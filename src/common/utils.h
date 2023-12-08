@@ -32,13 +32,7 @@ namespace uh::cluster {
 
             co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
             if (eptr) {
-                try {
-                    std::rethrow_exception(eptr);
-                }
-                catch (std::exception& e) {
-                    std::cout << "throw" << std::endl;
-                    throw e;
-                }
+                std::rethrow_exception(eptr);
             }
         }
 

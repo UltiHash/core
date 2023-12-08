@@ -99,12 +99,12 @@ namespace uh::cluster {
         {
             directory_message request = co_await m.recv_directory_message (h);
 
-            auto func = [this] (const auto& request) {
+            //auto func = [this] (const auto& request) {
                 std::vector<char> address_data;
                 zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
                 m_directory.insert (request.bucket_id, *request.object_key, address_data);
-            };
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
+            //};
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
 
             co_await m.send(SUCCESS, {});
             co_return;
@@ -116,7 +116,7 @@ namespace uh::cluster {
 
             ospan <char> buffer;
 
-            auto func = [this](const auto& request, auto& buffer) {
+            //auto func = [this](const auto& request, auto& buffer) {
                 address addr;
                 const auto buf = m_directory.get(request.bucket_id, *request.object_key);
                 zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
@@ -126,9 +126,9 @@ namespace uh::cluster {
                 }
                 buffer = ospan <char> (buffer_size);
                 m_storage.read_address(buffer.data.get(), addr);
-            };
+            //};
 
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref(request), std::ref((buffer))));
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref(request), std::ref((buffer))));
 
             m.register_write_buffer(buffer);
             co_await m.send_buffers(DIR_GET_OBJ_RESP);
@@ -137,29 +137,29 @@ namespace uh::cluster {
 
         coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
             directory_message request = co_await m.recv_directory_message (h);
-            auto func = [this] (const auto& request) {
+            //auto func = [this] (const auto& request) {
                 m_directory.add_bucket(request.bucket_id);
-            };
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
+            //};
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
             co_await m.send(SUCCESS, {});
 
         }
 
         coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
             directory_message request = co_await m.recv_directory_message (h);
-            auto func = [this] (const auto& request) {
+            //auto func = [this] (const auto& request) {
                 m_directory.remove_bucket(request.bucket_id);
-            };
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
+            //};
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
             co_await m.send(SUCCESS, {});
         }
 
         coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
             directory_message request = co_await m.recv_directory_message (h);
-            auto func = [this] (const auto& request) {
+            //auto func = [this] (const auto& request) {
                 m_directory.remove_object(request.bucket_id, *request.object_key);
-            };
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
+            //};
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::cref (request)));
             co_await m.send(SUCCESS, {});
         }
 
@@ -167,26 +167,24 @@ namespace uh::cluster {
             directory_lst_entities_message response;
             response.entities = m_directory.list_buckets();
 
-            //auto func = [this] (auto& response) {
-            //    response.entities = m_directory.list_buckets();
-            //};
-            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref (response)));
+            auto func = [this] (auto& response) {
+                response.entities = m_directory.list_buckets();
+            };
+            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref (response)));
             //co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
             std::vector<char> data;
             zpp::bits::out{data, zpp::bits::size4b{}}(response).or_throw();
             m.register_write_buffer(data);
-            std::cout << "before send" << std::endl;
             co_await m.send_buffers(DIR_LIST_BUCKET_RESP);
-            std::cout << "after send" << std::endl;
         }
 
         coro <void> handle_list_objects (messenger& m, const messenger::header &h) {
             directory_message request = co_await m.recv_directory_message (h);
             directory_lst_entities_message response;
-            auto func = [this] (auto& response, auto& request) {
+            //auto func = [this] (auto& response, auto& request) {
                 response.entities = m_directory.list_keys(request.bucket_id);
-            };
-            co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref(response), std::ref(request)));
+            //};
+            //co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref(response), std::ref(request)));
             co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
         }
 
