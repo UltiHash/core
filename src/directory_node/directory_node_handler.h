@@ -8,16 +8,18 @@
 #include <common/error.h>
 #include "common/protocol_handler.h"
 #include "directory_store.h"
+#include "common/utils.h"
 
 namespace uh::cluster {
 
 class directory_handler: public protocol_handler {
 public:
 
-    directory_handler(directory_node_config conf, global_data_view &storage) :
+    directory_handler(directory_node_config conf, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
             protocol_handler(conf.server_conf),
             m_directory(conf.directory_conf),
             m_storage(storage),
+            m_directory_workers (std::move (directory_workers)),
             m_counters(add_counter_family("uh_dr_requests", "number of requests handled by the directory node")),
             m_reqs_dir_put_obj(m_counters.Add({{"type", "DIR_PUT_OBJ_REQ"}})),
             m_reqs_dir_get_obj(m_counters.Add({{"type", "DIR_GET_OBJ_REQ"}})),
@@ -109,9 +111,12 @@ private:
     {
         directory_message request = co_await m.recv_directory_message (h);
 
-        std::vector<char> address_data;
-        zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
-        m_directory.insert (request.bucket_id, *request.object_key, address_data);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), [this, &request] () {
+            std::vector<char> address_data;
+            zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
+            m_directory.insert (request.bucket_id, *request.object_key, address_data);
+        });
+
         co_await m.send(SUCCESS, {});
         co_return;
     }
@@ -119,19 +124,21 @@ private:
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
 
         directory_message request = co_await m.recv_directory_message (h);
-        address addr;
 
-        const auto buf = m_directory.get(request.bucket_id, *request.object_key);
-        zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
+        ospan <char> buffer;
 
-        std::size_t buffer_size = 0;
-        for(auto frag_size : addr.sizes){
-            buffer_size += frag_size;
-        }
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request, &buffer] () {
+            address addr;
+            const auto buf = m_directory.get(request.bucket_id, *request.object_key);
+            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
+            std::size_t buffer_size = 0;
+            for(auto frag_size : addr.sizes){
+                buffer_size += frag_size;
+            }
+            buffer = ospan <char> (buffer_size);
+            m_storage.read_address(buffer.data.get(), addr);
+        });
 
-        ospan <char> buffer (buffer_size);
-
-        co_await m_storage.read_address(buffer.data.get(), addr);
         m.register_write_buffer(buffer);
         co_await m.send_buffers(DIR_GET_OBJ_RESP);
 
@@ -139,47 +146,54 @@ private:
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-
-        m_directory.add_bucket(request.bucket_id);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
+            m_directory.add_bucket(request.bucket_id);
+        });
         co_await m.send(SUCCESS, {});
 
     }
 
     coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        m_directory.remove_bucket(request.bucket_id);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
+            m_directory.remove_bucket(request.bucket_id);
+        });
         co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        m_directory.remove_object(request.bucket_id, *request.object_key);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
+            m_directory.remove_object(request.bucket_id, *request.object_key);
+        });
         co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {
-        directory_lst_entities_message response = {
-            .entities = m_directory.list_buckets()
-        };
+        directory_lst_entities_message response;
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &response] () {
+            response.entities = m_directory.list_buckets();
+        });
         co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
     }
 
     coro <void> handle_list_objects (messenger&m, const messenger::header &h) {
         directory_message request = co_await m.recv_directory_message (h);
-        directory_lst_entities_message response = {
-            .entities = m_directory.list_keys(
-                request.bucket_id)
-        };
+        directory_lst_entities_message response;
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request, &response] () {
+            response.entities = m_directory.list_keys(request.bucket_id);
+        });
         co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
     }
 
     coro <void> handle_recovery (messenger& m, const messenger::header& h) {
-        co_await m_storage.recover();
+        //co_await m_storage.recover();
         co_await m.send(RECOVER_RESP, {});
     }
 
     directory_store m_directory;
     global_data_view& m_storage;
+    std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
     prometheus::Family<prometheus::Counter> &m_counters;
     prometheus::Counter &m_reqs_invalid;
     prometheus::Counter &m_reqs_dir_put_obj;

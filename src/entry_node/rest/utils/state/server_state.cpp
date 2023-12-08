@@ -68,18 +68,6 @@ namespace uh::cluster::rest::utils
     }
 
 
-    void upload_state::list_state::insert_upload()
-    {
-
-    }
-
-
-    void upload_state::list_state::remove_upload()
-    {
-
-    }
-
-
     bool upload_state::insert_upload(std::string upload_id, std::string bucket, std::string object_key)
     {
         std::lock_guard<std::mutex> lock(mutex);

@@ -8,10 +8,10 @@
 #include <map>
 #include "data_node/data_node.h"
 #include "network/client.h"
-#include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
 #include "lru_cache.h"
+#include "common/utils.h"
 
 namespace uh::cluster {
 
@@ -30,7 +30,7 @@ public:
         sleep(2);
     }
 
-    coro <address> write (const std::string_view& data) {
+    address write (const std::string_view& data) {
         auto index = m_data_node_index.load();
         auto new_val = (index + 1) % m_data_node_offsets.size();
         while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
@@ -38,23 +38,17 @@ public:
             new_val = (index + 1) % m_data_node_offsets.size();
         }
 
-        auto m = m_data_node_offsets.at(index)->acquire_messenger();
-        co_await m.get().send(WRITE_REQ, data);
-        const auto message_header = co_await m.get().recv_header();
-        auto resp = co_await m.get().recv_address(message_header);
-        m.release();
+        address addr;
+        boost::asio::co_spawn(*m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
+                co_await m.get().send(WRITE_REQ, data);
+                const auto message_header = co_await m.get().recv_header();
+                addr = co_await m.get().recv_address(message_header);
+            } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
 
-        // l1 cache
-        sspan <char> l1_buf (std::min (resp.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (addr.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
-        m_cache_l1.put (resp.first().pointer, std::move (l1_buf));
-/*
-        // l2 cache
-        sspan <char> l2_buf (resp.first().size);
-        std::memcpy (l2_buf.data(), data.data(), l2_buf.size());
-        m_cache_l2.put (resp.first().pointer, std::move (l2_buf));
-*/
-        co_return std::move (resp);
+        m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
+        return addr;
     }
 
     sspan <char> read_l1_cache (const uint128_t pointer, const size_t size) {
@@ -75,28 +69,32 @@ public:
         return nullptr;
     }
 
-    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+    size_t read (char* buffer, const uint128_t pointer, const size_t size) {
         const fragment frag {pointer, size};
-        auto m = get_data_node (pointer)->acquire_messenger();
-        co_await m.get().send_fragment(READ_REQ, frag);
-        const auto h = co_await m.get().recv_header();
-        m.get().register_read_buffer (buffer, h.size);
-        co_await m.get().recv_buffers(h);
-        m.release();
+        size_t read_size = 0;
+        boost::asio::co_spawn(*m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
+            co_await m.get().send_fragment(READ_REQ, frag);
+            const auto h = co_await m.get().recv_header();
+            read_size = h.size;
+            m.get().register_read_buffer (buffer, read_size);
+            co_await m.get().recv_buffers(h);
+        } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        sspan <char> l1_buf (std::min (h.size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (read_size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
         // l2 cache
-        sspan <char> l2_buf (h.size);
-        std::memcpy (l2_buf.data(), buffer, h.size);
+        sspan <char> l2_buf (read_size);
+        std::memcpy (l2_buf.data(), buffer, read_size);
         m_cache_l2.put (pointer, std::move (l2_buf));
 
-        co_return h.size;
+        return read_size;
+
     }
 
+    /*
     coro <address> allocate (size_t total_size) {
 
         if (total_size % m_data_node_offsets.size() != 0) {
@@ -337,8 +335,8 @@ public:
         }
 
     }
-
-    coro <std::size_t> read_address (char* buffer, const address& addr) {
+*/
+    std::size_t read_address (char* buffer, const address& addr) {
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::unordered_map <std::shared_ptr <client>, std::vector <size_t>> node_data_offsets_map;
@@ -357,21 +355,19 @@ public:
             offset += frag.size;
         }
 
-        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
-            const auto node = nodes.at (node_id);
-            const auto& addr = node_address_map.at(node);
+        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
+            const auto node = nodes.at(id);
+            const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
-            co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
+            co_await m.get ().send_address (READ_ADDRESS_REQ, add);
             const auto h = co_await m.get ().recv_header ();
-            for (int i = 0; i < addr.size(); ++i) {
-                m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
+            for (int i = 0; i < add.size(); ++i) {
+                m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
             }
             co_await m.get ().recv_buffers (h);
-            co_return node_id;
-        };
+        });
 
-        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
-
+        return offset;
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
@@ -380,7 +376,7 @@ public:
         const auto h = co_await m.get().recv_header();
     }
 
-    coro <void> sync (const address& addr) {
+    void sync (const address& addr) {
 
         if (addr.empty()) [[unlikely]] {
             throw std::length_error ("Empty address is not allowed for sync");
@@ -399,72 +395,43 @@ public:
             node_address.push_fragment(frag);
         }
 
-
-
-        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
-            const auto node = nodes.at (node_id);
-
-            co_await m.get ().send_address(SYNC_REQ, node_address_map.at (node));
-            const auto h = co_await m.get().recv_header();
-            co_return h.type;
-        };
-
-        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
-        // error checking
-
-        co_return;
+        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
+            co_await m.get().send_address(SYNC_REQ, node_address_map.at(nodes [id]));
+            co_await m.get().recv_header();
+        });
     }
 
-    [[nodiscard]] coro <uint128_t> get_used_space () {
-
-        std::forward_list <client::acquired_messenger> messengers;
-        for (auto& dn: m_data_node_offsets) {
-            messengers.emplace_front(dn.second->acquire_messenger());
-            co_await messengers.front().get().send(USED_REQ, {});
-        }
+    [[nodiscard]] uint128_t get_used_space () {
 
         std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size());
-        for (const auto& n: m_data_node_offsets) {
-            nodes.emplace_back(n.second);
-        }
+        nodes.reserve (m_data_node_offsets.size());
+        for (const auto& n: m_data_node_offsets) {nodes.emplace_back(n.second);};
 
-        uint128_t used = 0;
-        std::mutex mut;
-        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
+        std::vector <uint128_t> used_spaces (nodes.size());
 
-            co_await messengers.front().get().send(USED_REQ, {});
+        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
+            co_await m.get().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t (message_header);
-            std::lock_guard <std::mutex> lock (mut);
-            used = used + resp;
-            co_return SUCCESS;
-        };
+            used_spaces [id] = co_await m.get().recv_uint128_t (message_header);
+        });
 
-        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
+        uint128_t used = std::accumulate(used_spaces.cbegin(), used_spaces.cend(), uint128_t {0});
 
-        co_return used;
+        return used;
     }
 
     [[nodiscard]] std::size_t get_data_node_count() {
         return m_data_node_offsets.size();
     }
 
-    coro <void> stop () {
+    void stop () {
 
-        std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
-        for (auto& node: m_data_node_offsets) {
-            nodes.emplace_back(node.second);
+        for (const auto& n: m_data_node_offsets) {
+            auto m = n.second->acquire_messenger();
+            boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
+                co_await m.get ().send(STOP, {});
+            } (std::move (m)), boost::asio::detached);
         }
-        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        auto bc_func = [] (auto m, int node_id) -> coro <void> {
-            co_await m.get ().send(STOP, {});
-            co_return;
-        };
-
-        broadcast_custom (*m_io_service, nodes, bc_func);
-        co_return;
     }
 
 

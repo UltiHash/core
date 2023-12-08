@@ -59,7 +59,10 @@ namespace uh::cluster::rest
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(entry_node_config config, std::vector <std::shared_ptr <client>>& dedupe_nodes, std::vector <std::shared_ptr <client>>& directory_nodes);
+        rest_server(entry_node_config config,
+                    std::vector <std::shared_ptr <client>>& dedupe_nodes,
+                    std::vector <std::shared_ptr <client>>& directory_nodes,
+                    std::shared_ptr <boost::asio::thread_pool> workers);
 
         void run();
 

@@ -139,10 +139,7 @@ private:
             }
 
             const auto frag_size = std::min (integration_data.size (), m_dedupe_conf.max_fragment_size);
-            auto addr_fut = boost::asio::co_spawn(*m_storage.get_executor(),
-                                                      store_data(integration_data.substr(0, frag_size)),
-                                                      boost::asio::use_future);
-            const auto addr = std::move(addr_fut.get());
+            const auto addr = store_data(integration_data.substr(0, frag_size));
             m_fragment_set.insert({addr.pointers[0], addr.pointers[1]},
                                   integration_data.substr(0, addr.sizes.front()), f.hint);
             result.addr.append_address(addr);
@@ -150,8 +147,7 @@ private:
             integration_data = integration_data.substr(frag_size);
         }
 
-        const auto sync_fut = boost::asio::co_spawn (*m_storage.get_executor(), m_storage.sync(result.addr), boost::asio::use_future);
-        sync_fut.wait();
+        m_storage.sync(result.addr);
         return result;
     }
 
@@ -164,8 +160,8 @@ private:
         }
     }
 
-    coro <address> store_data(const std::string_view& frag) {
-        co_return std::move (co_await m_storage.write(frag));
+    address store_data (const std::string_view& frag) {
+        return m_storage.write(frag);
     }
 
     dedupe_config m_dedupe_conf;

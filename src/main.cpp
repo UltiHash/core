@@ -16,13 +16,6 @@
 
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
-        .internal_server_conf = {
-                .threads = 4,
-                .port = 8081,
-                .metrics_bind_address = "0.0.0.0:9081",
-                .metrics_threads = 2,
-                .metrics_path = "/metrics"
-        },
         .rest_server_conf = {
                 .threads = 4,
                 .port = 8080,
@@ -30,8 +23,9 @@ uh::cluster::entry_node_config make_entry_node_config () {
                 .metrics_threads = 2,
                 .metrics_path = "/metrics"
         },
-        .dedupe_node_connection_count = 2,
-        .directory_connection_count = 2,
+        .dedupe_node_connection_count = 4,
+        .directory_connection_count = 4,
+        .worker_thread_count = 12,
     };
 }
 
@@ -53,7 +47,8 @@ uh::cluster::directory_node_config make_directory_node_config () {
                         .max_chunk_size = std::numeric_limits <uint32_t>::max(),
                 },
         },
-        .data_node_connection_count = 2,
+        .data_node_connection_count = 4,
+        .worker_thread_count = 8,
     };
 }
 
@@ -71,6 +66,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .data_node_connection_count = 16,
         .set_log_path = "ultihash-root/dd/set_log",
         .dedupe_worker_minimum_data_size = 128ul * 1024ul,
+        .worker_thread_count = 32,
     };
 }
 

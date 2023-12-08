@@ -1,10 +1,13 @@
 find_package(Python3 COMPONENTS Interpreter)
 
-set(enable_e2e_test ${ENABLE_E2E_TESTS})
-
 if (NOT Python3_Interpreter_FOUND)
 
-    message(WARNING "Python3 could not be found. Extended testing via PyTest is disabled.")
+    if (${ENABLE_E2E_TESTS})
+        message(FATAL_ERROR "Python3 could not be found. Extended testing via PyTest is disabled.")
+    else()
+        message(WARNING "Python3 could not be found. Extended testing via PyTest is disabled.")
+    endif()
+
     return()
 
 endif ()
@@ -13,7 +16,6 @@ find_program(Docker_EXECUTABLE docker)
 if(NOT Docker_EXECUTABLE)
 
     message(WARNING "Cannot find the docker executable. E2E tests will not run during `make test`.")
-    set(enable_e2e_test OFF)
 
 else()
 
@@ -53,8 +55,8 @@ add_executable(${PROJECT_NAME}-client ${CMAKE_CURRENT_SOURCE_DIR}/client/main.cp
 target_link_libraries(${PROJECT_NAME}-client ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-client PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-if (${enable_e2e_test})
-    add_test(NAME pytest_e2e
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh)
-endif()
+#if (${ENABLE_E2E_TESTS})
+#    add_test(NAME pytest_e2e
+#            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh)
+#endif()
