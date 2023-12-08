@@ -32,7 +32,13 @@ namespace uh::cluster {
 
             co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
             if (eptr) {
-                std::rethrow_exception(eptr);
+                try {
+                    std::rethrow_exception(eptr);
+                }
+                catch (std::exception& e) {
+                    std::cout << "throw" << std::endl;
+                    throw e;
+                }
             }
         }
 
@@ -44,9 +50,9 @@ namespace uh::cluster {
                                                                                Func func) {
 
             auto f = [] (auto& ioc, auto func, auto& cl) {
-                boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
+                boost::asio::co_spawn(ioc, std::move (func(cl.acquire_messenger())), boost::asio::use_future).get();
             };
-            co_await post_in_workers (workers, ioc, std::bind (f, std::ref(ioc), std::forward<Func>(func), std::ref(cl)));
+            co_await post_in_workers (workers, ioc, std::bind (f, std::ref(ioc), std::ref (func), std::ref(cl)));
 
         }
 
@@ -58,8 +64,9 @@ namespace uh::cluster {
 
             long i = 0;
             for (auto& n: nodes) {
+                auto m = n->acquire_messenger();
                 futures.emplace_back (boost::asio::co_spawn(ioc,
-                                                            func (n->acquire_messenger(), i++),
+                                                            func (std::move (m), i++),
                                                             boost::asio::use_future));
             }
 
@@ -74,8 +81,8 @@ namespace uh::cluster {
                                                                boost::asio::io_context& ioc,
                                                                boost::asio::thread_pool& workers,
                                                                Func func) {
-            auto f = [] (const auto& nodes, auto& ioc, auto func) {broadcast_from_worker_in_io_threads (nodes, ioc, std::ref (func));};
-            co_await post_in_workers (workers, ioc, std::bind (f, std::cref (nodes), std::ref (ioc), std::forward <Func> (func)));
+            auto f = [] (const auto& nodes, auto& ioc, auto func) {broadcast_from_worker_in_io_threads (nodes, ioc, std::move (func));};
+            co_await post_in_workers (workers, ioc, std::bind (f, std::cref (nodes), std::ref (ioc), std::move (func)));
         }
 
     };
