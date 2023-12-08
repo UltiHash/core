@@ -171,11 +171,7 @@ namespace uh::cluster {
                 response.entities = m_directory.list_buckets();
             };
             co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref (response)));
-            //co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
-            std::vector<char> data;
-            zpp::bits::out{data, zpp::bits::size4b{}}(response).or_throw();
-            m.register_write_buffer(data);
-            co_await m.send_buffers(DIR_LIST_BUCKET_RESP);
+            co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
         }
 
         coro <void> handle_list_objects (messenger& m, const messenger::header &h) {
