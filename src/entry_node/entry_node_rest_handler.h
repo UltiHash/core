@@ -371,6 +371,7 @@ namespace uh::cluster {
 
             try
             {
+                res = std::make_unique<http::model::get_object_response>(req);
 
                 std::chrono::time_point <std::chrono::steady_clock> timer;
                 const auto start = std::chrono::steady_clock::now();
