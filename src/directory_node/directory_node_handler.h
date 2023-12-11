@@ -164,7 +164,6 @@ namespace uh::cluster {
 
         coro <void> handle_list_buckets (messenger& m, const messenger::header &h) {
             directory_lst_entities_message response;
-            response.entities = m_directory.list_buckets();
 
             auto func = [] (directory_store& directory, directory_lst_entities_message& response) {
                 response.entities = directory.list_buckets();

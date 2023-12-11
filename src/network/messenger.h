@@ -62,7 +62,11 @@ namespace uh::cluster {
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_lst_entities_message req;
-            zpp::bits::in{std::span <char> {data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
+            try {
+                zpp::bits::in{std::span<char>{data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
+            }catch (std::exception& e) {
+                std::cout << "afa " << message_header.size << std::endl;
+            }
             co_return std::move (req);
         }
 

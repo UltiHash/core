@@ -20,16 +20,16 @@ namespace uh::cluster {
             std::exception_ptr eptr;
             boost::asio::steady_timer waiter (ioc, boost::asio::steady_timer::clock_type::duration::max ());
 
-            auto f = [] (auto f, auto& eptr, auto& waiter) {
+            auto f = [] (auto& f, auto& eptr, auto& waiter) {
                 try {
                     f ();
                 } catch (std::exception& e) {
                     eptr = std::current_exception();
                 }
-                waiter.expires_at(boost::asio::steady_timer::time_point::min());
+                waiter.cancel();
             };
-            boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(waiter)));
 
+            boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(waiter)));
             co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
             if (eptr) {
                 std::rethrow_exception(eptr);
@@ -43,7 +43,7 @@ namespace uh::cluster {
                                                                                client& cl,
                                                                                Func func) {
 
-            auto f = [] (auto& ioc, auto func, auto& cl) {
+            auto f = [] (auto& ioc, auto& func, auto& cl) {
                 boost::asio::co_spawn(ioc, std::move (func(cl.acquire_messenger())), boost::asio::use_future).get();
             };
             co_await post_in_workers (workers, ioc, std::bind (f, std::ref(ioc), std::ref (func), std::ref(cl)));
