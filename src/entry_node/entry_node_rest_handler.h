@@ -172,14 +172,13 @@ public:
 
         try
         {
-
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, [&bucket_id] (client::acquired_messenger m, long id) -> coro <void> {
+            auto func = [&bucket_id] (const auto& bucket, client::acquired_messenger m, long id) -> coro <void> {
                 directory_message dir_req {.bucket_id = bucket_id};
                 dir_req.bucket_id = bucket_id;
                 co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
-            });
-
+            };
+            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
         }
         catch (const error_exception& e) {
             LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e;
@@ -196,12 +195,13 @@ public:
 
         try
         {
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, [&req] (client::acquired_messenger m, long id) -> coro <void> {
+            auto func = [] (const http::http_request& req, client::acquired_messenger m, long id) -> coro <void> {
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
                 co_await m.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
-            });
+            };
+            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
         }
         catch (const error_exception& e)
         {
@@ -228,10 +228,7 @@ public:
 
         try {
 
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                [&req_bucket_id, &res] (client::acquired_messenger m) -> coro <void> {
+            auto func = [] (std::unique_ptr<http::model::get_bucket_response>& res, const std::string& req_bucket_id, client::acquired_messenger m) -> coro <void> {
                 co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
                 const auto h = co_await m.get().recv_header();
                 const auto list_buckets_res = co_await m.get().recv_directory_list_entities_message(h);
@@ -244,7 +241,12 @@ public:
                         throw error_exception(error::bucket_not_found);
                     }
                 }
-            });
+            };
+
+            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                *m_ioc,
+                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
 
         }
         catch (const error_exception& e)
@@ -266,10 +268,7 @@ public:
 
         std::unique_ptr<http::model::list_buckets_response> res = std::make_unique <http::model::list_buckets_response> (req);
 
-        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                            *m_ioc,
-                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                            [&res] (client::acquired_messenger m) -> coro <void> {
+        auto func = [] (std::unique_ptr<http::model::list_buckets_response>& res, client::acquired_messenger m) -> coro <void> {
             co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
             const auto h = co_await m.get().recv_header();
             auto list_buckets_res = co_await m.get().recv_directory_list_entities_message(h);
@@ -277,7 +276,12 @@ public:
             {
                 res->add_bucket(bucket);
             }
-        });
+        };
+
+        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                            *m_ioc,
+                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                            std::bind_front (func, std::ref (res)));
 
         co_return std::move(res);
     }
@@ -310,10 +314,11 @@ public:
                     .addr = std::make_unique <address> (std::move (resp.addr)),
             };
 
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, [&dir_req] (client::acquired_messenger m, long id) -> coro <void> {
+            auto func = [] (const directory_message& dir_req, client::acquired_messenger m, long id) -> coro <void> {
                 co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
                 co_await m.get().recv_header();
-            });
+            };
+            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
 
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -364,10 +369,7 @@ public:
             const auto start = std::chrono::steady_clock::now();
             std::string buffer;
 
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                [&buffer, &req] (client::acquired_messenger m) -> coro <void> {
+            auto func = [] (std::string& buffer, const http::http_request& req, client::acquired_messenger m) -> coro <void> {
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
                 dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
@@ -379,7 +381,11 @@ public:
                 m.get().register_read_buffer(buffer);
                 co_await m.get().recv_buffers(h_dir);
 
-            });
+            };
+            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                *m_ioc,
+                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                std::bind_front (func, std::ref (buffer), std::cref (req)));
 
             const auto stop = std::chrono::steady_clock::now ();
             const std::chrono::duration <double> duration = stop - start;
@@ -426,10 +432,8 @@ public:
 
         try
         {
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                [&res, &req] (client::acquired_messenger m) -> coro <void> {
+
+            auto func = [] (std::unique_ptr<http::model::list_objectsv2_response>& res, const http::http_request& req, client::acquired_messenger m) -> coro <void> {
                 res = std::make_unique<http::model::list_objectsv2_response>(req);
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
@@ -447,7 +451,12 @@ public:
                 {
                     res->add_content(content);
                 }
-            });
+            };
+
+            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                *m_ioc,
+                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                std::bind_front (func, std::ref (res), std::cref (req)));
 
         }
         catch (const error_exception& e)
@@ -469,10 +478,7 @@ public:
     {
         std::unique_ptr<http::model::list_objects_response> res;
 
-        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                            *m_ioc,
-                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                            [&res, &req] (client::acquired_messenger m) -> coro <void> {
+        auto func = [] (std::unique_ptr<http::model::list_objects_response>& res, const http::http_request& req, client::acquired_messenger m) -> coro <void> {
             res = std::make_unique<http::model::list_objects_response>(req);
 
             directory_message dir_req;
@@ -492,7 +498,12 @@ public:
             }
             res->add_name(req.get_URI().get_bucket_id());
 
-        });
+        };
+
+        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                            *m_ioc,
+                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                            std::bind_front (func, std::ref (res), std::cref (req)));
 
         co_return std::move(res);
     }
@@ -534,12 +545,14 @@ public:
         // acquire the internal parts container
         std::list<std::string_view> pieces;
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, [&pieces, &state, &req] () {
+        auto func = [] (std::list<std::string_view>& pieces, rest::utils::state& state, const http::http_request& req) {
             auto parts_container_ptr = state.get_multipart_container().get_value(req.get_URI().get_query_parameters().at("uploadId"));
             for (const auto &pair: *parts_container_ptr) {
                 pieces.emplace_back(pair.second.second);
             }
-        });
+        };
+
+        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (pieces), std::ref (state), std::cref (req)));
 
         LOG_INFO() << "upload size: " << req.get_body_size();
 
@@ -554,13 +567,15 @@ public:
                 .addr = std::make_unique <address> (std::move (resp.addr)),
         };
 
+        auto func_dir = [] (const directory_message& dir_req, client::acquired_messenger m, long id) -> coro <void> {
+            co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
+            co_await m.get().recv_header();
+        };
+
         co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes,
                                                                 *m_ioc,
                                                                 *m_workers,
-                                                                [&dir_req] (client::acquired_messenger m, long id) -> coro <void> {
-            co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
-            co_await m.get().recv_header();
-        });
+                                                                std::bind_front (func_dir, std::cref (dir_req)));
 
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
         auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -600,16 +615,18 @@ public:
 
         try
         {
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                [&req] (client::acquired_messenger m) -> coro <void> {
+            auto func = [] (const http::http_request& req, client::acquired_messenger m) -> coro <void> {
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
                 dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
                 co_await m.get().send_directory_message (DIR_DELETE_OBJ_REQ, dir_req);
                 co_await m.get().recv_header();
-            });
+            };
+
+            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                *m_ioc,
+                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                std::bind_front (func, std::cref (req)));
 
         }
         catch (const error_exception& e)
@@ -633,7 +650,7 @@ public:
 
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, [&state, &req, &res] () {
+        auto func = [] (std::unique_ptr<http::model::list_multi_part_uploads_response>& res, rest::utils::state& state, const http::http_request& req) {
             auto bucket_name = req.get_URI().get_bucket_id();
             auto ptr = state.get_bucket_multiparts().get_value(bucket_name);
             if (ptr == nullptr)
@@ -650,7 +667,9 @@ public:
                     }
                 }
             }
-        });
+        };
+
+        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front (func, std::ref (res), std::ref (state), std::cref (req)));
 
         co_return std::move(res);
     }
@@ -664,7 +683,7 @@ public:
 
         pugi::xpath_node_set object_nodes_set;
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, [&req, &object_nodes_set] () {
+        auto func = [] (http::http_request& req, pugi::xpath_node_set& object_nodes_set) {
             rest::utils::parser::xml_parser parsed_xml;
             try
             {
@@ -679,7 +698,9 @@ public:
             {
                 throw http::model::custom_error_response_exception(b_http::status::bad_request, http::model::error::type::malformed_xml);
             }
-        });
+        };
+
+        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
 
 
         auto bucket_id = req.get_URI().get_bucket_id();
@@ -690,10 +711,7 @@ public:
             try
             {
 
-                co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                    *m_ioc,
-                                                                                    *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                [&key, &bucket_id, &res] (client::acquired_messenger m) -> coro <void> {
+                auto func = [] (const char* key, const std::string& bucket_id, std::unique_ptr<http::model::delete_objects_response>& res, client::acquired_messenger m) -> coro <void> {
                     directory_message dir_req;
                     dir_req.bucket_id = bucket_id;
                     dir_req.object_key = std::make_unique <std::string> (key);
@@ -703,7 +721,11 @@ public:
                     co_await m.get().recv_header();
 
                     res->add_deleted_keys(key);
-                });
+                };
+                co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                    *m_ioc,
+                                                                                    *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                    std::bind_front(func, key, std::cref (bucket_id), std::ref (res)));
 
             }
             catch (const error_exception& e)
@@ -747,10 +769,12 @@ private:
         const auto part_size = static_cast <size_t> (std::ceil (static_cast <double> (total_size) / static_cast <double> (m_dedupe_nodes.size())));
 
         std::vector <dedupe_response> responses (m_dedupe_nodes.size());
-        co_await utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
-                                                                *m_ioc,
-                                                                *m_workers,
-                                                                [part_size, &offset_pieces, &responses] (client::acquired_messenger m, long i) -> coro <void> {
+
+        auto func = [] (size_t part_size,
+                const std::map <size_t, std::string_view>& offset_pieces,
+                std::vector <dedupe_response>& responses,
+                client::acquired_messenger m,
+                long i) -> coro <void> {
             const auto my_offset = i * part_size;
             std::list <std::string_view> my_pieces;
             auto offset_itr = offset_pieces.upper_bound(my_offset);
@@ -773,7 +797,12 @@ private:
             co_await m.get().send_buffers(DEDUPE_REQ);
             const auto h_dedup = co_await m.get().recv_header();
             responses [i] = co_await m.get().recv_dedupe_response(h_dedup);
-        });
+        };
+
+        co_await utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
+                                                                *m_ioc,
+                                                                *m_workers,
+                                                                std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
 
 
         dedupe_response resp {.effective_size = 0};
