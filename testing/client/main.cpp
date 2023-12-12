@@ -72,9 +72,9 @@ int main (int argc, char* args[]) {
 
     std::fstream f (ps.file_path);
     ospan <char> buf (std::filesystem::file_size (ps.file_path));
-    f.read(buf.data.get(), buf.size);
+    f.read(buf.data(), buf.size());
 
-    LOG_INFO() << "Read data from file " << ps.file_path << " of size " << buf.size / static_cast <double> (1024ul * 1024ul);
+    LOG_INFO() << "Read data from file " << ps.file_path << " of size " << buf.size() / static_cast <double> (1024ul * 1024ul);
 
     std::chrono::time_point <std::chrono::steady_clock> timer;
     const auto start = std::chrono::steady_clock::now();
@@ -92,12 +92,12 @@ int main (int argc, char* args[]) {
 
     const auto stop = std::chrono::steady_clock::now ();
     const std::chrono::duration <double> duration = stop - start;
-    const auto size = buf.size / static_cast <double> (1024ul * 1024ul);
+    const auto size = buf.size() / static_cast <double> (1024ul * 1024ul);
     const auto bandwidth = size / duration.count();
     LOG_INFO() << "Operation duration " << duration.count() << " s";
     LOG_INFO() << "Operation bandwidth " << bandwidth << " MB/s";
 
     const auto resp = response.get_future().get();
-    LOG_INFO() << "Operation response of size " << resp.size;
+    LOG_INFO() << "Operation response of size " << resp.size();
 
 }

@@ -85,7 +85,7 @@ BOOST_FIXTURE_TEST_CASE (bucket_prefilled_test, config_fixture)
     uh::cluster::bucket b(get_root_path(), "bucket1", get_bucket_config());
     auto restored_value = b.get_obj("key1");
     char original_value[] = "Would be a shame if we lost this data!";
-    BOOST_CHECK(std::memcmp(original_value, restored_value.data.get(), restored_value.size) == 0);
+    BOOST_CHECK(std::memcmp(original_value, restored_value.data(), restored_value.size()) == 0);
 
     cleanup();
 }

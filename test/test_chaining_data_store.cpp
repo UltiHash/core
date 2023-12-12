@@ -115,48 +115,48 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         BOOST_TEST(ds.get_used_space() == expected_size);
 
         const auto d1 = ds.read(addr1);
-        BOOST_TEST(d1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+        BOOST_TEST(d1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data(), data1, d1.size()) == 0);
 
         const auto d2 = ds.read(addr2);
-        BOOST_TEST(d2.size == sizeof(data2));
-        BOOST_CHECK(std::memcmp(d2.data.get(), data2, d2.size) == 0);
+        BOOST_TEST(d2.size() == sizeof(data2));
+        BOOST_CHECK(std::memcmp(d2.data(), data2, d2.size()) == 0);
 
         const auto d3 = ds.read(addr3);
-        BOOST_TEST(d3.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d3.data.get(), data3, d3.size) == 0);
+        BOOST_TEST(d3.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d3.data(), data3, d3.size()) == 0);
 
         const auto d4 = ds.read(addr4);
-        BOOST_TEST(d4.size == sizeof(data4));
-        BOOST_CHECK(std::memcmp(d4.data.get(), data4, d4.size) == 0);
+        BOOST_TEST(d4.size() == sizeof(data4));
+        BOOST_CHECK(std::memcmp(d4.data(), data4, d4.size()) == 0);
 
         const auto d5 = ds.read(addr5);
-        BOOST_TEST(d5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data(), data5, d5.size()) == 0);
 
         const auto d6 = ds.read(addr6);
-        BOOST_TEST(d6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+        BOOST_TEST(d6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data(), data6, d6.size()) == 0);
 
         const auto d7 = ds.read(addr7);
-        BOOST_TEST(d7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+        BOOST_TEST(d7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data(), data7, d7.size()) == 0);
 
         const auto d8 = ds.read(addr8);
-        BOOST_TEST(d8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+        BOOST_TEST(d8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
         const auto d9 = ds.read(addr9);
-        BOOST_TEST(d9.size == sizeof(data9));
-        BOOST_CHECK(std::memcmp(d9.data.get(), data9, d9.size) == 0);
+        BOOST_TEST(d9.size() == sizeof(data9));
+        BOOST_CHECK(std::memcmp(d9.data(), data9, d9.size()) == 0);
 
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         ds.remove(addr9);
         const auto dd9 = ds.read(addr9);
         expected_size -= sizeof(data9) + sizeof (uint32_t);
-        BOOST_TEST(dd9.size == sizeof (data9));
-        BOOST_CHECK(std::memcmp(buf, zero, dd9.size ) == 0);
+        BOOST_TEST(dd9.size() == sizeof (data9));
+        BOOST_CHECK(std::memcmp(buf, zero, dd9.size()) == 0);
 
         BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
         BOOST_CHECK(ds.get_used_space() == expected_size);
@@ -164,8 +164,8 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         ds.remove(addr2);
         const auto dd2 = ds.read(addr2);
         expected_size -= sizeof(data2) + sizeof (uint32_t);
-        BOOST_TEST(dd2.size == sizeof (data2));
-        BOOST_CHECK(std::memcmp(buf, zero, dd2.size ) == 0);
+        BOOST_TEST(dd2.size() == sizeof (data2));
+        BOOST_CHECK(std::memcmp(buf, zero, dd2.size()) == 0);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         const auto addr10 = ds.write(data10);
@@ -175,36 +175,36 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
 
         const auto dd1 = ds.read(addr1);
-        BOOST_TEST(dd1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(dd1.data.get(), data1, dd1.size) == 0);
+        BOOST_TEST(dd1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(dd1.data(), data1, dd1.size()) == 0);
 
         const auto dd3 = ds.read(addr3);
-        BOOST_TEST(dd3.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(dd3.data.get(), data3, dd3.size) == 0);
+        BOOST_TEST(dd3.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(dd3.data(), data3, dd3.size()) == 0);
 
         const auto dd4 = ds.read(addr4);
-        BOOST_TEST(dd4.size == sizeof(data4));
-        BOOST_CHECK(std::memcmp(dd4.data.get(), data4, dd4.size) == 0);
+        BOOST_TEST(dd4.size() == sizeof(data4));
+        BOOST_CHECK(std::memcmp(dd4.data(), data4, dd4.size()) == 0);
 
         const auto dd5 = ds.read(addr5);
-        BOOST_TEST(dd5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(dd5.data.get(), data5, dd5.size) == 0);
+        BOOST_TEST(dd5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(dd5.data(), data5, dd5.size()) == 0);
 
         const auto dd6 = ds.read(addr6);
-        BOOST_TEST(dd6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(dd6.data.get(), data6, dd6.size) == 0);
+        BOOST_TEST(dd6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(dd6.data(), data6, dd6.size()) == 0);
 
         const auto dd7 = ds.read(addr7);
-        BOOST_TEST(dd7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(dd7.data.get(), data7, dd7.size) == 0);
+        BOOST_TEST(dd7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(dd7.data(), data7, dd7.size()) == 0);
 
         const auto dd8 = ds.read(addr8);
-        BOOST_TEST(dd8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(dd8.data.get(), data8, dd8.size) == 0);
+        BOOST_TEST(dd8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(dd8.data(), data8, dd8.size()) == 0);
 
         const auto dd10 = ds.read(addr10);
-        BOOST_TEST(dd10.size == sizeof(data10));
-        BOOST_CHECK(std::memcmp(dd10.data.get(), data10, dd10.size) == 0);
+        BOOST_TEST(dd10.size() == sizeof(data10));
+        BOOST_CHECK(std::memcmp(dd10.data(), data10, dd10.size()) == 0);
 
         BOOST_TEST(ds.get_used_space() == expected_size);
 
@@ -216,32 +216,32 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         chaining_data_store ds (make_chaining_data_store_config());
         BOOST_TEST(ds.get_used_space() == expected_size);
         const auto d1 = ds.read(addr1);
-        BOOST_TEST(d1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+        BOOST_TEST(d1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data(), data1, d1.size()) == 0);
 
         const auto d3 = ds.read(addr3);
-        BOOST_TEST(d3.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d3.data.get(), data3, d3.size) == 0);
+        BOOST_TEST(d3.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d3.data(), data3, d3.size()) == 0);
 
         const auto d4 = ds.read(addr4);
-        BOOST_TEST(d4.size == sizeof(data4));
-        BOOST_CHECK(std::memcmp(d4.data.get(), data4, d4.size) == 0);
+        BOOST_TEST(d4.size() == sizeof(data4));
+        BOOST_CHECK(std::memcmp(d4.data(), data4, d4.size()) == 0);
 
         const auto d5 = ds.read(addr5);
-        BOOST_TEST(d5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data(), data5, d5.size()) == 0);
 
         const auto d6 = ds.read(addr6);
-        BOOST_TEST(d6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+        BOOST_TEST(d6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data(), data6, d6.size()) == 0);
 
         const auto d7 = ds.read(addr7);
-        BOOST_TEST(d7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+        BOOST_TEST(d7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data(), data7, d7.size()) == 0);
 
         const auto d8 = ds.read(addr8);
-        BOOST_TEST(d8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+        BOOST_TEST(d8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
 
         BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
