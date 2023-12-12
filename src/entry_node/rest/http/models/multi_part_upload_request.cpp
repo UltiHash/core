@@ -1,22 +1,24 @@
 #include "multi_part_upload_request.h"
-#include "entry_node/rest/utils/hashing/hash.h"
 #include "custom_error_response_exception.h"
 
 namespace uh::cluster::rest::http::model
 {
 
     multi_part_upload_request::multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                         utils::state& server_state,
+                                                         utils::server_state& server_state,
                                                  std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
-            m_internal_server_state(server_state),
+            m_server_state(server_state),
             m_part_number(std::stoi(m_uri->get_query_parameters().at("partNumber"))),
             m_upload_id(m_uri->get_query_parameters().at("uploadId"))
     {
-        m_parts_container_ptr = m_internal_server_state.get_multipart_container().get_value(m_upload_id);
 
-        // grab a hold of the parts map
-        if (m_parts_container_ptr == nullptr)
+        /*
+         * grab a hold of the parts container so that we don't get segmentation fault if
+         * the given upload is aborted or completed
+        */
+        m_parts_container = m_server_state.m_uploads.get_parts_container(m_upload_id);
+        if (m_parts_container == nullptr)
         {
             throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
@@ -29,9 +31,28 @@ namespace uh::cluster::rest::http::model
         return headers;
     }
 
-    const std::string& multi_part_upload_request::get_body()
+    const std::string& multi_part_upload_request::get_body() const
     {
-        return (*m_parts_container_ptr).find(m_part_number)->second.second;
+        auto single_part = m_parts_container->find(m_part_number);
+
+        if (single_part == nullptr)
+        {
+            throw std::runtime_error("part not found");
+        }
+
+        return single_part->body;
+    }
+
+    [[nodiscard]] std::size_t multi_part_upload_request::get_body_size() const
+    {
+        auto single_part = m_parts_container->find(m_part_number);
+
+        if (single_part == nullptr)
+        {
+            throw std::runtime_error("part not found");
+        }
+
+        return single_part->body.size();
     }
 
     coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
@@ -42,15 +63,19 @@ namespace uh::cluster::rest::http::model
 
             if (content_length != 0)
             {
-                if (m_parts_container_ptr->find(m_part_number) == m_parts_container_ptr->end())
+
+                auto single_part = m_parts_container->find(m_part_number);
+
+                if (single_part == nullptr)
                 {
-                    (*m_parts_container_ptr)[m_part_number].second.append(content_length, 0);
+                    std::string read_body;
+                    read_body.append(content_length, 0);
 
                     auto data_left = content_length - buffer.size();
 
                     // copy remaining bytes from flat buffer to body_buffer
-                    boost::asio::buffer_copy(boost::asio::buffer((*m_parts_container_ptr)[m_part_number].second), buffer.data());
-                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer((*m_parts_container_ptr)[m_part_number].second.data() + buffer.size(), data_left),
+                    boost::asio::buffer_copy(boost::asio::buffer(read_body), buffer.data());
+                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(read_body.data() + buffer.size(), data_left),
                                                                              boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
 
                     if (size_transferred + buffer.size() != content_length)
@@ -58,10 +83,11 @@ namespace uh::cluster::rest::http::model
                         throw std::runtime_error("error reading the http body");
                     }
 
-                    // calculate and store etag for verification step in complete mp
-                    rest::utils::hashing::MD5 md5;
-                    (*m_parts_container_ptr)[m_part_number].first = md5.calculateMD5((*m_parts_container_ptr)[m_part_number].second);
+                    m_parts_container->put_single_part(m_part_number, std::move(read_body));
                 }
+
+                // set etag
+                m_etag = m_parts_container->find(m_part_number)->etag;
             }
         }
         else

@@ -10,10 +10,8 @@ namespace uh::cluster::rest::http::model
     {
     public:
         explicit put_object_response(const http_request&);
-        put_object_response(const http_request&, http::response<http::string_body>);
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
-        void set_etag(std::string);
         void set_size(double);
         void set_effective_size(double);
         void set_space_savings(double);
@@ -35,9 +33,6 @@ namespace uh::cluster::rest::http::model
 
         bool m_expirationHasBeenSet = false;
         std::string m_expiration;
-
-        bool m_eTagHasBeenSet = false;
-        std::string m_eTag;
 
         bool m_checksumCRC32HasBeenSet = false;
         std::string m_checksumCRC32;

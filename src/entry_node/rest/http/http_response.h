@@ -19,12 +19,13 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] virtual const http::response<http::string_body>& get_response_specific_object() = 0;
         void set_body(std::string&&);
+        void set_etag(const std::string&);
 
     protected:
         const http_request& m_orig_req;
         http::response<http::string_body> m_res;
 
-        bool etagHasBeenSet = false;
+        bool m_etagHasBeenSet = false;
         std::string m_etag;
     };
 

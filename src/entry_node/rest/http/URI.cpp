@@ -81,7 +81,6 @@ namespace uh::cluster::rest::http
         return m_method;
     }
 
-
     bool URI::query_string_exists(const std::string& key) const
     {
         auto itr = m_query_parameters.find(key);
@@ -130,12 +129,15 @@ namespace uh::cluster::rest::http
         if (!m_bucket_id.empty())
         {
             if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63 )
+            {
                 throw rest::http::model::custom_error_response_exception(http::status::bad_request, rest::http::model::error::invalid_bucket_name);
+            }
 
             std::regex bucket_pattern(R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
             if (!std::regex_match(m_bucket_id, bucket_pattern))
+            {
                 throw rest::http::model::custom_error_response_exception(http::status::bad_request, rest::http::model::error::invalid_bucket_name);
-
+            }
         }
 
     }
