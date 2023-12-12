@@ -133,7 +133,6 @@ namespace uh::cluster {
 
             m_read_buffers.clear();
             m_read_size = 0;
-            co_return;
         }
 
         coro <void> send_buffers (const message_type type) {
@@ -144,8 +143,6 @@ namespace uh::cluster {
 
             m_write_buffers.clear();
             m_write_size = 0;
-            co_return;
-
         }
 
         coro <void> send_error (const error& e) {
