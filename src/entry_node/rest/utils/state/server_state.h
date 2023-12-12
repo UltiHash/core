@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
 #include "entry_node/rest/utils/hashing/hash.h"
 
 namespace uh::cluster::rest::utils

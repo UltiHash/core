@@ -560,7 +560,7 @@ namespace uh::cluster {
       }
       
       
-      coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::state& state)
+      coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::server_state& state)
     {
         auto res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
 
@@ -572,7 +572,7 @@ namespace uh::cluster {
         // acquire the internal parts container
         std::list<std::string_view> pieces;
 
-        auto func = [] (std::list<std::string_view>& pieces, rest::utils::state& state, const http::http_request& req) {
+        auto func = [] (std::list<std::string_view>& pieces, rest::utils::server_state& state, const http::http_request& req) {
             auto parts_container_ptr = state.m_uploads.get_parts_container(req.get_URI().get_query_parameters().at("uploadId"));
             for (const auto &pair : parts_container_ptr->get_parts())
             {
@@ -671,12 +671,12 @@ namespace uh::cluster {
     }
       
 
-    coro <std::unique_ptr<http::http_response>> handle_list_mp_uploads (const http::http_request& req, rest::utils::state& state)
+    coro <std::unique_ptr<http::http_response>> handle_list_mp_uploads (const http::http_request& req, rest::utils::server_state& state)
     {
 
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
 
-        auto func = [] (std::unique_ptr<http::model::list_multi_part_uploads_response>& res, rest::utils::state& state, const http::http_request& req) {
+        auto func = [] (std::unique_ptr<http::model::list_multi_part_uploads_response>& res, rest::utils::server_state& state, const http::http_request& req) {
             auto bucket_name = req.get_URI().get_bucket_id();
             auto multipart_map = state.m_uploads.list_multipart_uploads(bucket_name);
 
@@ -763,6 +763,9 @@ namespace uh::cluster {
         co_return std::move(res);
     }
 
+    [[nodiscard]] client& get_recovery_director () const {
+        return *m_directory_nodes.at(0);
+    }
 
     private:
 
