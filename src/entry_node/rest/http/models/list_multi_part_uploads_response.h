@@ -8,8 +8,8 @@ namespace uh::cluster::rest::http::model
 
     typedef struct
     {
-        std::string object_name;
         std::string upload_id;
+        std::string object_name;
     } key_and_uploadid;
 
     class list_multi_part_uploads_response : public http_response

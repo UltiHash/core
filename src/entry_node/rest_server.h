@@ -25,7 +25,7 @@
 #include "network/client.h"
 #include "entry_node/rest/http/http_request.h"
 #include "rest/http/http_response.h"
-#include "entry_node/rest/utils/containers/internal_server_state.h"
+#include "entry_node/rest/utils/state/server_state.h"
 
 //------------------------------------------------------------------------------
 
@@ -50,11 +50,11 @@ namespace uh::cluster::rest
         entry_node_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
-        boost::asio::ssl::context m_ssl;
+        boost::asio::ssl::context m_ssl; // TODO:
         entry_node_rest_handler m_handler;
         std::promise <message_type> m_recover_response;
 
-        utils::state m_internal_server_state;
+        utils::server_state m_server_state;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 

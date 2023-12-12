@@ -148,7 +148,7 @@ namespace uh::cluster::rest::http::model
 
                     counter++;
                 }
-                if (m_maxKeys == counter + common_prefixes.size())
+                if (counter + common_prefixes.size() == m_maxKeys)
                     break;
             }
         }

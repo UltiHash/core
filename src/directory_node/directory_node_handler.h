@@ -33,66 +33,79 @@ namespace uh::cluster {
             init();
         }
 
-        coro <void> handle (messenger m) override {
+    coro <void> handle (messenger m) override {
 
-            for (;;) {
-                std::optional<error> err;
+        for (;;) {
+            std::optional<error> err;
 
-                try {
-                    const auto message_header = co_await m.recv_header ();
-                    switch (message_header.type) {
-                        case DIR_PUT_OBJ_REQ:
-                            m_reqs_dir_put_obj.Increment();
-                            co_await handle_put_obj (m, message_header);
-                            break;
-                        case DIR_GET_OBJ_REQ:
-                            m_reqs_dir_get_obj.Increment();
-                            co_await handle_get_obj (m, message_header);
-                            break;
-                        case DIR_PUT_BUCKET_REQ:
-                            m_reqs_dir_put_bucket.Increment();
-                            co_await handle_put_bucket (m, message_header);
-                            break;
-                        case RECOVER_REQ:
-                            m_reqs_dir_recover.Increment();
-                            co_await handle_recovery (m, message_header);
-                            break;
-                        case DIR_LIST_BUCKET_REQ:
-                            m_reqs_dir_list_bucket.Increment();
-                            co_await handle_list_buckets(m, message_header);
-                            break;
-                        case DIR_LIST_OBJ_REQ:
-                            m_reqs_dir_list_obj.Increment();
-                            co_await handle_list_objects(m, message_header);
-                            break;
-                        case DIR_DELETE_BUCKET_REQ:
-                            m_reqs_dir_delete_bucket.Increment();
-                            co_await handle_delete_bucket(m, message_header);
-                            break;
-                        case DIR_DELETE_OBJ_REQ:
-                            co_await handle_delete_object(m, message_header);
-                            break;
-                        case STOP:
-                            co_return;
-                        default:
-                            m_reqs_invalid.Increment();
-                            throw std::invalid_argument ("Invalid message type!");
-                    }
-                } catch (const error_exception& e) {
-                    err = e.error();
-                } catch (const std::exception& e) {
-                    err = error(error::unknown, e.what());
+            try {
+                const auto message_header = co_await m.recv_header ();
+                switch (message_header.type) {
+                case DIR_PUT_OBJ_REQ:
+                    m_reqs_dir_put_obj.Increment();
+                    co_await handle_put_obj (m, message_header);
+                    break;
+                case DIR_GET_OBJ_REQ:
+                    m_reqs_dir_get_obj.Increment();
+                    co_await handle_get_obj (m, message_header);
+                    break;
+                case DIR_PUT_BUCKET_REQ:
+                    m_reqs_dir_put_bucket.Increment();
+                    co_await handle_put_bucket (m, message_header);
+                    break;
+                case RECOVER_REQ:
+                    m_reqs_dir_recover.Increment();
+                    co_await handle_recovery (m, message_header);
+                    break;
+                case DIR_LIST_BUCKET_REQ:
+                    m_reqs_dir_list_bucket.Increment();
+                    co_await handle_list_buckets(m, message_header);
+                    break;
+                case DIR_LIST_OBJ_REQ:
+                    m_reqs_dir_list_obj.Increment();
+                    co_await handle_list_objects(m, message_header);
+                    break;
+                case DIR_DELETE_BUCKET_REQ:
+                    m_reqs_dir_delete_bucket.Increment();
+                    co_await handle_delete_bucket(m, message_header);
+                    break;
+                case DIR_DELETE_OBJ_REQ:
+                    co_await handle_delete_object(m, message_header);
+                    break;
+                case DIR_BUCKET_EXISTS:
+                    co_await handle_bucket_exists(m, message_header);
+                    break;
+                case STOP:
+                    co_return;
+                default:
+                    m_reqs_invalid.Increment();
+                    throw std::invalid_argument ("Invalid message type!");
                 }
-
-                if (err)
-                {
-                    co_await m.send_error (*err);
-                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
             }
 
+            if (err)
+            {
+                co_await m.send_error (*err);
+            }
         }
 
+    }
+
     private:
+      
+        coro <void> handle_bucket_exists (messenger& m, const messenger::header& h)
+        {
+            directory_message request = co_await m.recv_directory_message (h);
+
+            m_directory.bucket_exists(request.bucket_id);
+
+            co_await m.send(SUCCESS, {});
+            co_return;
+        }
 
         coro <void> handle_put_obj (messenger& m, const messenger::header& h)
         {

@@ -15,6 +15,13 @@ namespace uh::cluster::rest::http
     void http_response::set_body(std::string&& body)
     {
         m_res.body() = std::move(body);
+        m_res.prepare_payload();
+    }
+
+    void http_response::set_etag(const std::string& etag)
+    {
+        m_etag = etag;
+        m_etagHasBeenSet = true;
     }
 
 } // namespace uh::cluster::rest::http

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <entry_node/rest/http/http_request.h>
-#include "entry_node/rest/utils/containers/internal_server_state.h"
+
+// UTILS
+#include "entry_node/rest/utils/state/server_state.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -10,7 +12,7 @@ namespace uh::cluster::rest::http::model
     {
     public:
         explicit multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                           utils::state&,
+                                           utils::server_state&,
                                            std::unique_ptr<rest::http::URI> uri);
 
         ~multi_part_upload_request() override = default;
@@ -21,12 +23,15 @@ namespace uh::cluster::rest::http::model
 
         coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override;
 
-        [[nodiscard]] const std::string& get_body() override;
+        [[nodiscard]] const std::string& get_body() const override;
+
+        [[nodiscard]] std::size_t get_body_size() const override;
 
     private:
 
-        utils::state& m_internal_server_state;
-        std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>> m_parts_container_ptr;
+        utils::server_state& m_server_state;
+        std::shared_ptr<utils::parts> m_parts_container;
+
         uint16_t m_part_number;
         std::string m_upload_id;
     };

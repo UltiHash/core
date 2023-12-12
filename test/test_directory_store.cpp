@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     {
         directory_store_config ds_conf = {"root", make_bucket_config()};
         directory_store ds (ds_conf);
-        BOOST_CHECK_THROW (ds.insert("b1", "k1", data1), std::out_of_range);
+        BOOST_CHECK_THROW (ds.insert("b1", "k1", data1), error_exception);
         ds.add_bucket("b1");
         ds.insert("b1", "k1", data1);
         ds.insert("b1", "k2", data2);

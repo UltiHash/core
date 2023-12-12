@@ -17,9 +17,9 @@ namespace uh::cluster::rest::http::model
         populate_response_headers();
     }
 
-    void list_multi_part_uploads_response::add_key_and_uploadid(const std::string& obj_name, const std::string& upload_id)
+    void list_multi_part_uploads_response::add_key_and_uploadid(const std::string& upload_id, const std::string& obj_name)
     {
-        m_keys_and_uploadids.emplace_back(obj_name, upload_id);
+        m_keys_and_uploadids.emplace_back(upload_id, obj_name);
     }
 
     void list_multi_part_uploads_response::populate_response_headers()
@@ -83,16 +83,21 @@ namespace uh::cluster::rest::http::model
         }
 
         std::string upload_xml_string;
+
         for (const auto& val : m_keys_and_uploadids)
+        {
             upload_xml_string += "<Upload>\n"
                                  "<Key>" + val.object_name + "</Key>\n"
                                  "<UploadId>" + val.upload_id + "</UploadId>\n"
-                                 "</Upload>\n";
+                                "</Upload>\n";
+        }
 
         set_body(std::string("<ListMultipartUploadsResult>\n"
                              "   <Bucket>" + m_orig_req.get_URI().get_bucket_id() + "</Bucket>\n"
                              + upload_xml_string +
                              "</ListMultipartUploadsResult>"));
+
+        std::cout << m_res.body();
 
         m_res.prepare_payload();
         return m_res;

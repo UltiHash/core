@@ -30,6 +30,7 @@ namespace uh::cluster::rest::http::model
             invalid_bucket_name,
             bad_upload_id,
             bad_part_number,
+            too_many_elements,
         };
 
         explicit error(type t = unknown);

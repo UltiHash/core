@@ -15,7 +15,6 @@ namespace uh::cluster::rest::http::model
     void init_multi_part_upload_response::set_upload_id(const std::string& upload_id)
     {
         m_uploadId = upload_id;
-        m_uploadIdHasBeenSet = true;
     }
 
     const http::response<http::string_body>& init_multi_part_upload_response::get_response_specific_object()
@@ -38,9 +37,7 @@ namespace uh::cluster::rest::http::model
                                    "<UploadId>" + m_uploadId + "</UploadId>\n"
                                    "</InitiateMultipartUploadResult>"));
 
-        m_res.prepare_payload();
         return m_res;
-
     }
 
 } // namespace uh::cluster::rest::http::model
