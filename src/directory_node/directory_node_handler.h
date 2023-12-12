@@ -8,7 +8,7 @@
 #include <common/error.h>
 #include "common/protocol_handler.h"
 #include "directory_store.h"
-#include "common/utils.h"
+#include "lib/utils.h"
 
 namespace uh::cluster {
 
@@ -131,13 +131,13 @@ namespace uh::cluster {
             auto func = [](directory_store& directory, global_data_view& storage, const directory_message& request, ospan <char>& buffer) {
                 address addr;
                 const auto buf = directory.get(request.bucket_id, *request.object_key);
-                zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
+                zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
                 std::size_t buffer_size = 0;
                 for(auto frag_size : addr.sizes){
                     buffer_size += frag_size;
                 }
                 buffer = ospan <char> (buffer_size);
-                storage.read_address(buffer.data.get(), addr);
+                storage.read_address(buffer.data(), addr);
             };
 
             co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref (m_storage), std::cref(request), std::ref((buffer))));

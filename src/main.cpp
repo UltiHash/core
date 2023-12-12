@@ -11,7 +11,7 @@
 #include "network/cluster_map.h"
 
 #include <config.h>
-#include "common/log.h"
+#include "lib/log.h"
 
 
 uh::cluster::entry_node_config make_entry_node_config () {

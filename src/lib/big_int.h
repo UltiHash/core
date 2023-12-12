@@ -178,6 +178,8 @@ public:
 
 };
 
+typedef big_int uint128_t;
+
 } // end namespace uh::cluster
 
 template <>

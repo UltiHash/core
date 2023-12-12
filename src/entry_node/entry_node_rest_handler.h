@@ -8,9 +8,9 @@
 #include <iostream>
 #include <memory>
 #include "common/metrics_handler.h"
-#include "common/log.h"
+#include "lib/log.h"
 #include "network/client.h"
-#include <common/utils.h>
+#include "lib/utils.h"
 
 // HTTP
 #include "entry_node/rest/http/http_request.h"

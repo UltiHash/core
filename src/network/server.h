@@ -19,7 +19,7 @@
 #include <thread>
 #include <vector>
 #include "common/cluster_config.h"
-#include <common/log.h>
+#include "lib/log.h"
 #include "messenger.h"
 #include "common/protocol_handler.h"
 

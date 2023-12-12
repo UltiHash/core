@@ -7,7 +7,7 @@
 #include "common/cluster_config.h"
 #include "global_data/global_data_view.h"
 #include "dedupe_node_handler.h"
-#include <common/log.h>
+#include "lib/log.h"
 
 namespace uh::cluster {
     class dedupe_node: public node_interface {

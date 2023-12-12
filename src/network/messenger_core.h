@@ -75,8 +75,8 @@ namespace uh::cluster {
 
         template<typename T>
         inline void register_read_buffer (const ospan <T>& buf) {
-            m_read_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
-            m_read_size += buf.size * sizeof(T);
+            m_read_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
+            m_read_size += buf.size() * sizeof(T);
         }
 
         template <typename T>
@@ -103,8 +103,8 @@ namespace uh::cluster {
 
         template<typename T>
         inline void register_write_buffer (const ospan <T>& buf) {
-            m_write_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
-            m_write_size += buf.size;
+            m_write_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
+            m_write_size += buf.size();
         }
 
         coro <header> recv_header () {

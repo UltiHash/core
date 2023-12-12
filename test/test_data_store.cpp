@@ -10,7 +10,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include "common/common.h"
-#include "data_node/free_spot_manager.h"
+#include "lib/free_spot_manager.h"
 #include "data_node/data_store.h"
 
 // ------------- Tests Suites Follow --------------

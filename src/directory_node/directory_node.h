@@ -7,7 +7,7 @@
 
 #include <functional>
 #include <iostream>
-#include <common/log.h>
+#include "lib/log.h"
 #include "common/cluster_config.h"
 #include "directory_node_handler.h"
 

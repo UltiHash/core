@@ -99,7 +99,7 @@ namespace uh::cluster {
             wait_for_responses();
 
             for (const auto& endpoint: m_endpoints) {
-                socket.send_to(boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), endpoint);
+                socket.send_to(boost::asio::buffer(m_roles_buf.data(), m_roles_buf.size()), endpoint);
             }
         }
 
@@ -120,10 +120,10 @@ namespace uh::cluster {
             std::memcpy(send_buf.get() + sizeof (id), &role, sizeof (role));
             socket.send_to (boost::asio::buffer(send_buf.get(), sizeof (id) + sizeof (role)), sender_endpoint);
 
-            socket.receive_from(boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), sender_endpoint);
+            socket.receive_from(boost::asio::buffer(m_roles_buf.data(), m_roles_buf.size()), sender_endpoint);
 
-            for (int i = 0; i < m_roles_buf.size; i += PROCESS_DATA_SIZE) {
-                const auto pointer = m_roles_buf.data.get() + i;
+            for (int i = 0; i < m_roles_buf.size(); i += PROCESS_DATA_SIZE) {
+                const auto pointer = m_roles_buf.data() + i;
                 const auto rid = *reinterpret_cast <int*> (pointer);
                 const auto rrole = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (rid));
                 const ipv4 ip (pointer + sizeof rid + sizeof rrole);
@@ -145,7 +145,7 @@ namespace uh::cluster {
         void handle_send (std::reference_wrapper <boost::asio::basic_datagram_socket<boost::asio::ip::udp>> socket) {
 
             const auto offset = m_resp_count.fetch_add (1, std::memory_order_relaxed) * PROCESS_DATA_SIZE;
-            const auto pointer = m_roles_buf.data.get() + offset;
+            const auto pointer = m_roles_buf.data() + offset;
             boost::asio::ip::udp::endpoint end_point;
             socket.get().receive_from (boost::asio::buffer(pointer, sizeof (int) + sizeof (role)), end_point);
             std::memcpy (pointer + sizeof (int) + sizeof (role), ipv4 (end_point.address().to_v4()).bytes, sizeof (ipv4));

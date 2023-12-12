@@ -5,7 +5,7 @@
 #ifndef UH_CLUSTER_METRICS_HANDLER_H
 #define UH_CLUSTER_METRICS_HANDLER_H
 
-#include "log.h"
+#include "lib/log.h"
 #include "cluster_config.h"
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>

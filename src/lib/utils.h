@@ -7,9 +7,10 @@
 
 #include <exception>
 #include <boost/asio/steady_timer.hpp>
-#include "common.h"
+#include "common/common.h"
 #include "network/messenger_core.h"
 #include "network/client.h"
+#include "awaitable_future.h"
 
 namespace uh::cluster {
 
@@ -18,19 +19,19 @@ namespace uh::cluster {
         template<typename Func>
         static coro <void> post_in_workers (boost::asio::thread_pool& workers, boost::asio::io_context& ioc, Func func) {
             std::exception_ptr eptr;
-            boost::asio::steady_timer waiter (ioc, boost::asio::steady_timer::clock_type::duration::max ());
+            awaitable_promise <void> pr (ioc);
 
-            auto f = [] (auto& f, auto& eptr, auto& waiter) {
+            auto f = [] (auto& f, auto& eptr, auto& promise) {
                 try {
                     f ();
                 } catch (std::exception& e) {
                     eptr = std::current_exception();
                 }
-                waiter.cancel();
+                promise.set();
             };
 
-            boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(waiter)));
-            co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+            boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(pr)));
+            co_await pr.get();
             if (eptr) {
                 std::rethrow_exception(eptr);
             }

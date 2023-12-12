@@ -7,7 +7,7 @@
 
 #include "common/cluster_config.h"
 #include "common/common.h"
-#include <data_node/free_spot_manager.h>
+#include "lib/free_spot_manager.h"
 #include <span>
 #include <list>
 #include <memory_resource>
@@ -227,7 +227,7 @@ public:
         index_type offset = 0;
         size_t tr = 0;
         do {
-            const auto r = ::read (fd, buf.data.get() + offset, h.size - tr);
+            const auto r = ::read (fd, buf.data() + offset, h.size - tr);
             if (r == 0) [[unlikely]] {
                 break;
             }
@@ -244,7 +244,7 @@ public:
 
             tr = 0;
             do {
-                const auto r = ::read (next_fd, buf.data.get() + offset, h.size - tr);
+                const auto r = ::read (next_fd, buf.data() + offset, h.size - tr);
                 if (r == 0) [[unlikely]] {
                     break;
                 }
