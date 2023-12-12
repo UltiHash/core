@@ -77,7 +77,7 @@ BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluste
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_single_node_without_ec, cluster_fixture)
 {
     //std::cout << "begin ec_basic_write_read_test_single_node_without_ec" << std::endl;
-    setup(1, 1, 0, NON);
+    setup(1, 1, 0, NONE);
 
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 1);
     constexpr auto data_size = 3ul*1024ul;
@@ -344,7 +344,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_with_recover_no_ec, cluster_
 {
     //std::cout << "begin ec_test_lost_one_data_node_with_recover_no_ec" << std::endl;
 
-    setup(14, 1, 0, NON);
+    setup(14, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 14);
 
     std::promise <address> alloc_promise;
@@ -370,7 +370,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_with_recover_no_ec, cluster_
     ioc.restart();
     shut_down();
     destroy_data_node(3);
-    turn_on(14, 1, 0, NON);
+    turn_on(14, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 14);
 
     boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
@@ -464,7 +464,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_no_data_node_with_recover, cluster_fixture
 BOOST_FIXTURE_TEST_CASE (ec_test_lost_no_data_node_with_recover_no_ec, cluster_fixture)
 {
     //std::cout << "begin ec_test_lost_no_data_node_with_recover_no_ec" << std::endl;
-    setup(20, 1, 0, NON);
+    setup(20, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 20);
 
     std::promise <address> alloc_promise;
@@ -489,7 +489,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_no_data_node_with_recover_no_ec, cluster_f
     ioc.stop();
     ioc.restart();
     shut_down();
-    turn_on(20, 1, 0, NON);
+    turn_on(20, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 20);
 
     boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
@@ -652,11 +652,11 @@ BOOST_FIXTURE_TEST_CASE (ec_test_empty_nodes_no_ec, cluster_fixture)
 {
     //std::cout << "begin ec_test_empty_nodes_no_ec" << std::endl;
 
-    setup(25, 1, 0, NON);
+    setup(25, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 25);
 
     shut_down();
-    turn_on(25, 1, 0, NON);
+    turn_on(25, 1, 0, NONE);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 25);
     boost::asio::io_context ioc;
 

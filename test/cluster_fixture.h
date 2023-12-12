@@ -7,9 +7,9 @@
 
 #include "common/cluster_config.h"
 #include "network/cluster_map.h"
-#include "data_node/data_node.h"
-#include "dedupe_node/dedupe_node.h"
-#include "directory_node/directory_node.h"
+#include "data_node/data_store_service.h"
+#include "dedupe_node/deduplication_service.h"
+#include "directory_service/directory_service.h"
 
 namespace uh::cluster {
 
@@ -20,10 +20,10 @@ namespace uh::cluster {
     {
     public:
 
-        std::vector <std::shared_ptr <node_interface>> m_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_dedupe_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_directory_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_data_nodes;
+        std::vector <std::shared_ptr <service_interface>> m_nodes;
+        std::vector <std::shared_ptr <service_interface>> m_dedupe_nodes;
+        std::vector <std::shared_ptr <service_interface>> m_directory_nodes;
+        std::vector <std::shared_ptr <service_interface>> m_data_nodes;
         std::vector <std::thread> m_threads;
         boost::asio::io_context m_ioc;
 
@@ -31,27 +31,27 @@ namespace uh::cluster {
         get_cluster_roles(int data_nodes, int dedupe_nodes, int directory_nodes) {
             std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles;
             for (int i = 0; i < data_nodes; ++i) {
-                roles[DATA_NODE].emplace(i, "127.0.0.1");
+                roles[DATASTORE_SERVICE].emplace(i, "127.0.0.1");
             }
             for (int i = 0; i < dedupe_nodes; ++i) {
-                roles[DEDUPE_NODE].emplace(i, "127.0.0.1");
+                roles[DEDUPLICATION_SERVICE].emplace(i, "127.0.0.1");
             }
             for (int i = 0; i < directory_nodes; ++i) {
-                roles[DIRECTORY_NODE].emplace(i, "127.0.0.1");
+                roles[DIRECTORY_SERVICE].emplace(i, "127.0.0.1");
             }
             return roles;
         }
 
-        dedupe_node& get_dedupe_node (int i) {
-            return dynamic_cast <dedupe_node&> (*m_dedupe_nodes.at(i));
+        deduplication_service& get_dedupe_node (int i) {
+            return dynamic_cast <deduplication_service&> (*m_dedupe_nodes.at(i));
         }
 
-        directory_node& get_directory_node (int i) {
-            return dynamic_cast <directory_node&> (*m_directory_nodes.at(i));
+        directory_service_handler& get_directory_node (int i) {
+            return dynamic_cast <directory_service_handler&> (*m_directory_nodes.at(i));
         }
 
-        data_node& get_data_node (int i) {
-            return dynamic_cast <data_node&> (*m_data_nodes.at(i));
+        data_store_service& get_data_node (int i) {
+            return dynamic_cast <data_store_service&> (*m_data_nodes.at(i));
         }
 
         void setup (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
@@ -63,7 +63,7 @@ namespace uh::cluster {
 
         void shut_down () {
             for (auto& node: m_dedupe_nodes) {
-                auto& dedupe = dynamic_cast <dedupe_node&> (*node);
+                auto& dedupe = dynamic_cast <deduplication_service&> (*node);
                 if (dedupe.get_global_data_view().get_data_node_count() > 0) {
                     try {
                         dedupe.get_global_data_view().stop();
@@ -102,16 +102,16 @@ namespace uh::cluster {
                     auto config = make_cluster_config(role_nodes.first, ec);
                     auto cmap = cluster_map(std::move (config), cluster_roles);
                     switch (role.first) {
-                        case DATA_NODE:
-                            m_nodes.emplace_back(std::make_shared<data_node>(role_nodes.first, std::move(cmap)));
+                        case DATASTORE_SERVICE:
+                            m_nodes.emplace_back(std::make_shared<data_store_service>(role_nodes.first, std::move(cmap)));
                             m_data_nodes.emplace_back(m_nodes.back());
                             break;
-                        case DEDUPE_NODE:
-                            m_nodes.emplace_back(std::make_shared<dedupe_node>(role_nodes.first, std::move(cmap), true));
+                        case DEDUPLICATION_SERVICE:
+                            m_nodes.emplace_back(std::make_shared<deduplication_service>(role_nodes.first, std::move(cmap), true));
                             m_dedupe_nodes.emplace_back(m_nodes.back());
                             break;
-                        case DIRECTORY_NODE:
-                            m_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap), true));
+                        case DIRECTORY_SERVICE:
+                            m_nodes.emplace_back(std::make_shared<directory_service_handler>(role_nodes.first, std::move(cmap), true));
                             m_directory_nodes.emplace_back(m_nodes.back());
                             break;
                         default:

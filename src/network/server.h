@@ -40,14 +40,14 @@ namespace uh::cluster
                 m_node_name (std::move (node_name)) {
             m_is_running = true;
             boost::asio::co_spawn(*m_ioc,
-                                  do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
+                                  do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.address), m_config.port}),
                                   [&](const std::exception_ptr &e) {
                                       if (e)
                                           try {
                                               std::rethrow_exception(e);
                                           }
                                           catch (boost::system::system_error &e) {
-                                              LOG_INFO() << m_node_name << " stopped server." << std::endl;
+                                              LOG_INFO() << "stopped server " << m_node_name << std::endl;
                                           }
                                           catch (std::exception &e) {
                                               LOG_ERROR() << "accept: " << e.what();
@@ -58,7 +58,7 @@ namespace uh::cluster
 
 
         void run() {
-            LOG_INFO() << m_node_name << " starting server";
+            LOG_INFO() << "starting server " << m_node_name << ", listening at " << m_config.address << ":" << m_config.port;
             std::exception_ptr excp_ptr;
 
             for (auto i = 0; i < m_config.threads - 1; i++)
@@ -165,7 +165,6 @@ namespace uh::cluster
         std::vector<std::thread> m_thread_container {};
         std::vector<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>> m_acceptors;
         std::unique_ptr <protocol_handler> m_handler;
-        const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
         std::atomic<bool> m_is_running;
         const std::string m_node_name;
     };

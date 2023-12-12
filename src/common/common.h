@@ -4,10 +4,9 @@
 
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
-
+#include <string>
 #include <vector>
-#include <span>
-#include <memory>
+#include <map>
 #include "common_types.h"
 
 namespace uh::cluster {
@@ -52,16 +51,47 @@ enum message_type: uint8_t {
 };
 
 enum role: uint8_t {
-    DATA_NODE,
-    DEDUPE_NODE,
-    DIRECTORY_NODE,
-    ENTRY_NODE,
+    DATASTORE_SERVICE,
+    DEDUPLICATION_SERVICE,
+    DIRECTORY_SERVICE,
+    ENTRYPOINT_SERVICE,
 };
 
 enum ec_type: uint8_t {
-    NON = 0,
+    NONE = 0,
     XOR,
 };
+
+const std::string etcd_default_host = "http://127.0.0.1:2379";
+const int etcd_default_ttl = 5;
+const std::string etcd_default_key_prefix = "/uh/";
+
+const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+        {"ds", uh::cluster::DATASTORE_SERVICE},
+        {"dd", uh::cluster::DEDUPLICATION_SERVICE},
+        {"dr", uh::cluster::DIRECTORY_SERVICE},
+        {"en", uh::cluster::ENTRYPOINT_SERVICE}
+};
+
+const std::map<uh::cluster::role, std::string> description_by_role {
+        {uh::cluster::DATASTORE_SERVICE,     "Data-Store Service"},
+        {uh::cluster::DEDUPLICATION_SERVICE, "Deduplication Service"},
+        {uh::cluster::DIRECTORY_SERVICE,     "Directory Service"},
+        {uh::cluster::ENTRYPOINT_SERVICE,    "Entrypoint Service"}
+};
+
+const std::map<uh::cluster::role, std::vector<uh::cluster::role>> dependencies_by_role = {
+        {uh::cluster::DEDUPLICATION_SERVICE, {uh::cluster::DATASTORE_SERVICE}},
+        {uh::cluster::DIRECTORY_SERVICE,     {uh::cluster::DATASTORE_SERVICE}},
+        {uh::cluster::ENTRYPOINT_SERVICE,    {uh::cluster::DEDUPLICATION_SERVICE, uh::cluster::DIRECTORY_SERVICE}}
+};
+
+static uh::cluster::role get_role (const std::string& role_str) {
+    if (role_by_abbreviation.contains(role_str))
+        return role_by_abbreviation.at(role_str);
+    else
+        throw std::invalid_argument ("Invalid role!");
+}
 
 } // end namespace uh::cluster
 

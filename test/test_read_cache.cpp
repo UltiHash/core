@@ -21,7 +21,7 @@ namespace uh::cluster {
 
     BOOST_FIXTURE_TEST_CASE (read_cache_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
     {
-        setup(4, 1, 1, NON);
+        setup(4, 1, 1, NONE);
         BOOST_TEST (get_directory_node(0).get_global_data_view().get_data_node_count() == 4);
 
         constexpr auto data_size = 4ul*1024ul;

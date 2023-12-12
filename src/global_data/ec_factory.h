@@ -16,7 +16,7 @@ namespace uh::cluster {
     struct ec_factory {
         static std::unique_ptr <ec> make_ec (ec_type type) {
             switch (type) {
-                case NON:
+                case NONE:
                     return std::make_unique <ec_non> ();
                 case XOR:
                     return std::make_unique <ec_xor> ();
