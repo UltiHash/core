@@ -7,10 +7,11 @@ venv_dir="@TESTING_VENV_DIR@"
 requirements_file="$TESTING_BASE_DIR/python-requirements.txt"
 AWS_ACCESS_KEY_ID="aws_access_key_id"
 AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
-
-set -e
+SAMPLE_CEPH_S3TESTS_CONF="$TESTING_BASE_DIR/ceph-s3tests.conf.in"
 
 cluster_url=""
+run_ultihash=1
+run_ceph=1
 
 print_help()
 {
@@ -19,6 +20,8 @@ print_help()
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -u URL, --url URL    run tests against an existing cluster"
+    echo " -U, --no-ulti        do not run UltiHash test suite"
+    echo " -C, --no-ceph        do not run Ceph test suite"
 }
 
 while [ -n "$1" ]; do
@@ -38,6 +41,10 @@ while [ -n "$1" ]; do
                         *) cluster_url="http://$cluster_url";;
                     esac
                     ;;
+        -U|--no-ulti) run_ultihash=0
+                      ;;
+        -C|--no-ceph) run_ceph=0
+                      ;;
     esac
 
     shift
@@ -64,13 +71,11 @@ fi
 . "$venv_dir/bin/activate"
 
 
-set +e
-
 setup_docker_compose_cluster ()
 {
     compose_file="$1"
     docker-compose -f "$compose_file" up --detach
-    trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT
+    trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
 }
 
 start_service ()
@@ -99,7 +104,7 @@ stop_service ()
     fi
 }
 
-stop_base_cluster ()
+stop_bare_cluster ()
 {
     dir="$1"
 
@@ -126,7 +131,7 @@ setup_bare_cluster ()
         start_service "$dir" "$role" "$uhc $role 0"
     done
 
-    trap "stop_base_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT
+    trap "stop_bare_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
 }
 
 compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
@@ -159,5 +164,44 @@ if [ "$timeout" -eq "0" ]; then
 fi
 
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
-    --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
+
+success=1
+
+if [ "$run_ultihash" -eq "1" ]; then
+    echo "*** running UltiHash test suite ..."
+    pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
+        --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
+    if [ "$?" != "0" ]; then
+        success=0
+    fi
+fi
+
+if [ "$run_ceph" -eq "1" ]; then
+    cluster_host=$(echo "$cluster_url" | sed -e 's/http:\/\///' -e 's/:[0-9]\+$//')
+    cluster_port=$(echo "$cluster_url" | grep -oE '[0-9]+$')
+
+    echo "running on $cluster_host at port $cluster_port"
+
+    echo "*** running Ceph test suite ..."
+    conf=$(realpath -e $(mktemp "s3_ceph_conf-XXXXXX"))
+    sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
+        -e "s/%TESTING_S3_PORT%/$cluster_port/" \
+        -e "s/%TESTING_AWS_KEY_ID%/$AWS_ACCESS_KEY_ID/" \
+        -e "s/%TESTING_AWS_SECRET_ACCESS_KEY%/$AWS_SECRET_ACCESS_KEY/" \
+        < $SAMPLE_CEPH_S3TESTS_CONF > $conf
+
+    S3TEST_CONF=$conf tox -c "$TESTING_BINARY_DIR/s3-tests/tox.ini" --workdir "$TESTING_BINARY_DIR/s3-tests" -- -m 'uhclustertest'
+    if [ "$?" != "0" ]; then
+        success=0
+    fi
+
+    rm $conf
+fi
+
+if [ "$success" == "1" ]; then
+    echo "*** all tests passed"
+    exit 0
+fi
+
+echo "*** there are test errors"
+exit 1
