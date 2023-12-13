@@ -62,15 +62,20 @@ enum ec_type: uint8_t {
     XOR,
 };
 
-const std::string etcd_default_host = "http://127.0.0.1:2379";
-const int etcd_default_ttl = 5;
-const std::string etcd_default_key_prefix = "/uh/";
+
 
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
         {"ds", uh::cluster::DATASTORE_SERVICE},
         {"dd", uh::cluster::DEDUPLICATION_SERVICE},
         {"dr", uh::cluster::DIRECTORY_SERVICE},
         {"en", uh::cluster::ENTRYPOINT_SERVICE}
+};
+
+const std::map<uh::cluster::role, std::string> abbreviation_by_role = {
+        {uh::cluster::DATASTORE_SERVICE, "ds"},
+        {uh::cluster::DEDUPLICATION_SERVICE, "dd"},
+        {uh::cluster::DIRECTORY_SERVICE, "dr"},
+        {uh::cluster::ENTRYPOINT_SERVICE, "en"}
 };
 
 const std::map<uh::cluster::role, std::string> description_by_role {
