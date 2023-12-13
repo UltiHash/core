@@ -4,10 +4,10 @@
 
 #include <system_error>
 #include "common/cluster_config.h"
-#include "data_store_service/data_store_service.h"
-#include "deduplication_service/deduplication_service.h"
-#include "directory_service/directory_service.h"
-#include "entrypoint_service/entrypoint_service.h"
+#include "storage/storage.h"
+#include "deduplicatior/deduplicator.h"
+#include "directory/directory.h"
+#include "entrypoint/entrypoint.h"
 
 #include <config.h>
 #include "common/log.h"
@@ -19,28 +19,28 @@ void execute_role (const uh::cluster::role role, const std::size_t id) {
     switch (role) {
         case uh::cluster::DATASTORE_SERVICE: {
             LOG_INFO() << "starting data-store service";
-            uh::cluster::data_store_service ds(id);
+            uh::cluster::storage ds(id);
             ds.run();
             break;
         }
 
         case uh::cluster::DEDUPLICATION_SERVICE: {
             LOG_INFO() << "starting deduplication service";
-            uh::cluster::deduplication_service dd (id);
+            uh::cluster::deduplicator dd (id);
             dd.run();
             break;
         }
 
         case uh::cluster::DIRECTORY_SERVICE: {
             LOG_INFO() << "starting directory service";
-            uh::cluster::directory_service dr (id);
+            uh::cluster::directory dr (id);
             dr.run();
             break;
         }
 
         case uh::cluster::ENTRYPOINT_SERVICE: {
             LOG_INFO() << "starting entrypoint service";
-            uh::cluster::entrypoint_service en (id);
+            uh::cluster::entrypoint en (id);
             en.run();
             break;
         }

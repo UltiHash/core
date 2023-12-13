@@ -11,21 +11,21 @@
 #include <etcd/KeepAlive.hpp>
 #include <common/log.h>
 #include "common/cluster_config.h"
-#include "directory_service_handler.h"
+#include "directory_handler.h"
 
 namespace uh::cluster {
 
-class directory_service: public service_interface {
+class directory: public service_interface {
 public:
 
-    directory_service(std::size_t id, const bool use_id_as_port_offset = false) :
+    directory(std::size_t id, const bool use_id_as_port_offset = false) :
             m_id(id),
             m_service_name(abbreviation_by_role.at(uh::cluster::DEDUPLICATION_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
             m_directory_workers (std::make_shared <boost::asio::thread_pool> (make_directory_node_config().worker_thread_count)),
             m_storage (m_registry),
             m_server (make_directory_node_config().server_conf, m_service_name,
-                      std::make_unique <directory_service_handler>(make_directory_node_config(), m_storage, m_directory_workers)),
+                      std::make_unique <directory_handler>(make_directory_node_config(), m_storage, m_directory_workers)),
             m_use_id_as_port_offset (use_id_as_port_offset)
     {
     }

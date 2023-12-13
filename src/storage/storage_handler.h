@@ -12,10 +12,10 @@
 
 namespace uh::cluster {
 
-class data_store_service_handler: public protocol_handler {
+class storage_handler: public protocol_handler {
 public:
 
-    data_store_service_handler(data_node_config conf, std::size_t id) :
+    storage_handler(data_node_config conf, std::size_t id) :
             protocol_handler(conf.server_conf),
             m_data_store(conf, id),
             m_is_stopped(false),

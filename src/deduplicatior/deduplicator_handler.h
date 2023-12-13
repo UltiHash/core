@@ -14,11 +14,11 @@
 
 namespace uh::cluster {
 
-class dedupe_node_handler: public protocol_handler {
+class deduplicator_handler: public protocol_handler {
 
 public:
 
-    dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
+    deduplicator_handler (dedupe_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
         protocol_handler (dedupe_conf.server_conf),
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_log_path, storage),

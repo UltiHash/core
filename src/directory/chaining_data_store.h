@@ -7,7 +7,7 @@
 
 #include "common/cluster_config.h"
 #include "common/common.h"
-#include <data_store_service/free_spot_manager.h>
+#include "storage/free_spot_manager.h"
 #include <span>
 #include <list>
 #include <memory_resource>

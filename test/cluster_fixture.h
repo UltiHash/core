@@ -9,7 +9,7 @@
 #include "network/cluster_map.h"
 #include "data_node/data_store_service.h"
 #include "dedupe_node/deduplication_service.h"
-#include "directory_service/directory_service.h"
+#include "directory_service/directory.h"
 
 namespace uh::cluster {
 
@@ -46,8 +46,8 @@ namespace uh::cluster {
             return dynamic_cast <deduplication_service&> (*m_dedupe_nodes.at(i));
         }
 
-        directory_service_handler& get_directory_node (int i) {
-            return dynamic_cast <directory_service_handler&> (*m_directory_nodes.at(i));
+        directory_handler& get_directory_node (int i) {
+            return dynamic_cast <directory_handler&> (*m_directory_nodes.at(i));
         }
 
         data_store_service& get_data_node (int i) {
@@ -111,7 +111,7 @@ namespace uh::cluster {
                             m_dedupe_nodes.emplace_back(m_nodes.back());
                             break;
                         case DIRECTORY_SERVICE:
-                            m_nodes.emplace_back(std::make_shared<directory_service_handler>(role_nodes.first, std::move(cmap), true));
+                            m_nodes.emplace_back(std::make_shared<directory_handler>(role_nodes.first, std::move(cmap), true));
                             m_directory_nodes.emplace_back(m_nodes.back());
                             break;
                         default:

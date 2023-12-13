@@ -16,10 +16,10 @@
 #include "rest_server.h"
 
 namespace uh::cluster {
-class entrypoint_service: public service_interface {
+class entrypoint: public service_interface {
 public:
 
-    explicit entrypoint_service(std::size_t id) :
+    explicit entrypoint(std::size_t id) :
             m_id(id),
             m_service_name(abbreviation_by_role.at(uh::cluster::DATASTORE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),

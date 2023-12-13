@@ -21,7 +21,7 @@
 #include <boost/beast/http/message_generator.hpp>
 #include "common/cluster_config.h"
 #include "common/protocol_handler.h"
-#include "entrypoint_service_rest_handler.h"
+#include "entrypoint_rest_handler.h"
 #include "network/client.h"
 #include "rest/http/http_request.h"
 #include "rest/http/http_response.h"
@@ -51,7 +51,7 @@ namespace uh::cluster::rest
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl;
-        entrypoint_service_rest_handler m_handler;
+        entrypoint_rest_handler m_handler;
         std::promise <message_type> m_recover_response;
 
         utils::state m_internal_server_state;

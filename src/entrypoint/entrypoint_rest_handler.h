@@ -46,10 +46,10 @@ namespace http = rest::http;
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace b_http = beast::http;           // from <boost/beast/http.hpp>
 
-class entrypoint_service_rest_handler : protected metrics_handler {
+class entrypoint_rest_handler : protected metrics_handler {
 public:
 
-    entrypoint_service_rest_handler (std::shared_ptr <boost::asio::io_context> ioc,
+    entrypoint_rest_handler (std::shared_ptr <boost::asio::io_context> ioc,
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
                              entry_node_config config,

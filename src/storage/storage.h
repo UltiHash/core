@@ -15,18 +15,18 @@
 #include "common/service_registry.h"
 #include "network/server.h"
 #include "data_store.h"
-#include "data_store_service_handler.h"
+#include "storage_handler.h"
 
 namespace uh::cluster {
-class data_store_service: public service_interface {
+class storage: public service_interface {
 public:
 
-    explicit data_store_service(std::size_t id) :
+    explicit storage(std::size_t id) :
             m_id(id),
             m_service_name(abbreviation_by_role.at(uh::cluster::DATASTORE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
             m_server(make_data_node_config().server_conf, m_service_name,
-                     std::make_unique<data_store_service_handler>(make_data_node_config(), id))
+                     std::make_unique<storage_handler>(make_data_node_config(), id))
     {}
 
     void run() override {
@@ -39,7 +39,7 @@ public:
         m_registry.unregister_service();
     }
 
-    ~data_store_service() override {
+    ~storage() override {
         LOG_DEBUG() << "terminating " << m_service_name;
     }
 
