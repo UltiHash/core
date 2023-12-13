@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-#include "common/common.h"
+#include "common/utils/common.h"
 #include "bucket.h"
 
 namespace uh::cluster {
@@ -49,7 +49,7 @@ public:
         }
     }
 
-    ospan <char> get (const std::string& bucket, const std::string& key) {
+    unique_buffer <char> get (const std::string& bucket, const std::string& key) {
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
             return b->second->get_obj(key);
         }

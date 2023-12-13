@@ -7,9 +7,9 @@
 
 #include <utility>
 
-#include "common/common.h"
-#include "common/cluster_config.h"
-#include "common/protocol_handler.h"
+#include "common/utils/common.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/protocol_handler.h"
 #include "dedupe_set.h"
 
 namespace uh::cluster {
@@ -68,21 +68,21 @@ private:
             throw std::length_error ("Empty data sent do the dedupe node");
         }
 
-        ospan<char> data(h.size);
+        unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
         const auto pieces = std::min (m_dedupe_conf.data_node_connection_count,
-                                      static_cast <int> (std::ceil (static_cast <double> (data.size) /
+                                      static_cast <int> (std::ceil (static_cast <double> (data.size()) /
                                       static_cast <double> (m_dedupe_conf.dedupe_worker_minimum_data_size))));
-        size_t piece_size = std::ceil (static_cast <double> (data.size) / pieces);
+        size_t piece_size = std::ceil (static_cast <double> (data.size()) / pieces);
         std::vector <dedupe_response> responses (pieces);
         std::atomic <int> resp = 0;
         boost::asio::steady_timer waiter (*m_storage.get_executor(), boost::asio::steady_timer::clock_type::duration::max ());
 
         for (int i = 0; i < pieces; ++i) {
             boost::asio::post(*m_dedupe_workers, [&responses, i, &data, piece_size, &resp, pieces, &waiter, this] () {
-                const auto data_piece = data.get_str_view().substr(i * piece_size, std::min (piece_size, data.size - i*piece_size));
+                const auto data_piece = data.get_str_view().substr(i * piece_size, std::min (piece_size, data.size() - i*piece_size));
                 responses[i] = deduplicate (data_piece);
                 auto count = resp++;
                 if (count == pieces - 1)

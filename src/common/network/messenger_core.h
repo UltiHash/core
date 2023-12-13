@@ -5,8 +5,8 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
-#include <common/error.h>
-#include "common/common.h"
+#include "common/utils/error.h"
+#include "common/utils/common.h"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -74,9 +74,9 @@ namespace uh::cluster {
         }
 
         template<typename T>
-        inline void register_read_buffer (const ospan <T>& buf) {
-            m_read_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
-            m_read_size += buf.size * sizeof(T);
+        inline void register_read_buffer (const unique_buffer <T>& buf) {
+            m_read_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
+            m_read_size += buf.size() * sizeof(T);
         }
 
         template <typename T>
@@ -102,9 +102,9 @@ namespace uh::cluster {
         }
 
         template<typename T>
-        inline void register_write_buffer (const ospan <T>& buf) {
-            m_write_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
-            m_write_size += buf.size;
+        inline void register_write_buffer (const unique_buffer <T>& buf) {
+            m_write_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
+            m_write_size += buf.size();
         }
 
         coro <header> recv_header () {
