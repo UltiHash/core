@@ -15,31 +15,30 @@ class unique_buffer {
     std::size_t d_size{0};
     std::unique_ptr<T[]> data_ptr = nullptr;
 public:
-    unique_buffer() = default;
+    constexpr unique_buffer() = default;
 
-    explicit unique_buffer(size_t data_size) :
+    constexpr explicit unique_buffer(size_t data_size) :
             d_size(data_size),
             data_ptr{std::make_unique_for_overwrite<T[]>(d_size)} {}
 
-    unique_buffer(size_t data_size, std::unique_ptr<T[]> &&ptr) :
+    constexpr unique_buffer(size_t data_size, std::unique_ptr<T[]> &&ptr) :
             d_size(data_size),
             data_ptr{std::move(ptr)} {}
 
-    unique_buffer(const std::nullptr_t &) {}
+    constexpr unique_buffer(const std::nullptr_t &) {}
 
-    unique_buffer(unique_buffer &&os) noexcept: d_size(os.d_size), data_ptr(std::move(os.data_ptr)) {
+    constexpr unique_buffer(unique_buffer &&os) noexcept: d_size(os.d_size), data_ptr(std::move(os.data_ptr)) {
         os.d_size = 0;
         os.data_ptr = nullptr;
     }
 
-    unique_buffer &operator=(unique_buffer &&os) noexcept {
+    constexpr unique_buffer &operator=(unique_buffer &&os) noexcept {
         d_size = os.d_size;
         data_ptr = std::move(os.data_ptr);
         os.d_size = 0;
         os.data_ptr = nullptr;
         return *this;
     }
-
 
     inline T *data() const noexcept {
         return data_ptr.get();
@@ -49,16 +48,16 @@ public:
         return d_size;
     }
 
-    inline void resize(std::size_t new_size) {
+    constexpr inline void resize(std::size_t new_size) {
         d_size = new_size;
         data_ptr = std::make_unique_for_overwrite<T[]>(d_size);
     }
 
-    [[nodiscard]] inline std::span<char> get_span() const noexcept {
+    [[nodiscard]] constexpr inline std::span<char> get_span() const noexcept {
         return {data_ptr.get(), d_size};
     }
 
-    [[nodiscard]] inline std::string_view get_str_view() const noexcept {
+    [[nodiscard]] constexpr inline std::string_view get_str_view() const noexcept {
         return {data_ptr.get(), d_size};
     }
 };

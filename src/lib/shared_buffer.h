@@ -15,24 +15,24 @@ class shared_buffer {
     std::size_t d_size{0};
     std::shared_ptr<T[]> data_ptr = nullptr;
 public:
-    shared_buffer() = default;
+    constexpr shared_buffer() = default;
 
-    explicit shared_buffer(size_t data_size) :
+    constexpr explicit shared_buffer(size_t data_size) :
             d_size(data_size),
             data_ptr{std::make_shared_for_overwrite<T[]>(d_size)} {}
 
-    shared_buffer(size_t data_size, std::shared_ptr<T[]> &&ptr) :
+    constexpr shared_buffer(size_t data_size, std::shared_ptr<T[]> &&ptr) :
             d_size(data_size),
             data_ptr{std::move(ptr)} {}
 
-    shared_buffer(const std::nullptr_t &) {}
+    constexpr shared_buffer (const std::nullptr_t &) {}
 
-    shared_buffer(shared_buffer &&ss) noexcept: d_size(ss.d_size), data_ptr(std::move(ss.data_ptr)) {
+    constexpr shared_buffer (shared_buffer &&ss) noexcept: d_size(ss.d_size), data_ptr(std::move(ss.data_ptr)) {
         ss.d_size = 0;
         ss.data_ptr = nullptr;
     }
 
-    shared_buffer(const shared_buffer &ss) noexcept: d_size(ss.d_size), data_ptr(ss.data_ptr) {
+    constexpr shared_buffer(const shared_buffer &ss) noexcept: d_size(ss.d_size), data_ptr(ss.data_ptr) {
     }
 
     inline T *data() const noexcept {
@@ -43,7 +43,7 @@ public:
         return d_size;
     }
 
-    shared_buffer &operator=(shared_buffer &&ss) noexcept {
+    constexpr shared_buffer &operator=(shared_buffer &&ss) noexcept {
         d_size = ss.d_size;
         data_ptr = std::move(ss.data_ptr);
         ss.d_size = 0;
@@ -51,22 +51,22 @@ public:
         return *this;
     }
 
-    shared_buffer &operator=(const shared_buffer &ss) noexcept {
+    constexpr shared_buffer &operator=(const shared_buffer &ss) noexcept {
         d_size = ss.d_size;
         data_ptr = ss.data_ptr;
         return *this;
     }
 
-    inline void resize(std::size_t new_size) {
+    constexpr inline void resize(std::size_t new_size) {
         d_size = new_size;
         data_ptr = std::make_shared_for_overwrite<T[]>(d_size);
     }
 
-    [[nodiscard]] inline std::span<char> get_span() const noexcept {
+    [[nodiscard]] constexpr inline std::span<char> get_span() const noexcept {
         return {data_ptr.get(), d_size};
     }
 
-    [[nodiscard]] inline std::string_view get_str_view() const noexcept {
+    [[nodiscard]] constexpr inline std::string_view get_str_view() const noexcept {
         return {data_ptr.get(), d_size};
     }
 };
