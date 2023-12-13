@@ -9,7 +9,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <third-party/zpp_bits/zpp_bits.h>
-#include "common/common_types.h"
+#include "common/utils/common_types.h"
 
 // ------------- Tests Suites Follow --------------
 

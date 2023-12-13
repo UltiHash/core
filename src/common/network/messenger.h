@@ -6,7 +6,7 @@
 #define CORE_MESSENGER_H
 
 #include "messenger_core.h"
-#include <third-party/zpp_bits/zpp_bits.h>
+#include "third-party/zpp_bits/zpp_bits.h"
 
 namespace uh::cluster {
 
@@ -49,42 +49,25 @@ namespace uh::cluster {
         }
 
         coro <directory_message> recv_directory_message (const header& message_header) {
-            ospan <char> data (message_header.size);
+            unique_buffer <char> data (message_header.size);
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_message req;
-            zpp::bits::in{std::span <char> {data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
+            zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
             co_return std::move (req);
         }
 
         coro <directory_lst_entities_message> recv_directory_list_entities_message (const header& message_header) {
-            ospan <char> data (message_header.size);
+            unique_buffer <char> data (message_header.size);
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_lst_entities_message req;
             try {
-                zpp::bits::in{std::span<char>{data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
+                zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
             }catch (std::exception& e) {
                 std::cout << "afa " << message_header.size << std::endl;
             }
             co_return std::move (req);
-        }
-
-        coro <allocated_write_message> recv_allocated_write (const header& message_header) {
-
-            auto addr = co_await recv_address (message_header);
-            const auto header = co_await recv_header();
-            auto resp = allocated_write_message {.data = ospan<char> (header.size)};
-            auto& resp_data = std::get <ospan <char>> (resp.data);
-            register_read_buffer (resp_data);
-            co_await recv_buffers(header);
-            resp.addr = std::move (addr);
-            co_return std::move (resp);
-        }
-
-        coro <void> send_allocated_write (const message_type type, const allocated_write_message& msg) {
-            co_await send_address(type, msg.addr);
-            co_await send (type, std::get <std::string_view> (msg.data));
         }
 
         coro <void> send_address (const message_type type, const address& addr) {

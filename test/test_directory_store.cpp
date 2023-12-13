@@ -115,44 +115,44 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_CHECK (std::find (b3.begin(), b3.end(), "k8") != b3.end());
 
         const auto d1 = ds.get("b1", "k1");
-        BOOST_TEST(d1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+        BOOST_TEST(d1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data(), data1, d1.size()) == 0);
 
         const auto d2 = ds.get("b1", "k2");
-        BOOST_TEST(d2.size == sizeof(data2));
-        BOOST_CHECK(std::memcmp(d2.data.get(), data2, d2.size) == 0);
+        BOOST_TEST(d2.size() == sizeof(data2));
+        BOOST_CHECK(std::memcmp(d2.data(), data2, d2.size()) == 0);
 
         const auto d3 = ds.get("b1", "k3");
-        BOOST_TEST(d3.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d3.data.get(), data3, d3.size) == 0);
+        BOOST_TEST(d3.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d3.data(), data3, d3.size()) == 0);
 
         const auto d32 = ds.get("b2", "k3");
-        BOOST_TEST(d32.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d32.data.get(), data3, d32.size) == 0);
+        BOOST_TEST(d32.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d32.data(), data3, d32.size()) == 0);
 
         const auto d4 = ds.get("b2", "k4");
-        BOOST_TEST(d4.size == sizeof(data4));
-        BOOST_CHECK(std::memcmp(d4.data.get(), data4, d4.size) == 0);
+        BOOST_TEST(d4.size() == sizeof(data4));
+        BOOST_CHECK(std::memcmp(d4.data(), data4, d4.size()) == 0);
 
         const auto d5 = ds.get("b2", "k5");
-        BOOST_TEST(d5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data(), data5, d5.size()) == 0);
 
         const auto d6 = ds.get("b2", "k6");
-        BOOST_TEST(d6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+        BOOST_TEST(d6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data(), data6, d6.size()) == 0);
 
         const auto d7 = ds.get("b3", "k7");
-        BOOST_TEST(d7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+        BOOST_TEST(d7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data(), data7, d7.size()) == 0);
 
         const auto d8 = ds.get("b3", "k8");
-        BOOST_TEST(d8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+        BOOST_TEST(d8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
         const auto d53 = ds.get("b3", "k5");
-        BOOST_TEST(d53.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d53.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d53.data(), data5, d5.size()) == 0);
 
     }
 
@@ -185,44 +185,44 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_CHECK (std::find (b3.begin(), b3.end(), "k8") != b3.end());
 
         const auto d1 = ds.get("b1", "k1");
-        BOOST_TEST(d1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+        BOOST_TEST(d1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data(), data1, d1.size()) == 0);
 
         const auto d2 = ds.get("b1", "k2");
-        BOOST_TEST(d2.size == sizeof(data2));
-        BOOST_CHECK(std::memcmp(d2.data.get(), data2, d2.size) == 0);
+        BOOST_TEST(d2.size() == sizeof(data2));
+        BOOST_CHECK(std::memcmp(d2.data(), data2, d2.size()) == 0);
 
         const auto d3 = ds.get("b1", "k3");
-        BOOST_TEST(d3.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d3.data.get(), data3, d3.size) == 0);
+        BOOST_TEST(d3.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d3.data(), data3, d3.size()) == 0);
 
         const auto d32 = ds.get("b2", "k3");
-        BOOST_TEST(d32.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d32.data.get(), data3, d32.size) == 0);
+        BOOST_TEST(d32.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d32.data(), data3, d32.size()) == 0);
 
         const auto d4 = ds.get("b2", "k4");
-        BOOST_TEST(d4.size == sizeof(data4));
-        BOOST_CHECK(std::memcmp(d4.data.get(), data4, d4.size) == 0);
+        BOOST_TEST(d4.size() == sizeof(data4));
+        BOOST_CHECK(std::memcmp(d4.data(), data4, d4.size()) == 0);
 
         const auto d5 = ds.get("b2", "k5");
-        BOOST_TEST(d5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data(), data5, d5.size()) == 0);
 
         const auto d6 = ds.get("b2", "k6");
-        BOOST_TEST(d6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+        BOOST_TEST(d6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data(), data6, d6.size()) == 0);
 
         const auto d7 = ds.get("b3", "k7");
-        BOOST_TEST(d7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+        BOOST_TEST(d7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data(), data7, d7.size()) == 0);
 
         const auto d8 = ds.get("b3", "k8");
-        BOOST_TEST(d8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+        BOOST_TEST(d8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
         const auto d53 = ds.get("b3", "k5");
-        BOOST_TEST(d53.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d53.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d53.data(), data5, d5.size()) == 0);
 
         const auto used_space_1 = ds.get_used_space();
 
@@ -265,36 +265,36 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_CHECK (std::find (b3.begin(), b3.end(), "k8") != b3.end());
 
         const auto d1 = ds.get("b1", "k1");
-        BOOST_TEST(d1.size == sizeof(data1));
-        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+        BOOST_TEST(d1.size() == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data(), data1, d1.size()) == 0);
 
         const auto d2 = ds.get("b1", "k2");
-        BOOST_TEST(d2.size == sizeof(data2));
-        BOOST_CHECK(std::memcmp(d2.data.get(), data2, d2.size) == 0);
+        BOOST_TEST(d2.size() == sizeof(data2));
+        BOOST_CHECK(std::memcmp(d2.data(), data2, d2.size()) == 0);
 
         const auto d32 = ds.get("b2", "k3");
-        BOOST_TEST(d32.size == sizeof(data3));
-        BOOST_CHECK(std::memcmp(d32.data.get(), data3, d32.size) == 0);
+        BOOST_TEST(d32.size() == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d32.data(), data3, d32.size()) == 0);
 
         const auto d5 = ds.get("b2", "k5");
-        BOOST_TEST(d5.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d5.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data(), data5, d5.size()) == 0);
 
         const auto d6 = ds.get("b2", "k6");
-        BOOST_TEST(d6.size == sizeof(data6));
-        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+        BOOST_TEST(d6.size() == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data(), data6, d6.size()) == 0);
 
         const auto d7 = ds.get("b3", "k7");
-        BOOST_TEST(d7.size == sizeof(data7));
-        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+        BOOST_TEST(d7.size() == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data(), data7, d7.size()) == 0);
 
         const auto d8 = ds.get("b3", "k8");
-        BOOST_TEST(d8.size == sizeof(data8));
-        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+        BOOST_TEST(d8.size() == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
         const auto d53 = ds.get("b3", "k5");
-        BOOST_TEST(d53.size == sizeof(data5));
-        BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
+        BOOST_TEST(d53.size() == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d53.data(), data5, d5.size()) == 0);
 
         BOOST_CHECK_THROW(ds.remove_bucket("b2"), std::exception);
     }

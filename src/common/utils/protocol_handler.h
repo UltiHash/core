@@ -5,7 +5,7 @@
 #ifndef CORE_PROTOCOL_HANDLER_H
 #define CORE_PROTOCOL_HANDLER_H
 
-#include "network/messenger.h"
+#include "common/network/messenger.h"
 #include "metrics_handler.h"
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>

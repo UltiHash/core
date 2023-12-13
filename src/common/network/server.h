@@ -18,10 +18,10 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "common/cluster_config.h"
-#include <common/log.h>
+#include "common/utils/cluster_config.h"
+#include "common/utils/log.h"
 #include "messenger.h"
-#include "common/protocol_handler.h"
+#include "common/utils/protocol_handler.h"
 
 //------------------------------------------------------------------------------
 
