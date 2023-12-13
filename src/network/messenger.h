@@ -49,7 +49,7 @@ namespace uh::cluster {
         }
 
         coro <directory_message> recv_directory_message (const header& message_header) {
-            ospan <char> data (message_header.size);
+            unique_buffer <char> data (message_header.size);
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_message req;
@@ -58,7 +58,7 @@ namespace uh::cluster {
         }
 
         coro <directory_lst_entities_message> recv_directory_list_entities_message (const header& message_header) {
-            ospan <char> data (message_header.size);
+            unique_buffer <char> data (message_header.size);
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_lst_entities_message req;

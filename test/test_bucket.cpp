@@ -90,63 +90,6 @@ BOOST_FIXTURE_TEST_CASE (bucket_prefilled_test, config_fixture)
     cleanup();
 }
 
-//BOOST_FIXTURE_TEST_CASE (test_bucket_operations, config_fixture)
-//{
-//    cleanup();
-//    setup_empty();
-//
-//    char bucket_data1 [1024 * 4];
-//    char bucket_data2 [1024 * 64];
-//    char bucket_data3 [1024 * 512];
-//    char bucket_data4 [1024 * 1024 * 4];
-//    char bucket_data5 [1024 * 1024 * 128];
-//    char bucket_data6 [1024 * 1024 * 1024];
-//
-//    fill_random_object (data1, sizeof (data1));
-//    fill_random_object (data2, sizeof (data2));
-//    fill_random_object (data3, sizeof (data3));
-//    fill_random_object (data4, sizeof (data4));
-//    fill_random_object (data5, sizeof (data5));
-//    fill_random_object (data6, sizeof (data6));
-//
-//    uh::cluster::bucket b(get_root_path(), "bucket1", get_bucket_config());
-//    BOOST_CHECK(!b.contains_object("obj1"));
-//    BOOST_CHECK(!b.contains_object("obj2"));
-//    BOOST_CHECK(!b.contains_object("obj3"));
-//    BOOST_CHECK(!b.contains_object("obj4"));
-//    BOOST_CHECK(!b.contains_object("obj5"));
-//    BOOST_CHECK(!b.contains_object("obj6"));
-//
-//    b.insert_object("obj1", {data1, sizeof (data1)});
-//    b.insert_object("obj2", {data2, sizeof (data2)});
-//    b.insert_object("obj3", {data3, sizeof (data3)});
-//    b.insert_object("obj4", {data4, sizeof (data4)});
-//    b.insert_object("obj5", {data5, sizeof (data5)});
-//    b.insert_object("obj6", {data6, sizeof (data6)});
-//    BOOST_CHECK(b.contains_object("obj1"));
-//    BOOST_CHECK(b.contains_object("obj2"));
-//    BOOST_CHECK(b.contains_object("obj3"));
-//    BOOST_CHECK(b.contains_object("obj4"));
-//    BOOST_CHECK(b.contains_object("obj5"));
-//    BOOST_CHECK(b.contains_object("obj6"));
-//
-//    auto ret1 = b.get_obj("obj1");
-//    BOOST_CHECK(std::memcmp(data1, ret1.data.get(), ret1.size) == 0);
-//    auto ret2 = b.get_obj("obj2");
-//    BOOST_CHECK(std::memcmp(data2, ret2.data.get(), ret2.size) == 0);
-//    auto ret3 = b.get_obj("obj3");
-//    BOOST_CHECK(std::memcmp(data3, ret3.data.get(), ret3.size) == 0);
-//    auto ret4 = b.get_obj("obj4");
-//    BOOST_CHECK(std::memcmp(data4, ret4.data.get(), ret4.size) == 0);
-//    auto ret5 = b.get_obj("obj5");
-//    BOOST_CHECK(std::memcmp(data5, ret5.data.get(), ret5.size) == 0);
-//    auto ret6 = b.get_obj("obj6");
-//    BOOST_CHECK(std::memcmp(data6, ret6.data.get(), ret6.size) == 0);
-//
-//
-//    cleanup();
-//}
-
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster

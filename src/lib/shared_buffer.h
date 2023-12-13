@@ -2,8 +2,8 @@
 // Created by massi on 12/12/23.
 //
 
-#ifndef UH_CLUSTER_SHARED_SPAN_H
-#define UH_CLUSTER_SHARED_SPAN_H
+#ifndef UH_CLUSTER_SHARED_BUFFER_H
+#define UH_CLUSTER_SHARED_BUFFER_H
 
 #include <span>
 #include <memory>
@@ -11,28 +11,28 @@
 namespace uh::cluster {
 
 template<typename T>
-class shared_span {
+class shared_buffer {
     std::size_t d_size{0};
     std::shared_ptr<T[]> data_ptr = nullptr;
 public:
-    shared_span() = default;
+    shared_buffer() = default;
 
-    explicit shared_span(size_t data_size) :
+    explicit shared_buffer(size_t data_size) :
             d_size(data_size),
             data_ptr{std::make_shared_for_overwrite<T[]>(d_size)} {}
 
-    shared_span(size_t data_size, std::shared_ptr<T[]> &&ptr) :
+    shared_buffer(size_t data_size, std::shared_ptr<T[]> &&ptr) :
             d_size(data_size),
             data_ptr{std::move(ptr)} {}
 
-    shared_span(const std::nullptr_t &) {}
+    shared_buffer(const std::nullptr_t &) {}
 
-    shared_span(shared_span &&ss) noexcept: d_size(ss.d_size), data_ptr(std::move(ss.data_ptr)) {
+    shared_buffer(shared_buffer &&ss) noexcept: d_size(ss.d_size), data_ptr(std::move(ss.data_ptr)) {
         ss.d_size = 0;
         ss.data_ptr = nullptr;
     }
 
-    shared_span(const shared_span &ss) noexcept: d_size(ss.d_size), data_ptr(ss.data_ptr) {
+    shared_buffer(const shared_buffer &ss) noexcept: d_size(ss.d_size), data_ptr(ss.data_ptr) {
     }
 
     inline T *data() const noexcept {
@@ -43,7 +43,7 @@ public:
         return d_size;
     }
 
-    shared_span &operator=(shared_span &&ss) noexcept {
+    shared_buffer &operator=(shared_buffer &&ss) noexcept {
         d_size = ss.d_size;
         data_ptr = std::move(ss.data_ptr);
         ss.d_size = 0;
@@ -51,7 +51,7 @@ public:
         return *this;
     }
 
-    shared_span &operator=(const shared_span &ss) noexcept {
+    shared_buffer &operator=(const shared_buffer &ss) noexcept {
         d_size = ss.d_size;
         data_ptr = ss.data_ptr;
         return *this;
@@ -71,7 +71,5 @@ public:
     }
 };
 
-template<typename T>
-using sspan = shared_span<T>;
 }
-#endif //UH_CLUSTER_SHARED_SPAN_H
+#endif //UH_CLUSTER_SHARED_BUFFER_H

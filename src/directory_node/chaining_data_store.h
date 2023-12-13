@@ -207,7 +207,7 @@ public:
         throw std::runtime_error ("Revert in chaining data store not implemented");
     }
 
-    ospan <char> read (index_type index) {
+    unique_buffer <char> read (index_type index) {
         std::shared_lock <std::shared_mutex> lock (m);
         const auto [fd, seek] = get_file_offset_pair(index);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
@@ -216,7 +216,7 @@ public:
 
         header h;
         h.load_from_file (fd, true);
-        ospan <char> buf;
+        unique_buffer <char> buf;
         if (h.has_next) [[unlikely]] {
             buf.resize(h.total_size);
         }

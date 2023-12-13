@@ -49,7 +49,7 @@ public:
         }
     }
 
-    ospan <char> get (const std::string& bucket, const std::string& key) {
+    unique_buffer <char> get (const std::string& bucket, const std::string& key) {
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
             return b->second->get_obj(key);
         }

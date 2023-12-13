@@ -62,7 +62,7 @@ public:
         m_transaction_log.append(key, index, transaction_log::operation::INSERT_END);
     }
 
-    ospan<char> get_obj(const std::string& key) {
+    unique_buffer<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
             throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});

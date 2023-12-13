@@ -68,7 +68,7 @@ private:
             throw std::length_error ("Empty data sent do the dedupe node");
         }
 
-        ospan<char> data(h.size);
+        unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 

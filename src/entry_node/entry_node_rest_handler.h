@@ -447,7 +447,7 @@ namespace uh::cluster {
                 co_await m.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
-                ospan <char> buffer (h_dir.size);
+                unique_buffer <char> buffer (h_dir.size);
                 directory_lst_entities_message list_objects_res;
 
                 list_objects_res = co_await m.get().recv_directory_list_entities_message(h_dir);
@@ -494,7 +494,7 @@ namespace uh::cluster {
             co_await m.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
-            ospan <char> buffer (h_dir.size);
+            unique_buffer <char> buffer (h_dir.size);
             directory_lst_entities_message list_objects_res;
 
             list_objects_res = co_await m.get().recv_directory_list_entities_message(h_dir);

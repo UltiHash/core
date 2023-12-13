@@ -19,7 +19,7 @@ struct params {
     std::filesystem::path file_path;
 };
 
-std::promise <ospan <char>> response;
+std::promise <unique_buffer <char>> response;
 
 params get_params (int argc, char* args[]) {
 
@@ -38,7 +38,7 @@ params get_params (int argc, char* args[]) {
 coro <void> perform_operation (messenger& m, message_type type, std::span <char> data) {
     co_await m.send(type, data);
     const auto h = co_await m.recv_header();
-    ospan <char> buf (h.size);
+    unique_buffer <char> buf (h.size);
     m.register_read_buffer(buf);
     co_await m.recv_buffers(h);
     response.set_value(std::move (buf));
@@ -71,7 +71,7 @@ int main (int argc, char* args[]) {
     LOG_INFO() << "Connected to the server";
 
     std::fstream f (ps.file_path);
-    ospan <char> buf (std::filesystem::file_size (ps.file_path));
+    unique_buffer <char> buf (std::filesystem::file_size (ps.file_path));
     f.read(buf.data(), buf.size());
 
     LOG_INFO() << "Read data from file " << ps.file_path << " of size " << buf.size() / static_cast <double> (1024ul * 1024ul);

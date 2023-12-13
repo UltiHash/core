@@ -106,7 +106,7 @@ public:
 private:
 
     coro <void> handle_write (messenger &m, const messenger::header& h) {
-        ospan <char> data (h.size);
+        unique_buffer <char> data (h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
@@ -117,7 +117,7 @@ private:
 
     coro <void> handle_read (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
-        ospan <char> buffer (resp.size);
+        unique_buffer <char> buffer (resp.size);
         const auto size = m_data_store.read(buffer.data(), resp.pointer, resp.size);
         co_await m.send (READ_RESP, {buffer.data(), size});
     }
@@ -127,7 +127,7 @@ private:
 
         const auto read_size = std::accumulate (resp.sizes.cbegin(), resp.sizes.cend(), 0ul);
 
-        ospan <char> buffer (read_size);
+        unique_buffer <char> buffer (read_size);
         size_t offset = 0;
         for (int i = 0; i < resp.size(); i++) {
             const auto frag = resp.get_fragment(i);

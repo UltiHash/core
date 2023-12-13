@@ -9,13 +9,10 @@
 #include <span>
 #include <third-party/zpp_bits/zpp_bits.h>
 #include "lib/big_int.h"
-#include <lib/shared_span.h>
-#include <lib/owning_span.h>
+#include <lib/unique_buffer.h>
 #include <lib/address.h>
 
 namespace uh::cluster {
-
-
 
 struct dedupe_response {
     std::size_t effective_size {};

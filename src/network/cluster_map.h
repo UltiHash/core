@@ -171,7 +171,7 @@ namespace uh::cluster {
         }
 
         std::atomic <int> m_resp_count = 0;
-        ospan <char> m_roles_buf;
+        unique_buffer <char> m_roles_buf;
         std::condition_variable m_cv;
         std::mutex m_cv_m;
         std::forward_list <boost::asio::ip::udp::endpoint> m_endpoints;

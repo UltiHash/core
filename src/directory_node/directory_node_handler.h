@@ -126,9 +126,9 @@ namespace uh::cluster {
 
             directory_message request = co_await m.recv_directory_message (h);
 
-            ospan <char> buffer;
+            unique_buffer <char> buffer;
 
-            auto func = [](directory_store& directory, global_data_view& storage, const directory_message& request, ospan <char>& buffer) {
+            auto func = [](directory_store& directory, global_data_view& storage, const directory_message& request, unique_buffer <char>& buffer) {
                 address addr;
                 const auto buf = directory.get(request.bucket_id, *request.object_key);
                 zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
@@ -136,7 +136,7 @@ namespace uh::cluster {
                 for(auto frag_size : addr.sizes){
                     buffer_size += frag_size;
                 }
-                buffer = ospan <char> (buffer_size);
+                buffer = unique_buffer <char> (buffer_size);
                 storage.read_address(buffer.data(), addr);
             };
 

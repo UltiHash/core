@@ -47,9 +47,9 @@ struct ec_xor: public ec {
         return std::prev (pfd)->second;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {
+    [[nodiscard]] std::vector <unique_buffer <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {
         const size_t part_size = data.size() / data_nodes_count;
-        std::vector <ospan <char>> result;
+        std::vector <unique_buffer <char>> result;
         result.emplace_back (part_size);
         const auto long_size = part_size >> std::bit_width (sizeof (unsigned long) - 1);
 
@@ -71,9 +71,9 @@ struct ec_xor: public ec {
         return result;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const override {
+    [[nodiscard]] std::vector <unique_buffer <char>> recover (const std::map <int, unique_buffer<char>>& data_pieces, int fail_count) const override {
         const size_t part_size = data_pieces.cbegin()->second.size();
-        std::vector <ospan <char>> result;
+        std::vector <unique_buffer <char>> result;
         result.emplace_back (part_size);
         const auto long_size = part_size >> std::bit_width (sizeof (unsigned long) - 1);
 

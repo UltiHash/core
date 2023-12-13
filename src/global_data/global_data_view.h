@@ -12,6 +12,7 @@
 #include "ec_factory.h"
 #include "lru_cache.h"
 #include "lib/utils.h"
+#include "lib/shared_buffer.h"
 
 namespace uh::cluster {
 
@@ -45,13 +46,13 @@ public:
                 addr = co_await m.get().recv_address(message_header);
             } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
 
-        sspan <char> l1_buf (std::min (addr.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (addr.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
         m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
         return addr;
     }
 
-    sspan <char> read_l1_cache (const uint128_t pointer, const size_t size) {
+    shared_buffer <char> read_l1_cache (const uint128_t pointer, const size_t size) {
         if (const auto c = m_cache_l1.get(pointer, nullptr); c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
                 return c;
@@ -60,7 +61,7 @@ public:
         return nullptr;
     }
 
-    sspan <char> read_l2_cache (const uint128_t pointer, const size_t size) {
+    shared_buffer <char> read_l2_cache (const uint128_t pointer, const size_t size) {
         if (const auto c = m_cache_l2.get(pointer, nullptr); c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
                 return c;
@@ -81,12 +82,12 @@ public:
         } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        sspan <char> l1_buf (std::min (read_size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (read_size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
         // l2 cache
-        sspan <char> l2_buf (read_size);
+        shared_buffer <char> l2_buf (read_size);
         std::memcpy (l2_buf.data(), buffer, read_size);
         m_cache_l2.put (pointer, std::move (l2_buf));
 
@@ -307,13 +308,13 @@ public:
             while (offset < min_end) {
                 const auto adjusted_chunk_size = std::min (uint128_t (chunk_size), (min_end - offset)).get_low();
 
-                auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
-                    ospan <char> buf (adjusted_chunk_size);
+                auto read_bc =  [&] (auto m, int node_id) -> coro <unique_buffer <char>> {
+                    unique_buffer <char> buf (adjusted_chunk_size);
                     co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});
                     co_await m.get().recv ({buf.data.get(), buf.size});
                     co_return std::move (buf);
                 };
-                const auto response = co_await broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
+                const auto response = co_await broadcast_gather_custom <unique_buffer <char>> (*m_io_service, healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
                 auto write_bc =  [&recovered] (auto m, int node_id) -> coro <address> {
@@ -492,8 +493,8 @@ private:
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-    lru_cache <uint128_t, sspan <char>> m_cache_l1;
-    lru_cache <uint128_t, sspan <char>> m_cache_l2;
+    lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
+    lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;
 
 };
 

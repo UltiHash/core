@@ -122,9 +122,9 @@ namespace uh::cluster {
             uint64_t object_id;
         };
 
-        static ospan <char> serialise (const entry& entry_) {
+        static unique_buffer <char> serialise (const entry& entry_) {
             const uint16_t key_size = std::get <std::string_view> (entry_.key).size();
-            ospan<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
+            unique_buffer<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
             std::memcpy (buf.data(), &key_size, sizeof key_size);
             buf.data()[sizeof key_size] = entry_.op;
             std::memcpy (buf.data() + sizeof key_size + sizeof entry_.op, &entry_.object_id, sizeof entry_.object_id);

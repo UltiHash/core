@@ -74,7 +74,7 @@ namespace uh::cluster {
         }
 
         template<typename T>
-        inline void register_read_buffer (const ospan <T>& buf) {
+        inline void register_read_buffer (const unique_buffer <T>& buf) {
             m_read_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
             m_read_size += buf.size() * sizeof(T);
         }
@@ -102,7 +102,7 @@ namespace uh::cluster {
         }
 
         template<typename T>
-        inline void register_write_buffer (const ospan <T>& buf) {
+        inline void register_write_buffer (const unique_buffer <T>& buf) {
             m_write_buffers.emplace_back (buf.data(), buf.size() * sizeof(T));
             m_write_size += buf.size();
         }
