@@ -7,12 +7,12 @@
 
 #include <functional>
 #include <iostream>
-#include "common/cluster_config.h"
-#include "network/cluster_map.h"
-#include "network/server.h"
+#include "common/utils/cluster_config.h"
+#include "common/network/cluster_map.h"
+#include "common/network/server.h"
 #include "entry_node/rest_server.h"
-#include "network/client.h"
-#include "common/node_interface.h"
+#include "common/network/client.h"
+#include "common/utils/node_interface.h"
 
 namespace uh::cluster
 {

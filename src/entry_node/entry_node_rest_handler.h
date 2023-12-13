@@ -7,10 +7,10 @@
 
 #include <iostream>
 #include <memory>
-#include "common/metrics_handler.h"
-#include "lib/log.h"
-#include "network/client.h"
-#include "lib/utils.h"
+#include "common/utils/metrics_handler.h"
+#include "common/utils/log.h"
+#include "common/network/client.h"
+#include "common/utils/worker_utils.h"
 
 // HTTP
 #include "entry_node/rest/http/http_request.h"
@@ -176,7 +176,7 @@ namespace uh::cluster {
                 co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
         }
         catch (const error_exception& e)
         {
@@ -202,7 +202,7 @@ namespace uh::cluster {
                 co_await m.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
         }
         catch (const error_exception& e)
         {
@@ -244,10 +244,10 @@ namespace uh::cluster {
                 }
             };
 
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                       *m_ioc,
+                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
 
         }
         catch (const error_exception& e)
@@ -280,10 +280,10 @@ namespace uh::cluster {
             }
         };
 
-        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                            *m_ioc,
-                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                            std::bind_front (func, std::ref (res)));
+        co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                   *m_ioc,
+                                                                                   *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                   std::bind_front (func, std::ref (res)));
 
         co_return std::move(res);
     }
@@ -323,7 +323,7 @@ namespace uh::cluster {
                 co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
 
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -387,10 +387,10 @@ namespace uh::cluster {
                 co_await m.get().recv_buffers(h_dir);
 
             };
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                std::bind_front (func, std::ref (buffer), std::cref (req)));
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                       *m_ioc,
+                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       std::bind_front (func, std::ref (buffer), std::cref (req)));
 
             const auto stop = std::chrono::steady_clock::now ();
             const std::chrono::duration <double> duration = stop - start;
@@ -458,10 +458,10 @@ namespace uh::cluster {
                 }
             };
 
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                std::bind_front (func, std::ref (res), std::cref (req)));
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                       *m_ioc,
+                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       std::bind_front (func, std::ref (res), std::cref (req)));
 
         }
         catch (const error_exception& e)
@@ -506,10 +506,10 @@ namespace uh::cluster {
 
         };
 
-        co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                            *m_ioc,
-                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                            std::bind_front (func, std::ref (res), std::cref (req)));
+        co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                   *m_ioc,
+                                                                                   *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                   std::bind_front (func, std::ref (res), std::cref (req)));
 
         co_return std::move(res);
     }
@@ -524,10 +524,10 @@ namespace uh::cluster {
           {
               res = std::make_unique<http::model::init_multi_part_upload_response>(req);
 
-              co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                  *m_ioc,
-                                                                                  *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                  [&res, &req] (client::acquired_messenger m) -> coro <void>
+              co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                         *m_ioc,
+                                                                                         *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                         [&res, &req] (client::acquired_messenger m) -> coro <void>
                   {
                       directory_message dir_req {.bucket_id = req.get_URI().get_bucket_id()};
 
@@ -580,7 +580,7 @@ namespace uh::cluster {
             }
         };
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (pieces), std::ref (state), std::cref (req)));
+        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (pieces), std::ref (state), std::cref (req)));
 
         LOG_INFO() << "upload size: " << req.get_body_size();
 
@@ -600,10 +600,10 @@ namespace uh::cluster {
             co_await m.get().recv_header();
         };
 
-        co_await utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes,
-                                                                *m_ioc,
-                                                                *m_workers,
-                                                                std::bind_front (func_dir, std::cref (dir_req)));
+        co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes,
+                                                                       *m_ioc,
+                                                                       *m_workers,
+                                                                       std::bind_front (func_dir, std::cref (dir_req)));
 
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
         auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -648,10 +648,10 @@ namespace uh::cluster {
                 co_await m.get().recv_header();
             };
 
-            co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                *m_ioc,
-                                                                                *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                std::bind_front (func, std::cref (req)));
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                       *m_ioc,
+                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       std::bind_front (func, std::cref (req)));
 
         }
         catch (const error_exception& e)
@@ -693,7 +693,7 @@ namespace uh::cluster {
             }
         };
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front (func, std::ref (res), std::ref (state), std::cref (req)));
+        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front (func, std::ref (res), std::ref (state), std::cref (req)));
 
         co_return std::move(res);
     }
@@ -725,7 +725,7 @@ namespace uh::cluster {
             }
         };
 
-        co_await utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
+        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
 
 
         auto bucket_id = req.get_URI().get_bucket_id();
@@ -747,10 +747,10 @@ namespace uh::cluster {
 
                     res->add_deleted_keys(key);
                 };
-                co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                    *m_ioc,
-                                                                                    *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
-                                                                                    std::bind_front(func2, key, std::cref (bucket_id), std::ref (res)));
+                co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                                                                                           *m_ioc,
+                                                                                           *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                           std::bind_front(func2, key, std::cref (bucket_id), std::ref (res)));
 
             }
             catch (const error_exception& e)
@@ -824,10 +824,10 @@ namespace uh::cluster {
                 responses [i] = co_await m.get().recv_dedupe_response(h_dedup);
             };
 
-            co_await utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
-                                                                    *m_ioc,
-                                                                    *m_workers,
-                                                                    std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
+                                                                           *m_ioc,
+                                                                           *m_workers,
+                                                                           std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
 
 
             dedupe_response resp {.effective_size = 0};

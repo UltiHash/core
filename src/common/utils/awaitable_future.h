@@ -7,7 +7,7 @@
 
 #include <boost/asio/steady_timer.hpp>
 #include <type_traits>
-#include "network/messenger_core.h"
+#include "common/network/messenger_core.h"
 
 namespace uh::cluster {
 

@@ -4,10 +4,10 @@
 #include <functional>
 #include <iostream>
 #include <utility>
-#include "common/cluster_config.h"
-#include "global_data/global_data_view.h"
+#include "common/utils/cluster_config.h"
+#include "common/global_data/global_data_view.h"
 #include "dedupe_node_handler.h"
-#include "lib/log.h"
+#include "common/utils/log.h"
 
 namespace uh::cluster {
     class dedupe_node: public node_interface {

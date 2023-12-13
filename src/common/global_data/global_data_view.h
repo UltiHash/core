@@ -7,12 +7,12 @@
 
 #include <map>
 #include "data_node/data_node.h"
-#include "network/client.h"
+#include "common/network/client.h"
 #include "ec.h"
 #include "ec_factory.h"
 #include "lru_cache.h"
-#include "lib/utils.h"
-#include "lib/shared_buffer.h"
+#include "common/utils/worker_utils.h"
+#include "common/utils/shared_buffer.h"
 
 namespace uh::cluster {
 
@@ -356,7 +356,7 @@ public:
             offset += frag.size;
         }
 
-        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
             const auto node = nodes.at(id);
             const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
@@ -396,7 +396,7 @@ public:
             node_address.push_fragment(frag);
         }
 
-        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send_address(SYNC_REQ, node_address_map.at(nodes [id]));
             co_await m.get().recv_header();
         });
@@ -410,7 +410,7 @@ public:
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
-        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             used_spaces [id] = co_await m.get().recv_uint128_t (message_header);

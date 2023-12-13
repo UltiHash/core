@@ -2,7 +2,7 @@
 
 #include <utility>
 #include "iostream"
-#include "lib/log.h"
+#include "common/utils/log.h"
 
 namespace uh::cluster::rest::http::model
 {

@@ -7,10 +7,10 @@
 
 #include <vector>
 #include <span>
-#include <third-party/zpp_bits/zpp_bits.h>
-#include "lib/big_int.h"
-#include <lib/unique_buffer.h>
-#include <lib/address.h>
+#include "third-party/zpp_bits/zpp_bits.h"
+#include "big_int.h"
+#include "unique_buffer.h"
+#include "address.h"
 
 namespace uh::cluster {
 

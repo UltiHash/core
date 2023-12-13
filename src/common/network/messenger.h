@@ -6,7 +6,7 @@
 #define CORE_MESSENGER_H
 
 #include "messenger_core.h"
-#include <third-party/zpp_bits/zpp_bits.h>
+#include "third-party/zpp_bits/zpp_bits.h"
 
 namespace uh::cluster {
 

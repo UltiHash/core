@@ -8,8 +8,8 @@
 #include <set>
 #include <queue>
 #include <utility>
-#include <common/common.h>
-#include <global_data/global_data_view.h>
+#include "common/utils/common.h"
+#include <common/global_data/global_data_view.h>
 #include "set_log.h"
 
 namespace uh::cluster {

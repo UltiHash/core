@@ -10,7 +10,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <mutex>
-#include "common/error.h"
+#include "common/utils/error.h"
 
 namespace uh::cluster{
 

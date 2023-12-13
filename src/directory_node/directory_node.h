@@ -7,8 +7,8 @@
 
 #include <functional>
 #include <iostream>
-#include "lib/log.h"
-#include "common/cluster_config.h"
+#include "common/utils/log.h"
+#include "common/utils/cluster_config.h"
 #include "directory_node_handler.h"
 
 namespace uh::cluster {

@@ -6,8 +6,8 @@
 #define CORE_DATA_NODE_HANDLER_H
 
 #include <utility>
-#include "common/common.h"
-#include "common/protocol_handler.h"
+#include "common/utils/common.h"
+#include "common/utils/protocol_handler.h"
 #include "data_store.h"
 
 namespace uh::cluster {

@@ -9,8 +9,8 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "common/common.h"
-#include "lib/free_spot_manager.h"
+#include "common/utils/common.h"
+#include "common/utils/free_spot_manager.h"
 #include "directory_node/chaining_data_store.h"
 
 // ------------- Tests Suites Follow --------------

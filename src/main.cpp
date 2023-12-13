@@ -3,15 +3,15 @@
 //
 
 #include <system_error>
-#include "common/cluster_config.h"
+#include "common/utils/cluster_config.h"
 #include "data_node/data_node.h"
 #include "dedupe_node/dedupe_node.h"
 #include "directory_node/directory_node.h"
 #include "entry_node/entry_node.h"
-#include "network/cluster_map.h"
+#include "common/network/cluster_map.h"
 
 #include <config.h>
-#include "lib/log.h"
+#include "common/utils/log.h"
 
 
 uh::cluster::entry_node_config make_entry_node_config () {

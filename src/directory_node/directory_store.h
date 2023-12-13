@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-#include "common/common.h"
+#include "common/utils/common.h"
 #include "bucket.h"
 
 namespace uh::cluster {

@@ -5,9 +5,9 @@
 #ifndef CORE_DATA_STORE_H
 #define CORE_DATA_STORE_H
 
-#include "common/cluster_config.h"
-#include "common/common.h"
-#include "lib/free_spot_manager.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/common.h"
+#include "common/utils/free_spot_manager.h"
 #include <span>
 #include <list>
 #include <memory_resource>

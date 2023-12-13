@@ -5,7 +5,7 @@
 #ifndef CORE_EC_H
 #define CORE_EC_H
 
-#include <network/client.h>
+#include "common/network/client.h"
 #include <memory>
 
 namespace uh::cluster {

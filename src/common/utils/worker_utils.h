@@ -2,19 +2,19 @@
 // Created by massi on 12/6/23.
 //
 
-#ifndef UH_CLUSTER_UTILS_H
-#define UH_CLUSTER_UTILS_H
+#ifndef UH_CLUSTER_WORKER_UTILS_H
+#define UH_CLUSTER_WORKER_UTILS_H
 
 #include <exception>
 #include <boost/asio/steady_timer.hpp>
-#include "common/common.h"
-#include "network/messenger_core.h"
-#include "network/client.h"
+#include "common.h"
+#include "common/network/messenger_core.h"
+#include "common/network/client.h"
 #include "awaitable_future.h"
 
 namespace uh::cluster {
 
-    struct utils {
+    struct worker_utils {
 
         template<typename Func>
         static coro <void> post_in_workers (boost::asio::thread_pool& workers, boost::asio::io_context& ioc, Func func) {
@@ -83,4 +83,4 @@ namespace uh::cluster {
     };
 
 } // end namespace uh::cluster
-#endif //UH_CLUSTER_UTILS_H
+#endif //UH_CLUSTER_WORKER_UTILS_H

@@ -19,10 +19,10 @@
 #include <thread>
 #include <vector>
 #include <boost/beast/http/message_generator.hpp>
-#include "common/cluster_config.h"
-#include "common/protocol_handler.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/protocol_handler.h"
 #include "entry_node_rest_handler.h"
-#include "network/client.h"
+#include "common/network/client.h"
 #include "entry_node/rest/http/http_request.h"
 #include "rest/http/http_response.h"
 #include "entry_node/rest/utils/state/server_state.h"

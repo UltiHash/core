@@ -7,7 +7,7 @@
 
 #include <cstdint>
 #include "big_int.h"
-#include <third-party/zpp_bits/zpp_bits.h>
+#include "third-party/zpp_bits/zpp_bits.h"
 
 namespace uh::cluster {
 

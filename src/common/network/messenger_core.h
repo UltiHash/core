@@ -5,8 +5,8 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
-#include <common/error.h>
-#include "common/common.h"
+#include "common/utils/error.h"
+#include "common/utils/common.h"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
