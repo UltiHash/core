@@ -62,8 +62,6 @@ enum ec_type: uint8_t {
     XOR,
 };
 
-
-
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
         {"ds", uh::cluster::DATASTORE_SERVICE},
         {"dd", uh::cluster::DEDUPLICATION_SERVICE},

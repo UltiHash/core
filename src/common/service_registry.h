@@ -11,6 +11,7 @@
 #include <boost/asio.hpp>
 
 #include "common.h"
+#include "log.h"
 
 namespace uh::cluster {
 
@@ -57,7 +58,12 @@ namespace uh::cluster {
         }
 
     private:
+    #ifdef NDEBUG
         const std::size_t m_etcd_default_ttl = 5;
+    #else
+        const std::size_t m_etcd_default_ttl = 5;
+    #endif
+
         const std::string m_etcd_default_key_prefix = "/uh/";
 
         const std::string m_etcd_host;

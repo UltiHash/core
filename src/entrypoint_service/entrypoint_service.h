@@ -15,16 +15,13 @@
 #include "network/client.h"
 #include "rest_server.h"
 
-namespace uh::cluster
-{
-
+namespace uh::cluster {
 class entrypoint_service: public service_interface {
 public:
 
-    entrypoint_service(std::size_t id, std::string  service_key, const std::string& etcd_host, const bool use_id_as_port_offset = false) :
+    explicit entrypoint_service(std::size_t id) :
             m_id(id),
-            m_service_key(std::move(service_key)),
-            m_service_name(m_service_key + "/" + std::to_string(m_id)),
+            m_service_name(abbreviation_by_role.at(uh::cluster::DATASTORE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entry_node_config().worker_thread_count)),
             m_rest_server (make_entry_node_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
@@ -47,11 +44,8 @@ public:
 
 
 private:
-
     const std::size_t m_id;
-    const std::string m_service_key;
     const std::string m_service_name;
-
     service_registry m_registry;
 
     std::vector <std::shared_ptr <client>> m_dedupe_nodes;
