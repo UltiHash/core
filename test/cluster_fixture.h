@@ -6,7 +6,7 @@
 #define CORE_TEST_GLOBAL_DATA_VIEW_FIXTURE_H
 
 #include "common/utils/cluster_config.h"
-#include "network/cluster_map.h"
+#include "common/network/cluster_map.h"
 #include "data_node/data_node.h"
 #include "dedupe_node/dedupe_node.h"
 #include "directory_node/directory_node.h"
