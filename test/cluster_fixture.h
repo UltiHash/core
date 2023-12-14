@@ -31,7 +31,7 @@ namespace uh::cluster {
         get_cluster_roles(int data_nodes, int dedupe_nodes, int directory_nodes) {
             std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles;
             for (int i = 0; i < data_nodes; ++i) {
-                roles[DATASTORE_SERVICE].emplace(i, "127.0.0.1");
+                roles[STORAGE_SERVICE].emplace(i, "127.0.0.1");
             }
             for (int i = 0; i < dedupe_nodes; ++i) {
                 roles[DEDUPLICATION_SERVICE].emplace(i, "127.0.0.1");
@@ -102,7 +102,7 @@ namespace uh::cluster {
                     auto config = make_cluster_config(role_nodes.first, ec);
                     auto cmap = cluster_map(std::move (config), cluster_roles);
                     switch (role.first) {
-                        case DATASTORE_SERVICE:
+                        case STORAGE_SERVICE:
                             m_nodes.emplace_back(std::make_shared<data_store_service>(role_nodes.first, std::move(cmap)));
                             m_data_nodes.emplace_back(m_nodes.back());
                             break;

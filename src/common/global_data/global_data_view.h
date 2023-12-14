@@ -197,7 +197,7 @@ public:
 
         m_io_service = io_service;
 
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::DATASTORE_SERVICE);
+        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
         if (ds_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");

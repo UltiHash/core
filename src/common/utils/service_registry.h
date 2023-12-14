@@ -57,6 +57,18 @@ namespace uh::cluster {
             return result;
         }
 
+        void wait_for_dependency(uh::cluster::role dependency) {
+            if(!abbreviation_by_role.contains(dependency))
+                throw std::invalid_argument ("Invalid role!");
+            std::string dependency_key = "/uh/" + abbreviation_by_role.at(dependency);
+
+            while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
+                LOG_INFO() << "Waiting for dependency " << dependency_key << " to become available...";
+                sleep(5);
+            }
+            LOG_INFO() << "Dependency " << dependency_key << " seems to be available.";
+        }
+
     private:
     #ifdef NDEBUG
         const std::size_t m_etcd_default_ttl = 5;

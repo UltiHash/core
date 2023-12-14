@@ -29,7 +29,7 @@ public:
     }
 
     void run() override {
-        //TODO: wait for dependencies to be available before creating connections
+        m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
         m_storage.create_data_node_connections(m_server.get_executor(), m_use_id_as_port_offset);
         m_registry.register_service();
         m_server.run();

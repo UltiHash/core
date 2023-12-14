@@ -23,7 +23,7 @@ public:
 
     explicit storage(std::size_t id) :
             m_id(id),
-            m_service_name(abbreviation_by_role.at(uh::cluster::DATASTORE_SERVICE) + "/" + std::to_string(m_id)),
+            m_service_name(abbreviation_by_role.at(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
             m_server(make_data_node_config().server_conf, m_service_name,
                      std::make_unique<storage_handler>(make_data_node_config(), id))

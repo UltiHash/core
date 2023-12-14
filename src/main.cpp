@@ -17,7 +17,7 @@ using namespace uh::cluster;
 void execute_role (const uh::cluster::role role, const std::size_t id) {
 
     switch (role) {
-        case uh::cluster::DATASTORE_SERVICE: {
+        case uh::cluster::STORAGE_SERVICE: {
             LOG_INFO() << "starting data-store service";
             uh::cluster::storage ds(id);
             ds.run();
