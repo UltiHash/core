@@ -4,9 +4,9 @@
 #include <functional>
 #include <iostream>
 #include <utility>
-#include "common/cluster_config.h"
-#include "common/log.h"
-#include "global_data/global_data_view.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/log.h"
+#include "common/global_data/global_data_view.h"
 #include "deduplicator_handler.h"
 
 

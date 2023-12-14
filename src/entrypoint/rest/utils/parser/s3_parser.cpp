@@ -27,8 +27,8 @@ namespace model = uh::cluster::rest::http::model;
 
     s3_parser::s3_parser
             (const b_http::request_parser<b_http::empty_body>& recv_req,
-             utils::state& server_state)
-            : m_recv_req(recv_req), m_internal_server_state(server_state)
+             utils::server_state& server_state)
+            : m_recv_req(recv_req), m_server_state(server_state)
     {}
 
     std::unique_ptr<rest::http::http_request>
@@ -44,8 +44,7 @@ namespace model = uh::cluster::rest::http::model;
                 {
                     if (uri->query_string_exists("uploads"))
                     {
-                        auto upload_id = m_internal_server_state.generate_and_add_upload_id(uri->get_bucket_id(), uri->get_object_key());
-                        return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id, std::move(uri));
+                        return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, m_server_state, std::move(uri));
                     }
                     else if (uri->query_string_exists("uploadId"))
                     {
@@ -55,7 +54,7 @@ namespace model = uh::cluster::rest::http::model;
                             throw model::custom_error_response_exception(b_http::status::bad_request, model::error::type::bad_upload_id);
                         }
 
-                        return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_internal_server_state, std::move(uri));
+                        return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_server_state, std::move(uri));
                     }
                 }
                 else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
@@ -84,13 +83,13 @@ namespace model = uh::cluster::rest::http::model;
                             throw model::custom_error_response_exception(b_http::status::bad_request, model::error::type::bad_upload_id);
                         }
 
-                        auto part_string = uri->get_query_parameters().at("partNumber");
-                        if (part_string.empty())
+                        auto part_num = std::stoi(uri->get_query_parameters().at("partNumber"));
+                        if (part_num < 1 || part_num > 10000)
                         {
                             throw model::custom_error_response_exception(b_http::status::bad_request, model::error::type::bad_part_number);
                         }
 
-                        return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, m_internal_server_state, std::move(uri));
+                        return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, m_server_state, std::move(uri));
                     }
                 }
                 else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
@@ -155,7 +154,7 @@ namespace model = uh::cluster::rest::http::model;
                             throw model::custom_error_response_exception(b_http::status::bad_request, model::error::type::bad_upload_id);
                         }
 
-                        return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_internal_server_state, std::move(uri));
+                        return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_server_state, std::move(uri));
                     }
                     else
                     {

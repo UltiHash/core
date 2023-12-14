@@ -6,8 +6,8 @@
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
 #include <utility>
-#include "common/common.h"
-#include "common/protocol_handler.h"
+#include "common/utils/common.h"
+#include "common/utils/protocol_handler.h"
 #include "data_store.h"
 
 namespace uh::cluster {
@@ -27,10 +27,6 @@ public:
             m_reqs_remove(m_req_counters.Add({{"message_type", "REMOVE_REQ"}})),
             m_reqs_sync(m_req_counters.Add({{"message_type", "SYNC_REQ"}})),
             m_reqs_used(m_req_counters.Add({{"message_type", "USED_REQ"}})),
-            m_reqs_alloc(m_req_counters.Add({{"message_type", "ALLOC_REQ"}})),
-            m_reqs_dealloc(m_req_counters.Add({{"message_type", "DEALLOC_REQ"}})),
-            m_reqs_alloc_write(m_req_counters.Add({{"message_type", "ALLOC_WRITE_REQ"}})),
-            m_reqs_query_usage(m_req_counters.Add({{"message_type", "QUERY_USAGE_REQ"}})),
             m_reqs_invalid(m_req_counters.Add({{"message_type", "INVALID"}})),
 
             m_resource_util(add_gauge_family("uh_dn_resource_utilization", "resources utilization of the data node instance")),
@@ -83,18 +79,6 @@ public:
                         m_reqs_used.Increment();
                         co_await handle_get_used(m, message_header);
                         break;
-                    case ALLOC_REQ:
-                        m_reqs_alloc.Increment();
-                        co_await handle_alloc (m, message_header);
-                        break;
-                    case DEALLOC_REQ:
-                        m_reqs_dealloc.Increment();
-                        co_await handle_dealloc (m, message_header);
-                        break;
-                    case ALLOC_WRITE_REQ:
-                        m_reqs_alloc_write.Increment();
-                        co_await handle_alloc_write (m, message_header);
-                        break;
                     case STOP:
                         m_is_stopped = true;
                         co_return;
@@ -122,10 +106,10 @@ public:
 private:
 
     coro <void> handle_write (messenger &m, const messenger::header& h) {
-        ospan <char> data (h.size);
+        unique_buffer <char> data (h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
-        const auto addr = m_data_store.write({data.data.get(), data.size});
+        const auto addr = m_data_store.write(data.get_span());
         m_util_used_storage.Set(m_data_store.get_used_space().get_low());
         m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send_address(WRITE_RESP, addr);
@@ -133,9 +117,9 @@ private:
 
     coro <void> handle_read (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
-        ospan <char> buffer (resp.size);
-        const auto size = m_data_store.read(buffer.data.get(), resp.pointer, resp.size);
-        co_await m.send (READ_RESP, {buffer.data.get(), size});
+        unique_buffer <char> buffer (resp.size);
+        const auto size = m_data_store.read(buffer.data(), resp.pointer, resp.size);
+        co_await m.send (READ_RESP, {buffer.data(), size});
     }
 
     coro <void> handle_read_address (messenger &m, const messenger::header& h) {
@@ -143,16 +127,16 @@ private:
 
         const auto read_size = std::accumulate (resp.sizes.cbegin(), resp.sizes.cend(), 0ul);
 
-        ospan <char> buffer (read_size);
+        unique_buffer <char> buffer (read_size);
         size_t offset = 0;
         for (int i = 0; i < resp.size(); i++) {
             const auto frag = resp.get_fragment(i);
-            if (m_data_store.read(buffer.data.get() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
+            if (m_data_store.read(buffer.data() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
                 throw std::runtime_error ("Could not read the data with the given size");
             }
             offset += frag.size;
         }
-        co_await m.send (READ_ADDRESS_RESP, {buffer.data.get(), offset});
+        co_await m.send (READ_ADDRESS_RESP, {buffer.data(), offset});
     }
 
     coro <void> handle_remove (messenger &m, const messenger::header& h) {
@@ -176,37 +160,6 @@ private:
         co_await m.send_uint128_t(USED_RESP, used);
     }
 
-    coro <void> handle_alloc (messenger &m, const messenger::header& h) {
-        size_t size;
-        m.register_read_buffer(size);
-        co_await m.recv_buffers(h);
-        const auto addr = m_data_store.allocate(size);
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
-        co_await m.send_address(ALLOC_RESP, addr);
-    }
-
-    coro <void> handle_dealloc (messenger &m, const messenger::header& h) {
-        std::vector <char> data (h.size);
-        m.register_read_buffer(data);
-        co_await m.recv_buffers(h);
-        address addr;
-        zpp::bits::in {data, zpp::bits::size4b{}} (addr).or_throw();
-        m_data_store.cancel_allocate(addr);
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
-        co_await m.send(DEALLOC_RESP, {});
-    }
-
-    coro <void> handle_alloc_write (messenger &m, const messenger::header& h) {
-        const auto msg = co_await m.recv_allocated_write(h);
-        const auto& data_ospan = std::get <ospan <char>> (msg.data);
-        m_data_store.allocated_write(msg.addr, {data_ospan.data.get(), data_ospan.size});
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
-        co_await m.send(ALLOC_WRITE_RESP, {});
-    }
-
     uh::cluster::data_store m_data_store;
     bool m_is_stopped;
 
@@ -217,10 +170,6 @@ private:
     prometheus::Counter &m_reqs_remove;
     prometheus::Counter &m_reqs_sync;
     prometheus::Counter &m_reqs_used;
-    prometheus::Counter &m_reqs_alloc;
-    prometheus::Counter &m_reqs_dealloc;
-    prometheus::Counter &m_reqs_alloc_write;
-    prometheus::Counter &m_reqs_query_usage;
     prometheus::Counter &m_reqs_invalid;
 
     prometheus::Family<prometheus::Gauge> &m_resource_util;

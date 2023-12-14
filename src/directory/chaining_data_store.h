@@ -5,9 +5,9 @@
 #ifndef CORE_CHAINING_DATA_STORE_H
 #define CORE_CHAINING_DATA_STORE_H
 
-#include "common/cluster_config.h"
-#include "common/common.h"
-#include "storage/free_spot_manager.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/common.h"
+#include "common/utils/free_spot_manager.h"
 #include <span>
 #include <list>
 #include <memory_resource>
@@ -207,7 +207,7 @@ public:
         throw std::runtime_error ("Revert in chaining data store not implemented");
     }
 
-    ospan <char> read (index_type index) {
+    unique_buffer <char> read (index_type index) {
         std::shared_lock <std::shared_mutex> lock (m);
         const auto [fd, seek] = get_file_offset_pair(index);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
@@ -216,7 +216,7 @@ public:
 
         header h;
         h.load_from_file (fd, true);
-        ospan <char> buf;
+        unique_buffer <char> buf;
         if (h.has_next) [[unlikely]] {
             buf.resize(h.total_size);
         }
@@ -227,7 +227,7 @@ public:
         index_type offset = 0;
         size_t tr = 0;
         do {
-            const auto r = ::read (fd, buf.data.get() + offset, h.size - tr);
+            const auto r = ::read (fd, buf.data() + offset, h.size - tr);
             if (r == 0) [[unlikely]] {
                 break;
             }
@@ -244,7 +244,7 @@ public:
 
             tr = 0;
             do {
-                const auto r = ::read (next_fd, buf.data.get() + offset, h.size - tr);
+                const auto r = ::read (next_fd, buf.data() + offset, h.size - tr);
                 if (r == 0) [[unlikely]] {
                     break;
                 }

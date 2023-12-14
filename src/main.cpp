@@ -3,14 +3,14 @@
 //
 
 #include <system_error>
-#include "common/cluster_config.h"
+#include "common/utils/cluster_config.h"
 #include "storage/storage.h"
 #include "deduplicatior/deduplicator.h"
 #include "directory/directory.h"
 #include "entrypoint/entrypoint.h"
 
 #include <config.h>
-#include "common/log.h"
+#include "common/utils/log.h"
 
 using namespace uh::cluster;
 

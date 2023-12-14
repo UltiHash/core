@@ -10,7 +10,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <mutex>
-#include "common/error.h"
+#include "common/utils/error.h"
 
 namespace uh::cluster{
 
@@ -62,7 +62,7 @@ public:
         m_transaction_log.append(key, index, transaction_log::operation::INSERT_END);
     }
 
-    ospan<char> get_obj(const std::string& key) {
+    unique_buffer<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
             throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});
@@ -73,17 +73,17 @@ public:
 
     void delete_object (const std::string& key) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);
-        if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});
-        }
-        const auto index = m_object_ptrs.at(key);
-        m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
+        if (m_object_ptrs.contains(key)) [[unlikely]]
+        {
+            const auto index = m_object_ptrs.at(key);
+            m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
 
-        m_object_ptrs.erase(key);
-        m_data_store.remove(index);
+            m_object_ptrs.erase(key);
+            m_data_store.remove(index);
+            m_transaction_log.append(key, index, transaction_log::operation::REMOVE_END);
+        }
         lock.unlock();
 
-        m_transaction_log.append(key, index, transaction_log::operation::REMOVE_END);
     }
 
     void update_object (const std::string &key, std::span<char> data) {

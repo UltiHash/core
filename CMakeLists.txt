@@ -12,6 +12,7 @@ add_compile_options(-fPIC)
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
+
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
 
@@ -54,8 +55,7 @@ add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIS
 target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 
-add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-        src/common/utils.h)
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 

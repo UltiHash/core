@@ -6,16 +6,6 @@ namespace uh::cluster::rest::http::model
     put_object_response::put_object_response(const http_request& req) : http_response(req)
     {}
 
-    put_object_response::put_object_response(const http_request& req, http::response<http::string_body> recv_res) :
-    http_response(req, std::move(recv_res))
-    {}
-
-    void put_object_response::set_etag(std::string etag)
-    {
-        m_eTagHasBeenSet = true;
-        m_eTag = std::move(etag);
-    }
-
     void put_object_response::set_size(double size)
     {
         m_originalSize = size;
@@ -42,14 +32,12 @@ namespace uh::cluster::rest::http::model
 
     const http::response<http::string_body>& put_object_response::get_response_specific_object()
     {
+
+        m_res.set(boost::beast::http::field::etag, m_orig_req.get_eTag());
+
         if(m_expirationHasBeenSet)
         {
             m_res.set("x-amz-expiration", m_expiration);
-        }
-
-        if(m_eTagHasBeenSet)
-        {
-            m_res.set(boost::beast::http::field::etag, m_eTag);
         }
 
         if(m_checksumCRC32HasBeenSet)

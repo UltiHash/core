@@ -8,11 +8,11 @@
 #include <functional>
 #include <iostream>
 
-#include "common/cluster_config.h"
-#include "common/service_interface.h"
-#include "common/service_registry.h"
-#include "network/server.h"
-#include "network/client.h"
+#include "common/utils/cluster_config.h"
+#include "common/utils/service_interface.h"
+#include "common/utils/service_registry.h"
+#include "common/network/server.h"
+#include "common/network/client.h"
 #include "rest_server.h"
 
 namespace uh::cluster {

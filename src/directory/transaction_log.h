@@ -7,7 +7,7 @@
 
 
 #include "unordered_map"
-#include <common/common.h>
+#include "common/utils/common.h"
 #include <string>
 #include <list>
 #include <fstream>
@@ -43,7 +43,7 @@ namespace uh::cluster {
 
         void append (std::string_view key, uint64_t object_id, operation op) const {
             const auto buf = serialise({.key = key, .op = op, .object_id = object_id});
-            if (buf.size != ::write (m_log_file, buf.data.get(), buf.size)) [[unlikely]] {
+            if (buf.size() != ::write (m_log_file, buf.data(), buf.size())) [[unlikely]] {
                 throw std::runtime_error ("Could not write into the log file");
             }
         }
@@ -110,6 +110,10 @@ namespace uh::cluster {
             return log_map;
         }
 
+        ~transaction_log() {
+            close (m_log_file);
+        }
+
     private:
 
         struct entry {
@@ -118,13 +122,13 @@ namespace uh::cluster {
             uint64_t object_id;
         };
 
-        static ospan <char> serialise (const entry& entry_) {
+        static unique_buffer <char> serialise (const entry& entry_) {
             const uint16_t key_size = std::get <std::string_view> (entry_.key).size();
-            ospan<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
-            std::memcpy (buf.data.get(), &key_size, sizeof key_size);
-            buf.data.get()[sizeof key_size] = entry_.op;
-            std::memcpy (buf.data.get() + sizeof key_size + sizeof entry_.op, &entry_.object_id, sizeof entry_.object_id);
-            std::memcpy (buf.data.get() + sizeof key_size + sizeof entry_.op + sizeof entry_.object_id, std::get <std::string_view> (entry_.key).data(), key_size);
+            unique_buffer<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
+            std::memcpy (buf.data(), &key_size, sizeof key_size);
+            buf.data()[sizeof key_size] = entry_.op;
+            std::memcpy (buf.data() + sizeof key_size + sizeof entry_.op, &entry_.object_id, sizeof entry_.object_id);
+            std::memcpy (buf.data() + sizeof key_size + sizeof entry_.op + sizeof entry_.object_id, std::get <std::string_view> (entry_.key).data(), key_size);
             return buf;
         }
 
@@ -156,7 +160,7 @@ namespace uh::cluster {
                 const auto tmp_file = get_log_file(new_file_path);
                 for (const auto &item: log_map) {
                     const auto buf = serialise({.key = std::string_view (item.first), .op = operation::INSERT, .object_id = item.second});
-                    if (buf.size != ::write (tmp_file, buf.data.get(), buf.size)) [[unlikely]] {
+                    if (buf.size() != ::write (tmp_file, buf.data(), buf.size())) [[unlikely]] {
                         throw std::runtime_error ("Could not write into the log file");
                     }
                 }

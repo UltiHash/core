@@ -9,7 +9,7 @@
 #include "ec_non.h"
 #include "ec_xor.h"
 
-#include <common/common.h>
+#include "common/utils/common.h"
 
 namespace uh::cluster {
 

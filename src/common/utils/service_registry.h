@@ -6,8 +6,8 @@
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
 #include <string>
-#include <etcd/Client.hpp>
-#include <etcd/KeepAlive.hpp>
+#include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
+#include "third-party/etcd-cpp-apiv3/etcd/KeepAlive.hpp"
 #include <boost/asio.hpp>
 
 #include "common.h"

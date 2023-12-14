@@ -8,8 +8,8 @@
 #include <filesystem>
 #include <cstring>
 #include <fcntl.h>
-#include "common/common_types.h"
-#include <global_data/global_data_view.h>
+#include "common/utils/common_types.h"
+#include <common/global_data/global_data_view.h>
 
 namespace uh::cluster {
 

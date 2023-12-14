@@ -14,7 +14,7 @@
 #include <deque>
 #include <memory>
 #include <condition_variable>
-#include "common/common.h"
+#include "common/utils/common.h"
 #include "messenger.h"
 
 namespace uh::cluster {

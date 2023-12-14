@@ -72,7 +72,7 @@ namespace uh::cluster::rest::utils
         if (nextDifferentItr != strings.end() && *nextDifferentItr == compareTo)
         {
             ++nextDifferentItr;
-        }
+        } // TODO REVIEW THIS ONE MORE TIME, SOME TESTS FAIL BECAUSE OF REMOVING IT BUT CONCEPTUALLY IT SHOULDN'T
 
         return nextDifferentItr;
     }

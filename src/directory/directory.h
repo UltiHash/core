@@ -7,10 +7,8 @@
 
 #include <functional>
 #include <iostream>
-#include <etcd/Client.hpp>
-#include <etcd/KeepAlive.hpp>
-#include <common/log.h>
-#include "common/cluster_config.h"
+#include <common/utils/log.h>
+#include "common/utils/cluster_config.h"
 #include "directory_handler.h"
 
 namespace uh::cluster {

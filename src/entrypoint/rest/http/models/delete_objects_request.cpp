@@ -64,14 +64,4 @@ namespace uh::cluster::rest::http::model
         return headers;
     }
 
-    void delete_objects_request::parse_and_check_xml() const
-    {
-
-    }
-
-    void delete_objects_request::validate_request_specific_criteria()
-    {
-        parse_and_check_xml();
-    }
-
 } // uh::cluster::http::rest::model

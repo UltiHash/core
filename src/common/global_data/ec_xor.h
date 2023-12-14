@@ -47,13 +47,13 @@ struct ec_xor: public ec {
         return std::prev (pfd)->second;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {
+    [[nodiscard]] std::vector <unique_buffer <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {
         const size_t part_size = data.size() / data_nodes_count;
-        std::vector <ospan <char>> result;
+        std::vector <unique_buffer <char>> result;
         result.emplace_back (part_size);
         const auto long_size = part_size >> std::bit_width (sizeof (unsigned long) - 1);
 
-        std::span <unsigned char> parity_view {reinterpret_cast <unsigned char*> (result.back().data.get()), part_size};
+        std::span <unsigned char> parity_view {reinterpret_cast <unsigned char*> (result.back().data()), part_size};
         std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()), long_size};
 
         std::memcpy (parity_view.data(), data.data(), part_size);
@@ -71,19 +71,19 @@ struct ec_xor: public ec {
         return result;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const override {
-        const size_t part_size = data_pieces.cbegin()->second.size;
-        std::vector <ospan <char>> result;
+    [[nodiscard]] std::vector <unique_buffer <char>> recover (const std::map <int, unique_buffer<char>>& data_pieces, int fail_count) const override {
+        const size_t part_size = data_pieces.cbegin()->second.size();
+        std::vector <unique_buffer <char>> result;
         result.emplace_back (part_size);
         const auto long_size = part_size >> std::bit_width (sizeof (unsigned long) - 1);
 
-        std::span <unsigned char> recovered_view {reinterpret_cast <unsigned char*> (result.back().data.get()), part_size};
+        std::span <unsigned char> recovered_view {reinterpret_cast <unsigned char*> (result.back().data()), part_size};
         std::span <unsigned long> long_recovered_view {reinterpret_cast <unsigned long*> (recovered_view.data()), long_size};
 
-        std::memcpy (recovered_view.data(), data_pieces.cbegin()->second.data.get(), part_size);
+        std::memcpy (recovered_view.data(), data_pieces.cbegin()->second.data(), part_size);
 
         for (const auto& data_piece : data_pieces  | std::views::drop(1)) {
-            const auto data_part = std::string_view (data_piece.second.data.get(), data_piece.second.size);
+            const auto data_part = data_piece.second.get_str_view();
             std::span <const unsigned long> long_data_part {reinterpret_cast <const unsigned long*> (data_part.data()), long_size};
             for (size_t k = 0; k < long_data_part.size(); ++k) {
                 long_recovered_view [k] ^= long_data_part[k];

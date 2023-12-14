@@ -16,12 +16,6 @@ enum message_type: uint8_t {
     READ_RESP = 11,
     WRITE_REQ = 12,
     WRITE_RESP = 13,
-    ALLOC_REQ = 14,
-    ALLOC_RESP = 15,
-    DEALLOC_REQ = 16,
-    DEALLOC_RESP = 17,
-    ALLOC_WRITE_REQ = 18,
-    ALLOC_WRITE_RESP = 19,
     SYNC_REQ = 20,
     SYNC_OK = 21,
     REMOVE_REQ = 22,
@@ -48,6 +42,7 @@ enum message_type: uint8_t {
     READ_ADDRESS_REQ = 43,
     READ_ADDRESS_RESP = 44,
     DIR_DELETE_OBJ_REQ = 45,
+    DIR_BUCKET_EXISTS = 46,
 };
 
 enum role: uint8_t {

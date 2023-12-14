@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 
-#include "common/common.h"
+#include "common/utils/common.h"
 #include "bucket.h"
 
 namespace uh::cluster {
@@ -38,16 +38,23 @@ public:
             b->second->insert_object(key, data);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 
-    ospan <char> get (const std::string& bucket, const std::string& key) {
+    void bucket_exists(const std::string& bucket)
+    {
+        if (m_buckets.find(bucket) == m_buckets.end()) {
+            throw error_exception(error::bucket_not_found);
+        }
+    }
+
+    unique_buffer <char> get (const std::string& bucket, const std::string& key) {
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
             return b->second->get_obj(key);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 
@@ -69,7 +76,7 @@ public:
             b->second->delete_object(key);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 

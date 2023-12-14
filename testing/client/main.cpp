@@ -3,9 +3,9 @@
 //
 #include <iostream>
 #include <fstream>
-#include "network/messenger.h"
-#include "common/common_types.h"
-#include "common/log.h"
+#include "common/network/messenger.h"
+#include "common/utils/common_types.h"
+#include "common/utils/log.h"
 #include <filesystem>
 #include <boost/asio/co_spawn.hpp>
 #include <future>
@@ -19,7 +19,7 @@ struct params {
     std::filesystem::path file_path;
 };
 
-std::promise <ospan <char>> response;
+std::promise <unique_buffer <char>> response;
 
 params get_params (int argc, char* args[]) {
 
@@ -38,7 +38,7 @@ params get_params (int argc, char* args[]) {
 coro <void> perform_operation (messenger& m, message_type type, std::span <char> data) {
     co_await m.send(type, data);
     const auto h = co_await m.recv_header();
-    ospan <char> buf (h.size);
+    unique_buffer <char> buf (h.size);
     m.register_read_buffer(buf);
     co_await m.recv_buffers(h);
     response.set_value(std::move (buf));
@@ -71,10 +71,10 @@ int main (int argc, char* args[]) {
     LOG_INFO() << "Connected to the server";
 
     std::fstream f (ps.file_path);
-    ospan <char> buf (std::filesystem::file_size (ps.file_path));
-    f.read(buf.data.get(), buf.size);
+    unique_buffer <char> buf (std::filesystem::file_size (ps.file_path));
+    f.read(buf.data(), buf.size());
 
-    LOG_INFO() << "Read data from file " << ps.file_path << " of size " << buf.size / static_cast <double> (1024ul * 1024ul);
+    LOG_INFO() << "Read data from file " << ps.file_path << " of size " << buf.size() / static_cast <double> (1024ul * 1024ul);
 
     std::chrono::time_point <std::chrono::steady_clock> timer;
     const auto start = std::chrono::steady_clock::now();
@@ -92,12 +92,12 @@ int main (int argc, char* args[]) {
 
     const auto stop = std::chrono::steady_clock::now ();
     const std::chrono::duration <double> duration = stop - start;
-    const auto size = buf.size / static_cast <double> (1024ul * 1024ul);
+    const auto size = buf.size() / static_cast <double> (1024ul * 1024ul);
     const auto bandwidth = size / duration.count();
     LOG_INFO() << "Operation duration " << duration.count() << " s";
     LOG_INFO() << "Operation bandwidth " << bandwidth << " MB/s";
 
     const auto resp = response.get_future().get();
-    LOG_INFO() << "Operation response of size " << resp.size;
+    LOG_INFO() << "Operation response of size " << resp.size();
 
 }

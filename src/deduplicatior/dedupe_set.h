@@ -8,8 +8,8 @@
 #include <set>
 #include <queue>
 #include <utility>
-#include <common/common.h>
-#include <global_data/global_data_view.h>
+#include "common/utils/common.h"
+#include <common/global_data/global_data_view.h>
 #include "set_log.h"
 
 namespace uh::cluster {
@@ -55,11 +55,11 @@ public:
                 return prefix < f.prefix;
             }
 
-            sspan <char> d1, d2;
+            shared_buffer <char> d1, d2;
             std::string_view s1, s2;
             bool b1 = false, b2 = false;
 
-            auto catch_frag = [&] (const fragment_element& f, sspan<char>& data, std::string_view& str, bool& l1) {
+            auto catch_frag = [&] (const fragment_element& f, shared_buffer<char>& data, std::string_view& str, bool& l1) {
                 if (f.m_data.has_value()) {
                     str = *f.m_data;
                 }
@@ -113,12 +113,12 @@ public:
         const std::set <fragment_element>::const_iterator hint;
     };
 
-    [[nodiscard]] static inline sspan<char> load_fragment (const fragment_element& f, global_data_view& storage) {
+    [[nodiscard]] static inline shared_buffer <char> load_fragment (const fragment_element& f, global_data_view& storage) {
         if (const auto c = storage.read_l2_cache(f.pointer, f.size); c.data() != nullptr) {
             return c;
         }
 
-        sspan <char> buf (f.size);
+        shared_buffer <char> buf (f.size);
         storage.read (buf.data(), f.pointer, f.size);
         return buf;
     }

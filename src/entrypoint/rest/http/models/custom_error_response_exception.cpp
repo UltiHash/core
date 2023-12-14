@@ -2,6 +2,7 @@
 
 #include <utility>
 #include "iostream"
+#include "common/utils/log.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -22,6 +23,7 @@ namespace uh::cluster::rest::http::model
                     {"InvalidBucketName", "bucket name has invalid characters"},
                     {"BadUploadId", "upload id is invalid"},
                     {"BadPartNumber", "part number is invalid"},
+                    {"TooManyElements", "too many elements in the request"},
             };
 
     static const std::pair<std::string, std::string> error_out_of_range = {"OutOfRange", "error out of range"};
@@ -79,7 +81,7 @@ namespace uh::cluster::rest::http::model
 
         m_res.prepare_payload();
 
-        std::cout << m_res.base() << std::endl;
+        LOG_INFO() << m_res.base() << std::endl;
 
         return m_res;
     }
