@@ -5,7 +5,7 @@
 #include <system_error>
 #include "common/utils/cluster_config.h"
 #include "storage/storage.h"
-#include "deduplicatior/deduplicator.h"
+#include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
 #include "entrypoint/entrypoint.h"
 
@@ -18,14 +18,14 @@ void execute_role (const uh::cluster::role role, const std::size_t id) {
 
     switch (role) {
         case uh::cluster::STORAGE_SERVICE: {
-            LOG_INFO() << "starting data-store service";
+            LOG_INFO() << "starting storage service";
             uh::cluster::storage ds(id);
             ds.run();
             break;
         }
 
         case uh::cluster::DEDUPLICATION_SERVICE: {
-            LOG_INFO() << "starting deduplication service";
+            LOG_INFO() << "starting deduplicatior service";
             uh::cluster::deduplicator dd (id);
             dd.run();
             break;

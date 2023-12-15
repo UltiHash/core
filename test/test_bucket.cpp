@@ -9,7 +9,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <directory_node/bucket.h>
+#include <directory/bucket.h>
 
 // ------------- Tests Suites Follow --------------
 

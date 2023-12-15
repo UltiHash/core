@@ -9,13 +9,11 @@
 #include "common/global_data/global_data_view.h"
 #include "deduplicator_handler.h"
 
-
-
 namespace uh::cluster {
-    class deduplicator: service_interface {
+    class deduplicator : public service_interface {
     public:
 
-        deduplicator(std::size_t id, const bool use_id_as_port_offset = false) :
+        explicit deduplicator(std::size_t id, const bool use_id_as_port_offset = false) :
                 m_id(id),
                 m_service_name(abbreviation_by_role.at(uh::cluster::DEDUPLICATION_SERVICE) + "/" + std::to_string(m_id)),
                 m_registry(m_service_name),
@@ -24,7 +22,8 @@ namespace uh::cluster {
                 m_server (make_dedupe_node_config().server_conf, m_service_name,
                           std::make_unique <deduplicator_handler>(make_dedupe_node_config(), m_storage, m_dedupe_workers)),
                 m_use_id_as_port_offset (use_id_as_port_offset)
-        {}
+        {
+        }
 
         void run() override {
             m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
@@ -46,10 +45,6 @@ namespace uh::cluster {
 
         global_data_view& get_global_data_view() {
             return m_storage;
-        }
-
-        server& get_server() {
-            return m_server;
         }
 
     private:

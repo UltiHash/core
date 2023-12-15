@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>
 #include "common/utils/common.h"
 #include "common/utils/free_spot_manager.h"
-#include "data_node/data_store.h"
+#include "storage/data_store.h"
 
 // ------------- Tests Suites Follow --------------
 

@@ -9,7 +9,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <directory_node/transaction_log.h>
+#include <directory/transaction_log.h>
 
 // ------------- Tests Suites Follow --------------
 
