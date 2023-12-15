@@ -32,7 +32,8 @@ namespace uh::cluster {
         }
 
         void unregister_service() {
-            m_etcd_keepalive->Cancel();
+            if(m_etcd_keepalive.get() != NULL)
+                m_etcd_keepalive->Cancel();
         }
 
         std::vector<std::pair<std::size_t, std::string>> get_service_instances(uh::cluster::role service_role) {
