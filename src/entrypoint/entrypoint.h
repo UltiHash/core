@@ -23,10 +23,10 @@ public:
             m_id(id),
             m_service_name(abbreviation_by_role.at(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
-            m_workers (std::make_shared <boost::asio::thread_pool> (make_entry_node_config().worker_thread_count)),
-            m_rest_server (make_entry_node_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
+            m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
+            m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
-        m_registry.wait_for_dependency(uh::cluster::DEDUPLICATION_SERVICE);
+        m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
         create_connections();
     }
@@ -57,16 +57,16 @@ private:
 
 
     void create_connections() {
-        for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATION_SERVICE)) {
+        for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {
             m_dedupe_nodes.emplace_back (std::make_shared <client> (m_rest_server.get_executor(), instance.second,
-                                                                    make_dedupe_node_config().server_conf.port,
-                                                                    make_entry_node_config().dedupe_node_connection_count));
+                                                                    make_deduplicator_config().server_conf.port,
+                                                                    make_entrypoint_config().dedupe_node_connection_count));
         }
 
         for(const auto& instance : m_registry.get_service_instances(uh::cluster::DIRECTORY_SERVICE)) {
             m_directory_nodes.emplace_back(std::make_shared <client> (m_rest_server.get_executor(), instance.second,
-                                                                      make_directory_node_config().server_conf.port,
-                                                                      make_entry_node_config().directory_connection_count));
+                                                                      make_directory_config().server_conf.port,
+                                                                      make_entrypoint_config().directory_connection_count));
         }
     }
 

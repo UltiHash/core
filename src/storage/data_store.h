@@ -25,7 +25,7 @@ class data_store {
 
 public:
 
-    explicit data_store (data_node_config conf, std::size_t id, bool adaptive = true);
+    explicit data_store (storage_config conf, std::size_t id, bool adaptive = true);
 
     address write (std::span <char> data);
 
@@ -78,7 +78,7 @@ private:
     int m_last_fd {};
     std::size_t m_last_file_data_end {};
     std::size_t m_data_id;
-    const data_node_config m_conf;
+    const storage_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_modified_files;

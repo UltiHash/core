@@ -52,7 +52,7 @@ public:
     entrypoint_rest_handler (std::shared_ptr <boost::asio::io_context> ioc,
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
-                             entry_node_config config,
+                             entrypoint_config config,
                              std::shared_ptr <boost::asio::thread_pool> workers):
             metrics_handler(config.rest_server_conf),
             m_ioc (std::move (ioc)),
@@ -840,7 +840,7 @@ public:
         }
 
         std::atomic <size_t> m_directory_node_index {};
-        entry_node_config m_entry_node_config {};
+        entrypoint_config m_entry_node_config {};
 
         std::shared_ptr <boost::asio::io_context> m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;

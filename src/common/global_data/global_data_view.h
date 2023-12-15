@@ -205,12 +205,13 @@ public:
 
         int i = 0;
         for(const auto& instance : ds_instances) {
-            uint16_t port = make_data_node_config().server_conf.port;
+            uint16_t port = make_storage_config().server_conf.port;
             if(use_id_as_port_offset) {
                 port += instance.first;
             }
-            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_dedupe_node_config().data_node_connection_count);
-            const uint128_t offset = make_data_node_config().max_data_store_size * (instance.first - m_ec->get_acquired_ec_node_count());
+            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
+            const uint128_t offset =
+                    make_storage_config().max_data_store_size * (instance.first - m_ec->get_acquired_ec_node_count());
 
             if (ds_instances.size() - i <= m_ec->get_required_ec_node_count()) {
                 m_ec->add_ec_node(offset, std::move (cl));
@@ -240,7 +241,7 @@ private:
             throw std::out_of_range ("The pointer is not in the range of data nodes");
        }
        const auto n = std::prev (pfd);
-       if (pfd == m_data_node_offsets.cend() and n->first + make_data_node_config().max_data_store_size < pointer) {
+       if (pfd == m_data_node_offsets.cend() and n->first + make_storage_config().max_data_store_size < pointer) {
             return m_ec->get_ec_node (pointer);
         }
         return n->second;

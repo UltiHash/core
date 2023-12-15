@@ -21,7 +21,7 @@ namespace uh::cluster {
 
 struct config_fixture
 {
-    static uh::cluster::data_node_config make_data_store_config () {
+    static uh::cluster::storage_config make_data_store_config () {
         return {
                 .directory = "root/dn",
                 .hole_log = "root/dn/log",

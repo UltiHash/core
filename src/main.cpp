@@ -24,7 +24,7 @@ void execute_role (const uh::cluster::role role, const std::size_t id) {
             break;
         }
 
-        case uh::cluster::DEDUPLICATION_SERVICE: {
+        case uh::cluster::DEDUPLICATOR_SERVICE: {
             LOG_INFO() << "starting deduplicatior service";
             uh::cluster::deduplicator dd (id);
             dd.run();

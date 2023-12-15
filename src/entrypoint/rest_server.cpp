@@ -12,7 +12,7 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(entry_node_config config,
+    rest_server::rest_server(entrypoint_config config,
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers) :

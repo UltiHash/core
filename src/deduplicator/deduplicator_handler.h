@@ -18,7 +18,7 @@ class deduplicator_handler: public protocol_handler {
 
 public:
 
-    deduplicator_handler (dedupe_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
+    deduplicator_handler (deduplicator_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
         protocol_handler (dedupe_conf.server_conf),
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_log_path, storage),
@@ -164,7 +164,7 @@ private:
         return m_storage.write(frag);
     }
 
-    dedupe_config m_dedupe_conf;
+    deduplicator_config m_dedupe_conf;
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;

@@ -33,7 +33,7 @@ namespace uh::cluster {
                 roles[STORAGE_SERVICE].emplace(i, "127.0.0.1");
             }
             for (int i = 0; i < dedupe_nodes; ++i) {
-                roles[DEDUPLICATION_SERVICE].emplace(i, "127.0.0.1");
+                roles[DEDUPLICATOR_SERVICE].emplace(i, "127.0.0.1");
             }
             for (int i = 0; i < directory_nodes; ++i) {
                 roles[DIRECTORY_SERVICE].emplace(i, "127.0.0.1");
@@ -98,13 +98,12 @@ namespace uh::cluster {
 
             for (const auto &role: cluster_roles) {
                 for (const auto &role_nodes: role.second) {
-                    auto config = make_cluster_config(role_nodes.first, ec);
                     switch (role.first) {
                         case STORAGE_SERVICE:
                             m_service_instances.emplace_back(std::make_shared<storage>(role_nodes.first));
                             m_storage_instances.emplace_back(m_service_instances.back());
                             break;
-                        case DEDUPLICATION_SERVICE:
+                        case DEDUPLICATOR_SERVICE:
                             m_service_instances.emplace_back(std::make_shared<deduplicator>(role_nodes.first, true));
                             m_deduplicator_instances.emplace_back(m_service_instances.back());
                             break;
@@ -180,7 +179,7 @@ namespace uh::cluster {
             return "/tmp/uh/";
         }
 
-        static uh::cluster::entry_node_config make_entry_node_config(int i) {
+        static uh::cluster::entrypoint_config make_entry_node_config(int i) {
             return {
                     .rest_server_conf = {
                             .threads = 4,
@@ -191,7 +190,7 @@ namespace uh::cluster {
             };
         }
 
-        static uh::cluster::data_node_config make_data_node_config(int i) {
+        static uh::cluster::storage_config make_data_node_config(int i) {
             std::string dn_dir = "dn" + std::to_string(i);
             return {
                     .directory = get_root_path() / dn_dir,
@@ -209,7 +208,7 @@ namespace uh::cluster {
             };
         }
 
-        static uh::cluster::directory_node_config make_directory_node_config(int i) {
+        static uh::cluster::directory_config make_directory_node_config(int i) {
             std::string dr_dir = "dr" + std::to_string(i);
 
             return {
@@ -234,7 +233,7 @@ namespace uh::cluster {
             };
         }
 
-        static uh::cluster::dedupe_config make_dedupe_node_config(int i) {
+        static uh::cluster::deduplicator_config make_dedupe_node_config(int i) {
             std::string dd_dir = "dd" + std::to_string(i);
 
             return {
@@ -261,17 +260,6 @@ namespace uh::cluster {
                     .l1_sample_size = 128,
                     .ec_algorithm = ec,
                     .recovery_chunk_size = 1 * 1024ul,
-            };
-        }
-
-        static uh::cluster::cluster_config make_cluster_config(int i, ec_type ec) {
-            return {
-                    .init_process_count = 4,
-                    .data_node_conf = make_data_node_config(i),
-                    .dedupe_node_conf = make_dedupe_node_config(i),
-                    .directory_node_conf = make_directory_node_config(i),
-                    .entry_node_conf = make_entry_node_config(i),
-                    .global_data_view_conf = make_global_data_view_config(ec)
             };
         }
 

@@ -8,6 +8,9 @@
 #include "common/utils/log.h"
 #include "common/global_data/global_data_view.h"
 #include "deduplicator_handler.h"
+#include "common/utils/service_interface.h"
+#include "common/utils/service_registry.h"
+#include "common/network/server.h"
 
 namespace uh::cluster {
     class deduplicator : public service_interface {
@@ -15,12 +18,12 @@ namespace uh::cluster {
 
         explicit deduplicator(std::size_t id, const bool use_id_as_port_offset = false) :
                 m_id(id),
-                m_service_name(abbreviation_by_role.at(uh::cluster::DEDUPLICATION_SERVICE) + "/" + std::to_string(m_id)),
+                m_service_name(abbreviation_by_role.at(uh::cluster::DEDUPLICATOR_SERVICE) + "/" + std::to_string(m_id)),
                 m_registry(m_service_name),
-                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_dedupe_node_config().worker_thread_count)),
+                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
                 m_storage (m_registry),
-                m_server (make_dedupe_node_config().server_conf, m_service_name,
-                          std::make_unique <deduplicator_handler>(make_dedupe_node_config(), m_storage, m_dedupe_workers)),
+                m_server (make_deduplicator_config().server_conf, m_service_name,
+                          std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers)),
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {
         }

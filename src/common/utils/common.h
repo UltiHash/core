@@ -47,7 +47,7 @@ enum message_type: uint8_t {
 
 enum role: uint8_t {
     STORAGE_SERVICE,
-    DEDUPLICATION_SERVICE,
+    DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
 };
@@ -58,17 +58,17 @@ enum ec_type: uint8_t {
 };
 
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-        {"ds", uh::cluster::STORAGE_SERVICE},
-        {"dd", uh::cluster::DEDUPLICATION_SERVICE},
-        {"dr", uh::cluster::DIRECTORY_SERVICE},
-        {"en", uh::cluster::ENTRYPOINT_SERVICE}
+        {"storage", uh::cluster::STORAGE_SERVICE},
+        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
+        {"directory", uh::cluster::DIRECTORY_SERVICE},
+        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
 };
 
 const std::map<uh::cluster::role, std::string> abbreviation_by_role = {
-        {uh::cluster::STORAGE_SERVICE,       "ds"},
-        {uh::cluster::DEDUPLICATION_SERVICE, "dd"},
-        {uh::cluster::DIRECTORY_SERVICE,     "dr"},
-        {uh::cluster::ENTRYPOINT_SERVICE,    "en"}
+        {uh::cluster::STORAGE_SERVICE,      "storage"},
+        {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
+        {uh::cluster::DIRECTORY_SERVICE,    "directory"},
+        {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"}
 };
 
 static uh::cluster::role get_role (const std::string& role_str) {

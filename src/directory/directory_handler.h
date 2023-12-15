@@ -15,7 +15,7 @@ namespace uh::cluster {
     class directory_handler: public protocol_handler {
     public:
 
-        directory_handler(directory_node_config conf, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
+        directory_handler(directory_config conf, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
                 protocol_handler(conf.server_conf),
                 m_directory(conf.directory_conf),
                 m_storage(storage),

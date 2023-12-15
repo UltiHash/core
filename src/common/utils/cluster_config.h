@@ -46,7 +46,7 @@ struct global_data_view_config {
 
 // roles config
 
-struct dedupe_config {
+struct deduplicator_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
     server_config server_conf{};
@@ -56,7 +56,7 @@ struct dedupe_config {
     int worker_thread_count {};
 };
 
-struct data_node_config {
+struct storage_config {
     std::filesystem::path directory;
     std::filesystem::path hole_log;
     size_t min_file_size;
@@ -65,14 +65,14 @@ struct data_node_config {
     server_config server_conf;
 };
 
-struct entry_node_config {
+struct entrypoint_config {
     server_config rest_server_conf;
     int dedupe_node_connection_count {};
     int directory_connection_count {};
     int worker_thread_count {};
 };
 
-struct directory_node_config {
+struct directory_config {
     server_config server_conf{};
     directory_store_config directory_conf;
     int data_node_connection_count{};
@@ -81,14 +81,14 @@ struct directory_node_config {
 
 struct cluster_config {
     int init_process_count {};
-    data_node_config data_node_conf;
-    dedupe_config dedupe_node_conf;
-    directory_node_config directory_node_conf;
-    entry_node_config entry_node_conf{};
+    storage_config storage_conf;
+    deduplicator_config deduplicator_conf;
+    directory_config directory_conf;
+    entrypoint_config entrypoint_conf{};
     global_data_view_config global_data_view_conf;
 };
 
-static entry_node_config make_entry_node_config () {
+static entrypoint_config make_entrypoint_config () {
     return {
             .rest_server_conf = {
                     .threads = 4,
@@ -104,7 +104,7 @@ static entry_node_config make_entry_node_config () {
     };
 }
 
-static directory_node_config make_directory_node_config () {
+static directory_config make_directory_config () {
     return {
             .server_conf = {
                     .threads = 4,
@@ -128,7 +128,7 @@ static directory_node_config make_directory_node_config () {
     };
 }
 
-static dedupe_config make_dedupe_node_config () {
+static deduplicator_config make_deduplicator_config () {
     return {
             .min_fragment_size = 32,
             .max_fragment_size = 8 * 1024,
@@ -147,7 +147,7 @@ static dedupe_config make_dedupe_node_config () {
     };
 }
 
-static data_node_config make_data_node_config () {
+static storage_config make_storage_config () {
     return {
             .directory = "ultihash-root/dn",
             .hole_log = "ultihash-root/dn/log",
