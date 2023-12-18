@@ -180,10 +180,8 @@ if [ "$run_ceph" -eq "1" ]; then
     cluster_host=$(echo "$cluster_url" | sed -e 's/http:\/\///' -e 's/:[0-9]\+$//')
     cluster_port=$(echo "$cluster_url" | grep -oE '[0-9]+$')
 
-    echo "running on $cluster_host at port $cluster_port"
-
     echo "*** running Ceph test suite ..."
-    conf=$(realpath -e $(mktemp "s3_ceph_conf-XXXXXX"))
+    conf="$TESTING_BINARY_DIR/ceph_s3_test.conf"
     sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
         -e "s/%TESTING_S3_PORT%/$cluster_port/" \
         -e "s/%TESTING_AWS_KEY_ID%/$AWS_ACCESS_KEY_ID/" \
@@ -194,8 +192,6 @@ if [ "$run_ceph" -eq "1" ]; then
     if [ "$?" != "0" ]; then
         success=0
     fi
-
-    rm $conf
 fi
 
 if [ "$success" == "1" ]; then
