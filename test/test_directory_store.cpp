@@ -296,7 +296,8 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_TEST(d53.size() == sizeof(data5));
         BOOST_CHECK(std::memcmp(d53.data(), data5, d5.size()) == 0);
 
-        BOOST_CHECK_THROW(ds.remove_bucket("b2"), std::exception);
+        ds.remove_bucket("b2");
+        BOOST_CHECK(ds.list_buckets().size() == 2);
     }
 
     {
@@ -304,7 +305,7 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         directory_store ds (ds_conf);
         const auto buckets = ds.list_buckets();
         //!! changed to 3 from 2 below
-        BOOST_TEST (buckets.size() == 3);
+        BOOST_TEST (buckets.size() == 2);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
 
