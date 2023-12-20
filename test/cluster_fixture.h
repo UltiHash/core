@@ -93,6 +93,7 @@ namespace uh::cluster {
 
         void turn_on (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
             std::exception_ptr excp_ptr;
+            const std::string registry_url = "http://127.0.0.1:2379";
 
             const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
 
@@ -100,15 +101,15 @@ namespace uh::cluster {
                 for (const auto &role_nodes: role.second) {
                     switch (role.first) {
                         case STORAGE_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<storage>(role_nodes.first));
+                            m_service_instances.emplace_back(std::make_shared<storage>(role_nodes.first, registry_url));
                             m_storage_instances.emplace_back(m_service_instances.back());
                             break;
                         case DEDUPLICATOR_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<deduplicator>(role_nodes.first, true));
+                            m_service_instances.emplace_back(std::make_shared<deduplicator>(role_nodes.first, registry_url, true));
                             m_deduplicator_instances.emplace_back(m_service_instances.back());
                             break;
                         case DIRECTORY_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<directory>(role_nodes.first, true));
+                            m_service_instances.emplace_back(std::make_shared<directory>(role_nodes.first, registry_url, true));
                             m_directory_instances.emplace_back(m_service_instances.back());
                             break;
                         default:
