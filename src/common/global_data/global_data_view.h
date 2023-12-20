@@ -6,11 +6,11 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include <map>
-#include "data_node/data_node.h"
 #include "common/network/client.h"
 #include "ec.h"
 #include "ec_factory.h"
 #include "lru_cache.h"
+#include "common/utils/cluster_config.h"
 #include "common/utils/worker_utils.h"
 #include "common/utils/shared_buffer.h"
 
@@ -23,12 +23,11 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (const cluster_map& cmap):
-                          m_cluster_map (cmap),
-                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.global_data_view_conf.ec_algorithm)),
-                          m_cache_l1 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity_l1),
-                          m_cache_l2 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity_l2){
-        sleep(2);
+    explicit global_data_view (service_registry& registry):
+            m_registry(registry),
+            m_ec (ec_factory::make_ec (make_global_data_view_config().ec_algorithm)),
+            m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
+            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2){
     }
 
     address write (const std::string_view& data) {
@@ -46,7 +45,7 @@ public:
                 addr = co_await m.get().recv_address(message_header);
             } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
 
-        shared_buffer <char> l1_buf (std::min (addr.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (addr.first().size, make_global_data_view_config().l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
         m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
         return addr;
@@ -82,7 +81,7 @@ public:
         } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        shared_buffer <char> l1_buf (std::min (read_size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (read_size, make_global_data_view_config().l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
@@ -194,25 +193,27 @@ public:
     }
 
 
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
+    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, const bool use_id_as_port_offset) {
 
         m_io_service = io_service;
 
-        if (m_cluster_map.m_roles.at(DATA_NODE).size() < m_ec->get_minimum_node_count()) [[unlikely]] {
+        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
+
+        if (ds_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
         }
 
         int i = 0;
-
-        for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
-            uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
+        for(const auto& instance : ds_instances) {
+            uint16_t port = make_storage_config().server_conf.port;
             if(use_id_as_port_offset) {
-                port += data_node.first;
+                port += instance.first;
             }
-            auto cl = std::make_shared <client> (m_io_service, data_node.second, port, connection_count);
-            const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * (data_node.first - m_ec->get_acquired_ec_node_count());
+            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
+            const uint128_t offset =
+                    make_storage_config().max_data_store_size * (instance.first - m_ec->get_acquired_ec_node_count());
 
-            if ( m_cluster_map.m_roles.at(DATA_NODE).size() - i <= m_ec->get_required_ec_node_count()) {
+            if (ds_instances.size() - i <= m_ec->get_required_ec_node_count()) {
                 m_ec->add_ec_node(offset, std::move (cl));
             }
             else {
@@ -228,7 +229,7 @@ public:
     }
 
     [[nodiscard]] inline std::size_t l1_cache_sample_size () const noexcept {
-        return m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size;
+        return make_global_data_view_config().l1_sample_size;
     }
 
 private:
@@ -240,15 +241,15 @@ private:
             throw std::out_of_range ("The pointer is not in the range of data nodes");
        }
        const auto n = std::prev (pfd);
-       if (pfd == m_data_node_offsets.cend() and n->first + m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size < pointer) {
+       if (pfd == m_data_node_offsets.cend() and n->first + make_storage_config().max_data_store_size < pointer) {
             return m_ec->get_ec_node (pointer);
         }
         return n->second;
     }
 
-    const cluster_map& m_cluster_map;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+    service_registry& m_registry;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;

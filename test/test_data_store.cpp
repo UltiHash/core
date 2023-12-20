@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>
 #include "common/utils/common.h"
 #include "common/utils/free_spot_manager.h"
-#include "data_node/data_store.h"
+#include "storage/data_store.h"
 
 // ------------- Tests Suites Follow --------------
 
@@ -21,7 +21,7 @@ namespace uh::cluster {
 
 struct config_fixture
 {
-    static uh::cluster::data_node_config make_data_store_config () {
+    static uh::cluster::storage_config make_data_store_config () {
         return {
                 .directory = "root/dn",
                 .hole_log = "root/dn/log",

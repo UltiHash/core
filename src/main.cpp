@@ -4,175 +4,58 @@
 
 #include <system_error>
 #include "common/utils/cluster_config.h"
-#include "data_node/data_node.h"
-#include "dedupe_node/dedupe_node.h"
-#include "directory_node/directory_node.h"
-#include "entry_node/entry_node.h"
-#include "common/network/cluster_map.h"
+#include "storage/storage.h"
+#include "deduplicator/deduplicator.h"
+#include "directory/directory.h"
+#include "entrypoint/entrypoint.h"
 
 #include <config.h>
 #include "common/utils/log.h"
 
+using namespace uh::cluster;
 
-uh::cluster::entry_node_config make_entry_node_config () {
-    return {
-        .rest_server_conf = {
-                .threads = 4,
-                .port = 8080,
-                .metrics_bind_address = "0.0.0.0:9080",
-                .metrics_threads = 2,
-                .metrics_path = "/metrics"
-        },
-        .dedupe_node_connection_count = 4,
-        .directory_connection_count = 4,
-        .worker_thread_count = 12,
-    };
-}
-
-uh::cluster::directory_node_config make_directory_node_config () {
-    return {
-        .server_conf = {
-                .threads = 4,
-                .port = 8083,
-                .metrics_bind_address = "0.0.0.0:9083",
-                .metrics_threads = 2,
-                .metrics_path = "/metrics"
-        },
-        .directory_conf = {
-                .root = "ultihash-root/dr",
-                .bucket_conf = {
-                        .min_file_size = 1024ul * 1024ul * 1024ul * 2,
-                        .max_file_size = 1024ul * 1024ul * 1024ul * 64,
-                        .max_storage_size = 1024ul * 1024ul * 1024ul * 256,
-                        .max_chunk_size = std::numeric_limits <uint32_t>::max(),
-                },
-        },
-        .data_node_connection_count = 4,
-        .worker_thread_count = 8,
-    };
-}
-
-uh::cluster::dedupe_config make_dedupe_node_config () {
-    return {
-        .min_fragment_size = 32,
-        .max_fragment_size = 8 * 1024,
-        .server_conf = {
-                .threads = 4,
-                .port = 8084,
-                .metrics_bind_address = "0.0.0.0:9084",
-                .metrics_threads = 2,
-                .metrics_path = "/metrics"
-        },
-        .data_node_connection_count = 16,
-        .set_log_path = "ultihash-root/dd/set_log",
-        .dedupe_worker_minimum_data_size = 128ul * 1024ul,
-        .worker_thread_count = 32,
-    };
-}
-
-uh::cluster::data_node_config make_data_node_config () {
-    return {
-            .directory = "ultihash-root/dn",
-            .hole_log = "ultihash-root/dn/log",
-            .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
-            .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
-            .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
-            .server_conf = {
-                    .threads = 16,
-                    .port = 8082,
-                    .metrics_bind_address = "0.0.0.0:9082",
-                    .metrics_threads = 2,
-                    .metrics_path = "/metrics"
-            },
-    };
-}
-
-uh::cluster::global_data_view_config make_global_data_view_config () {
-
-    return {
-        .read_cache_capacity_l1= 8000000,
-        .read_cache_capacity_l2= 4000,
-        .l1_sample_size = 128,
-        .ec_algorithm = uh::cluster::NON,
-        .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
-    };
-};
-
-uh::cluster::cluster_config make_cluster_config () {
-    return {
-            .init_process_count = 4,
-            .data_node_conf = make_data_node_config(),
-            .dedupe_node_conf = make_dedupe_node_config(),
-            .directory_node_conf = make_directory_node_config(),
-            .entry_node_conf = make_entry_node_config(),
-            .global_data_view_conf = make_global_data_view_config()
-    };
-}
-
-void execute_role (const uh::cluster::role role, const int id, uh::cluster::cluster_map cmap) {
+void execute_role (const uh::cluster::role role, const std::size_t id, const std::string& registry_url) {
 
     switch (role) {
-        case uh::cluster::DATA_NODE: {
-            LOG_INFO() << "starting data node";
-            uh::cluster::data_node dn (id, std::move (cmap));
-            dn.run();
+        case uh::cluster::STORAGE_SERVICE: {
+            LOG_INFO() << "starting storage service";
+            uh::cluster::storage ds(id, registry_url);
+            ds.run();
             break;
         }
-        case uh::cluster::DEDUPE_NODE: {
-            LOG_INFO() << "starting dedupe node";
-            uh::cluster::dedupe_node dd (id, std::move (cmap));
+
+        case uh::cluster::DEDUPLICATOR_SERVICE: {
+            LOG_INFO() << "starting deduplicatior service";
+            uh::cluster::deduplicator dd (id, registry_url);
             dd.run();
             break;
         }
-        case uh::cluster::DIRECTORY_NODE: {
-            LOG_INFO() << "starting directory node";
-            uh::cluster::directory_node pb (id, std::move (cmap));
-            pb.run();
+
+        case uh::cluster::DIRECTORY_SERVICE: {
+            LOG_INFO() << "starting directory service";
+            uh::cluster::directory dr (id, registry_url);
+            dr.run();
             break;
         }
-        case uh::cluster::ENTRY_NODE: {
-            LOG_INFO() << "starting entry node";
-            uh::cluster::entry_node en (id, std::move(cmap));
+
+        case uh::cluster::ENTRYPOINT_SERVICE: {
+            LOG_INFO() << "starting entrypoint service";
+            uh::cluster::entrypoint en (id, registry_url);
             en.run();
             break;
         }
+
     }
 
 }
 
-uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, uh::cluster::cluster_config&& cluster_conf) {
-    uh::cluster::cluster_map cmap (std::move (cluster_conf));
-
-    if (role == uh::cluster::ENTRY_NODE and id == 0) { // master
-        cmap.broadcast_init();
-    }
-    else {
-        cmap.send_recv_roles(role, id);
-    }
-    return cmap;
-}
-
-uh::cluster::role get_role (const std::string_view& role_str) {
-    if (role_str == "dn") {
-        return uh::cluster::DATA_NODE;
-    }
-    else if (role_str == "dd") {
-        return uh::cluster::DEDUPE_NODE;
-    }
-    else if (role_str == "dr") {
-        return uh::cluster::DIRECTORY_NODE;
-    }
-    else if (role_str == "en") {
-        return uh::cluster::ENTRY_NODE;
-    }
-    else {
-        throw std::invalid_argument ("Invalid role!");
-    }
-}
+//void handleChange(etcd::Response response) {
+//    LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
+//    }
 
 int main (int argc, char* args[]) {
-    if (argc != 3) {
-        throw std::invalid_argument("Usage: uh-cluster <role> <id>");
+    if (argc < 3 || argc > 4) {
+        throw std::invalid_argument("Usage: uh-cluster <role> <id> <optional: registry URL>");
     }
 
     uh::log::config lc {
@@ -188,16 +71,28 @@ int main (int argc, char* args[]) {
     };
 
     uh::log::init(lc);
-    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION;
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " on host " << boost::asio::ip::host_name();
 
-    const auto role_str = std::string_view(args[1]);   // en, dd, dr, dn
-    char* end;
-    const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
-    const auto role = get_role (role_str);
-    auto cluster_conf = make_cluster_config();
+    /*
+    etcd::Client etcd("http://127.0.0.1:2379");
+    std::shared_ptr<etcd::KeepAlive> keepalive = etcd.leasekeepalive(etcd_ttl).get();
+    etcd.set("/uh/ds/0", boost::asio::ip::host_name(),keepalive->Lease());
+    etcd::Watcher watcher("http://127.0.0.1:2379", "/uh", handleChange, true);
 
-    uh::cluster::cluster_map cmap = init_cluster_map (role, id, std::move (cluster_conf));
+    sleep(1);
+    keepalive->Cancel();
+    sleep(10);
+     */
 
-    execute_role (role, id, std::move (cmap));
+
+    const auto role_str = std::string(args[1]);   // en, dd, dr, dn
+    const std::size_t id = std::stoul(args[2]);
+    std::string registry_url = "http://127.0.0.1:2379";
+    if(argc == 4) {
+        registry_url = std::string(args[4]);
+    }
+    const auto role = get_service_role (role_str);
+
+    execute_role (role, id, registry_url);
 }

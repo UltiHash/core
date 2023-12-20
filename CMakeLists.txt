@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
 add_subdirectory(lib)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
-include_directories()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
 project(uh-cluster VERSION 0.1.0)
 message(STATUS "Building ${PROJECT_NAME}...")
@@ -43,7 +42,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} prometheus-cpp::pull pugixml::shared ${PugiXML_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS} )
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} prometheus-cpp::pull pugixml::shared ${PugiXML_LIBRARIES} etcd-cpp-api ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)

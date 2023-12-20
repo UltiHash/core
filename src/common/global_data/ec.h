@@ -7,6 +7,8 @@
 
 #include "common/network/client.h"
 #include <memory>
+#include <ranges>
+
 
 namespace uh::cluster {
     struct ec {

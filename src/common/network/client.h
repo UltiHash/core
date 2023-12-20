@@ -64,9 +64,20 @@ public:
     std::condition_variable m_cv;
     std::mutex m;
 
-    client (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string &ip, const int port, const int connections) {
+    client (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string &address, const std::uint16_t port, const int connections) {
+        boost::asio::io_service io_service;
+        boost::asio::ip::tcp::resolver resolver(io_service);
+        boost::asio::ip::tcp::resolver::query query(address, std::to_string(port));
+        boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
+        boost::asio::ip::tcp::resolver::iterator end; // End marker.
+        boost::asio::ip::tcp::endpoint endpoint;
+        while (iter != end)
+        {
+            endpoint = iter->endpoint();
+            iter++;
+        }
         for (int i = 0; i < connections; ++i) {
-            m_messengers.emplace_back(std::make_unique<messenger> (ioc, ip, port));
+            m_messengers.emplace_back(std::make_unique<messenger> (ioc, endpoint.address().to_string(), port));
         }
     }
 

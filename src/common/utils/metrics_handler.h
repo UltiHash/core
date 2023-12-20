@@ -19,7 +19,7 @@ namespace uh::cluster {
     public:
 
         explicit metrics_handler(server_config& c) :
-        m_exposer(make_exposer(c)),
+                //m_exposer(make_exposer(c)),
                 m_registry(std::make_shared<prometheus::Registry>()),
                 m_metrics_path(c.metrics_path) {};
 
@@ -43,16 +43,17 @@ namespace uh::cluster {
         }
 
         void init() {
-            m_exposer.RegisterCollectable(m_registry, m_metrics_path);
+            //m_exposer.RegisterCollectable(m_registry, m_metrics_path);
         }
 
     private:
-        prometheus::Exposer m_exposer;
+        //prometheus::Exposer m_exposer;
         std::shared_ptr<prometheus::Registry> m_registry;
         std::string m_metrics_path;
 
         prometheus::Exposer make_exposer(const server_config& c)
         {
+            /*
             LOG_INFO() << "starting metrics server at " << c.metrics_bind_address;
             try
             {
@@ -62,6 +63,8 @@ namespace uh::cluster {
             {
                 throw std::runtime_error(std::string("could not start metrics HTTP server: ") + e.what());
             }
+            */
+
         }
 
 

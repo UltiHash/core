@@ -9,7 +9,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <directory_node/directory_store.h>
+#include <directory/directory_store.h>
 
 // ------------- Tests Suites Follow --------------
 
