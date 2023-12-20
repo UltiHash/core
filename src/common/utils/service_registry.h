@@ -31,8 +31,8 @@ namespace uh::cluster {
             m_etcd_client.set(key, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
         }
 
-        void unregister_service() {
-            if(m_etcd_keepalive.get() != NULL)
+        ~service_registry() {
+            if(m_etcd_keepalive != NULL)
                 m_etcd_keepalive->Cancel();
         }
 

@@ -39,7 +39,6 @@ namespace uh::cluster {
             m_server.stop();
             m_dedupe_workers->join();
             m_dedupe_workers->stop();
-            m_registry.unregister_service();
         }
 
         ~deduplicator() override {

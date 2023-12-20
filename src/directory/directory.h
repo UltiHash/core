@@ -39,7 +39,6 @@ public:
         m_server.stop();
         m_directory_workers->join();
         m_directory_workers->stop();
-        m_registry.unregister_service();
     }
 
     global_data_view& get_global_data_view() {

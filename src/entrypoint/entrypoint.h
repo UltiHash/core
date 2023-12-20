@@ -40,7 +40,6 @@ public:
         LOG_INFO() << "stopping " << m_service_name;
         m_workers->join();
         m_workers->stop();
-        m_registry.unregister_service();
     }
 
 

@@ -36,7 +36,6 @@ public:
 
     void stop() override {
         m_server.stop();
-        m_registry.unregister_service();
     }
 
     ~storage() override {
