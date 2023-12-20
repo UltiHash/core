@@ -21,7 +21,7 @@ public:
 
     explicit entrypoint(std::size_t id) :
             m_id(id),
-            m_service_name(abbreviation_by_role.at(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
+            m_service_name(get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)

@@ -88,7 +88,7 @@ int main (int argc, char* args[]) {
 
     const auto role_str = std::string(args[1]);   // en, dd, dr, dn
     const std::size_t id = std::stoul(args[2]);
-    const auto role = get_role (role_str);
+    const auto role = get_service_role (role_str);
 
     execute_role (role, id);
 }

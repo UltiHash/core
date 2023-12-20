@@ -37,11 +37,9 @@ namespace uh::cluster {
         }
 
         std::vector<std::pair<std::size_t, std::string>> get_service_instances(uh::cluster::role service_role) {
-            if(!abbreviation_by_role.contains(service_role))
-                throw std::invalid_argument ("Invalid role!");
             std::vector<std::pair<std::size_t, std::string>> result;
 
-            std::string service_key = "/uh/" + abbreviation_by_role.at(service_role);
+            std::string service_key = "/uh/" + get_service_string(service_role);
             etcd::Response service_instances = m_etcd_client.ls(service_key).get();
             for (int i = 0; i < service_instances.keys().size(); i++) {
                 const auto& service_instance = service_instances.value(i);
@@ -59,9 +57,7 @@ namespace uh::cluster {
         }
 
         void wait_for_dependency(uh::cluster::role dependency) {
-            if(!abbreviation_by_role.contains(dependency))
-                throw std::invalid_argument ("Invalid role!");
-            std::string dependency_key = "/uh/" + abbreviation_by_role.at(dependency);
+            std::string dependency_key = "/uh/" + get_service_string(dependency);
 
             while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "Waiting for dependency " << dependency_key << " to become available...";
@@ -74,7 +70,10 @@ namespace uh::cluster {
     #ifdef NDEBUG
         const std::size_t m_etcd_default_ttl = 5;
     #else
-        const std::size_t m_etcd_default_ttl = 5;
+        // this value is used when running a debug build
+        // having a longer ttl is important here as running into a breakpoint will almost
+        // immediately let you run into ttl and thus will make debugging more complicated
+        const std::size_t m_etcd_default_ttl = 60;
     #endif
 
         const std::string m_etcd_default_key_prefix = "/uh/";
