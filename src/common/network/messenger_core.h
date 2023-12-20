@@ -25,15 +25,17 @@ namespace uh::cluster {
 
 
     public:
-
         struct header {
             message_type type;
             size_type size;
         };
 
-        messenger_core (const std::shared_ptr <boost::asio::io_context>& ioc, const boost::asio::ip::basic_endpoint<boost::asio::ip::tcp>& endpoint):
+        messenger_core(const std::shared_ptr <boost::asio::io_context>& ioc, const std::string& ip_addr,
+                       const std::uint16_t port) :
                 m_socket (*ioc),
-                m_ioc (ioc) {
+                m_ioc (ioc)
+        {
+            boost::asio::ip::tcp::endpoint endpoint (boost::asio::ip::address::from_string (ip_addr), port);
             m_socket.connect (endpoint);
         }
 
