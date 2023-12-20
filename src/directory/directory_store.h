@@ -80,23 +80,22 @@ public:
         }
     }
 
-    void remove_bucket (const std::string& bucket) {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]]
-        {
-            if (b->second->is_empty())
-            {
-                b->second->destroy_bucket();
-                m_buckets.erase(bucket);
-            }
-            else
-            {
-                throw error_exception (error::bucket_not_empty);
-            }
-        }
-        else
+    void remove_bucket (const std::string& name) {
+        auto b = m_buckets.find(name);
+
+        if (b == m_buckets.end())
         {
             throw error_exception(error::bucket_not_found);
         }
+
+        auto& bucket = *b->second;
+
+        for (const auto& key : bucket.list_keys("", "")) {
+            bucket.delete_object(key);
+        }
+
+        bucket.destroy_bucket();
+        m_buckets.erase(b);
     }
 
     std::vector <std::string> list_keys (const std::string& bucket, const std::string& lower_bound = "", const std::string& prefix = "") {
