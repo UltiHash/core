@@ -26,12 +26,12 @@ public:
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
-        m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
-        m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
-        create_connections();
     }
 
     void run() override {
+        m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
+        m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
+        create_connections();
         m_registry.register_service();
         m_rest_server.run();
     }
