@@ -1,7 +1,7 @@
 #include "URI.h"
 #include <regex>
 #include "entrypoint/rest/utils/string/string_utils.h"
-#include "entrypoint/rest/models/custom_error_response_exception.h"
+#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 
 namespace uh::cluster::rest::http
 {

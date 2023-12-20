@@ -18,8 +18,8 @@ namespace uh::cluster {
     class service_registry {
 
     public:
-        service_registry(std::string  service_id, const std::string etcd_host = "http://127.0.0.1:2379") :
-            m_etcd_host(std::move(etcd_host)),
+        service_registry(std::string  service_id, const std::string& etcd_host) :
+            m_etcd_host(etcd_host),
             m_service_id(std::move(service_id)),
             m_etcd_client(m_etcd_host)
         {

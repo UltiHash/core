@@ -14,33 +14,33 @@
 
 using namespace uh::cluster;
 
-void execute_role (const uh::cluster::role role, const std::size_t id) {
+void execute_role (const uh::cluster::role role, const std::size_t id, const std::string& registry_url) {
 
     switch (role) {
         case uh::cluster::STORAGE_SERVICE: {
             LOG_INFO() << "starting storage service";
-            uh::cluster::storage ds(id);
+            uh::cluster::storage ds(id, registry_url);
             ds.run();
             break;
         }
 
         case uh::cluster::DEDUPLICATOR_SERVICE: {
             LOG_INFO() << "starting deduplicatior service";
-            uh::cluster::deduplicator dd (id);
+            uh::cluster::deduplicator dd (id, registry_url);
             dd.run();
             break;
         }
 
         case uh::cluster::DIRECTORY_SERVICE: {
             LOG_INFO() << "starting directory service";
-            uh::cluster::directory dr (id);
+            uh::cluster::directory dr (id, registry_url);
             dr.run();
             break;
         }
 
         case uh::cluster::ENTRYPOINT_SERVICE: {
             LOG_INFO() << "starting entrypoint service";
-            uh::cluster::entrypoint en (id);
+            uh::cluster::entrypoint en (id, registry_url);
             en.run();
             break;
         }
@@ -54,8 +54,8 @@ void execute_role (const uh::cluster::role role, const std::size_t id) {
 //    }
 
 int main (int argc, char* args[]) {
-    if (argc != 3) {
-        throw std::invalid_argument("Usage: uh-cluster <role> <id>");
+    if (argc < 3 || argc > 4) {
+        throw std::invalid_argument("Usage: uh-cluster <role> <id> <optional: registry URL>");
     }
 
     uh::log::config lc {
@@ -88,7 +88,11 @@ int main (int argc, char* args[]) {
 
     const auto role_str = std::string(args[1]);   // en, dd, dr, dn
     const std::size_t id = std::stoul(args[2]);
+    std::string registry_url = "http://127.0.0.1:2379";
+    if(argc == 4) {
+        registry_url = std::string(args[4]);
+    }
     const auto role = get_service_role (role_str);
 
-    execute_role (role, id);
+    execute_role (role, id, registry_url);
 }
