@@ -1,5 +1,5 @@
 #include "bucket_canned_acl.h"
-#include "../../utils/hashing/hash.h"
+#include "entrypoint/rest/utils/hashing/hash.h"
 
 namespace uh::cluster::rest::http::model
 {

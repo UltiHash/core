@@ -2,7 +2,7 @@
 #include "custom_error_response_exception.h"
 
 // UTILS
-#include "../../utils/generator/generator.h"
+#include "entrypoint/rest/utils/generator/generator.h"
 
 namespace uh::cluster::rest::http::model
 {

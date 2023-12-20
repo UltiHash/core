@@ -1,6 +1,6 @@
 #include <iostream>
-#include "../utils/string/string_utils.h"
-#include "../utils/hashing/hash.h"
+#include "entrypoint/rest/utils/string/string_utils.h"
+#include "entrypoint/rest/utils/hashing/hash.h"
 
 #include "http_request.h"
 

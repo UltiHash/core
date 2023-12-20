@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../http_request.h"
-#include "../../utils/time/date_time.h"
+#include "entrypoint/rest/http/http_request.h"
+#include "entrypoint/rest/utils/time/date_time.h"
 #include "object_canned_acl.h"
 
 namespace uh::cluster::rest::http::model

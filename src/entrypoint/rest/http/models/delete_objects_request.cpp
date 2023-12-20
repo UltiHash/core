@@ -1,6 +1,6 @@
 #include "delete_objects_request.h"
-#include "../../utils/parser/xml_parser.h"
 #include "custom_error_response_exception.h"
+#include "entrypoint/rest/utils/parser/xml_parser.h"
 
 namespace uh::cluster::rest::http::model
 {

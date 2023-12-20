@@ -1,6 +1,6 @@
 #include "list_objectsv2_response.h"
 #include <set>
-#include "../../utils/string/string_utils.h"
+#include "entrypoint/rest/utils/string/string_utils.h"
 
 namespace uh::cluster::rest::http::model
 {

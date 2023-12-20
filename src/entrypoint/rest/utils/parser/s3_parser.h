@@ -3,8 +3,8 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
-#include "../../http/http_request.h"
-#include "../state/server_state.h"
+#include "entrypoint/rest/http/http_request.h"
+#include "entrypoint/rest/utils/state/server_state.h"
 
 
 namespace uh::cluster::rest::utils::parser

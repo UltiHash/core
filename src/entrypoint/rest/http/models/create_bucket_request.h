@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../http_request.h"
+#include "entrypoint/rest/http/http_request.h"
 #include "bucket_canned_acl.h"
 
 namespace uh::cluster::rest::http::model

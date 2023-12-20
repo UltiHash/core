@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../http_response.h"
-#include "../http_request.h"
+#include "entrypoint/rest/http/http_response.h"
+#include "entrypoint/rest/http/http_request.h"
 
 namespace uh::cluster::rest::http::model
 {

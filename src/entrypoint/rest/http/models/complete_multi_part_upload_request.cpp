@@ -1,6 +1,6 @@
-#include "complete_multi_part_upload_request.h"
-#include "../../utils/parser/xml_parser.h"
+#include "entrypoint/rest/utils/parser/xml_parser.h"
 #include "custom_error_response_exception.h"
+#include "complete_multi_part_upload_request.h"
 
 namespace uh::cluster::rest::http::model
 {
