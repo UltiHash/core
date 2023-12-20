@@ -66,8 +66,7 @@ int main (int argc, char* args[]) {
     }
 
     auto ioc = std::make_shared <boost::asio::io_context> ();
-    boost::asio::ip::tcp::endpoint endpoint (boost::asio::ip::address::from_string (ps.address), static_cast <int> (ps.port));
-    messenger m (ioc, endpoint);
+    messenger m (ioc, ps.address, static_cast <std::uint16_t> (ps.port));
 
     LOG_INFO() << "Connected to the server";
 
