@@ -57,6 +57,42 @@ enum ec_type: uint8_t {
     XOR,
 };
 
+enum config_parameters : uint8_t  {
+    CFG_HOST,
+    CFG_PORT,
+};
+
+static uh::cluster::config_parameters get_cfg_param (const std::string& cfg_param_str) {
+    const std::map<std::string, uh::cluster::config_parameters> param_by_string = {
+            {"host", uh::cluster::CFG_HOST},
+            {"port", uh::cluster::CFG_PORT}
+    };
+
+    if (param_by_string.contains(cfg_param_str))
+        return param_by_string.at(cfg_param_str);
+    else
+        throw std::invalid_argument ("Invalid configuration parameter: " + cfg_param_str);
+}
+
+    static std::string get_cfg_param_string (const uh::cluster::config_parameters& cfg_param) {
+        const std::map<uh::cluster::config_parameters, std::string> string_by_param = {
+                {uh::cluster::CFG_HOST, "host"},
+                {uh::cluster::CFG_PORT, "port"}
+        };
+
+        if (string_by_param.contains(cfg_param))
+            return string_by_param.at(cfg_param);
+        else
+            throw std::invalid_argument ("Invalid configuration parameter: " + std::to_string(cfg_param));
+    }
+
+struct service_endpoint {
+    uh::cluster::role role;
+    std::size_t id;
+    std::string host;
+    std::uint16_t port;
+};
+
 static uh::cluster::role get_service_role (const std::string& service_role_str) {
     const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
             {"storage", uh::cluster::STORAGE_SERVICE},

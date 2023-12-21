@@ -18,17 +18,20 @@ namespace uh::cluster {
     class service_registry {
 
     public:
-        service_registry(std::string  service_id, const std::string& etcd_host) :
+        service_registry(std::string service_id, const std::string& etcd_host) :
             m_etcd_host(etcd_host),
             m_service_id(std::move(service_id)),
             m_etcd_client(m_etcd_host)
         {
         }
 
-        void register_service() {
+        void register_service(std::uint16_t port = 0) {
             m_etcd_keepalive = m_etcd_client.leasekeepalive(m_etcd_default_ttl).get();
-            std::string key = m_etcd_default_key_prefix + m_service_id;
-            m_etcd_client.set(key, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
+            std::string key_base = m_etcd_default_key_prefix + m_service_id;
+            std::string key_host = key_base + "/" + get_cfg_param_string(uh::cluster::CFG_HOST);
+            std::string key_port = key_base + "/" + get_cfg_param_string(uh::cluster::CFG_PORT);
+            m_etcd_client.set(key_host, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
+            m_etcd_client.set(key_port, std::to_string(port), m_etcd_keepalive->Lease());
         }
 
         ~service_registry() {
@@ -36,22 +39,45 @@ namespace uh::cluster {
                 m_etcd_keepalive->Cancel();
         }
 
-        std::vector<std::pair<std::size_t, std::string>> get_service_instances(uh::cluster::role service_role) {
-            std::vector<std::pair<std::size_t, std::string>> result;
+        std::size_t get_config_value(const std::string& parameter) {
+            //check if an instance specific setting is available
+            //if not, check the global namespace
+            return 0;
+        }
 
-            std::string service_key = m_etcd_default_key_prefix + get_service_string(service_role);
-            etcd::Response service_instances = m_etcd_client.ls(service_key).get();
+        std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
+            std::map<std::size_t, service_endpoint> endpoints_by_id;
+
+            std::filesystem::path service_key(m_etcd_default_key_prefix + get_service_string(service_role));
+            etcd::Response service_instances = m_etcd_client.ls(service_key.string()).get();
             for (int i = 0; i < service_instances.keys().size(); i++) {
                 const auto& service_instance = service_instances.value(i);
-                std::filesystem::path service_path(service_instance.key());
+                std::filesystem::path service_full_path(service_instance.key());
+                std::filesystem::path service_rel_path = std::filesystem::relative(service_full_path, service_key);
                 try {
-                    std::size_t service_index = std::stoull(service_path.filename().string());
-                    result.emplace_back(service_index, service_instance.as_string());
+                    std::string begin = service_rel_path.begin()->string();
+                    std::size_t service_index = std::stoull(service_rel_path.begin()->string());
+                    if(!endpoints_by_id.contains(service_index))
+                        endpoints_by_id.emplace(std::size_t(service_index), service_endpoint{.role = service_role, .id = service_index});
+
+                    auto &endpoint = endpoints_by_id.at(service_index);
+                    if(service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_HOST)) {
+                        endpoint.host = service_instance.as_string();
+                    } else if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_PORT)) {
+                        endpoint.port = std::stoul(service_instance.as_string());
+                    }
                 } catch (std::invalid_argument& e) {
-                    LOG_ERROR() << "Failed to extract instance id from key " << service_key << ".";
-                    return result;
+                    LOG_ERROR() << "Failed to extract instance id from key " << service_key.string() << ".";
+                    endpoints_by_id.clear();
+                    break;
                 }
             }
+
+            std::vector<service_endpoint> result;
+            result.reserve(endpoints_by_id.size());
+
+            std::transform(endpoints_by_id.begin(), endpoints_by_id.end(), std::back_inserter(result),
+                           [](const auto& pair) { return pair.second; });
 
             return result;
         }

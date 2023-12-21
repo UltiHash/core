@@ -197,7 +197,7 @@ public:
 
         m_io_service = io_service;
 
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
+        std::vector<service_endpoint> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
         if (ds_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
@@ -207,11 +207,11 @@ public:
         for(const auto& instance : ds_instances) {
             uint16_t port = make_storage_config().server_conf.port;
             if(use_id_as_port_offset) {
-                port += instance.first;
+                port += instance.id;
             }
-            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
+            auto cl = std::make_shared <client> (m_io_service, instance.host, port, make_deduplicator_config().data_node_connection_count);
             const uint128_t offset =
-                    make_storage_config().max_data_store_size * (instance.first - m_ec->get_acquired_ec_node_count());
+                    make_storage_config().max_data_store_size * (instance.id - m_ec->get_acquired_ec_node_count());
 
             if (ds_instances.size() - i <= m_ec->get_required_ec_node_count()) {
                 m_ec->add_ec_node(offset, std::move (cl));
