@@ -52,10 +52,19 @@ void execute_role (const uh::cluster::role role, const std::size_t id, const std
 //void handleChange(etcd::Response response) {
 //    LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 //    }
+const std::string default_registry_url = "http://127.0.0.1:2379";
 
 int main (int argc, char* args[]) {
     if (argc < 3 || argc > 4) {
-        throw std::invalid_argument("Usage: uh-cluster <role> <id> <optional: registry URL>");
+        LOG_FATAL() << "Usage: " << args[0] << " <role> <id> <optional: registry>";
+        LOG_FATAL() << "\t<role>\t\t" <<
+            get_service_string(uh::cluster::STORAGE_SERVICE) << ", " <<
+            get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", " <<
+            get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or " <<
+            get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << ".";
+        LOG_FATAL() << "\t<id>\t\t" << "Non-negative integer used to identify service instances of the same role.";
+        LOG_FATAL() << "\t<registry>\t" << "Optionally, a URL to an etcd endpoint can be provided to override the default (\"" << default_registry_url << "\").";
+        exit(EINVAL);
     }
 
     uh::log::config lc {
@@ -88,7 +97,7 @@ int main (int argc, char* args[]) {
 
     const auto role_str = std::string(args[1]);   // en, dd, dr, dn
     const std::size_t id = std::stoul(args[2]);
-    std::string registry_url = "http://127.0.0.1:2379";
+    std::string registry_url = default_registry_url;
     if(argc == 4) {
         registry_url = std::string(args[4]);
     }
