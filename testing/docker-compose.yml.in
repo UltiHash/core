@@ -1,58 +1,58 @@
 version: '3'
 
 services:
-    dd:
+    deduplicator:
         image: uh/test
         container_name: dedupe
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "dd", "0" ]
+        entrypoint: [ "/uh-cluster", "deduplicator", "0" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8084" ]
             timeout: 1s
             interval: 5s
             retries: 5
 
-    dn:
+    storage:
         image: uh/test
         container_name: data
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "dn", "0" ]
+        entrypoint: [ "/uh-cluster", "storage", "0" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8082" ]
             timeout: 1s
             interval: 5s
             retries: 5
 
-    dr:
+    directory:
         image: uh/test
         container_name: directory
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "dr", "0" ]
+        entrypoint: [ "/uh-cluster", "directory", "0" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8083" ]
             timeout: 1s
             interval: 5s
             retries: 5
 
-    en:
+    entrypoint:
         image: uh/test
         container_name: entrypoint
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "en", "0" ]
+        entrypoint: [ "/uh-cluster", "entrypoint", "0" ]
         depends_on:
-            dd:
+            deduplicator:
                 condition: service_healthy
-            dn:
+            storage:
                 condition: service_healthy
-            dr:
+            directory:
                 condition: service_healthy
         ports:
             - "8080:8080"
