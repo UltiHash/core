@@ -49,10 +49,6 @@ void execute_role (const uh::cluster::role role, const std::size_t id, const std
 
 }
 
-//void handleChange(etcd::Response response) {
-//    LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
-//    }
-
 int main (int argc, char* args[]) {
     if (argc < 3 || argc > 4) {
         throw std::invalid_argument("Usage: uh-cluster <role> <id> <optional: registry URL>");
@@ -73,20 +69,7 @@ int main (int argc, char* args[]) {
     uh::log::init(lc);
     LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " on host " << boost::asio::ip::host_name();
 
-
-    /*
-    etcd::Client etcd("http://127.0.0.1:2379");
-    std::shared_ptr<etcd::KeepAlive> keepalive = etcd.leasekeepalive(etcd_ttl).get();
-    etcd.set("/uh/ds/0", boost::asio::ip::host_name(),keepalive->Lease());
-    etcd::Watcher watcher("http://127.0.0.1:2379", "/uh", handleChange, true);
-
-    sleep(1);
-    keepalive->Cancel();
-    sleep(10);
-     */
-
-
-    const auto role_str = std::string(args[1]);   // en, dd, dr, dn
+    const auto role_str = std::string(args[1]);
     const std::size_t id = std::stoul(args[2]);
     std::string registry_url = "http://127.0.0.1:2379";
     if(argc == 4) {
