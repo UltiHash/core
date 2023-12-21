@@ -77,7 +77,7 @@ stop_base_cluster ()
 {
     dir="$1"
 
-    for role in en dn dr dd; do
+    for role in entrypoint storage directory deduplicator; do
         kill -TERM $(cat "$dir/$role/uhc.pid")
     done
 
@@ -90,7 +90,7 @@ setup_bare_cluster ()
     dir=$(mktemp --directory)
     uhc=$(realpath --canonicalize-existing "$TESTING_BINARY_DIR/../uh-cluster")
 
-    for role in dd dr dn en; do
+    for role in deduplicator directory storage entrypoint; do
         mkdir -p "$dir/$role/log"
         mkdir -p "$dir/$role/data"
 
