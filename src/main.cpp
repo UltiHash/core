@@ -56,14 +56,15 @@ const std::string default_registry_url = "http://127.0.0.1:2379";
 
 int main (int argc, char* args[]) {
     if (argc < 3 || argc > 4) {
-        LOG_FATAL() << "Usage: " << args[0] << " <role> <id> <optional: registry>";
-        LOG_FATAL() << "\t<role>\t\t" <<
+        std::cerr << "Usage: " << args[0] << " <role> <id> <optional: registry>" << std::endl;
+        std::cerr << "\t<role>\t\t" <<
             get_service_string(uh::cluster::STORAGE_SERVICE) << ", " <<
             get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", " <<
             get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or " <<
-            get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << ".";
-        LOG_FATAL() << "\t<id>\t\t" << "Non-negative integer used to identify service instances of the same role.";
-        LOG_FATAL() << "\t<registry>\t" << "Optionally, a URL to an etcd endpoint can be provided to override the default (\"" << default_registry_url << "\").";
+            get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "." << std::endl;
+        std::cerr << "\t<id>\t\t" << "Non-negative integer used to identify service instances of the same role." << std::endl;
+        std::cerr << "\t<registry>\t" << "Optionally, a URL to an etcd endpoint can be provided to override the default (\"" <<
+            default_registry_url << "\")." << std::endl;
         exit(EINVAL);
     }
 
