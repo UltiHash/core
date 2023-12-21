@@ -238,9 +238,10 @@ public:
                         res->add_bucket(bucket);
                         break;
                     }
-                    if (res->get_bucket().empty()) {
-                        throw error_exception(error::bucket_not_found);
-                    }
+                }
+
+                if (res->get_bucket().empty()) {
+                    throw error_exception(error::bucket_not_found);
                 }
             };
 
