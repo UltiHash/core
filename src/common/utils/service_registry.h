@@ -19,11 +19,17 @@ namespace uh::cluster {
     class service_registry {
 
     public:
-        service_registry(std::string service_id, std::string etcd_host) :
-            m_etcd_host(std::move(etcd_host)),
-            m_service_id(std::move(service_id)),
-            m_etcd_client(m_etcd_host)
+        service_registry(uh::cluster::role role, std::size_t index, std::string etcd_host) :
+                m_etcd_host(std::move(etcd_host)),
+                m_service_role(role),
+                m_service_index(index),
+                m_service_id(get_service_string(role) + "/" + std::to_string(index)),
+                m_etcd_client(m_etcd_host)
         {
+        }
+
+        [[nodiscard]] const std::string& get_service_id() const {
+            return m_service_id;
         }
 
         void register_service(std::uint16_t port = 0) {
@@ -46,10 +52,21 @@ namespace uh::cluster {
             }
         }
 
-        std::size_t get_config_value(const std::string& parameter) {
-            //check if an instance specific setting is available
-            //if not, check the global namespace
-            return 0;
+        template <typename T, typename = std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T>) || std::is_same_v<T, std::string>>>
+        T get_config_value(const uh::cluster::config_parameter parameter) {
+            std::string instance_key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
+            try {
+                return convert_to_type(get(instance_key));
+            } catch (std::invalid_argument const & e_instance) {
+                try {
+                    std::string global_key = m_etcd_default_key_prefix + get_service_string(m_service_role) + "/global/" +
+                            get_cfg_param_string(parameter);
+                    return convert_to_type(get(global_key));
+                } catch (std::invalid_argument const & e_global) {
+                    //TODO: handle case that no values are in registry
+                    return convert_to_type("0");
+                }
+            }
         }
 
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
@@ -62,7 +79,7 @@ namespace uh::cluster {
                 std::filesystem::path service_full_path(service_instance.key());
                 std::filesystem::path service_rel_path = std::filesystem::relative(service_full_path, service_key);
                 std::string top_element = service_rel_path.begin()->string();
-                if(is_valid_id(top_element)) {
+                if(is_valid_pos_integer(top_element)) {
                     std::size_t service_index = std::stoull(top_element);
                     if (!endpoints_by_id.contains(service_index))
                         endpoints_by_id.emplace(std::size_t(service_index),
@@ -96,7 +113,7 @@ namespace uh::cluster {
                     const auto &dependency_instance = dependency_instances.value(i);
                     std::filesystem::path dependency_full_path(dependency_instance.key());
                     std::filesystem::path dependency_rel_path = std::filesystem::relative(dependency_full_path, dependency_key);
-                    if(is_valid_id(dependency_rel_path.begin()->string())) {
+                    if(is_valid_pos_integer(dependency_rel_path.begin()->string())) {
                         instance_found = true;
                         break;
                     }
@@ -107,7 +124,7 @@ namespace uh::cluster {
         }
 
     private:
-        static bool is_valid_id(const std::string& str) {
+        static bool is_valid_pos_integer(const std::string& str) {
             // Check if the string is empty
             if (str.empty()) {
                 return false;
@@ -139,6 +156,34 @@ namespace uh::cluster {
             }
         }
 
+        std::string get(const std::string &key) {
+            auto response = m_etcd_client.get(key).get();
+            try
+            {
+                if (response.is_ok())
+                    return response.value().as_string();
+                else
+                    throw std::invalid_argument("retrieval of configuration parameter " + key + " failed, details: " + response.error_message());
+            }
+            catch (std::exception const & ex)
+            {
+                throw std::system_error(EIO, std::generic_category(), "retrieval of configuration parameter " + key + " failed due to communication problem, details: " + ex.what());
+            }
+
+        }
+
+        template <typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
+        T convert_to_type(const std::string& str) {
+            if(is_valid_pos_integer(str))
+                return static_cast<T>(std::stoull(str));
+            else
+                throw std::invalid_argument("the configuration value " + str + " does not appear to be a valid non-negative integer.");
+        }
+
+        std::string convert_to_type(const std::string& str) {
+            return str;
+        }
+
     #ifdef NDEBUG
         const std::size_t m_etcd_default_ttl = 5;
     #else
@@ -151,6 +196,8 @@ namespace uh::cluster {
         const std::string m_etcd_default_key_prefix = "/uh/";
 
         const std::string m_etcd_host;
+        const uh::cluster::role m_service_role;
+        const std::size_t m_service_index;
         const std::string m_service_id;
 
         etcd::Client m_etcd_client;

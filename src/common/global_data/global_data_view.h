@@ -193,7 +193,7 @@ public:
     }
 
 
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, const bool use_id_as_port_offset) {
+    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service) {
 
         m_io_service = io_service;
 
@@ -206,7 +206,7 @@ public:
         int i = 0;
         for(const auto& instance : ds_instances) {
             uint16_t port = make_storage_config().server_conf.port;
-            if(use_id_as_port_offset) {
+            if(false) {
                 port += instance.id;
             }
             auto cl = std::make_shared <client> (m_io_service, instance.host, port, make_deduplicator_config().data_node_connection_count);

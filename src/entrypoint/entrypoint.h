@@ -20,9 +20,7 @@ class entrypoint: public service_interface {
 public:
 
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
-            m_id(id),
-            m_service_name(get_service_string(uh::cluster::ENTRYPOINT_SERVICE) + "/" + std::to_string(m_id)),
-            m_registry(m_service_name, registry_url),
+            m_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
@@ -37,15 +35,13 @@ public:
     }
 
     void stop() override {
-        LOG_INFO() << "stopping " << m_service_name;
+        LOG_INFO() << "stopping " << m_registry.get_service_id();
         m_workers->join();
         m_workers->stop();
     }
 
 
 private:
-    const std::size_t m_id;
-    const std::string m_service_name;
     service_registry m_registry;
 
     std::vector <std::shared_ptr <client>> m_dedupe_nodes;

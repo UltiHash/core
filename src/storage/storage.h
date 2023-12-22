@@ -22,10 +22,8 @@ class storage: public service_interface {
 public:
 
     explicit storage(std::size_t id, const std::string& registry_url) :
-            m_id(id),
-            m_service_name(get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
-            m_registry(m_service_name, registry_url),
-            m_server(make_storage_config().server_conf, m_service_name,
+            m_registry(uh::cluster::STORAGE_SERVICE, id, registry_url),
+            m_server(make_storage_config().server_conf, m_registry.get_service_id(),
                      std::make_unique<storage_handler>(make_storage_config(), id))
     {}
 
@@ -39,14 +37,11 @@ public:
     }
 
     ~storage() override {
-        LOG_DEBUG() << "terminating " << m_service_name;
+        LOG_DEBUG() << "terminating " << m_registry.get_service_id();
     }
 
 private:
-    const std::size_t m_id;
-    const std::string m_service_name;
     service_registry m_registry;
-
     server m_server;
 };
 } // end namespace uh::cluster

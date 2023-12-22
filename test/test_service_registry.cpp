@@ -20,7 +20,7 @@ namespace uh::cluster {
 
     BOOST_AUTO_TEST_CASE ( basic_register_retrieve_deregister )
     {
-        service_registry querying_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/0", REGISTRY_ENDPOINT);
+        service_registry querying_registry(uh::cluster::TEST_SERVICE, 0, REGISTRY_ENDPOINT);
         etcd::Client etcd_client(REGISTRY_ENDPOINT);
         std::string invalid_key = "/uh/" + get_service_string(uh::cluster::TEST_SERVICE) + "/42invalid";
         std::string global_key = "/uh/" + get_service_string(uh::cluster::TEST_SERVICE) + "/global";
@@ -33,7 +33,7 @@ namespace uh::cluster {
         }
 
         {
-            service_registry registering_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/42", REGISTRY_ENDPOINT);
+            service_registry registering_registry(uh::cluster::TEST_SERVICE, 42, REGISTRY_ENDPOINT);
             registering_registry.register_service(23);
 
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
@@ -55,14 +55,14 @@ namespace uh::cluster {
 
     BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(15) )
     {
-        service_registry querying_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/0", REGISTRY_ENDPOINT);
+        service_registry querying_registry(uh::cluster::TEST_SERVICE, 0, REGISTRY_ENDPOINT);
 
         {
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
             BOOST_CHECK(service_endpoints.empty());
         }
 
-        service_registry registering_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/42", REGISTRY_ENDPOINT);
+        service_registry registering_registry(uh::cluster::TEST_SERVICE, 42, REGISTRY_ENDPOINT);
         registering_registry.register_service(23);
 
         querying_registry.wait_for_dependency(uh::cluster::TEST_SERVICE);

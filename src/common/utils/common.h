@@ -60,13 +60,13 @@ enum ec_type: uint8_t {
     XOR,
 };
 
-enum config_parameters : uint8_t  {
+enum config_parameter : uint8_t  {
     CFG_HOST,
     CFG_PORT,
 };
 
-static uh::cluster::config_parameters get_cfg_param (const std::string& cfg_param_str) {
-    const std::map<std::string, uh::cluster::config_parameters> param_by_string = {
+static uh::cluster::config_parameter get_cfg_param (const std::string& cfg_param_str) {
+    const std::map<std::string, uh::cluster::config_parameter> param_by_string = {
             {"host", uh::cluster::CFG_HOST},
             {"port", uh::cluster::CFG_PORT}
     };
@@ -77,8 +77,8 @@ static uh::cluster::config_parameters get_cfg_param (const std::string& cfg_para
         throw std::invalid_argument ("Invalid configuration parameter: " + cfg_param_str);
 }
 
-    static std::string get_cfg_param_string (const uh::cluster::config_parameters& cfg_param) {
-        const std::map<uh::cluster::config_parameters, std::string> string_by_param = {
+    static std::string get_cfg_param_string (const uh::cluster::config_parameter& cfg_param) {
+        const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
                 {uh::cluster::CFG_HOST, "host"},
                 {uh::cluster::CFG_PORT, "port"}
         };
