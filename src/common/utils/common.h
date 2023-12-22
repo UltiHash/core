@@ -50,6 +50,9 @@ enum role: uint8_t {
     DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
+    #ifdef BOOST_TEST
+    TEST_SERVICE,
+    #endif
 };
 
 enum ec_type: uint8_t {
@@ -95,10 +98,13 @@ struct service_endpoint {
 
 static uh::cluster::role get_service_role (const std::string& service_role_str) {
     const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-            {"storage", uh::cluster::STORAGE_SERVICE},
+            {"storage",      uh::cluster::STORAGE_SERVICE},
             {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-            {"directory", uh::cluster::DIRECTORY_SERVICE},
-            {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
+            {"directory",    uh::cluster::DIRECTORY_SERVICE},
+            {"entrypoint",   uh::cluster::ENTRYPOINT_SERVICE},
+            #ifdef BOOST_TEST
+            {"test",         uh::cluster::TEST_SERVICE}
+            #endif
     };
 
     if (role_by_abbreviation.contains(service_role_str))
@@ -112,7 +118,10 @@ static std::string get_service_string(const uh::cluster::role& service_role) {
             {uh::cluster::STORAGE_SERVICE,      "storage"},
             {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
             {uh::cluster::DIRECTORY_SERVICE,    "directory"},
-            {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"}
+            {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"},
+            #ifdef BOOST_TEST
+            {uh::cluster::TEST_SERVICE,         "test"},
+            #endif
     };
 
     if(abbreviation_by_role.contains(service_role))
