@@ -9,6 +9,7 @@
 #include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/KeepAlive.hpp"
 #include <boost/asio.hpp>
+#include <utility>
 
 #include "common.h"
 #include "log.h"
@@ -18,8 +19,8 @@ namespace uh::cluster {
     class service_registry {
 
     public:
-        service_registry(std::string service_id, const std::string& etcd_host) :
-            m_etcd_host(etcd_host),
+        service_registry(std::string service_id, std::string etcd_host) :
+            m_etcd_host(std::move(etcd_host)),
             m_service_id(std::move(service_id)),
             m_etcd_client(m_etcd_host)
         {
@@ -27,16 +28,21 @@ namespace uh::cluster {
 
         void register_service(std::uint16_t port = 0) {
             m_etcd_keepalive = m_etcd_client.leasekeepalive(m_etcd_default_ttl).get();
-            std::string key_base = m_etcd_default_key_prefix + m_service_id;
-            std::string key_host = key_base + "/" + get_cfg_param_string(uh::cluster::CFG_HOST);
-            std::string key_port = key_base + "/" + get_cfg_param_string(uh::cluster::CFG_PORT);
+            std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
+            std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_HOST);
+            std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_PORT);
             m_etcd_client.set(key_host, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
             m_etcd_client.set(key_port, std::to_string(port), m_etcd_keepalive->Lease());
+            LOG_INFO() << "registered service instance " << key_base << " in service registry.";
         }
 
         ~service_registry() {
-            if(m_etcd_keepalive != NULL)
+            if(m_etcd_keepalive != NULL) {
+                std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
+                m_etcd_client.rmdir(key_base, true);
                 m_etcd_keepalive->Cancel();
+            }
+            LOG_INFO() << "deregistered service instance " << m_etcd_default_key_prefix + m_service_id << " from service registry.";
         }
 
         std::size_t get_config_value(const std::string& parameter) {
@@ -54,22 +60,18 @@ namespace uh::cluster {
                 const auto& service_instance = service_instances.value(i);
                 std::filesystem::path service_full_path(service_instance.key());
                 std::filesystem::path service_rel_path = std::filesystem::relative(service_full_path, service_key);
-                try {
-                    std::string begin = service_rel_path.begin()->string();
-                    std::size_t service_index = std::stoull(service_rel_path.begin()->string());
-                    if(!endpoints_by_id.contains(service_index))
-                        endpoints_by_id.emplace(std::size_t(service_index), service_endpoint{.role = service_role, .id = service_index});
-
+                std::string top_element = service_rel_path.begin()->string();
+                if(is_valid_id(top_element)) {
+                    std::size_t service_index = std::stoull(top_element);
+                    if (!endpoints_by_id.contains(service_index))
+                        endpoints_by_id.emplace(std::size_t(service_index),
+                                                service_endpoint{.role = service_role, .id = service_index});
                     auto &endpoint = endpoints_by_id.at(service_index);
-                    if(service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_HOST)) {
+                    if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_HOST)) {
                         endpoint.host = service_instance.as_string();
                     } else if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_PORT)) {
                         endpoint.port = std::stoul(service_instance.as_string());
                     }
-                } catch (std::invalid_argument& e) {
-                    LOG_ERROR() << "Failed to extract instance id from key " << service_key.string() << ".";
-                    endpoints_by_id.clear();
-                    break;
                 }
             }
 
@@ -83,16 +85,59 @@ namespace uh::cluster {
         }
 
         void wait_for_dependency(uh::cluster::role dependency) {
-            std::string dependency_key = m_etcd_default_key_prefix + get_service_string(dependency);
+            std::filesystem::path dependency_key(m_etcd_default_key_prefix + get_service_string(dependency));
 
-            while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
-                LOG_INFO() << "Waiting for dependency " << dependency_key << " to become available...";
+            bool instance_found = false;
+            while(!instance_found) {
+                LOG_INFO() << "waiting for dependency " << dependency_key.string() << " to become available...";
+                etcd::Response dependency_instances = m_etcd_client.ls(dependency_key.string()).get();
+                for (int i = 0; i < dependency_instances.keys().size(); i++) {
+                    const auto &dependency_instance = dependency_instances.value(i);
+                    std::filesystem::path dependency_full_path(dependency_instance.key());
+                    std::filesystem::path dependency_rel_path = std::filesystem::relative(dependency_full_path, dependency_key);
+                    if(is_valid_id(dependency_rel_path.begin()->string())) {
+                        instance_found = true;
+                        break;
+                    }
+                }
                 sleep(5);
             }
-            LOG_INFO() << "Dependency " << dependency_key << " seems to be available.";
+            LOG_INFO() << "dependency " << dependency_key.string() << " seems to be available.";
         }
 
     private:
+        static bool is_valid_id(const std::string& str) {
+            // Check if the string is empty
+            if (str.empty()) {
+                return false;
+            }
+
+            // Check if each character is a digit
+            for (char c : str) {
+                if (!std::isdigit(c)) {
+                    return false;
+                }
+            }
+
+            // Use std::stoi to check if the integer value is in the valid range
+            try {
+                std::size_t pos;
+                std::size_t value = std::stoull(str, &pos);
+
+                // Ensure the entire string was converted
+                if (pos != str.length())
+                    return false;
+
+                return true;
+            } catch (const std::out_of_range&) {
+                // std::stoull threw an out_of_range exception
+                return false;
+            } catch (const std::invalid_argument&) {
+                // std::stoull threw an invalid_argument exception
+                return false;
+            }
+        }
+
     #ifdef NDEBUG
         const std::size_t m_etcd_default_ttl = 5;
     #else
