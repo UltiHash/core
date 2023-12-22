@@ -33,16 +33,17 @@ namespace uh::cluster {
             std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_PORT);
             m_etcd_client.set(key_host, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
             m_etcd_client.set(key_port, std::to_string(port), m_etcd_keepalive->Lease());
+            m_registered = true;
             LOG_INFO() << "registered service instance " << key_base << " in service registry.";
         }
 
         ~service_registry() {
-            if(m_etcd_keepalive != NULL) {
+            if(m_registered && m_etcd_keepalive != NULL) {
                 std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
                 m_etcd_client.rmdir(key_base, true);
                 m_etcd_keepalive->Cancel();
+                LOG_INFO() << "deregistered service instance " << m_etcd_default_key_prefix + m_service_id << " from service registry.";
             }
-            LOG_INFO() << "deregistered service instance " << m_etcd_default_key_prefix + m_service_id << " from service registry.";
         }
 
         std::size_t get_config_value(const std::string& parameter) {
@@ -154,6 +155,7 @@ namespace uh::cluster {
 
         etcd::Client m_etcd_client;
         std::shared_ptr<etcd::KeepAlive> m_etcd_keepalive;
+        bool m_registered = false;
 
     };
 

@@ -53,8 +53,23 @@ namespace uh::cluster {
         etcd_client.rm(global_key);
     }
 
-    BOOST_AUTO_TEST_CASE( wait_for_dependencies )
+    BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(15) )
     {
+        service_registry querying_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/0", REGISTRY_ENDPOINT);
 
+        {
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            BOOST_CHECK(service_endpoints.empty());
+        }
+
+        service_registry registering_registry(get_service_string(uh::cluster::TEST_SERVICE) + "/42", REGISTRY_ENDPOINT);
+        registering_registry.register_service(23);
+
+        querying_registry.wait_for_dependency(uh::cluster::TEST_SERVICE);
+
+        {
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            BOOST_CHECK(service_endpoints.size() == 1);
+        }
     }
 } // end namespace uh::cluster
