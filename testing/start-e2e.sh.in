@@ -73,12 +73,40 @@ setup_docker_compose_cluster ()
     trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT
 }
 
+start_service ()
+{
+    runtime="$1"
+    service="$2"
+    command="$3"
+
+    mkdir -p "$runtime/$service/log"
+    mkdir -p "$runtime/$service/data"
+
+    (
+        cd "$runtime/$service"
+        $command 2> "log/stderr" 1> "log/stdout" &
+        echo $! > "service.pid"
+    )
+}
+
+stop_service ()
+{
+    runtime="$1"
+    service="$2"
+
+    if [ -e "$runtime/$service/service.pid" ]; then
+        kill -TERM $(cat "$runtime/$service/service.pid")
+    fi
+}
+
 stop_base_cluster ()
 {
     dir="$1"
 
+    stop_service "$dir" "etcd"
+
     for role in entrypoint storage directory deduplicator; do
-        kill -TERM $(cat "$dir/$role/uhc.pid")
+        stop_service "$dir" "$role"
     done
 
     wait
@@ -90,15 +118,12 @@ setup_bare_cluster ()
     dir=$(mktemp --directory)
     uhc=$(realpath --canonicalize-existing "$TESTING_BINARY_DIR/../uh-cluster")
 
-    for role in deduplicator directory storage entrypoint; do
-        mkdir -p "$dir/$role/log"
-        mkdir -p "$dir/$role/data"
+    if ! curl --silent http://localhost:2380; then
+        start_service "$dir" "etcd" "etcd"
+    fi
 
-        (
-            cd "$dir/$role"
-            $uhc "$role" 0 2> log/stderr 1> log/stdout &
-            echo $! > uhc.pid
-        )
+    for role in deduplicator directory storage entrypoint; do
+        start_service "$dir" "$role" "$uhc $role 0"
     done
 
     trap "stop_base_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT

@@ -1,18 +1,33 @@
 version: '3'
 
 services:
+    etcd:
+        image: bitnami/etcd
+        container_name: etcd
+        environment:
+            - ALLOW_NONE_AUTHENTICATION=yes
+        healthcheck:
+            test: [ "CMD", "lsof", "-i", "TCP:2380" ]
+            timeout: 1s
+            interval: 5s
+            retries: 5
+
     deduplicator:
         image: uh/test
         container_name: dedupe
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "deduplicator", "0" ]
+            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
+        entrypoint: [ "/uh-cluster", "deduplicator", "0", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8084" ]
             timeout: 1s
             interval: 5s
             retries: 5
+        depends_on:
+            etcd:
+                condition: service_healthy
 
     storage:
         image: uh/test
@@ -20,12 +35,16 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "storage", "0" ]
+            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
+        entrypoint: [ "/uh-cluster", "storage", "0", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8082" ]
             timeout: 1s
             interval: 5s
             retries: 5
+        depends_on:
+            etcd:
+                condition: service_healthy
 
     directory:
         image: uh/test
@@ -33,12 +52,16 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "directory", "0" ]
+            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
+        entrypoint: [ "/uh-cluster", "directory", "0", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8083" ]
             timeout: 1s
             interval: 5s
             retries: 5
+        depends_on:
+            etcd:
+                condition: service_healthy
 
     entrypoint:
         image: uh/test
@@ -46,8 +69,11 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "entrypoint", "0" ]
+            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
+        entrypoint: [ "/uh-cluster", "entrypoint", "0", "etcd:2380" ]
         depends_on:
+            etcd:
+                condition: service_healthy
             deduplicator:
                 condition: service_healthy
             storage:
