@@ -37,7 +37,7 @@ namespace uh::cluster {
             std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
             std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_HOST);
             std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_PORT);
-            m_etcd_client.set(key_host, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
+            m_etcd_client.set(key_host, retrieve_hostname(), m_etcd_keepalive->Lease());
             m_etcd_client.set(key_port, std::to_string(port), m_etcd_keepalive->Lease());
             m_registered = true;
             LOG_INFO() << "registered service instance " << key_base << " in service registry.";
@@ -182,6 +182,10 @@ namespace uh::cluster {
 
         std::string convert_to_type(const std::string& str) {
             return str;
+        }
+
+        std::string retrieve_hostname() {
+            return boost::asio::ip::host_name();
         }
 
     #ifdef NDEBUG
