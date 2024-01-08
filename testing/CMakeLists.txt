@@ -49,6 +49,11 @@ file(CREATE_LINK
         ${CMAKE_CURRENT_BINARY_DIR}/tests
         SYMBOLIC)
 
+file(CREATE_LINK
+        ${CMAKE_CURRENT_SOURCE_DIR}/s3-tests
+        ${CMAKE_CURRENT_BINARY_DIR}/s3-tests
+        SYMBOLIC)
+
 set_directory_properties(PROPERTIES ADDITIONAL_CLEAN_FILES "${TESTING_VENV_DIR}")
 
 add_executable(${PROJECT_NAME}-client ${CMAKE_CURRENT_SOURCE_DIR}/client/main.cpp)
