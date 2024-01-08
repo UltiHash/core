@@ -21,7 +21,6 @@ namespace uh::cluster::rest::http::model
 
     private:
         utils::server_state& m_server_state;
-        std::shared_ptr<utils::parts> m_parts_container;
 
         std::string m_upload_id;
         std::string m_bucket_name;

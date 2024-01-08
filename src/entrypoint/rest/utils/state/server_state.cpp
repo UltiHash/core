@@ -4,52 +4,6 @@
 namespace uh::cluster::rest::utils
 {
 
-    std::shared_ptr<parts::part_data> parts::find(std::uint16_t part_num) const
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        auto itr = parts_container.find(part_num);
-        if (itr != parts_container.end())
-        {
-            return itr->second;
-        }
-        else
-        {
-            return {};
-        }
-    }
-
-
-    parts::part_data::part_data(std::string&& recv_body) : body(std::move(recv_body)), etag(std::move(md5.calculateMD5(body)))
-    {}
-
-
-    bool parts::put_single_part(std::uint16_t part_number, std::string&& body)
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        return parts_container.emplace(part_number, std::make_shared<part_data>(std::move(body))).second;
-    }
-
-
-    size_t parts::size() const
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        return parts_container.size();
-    }
-
-
-    std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> parts::get_parts() const
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-
-        std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> parts_and_sizes;
-        for (const auto& pair : parts_container)
-        {
-            parts_and_sizes.emplace(pair.first, std::pair<const std::string&, std::size_t>{pair.second->body, pair.second->body.size()});
-        }
-
-        return parts_and_sizes;
-    }
-
     std::map<std::string, std::string> upload_state::list_multipart_uploads(const std::string& bucket) const
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -71,7 +25,7 @@ namespace uh::cluster::rest::utils
     bool upload_state::insert_upload(std::string upload_id, std::string bucket, std::string object_key)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        auto pair = upload_to_parts_container.emplace(upload_id, std::make_shared<parts>());
+        auto pair = m_upload_infos.emplace(upload_id, std::make_shared<upload_info>());
 
         // extra information for list multipart uploads
         if (m_list_state.bucket_to_uploads_container.find(bucket) == m_list_state.bucket_to_uploads_container.end())
@@ -93,7 +47,7 @@ namespace uh::cluster::rest::utils
     {
         std::lock_guard<std::mutex> lock(mutex);
 
-        bool status = upload_to_parts_container.erase(upload_id);
+        bool status = m_upload_infos.erase(upload_id);
 
         auto bucket_iter = m_list_state.bucket_to_uploads_container.find(bucket);
         if (bucket_iter != m_list_state.bucket_to_uploads_container.end())
@@ -115,11 +69,11 @@ namespace uh::cluster::rest::utils
     }
 
 
-    std::shared_ptr<parts> upload_state::get_parts_container(const std::string& upload_id) const
+    std::shared_ptr<upload_info> upload_state::get_upload_info(const std::string& upload_id) const
     {
         std::lock_guard<std::mutex> lock(mutex); // use shared lock here since we do not modify it
-        auto itr = upload_to_parts_container.find(upload_id);
-        if (itr != upload_to_parts_container.end())
+        auto itr = m_upload_infos.find(upload_id);
+        if (itr != m_upload_infos.end())
         {
             return itr->second;
         }
@@ -133,14 +87,26 @@ namespace uh::cluster::rest::utils
     bool upload_state::contains_upload(const std::string& upload_id) const
     {
         std::lock_guard<std::mutex> lock(mutex);
-        auto itr = upload_to_parts_container.find(upload_id);
-        if (itr != upload_to_parts_container.end())
+        auto itr = m_upload_infos.find(upload_id);
+        if (itr != m_upload_infos.end())
         {
             return true;
         }
         else
         {
             return false;
+        }
+    }
+
+    void upload_state::append_upload_part_info(const std::string& upload_id, const dedupe_response &resp, size_t data_size) {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto& total_resp = m_upload_infos [upload_id];
+        total_resp->effective_size += resp.effective_size;
+        total_resp->data_size += data_size;
+        total_resp->m_addr.append_address(resp.addr);
+        if (total_resp->upload_init_time == 0) {
+            const auto time = std::chrono::steady_clock::now ();
+            total_resp->upload_init_time = std::chrono::duration_cast<std::chrono::milliseconds> (time.time_since_epoch()).count();
         }
     }
 

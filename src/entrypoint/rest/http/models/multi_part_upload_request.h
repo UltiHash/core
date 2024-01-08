@@ -10,7 +10,6 @@ namespace uh::cluster::rest::http::model
     {
     public:
         explicit multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                           utils::server_state&,
                                            std::unique_ptr<rest::http::URI> uri);
 
         ~multi_part_upload_request() override = default;
@@ -19,18 +18,9 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-        coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override;
-
-        [[nodiscard]] const std::string& get_body() const override;
-
-        [[nodiscard]] std::size_t get_body_size() const override;
 
     private:
 
-        utils::server_state& m_server_state;
-        std::shared_ptr<utils::parts> m_parts_container;
-
-        uint16_t m_part_number;
         std::string m_upload_id;
     };
 

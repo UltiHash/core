@@ -6,40 +6,16 @@
 #include <unordered_map>
 #include <cstdint>
 #include "entrypoint/rest/utils/hashing/hash.h"
+#include "common/utils/common_types.h"
+#include <chrono>
 
 namespace uh::cluster::rest::utils
 {
-
-    struct parts
-    {
-    public:
-
-        /*
-         * THIS STRUCT IS IMMUTABLE ONCE INITIALIZED. IT CAN ONLY BE CONSTRUCTED AND DESTRUCTED
-         */
-        struct part_data
-        {
-        private:
-            rest::utils::hashing::MD5 md5 {};
-
-        public:
-            explicit part_data(std::string&&);
-
-            const std::string body {};
-            const std::string etag {};
-        };
-
-        std::shared_ptr<part_data> find(std::uint16_t part_num) const;
-        bool put_single_part(std::uint16_t part_number, std::string&& body);
-        size_t size() const;
-
-        std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> get_parts() const;
-
-        parts() = default;
-
-    private:
-        mutable std::mutex mutex {};
-        std::map<std::uint16_t, std::shared_ptr<part_data>> parts_container;
+    struct upload_info {
+        address m_addr;
+        size_t effective_size{0};
+        size_t data_size{0};
+        unsigned long long upload_init_time{0};
     };
 
     struct upload_state
@@ -48,14 +24,15 @@ namespace uh::cluster::rest::utils
 
         bool insert_upload(std::string upload_id, std::string bucket, std::string object_key);
         bool contains_upload(const std::string& bucket) const;
-        std::shared_ptr<parts> get_parts_container(const std::string& upload_id) const;
+        std::shared_ptr<upload_info> get_upload_info (const std::string& upload_id) const;
+        void append_upload_part_info (const std::string& upload_id, const dedupe_response& resp, size_t data_size);
         bool remove_upload(const std::string& upload_id, const std::string& bucket, const std::string& object_key);
         std::map<std::string, std::string> list_multipart_uploads(const std::string&) const;
 
     private:
         mutable std::mutex mutex {};
 
-        std::unordered_map<std::string, std::shared_ptr<parts>> upload_to_parts_container;
+        std::unordered_map<std::string, std::shared_ptr<upload_info>> m_upload_infos;
 
         struct list_state
         {
