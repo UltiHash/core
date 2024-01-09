@@ -13,13 +13,20 @@
 namespace uh::cluster::rest::utils
 {
     struct upload_info {
-        address m_addr;
         size_t effective_size{0};
         size_t data_size{0};
         std::map <uint16_t, std::string> etags;
         std::map <uint16_t, size_t> part_sizes;
-
+        std::map <uint16_t, address> addresses;
         unsigned long long upload_init_time{0};
+
+        [[nodiscard]] address get_address () const {
+            address addr;
+            for (const auto& a: addresses) {
+                addr.append_address(a.second);
+            }
+            return addr;
+        }
     };
 
     struct upload_state

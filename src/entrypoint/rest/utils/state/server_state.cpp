@@ -111,7 +111,7 @@ namespace uh::cluster::rest::utils
         total_resp->effective_size += resp.effective_size;
         total_resp->data_size += data.size();
         total_resp->part_sizes.emplace(part_id, data.size());
-        total_resp->m_addr.append_address(resp.addr);
+        total_resp->addresses.emplace(part_id, resp.addr);
         if (total_resp->upload_init_time == 0) {
             const auto time = std::chrono::steady_clock::now ();
             total_resp->upload_init_time = std::chrono::duration_cast<std::chrono::milliseconds> (time.time_since_epoch()).count();
