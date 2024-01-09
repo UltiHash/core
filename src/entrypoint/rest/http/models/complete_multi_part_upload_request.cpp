@@ -54,33 +54,25 @@ namespace uh::cluster::rest::http::model
             throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
 
-        auto etag_ptr = up_info->etags.cbegin();
         for (const auto& objectNode : object_nodes_set)
         {
             auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
             auto etag = objectNode.node().child("ETag").child_value();
 
-            if (*etag_ptr != etag ) {
-                //throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
-            }
-
             if (part_num != part_counter) {
-                //throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part_oder);
+                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part_oder);
             }
 
-            part_counter++;
-            etag_ptr ++;
-        }
+            if (up_info->part_sizes.at(part_num) < MAXIMUM_CHUNK_SIZE and part_num != up_info->part_sizes.size() - 1) {
+                throw custom_error_response_exception(http::status::bad_request, error::type::entity_too_small);
+            }
 
-        // small entity
-        //auto parts_and_sizes = up_info->get_parts();
-        //for (const auto& part : parts_and_sizes)
-        //{
-         //   if (part.second.second < 5*1024*1024 && part.first < parts_and_sizes.size())
-         //   {
-        //        throw custom_error_response_exception(http::status::bad_request, error::type::entity_too_small);
-         //   }
-        //}
+            if (up_info->etags.at(part_num) != etag ) {
+                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
+            }
+
+            part_counter ++;
+        }
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()

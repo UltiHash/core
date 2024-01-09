@@ -556,9 +556,11 @@ public:
 
     coro <std::unique_ptr<http::http_response>> handle_mp_upload (const http::http_request& req, rest::utils::server_state& state) {
         if (req.get_body_size() > 0) [[likely]] {
-            const auto resp = co_await integrate_data(std::list <std::string_view> {req.get_body()});
+            std::list <std::string_view> data {req.get_body()};
+            const auto resp = co_await integrate_data(data);
             auto func = [](rest::utils::server_state& state, const http::http_request& req, const auto& resp) {
-                state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"), resp,
+                state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"),
+                                                        std::stoi (req.get_URI().get_query_parameters().at("partNumber")), resp,
                                                         req.get_body());
             };
             co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));

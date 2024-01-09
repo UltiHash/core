@@ -29,6 +29,7 @@ namespace uh::cluster::rest::http::model
         std::string m_bucket_name;
         std::string m_object_name;
         utils::server_state& m_server_state;
+        constexpr static size_t MAXIMUM_CHUNK_SIZE = 5ul*1024ul*1024ul;
     };
 
 } // uh::cluster::rest::http::model

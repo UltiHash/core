@@ -98,14 +98,19 @@ namespace uh::cluster::rest::utils
         }
     }
 
-    void upload_state::append_upload_part_info(const std::string& upload_id, const dedupe_response &resp, const std::string& data) {
+    void upload_state::append_upload_part_info(const std::string& upload_id, uint16_t part_id, const dedupe_response &resp, const std::string& data) {
         std::lock_guard<std::mutex> lock(mutex);
         auto& total_resp = m_upload_infos [upload_id];
         if (!data.empty()) {
-            total_resp->etags.emplace_back(m_md5_calculator.calculateMD5(data));
+            rest::utils::hashing::MD5 md5_calculator;
+            total_resp->etags.emplace(part_id, md5_calculator.calculateMD5(data));
+        }
+        else { // default etag
+            total_resp->etags.emplace(part_id, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
         }
         total_resp->effective_size += resp.effective_size;
         total_resp->data_size += data.size();
+        total_resp->part_sizes.emplace(part_id, data.size());
         total_resp->m_addr.append_address(resp.addr);
         if (total_resp->upload_init_time == 0) {
             const auto time = std::chrono::steady_clock::now ();
