@@ -54,9 +54,9 @@ namespace uh::cluster {
 
         template <typename T, typename = std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T>) || std::is_same_v<T, std::string>>>
         T get_config_value(const uh::cluster::config_parameter parameter) {
-            std::string instance_key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
+            std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
             try {
-                return convert_to_type(get(instance_key));
+                return convert_to_type(get(key));
             } catch (std::invalid_argument const & e_instance) {
                 try {
                     std::string global_key = m_etcd_default_key_prefix + get_service_string(m_service_role) + "/global/" +
@@ -67,6 +67,15 @@ namespace uh::cluster {
                     return convert_to_type("0");
                 }
             }
+        }
+
+        void set_config_value(const uh::cluster::config_parameter parameter, std::size_t value) {
+            set_config_value(parameter, std::to_string(value));
+        }
+
+        void set_config_value(const uh::cluster::config_parameter parameter, std::string value) {
+            std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
+            set(key, value);
         }
 
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
@@ -169,7 +178,21 @@ namespace uh::cluster {
             {
                 throw std::system_error(EIO, std::generic_category(), "retrieval of configuration parameter " + key + " failed due to communication problem, details: " + ex.what());
             }
+        }
 
+        std::string set(const std::string &key, const std::string &value) {
+            auto response = m_etcd_client.set(key, value).get();
+            try
+            {
+                if (response.is_ok())
+                    return response.value().as_string();
+                else
+                    throw std::invalid_argument("setting the configuration parameter " + key + " failed, details: " + response.error_message());
+            }
+            catch (std::exception const & ex)
+            {
+                throw std::system_error(EIO, std::generic_category(), "setting the configuration parameter " + key + " failed due to communication problem, details: " + ex.what());
+            }
         }
 
         template <typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
@@ -180,11 +203,11 @@ namespace uh::cluster {
                 throw std::invalid_argument("the configuration value " + str + " does not appear to be a valid non-negative integer.");
         }
 
-        std::string convert_to_type(const std::string& str) {
+        static std::string convert_to_type(const std::string& str) {
             return str;
         }
 
-        std::string retrieve_hostname() {
+        static std::string retrieve_hostname() {
             return boost::asio::ip::host_name();
         }
 
