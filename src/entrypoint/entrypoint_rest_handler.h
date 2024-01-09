@@ -137,11 +137,11 @@ public:
                 break;
             case http::http_request_type::INIT_MULTIPART_UPLOAD:
                 m_reqs_init_multipart_upload.Increment();
-                res = co_await handle_init_mp_upload(req);
+                res = co_await handle_init_mp_upload(req, state);
                 break;
             case http::http_request_type::MULTIPART_UPLOAD:
                 m_reqs_multiplart_upload.Increment();
-                res = handle_mp_upload(req);
+                res = co_await handle_mp_upload(req, state);
                 break;
             case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
                 m_reqs_complete_multipart_upload.Increment();
@@ -518,7 +518,7 @@ public:
 
 
 
-      coro <std::unique_ptr<http::http_response>> handle_init_mp_upload (const http::http_request& req)
+      coro <std::unique_ptr<http::http_response>> handle_init_mp_upload (const http::http_request& req, rest::utils::server_state& state)
       {
           std::unique_ptr<http::model::init_multi_part_upload_response> res;
           try
@@ -539,6 +539,7 @@ public:
                   });
 
           }
+
           catch (const error_exception& e)
           {
               switch (*e.error())
@@ -553,47 +554,31 @@ public:
           co_return std::move(res);
       }
 
-      std::unique_ptr<http::http_response> handle_mp_upload (const http::http_request& req)
-      {
+    coro <std::unique_ptr<http::http_response>> handle_mp_upload (const http::http_request& req, rest::utils::server_state& state) {
+        if (req.get_body_size() > 0) [[likely]] {
+            std::list <std::string_view> data {req.get_body()};
+            const auto resp = co_await integrate_data(data);
+            auto func = [](rest::utils::server_state& state, const http::http_request& req, const auto& resp) {
+                state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"),
+                                                        std::stoi (req.get_URI().get_query_parameters().at("partNumber")), resp,
+                                                        req.get_body());
+            };
+            co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
+        }
+        std::unique_ptr<http::model::multi_part_upload_response> res = std::make_unique<http::model::multi_part_upload_response>(req);
+        co_return std::move(res);
+    }
 
-          std::unique_ptr<http::model::multi_part_upload_response> res = std::make_unique<http::model::multi_part_upload_response>(req);
-          return std::move(res);
-      }
 
-
-      coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::server_state& state)
+    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::server_state& state)
     {
         auto res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
 
-        std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now();
-
-        auto body_size = req.get_body_size();
-
-        // acquire the internal parts container
-        std::list<std::string_view> pieces;
-
-        auto func = [] (std::list<std::string_view>& pieces, rest::utils::server_state& state, const http::http_request& req) {
-            auto parts_container_ptr = state.m_uploads.get_parts_container(req.get_URI().get_query_parameters().at("uploadId"));
-            for (const auto &pair : parts_container_ptr->get_parts())
-            {
-                pieces.emplace_back(pair.second.first);
-            }
-        };
-
-        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (pieces), std::ref (state), std::cref (req)));
-
-        LOG_INFO() << "upload size: " << req.get_body_size();
-
-        dedupe_response resp {.effective_size = 0};
-        if (body_size > 0) [[likely]] {
-            resp = co_await integrate_data(pieces);
-        }
-
+        auto up_info = state.m_uploads.get_upload_info(req.get_URI().get_query_parameters().at("uploadId"));
         const directory_message dir_req {
                 .bucket_id = req.get_URI().get_bucket_id(),
                 .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                .addr = std::make_unique <address> (std::move (resp.addr)),
+                .addr = std::make_unique <address> (std::move (up_info->get_address())),
         };
 
         auto func_dir = [] (const directory_message& dir_req, client::acquired_messenger m, long id) -> coro <void> {
@@ -606,17 +591,20 @@ public:
                                                                        *m_workers,
                                                                        std::bind_front (func_dir, std::cref (dir_req)));
 
-        const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
-        auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
-        auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-        const auto bandwidth = size_mb / duration.count();
+        const auto size_mb = static_cast <double> (up_info->data_size) / static_cast <double> (1024ul * 1024ul);
+        auto effective_size = static_cast <double> (up_info->effective_size) / static_cast <double> (1024ul * 1024ul);
+        auto space_saving = 1.0 - effective_size / size_mb;
+        const auto stop = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now ().time_since_epoch()).count();
+        const auto dur_ms = stop - up_info->upload_init_time;
 
+        const double dur_s = static_cast <double> (dur_ms) / 1000.0;
+        const auto bandwidth = size_mb / dur_s;
+
+        LOG_INFO() << "upload size: " << req.get_body_size();
         LOG_INFO() << "original size " << size_mb << " MB";
         LOG_INFO() << "effective size " << effective_size << " MB";
         LOG_INFO() << "space saving " << space_saving;
-        LOG_INFO() << "integration duration " << duration.count() << " s";
+        LOG_INFO() << "integration duration " << dur_s << " s";
         LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
 
         rest::utils::hashing::MD5 md5;

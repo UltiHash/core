@@ -1,3 +1,4 @@
+#include <memory>
 #include "hash.h"
 
 namespace uh::cluster::rest::utils::hashing

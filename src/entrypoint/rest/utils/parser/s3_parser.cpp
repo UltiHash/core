@@ -89,7 +89,7 @@ namespace model = uh::cluster::rest::http::model;
                             throw model::custom_error_response_exception(b_http::status::bad_request, model::error::type::bad_part_number);
                         }
 
-                        return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, m_server_state, std::move(uri));
+                        return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, std::move(uri));
                     }
                 }
                 else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())

@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
@@ -34,13 +35,16 @@ namespace uh::cluster
 
     public:
         server(server_config config, std::string node_name, std::unique_ptr <protocol_handler> handler) :
-                m_config (config),
+                m_config (std::move(config)),
                 m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)),
                 m_handler (std::move (handler)),
                 m_node_name (std::move (node_name)) {
             m_is_running = true;
+
+            auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.address), m_config.port});
             boost::asio::co_spawn(*m_ioc,
-                                  do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.address), m_config.port}),
+
+                                  do_accept (std::move (acceptor)),
                                   [&](const std::exception_ptr &e) {
                                       if (e)
                                           try {
@@ -108,17 +112,22 @@ namespace uh::cluster
 
     private:
 
-        // Accepts incoming connections and launches the sessions
-        boost::asio::awaitable<void> do_listen(boost::asio::ip::tcp::endpoint endpoint) {
-
+        boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>
+        do_listen (const boost::asio::ip::tcp::endpoint& endpoint) {
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
-                    boost::asio::ip::tcp::acceptor(co_await boost::asio::this_coro::executor));
+                    boost::asio::ip::tcp::acceptor(*m_ioc));
 
             acceptor.open(endpoint.protocol());
             acceptor.set_option(boost::asio::socket_base::reuse_address(true));
 
             acceptor.bind(endpoint);
             acceptor.listen(boost::asio::socket_base::max_listen_connections);
+            return acceptor;
+        }
+        
+        // Accepts incoming connections and launches the sessions
+        boost::asio::awaitable<void> do_accept (auto acceptor) {
+
 
             while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();

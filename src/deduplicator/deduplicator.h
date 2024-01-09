@@ -27,6 +27,9 @@ namespace uh::cluster {
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {
         }
+void init () {
+
+        }
 
         void run() override {
             m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);

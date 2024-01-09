@@ -16,6 +16,8 @@ namespace uh::cluster::rest::utils::hashing
 
         std::string calculateMD5(const std::string& input);
 
+        static std::string calculateMD5_2(const std::string& input);
+
     private:
         EVP_MD_CTX* pEvpContext;
 

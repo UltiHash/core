@@ -76,11 +76,10 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
     fill_random2 (data11, sizeof (data11));
 
 
-    char buf [8*1024];
     char zero [8*1024];
     std::memset(zero, 0, sizeof(zero));
 
-    uint64_t addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9, addr10, addr11;
+    uint64_t addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9;
 
     size_t expected_size = sizeof (size_t);
     {
@@ -156,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         const auto dd9 = ds.read(addr9);
         expected_size -= sizeof(data9) + sizeof (uint32_t);
         BOOST_TEST(dd9.size() == sizeof (data9));
-        BOOST_CHECK(std::memcmp(buf, zero, dd9.size()) == 0);
+        BOOST_CHECK(std::memcmp(dd9.data(), zero, dd9.size()) == 0);
 
         BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
         BOOST_CHECK(ds.get_used_space() == expected_size);
@@ -165,7 +164,7 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         const auto dd2 = ds.read(addr2);
         expected_size -= sizeof(data2) + sizeof (uint32_t);
         BOOST_TEST(dd2.size() == sizeof (data2));
-        BOOST_CHECK(std::memcmp(buf, zero, dd2.size()) == 0);
+        BOOST_CHECK(std::memcmp(dd2.data(), zero, dd2.size()) == 0);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         const auto addr10 = ds.write(data10);
