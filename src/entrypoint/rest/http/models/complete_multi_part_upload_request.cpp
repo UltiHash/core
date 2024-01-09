@@ -47,6 +47,40 @@ namespace uh::cluster::rest::http::model
         {
             throw custom_error_response_exception(http::status::bad_request, error::type::malformed_xml);
         }
+
+        uint16_t part_counter = 1;
+        const auto up_info = m_server_state.m_uploads.get_upload_info(m_upload_id);
+        if (up_info == nullptr) {
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
+        }
+
+        auto etag_ptr = up_info->etags.cbegin();
+        for (const auto& objectNode : object_nodes_set)
+        {
+            auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
+            auto etag = objectNode.node().child("ETag").child_value();
+
+            if (*etag_ptr != etag ) {
+                //throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
+            }
+
+            if (part_num != part_counter) {
+                //throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part_oder);
+            }
+
+            part_counter++;
+            etag_ptr ++;
+        }
+
+        // small entity
+        //auto parts_and_sizes = up_info->get_parts();
+        //for (const auto& part : parts_and_sizes)
+        //{
+         //   if (part.second.second < 5*1024*1024 && part.first < parts_and_sizes.size())
+         //   {
+        //        throw custom_error_response_exception(http::status::bad_request, error::type::entity_too_small);
+         //   }
+        //}
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()

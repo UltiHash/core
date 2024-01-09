@@ -98,11 +98,14 @@ namespace uh::cluster::rest::utils
         }
     }
 
-    void upload_state::append_upload_part_info(const std::string& upload_id, const dedupe_response &resp, size_t data_size) {
+    void upload_state::append_upload_part_info(const std::string& upload_id, const dedupe_response &resp, const std::string& data) {
         std::lock_guard<std::mutex> lock(mutex);
         auto& total_resp = m_upload_infos [upload_id];
+        if (!data.empty()) {
+            total_resp->etags.emplace_back(m_md5_calculator.calculateMD5(data));
+        }
         total_resp->effective_size += resp.effective_size;
-        total_resp->data_size += data_size;
+        total_resp->data_size += data.size();
         total_resp->m_addr.append_address(resp.addr);
         if (total_resp->upload_init_time == 0) {
             const auto time = std::chrono::steady_clock::now ();

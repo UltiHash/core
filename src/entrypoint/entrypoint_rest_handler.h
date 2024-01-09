@@ -538,15 +538,6 @@ public:
                       res->set_upload_id(req.get_eTag());
                   });
 
-              if (req.get_body_size() > 0) [[likely]] {
-                  const auto resp = co_await integrate_data({req.get_body()});
-                  auto func = [](rest::utils::server_state& state, const http::http_request& req, const auto& resp) {
-                      state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"), resp,
-                                                              req.get_body_size());
-                  };
-                  co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
-              }
-
           }
 
           catch (const error_exception& e)
@@ -565,10 +556,10 @@ public:
 
     coro <std::unique_ptr<http::http_response>> handle_mp_upload (const http::http_request& req, rest::utils::server_state& state) {
         if (req.get_body_size() > 0) [[likely]] {
-            const auto resp = co_await integrate_data({req.get_body()});
+            const auto resp = co_await integrate_data(std::list <std::string_view> {req.get_body()});
             auto func = [](rest::utils::server_state& state, const http::http_request& req, const auto& resp) {
                 state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"), resp,
-                                                        req.get_body_size());
+                                                        req.get_body());
             };
             co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
         }
@@ -580,16 +571,6 @@ public:
     coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::server_state& state)
     {
         auto res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
-
-        if (req.get_body_size() > 0) [[likely]] {
-            const auto resp = co_await integrate_data({req.get_body()});
-            auto func = [](rest::utils::server_state& state, const http::http_request& req, const auto& resp) {
-                state.m_uploads.append_upload_part_info(req.get_URI().get_query_parameters().at("uploadId"), resp,
-                                                        req.get_body_size());
-            };
-            co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
-        }
-
 
         auto up_info = state.m_uploads.get_upload_info(req.get_URI().get_query_parameters().at("uploadId"));
         const directory_message dir_req {
