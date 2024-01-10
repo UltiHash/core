@@ -15,15 +15,6 @@ namespace uh::cluster::rest::http::model
             m_object_name(m_uri->get_object_key()),
             m_upload_id(m_uri->get_query_string_value("uploadId"))
     {
-        /*
-         * grab a hold of the parts container so that we don't get segmentation fault if
-         * the given upload is aborted or completed
-        */
-        m_parts_container = m_server_state.m_uploads.get_parts_container(m_upload_id);
-        if (m_parts_container == nullptr)
-        {
-            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
-        }
     }
 
     complete_multi_part_upload_request::
@@ -58,61 +49,30 @@ namespace uh::cluster::rest::http::model
         }
 
         uint16_t part_counter = 1;
+        const auto up_info = m_server_state.m_uploads.get_upload_info(m_upload_id);
+        if (up_info == nullptr) {
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
+        }
+
         for (const auto& objectNode : object_nodes_set)
         {
             auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
             auto etag = objectNode.node().child("ETag").child_value();
 
-            auto part = m_parts_container->find(part_num);
-            if ( part == nullptr || part->etag != etag  )
-            {
-                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
-            }
-
-            if (part_num != part_counter)
-            {
+            if (part_num != part_counter) {
                 throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part_oder);
             }
 
-            part_counter++;
-        }
-
-        // small entity
-        auto parts_and_sizes = m_parts_container->get_parts();
-        for (const auto& part : parts_and_sizes)
-        {
-            if (part.second.second < 5*1024*1024 && part.first < parts_and_sizes.size())
-            {
+            if (up_info->part_sizes.at(part_num) < MAXIMUM_CHUNK_SIZE and part_num != up_info->part_sizes.size() - 1) {
                 throw custom_error_response_exception(http::status::bad_request, error::type::entity_too_small);
             }
-        }
-    }
 
-    const std::string& complete_multi_part_upload_request::get_body() const
-    {
-        if (m_completed_body.empty())
-        {
-            auto parts_and_sizes = m_parts_container->get_parts();
-            for (const auto& part : parts_and_sizes)
-            {
-                m_completed_body += part.second.first;
+            if (up_info->etags.at(part_num) != etag ) {
+                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
             }
+
+            part_counter ++;
         }
-
-        return m_completed_body;
-    }
-
-    std::size_t complete_multi_part_upload_request::get_body_size() const
-    {
-        std::size_t body_size {};
-
-        auto parts_and_sizes = m_parts_container->get_parts();
-        for (const auto& part : parts_and_sizes)
-        {
-            body_size += part.second.second;
-        }
-
-        return body_size;
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()

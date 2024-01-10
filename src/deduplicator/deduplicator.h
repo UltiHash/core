@@ -24,6 +24,9 @@ namespace uh::cluster {
                           std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers))
         {
         }
+void init () {
+
+        }
 
         void run() override {
             m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);

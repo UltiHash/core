@@ -217,7 +217,7 @@ namespace uh::cluster {
         // this value is used when running a debug build
         // having a longer ttl is important here as running into a breakpoint will almost
         // immediately let you run into ttl and thus will make debugging more complicated
-        const std::size_t m_etcd_default_ttl = 60;
+        const std::size_t m_etcd_default_ttl = 60000;
     #endif
 
         const std::string m_etcd_default_key_prefix = "/uh/";

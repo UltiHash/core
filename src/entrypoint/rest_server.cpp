@@ -109,6 +109,7 @@ namespace uh::cluster::rest
 
                 // validate
                 s3_request->validate_request_specific_criteria();
+
                 auto s3_res = co_await m_handler.handle(*s3_request, m_server_state);
 
                 // send response

@@ -45,13 +45,20 @@ void execute_role (const uh::cluster::role role, const std::size_t id, const std
 
 }
 
-//void handleChange(etcd::Response response) {
-//    LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
-//    }
+const std::string default_registry_url = "http://127.0.0.1:2379";
 
 int main (int argc, char* args[]) {
     if (argc < 3 || argc > 4) {
-        throw std::invalid_argument("Usage: uh-cluster <role> <id> <optional: registry URL>");
+        std::cerr << "Usage: " << args[0] << " <role> <id> <optional: registry>" << std::endl;
+        std::cerr << "\t<role>\t\t" <<
+            get_service_string(uh::cluster::STORAGE_SERVICE) << ", " <<
+            get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", " <<
+            get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or " <<
+            get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "." << std::endl;
+        std::cerr << "\t<id>\t\t" << "Non-negative integer used to identify service instances of the same role." << std::endl;
+        std::cerr << "\t<registry>\t" << "Optionally, a URL to an etcd endpoint can be provided to override the default (\"" <<
+            default_registry_url << "\")." << std::endl;
+        exit(EINVAL);
     }
 
     uh::log::config lc {
@@ -68,24 +75,11 @@ int main (int argc, char* args[]) {
 
     uh::log::init(lc);
 
-
-    /*
-    etcd::Client etcd("http://127.0.0.1:2379");
-    std::shared_ptr<etcd::KeepAlive> keepalive = etcd.leasekeepalive(etcd_ttl).get();
-    etcd.set("/uh/ds/0", boost::asio::ip::host_name(),keepalive->Lease());
-    etcd::Watcher watcher("http://127.0.0.1:2379", "/uh", handleChange, true);
-
-    sleep(1);
-    keepalive->Cancel();
-    sleep(10);
-     */
-
-
-    const auto role_str = std::string(args[1]);   // en, dd, dr, dn
+    const auto role_str = std::string(args[1]);
     const std::size_t id = std::stoul(args[2]);
-    std::string registry_url = "http://127.0.0.1:2379";
+    std::string registry_url = default_registry_url;
     if(argc == 4) {
-        registry_url = std::string(args[4]);
+        registry_url = std::string(args[3]);
     }
     const auto role = get_service_role (role_str);
 
