@@ -21,11 +21,21 @@ public:
 
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
             m_id(id),
-            m_service_name(get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
+            m_service_name(get_service_string(uh::cluster::ENTRYPOINT_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name, registry_url),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
+    }
+
+    void add_deduplicator_service()
+    {
+        LOG_INFO() << "dedup is added";
+    }
+
+    void remove_deduplicator_service()
+    {
+        LOG_INFO() << "dedup is removed";
     }
 
     void run() override {
@@ -33,6 +43,11 @@ public:
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
         create_connections();
         m_registry.register_service();
+
+        m_registry.register_callback_add_service(uh::cluster::DEDUPLICATOR_SERVICE, [&](){ add_deduplicator_service(); });
+        m_registry.register_callback_remove_service(uh::cluster::DEDUPLICATOR_SERVICE, [&](){ remove_deduplicator_service(); });
+        m_registry.add_dedup();
+        m_registry.remove_dedup();
         m_rest_server.run();
     }
 
