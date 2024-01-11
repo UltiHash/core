@@ -29,10 +29,10 @@ class lfu_cache {
     std::list <key_order_data> m_order;
 
     std::map <Key, key_map_data> m_key_values;
-    const int m_capacity;
+    const size_t m_capacity;
 
 public:
-    explicit lfu_cache(int capacity): m_capacity {capacity} {
+    explicit lfu_cache(size_t capacity): m_capacity {capacity} {
     }
 
     void put (const Key& key, Value&& val) {

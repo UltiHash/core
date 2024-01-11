@@ -8,7 +8,7 @@
 #include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
 #include "entrypoint/entrypoint.h"
-
+#include <common/utils/common.h>
 #include <config.h>
 #include "common/utils/log.h"
 

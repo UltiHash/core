@@ -64,7 +64,7 @@ namespace uh::cluster {
                 throw std::runtime_error(std::string("could not start metrics HTTP server: ") + e.what());
             }
             */
-
+            throw std::runtime_error ("not implemented");
         }
 
 

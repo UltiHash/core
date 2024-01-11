@@ -129,7 +129,7 @@ private:
 
         unique_buffer <char> buffer (read_size);
         size_t offset = 0;
-        for (int i = 0; i < resp.size(); i++) {
+        for (size_t i = 0; i < resp.size(); i++) {
             const auto frag = resp.get_fragment(i);
             if (m_data_store.read(buffer.data() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
                 throw std::runtime_error ("Could not read the data with the given size");

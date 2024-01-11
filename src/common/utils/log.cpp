@@ -118,6 +118,8 @@ std::string to_string(boost::log::trivial::severity_level level)
         case trivial::warning: return "WARN";
         case trivial::error: return "ERROR";
         case trivial::fatal: return "FATAL";
+        default:
+            throw std::runtime_error ("unsupported log level");
     }
 
     throw std::runtime_error("unsupported log level type");

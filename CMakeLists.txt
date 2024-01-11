@@ -8,7 +8,6 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
-
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -44,6 +43,7 @@ endif()
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} prometheus-cpp::pull pugixml::shared ${PugiXML_LIBRARIES} etcd-cpp-api ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
+add_compile_options(-Wall)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 

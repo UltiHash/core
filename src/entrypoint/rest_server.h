@@ -49,10 +49,9 @@ namespace uh::cluster::rest
     private:
         entrypoint_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
-        std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl; // TODO:
+        std::vector<std::thread> m_thread_container {};
         entrypoint_rest_handler m_handler;
-        std::promise <message_type> m_recover_response;
 
         utils::server_state m_server_state;
 

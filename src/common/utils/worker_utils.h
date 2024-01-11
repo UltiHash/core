@@ -45,7 +45,7 @@ namespace uh::cluster {
                                                                                Func func) {
 
             auto f = [] (auto& ioc, auto& func, auto& cl) {
-                boost::asio::co_spawn(ioc, std::move (func(cl.acquire_messenger())), boost::asio::use_future).get();
+                boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
             };
             co_await post_in_workers (workers, ioc, std::bind (f, std::ref(ioc), std::ref (func), std::ref(cl)));
 

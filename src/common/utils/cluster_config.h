@@ -8,7 +8,7 @@
 #include <vector>
 #include <numeric>
 #include <filesystem>
-#include "common/utils/common.h"
+#include "big_int.h"
 
 namespace uh::cluster {
 
@@ -40,8 +40,6 @@ struct global_data_view_config {
     int read_cache_capacity_l1 {};
     int read_cache_capacity_l2 {};
     size_t l1_sample_size {};
-    ec_type ec_algorithm {};
-    size_t recovery_chunk_size {};
 };
 
 // roles config
@@ -80,7 +78,6 @@ struct directory_config {
 };
 
 struct cluster_config {
-    int init_process_count {};
     storage_config storage_conf;
     deduplicator_config deduplicator_conf;
     directory_config directory_conf;
@@ -171,8 +168,6 @@ static global_data_view_config make_global_data_view_config () {
             .read_cache_capacity_l1= 8000000,
             .read_cache_capacity_l2= 4000,
             .l1_sample_size = 128,
-            .ec_algorithm = uh::cluster::NONE,
-            .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
     };
 };
 

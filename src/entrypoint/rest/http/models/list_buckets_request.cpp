@@ -11,8 +11,7 @@ namespace uh::cluster::rest::http::model
 
     list_buckets_request& list_buckets_request::operator = (const http::request_parser<http::empty_body>& recv_req)
     {
-        const auto& header_list = recv_req.get();
-
+        recv_req.get();
         return *this;
     }
 

@@ -43,7 +43,7 @@ namespace uh::cluster {
 
         void append (std::string_view key, uint64_t object_id, operation op) const {
             const auto buf = serialise({.key = key, .op = op, .object_id = object_id});
-            if (buf.size() != ::write (m_log_file, buf.data(), buf.size())) [[unlikely]] {
+            if (static_cast <ssize_t> (buf.size()) != ::write (m_log_file, buf.data(), buf.size())) [[unlikely]] {
                 throw std::runtime_error ("Could not write into the log file");
             }
         }
@@ -160,7 +160,7 @@ namespace uh::cluster {
                 const auto tmp_file = get_log_file(new_file_path);
                 for (const auto &item: log_map) {
                     const auto buf = serialise({.key = std::string_view (item.first), .op = operation::INSERT, .object_id = item.second});
-                    if (buf.size() != ::write (tmp_file, buf.data(), buf.size())) [[unlikely]] {
+                    if (static_cast <ssize_t> (buf.size()) != ::write (tmp_file, buf.data(), buf.size())) [[unlikely]] {
                         throw std::runtime_error ("Could not write into the log file");
                     }
                 }

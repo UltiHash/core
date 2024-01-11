@@ -41,7 +41,7 @@ namespace uh::cluster {
 
             std::string service_key = m_etcd_default_key_prefix + get_service_string(service_role);
             etcd::Response service_instances = m_etcd_client.ls(service_key).get();
-            for (int i = 0; i < service_instances.keys().size(); i++) {
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
                 const auto& service_instance = service_instances.value(i);
                 std::filesystem::path service_path(service_instance.key());
                 try {

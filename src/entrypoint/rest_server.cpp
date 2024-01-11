@@ -16,25 +16,12 @@ namespace uh::cluster::rest
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers) :
-        m_config(std::move(config)), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
+        m_config(std::move(config)),
+        m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.rest_server_conf.threads-1),
         m_handler (m_ioc, dedupe_nodes, directory_nodes, m_config, std::move (workers))
     {
-        boost::asio::co_spawn(*m_ioc,
-                              recover_failed_nodes (),
-                              [](const std::exception_ptr& e)
-                              {
-                                  if (e)
-                                      try
-                                      {
-                                          std::rethrow_exception(e);
-                                      }
-                                      catch(std::exception & e)
-                                      {
-                                          std::cerr << "Error in acceptor: " << e.what() << "\n";
-                                      }
-                              });
 
         boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.rest_server_conf.port}),
@@ -70,14 +57,6 @@ namespace uh::cluster::rest
     }
 
 //------------------------------------------------------------------------------
-
-    coro <void> rest_server::recover_failed_nodes ()
-    {
-        auto m = m_handler.get_recovery_director().acquire_messenger();
-        co_await m.get().send(RECOVER_REQ, {});
-        const auto h = co_await m.get().recv_header();
-        m_recover_response.set_value(h.type);
-    }
 
     coro <void>
     rest_server::do_session(tcp_stream stream)
@@ -158,11 +137,6 @@ namespace uh::cluster::rest
     coro <void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
-        const auto recover_response = m_recover_response.get_future().get();
-        if (recover_response != RECOVER_RESP) [[unlikely]]
-        {
-            throw std::runtime_error ("Recovery not successful!");
-        }
 
         auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
         acceptor.open(endpoint.protocol());

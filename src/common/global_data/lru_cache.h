@@ -23,11 +23,11 @@ class lru_cache {
 
     std::unordered_map<K, typename std::list<Node>::iterator> m_map;
     std::list<Node> m_lruList;
-    int m_capacity;
+    size_t m_capacity;
     std::mutex m;
 
 public:
-    explicit lru_cache(int capacity): m_capacity {capacity} {
+    explicit lru_cache(size_t capacity): m_capacity {capacity} {
     }
 
     void put (const K& key, V&& value) {
