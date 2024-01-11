@@ -58,6 +58,7 @@ namespace uh::cluster {
             LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
             auto service_role = get_service_role(utils::extract_service_role(response.value().key()));
+
             switch (utils::get_etcd_action_enum(response.action())) {
                 case utils::etcd_action::create:
                     if (m_add_service_callbacks.contains(service_role))
