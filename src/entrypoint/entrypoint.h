@@ -44,8 +44,8 @@ public:
         create_connections();
         m_registry.register_service();
 
-        m_registry.register_callback_add_service(uh::cluster::DEDUPLICATOR_SERVICE, [&](){ add_deduplicator_service(); });
-        m_registry.register_callback_remove_service(uh::cluster::DEDUPLICATOR_SERVICE, [&](){ remove_deduplicator_service(); });
+        m_registry.register_callback_add_service(uh::cluster::DEDUPLICATOR_SERVICE, [this](){ add_deduplicator_service(); });
+        m_registry.register_callback_remove_service(uh::cluster::DEDUPLICATOR_SERVICE, [this](){ remove_deduplicator_service(); });
         m_registry.add_dedup();
         m_registry.remove_dedup();
         m_rest_server.run();

@@ -49,7 +49,7 @@ namespace uh::cluster {
             m_etcd_host(etcd_host),
             m_service_id(std::move(service_id)),
             m_etcd_client(m_etcd_host),
-            m_watcher(m_etcd_host, m_etcd_default_key_prefix, [&](etcd::Response response) {return handle_state_changes(response);}, true)
+            m_watcher(m_etcd_host, m_etcd_default_key_prefix, [this](etcd::Response response) {return handle_state_changes(response);}, true)
         {
         }
 
