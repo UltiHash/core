@@ -61,10 +61,10 @@ boost::shared_ptr<sinks::sink> make_sink(const sink_config& cfg)
     sink->locked_backend()->add_stream(open_stream(cfg));
     sink->set_filter(logging::trivial::severity >= cfg.level);
 
-    //sink->set_formatter(
-    //    expr::stream
-    //        << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-    //        << "\t" << logging::trivial::severity << "\t" << expr::smessage);
+    sink->set_formatter(
+        expr::stream
+            << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+            << "\t" << logging::trivial::severity << "\t" << expr::smessage);
 
     sink->locked_backend()->auto_flush();
 
