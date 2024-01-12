@@ -25,15 +25,33 @@ namespace uh::cluster {
         {
         }
 
-        void register_service() {
-            m_etcd_keepalive = m_etcd_client.leasekeepalive(m_etcd_default_ttl).get();
-            std::string key = m_etcd_default_key_prefix + m_service_id;
-            m_etcd_client.set(key, boost::asio::ip::host_name(), m_etcd_keepalive->Lease());
-        }
+        class registration
+        {
+        public:
+            registration(etcd::Client& client, const std::string& key, std::size_t ttl)
+                : m_client(client),
+                  m_lease(m_client.leasegrant(ttl).get().value().lease()),
+                  m_keepalive(m_client, ttl, m_lease)
+            {
+                m_client.set(key, boost::asio::ip::host_name(), m_lease);
+            }
 
-        ~service_registry() {
-            if(m_etcd_keepalive != NULL)
-                m_etcd_keepalive->Cancel();
+            ~registration()
+            {
+                m_client.leaserevoke(m_lease);
+            }
+
+        private:
+            etcd::Client& m_client;
+            int64_t m_lease;
+            etcd::KeepAlive m_keepalive;
+        };
+
+        std::unique_ptr<registration> register_service() {
+            return std::make_unique<registration>(
+                m_etcd_client,
+                m_etcd_default_key_prefix + m_service_id,
+                m_etcd_default_ttl);
         }
 
         std::vector<std::pair<std::size_t, std::string>> get_service_instances(uh::cluster::role service_role) {
@@ -82,8 +100,6 @@ namespace uh::cluster {
         const std::string m_service_id;
 
         etcd::Client m_etcd_client;
-        std::shared_ptr<etcd::KeepAlive> m_etcd_keepalive;
-
     };
 
 }
