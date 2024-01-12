@@ -23,8 +23,7 @@ public:
 
     explicit storage(std::size_t id, const std::string& registry_url) :
             m_registry(uh::cluster::STORAGE_SERVICE, id, registry_url),
-            m_server(make_storage_config().server_conf, m_registry.get_service_id(),
-                     std::make_unique<storage_handler>(make_storage_config(), id))
+            m_server(m_registry.get_server_config(), m_registry.get_service_name(), std::make_unique<storage_handler>(m_registry))
     {}
 
     void run() override {
@@ -37,7 +36,7 @@ public:
     }
 
     ~storage() override {
-        LOG_DEBUG() << "terminating " << m_registry.get_service_id();
+        LOG_DEBUG() << "terminating " << m_registry.get_service_name();
     }
 
 private:

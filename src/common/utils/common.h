@@ -50,9 +50,6 @@ enum role: uint8_t {
     DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
-    #ifdef BOOST_TEST
-    TEST_SERVICE,
-    #endif
 };
 
 enum ec_type: uint8_t {
@@ -61,14 +58,18 @@ enum ec_type: uint8_t {
 };
 
 enum config_parameter : uint8_t  {
+    CFG_BIND_ADDR,
     CFG_HOST,
     CFG_PORT,
+    CFG_THREADS,
 };
 
 static uh::cluster::config_parameter get_cfg_param (const std::string& cfg_param_str) {
     const std::map<std::string, uh::cluster::config_parameter> param_by_string = {
             {"host", uh::cluster::CFG_HOST},
-            {"port", uh::cluster::CFG_PORT}
+            {"port", uh::cluster::CFG_PORT},
+            {"bind_address", uh::cluster::CFG_BIND_ADDR},
+            {"threads", uh::cluster::CFG_THREADS}
     };
 
     if (param_by_string.contains(cfg_param_str))
@@ -80,7 +81,9 @@ static uh::cluster::config_parameter get_cfg_param (const std::string& cfg_param
     static std::string get_cfg_param_string (const uh::cluster::config_parameter& cfg_param) {
         const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
                 {uh::cluster::CFG_HOST, "host"},
-                {uh::cluster::CFG_PORT, "port"}
+                {uh::cluster::CFG_PORT, "port"},
+                {uh::cluster::CFG_BIND_ADDR, "bind_address"},
+                {uh::cluster::CFG_THREADS, "threads"}
         };
 
         if (string_by_param.contains(cfg_param))
@@ -101,10 +104,7 @@ static uh::cluster::role get_service_role (const std::string& service_role_str) 
             {"storage",      uh::cluster::STORAGE_SERVICE},
             {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
             {"directory",    uh::cluster::DIRECTORY_SERVICE},
-            {"entrypoint",   uh::cluster::ENTRYPOINT_SERVICE},
-            #ifdef BOOST_TEST
-            {"test",         uh::cluster::TEST_SERVICE}
-            #endif
+            {"entrypoint",   uh::cluster::ENTRYPOINT_SERVICE}
     };
 
     if (role_by_abbreviation.contains(service_role_str))
@@ -118,10 +118,7 @@ static std::string get_service_string(const uh::cluster::role& service_role) {
             {uh::cluster::STORAGE_SERVICE,      "storage"},
             {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
             {uh::cluster::DIRECTORY_SERVICE,    "directory"},
-            {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"},
-            #ifdef BOOST_TEST
-            {uh::cluster::TEST_SERVICE,         "test"},
-            #endif
+            {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"}
     };
 
     if(abbreviation_by_role.contains(service_role))

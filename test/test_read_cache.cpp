@@ -21,10 +21,8 @@ namespace uh::cluster {
 
     BOOST_FIXTURE_TEST_CASE (read_cache_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
     {
-        BOOST_CHECK(true);
-        //TODO: test cases based on cluster_fixture need to be refarctored to make use of new discovery mechanism
-        /*
         setup(4, 1, 1, NONE);
+        sleep(10);
         BOOST_TEST (get_directory_service(0).get_global_data_view().get_data_node_count() == 4);
 
         constexpr auto data_size = 4ul*1024ul;
@@ -59,6 +57,6 @@ namespace uh::cluster {
         ioc.run();
 
         BOOST_CHECK(std::string_view (data, data_size) == std::string_view (read_buf, data_size));
-        */
+
     }
 } // end namespace uh::cluster

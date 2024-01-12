@@ -22,7 +22,7 @@ public:
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
             m_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
-            m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
+            m_rest_server (m_registry, m_dedupe_nodes, m_directory_nodes, m_workers)
     {
     }
 
@@ -35,7 +35,7 @@ public:
     }
 
     void stop() override {
-        LOG_INFO() << "stopping " << m_registry.get_service_id();
+        LOG_INFO() << "stopping " << m_registry.get_service_name();
         m_workers->join();
         m_workers->stop();
     }
@@ -54,13 +54,13 @@ private:
     void create_connections() {
         for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {
             m_dedupe_nodes.emplace_back (std::make_shared <client> (m_rest_server.get_executor(), instance.host,
-                                                                    make_deduplicator_config().server_conf.port,
+                                                                    instance.port,
                                                                     make_entrypoint_config().dedupe_node_connection_count));
         }
 
         for(const auto& instance : m_registry.get_service_instances(uh::cluster::DIRECTORY_SERVICE)) {
             m_directory_nodes.emplace_back(std::make_shared <client> (m_rest_server.get_executor(), instance.host,
-                                                                      make_directory_config().server_conf.port,
+                                                                      instance.port,
                                                                       make_entrypoint_config().directory_connection_count));
         }
     }

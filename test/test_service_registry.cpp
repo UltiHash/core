@@ -20,32 +20,33 @@ namespace uh::cluster {
 
     BOOST_AUTO_TEST_CASE ( basic_register_retrieve_deregister )
     {
-        service_registry querying_registry(uh::cluster::TEST_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
         etcd::Client etcd_client(REGISTRY_ENDPOINT);
-        std::string invalid_key = "/uh/" + get_service_string(uh::cluster::TEST_SERVICE) + "/42invalid";
-        std::string global_key = "/uh/" + get_service_string(uh::cluster::TEST_SERVICE) + "/global";
+
+        std::string invalid_key = "/uh/" + get_service_string(uh::cluster::STORAGE_SERVICE) + "/42invalid";
+        std::string global_key = "/uh/" + get_service_string(uh::cluster::STORAGE_SERVICE) + "/global/test_value";
         etcd_client.put(invalid_key, "invalid entry from test case");
         etcd_client.put(global_key, "global value");
 
         {
-            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.empty());
         }
 
         {
-            service_registry registering_registry(uh::cluster::TEST_SERVICE, 42, REGISTRY_ENDPOINT);
-            registering_registry.register_service(23);
+            service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
+            registering_registry.register_service();
 
-            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.size() == 1);
-            BOOST_CHECK(service_endpoints.begin()->role == uh::cluster::TEST_SERVICE);
+            BOOST_CHECK(service_endpoints.begin()->role == uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.begin()->id == 42);
             BOOST_CHECK(service_endpoints.begin()->host == boost::asio::ip::host_name());
-            BOOST_CHECK(service_endpoints.begin()->port == 23);
+            BOOST_CHECK(service_endpoints.begin()->port == 9200);
         }
 
         {
-            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.empty());
         }
 
@@ -55,21 +56,22 @@ namespace uh::cluster {
 
     BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(15) )
     {
-        service_registry querying_registry(uh::cluster::TEST_SERVICE, 0, REGISTRY_ENDPOINT);
+        etcd::Client etcd_client(REGISTRY_ENDPOINT);
+
+        service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
 
         {
-            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
+            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.empty());
         }
 
-        service_registry registering_registry(uh::cluster::TEST_SERVICE, 42, REGISTRY_ENDPOINT);
-        registering_registry.register_service(23);
+        service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
+        registering_registry.register_service();
 
-        querying_registry.wait_for_dependency(uh::cluster::TEST_SERVICE);
+        querying_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
 
-        {
-            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::TEST_SERVICE);
-            BOOST_CHECK(service_endpoints.size() == 1);
-        }
+
+        auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
+        BOOST_CHECK(service_endpoints.size() == 1);
     }
 } // end namespace uh::cluster

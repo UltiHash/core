@@ -12,7 +12,9 @@
 #include <utility>
 
 #include "common.h"
+#include "cluster_config.h"
 #include "log.h"
+
 
 namespace uh::cluster {
 
@@ -24,58 +26,97 @@ namespace uh::cluster {
                 m_service_role(role),
                 m_service_index(index),
                 m_service_id(get_service_string(role) + "/" + std::to_string(index)),
-                m_etcd_client(m_etcd_host)
+                m_etcd_client(m_etcd_host),
+                m_etcd_keepalive(m_etcd_client.leasekeepalive(m_etcd_default_ttl).get())
         {
+            init_default_config_values();
         }
 
-        [[nodiscard]] const std::string& get_service_id() const {
+        [[nodiscard]] const std::string& get_service_name() const {
             return m_service_id;
         }
 
-        void register_service(std::uint16_t port = 0) {
-            m_etcd_keepalive = m_etcd_client.leasekeepalive(m_etcd_default_ttl).get();
+        [[nodiscard]] std::size_t get_service_index() const {
+            return m_service_index;
+        }
+
+        void register_service() {
             std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
             std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_HOST);
             std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_PORT);
             m_etcd_client.set(key_host, retrieve_hostname(), m_etcd_keepalive->Lease());
-            m_etcd_client.set(key_port, std::to_string(port), m_etcd_keepalive->Lease());
+            m_etcd_client.set(key_port, std::to_string(get_server_config().port), m_etcd_keepalive->Lease());
             m_registered = true;
             LOG_INFO() << "registered service instance " << key_base << " in service registry.";
         }
 
-        ~service_registry() {
-            if(m_registered && m_etcd_keepalive != NULL) {
-                std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
-                m_etcd_client.rmdir(key_base, true);
-                m_etcd_keepalive->Cancel();
-                LOG_INFO() << "deregistered service instance " << m_etcd_default_key_prefix + m_service_id << " from service registry.";
+        void enable_testing() {
+            std::string key = m_etcd_default_key_prefix + "global/testing";
+            m_etcd_client.set(key, std::to_string(true), m_etcd_keepalive->Lease());
+            m_testing = true;
+            LOG_INFO() << "set testing flag " << key << " in service registry.";
+        }
+
+        server_config get_server_config() {
+            std::string address = get_config_value(CFG_BIND_ADDR);
+
+            std::string port_str = get_config_value(CFG_PORT);
+            std::uint16_t port = 0;
+            if(is_valid_pos_integer(port_str)){
+                port = std::stoull(port_str);
+                if(detect_testing())
+                    port += m_service_index;
+            }
+
+            std::string threads_str = get_config_value(CFG_THREADS);
+            std::size_t threads = 0;
+            if(is_valid_pos_integer(threads_str))
+                threads = std::stoull(threads_str);
+
+            return {
+                .threads = threads,
+                .port = port,
+                .bind_address = address
+            };
+        }
+
+        bool detect_testing() {
+            std::string key = m_etcd_default_key_prefix + "global/testing";
+            auto response = m_etcd_client.get(key).get();
+            try {
+                if (response.is_ok())
+                    return true;
+                else
+                    return false;
+            } catch (std::exception const & ex) {
+                throw std::system_error(EIO, std::generic_category(), "getting the key '" + key + "' failed due to communication problem, details: " + ex.what());
             }
         }
 
-        template <typename T, typename = std::enable_if_t<(std::is_integral_v<T> && std::is_unsigned_v<T>) || std::is_same_v<T, std::string>>>
-        T get_config_value(const uh::cluster::config_parameter parameter) {
+        ~service_registry() {
+            if(m_etcd_keepalive != NULL) {
+                std::string key;
+                if(m_registered)
+                    key =  m_etcd_default_key_prefix + m_service_id + "/";
+                else if (m_testing)
+                    key = m_etcd_default_key_prefix + "global/testing";
+                m_etcd_client.rmdir(key, true);
+                m_etcd_keepalive->Cancel();
+                LOG_INFO() << "deregistered service instance " << key << " from service registry.";
+            }
+        }
+
+        std::string get_config_value(const uh::cluster::config_parameter parameter) {
             std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
             try {
-                return convert_to_type(get(key));
+                return get(key);
             } catch (std::invalid_argument const & e_instance) {
-                try {
-                    std::string global_key = m_etcd_default_key_prefix + get_service_string(m_service_role) + "/global/" +
-                            get_cfg_param_string(parameter);
-                    return convert_to_type(get(global_key));
-                } catch (std::invalid_argument const & e_global) {
-                    //TODO: handle case that no values are in registry
-                    return convert_to_type("0");
-                }
+                std::string global_key = m_etcd_default_key_prefix +
+                        "global/" +
+                        get_service_string(m_service_role) + "/" +
+                        get_cfg_param_string(parameter);
+                return get(global_key);
             }
-        }
-
-        void set_config_value(const uh::cluster::config_parameter parameter, std::size_t value) {
-            set_config_value(parameter, std::to_string(value));
-        }
-
-        void set_config_value(const uh::cluster::config_parameter parameter, std::string value) {
-            std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
-            set(key, value);
         }
 
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
@@ -133,6 +174,52 @@ namespace uh::cluster {
         }
 
     private:
+        bool key_exists(std::string key) {
+            try {
+                get(key);
+            } catch (std::invalid_argument const & e)  {
+                return false;
+            }
+            return true;
+        }
+
+        void init_default_config_values() {
+            auto response = m_etcd_client.lock(m_etcd_default_key_prefix + "global/lock").get();
+            if(!key_exists(m_etcd_default_key_prefix + "global/initialized")) {
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_PORT, 9200);
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_THREADS, 16);
+
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_PORT, 9300);
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_THREADS, 4);
+
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_PORT, 9400);
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_THREADS, 4);
+
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_PORT, 8080);
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_THREADS, 4);
+
+                m_etcd_client.set(m_etcd_default_key_prefix + "global/initialized", "1");
+
+            }
+            auto _ = m_etcd_client.unlock(response.lock_key()).get();
+        }
+
+        void set_config_global_value(const uh::cluster::role service_role, const uh::cluster::config_parameter parameter, std::size_t value) {
+            set_config_global_value(service_role, parameter, std::to_string(value));
+        }
+
+        void set_config_global_value(const uh::cluster::role service_role, const uh::cluster::config_parameter parameter, const std::string& value) {
+            std::string key = m_etcd_default_key_prefix +
+                              "global/" +
+                              get_service_string(service_role) + "/" +
+                              get_cfg_param_string(parameter);
+            set(key, value);
+        }
+
         static bool is_valid_pos_integer(const std::string& str) {
             // Check if the string is empty
             if (str.empty()) {
@@ -166,18 +253,18 @@ namespace uh::cluster {
         }
 
         std::string get(const std::string &key) {
-            auto response = m_etcd_client.get(key).get();
-            try
-            {
-                if (response.is_ok())
-                    return response.value().as_string();
-                else
-                    throw std::invalid_argument("retrieval of configuration parameter " + key + " failed, details: " + response.error_message());
-            }
-            catch (std::exception const & ex)
-            {
+            etcd::Response response;
+
+            try {
+                response= m_etcd_client.get(key).get();
+            } catch (std::exception const & ex) {
                 throw std::system_error(EIO, std::generic_category(), "retrieval of configuration parameter " + key + " failed due to communication problem, details: " + ex.what());
             }
+
+            if (response.is_ok())
+                return response.value().as_string();
+            else
+                throw std::invalid_argument("retrieval of configuration parameter " + key + " failed, details: " + response.error_message());
         }
 
         std::string set(const std::string &key, const std::string &value) {
@@ -195,30 +282,11 @@ namespace uh::cluster {
             }
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
-        T convert_to_type(const std::string& str) {
-            if(is_valid_pos_integer(str))
-                return static_cast<T>(std::stoull(str));
-            else
-                throw std::invalid_argument("the configuration value " + str + " does not appear to be a valid non-negative integer.");
-        }
-
-        static std::string convert_to_type(const std::string& str) {
-            return str;
-        }
-
         static std::string retrieve_hostname() {
             return boost::asio::ip::host_name();
         }
 
-    #ifdef NDEBUG
-        const std::size_t m_etcd_default_ttl = 5;
-    #else
-        // this value is used when running a debug build
-        // having a longer ttl is important here as running into a breakpoint will almost
-        // immediately let you run into ttl and thus will make debugging more complicated
-        const std::size_t m_etcd_default_ttl = 60000;
-    #endif
+        const std::size_t m_etcd_default_ttl = 600;
 
         const std::string m_etcd_default_key_prefix = "/uh/";
 
@@ -230,6 +298,7 @@ namespace uh::cluster {
         etcd::Client m_etcd_client;
         std::shared_ptr<etcd::KeepAlive> m_etcd_keepalive;
         bool m_registered = false;
+        bool m_testing = false;
 
     };
 

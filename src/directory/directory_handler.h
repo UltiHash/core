@@ -15,11 +15,11 @@ namespace uh::cluster {
     class directory_handler: public protocol_handler {
     public:
 
-        directory_handler(directory_config conf, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
-                protocol_handler(conf.server_conf),
-                m_directory(conf.directory_conf),
+        directory_handler(service_registry& registry, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
+                m_directory("ultihash-root/dr"),
                 m_storage(storage),
-                m_directory_workers (std::move (directory_workers)),
+                m_directory_workers (std::move (directory_workers))
+                /*
                 m_counters(add_counter_family("uh_dr_requests", "number of requests handled by the directory node")),
                 m_reqs_dir_put_obj(m_counters.Add({{"type", "DIR_PUT_OBJ_REQ"}})),
                 m_reqs_dir_get_obj(m_counters.Add({{"type", "DIR_GET_OBJ_REQ"}})),
@@ -29,8 +29,9 @@ namespace uh::cluster {
                 m_reqs_dir_list_obj(m_counters.Add({{"type", "DIR_LIST_OBJ_REQ"}})),
                 m_reqs_dir_delete_bucket(m_counters.Add({{"type", "DIR_DELETE_BUCKET_REQ"}})),
                 m_reqs_invalid(m_counters.Add({{"type", "INVALID"}}))
+                 */
         {
-            init();
+            //init();
         }
 
     coro <void> handle (messenger m) override {
@@ -42,31 +43,31 @@ namespace uh::cluster {
                 const auto message_header = co_await m.recv_header ();
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
-                    m_reqs_dir_put_obj.Increment();
+                    //m_reqs_dir_put_obj.Increment();
                     co_await handle_put_obj (m, message_header);
                     break;
                 case DIR_GET_OBJ_REQ:
-                    m_reqs_dir_get_obj.Increment();
+                    //m_reqs_dir_get_obj.Increment();
                     co_await handle_get_obj (m, message_header);
                     break;
                 case DIR_PUT_BUCKET_REQ:
-                    m_reqs_dir_put_bucket.Increment();
+                    //m_reqs_dir_put_bucket.Increment();
                     co_await handle_put_bucket (m, message_header);
                     break;
                 case RECOVER_REQ:
-                    m_reqs_dir_recover.Increment();
+                    //m_reqs_dir_recover.Increment();
                     co_await handle_recovery (m, message_header);
                     break;
                 case DIR_LIST_BUCKET_REQ:
-                    m_reqs_dir_list_bucket.Increment();
+                    //m_reqs_dir_list_bucket.Increment();
                     co_await handle_list_buckets(m, message_header);
                     break;
                 case DIR_LIST_OBJ_REQ:
-                    m_reqs_dir_list_obj.Increment();
+                    //m_reqs_dir_list_obj.Increment();
                     co_await handle_list_objects(m, message_header);
                     break;
                 case DIR_DELETE_BUCKET_REQ:
-                    m_reqs_dir_delete_bucket.Increment();
+                    //m_reqs_dir_delete_bucket.Increment();
                     co_await handle_delete_bucket(m, message_header);
                     break;
                 case DIR_DELETE_OBJ_REQ:
@@ -78,7 +79,7 @@ namespace uh::cluster {
                 case STOP:
                     co_return;
                 default:
-                    m_reqs_invalid.Increment();
+                    //m_reqs_invalid.Increment();
                     throw std::invalid_argument ("Invalid message type!");
                 }
             } catch (const error_exception& e) {
@@ -202,6 +203,7 @@ namespace uh::cluster {
         directory_store m_directory;
         global_data_view& m_storage;
         std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
+        /*
         prometheus::Family<prometheus::Counter> &m_counters;
         prometheus::Counter &m_reqs_invalid;
         prometheus::Counter &m_reqs_dir_put_obj;
@@ -211,6 +213,7 @@ namespace uh::cluster {
         prometheus::Counter &m_reqs_dir_list_bucket;
         prometheus::Counter &m_reqs_dir_list_obj;
         prometheus::Counter &m_reqs_dir_delete_bucket;
+        */
 
     };
 } // end namespace uh::cluster

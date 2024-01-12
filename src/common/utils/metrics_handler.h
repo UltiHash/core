@@ -21,7 +21,7 @@ namespace uh::cluster {
         explicit metrics_handler(server_config& c) :
                 //m_exposer(make_exposer(c)),
                 m_registry(std::make_shared<prometheus::Registry>()),
-                m_metrics_path(c.metrics_path) {};
+                m_metrics_path("/metrics") {};
 
         virtual ~metrics_handler() = default;
 

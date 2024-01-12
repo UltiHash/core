@@ -205,11 +205,7 @@ public:
 
         int i = 0;
         for(const auto& instance : ds_instances) {
-            uint16_t port = make_storage_config().server_conf.port;
-            if(false) {
-                port += instance.id;
-            }
-            auto cl = std::make_shared <client> (m_io_service, instance.host, port, make_deduplicator_config().data_node_connection_count);
+            auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, make_deduplicator_config().data_node_connection_count);
             const uint128_t offset =
                     make_storage_config().max_data_store_size * (instance.id - m_ec->get_acquired_ec_node_count());
 

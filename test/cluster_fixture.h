@@ -19,27 +19,23 @@ namespace uh::cluster {
     {
     public:
 
-        std::vector <std::shared_ptr <service_interface>> m_service_instances;
+
+        cluster_fixture() :
+                m_registry_url("http://127.0.0.1:2379"),
+                m_registry(uh::cluster::STORAGE_SERVICE, UINT64_MAX, m_registry_url)
+        {
+            m_registry.enable_testing();
+        }
+
+
+        const std::string m_registry_url = "http://127.0.0.1:2379";
+        service_registry m_registry;
+
         std::vector <std::shared_ptr <service_interface>> m_deduplicator_instances;
         std::vector <std::shared_ptr <service_interface>> m_directory_instances;
         std::vector <std::shared_ptr <service_interface>> m_storage_instances;
         std::vector <std::thread> m_threads;
         boost::asio::io_context m_ioc;
-
-        static std::unordered_map <uh::cluster::role, std::map <int, std::string>>
-        get_cluster_roles(int data_nodes, int dedupe_nodes, int directory_nodes) {
-            std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles;
-            for (int i = 0; i < data_nodes; ++i) {
-                roles[STORAGE_SERVICE].emplace(i, "127.0.0.1");
-            }
-            for (int i = 0; i < dedupe_nodes; ++i) {
-                roles[DEDUPLICATOR_SERVICE].emplace(i, "127.0.0.1");
-            }
-            for (int i = 0; i < directory_nodes; ++i) {
-                roles[DIRECTORY_SERVICE].emplace(i, "127.0.0.1");
-            }
-            return roles;
-        }
 
         deduplicator& get_deduplicator_service (int i) {
             return dynamic_cast <deduplicator&> (*m_deduplicator_instances.at(i));
@@ -72,16 +68,24 @@ namespace uh::cluster {
                 }
             }
 
-            for (const auto& node: m_service_instances) {
+            for (const auto& node: m_deduplicator_instances) {
                 node->stop();
             }
+
+            for (const auto& node: m_directory_instances) {
+                node->stop();
+            }
+
+            for (const auto& node: m_storage_instances) {
+                node->stop();
+            }
+
 
             for (auto& thread: m_threads) {
                 thread.join();
             }
 
             m_threads.clear();
-            m_service_instances.clear();
             m_deduplicator_instances.clear();
             m_storage_instances.clear();
             m_directory_instances.clear();
@@ -93,30 +97,17 @@ namespace uh::cluster {
 
         void turn_on (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
             std::exception_ptr excp_ptr;
-            const std::string registry_url = "http://127.0.0.1:2379";
 
-            const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
-
-            for (const auto &role: cluster_roles) {
-                for (const auto &role_nodes: role.second) {
-                    switch (role.first) {
-                        case STORAGE_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<storage>(role_nodes.first, registry_url));
-                            m_storage_instances.emplace_back(m_service_instances.back());
-                            break;
-                        case DEDUPLICATOR_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<deduplicator>(role_nodes.first, registry_url, true));
-                            m_deduplicator_instances.emplace_back(m_service_instances.back());
-                            break;
-                        case DIRECTORY_SERVICE:
-                            m_service_instances.emplace_back(std::make_shared<directory>(role_nodes.first, registry_url, true));
-                            m_directory_instances.emplace_back(m_service_instances.back());
-                            break;
-                        default:
-                            throw std::runtime_error("no support for the role type");
-                    }
-                }
+            for (int i = 0; i < data_nodes; ++i) {
+                m_storage_instances.emplace_back(std::make_shared<storage>(i, m_registry_url));
             }
+            for (int i = 0; i < dedupe_nodes; ++i) {
+                m_deduplicator_instances.emplace_back(std::make_shared<deduplicator>(i, m_registry_url));
+            }
+            for (int i = 0; i < directory_nodes; ++i) {
+                m_directory_instances.emplace_back(std::make_shared<directory>(i, m_registry_url));
+            }
+
 
             for (const auto &node: m_storage_instances) {
                 m_ioc.post([&node] { node->run(); });
@@ -127,8 +118,6 @@ namespace uh::cluster {
                 });
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds (4));
-
             for (const auto &node: m_deduplicator_instances) {
                 m_ioc.post([&node] { node->run(); });
                 m_threads.emplace_back([&] {
@@ -138,8 +127,6 @@ namespace uh::cluster {
                 });
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds (1));
-
             for (const auto &node: m_directory_instances) {
                 m_ioc.post([&node] { node->run(); });
                 m_threads.emplace_back([&] {
@@ -148,8 +135,6 @@ namespace uh::cluster {
                     }
                 });
             }
-
-            std::this_thread::sleep_for(std::chrono::seconds (3));
 
             if (excp_ptr) {
                 try {
@@ -170,98 +155,8 @@ namespace uh::cluster {
             std::filesystem::remove_all(get_root_path());
         }
 
-        static void destroy_data_node (int i) {
-            std::string dn_dir = "dn" + std::to_string(i);
-
-            std::filesystem::remove_all(get_root_path() / dn_dir);
-        }
-
         static std::filesystem::path get_root_path() {
             return "/tmp/uh/";
-        }
-
-        static uh::cluster::entrypoint_config make_entry_node_config(int i) {
-            return {
-                    .rest_server_conf = {
-                            .threads = 4,
-                            .port = static_cast<uint16_t>(8500 + i),
-                    },
-                    .dedupe_node_connection_count = 2,
-                    .directory_connection_count = 2,
-            };
-        }
-
-        static uh::cluster::storage_config make_data_node_config(int i) {
-            std::string dn_dir = "dn" + std::to_string(i);
-            return {
-                    .directory = get_root_path() / dn_dir,
-                    .hole_log = get_root_path() / dn_dir / "log",
-                    .min_file_size = 1ul * 1024ul,
-                    .max_file_size = 2ul * 1024ul,
-                    .max_data_store_size = 64ul * 1024ul,
-                    .server_conf = {
-                            .threads = 4,
-                            .port = static_cast<uint16_t>(8600 + i),
-                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9600 + i)),
-                            .metrics_threads = 2,
-                            .metrics_path = "/metrics"
-                    },
-            };
-        }
-
-        static uh::cluster::directory_config make_directory_node_config(int i) {
-            std::string dr_dir = "dr" + std::to_string(i);
-
-            return {
-                    .server_conf = {
-                            .threads = 4,
-                            .port = static_cast<uint16_t>(8700 + i),
-                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9700 + i)),
-                            .metrics_threads = 2,
-                            .metrics_path = "/metrics"
-
-                    },
-                    .directory_conf = {
-                            .root = get_root_path() / dr_dir,
-                            .bucket_conf = {
-                                    .min_file_size = 1024ul * 2,
-                                    .max_file_size = 1024ul * 64,
-                                    .max_storage_size = 1024ul * 256,
-                                    .max_chunk_size = std::numeric_limits <uint32_t>::max(),
-                            },
-                    },
-                    .data_node_connection_count = 2,
-            };
-        }
-
-        static uh::cluster::deduplicator_config make_dedupe_node_config(int i) {
-            std::string dd_dir = "dd" + std::to_string(i);
-
-            return {
-                    .min_fragment_size = 32,
-                    .max_fragment_size = 8 * 1024,
-                    .server_conf = {
-                            .threads = 1,
-                            .port = static_cast <uint16_t> (8800 + i),
-                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9800 + i)),
-                            .metrics_threads = 2,
-                            .metrics_path = "/metrics"
-                    },
-                    .data_node_connection_count = 2,
-                    .set_log_path = get_root_path() / "dd_set",
-                    .dedupe_worker_minimum_data_size = 128ul * 1024ul,
-            };
-        }
-
-        static uh::cluster::global_data_view_config make_global_data_view_config(ec_type ec) {
-
-            return {
-                    .read_cache_capacity_l1 = 200,
-                    .read_cache_capacity_l2 = 100,
-                    .l1_sample_size = 128,
-                    .ec_algorithm = ec,
-                    .recovery_chunk_size = 1 * 1024ul,
-            };
         }
 
         static void fill_random(char* buf, size_t size) {

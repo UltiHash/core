@@ -26,6 +26,7 @@
 #include "rest/http/http_request.h"
 #include "rest/http/http_response.h"
 #include "rest/utils/state/server_state.h"
+#include "common/utils/service_registry.h"
 
 //------------------------------------------------------------------------------
 
@@ -47,7 +48,7 @@ namespace uh::cluster::rest
     class rest_server
     {
     private:
-        entrypoint_config m_config;
+        server_config m_server_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl; // TODO:
@@ -59,7 +60,7 @@ namespace uh::cluster::rest
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(entrypoint_config config,
+        rest_server(service_registry& registry,
                     std::vector <std::shared_ptr <client>>& dedupe_nodes,
                     std::vector <std::shared_ptr <client>>& directory_nodes,
                     std::shared_ptr <boost::asio::thread_pool> workers);
@@ -81,6 +82,8 @@ namespace uh::cluster::rest
         // Accepts incoming connections and launches the sessions
         coro <void>
         do_listen(tcp::endpoint endpoint);
+
+
     };
 
 //------------------------------------------------------------------------------

@@ -12,14 +12,15 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(entrypoint_config config,
+    rest_server::rest_server(service_registry& registry,
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers) :
-        m_config(std::move(config)), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
+        m_server_config(registry.get_server_config()),
+        m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_server_config.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
-        m_thread_container(m_config.rest_server_conf.threads-1),
-        m_handler (m_ioc, dedupe_nodes, directory_nodes, m_config, std::move (workers))
+        m_thread_container(m_server_config.threads-1),
+        m_handler (m_ioc, dedupe_nodes, directory_nodes, std::move (workers))
     {
         boost::asio::co_spawn(*m_ioc,
                               recover_failed_nodes (),
@@ -37,7 +38,7 @@ namespace uh::cluster::rest
                               });
 
         boost::asio::co_spawn(*m_ioc,
-                              do_listen(tcp::endpoint{m_server_address, m_config.rest_server_conf.port}),
+                              do_listen(tcp::endpoint{m_server_address, m_server_config.port}),
                               [](const std::exception_ptr& e)
                               {
                                   if (e)
@@ -59,7 +60,7 @@ namespace uh::cluster::rest
     {
         LOG_INFO() << "starting rest server";
 
-        for(auto i = 0 ; i < m_config.rest_server_conf.threads - 1 ; i++)
+        for(auto i = 0 ; i < m_server_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
                     [&]
                     {

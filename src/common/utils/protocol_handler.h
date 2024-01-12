@@ -15,14 +15,11 @@
 
 namespace uh::cluster {
 
-    class protocol_handler : protected metrics_handler {
+    class protocol_handler  {
     public:
     virtual coro <void> handle (messenger m) = 0;
 
-    explicit protocol_handler(server_config& c) :
-        metrics_handler(c) {};
-
-    ~protocol_handler() override = default;
+    virtual ~protocol_handler() = default;
 
     [[nodiscard]] virtual bool stop_received() const {
         return false;

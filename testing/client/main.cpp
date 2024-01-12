@@ -46,7 +46,7 @@ coro <void> perform_operation (messenger& m, message_type type, std::span <char>
 
 std::string dump_usage () {
     return {
-        "Usage: <executable> <server-address> <server-port> <request-type> <data-file-path>"
+        "Usage: <executable> <server-bind_address> <server-port> <request-type> <data-file-path>"
     };
 }
 
