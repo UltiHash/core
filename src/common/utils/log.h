@@ -76,12 +76,16 @@ std::ostream& operator<<(std::ostream& out, const sink_config& c);
 
 // ---------------------------------------------------------------------
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
 /**
  * Initialize application logging.
  *
  * @param logfilename path to log file
  */
 void init(const config& cfg);
+#pragma GCC diagnostic pop
 
 // ---------------------------------------------------------------------
 

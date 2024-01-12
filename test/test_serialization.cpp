@@ -17,6 +17,7 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
+
 BOOST_AUTO_TEST_CASE (serialization_directory_request_test) {
 
     directory_message msg_orig;

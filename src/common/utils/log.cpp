@@ -54,7 +54,6 @@ boost::shared_ptr<std::ostream> open_stream(const sink_config& cfg)
 
 // ---------------------------------------------------------------------
 
-#pragma GCC diagnostic ignored "-Wrestrict"
 boost::shared_ptr<sinks::sink> make_sink(const sink_config& cfg)
 {
     auto sink = boost::make_shared< sinks::synchronous_sink<sinks::text_ostream_backend> >();
