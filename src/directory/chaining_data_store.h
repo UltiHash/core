@@ -179,10 +179,15 @@ public:
                 }
             }
             const auto header_buffer = h.serialize();
-            const auto ws = ::write (partial_alloc.fd, header_buffer.data(), header_size);
-            if (ws != static_cast <ssize_t> (header_size)) [[unlikely]] {
-                throw std::runtime_error ("Could not write the header in the chaining data store");
+            size_t total_size = 0;
+            while (total_size < header_size) {
+                const auto ws = ::write (partial_alloc.fd, header_buffer.data(), header_size);
+                if (ws < 0) [[unlikely]] {
+                    throw std::runtime_error ("Could not write the header in the chaining data store");
+                }
+                total_size += ws;
             }
+
             for (size_t written = 0;
                  written < h.size;
                  written += ::write(partial_alloc.fd, data.data() + offset + written, h.size - written));
