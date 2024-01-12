@@ -28,24 +28,15 @@ public:
     {
     }
 
-    void add_deduplicator_service()
-    {
-        LOG_INFO() << "dedup is added";
-    }
-
-    void remove_deduplicator_service()
-    {
-        LOG_INFO() << "dedup is removed";
-    }
-
     void run() override {
         m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
         create_connections();
         m_registry.register_service();
 
-        m_registry.register_callback_add_service(uh::cluster::DEDUPLICATOR_SERVICE, [this](){ add_deduplicator_service(); });
-        m_registry.register_callback_remove_service(uh::cluster::DEDUPLICATOR_SERVICE, [this](){ remove_deduplicator_service(); });
+        register_deduplicator_service_callbacks();
+        register_directory_service_callbacks();
+
         m_registry.add_dedup();
         m_registry.remove_dedup();
         m_rest_server.run();
@@ -56,7 +47,6 @@ public:
         m_workers->join();
         m_workers->stop();
     }
-
 
 private:
     const std::size_t m_id;
@@ -69,6 +59,34 @@ private:
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
+
+    void register_deduplicator_service_callbacks() {
+        auto add_deduplicator_service = [this](std::size_t uuid) {
+            LOG_INFO() << "deduplicator service with id " << uuid << " added";
+
+            // add n connections to the newly created service and emplace it to list of clients
+        };
+        auto remove_deduplicator_service = [this](std::size_t uuid) {
+            LOG_INFO() << "deduplicator service with id " << uuid << " removed";
+
+            // remove n connections to the removed service and delete it from the list of clients
+        };
+
+        m_registry.register_callback_add_service(uh::cluster::DEDUPLICATOR_SERVICE, add_deduplicator_service);
+        m_registry.register_callback_remove_service(uh::cluster::DEDUPLICATOR_SERVICE, remove_deduplicator_service);
+    }
+
+    void register_directory_service_callbacks() {
+        auto add_directory_service = [this](std::size_t uuid) {
+            LOG_INFO() << "directory service with id " << uuid << " added";
+        };
+        auto remove_directory_service = [this](std::size_t uuid) {
+            LOG_INFO() << "directory service with id " << uuid << " removed";
+        };
+
+        m_registry.register_callback_add_service(uh::cluster::DIRECTORY_SERVICE, add_directory_service);
+        m_registry.register_callback_remove_service(uh::cluster::DIRECTORY_SERVICE, remove_directory_service);
+    }
 
     void create_connections() {
         for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {

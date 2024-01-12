@@ -34,11 +34,17 @@ namespace uh::cluster {
             throw std::invalid_argument("invalid etcd action");
     }
 
-    static std::string extract_service_role(const std::string &key) {
+    typedef struct {
+        uh::cluster::role role;
+        std::size_t id;
+    } service_info;
+
+    static service_info extract_service_info(const std::string &key) {
         size_t uh_slash_pos = key.find("/uh/");
         size_t next_slash_pos = key.find('/', uh_slash_pos + 4);
 
-        return key.substr(uh_slash_pos + 4, next_slash_pos - uh_slash_pos - 4);
+        return { .role = get_service_role(key.substr(uh_slash_pos + 4, next_slash_pos - uh_slash_pos - 4)),
+                 .id = std::stoul(key.substr(next_slash_pos+1))};
     };
 }
 
@@ -55,18 +61,20 @@ namespace uh::cluster {
 
         void handle_state_changes(const etcd::Response& response)
         {
-            LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
+            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
-            auto service_role = get_service_role(utils::extract_service_role(response.value().key()));
+            auto service_info = utils::extract_service_info(response.value().key());
+            const auto& service_role = service_info.role;
+            const auto& service_id = service_info.id;
 
             switch (utils::get_etcd_action_enum(response.action())) {
                 case utils::etcd_action::create:
                     if (m_add_service_callbacks.contains(service_role))
-                        m_add_service_callbacks[service_role]();
+                        m_add_service_callbacks[service_role](service_id);
                     break;
                 case utils::etcd_action::erase:
                     if (m_remove_service_callbacks.contains(service_role))
-                        m_remove_service_callbacks[service_role]();
+                        m_remove_service_callbacks[service_role](service_id);
                     break;
             }
         }
@@ -87,11 +95,11 @@ namespace uh::cluster {
             m_etcd_client.rmdir("/uh/deduplicator/1");
         }
 
-        void register_callback_add_service(uh::cluster::role service_role, std::function<void()> callback) {
+        void register_callback_add_service(uh::cluster::role service_role, std::function<void(const std::size_t)> callback) {
             m_add_service_callbacks[service_role] = std::move(callback);
         }
 
-        void register_callback_remove_service(uh::cluster::role service_role, std::function<void()> callback) {
+        void register_callback_remove_service(uh::cluster::role service_role, std::function<void(const std::size_t)> callback) {
             m_remove_service_callbacks[service_role] = std::move(callback);
         }
 
@@ -146,8 +154,8 @@ namespace uh::cluster {
         const std::string m_etcd_host;
         const std::string m_service_id;
 
-        std::map<uh::cluster::role, std::function<void()>> m_add_service_callbacks;
-        std::map<uh::cluster::role, std::function<void()>> m_remove_service_callbacks;
+        std::map<uh::cluster::role, std::function<void(const std::size_t)>> m_add_service_callbacks;
+        std::map<uh::cluster::role, std::function<void(const std::size_t)>> m_remove_service_callbacks;
 
         etcd::Client m_etcd_client;
         std::shared_ptr<etcd::KeepAlive> m_etcd_keepalive;
