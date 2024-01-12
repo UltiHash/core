@@ -54,22 +54,27 @@ enum role: uint8_t {
 
 enum ec_type: uint8_t {
     NONE = 0,
-    XOR,
+    XOR = 1,
 };
 
 enum config_parameter : uint8_t  {
-    CFG_BIND_ADDR,
-    CFG_HOST,
-    CFG_PORT,
-    CFG_THREADS,
+    CFG_SERVER_THREADS,
+    CFG_SERVER_BIND_ADDR,
+    CFG_SERVER_PORT,
+    CFG_ENDPOINT_HOST,
+    CFG_ENDPOINT_PORT,
+
+
+
 };
 
 static uh::cluster::config_parameter get_cfg_param (const std::string& cfg_param_str) {
     const std::map<std::string, uh::cluster::config_parameter> param_by_string = {
-            {"host", uh::cluster::CFG_HOST},
-            {"port", uh::cluster::CFG_PORT},
-            {"bind_address", uh::cluster::CFG_BIND_ADDR},
-            {"threads", uh::cluster::CFG_THREADS}
+            {"server_threads", uh::cluster::CFG_SERVER_THREADS},
+            {"server_bind_address", uh::cluster::CFG_SERVER_BIND_ADDR},
+            {"server_port", uh::cluster::CFG_SERVER_PORT},
+            {"endpoint_host", uh::cluster::CFG_ENDPOINT_HOST},
+            {"endpoint_port", uh::cluster::CFG_ENDPOINT_PORT},
     };
 
     if (param_by_string.contains(cfg_param_str))
@@ -80,10 +85,11 @@ static uh::cluster::config_parameter get_cfg_param (const std::string& cfg_param
 
     static std::string get_cfg_param_string (const uh::cluster::config_parameter& cfg_param) {
         const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
-                {uh::cluster::CFG_HOST, "host"},
-                {uh::cluster::CFG_PORT, "port"},
-                {uh::cluster::CFG_BIND_ADDR, "bind_address"},
-                {uh::cluster::CFG_THREADS, "threads"}
+                {uh::cluster::CFG_SERVER_THREADS,   "server_threads"},
+                {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
+                {uh::cluster::CFG_SERVER_PORT,      "server_port"},
+                {uh::cluster::CFG_ENDPOINT_HOST,    "endpoint_host"},
+                {uh::cluster::CFG_ENDPOINT_PORT,    "endpoint_port"},
         };
 
         if (string_by_param.contains(cfg_param))

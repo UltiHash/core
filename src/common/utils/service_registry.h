@@ -42,8 +42,8 @@ namespace uh::cluster {
 
         void register_service() {
             std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
-            std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_HOST);
-            std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_PORT);
+            std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST);
+            std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT);
             m_etcd_client.set(key_host, retrieve_hostname(), m_etcd_keepalive->Lease());
             m_etcd_client.set(key_port, std::to_string(get_server_config().port), m_etcd_keepalive->Lease());
             m_registered = true;
@@ -58,9 +58,9 @@ namespace uh::cluster {
         }
 
         server_config get_server_config() {
-            std::string address = get_config_value(CFG_BIND_ADDR);
+            std::string address = get_config_value(CFG_SERVER_BIND_ADDR);
 
-            std::string port_str = get_config_value(CFG_PORT);
+            std::string port_str = get_config_value(CFG_SERVER_PORT);
             std::uint16_t port = 0;
             if(is_valid_pos_integer(port_str)){
                 port = std::stoull(port_str);
@@ -68,7 +68,7 @@ namespace uh::cluster {
                     port += m_service_index;
             }
 
-            std::string threads_str = get_config_value(CFG_THREADS);
+            std::string threads_str = get_config_value(CFG_SERVER_THREADS);
             std::size_t threads = 0;
             if(is_valid_pos_integer(threads_str))
                 threads = std::stoull(threads_str);
@@ -135,9 +135,9 @@ namespace uh::cluster {
                         endpoints_by_id.emplace(std::size_t(service_index),
                                                 service_endpoint{.role = service_role, .id = service_index});
                     auto &endpoint = endpoints_by_id.at(service_index);
-                    if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_HOST)) {
+                    if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST)) {
                         endpoint.host = service_instance.as_string();
-                    } else if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_PORT)) {
+                    } else if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT)) {
                         endpoint.port = std::stoul(service_instance.as_string());
                     }
                 }
@@ -186,21 +186,21 @@ namespace uh::cluster {
         void init_default_config_values() {
             auto response = m_etcd_client.lock(m_etcd_default_key_prefix + "global/lock").get();
             if(!key_exists(m_etcd_default_key_prefix + "global/initialized")) {
-                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_PORT, 9200);
-                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
-                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_THREADS, 16);
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_PORT, 9200);
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_THREADS, 16);
 
-                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_PORT, 9300);
-                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
-                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_THREADS, 4);
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_PORT, 9300);
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
 
-                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_PORT, 9400);
-                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
-                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_THREADS, 4);
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_PORT, 9400);
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
 
-                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_PORT, 8080);
-                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_BIND_ADDR, "0.0.0.0");
-                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_THREADS, 4);
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_PORT, 8080);
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+                set_config_global_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
 
                 m_etcd_client.set(m_etcd_default_key_prefix + "global/initialized", "1");
 
