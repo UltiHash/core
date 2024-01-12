@@ -7,6 +7,9 @@
 #define BOOST_TEST_MODULE "serialization tests"
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+
 #include <boost/test/unit_test.hpp>
 #include <third-party/zpp_bits/zpp_bits.h>
 #include "common/utils/common_types.h"
@@ -41,3 +44,4 @@ BOOST_AUTO_TEST_CASE (serialization_directory_request_test) {
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster
+#pragma GCC diagnostic pop
