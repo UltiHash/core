@@ -7,7 +7,6 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
-#pragma GCC diagnostic ignored "-Werror"
 
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/severity_logger.hpp>
