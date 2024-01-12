@@ -43,7 +43,7 @@ endif()
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} prometheus-cpp::pull pugixml::shared ${PugiXML_LIBRARIES} etcd-cpp-api ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
-add_compile_options(-Wall)
+add_compile_options(-Wall -Werror)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
