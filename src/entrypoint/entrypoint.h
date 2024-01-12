@@ -32,7 +32,7 @@ public:
         m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
         create_connections();
-        m_registry.register_service();
+        m_registration = m_registry.register_service();
         m_rest_server.run();
     }
 
@@ -54,6 +54,7 @@ private:
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
+    std::unique_ptr<service_registry::registration> m_registration;
 
     void create_connections() {
         for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {
