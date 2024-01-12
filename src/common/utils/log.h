@@ -79,6 +79,7 @@ std::ostream& operator<<(std::ostream& out, const sink_config& c);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
+#pragma GCC diagnostic ignored "-Werror"
 /**
  * Initialize application logging.
  *
