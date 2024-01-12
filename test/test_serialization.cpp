@@ -8,7 +8,7 @@
 #endif
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wrestrict"
+#pragma GCC diagnostic ignored "-Werror=stringop-overflow"
 
 #include <boost/test/unit_test.hpp>
 #include <third-party/zpp_bits/zpp_bits.h>
