@@ -18,8 +18,6 @@ namespace uh::cluster::rest::http::model
 
         inline coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override { co_return; }
 
-    private:
-        list_buckets_request& operator  = (const http::request_parser<http::empty_body>& recv_req);
     };
 
 } // uh::cluster::rest::http::model

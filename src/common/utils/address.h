@@ -37,7 +37,6 @@ struct address {
         pointers.emplace_back(frag.pointer.get_data()[0]);
         pointers.emplace_back(frag.pointer.get_data()[1]);
         sizes.emplace_back(frag.size);
-        int i = 0;
     }
 
     void append_address (const address& addr) {

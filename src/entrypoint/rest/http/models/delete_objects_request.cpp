@@ -48,9 +48,9 @@ namespace uh::cluster::rest::http::model
         }
         const auto& checksum_l = header_list.find("x-amz-sdk-checksum-algorithm");
         const auto& checksum_u = header_list.find("X-Amz-Sdk-Checksum-Algorithm");
-        if (expec_l != header_list.end() || expec_u != header_list.end())
+        if (checksum_l != header_list.end() || checksum_u != header_list.end())
         {
-            m_checksumAlgorithm = ( expec_l != header_list.end() ) ? expec_l->value() : expec_u->value();
+            m_checksumAlgorithm = ( checksum_l != header_list.end() ) ? checksum_l->value() : checksum_u->value();
             m_checksumAlgorithmHasBeenSet = true;
         }
 

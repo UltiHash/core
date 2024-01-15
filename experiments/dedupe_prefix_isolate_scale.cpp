@@ -29,7 +29,7 @@ class dedupe_set {
 
     size_t min_fragment_size = 32ul;
     size_t max_fragment_size = 8ul*1024ul;
-    size_t max_step_back = min_fragment_size;
+    long max_step_back = static_cast <long> (min_fragment_size);
 
     uint8_t mmin_char;
     uint16_t mmax_char;
@@ -143,7 +143,7 @@ int main (int argc, char* args[]) {
 
     const auto range_size = static_cast <uint16_t> (std::ceil ((std::numeric_limits <uint8_t>::max() + 1 )/ static_cast <double> (set_count)));
     uint16_t offset = 0;
-    for (int i = 0; i < set_count; ++i) {
+    for (size_t i = 0; i < set_count; ++i) {
         sets.emplace(offset, dedupe_set {static_cast <uint8_t> (offset), static_cast<uint16_t>(offset + range_size)});
         offset += range_size;
     }

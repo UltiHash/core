@@ -28,7 +28,7 @@ namespace uh::cluster {
             REMOVE_END = 'R',
             UPDATE_START = 'u',
             UPDATE_END = 'U',
-            INSERT = 'a',
+            INSERT_ = 'a',
         };
 
         explicit transaction_log (std::filesystem::path log_path):
@@ -43,8 +43,13 @@ namespace uh::cluster {
 
         void append (std::string_view key, uint64_t object_id, operation op) const {
             const auto buf = serialise({.key = key, .op = op, .object_id = object_id});
-            if (buf.size() != ::write (m_log_file, buf.data(), buf.size())) [[unlikely]] {
-                throw std::runtime_error ("Could not write into the log file");
+            size_t total_size = 0;
+            while (total_size < buf.size()) {
+                const auto ws = ::write (m_log_file, buf.data() + total_size, buf.size() - total_size);
+                if (ws < 0) [[unlikely]] {
+                    throw std::runtime_error ("Could not write into the log file");
+                }
+                total_size += ws;
             }
         }
 
@@ -64,7 +69,7 @@ namespace uh::cluster {
                 auto e = deserialize(m_log_file);
                 const auto key_size = std::get <std::string> (e.key).size();
                 switch (e.op) {
-                    case operation::INSERT:
+                    case operation::INSERT_:
                         log_map.emplace(std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     case operation::INSERT_END:
@@ -159,9 +164,15 @@ namespace uh::cluster {
 
                 const auto tmp_file = get_log_file(new_file_path);
                 for (const auto &item: log_map) {
-                    const auto buf = serialise({.key = std::string_view (item.first), .op = operation::INSERT, .object_id = item.second});
-                    if (buf.size() != ::write (tmp_file, buf.data(), buf.size())) [[unlikely]] {
-                        throw std::runtime_error ("Could not write into the log file");
+                    const auto buf = serialise({.key = std::string_view (item.first), .op = operation::INSERT_, .object_id = item.second});
+
+                    size_t total_size = 0;
+                    while (total_size < buf.size()) {
+                        const auto ws = ::write (tmp_file, buf.data() + total_size, buf.size() - total_size);
+                        if (ws < 0) [[unlikely]] {
+                            throw std::runtime_error ("Could not write into the log file");
+                        }
+                        total_size += ws;
                     }
                 }
                 close(tmp_file);

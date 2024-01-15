@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE (data_store_free_spot_manager_test)
         BOOST_CHECK(fs2 == std::nullopt);
 
 
-        for (int i = 0; i < offsets.size(); ++i) {
+        for (size_t i = 0; i < offsets.size(); ++i) {
             fsm.push_free_spot(offsets[i], sizes[i]);
             expected_total_free_size += sizes[i];
 
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE (data_store_free_spot_manager_test)
 // ---------------------------------------------------------------------
 
 void fill_random(char* buf, size_t size) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         buf[i] = rand()&0xff;
     }
 }
@@ -316,7 +316,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         size_t ts = 0;
 
 
-        for (int i = 0; i < addr6.size (); ++i) {
+        for (size_t i = 0; i < addr6.size (); ++i) {
             const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -325,7 +325,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr7.size (); ++i) {
+        for (size_t i = 0; i < addr7.size (); ++i) {
             const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -334,7 +334,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr8.size (); ++i) {
+        for (size_t i = 0; i < addr8.size (); ++i) {
             const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -343,7 +343,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data8, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr9.size (); ++i) {
+        for (size_t i = 0; i < addr9.size (); ++i) {
             const auto p = addr9.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -355,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
 
         ds.remove(addr9.get_fragment(0).pointer, addr9.get_fragment(0).size);
         ts = 0;
-        for (int i = 0; i < addr9.size (); ++i) {
+        for (size_t i = 0; i < addr9.size (); ++i) {
             const auto p = addr9.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -370,7 +370,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
 
         ds.remove(addr2.get_fragment(0).pointer, addr2.get_fragment(0).size);
         ts = 0;
-        for (int i = 0; i < addr2.size (); ++i) {
+        for (size_t i = 0; i < addr2.size (); ++i) {
             const auto p = addr2.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -380,14 +380,14 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_TEST(ts == sizeof (data2));
         BOOST_CHECK(std::memcmp(buf, zero, ts) == 0);
 
-        const auto addr10 = ds.write(data10);
+        addr10 = ds.write(data10);
         expected_size += sizeof (data10);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
 
         ts = 0;
-        for (int i = 0; i < addr6.size (); ++i) {
+        for (size_t i = 0; i < addr6.size (); ++i) {
             const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -397,7 +397,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr7.size (); ++i) {
+        for (size_t i = 0; i < addr7.size (); ++i) {
             const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -406,7 +406,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr8.size (); ++i) {
+        for (size_t i = 0; i < addr8.size (); ++i) {
             const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -430,7 +430,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
 
         ts = 0;
 
-        for (int i = 0; i < addr6.size (); ++i) {
+        for (size_t i = 0; i < addr6.size (); ++i) {
             const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -439,7 +439,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr7.size (); ++i) {
+        for (size_t i = 0; i < addr7.size (); ++i) {
             const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -448,7 +448,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr8.size (); ++i) {
+        for (size_t i = 0; i < addr8.size (); ++i) {
             const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
@@ -457,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data8, ts) == 0);
 
         ts = 0;
-        for (int i = 0; i < addr6.size (); ++i) {
+        for (size_t i = 0; i < addr6.size (); ++i) {
             const auto p = addr6.get_fragment(i);
             ds.remove(p.pointer, p.size);
             ts += p.size;
@@ -471,7 +471,7 @@ BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
 
         ts = 0;
 
-        for (int i = 0; i < addr11.size (); ++i) {
+        for (size_t i = 0; i < addr11.size (); ++i) {
             const auto p = addr11.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;

@@ -162,7 +162,7 @@ public:
         const auto alloc = allocate (data.size());
 
         unsigned long offset = 0;
-        int index = 0;
+        size_t index = 0;
         size_t total_acquired_size = 0;
         for (const auto& partial_alloc: alloc) {
             if (lseek(partial_alloc.fd, partial_alloc.seek, SEEK_SET) != partial_alloc.seek) [[unlikely]] {
@@ -179,10 +179,15 @@ public:
                 }
             }
             const auto header_buffer = h.serialize();
-            const auto ws = ::write (partial_alloc.fd, header_buffer.data(), header_size);
-            if (ws != header_size) [[unlikely]] {
-                throw std::runtime_error ("Could not write the header in the chaining data store");
+            size_t total_size = 0;
+            while (total_size < header_size) {
+                const auto ws = ::write (partial_alloc.fd, header_buffer.data() + total_size, header_size - total_size);
+                if (ws < 0) [[unlikely]] {
+                    throw std::runtime_error ("Could not write the header in the chaining data store");
+                }
+                total_size += ws;
             }
+
             for (size_t written = 0;
                  written < h.size;
                  written += ::write(partial_alloc.fd, data.data() + offset + written, h.size - written));

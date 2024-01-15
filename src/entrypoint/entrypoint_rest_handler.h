@@ -533,7 +533,7 @@ public:
                       directory_message dir_req {.bucket_id = req.get_URI().get_bucket_id()};
 
                       co_await m.get().send_directory_message (DIR_BUCKET_EXISTS, dir_req);
-                      const auto h_dir = co_await m.get().recv_header();
+                      co_await m.get().recv_header();
 
                       res->set_upload_id(req.get_eTag());
                   });
@@ -829,13 +829,14 @@ public:
         }
 
         std::atomic <size_t> m_directory_node_index {};
-        entrypoint_config m_entry_node_config {};
 
         std::shared_ptr <boost::asio::io_context> m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
 
         std::vector <std::shared_ptr <client>>& m_dedupe_nodes;
         std::vector <std::shared_ptr <client>>& m_directory_nodes;
+        entrypoint_config m_entry_node_config {};
+
 
         prometheus::Family<prometheus::Counter> &m_req_counters;
         prometheus::Counter &m_reqs_create_bucket;

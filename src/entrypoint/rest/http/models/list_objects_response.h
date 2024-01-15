@@ -38,7 +38,7 @@ namespace uh::cluster::rest::http::model
         std::string m_delimiter;
 
         bool m_maxKeysHasBeenSet = false;
-        int m_maxKeys = 1000;
+        size_t m_maxKeys = 1000;
 
         bool m_commonPrefixesHasBeenSet = false;
         std::vector<std::string> m_commonPrefixes;
