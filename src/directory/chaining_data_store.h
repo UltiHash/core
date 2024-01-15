@@ -181,7 +181,7 @@ public:
             const auto header_buffer = h.serialize();
             size_t total_size = 0;
             while (total_size < header_size) {
-                const auto ws = ::write (partial_alloc.fd, header_buffer.data(), header_size);
+                const auto ws = ::write (partial_alloc.fd, header_buffer.data() + total_size, header_size - total_size);
                 if (ws < 0) [[unlikely]] {
                     throw std::runtime_error ("Could not write the header in the chaining data store");
                 }

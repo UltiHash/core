@@ -45,7 +45,7 @@ namespace uh::cluster {
             const auto buf = serialise({.key = key, .op = op, .object_id = object_id});
             size_t total_size = 0;
             while (total_size < buf.size()) {
-                const auto ws = ::write (m_log_file, buf.data(), buf.size());
+                const auto ws = ::write (m_log_file, buf.data() + total_size, buf.size() - total_size);
                 if (ws < 0) [[unlikely]] {
                     throw std::runtime_error ("Could not write into the log file");
                 }
@@ -168,7 +168,7 @@ namespace uh::cluster {
 
                     size_t total_size = 0;
                     while (total_size < buf.size()) {
-                        const auto ws = ::write (tmp_file, buf.data(), buf.size());
+                        const auto ws = ::write (tmp_file, buf.data() + total_size, buf.size() - total_size);
                         if (ws < 0) [[unlikely]] {
                             throw std::runtime_error ("Could not write into the log file");
                         }
