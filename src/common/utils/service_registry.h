@@ -40,21 +40,57 @@ namespace uh::cluster {
             return m_service_index;
         }
 
-        void register_service() {
-            std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
-            std::string key_host = key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST);
-            std::string key_port = key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT);
-            m_etcd_client.set(key_host, retrieve_hostname(), m_etcd_keepalive->Lease());
-            m_etcd_client.set(key_port, std::to_string(get_server_config().port), m_etcd_keepalive->Lease());
-            m_registered = true;
-            LOG_INFO() << "registered service instance " << key_base << " in service registry.";
-        }
+        class registration
+        {
+        public:
+            registration(etcd::Client& client, const std::string& key, const std::string& value, std::size_t ttl)
+                : m_client(client),
+                  m_lease(m_client.leasegrant(ttl).get().value().lease()),
+                  m_keepalive(m_client, ttl, m_lease)
+            {
+                m_etcd_client.set(key, value, m_lease);
+            }
 
-        void enable_testing() {
+            ~registration()
+            {
+                m_client.leaserevoke(m_lease);
+            }
+
+        private:
+            etcd::Client& m_client;
+            int64_t m_lease;
+            etcd::KeepAlive m_keepalive;
+        };
+
+        std::unique_ptr<registration> register_service() {
+            return std::make_unique<registration>(
+                m_etcd_client,
+                m_etcd_default_key_prefix + m_service_id,
+                boost::asio::ip::host_name(),
+                m_etcd_default_ttl);
+        }
+      
+        
+
+        std::unique_ptr<registration> register_testing() {
+            return std::make_unique<registration>(
+                m_etcd_client,
+                m_etcd_default_key_prefix + "global/testing",
+                to_string(true),
+                m_etcd_default_ttl);
+        }
+      
+        bool detect_testing() {
             std::string key = m_etcd_default_key_prefix + "global/testing";
-            m_etcd_client.set(key, std::to_string(true), m_etcd_keepalive->Lease());
-            m_testing = true;
-            LOG_INFO() << "set testing flag " << key << " in service registry.";
+            auto response = m_etcd_client.get(key).get();
+            try {
+                if (response.is_ok())
+                    return true;
+                else
+                    return false;
+            } catch (std::exception const & ex) {
+                throw std::system_error(EIO, std::generic_category(), "getting the key '" + key + "' failed due to communication problem, details: " + ex.what());
+            }
         }
 
         server_config get_server_config() {
@@ -80,18 +116,7 @@ namespace uh::cluster {
             };
         }
 
-        bool detect_testing() {
-            std::string key = m_etcd_default_key_prefix + "global/testing";
-            auto response = m_etcd_client.get(key).get();
-            try {
-                if (response.is_ok())
-                    return true;
-                else
-                    return false;
-            } catch (std::exception const & ex) {
-                throw std::system_error(EIO, std::generic_category(), "getting the key '" + key + "' failed due to communication problem, details: " + ex.what());
-            }
-        }
+
 
         ~service_registry() {
             if(m_etcd_keepalive != NULL) {
@@ -117,7 +142,6 @@ namespace uh::cluster {
                         get_cfg_param_string(parameter);
                 return get(global_key);
             }
-        }
 
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
@@ -296,10 +320,6 @@ namespace uh::cluster {
         const std::string m_service_id;
 
         etcd::Client m_etcd_client;
-        std::shared_ptr<etcd::KeepAlive> m_etcd_keepalive;
-        bool m_registered = false;
-        bool m_testing = false;
-
     };
 
 }
