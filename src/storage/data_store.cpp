@@ -131,49 +131,6 @@ void data_store::remove(uint128_t pointer, size_t size) {
     fsync (fd);
 }
 
-address data_store::allocate (size_t size) {
-    std::unique_lock <std::shared_mutex> lock (m);
-
-    const auto alloc = allocate_internal (size);
-    address addr;
-    for (const auto& partial_alloc: alloc) {
-        addr.push_fragment({partial_alloc.global_offset, partial_alloc.size});
-    }
-    m_free_spot_manager.apply_popped_items();
-    m_used += size;
-    lock.unlock();
-    sync();
-    return addr;
-}
-
-void data_store::cancel_allocate(const address &addr) {
-
-    for (int i = 0; i < addr.size(); ++i) {
-        remove (addr.pointers[i], addr.sizes[i]);
-    }
-}
-
-void data_store::allocated_write(const address &allocation, std::span<char> data) {
-
-    if (std::accumulate(allocation.sizes.cbegin(), allocation.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
-        throw std::bad_array_new_length ();
-    }
-
-    unsigned long offset = 0;
-    for (int i = 0; i < allocation.size(); ++i) {
-        const auto fragment = allocation.get_fragment(i);
-        const auto [fd, seek] = get_file_offset_pair(fragment.pointer);
-        if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
-            throw std::runtime_error ("Could not seek to the allocated position.");
-        }
-
-        for (size_t written = 0;
-             written < fragment.size;
-             written += ::write(fd, data.data() + offset + written, fragment.size - written));
-        offset += fragment.size;
-    }
-}
-
 void data_store::sync() {
     std::lock_guard <std::shared_mutex> lock (m);
 
@@ -339,11 +296,5 @@ uint128_t data_store::get_used_space() const noexcept {
 uint128_t data_store::get_free_space() const noexcept {
     return m_conf.max_data_store_size - m_used;
 }
-
-long data_store::get_data_id() const noexcept {
-    return m_data_id;
-}
-
-
 
 } // end namespace uh::cluster

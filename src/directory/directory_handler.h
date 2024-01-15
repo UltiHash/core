@@ -203,7 +203,6 @@ namespace uh::cluster {
         global_data_view& m_storage;
         std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
         prometheus::Family<prometheus::Counter> &m_counters;
-        prometheus::Counter &m_reqs_invalid;
         prometheus::Counter &m_reqs_dir_put_obj;
         prometheus::Counter &m_reqs_dir_get_obj;
         prometheus::Counter &m_reqs_dir_put_bucket;
@@ -211,6 +210,7 @@ namespace uh::cluster {
         prometheus::Counter &m_reqs_dir_list_bucket;
         prometheus::Counter &m_reqs_dir_list_obj;
         prometheus::Counter &m_reqs_dir_delete_bucket;
+        prometheus::Counter &m_reqs_invalid;
 
     };
 } // end namespace uh::cluster

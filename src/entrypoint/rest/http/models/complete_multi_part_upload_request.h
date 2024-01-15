@@ -25,9 +25,9 @@ namespace uh::cluster::rest::http::model
         void validate_request() const;
 
         mutable std::string m_completed_body {};
-        std::string m_upload_id;
         std::string m_bucket_name;
         std::string m_object_name;
+        std::string m_upload_id;
         utils::server_state& m_server_state;
         constexpr static size_t MAXIMUM_CHUNK_SIZE = 5ul*1024ul*1024ul;
     };

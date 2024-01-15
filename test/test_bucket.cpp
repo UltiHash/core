@@ -69,12 +69,6 @@ struct config_fixture
     }
 };
 
-void fill_random_object(char* buf, size_t size) {
-    for (int i = 0; i < size; ++i) {
-        buf[i] = rand()&0xff;
-    }
-}
-
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE (bucket_prefilled_test, config_fixture)

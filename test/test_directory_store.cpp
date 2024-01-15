@@ -34,7 +34,7 @@ struct config_fixture
 };
 
 void fill_random_dirstore (char* buf, size_t size) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         buf[i] = rand()&0xff;
     }
 }

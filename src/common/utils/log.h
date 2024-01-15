@@ -5,6 +5,9 @@
 #ifndef UH_LOGGING_LOGGING_BOOST_H
 #define UH_LOGGING_LOGGING_BOOST_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 
@@ -76,6 +79,7 @@ std::ostream& operator<<(std::ostream& out, const sink_config& c);
 
 // ---------------------------------------------------------------------
 
+
 /**
  * Initialize application logging.
  *
@@ -90,5 +94,6 @@ static boost::log::sources::severity_logger<boost::log::trivial::severity_level>
 // ---------------------------------------------------------------------
 
 } // namespace uh::log
+#pragma GCC diagnostic pop
 
 #endif

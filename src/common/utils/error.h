@@ -29,8 +29,8 @@ public:
     static type from_code(uint32_t code);
 
 private:
-    std::string m_message;
     type m_type;
+    std::string m_message;
 };
 
 class error_exception : public std::exception {
