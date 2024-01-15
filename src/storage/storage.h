@@ -30,7 +30,7 @@ public:
     {}
 
     void run() override {
-        m_registry.register_service();
+        m_registration = m_registry.register_service();
         m_server.run();
     }
 
@@ -48,6 +48,7 @@ private:
     service_registry m_registry;
 
     server m_server;
+    std::unique_ptr<service_registry::registration> m_registration;
 };
 } // end namespace uh::cluster
 #endif //CORE_DATA_NODE_H
