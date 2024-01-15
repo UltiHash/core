@@ -9,6 +9,7 @@
 #include "storage/storage.h"
 #include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
+#include "common/utils/common.h"
 
 namespace uh::cluster {
 
@@ -24,12 +25,13 @@ namespace uh::cluster {
                 m_registry_url("http://127.0.0.1:2379"),
                 m_registry(uh::cluster::STORAGE_SERVICE, UINT64_MAX, m_registry_url)
         {
-            m_registry.enable_testing();
+            m_registration = m_registry.register_testing();
         }
 
 
         const std::string m_registry_url = "http://127.0.0.1:2379";
         service_registry m_registry;
+        std::unique_ptr<service_registry::registration> m_registration;
 
         std::vector <std::shared_ptr <service_interface>> m_deduplicator_instances;
         std::vector <std::shared_ptr <service_interface>> m_directory_instances;
@@ -54,6 +56,7 @@ namespace uh::cluster {
             teardown();
 
             turn_on(data_nodes, dedupe_nodes, directory_nodes, ec);
+            sleep(15);
         }
 
         void shut_down () {

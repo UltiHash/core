@@ -26,8 +26,7 @@ namespace uh::cluster {
                 m_service_role(role),
                 m_service_index(index),
                 m_service_id(get_service_string(role) + "/" + std::to_string(index)),
-                m_etcd_client(m_etcd_host),
-                m_etcd_keepalive(m_etcd_client.leasekeepalive(m_etcd_default_ttl).get())
+                m_etcd_client(m_etcd_host)
         {
             init_default_config_values();
         }
@@ -43,12 +42,13 @@ namespace uh::cluster {
         class registration
         {
         public:
-            registration(etcd::Client& client, const std::string& key, const std::string& value, std::size_t ttl)
+            registration(etcd::Client& client, const std::map<std::basic_string<char>, std::basic_string<char>>& kv_pairs, std::size_t ttl)
                 : m_client(client),
                   m_lease(m_client.leasegrant(ttl).get().value().lease()),
                   m_keepalive(m_client, ttl, m_lease)
             {
-                m_etcd_client.set(key, value, m_lease);
+                for(const auto& pair : kv_pairs)
+                    m_client.set(pair.first, pair.second, m_lease);
             }
 
             ~registration()
@@ -63,23 +63,32 @@ namespace uh::cluster {
         };
 
         std::unique_ptr<registration> register_service() {
+            const std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
+            const std::map<std::string, std::string> kv_pairs =
+                    {
+                        {key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST), retrieve_hostname()},
+                        {key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(get_server_config().port)}
+                    };
+
             return std::make_unique<registration>(
                 m_etcd_client,
-                m_etcd_default_key_prefix + m_service_id,
-                boost::asio::ip::host_name(),
+                kv_pairs,
                 m_etcd_default_ttl);
         }
-      
-        
 
         std::unique_ptr<registration> register_testing() {
+            const std::map<std::string, std::string> kv_pairs =
+                    {
+                            {m_etcd_default_key_prefix + "global/testing", std::to_string(true)}
+                    };
+
             return std::make_unique<registration>(
-                m_etcd_client,
-                m_etcd_default_key_prefix + "global/testing",
-                to_string(true),
-                m_etcd_default_ttl);
+                    m_etcd_client,
+                    kv_pairs,
+                    m_etcd_default_ttl);
         }
       
+
         bool detect_testing() {
             std::string key = m_etcd_default_key_prefix + "global/testing";
             auto response = m_etcd_client.get(key).get();
@@ -118,30 +127,18 @@ namespace uh::cluster {
 
 
 
-        ~service_registry() {
-            if(m_etcd_keepalive != NULL) {
-                std::string key;
-                if(m_registered)
-                    key =  m_etcd_default_key_prefix + m_service_id + "/";
-                else if (m_testing)
-                    key = m_etcd_default_key_prefix + "global/testing";
-                m_etcd_client.rmdir(key, true);
-                m_etcd_keepalive->Cancel();
-                LOG_INFO() << "deregistered service instance " << key << " from service registry.";
-            }
-        }
-
         std::string get_config_value(const uh::cluster::config_parameter parameter) {
             std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
             try {
                 return get(key);
-            } catch (std::invalid_argument const & e_instance) {
+            } catch (std::invalid_argument const &e_instance) {
                 std::string global_key = m_etcd_default_key_prefix +
-                        "global/" +
-                        get_service_string(m_service_role) + "/" +
-                        get_cfg_param_string(parameter);
+                                         "global/" +
+                                         get_service_string(m_service_role) + "/" +
+                                         get_cfg_param_string(parameter);
                 return get(global_key);
             }
+        }
 
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
