@@ -13,6 +13,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/worker_utils.h"
 #include "common/utils/shared_buffer.h"
+#include "common/utils/service_maintainer.h"
 
 namespace uh::cluster {
 
@@ -222,15 +223,18 @@ private:
     std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
 
-       if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+        if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
             throw std::out_of_range ("The pointer is not in the range of data nodes");
-       }
-       const auto n = std::prev (pfd);
-       return n->second;
+        }
+        const auto n = std::prev (pfd);
+        return n->second;
     }
 
     std::shared_ptr <boost::asio::io_context> m_io_service;
-    std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+    std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets; // move it in maintainer
+
+    service_maintainer m_service_maintainer;
+
     service_registry& m_registry;
     std::atomic <size_t> m_data_node_index {};
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
