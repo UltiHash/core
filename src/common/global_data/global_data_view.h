@@ -25,9 +25,8 @@ public:
 
     explicit global_data_view (const global_data_view_config& config):
             m_config(config),
-            m_ec (ec_factory::make_ec (m_config.ec_algorithm)),
             m_cache_l1 (m_config.read_cache_capacity_l1),
-            m_cache_l2 (m_config.read_cache_capacity_l2){
+            m_cache_l2 (m_config.read_cache_capacity_l2) {
     }
 
     address write (const std::string_view& data) {
@@ -101,7 +100,7 @@ public:
         std::vector <std::shared_ptr <client>> nodes;
 
         size_t offset = 0;
-        for (int i = 0; i < addr.size(); ++i) {
+        for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
             auto n = get_data_node (frag.pointer);
             auto& node_address = node_address_map [n];
@@ -119,7 +118,7 @@ public:
             const auto& offsets = node_data_offsets_map.at(node);
             co_await m.get ().send_address (READ_ADDRESS_REQ, add);
             const auto h = co_await m.get ().recv_header ();
-            for (int i = 0; i < add.size(); ++i) {
+            for (size_t i = 0; i < add.size(); ++i) {
                 m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
             }
             co_await m.get ().recv_buffers (h);
@@ -131,7 +130,7 @@ public:
     coro <void> remove (const uint128_t pointer, const size_t size) {
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
-        const auto h = co_await m.get().recv_header();
+        co_await m.get().recv_header();
     }
 
     void sync (const address& addr) {
@@ -143,7 +142,7 @@ public:
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
-        for (int i = 0; i < addr.size(); ++i) {
+        for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
             auto n = get_data_node (frag.pointer);
             auto& node_address = node_address_map [n];
@@ -197,22 +196,11 @@ public:
 
         m_io_service = io_service;
 
-        if (storage_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
-            throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
-        }
-
         int i = 0;
         for(const auto& instance : storage_instances) {
             auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, make_deduplicator_config().data_node_connection_count);
-            const uint128_t offset =
-                    make_storage_config().max_data_store_size * (instance.id - m_ec->get_acquired_ec_node_count());
-
-            if (storage_instances.size() - i <= m_ec->get_required_ec_node_count()) {
-                m_ec->add_ec_node(offset, std::move (cl));
-            }
-            else {
-                m_data_node_offsets.emplace(offset, std::move(cl));
-            }
+            const uint128_t offset = make_storage_config().max_data_store_size * (instance.id);
+            m_data_node_offsets.emplace(offset, std::move(cl));
             i++;
         }
 
@@ -235,17 +223,12 @@ private:
             throw std::out_of_range ("The pointer is not in the range of data nodes");
        }
        const auto n = std::prev (pfd);
-       if (pfd == m_data_node_offsets.cend() and n->first + make_storage_config().max_data_store_size < pointer) {
-            return m_ec->get_ec_node (pointer);
-        }
-        return n->second;
+       return n->second;
     }
 
     global_data_view_config m_config;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-
-    std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;

@@ -21,11 +21,7 @@ namespace uh::cluster {
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
                 m_storage (m_registry.get_global_data_view_config()),
                 m_server (m_registry.get_server_config(), m_registry.get_service_name(),
-                          std::make_unique <deduplicator_handler>(m_registry, m_storage, m_dedupe_workers))
-        {
-        }
-void init () {
-
+                          std::make_unique <deduplicator_handler>(m_registry, m_storage, m_dedupe_workers)) {
         }
 
         void run() override {
@@ -54,6 +50,7 @@ void init () {
         std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
         global_data_view m_storage;
         server m_server;
+
         std::unique_ptr<service_registry::registration> m_registration;
     };
 } // end namespace uh::cluster

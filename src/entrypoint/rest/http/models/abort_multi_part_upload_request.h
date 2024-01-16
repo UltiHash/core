@@ -23,8 +23,8 @@ namespace uh::cluster::rest::http::model
         utils::server_state& m_server_state;
 
         std::string m_upload_id;
-        std::string m_bucket_name;
         std::string m_object_name;
+        std::string m_bucket_name;
     };
 
 } // uh::cluster::rest::http::model

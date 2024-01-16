@@ -5,7 +5,6 @@
 #ifndef UH_CLUSTER_METRICS_HANDLER_H
 #define UH_CLUSTER_METRICS_HANDLER_H
 
-#include "log.h"
 #include "cluster_config.h"
 #include <prometheus/exposer.h>
 #include <prometheus/registry.h>
@@ -43,30 +42,11 @@ namespace uh::cluster {
         }
 
         void init() {
-            //m_exposer.RegisterCollectable(m_registry, m_metrics_path);
         }
 
     private:
-        //prometheus::Exposer m_exposer;
         std::shared_ptr<prometheus::Registry> m_registry;
         std::string m_metrics_path;
-
-        prometheus::Exposer make_exposer(const server_config& c)
-        {
-            /*
-            LOG_INFO() << "starting metrics server at " << c.metrics_bind_address;
-            try
-            {
-                return prometheus::Exposer(c.metrics_bind_address, c.metrics_threads);
-            }
-            catch (const std::exception& e)
-            {
-                throw std::runtime_error(std::string("could not start metrics HTTP server: ") + e.what());
-            }
-            */
-
-        }
-
 
     };
 

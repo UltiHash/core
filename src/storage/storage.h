@@ -10,11 +10,11 @@
 #include <atomic>
 #include <utility>
 
+#include "data_store.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/service_interface.h"
 #include "common/utils/service_registry.h"
 #include "common/network/server.h"
-#include "data_store.h"
 #include "storage_handler.h"
 
 namespace uh::cluster {

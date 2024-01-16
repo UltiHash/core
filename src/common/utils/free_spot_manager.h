@@ -10,7 +10,8 @@
 #include <optional>
 #include <cstring>
 #include <forward_list>
-#include "common.h"
+#include <common/utils/big_int.h>
+#include <common/utils/common_types.h>
 
 namespace uh::cluster {
 

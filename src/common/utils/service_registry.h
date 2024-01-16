@@ -9,12 +9,9 @@
 #include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/KeepAlive.hpp"
 #include <boost/asio.hpp>
-#include <utility>
 
 #include "common.h"
-#include "cluster_config.h"
 #include "log.h"
-
 
 namespace uh::cluster {
 
@@ -87,7 +84,7 @@ namespace uh::cluster {
                     kv_pairs,
                     m_etcd_default_ttl);
         }
-      
+
 
         bool detect_testing() {
             std::string key = m_etcd_default_key_prefix + "global/testing";
@@ -149,7 +146,7 @@ namespace uh::cluster {
 
             std::filesystem::path service_key(m_etcd_default_key_prefix + get_service_string(service_role));
             etcd::Response service_instances = m_etcd_client.ls(service_key.string()).get();
-            for (int i = 0; i < service_instances.keys().size(); i++) {
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
                 const auto& service_instance = service_instances.value(i);
                 std::filesystem::path service_full_path(service_instance.key());
                 std::filesystem::path service_rel_path = std::filesystem::relative(service_full_path, service_key);

@@ -9,9 +9,10 @@ namespace uh::cluster::rest::http::model
                                                                      std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
             m_server_state(server_state),
-            m_bucket_name(m_uri->get_bucket_id()),
+            m_upload_id(m_uri->get_query_parameters().at("uploadId")),
             m_object_name(m_uri->get_object_key()),
-            m_upload_id(m_uri->get_query_parameters().at("uploadId"))
+            m_bucket_name(m_uri->get_bucket_id())
+
     {
         /*
          * grab a hold of the parts container so that we don't get segmentation fault if

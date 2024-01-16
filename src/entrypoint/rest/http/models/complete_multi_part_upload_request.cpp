@@ -10,10 +10,10 @@ namespace uh::cluster::rest::http::model
                                                                            utils::server_state& server_state,
                                                                            std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
-            m_server_state(server_state),
             m_bucket_name(m_uri->get_bucket_id()),
             m_object_name(m_uri->get_object_key()),
-            m_upload_id(m_uri->get_query_string_value("uploadId"))
+            m_upload_id(m_uri->get_query_string_value("uploadId")),
+            m_server_state(server_state)
     {
     }
 
@@ -56,7 +56,7 @@ namespace uh::cluster::rest::http::model
 
         for (const auto& objectNode : object_nodes_set)
         {
-            auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
+            auto part_num = std::stoul (objectNode.node().child("PartNumber").child_value());
             auto etag = objectNode.node().child("ETag").child_value();
 
             if (part_num != part_counter) {
