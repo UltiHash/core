@@ -23,11 +23,11 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (service_registry& registry):
-            m_registry(registry),
-            m_ec (ec_factory::make_ec (make_global_data_view_config().ec_algorithm)),
-            m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
-            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2){
+    explicit global_data_view (const global_data_view_config& config):
+            m_config(config),
+            m_ec (ec_factory::make_ec (m_config.ec_algorithm)),
+            m_cache_l1 (m_config.read_cache_capacity_l1),
+            m_cache_l2 (m_config.read_cache_capacity_l2){
     }
 
     address write (const std::string_view& data) {
@@ -193,23 +193,21 @@ public:
     }
 
 
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service) {
+    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, const std::vector<service_endpoint>& storage_instances) {
 
         m_io_service = io_service;
 
-        std::vector<service_endpoint> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-
-        if (ds_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
+        if (storage_instances.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
         }
 
         int i = 0;
-        for(const auto& instance : ds_instances) {
+        for(const auto& instance : storage_instances) {
             auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, make_deduplicator_config().data_node_connection_count);
             const uint128_t offset =
                     make_storage_config().max_data_store_size * (instance.id - m_ec->get_acquired_ec_node_count());
 
-            if (ds_instances.size() - i <= m_ec->get_required_ec_node_count()) {
+            if (storage_instances.size() - i <= m_ec->get_required_ec_node_count()) {
                 m_ec->add_ec_node(offset, std::move (cl));
             }
             else {
@@ -243,9 +241,10 @@ private:
         return n->second;
     }
 
+    global_data_view_config m_config;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-    service_registry& m_registry;
+
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;

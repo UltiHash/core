@@ -125,6 +125,10 @@ namespace uh::cluster {
             };
         }
 
+        global_data_view_config get_global_data_view_config() {
+            return make_global_data_view_config();
+        }
+
 
 
         std::string get_config_value(const uh::cluster::config_parameter parameter) {
