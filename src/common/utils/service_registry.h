@@ -11,6 +11,7 @@
 #include <boost/asio.hpp>
 
 #include "common.h"
+#include "cluster_config.h"
 #include "log.h"
 
 namespace uh::cluster {
@@ -63,8 +64,8 @@ namespace uh::cluster {
             const std::string key_base = m_etcd_default_key_prefix + m_service_id + "/";
             const std::map<std::string, std::string> kv_pairs =
                     {
-                        {key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST), retrieve_hostname()},
-                        {key_base + get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(get_server_config().port)}
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), retrieve_hostname()},
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(get_server_config().port)}
                     };
 
             return std::make_unique<registration>(
@@ -102,18 +103,11 @@ namespace uh::cluster {
         server_config get_server_config() {
             std::string address = get_config_value(CFG_SERVER_BIND_ADDR);
 
-            std::string port_str = get_config_value(CFG_SERVER_PORT);
-            std::uint16_t port = 0;
-            if(is_valid_pos_integer(port_str)){
-                port = std::stoull(port_str);
-                if(detect_testing())
-                    port += m_service_index;
-            }
+            std::uint16_t port = std::stoull(get_config_value(CFG_SERVER_PORT));
+            if(detect_testing())
+                port += m_service_index;
 
-            std::string threads_str = get_config_value(CFG_SERVER_THREADS);
-            std::size_t threads = 0;
-            if(is_valid_pos_integer(threads_str))
-                threads = std::stoull(threads_str);
+            std::size_t threads = std::stoull(get_config_value(CFG_SERVER_THREADS));
 
             return {
                 .threads = threads,
@@ -129,14 +123,14 @@ namespace uh::cluster {
 
 
         std::string get_config_value(const uh::cluster::config_parameter parameter) {
-            std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_cfg_param_string(parameter);
+            std::string key = m_etcd_default_key_prefix + m_service_id + "/" + get_config_string(parameter);
             try {
                 return get(key);
             } catch (std::invalid_argument const &e_instance) {
                 std::string global_key = m_etcd_default_key_prefix +
                                          "global/" +
                                          get_service_string(m_service_role) + "/" +
-                                         get_cfg_param_string(parameter);
+                                         get_config_string(parameter);
                 return get(global_key);
             }
         }
@@ -150,17 +144,18 @@ namespace uh::cluster {
                 const auto& service_instance = service_instances.value(i);
                 std::filesystem::path service_full_path(service_instance.key());
                 std::filesystem::path service_rel_path = std::filesystem::relative(service_full_path, service_key);
-                std::string top_element = service_rel_path.begin()->string();
-                if(is_valid_pos_integer(top_element)) {
-                    std::size_t service_index = std::stoull(top_element);
+
+                if(is_valid_pos_integer(service_rel_path.begin()->string())) {
+                    std::size_t service_index = std::stoull(service_rel_path.begin()->string());
                     if (!endpoints_by_id.contains(service_index))
                         endpoints_by_id.emplace(std::size_t(service_index),
                                                 service_endpoint{.role = service_role, .id = service_index});
                     auto &endpoint = endpoints_by_id.at(service_index);
-                    if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_ENDPOINT_HOST)) {
+
+                    if (service_rel_path.filename().string() == get_config_string(uh::cluster::CFG_ENDPOINT_HOST)) {
                         endpoint.host = service_instance.as_string();
-                    } else if (service_rel_path.filename().string() == get_cfg_param_string(uh::cluster::CFG_ENDPOINT_PORT)) {
-                        endpoint.port = std::stoul(service_instance.as_string());
+                    } else if (service_rel_path.filename().string() == get_config_string(uh::cluster::CFG_ENDPOINT_PORT)) {
+                        endpoint.port = std::stoull(service_instance.as_string());
                     }
                 }
             }
@@ -181,7 +176,7 @@ namespace uh::cluster {
             while(!instance_found) {
                 LOG_INFO() << "waiting for dependency " << dependency_key.string() << " to become available...";
                 etcd::Response dependency_instances = m_etcd_client.ls(dependency_key.string()).get();
-                for (int i = 0; i < dependency_instances.keys().size(); i++) {
+                for (size_t i = 0; i < dependency_instances.keys().size(); i++) {
                     const auto &dependency_instance = dependency_instances.value(i);
                     std::filesystem::path dependency_full_path(dependency_instance.key());
                     std::filesystem::path dependency_rel_path = std::filesystem::relative(dependency_full_path, dependency_key);
@@ -203,6 +198,18 @@ namespace uh::cluster {
                 return false;
             }
             return true;
+        }
+
+        bool is_valid_pos_integer(const std::string& str) {
+            try {
+                size_t pos;
+                std::stoull(str, &pos);
+                return pos == str.length();  // Check if entire string was consumed
+            } catch (std::invalid_argument&) {
+                return false;  // stoi threw an invalid_argument exception
+            } catch (std::out_of_range&) {
+                return false;  // stoi threw an out_of_range exception
+            }
         }
 
         void init_default_config_values() {
@@ -238,40 +245,8 @@ namespace uh::cluster {
             std::string key = m_etcd_default_key_prefix +
                               "global/" +
                               get_service_string(service_role) + "/" +
-                              get_cfg_param_string(parameter);
+                              get_config_string(parameter);
             set(key, value);
-        }
-
-        static bool is_valid_pos_integer(const std::string& str) {
-            // Check if the string is empty
-            if (str.empty()) {
-                return false;
-            }
-
-            // Check if each character is a digit
-            for (char c : str) {
-                if (!std::isdigit(c)) {
-                    return false;
-                }
-            }
-
-            // Use std::stoi to check if the integer value is in the valid range
-            try {
-                std::size_t pos;
-                std::size_t value = std::stoull(str, &pos);
-
-                // Ensure the entire string was converted
-                if (pos != str.length())
-                    return false;
-
-                return true;
-            } catch (const std::out_of_range&) {
-                // std::stoull threw an out_of_range exception
-                return false;
-            } catch (const std::invalid_argument&) {
-                // std::stoull threw an invalid_argument exception
-                return false;
-            }
         }
 
         std::string get(const std::string &key) {

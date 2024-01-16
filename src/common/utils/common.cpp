@@ -31,4 +31,35 @@ uh::cluster::role get_service_role(const std::string &service_role_str) {
     else
         throw std::invalid_argument ("Invalid role!");
 }
+
+uh::cluster::config_parameter get_config_param (const std::string& cfg_param_str) {
+    const std::map<std::string, uh::cluster::config_parameter> param_by_string = {
+            {"server_threads", uh::cluster::CFG_SERVER_THREADS},
+            {"server_bind_address", uh::cluster::CFG_SERVER_BIND_ADDR},
+            {"server_port", uh::cluster::CFG_SERVER_PORT},
+            {"endpoint_host", uh::cluster::CFG_ENDPOINT_HOST},
+            {"endpoint_port", uh::cluster::CFG_ENDPOINT_PORT},
+    };
+
+    if (param_by_string.contains(cfg_param_str))
+        return param_by_string.at(cfg_param_str);
+    else
+        throw std::invalid_argument ("Invalid configuration parameter: " + cfg_param_str);
+}
+
+std::string get_config_string (const uh::cluster::config_parameter& cfg_param) {
+    const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
+            {uh::cluster::CFG_SERVER_THREADS,   "server_threads"},
+            {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
+            {uh::cluster::CFG_SERVER_PORT,      "server_port"},
+            {uh::cluster::CFG_ENDPOINT_HOST,    "endpoint_host"},
+            {uh::cluster::CFG_ENDPOINT_PORT,    "endpoint_port"},
+    };
+
+    if (string_by_param.contains(cfg_param))
+        return string_by_param.at(cfg_param);
+    else
+        throw std::invalid_argument ("Invalid configuration parameter: " + std::to_string(cfg_param));
+}
+
 }

@@ -19,7 +19,7 @@ public:
     explicit directory(std::size_t id, const std::string& registry_url) :
             m_registry(uh::cluster::DIRECTORY_SERVICE, id, registry_url),
             m_directory_workers (std::make_shared <boost::asio::thread_pool> (make_directory_config().worker_thread_count)),
-            m_storage (m_registry),
+            m_storage (m_registry.get_global_data_view_config()),
             m_server (m_registry.get_server_config(), m_registry.get_service_name(),
                       std::make_unique <directory_handler>(m_registry, m_storage, m_directory_workers))
     {
@@ -27,7 +27,7 @@ public:
 
     void run() override {
         m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-        m_storage.create_data_node_connections(m_server.get_executor());
+        m_storage.create_data_node_connections(m_server.get_executor(), m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE));
         m_registration = m_registry.register_service();
         m_server.run();
     }

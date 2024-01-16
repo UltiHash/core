@@ -65,7 +65,7 @@ namespace uh::cluster
             LOG_INFO() << "starting server " << m_server_name << ", listening at " << m_config.bind_address << ":" << m_config.port;
             std::exception_ptr excp_ptr;
 
-            for (auto i = 0; i < m_config.threads - 1; i++)
+            for (size_t i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
                         [&] {
                             try {

@@ -46,7 +46,7 @@ namespace uh::cluster::rest
     {
         LOG_INFO() << "starting rest server";
 
-        for(auto i = 0 ; i < m_server_config.threads - 1 ; i++)
+        for(size_t i = 0 ; i < m_server_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
                     [&]
                     {

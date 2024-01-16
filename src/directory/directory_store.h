@@ -26,7 +26,7 @@ public:
 
     explicit directory_store (const std::string& root):
         m_root (root),
-        m_bucket_conf (make_bucket_config()) //TODO: fetch config values from service registry
+        m_bucket_conf (make_directory_config().directory_conf.bucket_conf) //TODO: fetch config values from service registry
     {
         std::filesystem::create_directories (m_root);
         for (const auto& entry: std::filesystem::directory_iterator (m_root)) {
