@@ -9,6 +9,7 @@
 #include <numeric>
 #include <filesystem>
 #include "big_int.h"
+#include "common.h"
 
 namespace uh::cluster {
 
@@ -19,6 +20,14 @@ struct server_config
     std::size_t threads;
     uint16_t port;
     std::string bind_address;
+};
+
+
+struct service_endpoint {
+    uh::cluster::role role;
+    std::size_t id;
+    std::string host;
+    std::uint16_t port;
 };
 
 struct bucket_config {

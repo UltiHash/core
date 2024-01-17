@@ -57,7 +57,7 @@ enum ec_type: uint8_t {
     XOR = 1,
 };
 
-enum config_parameter : uint8_t  {
+enum config_parameter  {
     CFG_SERVER_THREADS,
     CFG_SERVER_BIND_ADDR,
     CFG_SERVER_PORT,
@@ -97,20 +97,13 @@ enum config_parameter : uint8_t  {
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-struct service_endpoint {
-    uh::cluster::role role;
-    std::size_t id;
-    std::string host;
-    std::uint16_t port;
-};
-
 uh::cluster::role get_service_role (const std::string& service_role_str);
 
-std::string get_service_string(const uh::cluster::role& service_role);
+const std::string& get_service_string(const uh::cluster::role& service_role);
 
 uh::cluster::config_parameter get_config_param (const std::string& cfg_param_str);
 
-std::string get_config_string (const uh::cluster::config_parameter& cfg_param);
+const std::string& get_config_string (const uh::cluster::config_parameter& cfg_param);
 
 } // end namespace uh::cluster
 

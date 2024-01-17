@@ -6,12 +6,6 @@
 #define CORE_PROTOCOL_HANDLER_H
 
 #include "common/network/messenger.h"
-#include "metrics_handler.h"
-#include <prometheus/exposer.h>
-#include <prometheus/registry.h>
-#include <prometheus/counter.h>
-#include <prometheus/gauge.h>
-
 
 namespace uh::cluster {
 

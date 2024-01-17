@@ -26,7 +26,7 @@
 #include "rest/http/http_request.h"
 #include "rest/http/http_response.h"
 #include "rest/utils/state/server_state.h"
-#include "common/utils/service_registry.h"
+#include "common/registry/service_registry.h"
 
 //------------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ namespace uh::cluster::rest
     class rest_server
     {
     private:
-        server_config m_server_config;
+        const server_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         boost::asio::ssl::context m_ssl; // TODO:
         std::vector<std::thread> m_thread_container {};
@@ -56,10 +56,10 @@ namespace uh::cluster::rest
 
         utils::server_state m_server_state;
 
-        const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
+        boost::asio::ip::address m_server_address;
 
     public:
-        rest_server(service_registry& registry,
+        rest_server(server_config config,
                     std::vector <std::shared_ptr <client>>& dedupe_nodes,
                     std::vector <std::shared_ptr <client>>& directory_nodes,
                     std::shared_ptr <boost::asio::thread_pool> workers);
@@ -68,6 +68,8 @@ namespace uh::cluster::rest
 
         [[nodiscard]] std::shared_ptr <boost::asio::io_context>
         get_executor () const;
+
+        [[nodiscard]] const server_config& get_server_config();
 
         ~rest_server();
 

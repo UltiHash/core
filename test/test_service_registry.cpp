@@ -10,7 +10,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <boost/asio/ip/host_name.hpp>
-#include <common/utils/service_registry.h>
+#include "common/registry/service_registry.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
 
@@ -23,11 +23,6 @@ namespace uh::cluster {
         service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
         etcd::Client etcd_client(REGISTRY_ENDPOINT);
 
-        std::string invalid_key = "/uh/" + get_service_string(uh::cluster::STORAGE_SERVICE) + "/42invalid";
-        std::string global_key = "/uh/" + get_service_string(uh::cluster::STORAGE_SERVICE) + "/global/test_value";
-        etcd_client.put(invalid_key, "invalid entry from test case");
-        etcd_client.put(global_key, "global value");
-
         {
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.empty());
@@ -35,7 +30,7 @@ namespace uh::cluster {
 
         {
             service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
-            auto reg = registering_registry.register_service();
+            auto reg = registering_registry.register_service({.port = 9200});
 
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.size() == 1);
@@ -50,8 +45,6 @@ namespace uh::cluster {
             BOOST_CHECK(service_endpoints.empty());
         }
 
-        etcd_client.rm(invalid_key);
-        etcd_client.rm(global_key);
     }
 
     BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(15) )
@@ -66,7 +59,7 @@ namespace uh::cluster {
         }
 
         service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
-        auto reg = registering_registry.register_service();
+        auto reg = registering_registry.register_service({.port = 9200});
 
         querying_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
 

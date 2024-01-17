@@ -7,7 +7,6 @@
 
 #include <iostream>
 #include <memory>
-#include "common/utils/metrics_handler.h"
 #include "common/utils/log.h"
 #include "common/network/client.h"
 #include "common/utils/worker_utils.h"
@@ -57,30 +56,7 @@ public:
             m_workers (std::move (workers)),
             m_dedupe_nodes (dedupe_nodes),
             m_directory_nodes (directory_nodes)
-
-            /*
-            m_req_counters(add_counter_family("uh_en_requests", "number of HTTP requests handled by the entry node")),
-
-            m_reqs_create_bucket(m_req_counters.Add({{"request_type", "CREATE_BUCKET"}})),
-            m_reqs_get_bucket(m_req_counters.Add({{"request_type", "GET_BUCKET"}})),
-            m_reqs_list_buckets(m_req_counters.Add({{"request_type", "LIST_BUCKETS"}})),
-            m_reqs_delete_bucket(m_req_counters.Add({{"request_type", "DELETE_BUCKET"}})),
-            m_reqs_delete_objects(m_req_counters.Add({{"request_type", "DELETE_OBJECTS"}})),
-            m_reqs_put_object(m_req_counters.Add({{"request_type", "PUT_OBJECT"}})),
-            m_reqs_get_object(m_req_counters.Add({{"request_type", "GET_OBJECT"}})),
-            m_reqs_delete_object(m_req_counters.Add({{"request_type", "DELETE_OBJECT"}})),
-            m_reqs_list_objects_v2(m_req_counters.Add({{"request_type", "LIST_OBJECTS_V2"}})),
-            m_reqs_list_objects(m_req_counters.Add({{"request_type", "LIST_OBJECTS"}})),
-            m_reqs_get_object_attributes(m_req_counters.Add({{"request_type", "GET_OBJECT_ATTRIBUTES"}})),
-            m_reqs_init_multipart_upload(m_req_counters.Add({{"request_type", "INIT_MULTIPART_UPLOAD"}})),
-            m_reqs_multiplart_upload(m_req_counters.Add({{"request_type", "MULTIPART_UPLOAD"}})),
-            m_reqs_complete_multipart_upload(m_req_counters.Add({{"request_type", "COMPLETE_MULTIPART_UPLOAD"}})),
-            m_reqs_abort_multipart_upload(m_req_counters.Add({{"request_type", "ABORT_MULTIPART_UPLOAD"}})),
-            m_reqs_list_multi_part_uploads(m_req_counters.Add({{"request_type", "LIST_MULTI_PART_UPLOADS"}})),
-            m_reqs_invalid(m_req_counters.Add({{"request_type", "INVALID"}}))
-            */
     {
-        //init();
     }
 
     coro < std::unique_ptr<http::http_response> > handle (http::http_request& req, rest::utils::server_state& state)
@@ -91,71 +67,54 @@ public:
         switch (req.get_request_name())
         {
             case http::http_request_type::CREATE_BUCKET:
-                //m_reqs_create_bucket.Increment();
                 res = co_await handle_create_bucket(req);
                 break;
             case http::http_request_type::GET_BUCKET:
-                //m_reqs_get_bucket.Increment();
                 res = co_await handle_get_bucket(req);
                 break;
             case http::http_request_type::LIST_BUCKETS:
-                //m_reqs_list_buckets.Increment();
                 res = co_await handle_list_buckets(req);
                 break;
             case http::http_request_type::DELETE_BUCKET:
-                //m_reqs_delete_bucket.Increment();
                 res = co_await handle_delete_bucket(req);
                 break;
             case http::http_request_type::DELETE_OBJECTS:
-                //m_reqs_delete_objects.Increment();
                 res = co_await handle_delete_objects(req);
                 break;
             case http::http_request_type::PUT_OBJECT:
-                //m_reqs_put_object.Increment();
                 res = co_await handle_put_object(req);
                 break;
             case http::http_request_type::GET_OBJECT:
-                //m_reqs_get_object.Increment();
                 res = co_await handle_get_object(req);
                 break;
             case http::http_request_type::DELETE_OBJECT:
-                //m_reqs_delete_object.Increment();
                 res = co_await handle_delete_object(req);
                 break;
             case http::http_request_type::LIST_OBJECTS_V2:
-                //m_reqs_list_objects_v2.Increment();
                 res = co_await handle_list_objects_v2(req);
                 break;
             case http::http_request_type::LIST_OBJECTS:
-                //m_reqs_list_objects.Increment();
                 res = co_await handle_list_objects(req);
                 break;
             case http::http_request_type::GET_OBJECT_ATTRIBUTES:
-                //m_reqs_get_object_attributes.Increment();
                 res = handle_get_object_attributes(req);
                 break;
             case http::http_request_type::INIT_MULTIPART_UPLOAD:
-                //m_reqs_init_multipart_upload.Increment();
                 res = co_await handle_init_mp_upload(req, state);
                 break;
             case http::http_request_type::MULTIPART_UPLOAD:
-                //m_reqs_multiplart_upload.Increment();
                 res = co_await handle_mp_upload(req, state);
                 break;
             case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
-                //m_reqs_complete_multipart_upload.Increment();
                 res = co_await handle_complete_mp_upload(req, state);
                 break;
             case http::http_request_type::ABORT_MULTIPART_UPLOAD:
-                //m_reqs_abort_multipart_upload.Increment();
                 res = handle_abort_mp_upload(req);
                 break;
             case http::http_request_type::LIST_MULTI_PART_UPLOADS:
-                //m_reqs_list_multi_part_uploads.Increment();
                 res = co_await handle_list_mp_uploads(req, state);
                 break;
             default:
-                //m_reqs_invalid.Increment();
                 throw std::runtime_error("request not supported by the backend yet.");
         }
 
@@ -834,29 +793,7 @@ public:
 
         std::vector <std::shared_ptr <client>>& m_dedupe_nodes;
         std::vector <std::shared_ptr <client>>& m_directory_nodes;
-        entrypoint_config m_entry_node_config {};
 
-
-        /*
-        prometheus::Family<prometheus::Counter> &m_req_counters;
-        prometheus::Counter &m_reqs_create_bucket;
-        prometheus::Counter &m_reqs_get_bucket;
-        prometheus::Counter &m_reqs_list_buckets;
-        prometheus::Counter &m_reqs_delete_bucket;
-        prometheus::Counter &m_reqs_delete_objects;
-        prometheus::Counter &m_reqs_put_object;
-        prometheus::Counter &m_reqs_get_object;
-        prometheus::Counter &m_reqs_delete_object;
-        prometheus::Counter &m_reqs_list_objects_v2;
-        prometheus::Counter &m_reqs_list_objects;
-        prometheus::Counter &m_reqs_get_object_attributes;
-        prometheus::Counter &m_reqs_init_multipart_upload;
-        prometheus::Counter &m_reqs_multiplart_upload;
-        prometheus::Counter &m_reqs_complete_multipart_upload;
-        prometheus::Counter &m_reqs_abort_multipart_upload;
-        prometheus::Counter &m_reqs_list_multi_part_uploads;
-        prometheus::Counter &m_reqs_invalid;
-        */
     };
 
 } // end namespace uh::cluster

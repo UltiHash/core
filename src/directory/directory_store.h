@@ -12,7 +12,7 @@
 
 #include "common/utils/common.h"
 #include "bucket.h"
-#include "common/utils/service_registry.h"
+#include "common/registry/service_registry.h"
 
 namespace uh::cluster {
 
