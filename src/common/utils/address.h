@@ -56,7 +56,7 @@ struct address {
         sizes.resize (count);
     }
 
-    [[nodiscard]] fragment get_fragment (int i) const {
+    [[nodiscard]] fragment get_fragment (size_t i) const {
         return {{pointers[2*i], pointers[2*i+1]}, sizes[i]};
     }
 

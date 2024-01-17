@@ -17,6 +17,9 @@ namespace uh::cluster {
 
     class protocol_handler : protected metrics_handler {
     public:
+
+    virtual void init() {}
+
     virtual coro <void> handle (messenger m) = 0;
 
     explicit protocol_handler(server_config& c) :
