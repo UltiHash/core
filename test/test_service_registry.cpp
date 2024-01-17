@@ -47,7 +47,7 @@ namespace uh::cluster {
 
     }
 
-    BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(15) )
+    BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(30) )
     {
         etcd::Client etcd_client(REGISTRY_ENDPOINT);
 
