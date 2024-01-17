@@ -62,6 +62,9 @@ namespace uh::cluster
 
 
         void run() {
+
+            m_handler->init();
+
             LOG_INFO() << "starting server " << m_node_name << ", listening at " << m_config.address << ":" << m_config.port;
             std::exception_ptr excp_ptr;
 

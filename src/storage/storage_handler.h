@@ -41,11 +41,11 @@ public:
 
     {
         init();
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
-        m_config_min_file_size.Set(conf.min_file_size);
-        m_config_max_file_size.Set(conf.max_file_size);
-        m_config_max_data_store_size.Set(conf.max_data_store_size.get_low());
+        m_util_used_storage.Set(static_cast <double> (m_data_store.get_used_space().get_low()));
+        m_util_free_storage.Set(static_cast <double> (m_data_store.get_free_space().get_low()));
+        m_config_min_file_size.Set(static_cast <double> (conf.min_file_size));
+        m_config_max_file_size.Set(static_cast <double> (conf.max_file_size));
+        m_config_max_data_store_size.Set(static_cast <double> (conf.max_data_store_size.get_low()));
     }
 
     coro <void> handle (messenger m) override {
@@ -110,8 +110,8 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
+        m_util_used_storage.Set(static_cast <double> (m_data_store.get_used_space().get_low()));
+        m_util_free_storage.Set(static_cast <double> (m_data_store.get_free_space().get_low()));
         co_await m.send_address(WRITE_RESP, addr);
     }
 
@@ -142,20 +142,20 @@ private:
     coro <void> handle_remove (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         m_data_store.remove(resp.pointer, resp.size);
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
+        m_util_used_storage.Set(static_cast <double> (m_data_store.get_used_space().get_low()));
+        m_util_free_storage.Set(static_cast <double> (m_data_store.get_free_space().get_low()));
         co_await m.send (REMOVE_OK, {});
     }
 
     coro <void> handle_sync (messenger &m, const messenger::header& h) {
         co_await m.recv_address(h);
         m_data_store.sync();
-        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
-        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
+        m_util_used_storage.Set(static_cast <double> (m_data_store.get_used_space().get_low()));
+        m_util_free_storage.Set(static_cast <double> (m_data_store.get_free_space().get_low()));
         co_await m.send (SYNC_OK, {});
     }
 
-    coro <void> handle_get_used (messenger &m, const messenger::header& h) {
+    coro <void> handle_get_used (messenger &m, const messenger::header&) {
         const auto used = m_data_store.get_used_space();
         co_await m.send_uint128_t(USED_RESP, used);
     }
