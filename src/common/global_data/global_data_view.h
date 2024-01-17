@@ -19,8 +19,8 @@ namespace uh::cluster {
 
 using namespace std::placeholders;
 
+// TODO: use get_clients_list
 class global_data_view {
-
 
 public:
 
@@ -28,15 +28,15 @@ public:
             m_io_service (ioc),
             m_registry(registry),
             m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
-            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2){
+            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2) {
     }
 
     address write (const std::string_view& data) {
         auto index = m_data_node_index.load();
-        auto new_val = (index + 1) % m_data_node_offsets.size();
+        auto new_val = (index + 1) % m_datanode_services->size();
         while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
             index = m_data_node_index.load();
-            new_val = (index + 1) % m_data_node_offsets.size();
+            new_val = (index + 1) % m_datanode_services->size();
         }
 
         address addr;
@@ -44,7 +44,7 @@ public:
                 co_await m.get().send(WRITE_REQ, data);
                 const auto message_header = co_await m.get().recv_header();
                 addr = co_await m.get().recv_address(message_header);
-            } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
+            } (m_datanode_services->at(index)->acquire_messenger()), boost::asio::use_future).get();
 
         shared_buffer <char> l1_buf (std::min (addr.first().size, make_global_data_view_config().l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
@@ -163,8 +163,10 @@ public:
     [[nodiscard]] uint128_t get_used_space () {
 
         std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve (m_data_node_offsets.size());
-        for (const auto& n: m_data_node_offsets) {nodes.emplace_back(n.second);};
+        nodes.reserve (m_datanode_services->size());
+
+        // get clients list
+        for (const auto& n: *m_datanode_services) {nodes.emplace_back(n.second);};
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
@@ -180,12 +182,12 @@ public:
     }
 
     [[nodiscard]] std::size_t get_data_node_count() {
-        return m_data_node_offsets.size();
+        return m_datanode_services->size();
     }
 
     void stop () {
 
-        for (const auto& n: m_data_node_offsets) {
+        for (const auto& n: *m_datanode_services) {
             auto m = n.second->acquire_messenger();
             boost::asio::co_spawn (m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
                 co_await m.get ().send(STOP, {});
@@ -194,17 +196,9 @@ public:
     }
 
 
+
     void create_data_node_connections () {
-
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-
-        for(const auto& instance : ds_instances) {
-            uint16_t port = make_storage_config().server_conf.port;
-            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
-            const uint128_t offset = make_storage_config().max_data_store_size * (instance.first);
-            m_data_node_offsets.emplace(offset, std::move(cl));
-        }
-
+        m_datanode_services = std::make_unique<datanode_services>(STORAGE_SERVICE, m_registry, m_io_service);
     }
 
     [[nodiscard]] boost::asio::io_context& get_executor () const {
@@ -218,19 +212,18 @@ public:
 private:
 
     std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
-        const auto pfd = m_data_node_offsets.upper_bound (pointer);
+        const auto pfd = m_datanode_services->upper_bound (pointer);
 
-        if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+        if (pfd == m_datanode_services->cbegin()) [[unlikely]] {
             throw std::out_of_range ("The pointer is not in the range of data nodes");
         }
         const auto n = std::prev (pfd);
         return n->second;
     }
 
-    boost::asio::io_context& m_io_service;
-    std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets; // move it in maintainer
 
-    //service_maintainer m_service_maintainer;
+    boost::asio::io_context& m_io_service;
+    std::unique_ptr<datanode_services> m_datanode_services;
 
     service_registry& m_registry;
     std::atomic <size_t> m_data_node_index {};

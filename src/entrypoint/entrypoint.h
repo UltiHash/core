@@ -22,20 +22,22 @@ public:
 
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
             m_id(id),
-            m_service_name(get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
-            m_registry(m_service_name, registry_url),
-            m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_registry, m_rest_server),
-            m_directory_nodes(DIRECTORY_SERVICE, m_registry, m_rest_server),
+            m_service_name (get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
+            m_registry (m_service_name, registry_url),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
+        // TODO: refactor the parameter list of the constructor further further
+        m_dedupe_nodes = std::make_unique<services>(DEDUPLICATOR_SERVICE, m_registry, m_rest_server.get_executor(),
+                                                    make_deduplicator_config().server_conf.port, make_entrypoint_config().dedupe_node_connection_count);
+        m_directory_nodes = std::make_unique<services>(DIRECTORY_SERVICE, m_registry, m_rest_server.get_executor(),
+                                                       make_directory_config().server_conf.port, make_entrypoint_config().directory_connection_count);
     }
 
     void run() override {
         m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
-        // remove connections
-//        create_connections();
+
         m_registration = m_registry.register_service();
         m_rest_server.run();
     }
@@ -51,23 +53,13 @@ private:
     const std::string m_service_name;
     service_registry m_registry;
 
-    service_maintainer m_dedupe_nodes;
-    service_maintainer m_directory_nodes;
+    std::unique_ptr<services> m_dedupe_nodes;
+    std::unique_ptr<services> m_directory_nodes;
 
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
-
-//    void create_connections() {
-//        for(const auto& instance : m_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {
-//            m_dedupe_nodes.add_node_client(instance.first, instance.second);
-//        }
-//
-//        for(const auto& instance : m_registry.get_service_instances(uh::cluster::DIRECTORY_SERVICE)) {
-//            m_directory_nodes.add_node_client(instance.first, instance.second);
-//        }
-//    }
 
 };
 
