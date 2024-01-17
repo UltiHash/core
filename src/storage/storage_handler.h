@@ -115,7 +115,7 @@ private:
         co_await m.send (SYNC_OK, {});
     }
 
-    coro <void> handle_get_used (messenger &m, const messenger::header& h) {
+    coro <void> handle_get_used (messenger &m, const messenger::header&) {
         const auto used = m_data_store.get_used_space();
         co_await m.send_uint128_t(USED_RESP, used);
     }

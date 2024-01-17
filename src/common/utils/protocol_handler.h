@@ -11,6 +11,9 @@ namespace uh::cluster {
 
     class protocol_handler  {
     public:
+
+    virtual void init() {}
+
     virtual coro <void> handle (messenger m) = 0;
 
     virtual ~protocol_handler() = default;

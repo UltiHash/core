@@ -536,7 +536,7 @@ public:
         const directory_message dir_req {
                 .bucket_id = req.get_URI().get_bucket_id(),
                 .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                .addr = std::make_unique <address> (std::move (up_info->get_address())),
+                .addr = std::make_unique <address> (up_info->generate_total_address()),
         };
 
         auto func_dir = [] (const directory_message& dir_req, client::acquired_messenger m, long id) -> coro <void> {

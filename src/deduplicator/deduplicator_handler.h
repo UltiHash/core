@@ -24,12 +24,15 @@ public:
         m_fragment_set (m_dedupe_conf.set_log_path, storage),
         m_storage (storage),
         m_dedupe_workers (std::move (dedupe_workers))
-        {
-            if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
-                throw std::invalid_argument ("L1 cache sample size should not be smaller than the min fragment size!");
-            }
-            boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
+    {
+        if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
+            throw std::invalid_argument ("L1 cache sample size should not be smaller than the min fragment size!");
         }
+    }
+
+    void init () override {
+        boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
+    }
 
     coro <void> handle (messenger m) override {
 
@@ -40,7 +43,7 @@ public:
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
                     case DEDUPE_REQ:
-                        //m_reqs_dedupe.Increment();
+
                         co_await handle_dedupe(m, message_header);
                         break;
                     default:
