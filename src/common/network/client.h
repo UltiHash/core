@@ -64,7 +64,7 @@ public:
     std::condition_variable m_cv;
     std::mutex m;
 
-    client (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string &address, const std::uint16_t port, const int connections) {
+    client (boost::asio::io_context& ioc, const std::string &address, const std::uint16_t port, const int connections) {
         boost::asio::io_service io_service;
         boost::asio::ip::tcp::resolver resolver(io_service);
         boost::asio::ip::tcp::resolver::query query(address, std::to_string(port));

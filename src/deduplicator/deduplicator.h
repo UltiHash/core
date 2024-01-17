@@ -21,14 +21,16 @@ namespace uh::cluster {
                 m_service_name(get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + "/" + std::to_string(m_id)),
                 m_registry(m_service_name, registry_url),
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
-                m_storage (m_registry),
+                m_ioc (boost::asio::io_context (make_deduplicator_config().server_conf.threads)),
+                m_storage (m_registry, m_ioc),
                 m_server (make_deduplicator_config().server_conf, m_service_name,
-                          std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers)) {
+                          std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers),
+                          m_ioc) {
         }
 
         void run() override {
             m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-            m_storage.create_data_node_connections(m_server.get_executor());
+            m_storage.create_data_node_connections();
             m_registration = m_registry.register_service();
             m_server.run();
         }
@@ -41,6 +43,7 @@ namespace uh::cluster {
 
         ~deduplicator() override {
             LOG_DEBUG() << "terminating " << m_service_name;
+            m_ioc.stop();
         }
 
         global_data_view& get_global_data_view() {
@@ -53,9 +56,9 @@ namespace uh::cluster {
         service_registry m_registry;
 
         std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
+        boost::asio::io_context m_ioc;
         global_data_view m_storage;
         server m_server;
-
         std::unique_ptr<service_registry::registration> m_registration;
     };
 } // end namespace uh::cluster

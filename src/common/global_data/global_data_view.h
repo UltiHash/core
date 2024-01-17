@@ -24,7 +24,8 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (service_registry& registry):
+    explicit global_data_view (service_registry& registry, boost::asio::io_context& ioc):
+            m_io_service (ioc),
             m_registry(registry),
             m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
             m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2){
@@ -39,7 +40,7 @@ public:
         }
 
         address addr;
-        boost::asio::co_spawn(*m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
+        boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
                 co_await m.get().send(WRITE_REQ, data);
                 const auto message_header = co_await m.get().recv_header();
                 addr = co_await m.get().recv_address(message_header);
@@ -72,7 +73,7 @@ public:
     size_t read (char* buffer, const uint128_t pointer, const size_t size) {
         const fragment frag {pointer, size};
         size_t read_size = 0;
-        boost::asio::co_spawn(*m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
+        boost::asio::co_spawn(m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
             co_await m.get().send_fragment(READ_REQ, frag);
             const auto h = co_await m.get().recv_header();
             read_size = h.size;
@@ -113,7 +114,7 @@ public:
             offset += frag.size;
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
             const auto node = nodes.at(id);
             const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
@@ -153,7 +154,7 @@ public:
             node_address.push_fragment(frag);
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send_address(SYNC_REQ, node_address_map.at(nodes [id]));
             co_await m.get().recv_header();
         });
@@ -167,7 +168,7 @@ public:
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             used_spaces [id] = co_await m.get().recv_uint128_t (message_header);
@@ -186,31 +187,27 @@ public:
 
         for (const auto& n: m_data_node_offsets) {
             auto m = n.second->acquire_messenger();
-            boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
+            boost::asio::co_spawn (m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
                 co_await m.get ().send(STOP, {});
             } (std::move (m)), boost::asio::detached);
         }
     }
 
 
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service) {
-
-        m_io_service = io_service;
+    void create_data_node_connections () {
 
         std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
-        int i = 0;
         for(const auto& instance : ds_instances) {
             uint16_t port = make_storage_config().server_conf.port;
             auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
             const uint128_t offset = make_storage_config().max_data_store_size * (instance.first);
             m_data_node_offsets.emplace(offset, std::move(cl));
-            i++;
         }
 
     }
 
-    [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
+    [[nodiscard]] boost::asio::io_context& get_executor () const {
         return m_io_service;
     }
 
@@ -230,10 +227,10 @@ private:
         return n->second;
     }
 
-    std::shared_ptr <boost::asio::io_context> m_io_service;
+    boost::asio::io_context& m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets; // move it in maintainer
 
-    service_maintainer m_service_maintainer;
+    //service_maintainer m_service_maintainer;
 
     service_registry& m_registry;
     std::atomic <size_t> m_data_node_index {};

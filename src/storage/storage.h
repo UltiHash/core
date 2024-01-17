@@ -25,8 +25,10 @@ public:
             m_id(id),
             m_service_name(get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry(m_service_name, registry_url),
+            m_ioc (boost::asio::io_context (make_storage_config().server_conf.threads)),
             m_server(make_storage_config().server_conf, m_service_name,
-                     std::make_unique<storage_handler>(make_storage_config(), id))
+                     std::make_unique<storage_handler>(make_storage_config(), id),
+                     m_ioc)
     {}
 
     void run() override {
@@ -36,17 +38,19 @@ public:
 
     void stop() override {
         m_server.stop();
+        m_ioc.stop();
     }
 
     ~storage() override {
         LOG_DEBUG() << "terminating " << m_service_name;
+        m_ioc.stop();
     }
 
 private:
     const std::size_t m_id;
     const std::string m_service_name;
     service_registry m_registry;
-
+    boost::asio::io_context m_ioc;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };

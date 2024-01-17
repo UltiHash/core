@@ -40,7 +40,6 @@ public:
 
 
     {
-        init();
         m_util_used_storage.Set(static_cast <double> (m_data_store.get_used_space().get_low()));
         m_util_free_storage.Set(static_cast <double> (m_data_store.get_free_space().get_low()));
         m_config_min_file_size.Set(static_cast <double> (conf.min_file_size));
