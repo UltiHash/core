@@ -26,13 +26,15 @@ public:
         m_dedupe_workers (std::move (dedupe_workers)),
         m_counters (add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
         m_reqs_dedupe (m_counters.Add({{"type", "DEDUPE_REQ"}}))
-        {
-            if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
-                throw std::invalid_argument ("L1 cache sample size should not be smaller than the min fragment size!");
-            }
-            init();
-            boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
+    {
+        if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
+            throw std::invalid_argument ("L1 cache sample size should not be smaller than the min fragment size!");
         }
+    }
+
+    void init () override {
+        boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
+    }
 
     coro <void> handle (messenger m) override {
 

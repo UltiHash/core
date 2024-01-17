@@ -41,8 +41,6 @@ namespace uh::cluster {
             return builder.Register(*m_registry);
         }
 
-        void init() {
-        }
 
     private:
         std::shared_ptr<prometheus::Registry> m_registry;

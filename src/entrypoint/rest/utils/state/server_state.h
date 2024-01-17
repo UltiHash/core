@@ -20,7 +20,7 @@ namespace uh::cluster::rest::utils
         std::map <uint16_t, address> addresses;
         unsigned long long upload_init_time{0};
 
-        [[nodiscard]] address get_address () const {
+        [[nodiscard]] address generate_total_address () const {
             address addr;
             for (const auto& a: addresses) {
                 addr.append_address(a.second);
