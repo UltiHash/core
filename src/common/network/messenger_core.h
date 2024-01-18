@@ -37,9 +37,11 @@ namespace uh::cluster {
         {
             boost::asio::ip::tcp::endpoint endpoint (boost::asio::ip::address::from_string (ip_addr), port);
             m_socket.connect (endpoint);
+            clear_buffers();
         }
 
         explicit messenger_core (boost::asio::ip::tcp::socket &&socket): m_socket (std::move (socket)) {
+            clear_buffers();
         }
 
         messenger_core (messenger_core&& m) noexcept:
@@ -136,14 +138,33 @@ namespace uh::cluster {
             m_read_size = 0;
         }
 
+        void reserve_write_buffers (size_t capacity) {
+            m_write_buffers.reserve(capacity + 2);
+        }
+
+        void reserve_read_buffers (size_t capacity) {
+            m_read_buffers.reserve(capacity);
+        }
+
+        void reset_write_buffers () {
+            m_write_buffers.clear();
+            m_write_size = 0;
+            m_write_buffers.emplace_back();
+            m_write_buffers.emplace_back();
+        }
+
+        void reset_read_buffers () {
+            m_read_buffers.clear();
+            m_read_size = 0;
+        }
+
         coro <void> send_buffers (const message_type type) {
-            m_write_buffers.emplace_front(&m_write_size, sizeof m_write_size);
-            m_write_buffers.emplace_front(&type, sizeof type);
+            m_write_buffers[0] = {&type, sizeof type};
+            m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
 
             co_await boost::asio::async_write (m_socket, m_write_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
-            m_write_buffers.clear();
-            m_write_size = 0;
+            reset_write_buffers();
         }
 
         coro <void> send_error (const error& e) {
@@ -175,28 +196,9 @@ namespace uh::cluster {
             co_return;
         }
 
-        coro <header> recv (std::span <char> buffer) {
-            size_type size = 0;
-            message_type type;
-            std::vector <boost::asio::mutable_buffer> buffers {
-                    {&type, sizeof (type)},
-                    {&size, sizeof (size)},
-                    {buffer.data(), buffer.size()}};
-
-            co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
-
-            if (type == FAILURE) [[unlikely]] {
-                const auto e = co_await recv_error({.type = type, .size = size});
-                throw error_exception(e);
-            }
-            co_return header {type, size};
-        }
-
         void clear_buffers () {
-            m_write_buffers.clear();
-            m_read_buffers.clear();
-            m_write_size = 0;
-            m_read_size = 0;
+            reset_write_buffers();
+            reset_read_buffers();
         }
 
         ~messenger_core() {
@@ -211,8 +213,8 @@ namespace uh::cluster {
 
         boost::asio::ip::tcp::socket m_socket;
 
-        std::list <boost::asio::mutable_buffer> m_read_buffers;
-        std::list <boost::asio::const_buffer> m_write_buffers;
+        std::vector <boost::asio::mutable_buffer> m_read_buffers;
+        std::vector <boost::asio::const_buffer> m_write_buffers;
         size_type m_read_size = 0;
         size_type m_write_size = 0;
 

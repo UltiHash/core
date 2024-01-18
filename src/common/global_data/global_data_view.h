@@ -118,6 +118,7 @@ public:
             const auto& offsets = node_data_offsets_map.at(node);
             co_await m.get ().send_address (READ_ADDRESS_REQ, add);
             const auto h = co_await m.get ().recv_header ();
+            m.get().reserve_read_buffers(add.size());
             for (size_t i = 0; i < add.size(); ++i) {
                 m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
             }
