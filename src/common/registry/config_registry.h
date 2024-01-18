@@ -56,7 +56,7 @@ private:
         explicit registry_lock(etcd::Client& client) :
                 m_client(client)
         {
-            m_response = m_client.lock(m_etcd_lock_key).get();
+            m_response = m_client.lock(m_etcd_global_lock_key).get();
         }
 
         ~registry_lock()
@@ -99,18 +99,20 @@ private:
     }
 
     void set_config_global_value(const uh::cluster::role service_role, const uh::cluster::config_parameter parameter, const std::string& value) {
-        std::string key = m_etcd_global_key_prefix +
+        std::string key = m_etcd_global_config_key_prefix +
                           get_service_string(service_role) + "/" +
                           get_config_string(parameter);
         set(key, value);
     }
 
     std::string get_config_value(const uh::cluster::config_parameter parameter) {
-        std::string key = m_etcd_default_key_prefix + m_service_name + "/" + get_config_string(parameter);
+        std::string key = m_etcd_instance_config_key_prefix +
+                m_service_name + "/" +
+                get_config_string(parameter);
         try {
             return get(key);
         } catch (std::invalid_argument const &e_instance) {
-            std::string global_key = m_etcd_global_key_prefix +
+            std::string global_key = m_etcd_global_config_key_prefix +
                                      get_service_string(m_service_role) + "/" +
                                      get_config_string(parameter);
             return get(global_key);
