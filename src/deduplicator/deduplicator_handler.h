@@ -18,14 +18,11 @@ class deduplicator_handler: public protocol_handler {
 
 public:
 
-    deduplicator_handler (deduplicator_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
-        protocol_handler (dedupe_conf.server_conf),
-        m_dedupe_conf (std::move(dedupe_conf)),
+    deduplicator_handler (deduplicator_config config, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
+        m_dedupe_conf (std::move(config)), // TODO: retrieve from service registry
         m_fragment_set (m_dedupe_conf.set_log_path, storage),
         m_storage (storage),
-        m_dedupe_workers (std::move (dedupe_workers)),
-        m_counters (add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
-        m_reqs_dedupe (m_counters.Add({{"type", "DEDUPE_REQ"}}))
+        m_dedupe_workers (std::move (dedupe_workers))
     {
         if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument ("L1 cache sample size should not be smaller than the min fragment size!");
@@ -45,7 +42,7 @@ public:
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
                     case DEDUPE_REQ:
-                        m_reqs_dedupe.Increment();
+
                         co_await handle_dedupe(m, message_header);
                         break;
                     default:
@@ -170,8 +167,6 @@ private:
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
-    prometheus::Family<prometheus::Counter>& m_counters;
-    prometheus::Counter& m_reqs_dedupe;
 };
 
 } // end namespace uh::cluster

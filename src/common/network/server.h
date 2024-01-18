@@ -34,14 +34,14 @@ namespace uh::cluster
     class server {
 
     public:
-        server(server_config config, std::string node_name, std::unique_ptr <protocol_handler> handler) :
+        server(server_config config, std::string server_name, std::unique_ptr <protocol_handler> handler) :
                 m_config (std::move(config)),
                 m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)),
                 m_handler (std::move (handler)),
-                m_node_name (std::move (node_name)) {
+                m_server_name (std::move(server_name)) {
             m_is_running = true;
 
-            auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.address), m_config.port});
+            auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.bind_address), m_config.port});
             boost::asio::co_spawn(*m_ioc,
 
                                   do_accept (std::move (acceptor)),
@@ -51,7 +51,7 @@ namespace uh::cluster
                                               std::rethrow_exception(e);
                                           }
                                           catch (boost::system::system_error &e) {
-                                              LOG_INFO() << "stopped server " << m_node_name << std::endl;
+                                              LOG_INFO() << "stopped server " << m_server_name << std::endl;
                                           }
                                           catch (std::exception &e) {
                                               LOG_ERROR() << "accept: " << e.what();
@@ -62,13 +62,12 @@ namespace uh::cluster
 
 
         void run() {
-
             m_handler->init();
 
-            LOG_INFO() << "starting server " << m_node_name << ", listening at " << m_config.address << ":" << m_config.port;
+            LOG_INFO() << "starting server " << m_server_name << ", listening at " << m_config.bind_address << ":" << m_config.port;
             std::exception_ptr excp_ptr;
 
-            for (auto i = 0; i < m_config.threads - 1; i++)
+            for (size_t i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
                         [&] {
                             try {
@@ -106,6 +105,10 @@ namespace uh::cluster
             return m_ioc;
         }
 
+        [[nodiscard]] const server_config& get_server_config() const {
+            return m_config;
+        }
+
         ~server() {
             for (auto& thread: m_thread_container) {
                 thread.join();
@@ -134,7 +137,6 @@ namespace uh::cluster
 
             while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
-                //std::cout << m_node_name << " connection established before co_spawn" << std::endl;
                 auto conn_address = stream.remote_endpoint().address().to_string();
                 auto conn_port = stream.remote_endpoint().port();
 
@@ -158,7 +160,7 @@ namespace uh::cluster
                                     acceptor.close();
                                     while(acceptor.is_open()) {};
                                 } catch (boost::system::system_error &e) {
-                                    LOG_ERROR() << "Error in closing the server acceptor in " << m_node_name;
+                                    LOG_ERROR() << "Error in closing the server acceptor in " << m_server_name;
                                 }
                             }
                         });
@@ -166,19 +168,19 @@ namespace uh::cluster
         }
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
-            LOG_INFO() << m_node_name <<" connection from: " << stream.remote_endpoint();
+            LOG_INFO() << m_server_name << " connection from: " << stream.remote_endpoint();
             co_await m_handler->handle (messenger(std::move(stream)));
             co_return;
         }
 
 
-        server_config m_config;
+        const server_config m_config;
         std::shared_ptr <boost::asio::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         std::vector<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>> m_acceptors;
         std::unique_ptr <protocol_handler> m_handler;
         std::atomic<bool> m_is_running;
-        const std::string m_node_name;
+        const std::string m_server_name;
     };
 
 //------------------------------------------------------------------------------

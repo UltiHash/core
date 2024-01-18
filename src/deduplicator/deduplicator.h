@@ -9,7 +9,7 @@
 #include "common/global_data/global_data_view.h"
 #include "deduplicator_handler.h"
 #include "common/utils/service_interface.h"
-#include "common/utils/service_registry.h"
+#include "common/registry/service_registry.h"
 #include "common/network/server.h"
 
 namespace uh::cluster {
@@ -17,19 +17,18 @@ namespace uh::cluster {
     public:
 
         explicit deduplicator(std::size_t id, const std::string& registry_url) :
-                m_id(id),
-                m_service_name(get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + "/" + std::to_string(m_id)),
-                m_registry(m_service_name, registry_url),
+                m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, id, registry_url),
+                m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE, id, registry_url),
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
-                m_storage (m_registry),
-                m_server (make_deduplicator_config().server_conf, m_service_name,
+                m_storage (m_config_registry.get_global_data_view_config()),
+                m_server (m_config_registry.get_server_config(), m_service_registry.get_service_name(),
                           std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers)) {
         }
 
         void run() override {
-            m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-            m_storage.create_data_node_connections(m_server.get_executor());
-            m_registration = m_registry.register_service();
+            m_service_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
+            m_storage.create_data_node_connections(m_server.get_executor(), m_service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE));
+            m_registration = m_service_registry.register_service(m_server.get_server_config());
             m_server.run();
         }
 
@@ -40,18 +39,12 @@ namespace uh::cluster {
         }
 
         ~deduplicator() override {
-            LOG_DEBUG() << "terminating " << m_service_name;
-        }
-
-        global_data_view& get_global_data_view() {
-            return m_storage;
+            LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
         }
 
     private:
-        const std::size_t m_id;
-        const std::string m_service_name;
-        service_registry m_registry;
-
+        config_registry m_config_registry;
+        service_registry m_service_registry;
         std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
         global_data_view m_storage;
         server m_server;

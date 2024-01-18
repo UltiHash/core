@@ -16,20 +16,20 @@ namespace uh::cluster {
 class directory: public service_interface {
 public:
 
-    explicit directory(std::size_t id, const std::string& registry_url, const bool use_id_as_port_offset = false) :
-            m_id(id),
-            m_service_name(get_service_string(uh::cluster::DIRECTORY_SERVICE) + "/" + std::to_string(m_id)),
-            m_registry(m_service_name, registry_url),
+    explicit directory(std::size_t id, const std::string& registry_url) :
+            m_config_registry(uh::cluster::DIRECTORY_SERVICE, id, registry_url),
+            m_service_registry(uh::cluster::DIRECTORY_SERVICE, id, registry_url),
             m_directory_workers (std::make_shared <boost::asio::thread_pool> (make_directory_config().worker_thread_count)),
-            m_storage (m_registry),
-            m_server (make_directory_config().server_conf, m_service_name,
-                      std::make_unique <directory_handler>(make_directory_config(), m_storage, m_directory_workers)) {
+            m_storage (m_config_registry.get_global_data_view_config()),
+            m_server (m_config_registry.get_server_config(), m_service_registry.get_service_name(),
+                      std::make_unique <directory_handler>(make_directory_config(), m_storage, m_directory_workers))
+    {
     }
 
     void run() override {
-        m_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-        m_storage.create_data_node_connections(m_server.get_executor());
-        m_registration = m_registry.register_service();
+        m_service_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
+        m_storage.create_data_node_connections(m_server.get_executor(), m_service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE));
+        m_registration = m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
@@ -39,15 +39,9 @@ public:
         m_directory_workers->stop();
     }
 
-    global_data_view& get_global_data_view() {
-        return m_storage;
-    }
-
 private:
-    const std::size_t m_id;
-    const std::string m_service_name;
-    service_registry m_registry;
-
+    config_registry m_config_registry;
+    service_registry m_service_registry;
     std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
     global_data_view m_storage;
     server m_server;
