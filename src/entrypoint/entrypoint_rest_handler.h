@@ -40,6 +40,9 @@
 #include "rest/utils/hashing/hash.h"
 #include "rest/utils/state/server_state.h"
 
+// COMMON
+#include "common/utils/services.h"
+
 namespace uh::cluster {
 
     namespace http = rest::http;
@@ -50,8 +53,8 @@ class entrypoint_rest_handler : protected metrics_handler {
 public:
 
     entrypoint_rest_handler (boost::asio::io_context& ioc,
-                             std::vector <std::shared_ptr <client>>& dedupe_nodes,
-                             std::vector <std::shared_ptr <client>>& directory_nodes,
+                             services& dedupe_nodes,
+                             services& directory_nodes,
                              entrypoint_config config,
                              std::shared_ptr <boost::asio::thread_pool> workers):
             metrics_handler(config.rest_server_conf),
@@ -175,7 +178,7 @@ public:
                 co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes.get_clients_list(), m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
         }
         catch (const error_exception& e)
         {
@@ -201,7 +204,7 @@ public:
                 co_await m.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes.get_clients_list(), m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
         }
         catch (const error_exception& e)
         {
@@ -244,9 +247,11 @@ public:
                 }
             };
 
+            auto directory_services = m_directory_nodes.get_clients_list();
+            auto directory_services_size = directory_services.size();
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
-                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                        std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
 
         }
@@ -280,9 +285,11 @@ public:
             }
         };
 
+        auto directory_services = m_directory_nodes.get_clients_list();
+        auto directory_services_size = directory_services.size();
         co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                    m_ioc,
-                                                                                   *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                   *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                    std::bind_front (func, std::ref (res)));
 
         co_return std::move(res);
@@ -323,7 +330,7 @@ public:
                 co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes.get_clients_list(), m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
 
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -387,9 +394,12 @@ public:
                 co_await m.get().recv_buffers(h_dir);
 
             };
+
+            auto directory_services = m_directory_nodes.get_clients_list();
+            auto directory_services_size = directory_services.size();
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
-                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                        std::bind_front (func, std::ref (buffer), std::cref (req)));
 
             const auto stop = std::chrono::steady_clock::now ();
@@ -458,9 +468,11 @@ public:
                 }
             };
 
+            auto directory_services = m_directory_nodes.get_clients_list();
+            auto directory_services_size = directory_services.size();
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
-                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                        std::bind_front (func, std::ref (res), std::cref (req)));
 
         }
@@ -506,9 +518,11 @@ public:
 
         };
 
+        auto directory_services = m_directory_nodes.get_clients_list();
+        auto directory_services_size = directory_services.size();
         co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                    m_ioc,
-                                                                                   *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                   *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                    std::bind_front (func, std::ref (res), std::cref (req)));
 
         co_return std::move(res);
@@ -524,9 +538,11 @@ public:
           {
               res = std::make_unique<http::model::init_multi_part_upload_response>(req);
 
+              auto directory_services = m_directory_nodes.get_clients_list();
+              auto directory_services_size = directory_services.size();
               co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                          m_ioc,
-                                                                                         *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                         *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                          [&res, &req] (client::acquired_messenger m) -> coro <void>
                   {
                       directory_message dir_req {.bucket_id = req.get_URI().get_bucket_id()};
@@ -585,7 +601,7 @@ public:
             co_await m.get().recv_header();
         };
 
-        co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes,
+        co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes.get_clients_list(),
                                                                        m_ioc,
                                                                        *m_workers,
                                                                        std::bind_front (func_dir, std::cref (dir_req)));
@@ -636,9 +652,11 @@ public:
                 co_await m.get().recv_header();
             };
 
+            auto directory_services = m_directory_nodes.get_clients_list();
+            auto directory_services_size = directory_services.size();
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
-                                                                                       *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                       *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                        std::bind_front (func, std::cref (req)));
 
         }
@@ -735,9 +753,12 @@ public:
 
                     res->add_deleted_keys(key);
                 };
+
+                auto directory_services = m_directory_nodes.get_clients_list();
+                auto directory_services_size = directory_services.size();
                 co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                            m_ioc,
-                                                                                           *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
+                                                                                           *directory_services[get_round_robin_index(m_directory_node_index, directory_services_size)],
                                                                                            std::bind_front(func2, key, std::cref (bucket_id), std::ref (res)));
 
             }
@@ -752,7 +773,7 @@ public:
     }
 
     [[nodiscard]] client& get_recovery_director () const {
-        return *m_directory_nodes.at(0);
+        return *m_directory_nodes.get(0);
     }
 
     private:
@@ -779,9 +800,12 @@ public:
                 offset_pieces.emplace_hint(offset_pieces.cend(), total_size, dp);
                 total_size += dp.size();
             }
-            const auto part_size = static_cast <size_t> (std::ceil (static_cast <double> (total_size) / static_cast <double> (m_dedupe_nodes.size())));
 
-            std::vector <dedupe_response> responses (m_dedupe_nodes.size());
+            auto dedup_services = m_dedupe_nodes.get_clients_list();
+            auto dedup_services_size = dedup_services.size();
+            const auto part_size = static_cast <size_t> (std::ceil (static_cast <double> (total_size) / static_cast <double> (dedup_services_size)));
+
+            std::vector <dedupe_response> responses (dedup_services_size);
 
             auto func = [] (size_t part_size,
                     const std::map <size_t, std::string_view>& offset_pieces,
@@ -812,7 +836,7 @@ public:
                 responses [i] = co_await m.get().recv_dedupe_response(h_dedup);
             };
 
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (dedup_services,
                                                                            m_ioc,
                                                                            *m_workers,
                                                                            std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
@@ -832,8 +856,8 @@ public:
         boost::asio::io_context& m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
 
-        std::vector <std::shared_ptr <client>>& m_dedupe_nodes;
-        std::vector <std::shared_ptr <client>>& m_directory_nodes;
+        services& m_dedupe_nodes;
+        services& m_directory_nodes;
         entrypoint_config m_entry_node_config {};
 
 

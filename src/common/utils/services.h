@@ -7,7 +7,6 @@
 #include "log.h"
 #include "common/network/client.h"
 #include "common/utils/service_registry.h"
-#include "entrypoint/rest_server.h"
 
 namespace uh::cluster {
 

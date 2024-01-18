@@ -24,18 +24,20 @@ class global_data_view {
 public:
 
     explicit global_data_view (service_registry& registry, boost::asio::io_context& ioc, const std::uint16_t port, const int connection_count):
-            m_io_service (ioc),
-            m_port(port),
-            m_connection_count(connection_count),
-            m_registry(registry),
-            m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
-            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2) {
+        m_io_service (ioc),
+        m_datanode_services(STORAGE_SERVICE, registry, m_io_service, port, connection_count),
+        m_port(port),
+        m_connection_count(connection_count),
+        m_registry(registry),
+        m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
+        m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2)
+        {
     }
 
     address write (const std::string_view& data) {
         auto index = m_data_node_index.load();
 
-        auto services = m_datanode_services->get_clients_list();
+        auto services = m_datanode_services.get_clients_list();
         auto services_size = services.size();
 
         auto new_val = (index + 1) % services_size;
@@ -85,7 +87,7 @@ public:
             read_size = h.size;
             m.get().register_read_buffer (buffer, read_size);
             co_await m.get().recv_buffers(h);
-        } (m_datanode_services->get(pointer)->acquire_messenger()), boost::asio::use_future).get();
+        } (m_datanode_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
         shared_buffer <char> l1_buf (std::min (read_size, make_global_data_view_config().l1_sample_size));
@@ -111,7 +113,7 @@ public:
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_datanode_services->get (frag.pointer);
+            auto n = m_datanode_services.get (frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(n);
@@ -137,7 +139,7 @@ public:
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
-        auto m = m_datanode_services->get(pointer)->acquire_messenger();
+        auto m = m_datanode_services.get(pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         co_await m.get().recv_header();
     }
@@ -154,7 +156,7 @@ public:
         // TODO: consult about this
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_datanode_services->get(frag.pointer);
+            auto n = m_datanode_services.get(frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(std::move (n));
@@ -171,7 +173,7 @@ public:
     [[nodiscard]] uint128_t get_used_space () {
 
         // get clients list
-        auto nodes = m_datanode_services->get_clients_list();
+        auto nodes = m_datanode_services.get_clients_list();
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
@@ -187,13 +189,13 @@ public:
     }
 
     [[nodiscard]] std::size_t get_data_node_count() {
-        return m_datanode_services->size();
+        return m_datanode_services.size();
     }
 
     void stop () {
 
         // TODO: BUT what if the client list is outdated?
-        auto nodes = m_datanode_services->get_clients_list();
+        auto nodes = m_datanode_services.get_clients_list();
 
         for (const auto& n: nodes) {
             auto m = n->acquire_messenger();
@@ -204,7 +206,6 @@ public:
     }
 
     void create_data_node_connections () {
-        m_datanode_services = std::make_unique<datanode_services>(STORAGE_SERVICE, m_registry, m_io_service, m_port, m_connection_count);
     }
 
     [[nodiscard]] boost::asio::io_context& get_executor () const {
@@ -219,7 +220,7 @@ private:
 
     boost::asio::io_context& m_io_service;
 
-    std::unique_ptr<datanode_services> m_datanode_services;
+    datanode_services m_datanode_services;
     const std::uint16_t m_port;
     const int m_connection_count;
 

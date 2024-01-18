@@ -5,6 +5,7 @@
 #ifndef UH_CLUSTER_SERVICE_REGISTRY_H
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
+#include <shared_mutex>
 #include <string>
 #include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/KeepAlive.hpp"
@@ -16,44 +17,39 @@
 
 namespace uh::cluster {
 
-    namespace {
+    enum class etcd_action : uint8_t {
+        create = 0,
+        erase,
+    };
 
-        enum class etcd_action : uint8_t {
-            create = 0,
-            erase,
+    static etcd_action get_etcd_action_enum(const std::string &action_str) {
+        const std::map<std::string, etcd_action> etcd_action = {
+                {"create", etcd_action::create},
+                {"delete", etcd_action::erase},
         };
 
-        etcd_action get_etcd_action_enum(const std::string &action_str) {
-            const std::map<std::string, etcd_action> etcd_action = {
-                    {"create", etcd_action::create},
-                    {"delete", etcd_action::erase},
-            };
-
-            if (etcd_action.contains(action_str))
-                return etcd_action.at(action_str);
-            else
-                throw std::invalid_argument("invalid etcd action");
-        }
-
-        typedef struct {
-            uh::cluster::role role;
-            std::size_t id;
-            std::string value;
-        } service_info;
-
-        service_info extract_service_info(const std::string &key, const std::string& value) {
-            size_t uh_slash_pos = key.find("/uh/");
-            size_t next_slash_pos = key.find('/', uh_slash_pos + 4);
-
-            return { .role = get_service_role(key.substr(uh_slash_pos + 4, next_slash_pos - uh_slash_pos - 4)),
-                    .id = std::stoul(key.substr(next_slash_pos+1)),
-                    .value = value};
-        };
-
+        if (etcd_action.contains(action_str))
+            return etcd_action.at(action_str);
+        else
+            throw std::invalid_argument("invalid etcd action");
     }
 
-    class service_registry {
+    typedef struct {
+        uh::cluster::role role;
+        std::size_t id;
+        std::string value;
+    } service_info;
 
+    static service_info extract_service_info(const std::string &key, const std::string& value) {
+        size_t uh_slash_pos = key.find("/uh/");
+        size_t next_slash_pos = key.find('/', uh_slash_pos + 4);
+
+        return { .role = get_service_role(key.substr(uh_slash_pos + 4, next_slash_pos - uh_slash_pos - 4)),
+                .id = std::stoul(key.substr(next_slash_pos+1)),
+                .value = value};
+    };
+
+    class service_registry {
     public:
         service_registry(std::string  service_id, const std::string& etcd_host) :
             m_etcd_host(etcd_host),
