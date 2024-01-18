@@ -54,13 +54,56 @@ enum role: uint8_t {
 
 enum ec_type: uint8_t {
     NONE = 0,
-    XOR,
+    XOR = 1,
+};
+
+enum config_parameter  {
+    CFG_SERVER_THREADS,
+    CFG_SERVER_BIND_ADDR,
+    CFG_SERVER_PORT,
+
+    CFG_ENDPOINT_HOST,
+    CFG_ENDPOINT_PORT,
+
+    CFG_GDV_READ_CACHE_CAPACITY_L1,
+    CFG_GDV_READ_CACHE_CAPACITY_L2,
+    CFG_GDV_L1_SAMPLE_SIZE,
+    CFG_GDV_EC_ALGORITHM,
+    CFG_GDV_RECOVERY_CHUNK_SIZE,
+
+    CFG_STORAGE_DIRECTORY,
+    CFG_STORAGE_HOLE_LOG,
+    CFG_STORAGE_MIN_FILE_SIZE,
+    CFG_STORAGE_MAX_FILE_SIZE,
+    CFG_STORAGE_MAX_DATA_STORE_SIZE,
+
+    CFG_DEDUP_MIN_FRAGMENT_SIZE,
+    CFG_DEDUP_MAX_FRAGMENT_SIZE,
+    CFG_DEDUP_CONNECTIONS_PER_STORAGE_SERVICE,
+    CFG_DEDUP_SET_LOG_PATH,
+    CFG_DEDUP_WORKER_MIN_DATA_SIZE,
+    CFG_DEDUP_WORKER_THREAD_COUNT,
+
+    CFG_DIR_CONNECTIONS_PER_STORAGE_SERVICE,
+    CFG_DIR_WORKER_THREAD_COUNT,
+
+    CFG_BUCKET_MIN_FILE_SIZE,
+    CFG_BUCKET_MAX_FILE_SIZE,
+    CFG_BUCKET_MAX_STORAGE_SIZE,
+    CFG_BUCKET_MAX_CHUNK_SIZE,
+
+    CFG_ENTRYPOINT_CONNECTIONS_PER_DEDUPLICATOR_SERVICE,
+    CFG_ENTRYPOINT_CONNECTIONS_PER_DIRECTORY_SERVICE,
+    CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
 uh::cluster::role get_service_role (const std::string& service_role_str);
 
-std::string get_service_string(const uh::cluster::role& service_role);
+const std::string& get_service_string(const uh::cluster::role& service_role);
 
+uh::cluster::config_parameter get_config_param (const std::string& cfg_param_str);
+
+const std::string& get_config_string (const uh::cluster::config_parameter& cfg_param);
 
 } // end namespace uh::cluster
 

@@ -23,10 +23,10 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (service_registry& registry):
-            m_registry(registry),
-            m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
-            m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2){
+    explicit global_data_view (const global_data_view_config& config):
+            m_config(config),
+            m_cache_l1 (m_config.read_cache_capacity_l1),
+            m_cache_l2 (m_config.read_cache_capacity_l2) {
     }
 
     address write (const std::string_view& data) {
@@ -193,17 +193,14 @@ public:
     }
 
 
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service) {
+    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, const std::vector<service_endpoint>& storage_instances) {
 
         m_io_service = io_service;
 
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-
         int i = 0;
-        for(const auto& instance : ds_instances) {
-            uint16_t port = make_storage_config().server_conf.port;
-            auto cl = std::make_shared <client> (m_io_service, instance.second, port, make_deduplicator_config().data_node_connection_count);
-            const uint128_t offset = make_storage_config().max_data_store_size * (instance.first);
+        for(const auto& instance : storage_instances) {
+            auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, make_deduplicator_config().data_node_connection_count);
+            const uint128_t offset = make_storage_config().max_data_store_size * (instance.id);
             m_data_node_offsets.emplace(offset, std::move(cl));
             i++;
         }
@@ -230,9 +227,9 @@ private:
        return n->second;
     }
 
+    global_data_view_config m_config;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-    service_registry& m_registry;
     std::atomic <size_t> m_data_node_index {};
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;
