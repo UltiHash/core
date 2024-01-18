@@ -9,6 +9,7 @@
 #include <numeric>
 #include <filesystem>
 #include "big_int.h"
+#include "common.h"
 
 namespace uh::cluster {
 
@@ -16,12 +17,17 @@ namespace uh::cluster {
 
 struct server_config
 {
-    int threads;
+    std::size_t threads;
     uint16_t port;
-    std::string address;
-    std::string metrics_bind_address;
-    std::size_t metrics_threads;
-    std::string metrics_path;
+    std::string bind_address;
+};
+
+
+struct service_endpoint {
+    uh::cluster::role role;
+    std::size_t id;
+    std::string host;
+    std::uint16_t port;
 };
 
 struct bucket_config {
@@ -47,7 +53,6 @@ struct global_data_view_config {
 struct deduplicator_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
-    server_config server_conf{};
     int data_node_connection_count{};
     std::filesystem::path set_log_path;
     size_t dedupe_worker_minimum_data_size{};
@@ -60,19 +65,16 @@ struct storage_config {
     size_t min_file_size;
     size_t max_file_size;
     uint128_t max_data_store_size;
-    server_config server_conf;
 };
 
 struct entrypoint_config {
-    server_config rest_server_conf;
     int dedupe_node_connection_count {};
     int directory_connection_count {};
     int worker_thread_count {};
 };
 
 struct directory_config {
-    server_config server_conf{};
-    directory_store_config directory_conf;
+    directory_store_config directory_store_conf;
     int data_node_connection_count{};
     int worker_thread_count {};
 };
