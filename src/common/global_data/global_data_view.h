@@ -26,8 +26,6 @@ public:
     explicit global_data_view (service_registry& registry, boost::asio::io_context& ioc, const std::uint16_t port, const int connection_count):
         m_io_service (ioc),
         m_datanode_services(STORAGE_SERVICE, registry, m_io_service, port, connection_count),
-        m_port(port),
-        m_connection_count(connection_count),
         m_registry(registry),
         m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
         m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2)
@@ -35,24 +33,15 @@ public:
     }
 
     address write (const std::string_view& data) {
-        auto index = m_data_node_index.load();
 
-        auto services = m_datanode_services.get_clients_list();
-        auto services_size = services.size();
-
-        auto new_val = (index + 1) % services_size;
-        while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
-            index = m_data_node_index.load();
-            new_val = (index + 1) % services_size;
-        }
+        const auto client = m_datanode_services.get();
 
         address addr;
         boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
                 co_await m.get().send(WRITE_REQ, data);
                 const auto message_header = co_await m.get().recv_header();
                 addr = co_await m.get().recv_address(message_header);
-                // TODO: assumption is that the map and vector will have same index
-            } (services[index]->acquire_messenger()), boost::asio::use_future).get();
+            } (client->acquire_messenger()), boost::asio::use_future).get();
 
         shared_buffer <char> l1_buf (std::min (addr.first().size, make_global_data_view_config().l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
@@ -153,7 +142,6 @@ public:
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
-        // TODO: consult about this
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
             auto n = m_datanode_services.get(frag.pointer);
@@ -172,7 +160,6 @@ public:
 
     [[nodiscard]] uint128_t get_used_space () {
 
-        // get clients list
         auto nodes = m_datanode_services.get_clients_list();
 
         std::vector <uint128_t> used_spaces (nodes.size());
@@ -188,24 +175,12 @@ public:
         return used;
     }
 
-    [[nodiscard]] std::size_t get_data_node_count() {
-        return m_datanode_services.size();
-    }
-
-    void stop () {
-
-        // TODO: BUT what if the client list is outdated?
-        auto nodes = m_datanode_services.get_clients_list();
-
-        for (const auto& n: nodes) {
-            auto m = n->acquire_messenger();
-            boost::asio::co_spawn (m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
-                co_await m.get ().send(STOP, {});
-            } (std::move (m)), boost::asio::detached);
-        }
-    }
-
     void create_data_node_connections () {
+        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
+
+        for(const auto& instance : ds_instances) {
+            m_datanode_services.add_service({.role = STORAGE_SERVICE, .id = instance.first , .value = instance.second});
+        }
     }
 
     [[nodiscard]] boost::asio::io_context& get_executor () const {
@@ -221,11 +196,8 @@ private:
     boost::asio::io_context& m_io_service;
 
     datanode_services m_datanode_services;
-    const std::uint16_t m_port;
-    const int m_connection_count;
 
     service_registry& m_registry;
-    std::atomic <size_t> m_data_node_index {};
 
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;

@@ -21,6 +21,20 @@ namespace uh::cluster {
             m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
         }
 
+        std::shared_ptr <client> get()
+        {
+            auto index = m_nodes_index.load();
+
+            const auto services = get_clients_list();
+            const auto services_size = services.size();
+
+            auto new_val = (index + 1) % services_size;
+            while (!m_nodes_index.compare_exchange_weak (index, new_val)) {
+                index = m_nodes_index.load();
+                new_val = (index + 1) % services_size;
+            }
+        }
+
         std::shared_ptr <client> get(const std::size_t id) const {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
 
@@ -43,9 +57,26 @@ namespace uh::cluster {
             return clients_list;
         }
 
+        void add_service(const service_info& service) {
+            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
+
+            if (m_clients.contains(service.id)) [[unlikely]]
+                return;
+
+            m_clients.insert({service.id, std::make_shared<client>(m_ioc, service.value,
+                                                                   m_port,
+                                                                   m_connection_count)});
+        }
+
+        [[nodiscard]] inline const role get_role() const noexcept {
+            return m_role;
+        }
+
     private:
         mutable std::shared_mutex m_shared_mutex;
         std::map <size_t, std::shared_ptr <client>> m_clients;
+
+        std::atomic <size_t> m_nodes_index {};
 
         service_registry& m_registry;
         boost::asio::io_context& m_ioc;
@@ -57,10 +88,7 @@ namespace uh::cluster {
 
             LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
 
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-            m_clients.insert({service.id, std::make_shared<client>(m_ioc, service.value,
-                                                                   m_port,
-                                                                   m_connection_count)});
+            add_service(service);
         }
 
         void remove_service_callback(const service_info& service) {
@@ -86,9 +114,18 @@ namespace uh::cluster {
             m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
         }
 
-        // If size is used too much it will not be ideal because size can change
-        inline auto size() const noexcept {
-            return m_data_node_offsets.size();
+        std::shared_ptr <client> get() {
+            auto index = m_data_node_index.load();
+
+            // TODO: optimize this
+            const auto services = get_clients_list();
+            const auto services_size = services.size();
+
+            auto new_val = (index + 1) % services_size;
+            while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
+                index = m_data_node_index.load();
+                new_val = (index + 1) % services_size;
+            }
         }
 
         std::shared_ptr <client> get(const std::size_t id) const {
@@ -117,8 +154,6 @@ namespace uh::cluster {
         }
 
         [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients_list() const {
-
-            // Question: vector index is same as the map index
             std::vector <std::shared_ptr <client>> clients_list;
 
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
@@ -128,10 +163,26 @@ namespace uh::cluster {
             return clients_list;
         }
 
+        void add_service(const service_info& service) {
+            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
+
+            if (m_clients.contains(service.id)) [[unlikely]]
+                return;
+
+            auto cl = std::make_shared<client>(m_ioc, service.value,
+                                               m_port,
+                                               m_connection_count);
+
+            m_clients.insert({service.id, cl});
+            const uint128_t offset = make_storage_config().max_data_store_size * (service.id);
+            m_data_node_offsets.emplace(offset, std::move(cl));
+        }
+
     private:
         mutable std::shared_mutex m_shared_mutex;
         std::map <const size_t, std::shared_ptr <client>> m_clients;
         std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+        std::atomic <size_t> m_data_node_index {};
 
         service_registry& m_registry;
         boost::asio::io_context& m_ioc;
@@ -142,15 +193,7 @@ namespace uh::cluster {
         void add_service_callback(const service_info& service) {
             LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
 
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-
-            auto cl = std::make_shared<client>(m_ioc, service.value,
-                                               m_port,
-                                               m_connection_count);
-
-            m_clients.insert({service.id, cl});
-            const uint128_t offset = make_storage_config().max_data_store_size * (service.id);
-            m_data_node_offsets.emplace(offset, std::move(cl));
+            add_service(service);
         }
 
         void remove_service_callback(const service_info& service) {

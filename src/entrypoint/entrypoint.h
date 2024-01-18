@@ -38,6 +38,9 @@ public:
         m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
 
+        create_connections(m_dedupe_nodes);
+        create_connections(m_directory_nodes);
+
         m_registration = m_registry.register_service();
         m_rest_server.run();
     }
@@ -61,6 +64,15 @@ private:
     rest::rest_server m_rest_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
+
+    void create_connections (services& clients) {
+
+        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(clients.get_role());
+
+        for(const auto& instance : ds_instances) {
+            clients.add_service({.role = clients.get_role(), .id = instance.first , .value = instance.second});
+        }
+    }
 
 };
 
