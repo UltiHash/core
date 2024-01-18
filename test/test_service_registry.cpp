@@ -31,6 +31,7 @@ namespace uh::cluster {
         {
             service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
             auto reg = registering_registry.register_service({.port = 9200});
+            sleep(2);
 
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.size() == 1);

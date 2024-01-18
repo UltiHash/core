@@ -74,7 +74,7 @@ struct entrypoint_config {
 };
 
 struct directory_config {
-    directory_store_config directory_conf;
+    directory_store_config directory_store_conf;
     int data_node_connection_count{};
     int worker_thread_count {};
 };

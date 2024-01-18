@@ -70,6 +70,8 @@ private:
     };
 
     void init_default_config_values() {
+        //these are only default settings
+        //TODO: check if config file is available and use values from there if available
         registry_lock lock(m_etcd_client);
         if(!key_exists(m_etcd_initialized_key)) {
             set_config_global_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_PORT, 9200);

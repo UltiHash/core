@@ -18,9 +18,8 @@ class deduplicator_handler: public protocol_handler {
 
 public:
 
-    deduplicator_handler (service_registry& registry, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
-
-        m_dedupe_conf (make_deduplicator_config()), // TODO: retrieve from service registry
+    deduplicator_handler (deduplicator_config config, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
+        m_dedupe_conf (std::move(config)), // TODO: retrieve from service registry
         m_fragment_set (m_dedupe_conf.set_log_path, storage),
         m_storage (storage),
         m_dedupe_workers (std::move (dedupe_workers))

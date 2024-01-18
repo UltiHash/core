@@ -15,7 +15,7 @@ entrypoint_config make_entrypoint_config() {
 
 directory_config make_directory_config() {
     return {
-            .directory_conf = {
+            .directory_store_conf = {
                     .root = "ultihash-root/dr",
                     .bucket_conf = {
                             .min_file_size = 1024ul * 1024ul * 1024ul * 2,

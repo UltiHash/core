@@ -20,17 +20,17 @@ class directory_store {
 
     std::unordered_map <std::string, std::unique_ptr <bucket>> m_buckets;
     std::filesystem::path m_root;
-    bucket_config m_bucket_conf;
+    directory_store_config m_conf;
 
 public:
 
     explicit directory_store (const std::string& root):
         m_root (root),
-        m_bucket_conf (make_directory_config().directory_conf.bucket_conf) //TODO: fetch config values from service registry
+        m_conf (make_directory_config().directory_store_conf) //TODO: fetch config values from service registry
     {
         std::filesystem::create_directories (m_root);
         for (const auto& entry: std::filesystem::directory_iterator (m_root)) {
-            m_buckets.emplace (entry.path().filename(), std::make_unique <bucket> (m_root, entry.path().filename(), m_bucket_conf));
+            m_buckets.emplace (entry.path().filename(), std::make_unique <bucket> (m_root, entry.path().filename(), m_conf.bucket_conf));
         }
     }
 
@@ -60,7 +60,7 @@ public:
     }
 
     void add_bucket (const std::string& bucket_id) {
-        m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_bucket_conf));
+        m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_conf.bucket_conf));
     }
 
     void remove_object (const std::string& bucket_id, const std::string& object_key) {
