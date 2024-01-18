@@ -83,16 +83,15 @@ namespace uh::cluster {
                 std::string service_relative_path = service_instance.key().substr(service_prefix_path.length());
 
                 std::size_t service_index = get_valid_index (service_relative_path.substr(0, service_relative_path.find('/')));
-                if (!endpoints_by_id.contains(service_index))
-                    endpoints_by_id.emplace(std::size_t(service_index),
-                                            service_endpoint{.role = service_role, .id = service_index});
-                auto &endpoint = endpoints_by_id.at(service_index);
+                auto [it, success] =
+                        endpoints_by_id.insert(std::pair(std::size_t(service_index),
+                                                            service_endpoint{.role = service_role, .id = service_index}));
 
                 const std::string config_string(service_relative_path.substr(service_relative_path.rfind('/') + 1));
                 if (config_string == get_config_string(uh::cluster::CFG_ENDPOINT_HOST)) {
-                    endpoint.host = service_instance.as_string();
+                    it->second.host = service_instance.as_string();
                 } else if (config_string == get_config_string(uh::cluster::CFG_ENDPOINT_PORT)) {
-                    endpoint.port = std::stoull(service_instance.as_string());
+                    it->second.port = std::stoull(service_instance.as_string());
                 }
             }
 

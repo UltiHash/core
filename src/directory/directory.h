@@ -22,7 +22,7 @@ public:
             m_directory_workers (std::make_shared <boost::asio::thread_pool> (make_directory_config().worker_thread_count)),
             m_storage (m_config_registry.get_global_data_view_config()),
             m_server (m_config_registry.get_server_config(), m_service_registry.get_service_name(),
-                      std::make_unique <directory_handler>(m_service_registry, m_storage, m_directory_workers))
+                      std::make_unique <directory_handler>(make_directory_config(), m_storage, m_directory_workers))
     {
     }
 

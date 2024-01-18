@@ -19,14 +19,14 @@ namespace uh::cluster {
 class directory_store {
 
     std::unordered_map <std::string, std::unique_ptr <bucket>> m_buckets;
-    std::filesystem::path m_root;
     directory_store_config m_conf;
+    std::filesystem::path m_root;
 
 public:
 
-    explicit directory_store (const std::string& root):
-        m_root (root),
-        m_conf (make_directory_config().directory_store_conf) //TODO: fetch config values from service registry
+    explicit directory_store (directory_store_config  conf):
+        m_conf (std::move(conf)), //TODO: fetch config values from service registry
+        m_root (m_conf.root)
     {
         std::filesystem::create_directories (m_root);
         for (const auto& entry: std::filesystem::directory_iterator (m_root)) {

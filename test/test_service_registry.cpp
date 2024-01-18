@@ -21,7 +21,6 @@ namespace uh::cluster {
     BOOST_AUTO_TEST_CASE ( basic_register_retrieve_deregister )
     {
         service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-        etcd::Client etcd_client(REGISTRY_ENDPOINT);
 
         {
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
@@ -31,8 +30,8 @@ namespace uh::cluster {
         {
             service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
             auto reg = registering_registry.register_service({.port = 9200});
-            sleep(2);
 
+            querying_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
             auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
             BOOST_CHECK(service_endpoints.size() == 1);
             BOOST_CHECK(service_endpoints.begin()->role == uh::cluster::STORAGE_SERVICE);
@@ -50,8 +49,6 @@ namespace uh::cluster {
 
     BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(30) )
     {
-        etcd::Client etcd_client(REGISTRY_ENDPOINT);
-
         service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
 
         {
