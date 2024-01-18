@@ -1,5 +1,5 @@
-#ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
-#define UH_CLUSTER_SERVICE_MAINTAINER_H
+#ifndef UH_CLUSTER_SERVICES_H
+#define UH_CLUSTER_SERVICES_H
 
 #include <ranges>
 #include <utility>
@@ -14,9 +14,10 @@ namespace uh::cluster {
     class services {
     public:
 
-        services (const role r, service_registry& registry, const std::shared_ptr<boost::asio::io_context>& ioc,
+        services (const role r, service_registry& registry, boost::asio::io_context& ioc,
                   const std::uint16_t port, const int connection_count):
-        m_registry(registry), m_ioc(ioc), m_role(r), m_port(port), m_connection_count(connection_count) {
+                  m_registry(registry), m_ioc(ioc), m_role(r), m_port(port), m_connection_count(connection_count) {
+
             m_registry.register_callback_add_service(m_role, [this](const service_info& service) { add_service_callback(service); });
             m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
         }
@@ -48,7 +49,7 @@ namespace uh::cluster {
         std::map <size_t, std::shared_ptr <client>> m_clients;
 
         service_registry& m_registry;
-        const std::shared_ptr<boost::asio::io_context>& m_ioc;
+        boost::asio::io_context& m_ioc;
         const role m_role;
         const std::uint16_t m_port;
         const int m_connection_count;
@@ -76,11 +77,17 @@ namespace uh::cluster {
 
         datanode_services (const role r, service_registry& registry, boost::asio::io_context& ioc,
                            const std::uint16_t port, const int connection_count):
-                m_registry(registry), m_ioc(ioc), m_role(r), m_port(port), m_connection_count(connection_count) {
+                            m_registry(registry),
+                            m_ioc(ioc),
+                            m_role(r),
+                            m_port(port),
+                            m_connection_count(connection_count) {
+
             m_registry.register_callback_add_service(m_role, [this](const service_info& service) { add_service_callback(service); });
             m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
         }
 
+        // If size is used too much it will not be ideal because size can change
         inline auto size() const noexcept {
             return m_data_node_offsets.size();
         }
@@ -97,12 +104,22 @@ namespace uh::cluster {
             }
         }
 
-        std::shared_ptr <client> get(const uint128_t) const {
-            // logic of upper bound goes here
+        // Question: What happens if we have 1 2 3 4 data index and we remove 2.
+        std::shared_ptr <client> get(const uint128_t& pointer) const {
+            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+
+            const auto pfd = m_data_node_offsets.upper_bound (pointer);
+
+            if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            }
+            const auto n = std::prev (pfd);
+            return n->second;
         }
 
         [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients_list() const {
 
+            // Question: vector index is same as the map index
             std::vector <std::shared_ptr <client>> clients_list;
 
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
@@ -150,4 +167,4 @@ namespace uh::cluster {
 
 } // uh::cluster
 
-#endif // UH_CLUSTER_SERVICE_MAINTAINER_H
+#endif // UH_CLUSTER_SERVICES_H

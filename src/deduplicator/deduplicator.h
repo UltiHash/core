@@ -22,7 +22,7 @@ namespace uh::cluster {
                 m_registry(m_service_name, registry_url),
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
                 m_ioc (boost::asio::io_context (make_deduplicator_config().server_conf.threads)),
-                m_storage (m_registry, m_ioc),
+                m_storage (m_registry, m_ioc, make_storage_config().server_conf.port, make_deduplicator_config().data_node_connection_count),
                 m_server (make_deduplicator_config().server_conf, m_service_name,
                           std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers),
                           m_ioc) {

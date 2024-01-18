@@ -11,7 +11,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/service_interface.h"
 #include "common/utils/service_registry.h"
-#include "common/utils/service_maintainer.h"
+#include "common/utils/services.h"
 #include "common/network/server.h"
 #include "common/network/client.h"
 #include "rest_server.h"
@@ -24,14 +24,14 @@ public:
             m_id(id),
             m_service_name (get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
             m_registry (m_service_name, registry_url),
+            m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_registry, m_ioc,
+            make_deduplicator_config().server_conf.port, make_entrypoint_config().dedupe_node_connection_count),
+            m_directory_nodes(DIRECTORY_SERVICE, m_registry, m_ioc,
+                                                   make_directory_config().server_conf.port, make_entrypoint_config().directory_connection_count),
+            m_ioc (boost::asio::io_context(make_entrypoint_config().rest_server_conf.threads)),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
-            m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
+            m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
     {
-        // TODO: refactor the parameter list of the constructor further further
-        m_dedupe_nodes = std::make_unique<services>(DEDUPLICATOR_SERVICE, m_registry, m_rest_server.get_executor(),
-                                                    make_deduplicator_config().server_conf.port, make_entrypoint_config().dedupe_node_connection_count);
-        m_directory_nodes = std::make_unique<services>(DIRECTORY_SERVICE, m_registry, m_rest_server.get_executor(),
-                                                       make_directory_config().server_conf.port, make_entrypoint_config().directory_connection_count);
     }
 
     void run() override {
@@ -53,9 +53,10 @@ private:
     const std::string m_service_name;
     service_registry m_registry;
 
-    std::unique_ptr<services> m_dedupe_nodes;
-    std::unique_ptr<services> m_directory_nodes;
+    services m_dedupe_nodes;
+    services m_directory_nodes;
 
+    boost::asio::io_context m_ioc;
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 

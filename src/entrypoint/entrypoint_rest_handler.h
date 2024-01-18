@@ -49,13 +49,13 @@ namespace uh::cluster {
 class entrypoint_rest_handler : protected metrics_handler {
 public:
 
-    entrypoint_rest_handler (std::shared_ptr <boost::asio::io_context> ioc,
+    entrypoint_rest_handler (boost::asio::io_context& ioc,
                              std::vector <std::shared_ptr <client>>& dedupe_nodes,
                              std::vector <std::shared_ptr <client>>& directory_nodes,
                              entrypoint_config config,
                              std::shared_ptr <boost::asio::thread_pool> workers):
             metrics_handler(config.rest_server_conf),
-            m_ioc (std::move (ioc)),
+            m_ioc (ioc),
             m_workers (std::move (workers)),
             m_dedupe_nodes (dedupe_nodes),
             m_directory_nodes (directory_nodes),
@@ -175,7 +175,7 @@ public:
                 co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front (func, std::cref (bucket_id)));
         }
         catch (const error_exception& e)
         {
@@ -201,7 +201,7 @@ public:
                 co_await m.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front(func, std::cref (req)));
         }
         catch (const error_exception& e)
         {
@@ -245,7 +245,7 @@ public:
             };
 
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                       *m_ioc,
+                                                                                       m_ioc,
                                                                                        *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                        std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
 
@@ -281,7 +281,7 @@ public:
         };
 
         co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                   *m_ioc,
+                                                                                   m_ioc,
                                                                                    *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                    std::bind_front (func, std::ref (res)));
 
@@ -323,7 +323,7 @@ public:
                 co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
                 co_await m.get().recv_header();
             };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, *m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
+            co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes, m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
 
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
@@ -388,7 +388,7 @@ public:
 
             };
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                       *m_ioc,
+                                                                                       m_ioc,
                                                                                        *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                        std::bind_front (func, std::ref (buffer), std::cref (req)));
 
@@ -459,7 +459,7 @@ public:
             };
 
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                       *m_ioc,
+                                                                                       m_ioc,
                                                                                        *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                        std::bind_front (func, std::ref (res), std::cref (req)));
 
@@ -507,7 +507,7 @@ public:
         };
 
         co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                   *m_ioc,
+                                                                                   m_ioc,
                                                                                    *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                    std::bind_front (func, std::ref (res), std::cref (req)));
 
@@ -525,7 +525,7 @@ public:
               res = std::make_unique<http::model::init_multi_part_upload_response>(req);
 
               co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                         *m_ioc,
+                                                                                         m_ioc,
                                                                                          *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                          [&res, &req] (client::acquired_messenger m) -> coro <void>
                   {
@@ -562,7 +562,7 @@ public:
                                                         std::stoi (req.get_URI().get_query_parameters().at("partNumber")), resp,
                                                         req.get_body());
             };
-            co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
+            co_await worker_utils::post_in_workers (*m_workers, m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
         }
         std::unique_ptr<http::model::multi_part_upload_response> res = std::make_unique<http::model::multi_part_upload_response>(req);
         co_return std::move(res);
@@ -586,7 +586,7 @@ public:
         };
 
         co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_nodes,
-                                                                       *m_ioc,
+                                                                       m_ioc,
                                                                        *m_workers,
                                                                        std::bind_front (func_dir, std::cref (dir_req)));
 
@@ -637,7 +637,7 @@ public:
             };
 
             co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                       *m_ioc,
+                                                                                       m_ioc,
                                                                                        *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                        std::bind_front (func, std::cref (req)));
 
@@ -681,7 +681,7 @@ public:
             }
         };
 
-        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front (func, std::ref (res), std::ref (state), std::cref (req)));
+        co_await worker_utils::post_in_workers (*m_workers, m_ioc, std::bind_front (func, std::ref (res), std::ref (state), std::cref (req)));
 
         co_return std::move(res);
     }
@@ -713,7 +713,7 @@ public:
             }
         };
 
-        co_await worker_utils::post_in_workers (*m_workers, *m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
+        co_await worker_utils::post_in_workers (*m_workers, m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
 
 
         auto bucket_id = req.get_URI().get_bucket_id();
@@ -736,7 +736,7 @@ public:
                     res->add_deleted_keys(key);
                 };
                 co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
-                                                                                           *m_ioc,
+                                                                                           m_ioc,
                                                                                            *m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())),
                                                                                            std::bind_front(func2, key, std::cref (bucket_id), std::ref (res)));
 
@@ -813,7 +813,7 @@ public:
             };
 
             co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_dedupe_nodes,
-                                                                           *m_ioc,
+                                                                           m_ioc,
                                                                            *m_workers,
                                                                            std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
 
@@ -829,7 +829,7 @@ public:
 
         std::atomic <size_t> m_directory_node_index {};
 
-        std::shared_ptr <boost::asio::io_context> m_ioc;
+        boost::asio::io_context& m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
 
         std::vector <std::shared_ptr <client>>& m_dedupe_nodes;

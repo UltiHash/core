@@ -19,10 +19,13 @@
 #include <thread>
 #include <vector>
 #include <boost/beast/http/message_generator.hpp>
+
 #include "common/utils/cluster_config.h"
 #include "common/utils/protocol_handler.h"
-#include "entrypoint_rest_handler.h"
+#include "common/utils/services.h"
 #include "common/network/client.h"
+
+#include "entrypoint_rest_handler.h"
 #include "rest/http/http_request.h"
 #include "rest/http/http_response.h"
 #include "rest/utils/state/server_state.h"
@@ -47,8 +50,9 @@ namespace uh::cluster::rest
     class rest_server
     {
     private:
+        boost::asio::io_context& m_ioc;
+
         entrypoint_config m_config;
-        std::shared_ptr <net::io_context> m_ioc;
         boost::asio::ssl::context m_ssl; // TODO:
         std::vector<std::thread> m_thread_container {};
         entrypoint_rest_handler m_handler;
@@ -59,13 +63,14 @@ namespace uh::cluster::rest
 
     public:
         rest_server(entrypoint_config config,
-                    std::vector <std::shared_ptr <client>>& dedupe_nodes,
-                    std::vector <std::shared_ptr <client>>& directory_nodes,
-                    std::shared_ptr <boost::asio::thread_pool> workers);
+                    services& dedupe_nodes,
+                    services& directory_nodes,
+                    std::shared_ptr <boost::asio::thread_pool> workers,
+                    boost::asio::io_context& ioc);
 
         void run();
 
-        [[nodiscard]] std::shared_ptr <boost::asio::io_context>
+        [[nodiscard]] boost::asio::io_context&
         get_executor () const;
 
         ~rest_server();
