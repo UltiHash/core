@@ -21,7 +21,7 @@ namespace uh::cluster::rest
         m_config(std::move(config)),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.threads-1),
-        m_handler (m_ioc, dedupe_nodes, directory_nodes, m_config, std::move (workers))
+        m_handler (m_ioc, dedupe_nodes, directory_nodes, std::move (workers))
     {
         m_server_address = boost::asio::ip::make_address(m_config.bind_address);
         boost::asio::co_spawn(m_ioc,

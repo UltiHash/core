@@ -54,7 +54,6 @@ public:
     entrypoint_rest_handler (boost::asio::io_context& ioc,
                              services& dedupe_nodes,
                              services& directory_nodes,
-                             entrypoint_config config,
                              std::shared_ptr <boost::asio::thread_pool> workers):
             m_ioc (ioc),
             m_workers (std::move (workers)),

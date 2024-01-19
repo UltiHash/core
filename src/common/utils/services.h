@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_SERVICES_H
 #define UH_CLUSTER_SERVICES_H
 
+#include <shared_mutex>
 #include <ranges>
 #include <utility>
 
@@ -35,6 +36,8 @@ namespace uh::cluster {
                 index = m_nodes_index.load();
                 new_val = (index + 1) % services_size;
             }
+
+            return services.at(index);
         }
 
         std::shared_ptr <client> get(const std::size_t id) const {
@@ -126,6 +129,8 @@ namespace uh::cluster {
                 index = m_data_node_index.load();
                 new_val = (index + 1) % services_size;
             }
+
+            return m_clients.at(index);
         }
 
         std::shared_ptr <client> get(const std::size_t id) const {
