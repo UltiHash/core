@@ -10,8 +10,9 @@
 
 #include "common/utils/cluster_config.h"
 #include "common/utils/service_interface.h"
-#include "common/utils/service_registry.h"
 #include "common/utils/services.h"
+#include "common/registry/config_registry.h"
+#include "common/registry/service_registry.h"
 #include "common/network/server.h"
 #include "common/network/client.h"
 #include "rest_server.h"
@@ -21,40 +22,36 @@ class entrypoint: public service_interface {
 public:
 
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
-            m_id(id),
-            m_service_name (get_service_string(uh::cluster::STORAGE_SERVICE) + "/" + std::to_string(m_id)),
-            m_registry (m_service_name, registry_url),
-            m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_registry, m_ioc,
-            make_deduplicator_config().server_conf.port, make_entrypoint_config().dedupe_node_connection_count),
-            m_directory_nodes(DIRECTORY_SERVICE, m_registry, m_ioc,
-                                                   make_directory_config().server_conf.port, make_entrypoint_config().directory_connection_count),
-            m_ioc (boost::asio::io_context(make_entrypoint_config().rest_server_conf.threads)),
+            m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
+            m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
+            m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().dedupe_node_connection_count),
+            m_directory_nodes(DIRECTORY_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().directory_connection_count),
+            m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
-            m_rest_server (make_entrypoint_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
+            m_rest_server (m_config_registry.get_server_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
     {
     }
 
     void run() override {
-        m_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
-        m_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
+        m_service_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
+        m_service_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
 
         create_connections(m_dedupe_nodes);
         create_connections(m_directory_nodes);
 
-        m_registration = m_registry.register_service();
+        m_registration = m_service_registry.register_service(m_rest_server.get_server_config());
         m_rest_server.run();
     }
 
     void stop() override {
-        LOG_INFO() << "stopping " << m_service_name;
+        LOG_INFO() << "stopping " << m_service_registry.get_service_name();
         m_workers->join();
         m_workers->stop();
     }
 
 private:
-    const std::size_t m_id;
-    const std::string m_service_name;
-    service_registry m_registry;
+    config_registry m_config_registry;
+    service_registry m_service_registry;
 
     services m_dedupe_nodes;
     services m_directory_nodes;
@@ -67,11 +64,12 @@ private:
 
     void create_connections (services& clients) {
 
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(clients.get_role());
+        std::vector<service_endpoint> instances = m_service_registry.get_service_instances(clients.get_role());
 
-        for(const auto& instance : ds_instances) {
-            clients.add_service({.role = clients.get_role(), .id = instance.first , .value = instance.second});
+        for(const auto& instance : instances) {
+            clients.add_service(instance);
         }
+
     }
 
 };

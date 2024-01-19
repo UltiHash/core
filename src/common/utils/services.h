@@ -6,19 +6,21 @@
 
 #include "log.h"
 #include "common/network/client.h"
-#include "common/utils/service_registry.h"
+#include "common/registry/service_registry.h"
 
 namespace uh::cluster {
 
     class services {
     public:
 
-        services (const role r, service_registry& registry, boost::asio::io_context& ioc,
-                  const std::uint16_t port, const int connection_count):
-                  m_registry(registry), m_ioc(ioc), m_role(r), m_port(port), m_connection_count(connection_count) {
+        services (const role r, service_registry& registry, boost::asio::io_context& ioc, const int connection_count):
+                  m_registry(registry),
+                  m_ioc(ioc),
+                  m_role(r),
+                  m_connection_count(connection_count) {
 
-            m_registry.register_callback_add_service(m_role, [this](const service_info& service) { add_service_callback(service); });
-            m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
+            m_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
+            m_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
         }
 
         std::shared_ptr <client> get()
@@ -57,14 +59,14 @@ namespace uh::cluster {
             return clients_list;
         }
 
-        void add_service(const service_info& service) {
+        void add_service(const service_endpoint& service) {
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
 
             if (m_clients.contains(service.id)) [[unlikely]]
                 return;
 
-            m_clients.insert({service.id, std::make_shared<client>(m_ioc, service.value,
-                                                                   m_port,
+            m_clients.insert({service.id, std::make_shared<client>(m_ioc, service.host,
+                                                                   service.port,
                                                                    m_connection_count)});
         }
 
@@ -81,17 +83,16 @@ namespace uh::cluster {
         service_registry& m_registry;
         boost::asio::io_context& m_ioc;
         const role m_role;
-        const std::uint16_t m_port;
         const int m_connection_count;
 
-        void add_service_callback(const service_info& service) {
+        void add_service_callback(const service_endpoint& service) {
 
             LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
 
             add_service(service);
         }
 
-        void remove_service_callback(const service_info& service) {
+        void remove_service_callback(const service_endpoint& service) {
             LOG_INFO() << "removed callback for service " << get_service_string(m_role) << " called.";
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
@@ -103,15 +104,14 @@ namespace uh::cluster {
     public:
 
         datanode_services (const role r, service_registry& registry, boost::asio::io_context& ioc,
-                           const std::uint16_t port, const int connection_count):
+                           const int connection_count):
                             m_registry(registry),
                             m_ioc(ioc),
                             m_role(r),
-                            m_port(port),
                             m_connection_count(connection_count) {
 
-            m_registry.register_callback_add_service(m_role, [this](const service_info& service) { add_service_callback(service); });
-            m_registry.register_callback_remove_service(m_role, [this](const service_info& service) { remove_service_callback(service); });
+            m_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
+            m_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
         }
 
         std::shared_ptr <client> get() {
@@ -163,14 +163,14 @@ namespace uh::cluster {
             return clients_list;
         }
 
-        void add_service(const service_info& service) {
+        void add_service(const service_endpoint& service) {
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
 
             if (m_clients.contains(service.id)) [[unlikely]]
                 return;
 
-            auto cl = std::make_shared<client>(m_ioc, service.value,
-                                               m_port,
+            auto cl = std::make_shared<client>(m_ioc, service.host,
+                                               service.port,
                                                m_connection_count);
 
             m_clients.insert({service.id, cl});
@@ -187,16 +187,15 @@ namespace uh::cluster {
         service_registry& m_registry;
         boost::asio::io_context& m_ioc;
         const role m_role;
-        const std::uint16_t m_port;
         const int m_connection_count;
 
-        void add_service_callback(const service_info& service) {
+        void add_service_callback(const service_endpoint& service) {
             LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
 
             add_service(service);
         }
 
-        void remove_service_callback(const service_info& service) {
+        void remove_service_callback(const service_endpoint& service) {
             LOG_INFO() << "remove callback for service " << get_service_string(m_role) << " called.";
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);

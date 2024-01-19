@@ -23,13 +23,14 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (service_registry& registry, boost::asio::io_context& ioc, const std::uint16_t port, const int connection_count):
-        m_io_service (ioc),
-        m_datanode_services(STORAGE_SERVICE, registry, m_io_service, port, connection_count),
-        m_registry(registry),
-        m_cache_l1 (make_global_data_view_config().read_cache_capacity_l1),
-        m_cache_l2 (make_global_data_view_config().read_cache_capacity_l2)
-        {
+    explicit global_data_view (const global_data_view_config& config, service_registry& registry, boost::asio::io_context& ioc, const int connection_count):
+            m_io_service (ioc),
+            m_registry(registry),
+            m_datanode_services(STORAGE_SERVICE, registry, m_io_service, connection_count),
+            m_config(config),
+            m_cache_l1 (m_config.read_cache_capacity_l1),
+            m_cache_l2 (m_config.read_cache_capacity_l2)
+    {
     }
 
     address write (const std::string_view& data) {
@@ -176,10 +177,10 @@ public:
     }
 
     void create_data_node_connections () {
-        std::vector<std::pair<std::size_t, std::string>> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
+        std::vector<service_endpoint> ds_instances = m_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
         for(const auto& instance : ds_instances) {
-            m_datanode_services.add_service({.role = STORAGE_SERVICE, .id = instance.first , .value = instance.second});
+            m_datanode_services.add_service(instance);
         }
     }
 
@@ -194,10 +195,10 @@ public:
 private:
 
     boost::asio::io_context& m_io_service;
+    service_registry& m_registry;
 
     datanode_services m_datanode_services;
-
-    service_registry& m_registry;
+    global_data_view_config m_config;
 
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;

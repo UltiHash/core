@@ -18,28 +18,24 @@ void execute_role (const uh::cluster::role role, const std::size_t id, const std
 
     switch (role) {
         case uh::cluster::STORAGE_SERVICE: {
-            LOG_INFO() << "starting storage service";
             uh::cluster::storage ds(id, registry_url);
             ds.run();
             break;
         }
 
         case uh::cluster::DEDUPLICATOR_SERVICE: {
-            LOG_INFO() << "starting deduplicatior service";
             uh::cluster::deduplicator dd (id, registry_url);
             dd.run();
             break;
         }
 
         case uh::cluster::DIRECTORY_SERVICE: {
-            LOG_INFO() << "starting directory service";
             uh::cluster::directory dr (id, registry_url);
             dr.run();
             break;
         }
 
         case uh::cluster::ENTRYPOINT_SERVICE: {
-            LOG_INFO() << "starting entrypoint service";
             uh::cluster::entrypoint en (id, registry_url);
             en.run();
             break;
@@ -78,7 +74,6 @@ int main (int argc, char* args[]) {
     };
 
     uh::log::init(lc);
-    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " on host " << boost::asio::ip::host_name();
 
     const auto role_str = std::string(args[1]);
     const std::size_t id = std::stoul(args[2]);
@@ -88,5 +83,7 @@ int main (int argc, char* args[]) {
     }
     const auto role = get_service_role (role_str);
 
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""  << boost::asio::ip::host_name() <<
+        "\" using service role \"" << role_str << "\", service id \"" << id << "\" and service registry endpoints \"" << registry_url << "\"." ;
     execute_role (role, id, registry_url);
 }

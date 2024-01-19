@@ -12,7 +12,7 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(entrypoint_config config,
+    rest_server::rest_server(server_config config,
                              services& dedupe_nodes,
                              services& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers,
@@ -20,12 +20,12 @@ namespace uh::cluster::rest
         m_ioc(ioc),
         m_config(std::move(config)),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
-        m_thread_container(m_config.rest_server_conf.threads-1),
+        m_thread_container(m_config.threads-1),
         m_handler (m_ioc, dedupe_nodes, directory_nodes, m_config, std::move (workers))
     {
-
+        m_server_address = boost::asio::ip::make_address(m_config.bind_address);
         boost::asio::co_spawn(m_ioc,
-                              do_listen(tcp::endpoint{m_server_address, m_config.rest_server_conf.port}),
+                              do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
                               {
                                   if (e)
@@ -47,7 +47,7 @@ namespace uh::cluster::rest
     {
         LOG_INFO() << "starting rest server";
 
-        for(auto i = 0 ; i < m_config.rest_server_conf.threads - 1 ; i++)
+        for(size_t i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
                     [&]
                     {
@@ -176,6 +176,12 @@ namespace uh::cluster::rest
     boost::asio::io_context& rest_server::get_executor() const
     {
         return m_ioc;
+    }
+
+//------------------------------------------------------------------------------
+
+    const server_config& rest_server::get_server_config() {
+        return m_config;
     }
 
 //------------------------------------------------------------------------------
