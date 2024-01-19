@@ -92,4 +92,19 @@ Using the `state_registry` class (not yet available), services can persist their
 /<namespace>/state/instance/<service_class>/<service_id>/<state_descriptor>
 ```
 
+# Reacting to cluster changes
+## Watcher Class
+`service_registry` has a has a `watcher` member variable which is responsible for watching any changes in etcd. 
+When there is some change in the etcd server, the `watcher` client in the `service_registry` calls a handler function
+which we assign. This handler function gets `etcd Response` object responsible for communicating what happened in the
+etcd server. This then allows us to call the registered functions from the handler function which can be used to react
+to addition/removal of any services.
+
+## Registering callback functions
+We can register callback functions to be called in order to add/remove clients to the added/removed services. `services` 
+class is responsible for registering such callbacks. The purpose of `services` class is to maintain all the
+client connections to the required services. Thus, it is `service` class's responsibility to register callbacks 
+which allows a mechanism to add/remove clients accordingly to the services' addition/removal. 
+
+
 All further details need to be fleshed out alongside the implementation of the `state_registry` class.
