@@ -24,7 +24,7 @@ namespace uh::cluster {
     };
 
     static etcd_action get_etcd_action_enum(const std::string &action_str) {
-        const std::map<std::string, etcd_action> etcd_action = {
+        static const std::map<std::string, etcd_action> etcd_action = {
                 {"create", etcd_action::create},
                 {"delete", etcd_action::erase},
         };

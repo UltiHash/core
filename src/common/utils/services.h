@@ -211,6 +211,6 @@ namespace uh::cluster {
         }
     };
 
-} // uh::cluster
+} // end namespace uh::cluster
 
 #endif // UH_CLUSTER_SERVICES_H

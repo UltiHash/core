@@ -94,7 +94,7 @@ Using the `state_registry` class (not yet available), services can persist their
 
 # Reacting to cluster changes
 ## Watcher Class
-`service_registry` has a has a `watcher` member variable which is responsible for watching any changes in etcd. 
+`service_registry` has a `watcher` member variable which is responsible for watching any changes in etcd. 
 When there is some change in the etcd server, the `watcher` client in the `service_registry` calls a handler function
 which we assign. This handler function gets `etcd Response` object responsible for communicating what happened in the
 etcd server. This then allows us to call the registered functions from the handler function which can be used to react

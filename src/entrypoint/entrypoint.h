@@ -24,9 +24,9 @@ public:
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
             m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
+            m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
             m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().dedupe_node_connection_count),
             m_directory_nodes(DIRECTORY_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().directory_connection_count),
-            m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (m_config_registry.get_server_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
     {
@@ -50,13 +50,14 @@ public:
     }
 
 private:
+
     config_registry m_config_registry;
     service_registry m_service_registry;
+    boost::asio::io_context m_ioc;
 
     services m_dedupe_nodes;
     services m_directory_nodes;
 
-    boost::asio::io_context m_ioc;
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
