@@ -47,17 +47,18 @@ namespace uh::cluster {
         {
         }
 
-        service_endpoint get_service_endpoint(const std::string &key, const std::string& value) {
+        service_endpoint get_service_endpoint(const std::string &key) {
+
             const std::string service_role = std::filesystem::path(key).parent_path().filename();
-            const std::size_t service_id = std::stoul(value);
+            const std::string service_id = std::filesystem::path(key).filename();
 
             // extract host and port
-            const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + value + '/';
+            const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + service_id + '/';
             const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
             const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
 
             return { .role = get_service_role(service_role),
-                    .id = service_id,
+                    .id = std::stoul(service_id),
                     .host = host_response.value().as_string(),
                     .port = static_cast<uint16_t>(std::stoul(port_response.value().as_string()))
             };
@@ -67,7 +68,7 @@ namespace uh::cluster {
         {
             LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
-            auto service_endpoint = get_service_endpoint(response.value().key(), response.value().as_string());
+            auto service_endpoint = get_service_endpoint(response.value().key());
 
             switch (get_etcd_action_enum(response.action())) {
                 case etcd_action::create:
@@ -115,7 +116,7 @@ namespace uh::cluster {
                 m_client.leaserevoke(m_lease);
             }
 
-                    private:
+            private:
             etcd::Client& m_client;
             int64_t m_lease;
             etcd::KeepAlive m_keepalive;
@@ -129,7 +130,7 @@ namespace uh::cluster {
             const std::string key_base = m_etcd_services_attributes_key_prefix + m_service_name + "/";
             const std::map<std::string, std::string> kv_pairs =
                     {
-                        {announced_key_base , std::to_string(m_service_index)},
+                        {announced_key_base , {}},
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), boost::asio::ip::host_name()},
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)}
                     };
