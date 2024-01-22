@@ -15,8 +15,14 @@
 using namespace uh::cluster;
 
 struct config {
+    enum action {
+        start_service,
+        print_vcsid
+    };
+
     static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
 
+    action task;
     uh::cluster::role role;
     std::size_t id;
     std::string etcd_url;
@@ -48,11 +54,17 @@ void execute_role(const config& cfg) {
 }
 
 std::optional<config> parse_command_line(int argc, const char* args[]) {
+
+    if (argc > 1 && std::string(args[1]) == "--vcsid") {
+        return config{ .task = config::print_vcsid };
+    }
+
     if (argc < 3 || argc > 4) {
         return {};
     }
 
     return config{
+        .task = config::start_service,
         .role = get_service_role(args[1]),
         .id = std::stoul(args[2]),
         .etcd_url = argc == 4 ? args[3] : config::default_registry_url,
@@ -70,12 +82,22 @@ void print_help(std::ostream& out) {
         << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n";
 }
 
+void print_vcsid(std::ostream& out) {
+    out << PROJECT_NAME << " " << PROJECT_VERSION << " (" << __DATE__ << " " << __TIME__ << ")\n"
+        << PROJECT_REPOSITORY << " (" << PROJECT_VCSID << ")\n";
+}
+
 int main (int argc, const char* args[]) {
     try {
         auto cfg = parse_command_line(argc, args);
         if (!cfg) {
             print_help(std::cerr);
             return 1;
+        }
+
+        if (cfg->task == config::print_vcsid) {
+            print_vcsid(std::cout);
+            return 0;
         }
 
         uh::log::config lc {
