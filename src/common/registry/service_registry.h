@@ -52,47 +52,38 @@ namespace uh::cluster {
             m_watcher.Cancel();
         }
 
-        service_endpoint get_service_endpoint(const std::string &key, const etcd_action action) {
-
-            const std::string service_role = std::filesystem::path(key).parent_path().filename();
-            const std::string service_id = std::filesystem::path(key).filename().string();
-
-            if (action == etcd_action::create)
-            {
-                const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + service_id + '/';
-                const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
-                const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
-
-                return { .role = get_service_role(service_role),
-                        .id = std::stoul(service_id),
-                        .host = host_response.value().as_string(),
-                        .port = static_cast<uint16_t>(std::stoul(port_response.value().as_string()))
-                };
-            }
-            else {
-                return {.role = get_service_role(service_role),
-                        .id = std::stoul(service_id)
-                };
-            }
-
-        };
-
         void handle_state_changes(const etcd::Response& response)
         {
             LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
-            const auto etcd_action = get_etcd_action_enum(response.action());
-            auto service_endpoint = get_service_endpoint(response.value().key(), etcd_action);
+            const auto& key = response.value().key();
 
+            const std::string service_role = std::filesystem::path(key).parent_path().filename();
+            const auto service_role_enum = get_service_role(service_role);
+
+            const std::string service_id = std::filesystem::path(key).filename().string();
+
+            const auto etcd_action = get_etcd_action_enum(response.action());
             switch (etcd_action) {
                 case etcd_action::create:
-                    if (m_add_service_callbacks.contains(service_endpoint.role))
-                        m_add_service_callbacks[service_endpoint.role](service_endpoint);
+                    if (m_add_service_callbacks.contains(service_role_enum)) {
+
+                        const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + service_id + '/';
+                        const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
+                        const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
+
+                        m_add_service_callbacks[service_role_enum]({.role = get_service_role(service_role),
+                                                                           .id = std::stoul(service_id),
+                                                                           .host = host_response.value().as_string(),
+                                                                           .port = static_cast<uint16_t>(std::stoul(port_response.value().as_string()))});
+                    }
                     break;
 
                 case etcd_action::erase:
-                    if (m_remove_service_callbacks.contains(service_endpoint.role))
-                        m_remove_service_callbacks[service_endpoint.role](service_endpoint);
+                    if (m_remove_service_callbacks.contains(service_role_enum))
+                        m_remove_service_callbacks[service_role_enum]({.role = get_service_role(service_role),
+                                                                       .id = std::stoul(service_id)
+                                                                      });
                     break;
             }
         }
