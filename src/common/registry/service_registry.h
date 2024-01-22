@@ -52,7 +52,7 @@ namespace uh::cluster {
             const std::size_t service_id = std::stoul(value);
 
             // extract host and port
-            const auto service_prefix_path = m_etcd_services_exposed_key_prefix + service_role + '/' + value + '/';
+            const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + value + '/';
             const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
             const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
 
@@ -126,7 +126,7 @@ namespace uh::cluster {
             // expose the announced
             const std::string announced_key_base = m_etcd_services_announced_key_prefix + m_service_name;
 
-            const std::string key_base = m_etcd_services_exposed_key_prefix + m_service_name + "/" + std::to_string(m_service_index) + "/";
+            const std::string key_base = m_etcd_services_attributes_key_prefix + m_service_name + "/" + std::to_string(m_service_index) + "/";
             const std::map<std::string, std::string> kv_pairs =
                     {
                         {announced_key_base , std::to_string(m_service_index)},
@@ -144,7 +144,7 @@ namespace uh::cluster {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
 
             // extract
-            const std::string service_prefix_path(m_etcd_services_exposed_key_prefix + get_service_string(service_role) + "/");
+            const std::string service_prefix_path(m_etcd_services_attributes_key_prefix + get_service_string(service_role) + "/");
             etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
             for (size_t i = 0; i < service_instances.keys().size(); i++) {
 
