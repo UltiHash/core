@@ -100,8 +100,6 @@ uh::cluster::role get_service_role (const std::string& service_role_str);
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
 
-uh::cluster::config_parameter get_config_param (const std::string& cfg_param_str);
-
 const std::string& get_config_string (const uh::cluster::config_parameter& cfg_param);
 
 } // end namespace uh::cluster
