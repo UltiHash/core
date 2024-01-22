@@ -36,6 +36,8 @@ public:
     }
 
     global_data_view_config get_global_data_view_config() {
+        if(m_service_role != uh::cluster::DEDUPLICATOR_SERVICE and m_service_role != uh::cluster::DIRECTORY_SERVICE)
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + "' or '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) + "' may access the global data view configuration!");
         return {
             .storage_service_connection_count = get_config_value_ull(CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT),
             .read_cache_capacity_l1 = get_config_value_ull(CFG_GDV_READ_CACHE_CAPACITY_L1),
@@ -46,6 +48,8 @@ public:
     }
 
     storage_config get_storage_config() {
+        if(m_service_role != uh::cluster::STORAGE_SERVICE)
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::STORAGE_SERVICE) + "' may access the " + get_service_string(uh::cluster::STORAGE_SERVICE) + " configuration!");
         return {
             .root_dir = get_config_value_string(CFG_STORAGE_ROOT_DIR),
             .min_file_size = get_config_value_ull(CFG_STORAGE_MIN_FILE_SIZE),
@@ -55,6 +59,8 @@ public:
     }
 
     deduplicator_config get_deduplicator_config() {
+        if(m_service_role != uh::cluster::DEDUPLICATOR_SERVICE)
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + "' may access the " + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + " configuration!");
         return {
             .root_dir = get_config_value_string(CFG_DEDUP_ROOT_DIR),
             .min_fragment_size = get_config_value_ull(CFG_DEDUP_MIN_FRAGMENT_SIZE),
@@ -65,6 +71,8 @@ public:
     }
 
     directory_config get_directory_config() {
+        if(m_service_role != uh::cluster::DIRECTORY_SERVICE)
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) + "' may access the " + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + " DIRECTORY_SERVICE!");
         return {
                 .directory_store_conf = {
                         .root_dir = get_config_value_string(CFG_DIR_ROOT_DIR),
@@ -80,6 +88,8 @@ public:
     }
 
     entrypoint_config get_entrypoint_config() {
+        if(m_service_role != uh::cluster::ENTRYPOINT_SERVICE)
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::ENTRYPOINT_SERVICE) + "' may access the " + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + " ENTRYPOINT_SERVICE!");
         return {
                 .dedupe_node_connection_count = get_config_value_ull(CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT),
                 .directory_connection_count = get_config_value_ull(CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT),
