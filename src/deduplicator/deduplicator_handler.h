@@ -20,7 +20,7 @@ public:
 
     deduplicator_handler (deduplicator_config config, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
         m_dedupe_conf (std::move(config)), // TODO: retrieve from service registry
-        m_fragment_set (m_dedupe_conf.set_log_path, storage),
+        m_fragment_set (m_dedupe_conf.root_dir / "log", storage),
         m_storage (storage),
         m_dedupe_workers (std::move (dedupe_workers))
     {
@@ -71,19 +71,19 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
-        const auto pieces = std::min (m_dedupe_conf.data_node_connection_count,
-                                      static_cast <int> (std::ceil (static_cast <double> (data.size()) /
+        const std::size_t pieces = std::min (m_storage.get_storage_service_connection_count(),
+                                      static_cast <std::size_t> (std::ceil (static_cast <double> (data.size()) /
                                       static_cast <double> (m_dedupe_conf.dedupe_worker_minimum_data_size))));
         size_t piece_size = std::ceil (static_cast <double> (data.size()) / pieces);
         std::vector <dedupe_response> responses (pieces);
-        std::atomic <int> resp = 0;
+        std::atomic <std::size_t> resp = 0;
         boost::asio::steady_timer waiter (*m_storage.get_executor(), boost::asio::steady_timer::clock_type::duration::max ());
 
-        for (int i = 0; i < pieces; ++i) {
+        for (std::size_t i = 0; i < pieces; ++i) {
             boost::asio::post(*m_dedupe_workers, [&responses, i, &data, piece_size, &resp, pieces, &waiter, this] () {
                 const auto data_piece = data.get_str_view().substr(i * piece_size, std::min (piece_size, data.size() - i*piece_size));
                 responses[i] = deduplicate (data_piece);
-                auto count = resp++;
+                std::size_t count = resp++;
                 if (count == pieces - 1)
                     waiter.expires_at(boost::asio::steady_timer::time_point::min());
             });
@@ -91,7 +91,7 @@ private:
 
         co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
 
-        for (int i = 1; i < pieces; i++) {
+        for (std::size_t i = 1; i < pieces; i++) {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
