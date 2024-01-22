@@ -15,6 +15,7 @@
 #include "common/utils/log.h"
 #include "namespace.h"
 #include "etcd/Watcher.hpp"
+#include "etcd/v3/Transaction.hpp"
 
 namespace uh::cluster {
 
@@ -47,40 +48,58 @@ namespace uh::cluster {
         {
         }
 
+        ~service_registry() {
+            m_watcher.Cancel();
+        }
+
         service_endpoint get_service_endpoint(const std::string &key) {
 
             const std::string service_role = std::filesystem::path(key).parent_path().filename();
-            const std::string service_id = std::filesystem::path(key).filename();
+            const std::string service_id = std::filesystem::path(key).filename().string();
 
             // extract host and port
             const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + service_id + '/';
-            const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
-            const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
+
+            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
+                std::cout << service_instances.value(i).as_string() << std::endl;
+            }
+
+            auto tmp2 = service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST);
+            const etcd::Response host_response = m_etcd_client.get(tmp2).get();
+            auto tmp3 = service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT);
+            const etcd::Response port_response = m_etcd_client.get(tmp3).get();
+
+            const std::string tmp =  port_response.value().as_string();
+            auto port = std::stoul(tmp);
+            std::cout << port;
 
             return { .role = get_service_role(service_role),
                     .id = std::stoul(service_id),
                     .host = host_response.value().as_string(),
-                    .port = static_cast<uint16_t>(std::stoul(port_response.value().as_string()))
+                    .port = static_cast<uint16_t>(port)
             };
         };
 
         void handle_state_changes(const etcd::Response& response)
         {
-            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
+//            if (!m_add_service_callbacks.empty() || !m_remove_service_callbacks.empty()) {
+                LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
-            auto service_endpoint = get_service_endpoint(response.value().key());
+                auto service_endpoint = get_service_endpoint(response.value().key());
 
-            switch (get_etcd_action_enum(response.action())) {
-                case etcd_action::create:
-                    if (m_add_service_callbacks.contains(service_endpoint.role))
-                        m_add_service_callbacks[service_endpoint.role](service_endpoint);
-                    break;
+                switch (get_etcd_action_enum(response.action())) {
+                    case etcd_action::create:
+                        if (m_add_service_callbacks.contains(service_endpoint.role))
+                            m_add_service_callbacks[service_endpoint.role](service_endpoint);
+                        break;
 
-                case etcd_action::erase:
-                    if (m_remove_service_callbacks.contains(service_endpoint.role))
-                        m_remove_service_callbacks[service_endpoint.role](service_endpoint);
-                    break;
-            }
+                    case etcd_action::erase:
+                        if (m_remove_service_callbacks.contains(service_endpoint.role))
+                            m_remove_service_callbacks[service_endpoint.role](service_endpoint);
+                        break;
+                }
+//            }
         }
 
         void register_callback_add_service(uh::cluster::role service_role, std::function<void(const service_endpoint&)> callback) {
@@ -107,8 +126,10 @@ namespace uh::cluster {
                   m_lease(m_client.leasegrant(ttl).get().value().lease()),
                   m_keepalive(m_client, ttl, m_lease)
             {
+                etcdv3::Transaction txn;
                 for(const auto& pair : kv_pairs)
                     m_client.set(pair.first, pair.second, m_lease); // TODO: introduce transaction in this loop so that all the information is written to etcd at once
+                m_client.txn(txn).get();
             }
 
             ~registration()
@@ -130,9 +151,9 @@ namespace uh::cluster {
             const std::string key_base = m_etcd_services_attributes_key_prefix + m_service_name + "/";
             const std::map<std::string, std::string> kv_pairs =
                     {
-                        {announced_key_base , {}},
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), boost::asio::ip::host_name()},
-                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)}
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)},
+                        {announced_key_base , {}},
                     };
 
             return std::make_unique<registration>(
