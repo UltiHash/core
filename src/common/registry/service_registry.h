@@ -48,7 +48,7 @@ namespace uh::cluster {
         }
 
         service_endpoint get_service_endpoint(const std::string &key, const std::string& value) {
-            const std::string service_role = std::filesystem::path(key).filename();
+            const std::string service_role = std::filesystem::path(key).parent_path().filename();
             const std::size_t service_id = std::stoul(value);
 
             // extract host and port
@@ -126,7 +126,7 @@ namespace uh::cluster {
             // expose the announced
             const std::string announced_key_base = m_etcd_services_announced_key_prefix + m_service_name;
 
-            const std::string key_base = m_etcd_services_attributes_key_prefix + m_service_name + "/" + std::to_string(m_service_index) + "/";
+            const std::string key_base = m_etcd_services_attributes_key_prefix + m_service_name + "/";
             const std::map<std::string, std::string> kv_pairs =
                     {
                         {announced_key_base , std::to_string(m_service_index)},
