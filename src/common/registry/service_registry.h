@@ -47,7 +47,7 @@ namespace uh::cluster {
         {
         }
 
-        service_endpoint extract_service_info(const std::string &key, const std::string& value) {
+        service_endpoint get_service_endpoint(const std::string &key, const std::string& value) {
             const std::string service_role = std::filesystem::path(key).filename();
             const std::size_t service_id = std::stoul(value);
 
@@ -67,17 +67,17 @@ namespace uh::cluster {
         {
             LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
 
-            auto service_info = extract_service_info(response.value().key(), response.value().as_string());
+            auto service_endpoint = get_service_endpoint(response.value().key(), response.value().as_string());
 
             switch (get_etcd_action_enum(response.action())) {
                 case etcd_action::create:
-                    if (m_add_service_callbacks.contains(service_info.role))
-                        m_add_service_callbacks[service_info.role](service_info);
+                    if (m_add_service_callbacks.contains(service_endpoint.role))
+                        m_add_service_callbacks[service_endpoint.role](service_endpoint);
                     break;
 
                 case etcd_action::erase:
-                    if (m_remove_service_callbacks.contains(service_info.role))
-                        m_remove_service_callbacks[service_info.role](service_info);
+                    if (m_remove_service_callbacks.contains(service_endpoint.role))
+                        m_remove_service_callbacks[service_endpoint.role](service_endpoint);
                     break;
             }
         }

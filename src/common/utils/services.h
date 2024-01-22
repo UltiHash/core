@@ -15,13 +15,13 @@ namespace uh::cluster {
     public:
 
         services (const role r, service_registry& registry, boost::asio::io_context& ioc, const int connection_count):
-                  m_registry(registry),
+                  m_service_registry(registry),
                   m_ioc(ioc),
                   m_role(r),
                   m_connection_count(connection_count) {
 
-            m_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
-            m_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
+            m_service_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
+            m_service_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
         }
 
         std::shared_ptr <client> get()
@@ -83,7 +83,7 @@ namespace uh::cluster {
 
         std::atomic <size_t> m_nodes_index {};
 
-        service_registry& m_registry;
+        service_registry& m_service_registry;
         boost::asio::io_context& m_ioc;
         const role m_role;
         const int m_connection_count;
@@ -103,18 +103,18 @@ namespace uh::cluster {
         }
     };
 
-    class datanode_services {
+    class storage_services {
     public:
 
-        datanode_services (const role r, service_registry& registry, boost::asio::io_context& ioc,
+        storage_services (const role r, service_registry& registry, boost::asio::io_context& ioc,
                            const int connection_count):
-                            m_registry(registry),
+                            m_service_registry(registry),
                             m_ioc(ioc),
                             m_role(r),
                             m_connection_count(connection_count) {
 
-            m_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
-            m_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
+            m_service_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
+            m_service_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
         }
 
         std::shared_ptr <client> get() {
@@ -189,7 +189,7 @@ namespace uh::cluster {
         std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
         std::atomic <size_t> m_data_node_index {};
 
-        service_registry& m_registry;
+        service_registry& m_service_registry;
         boost::asio::io_context& m_ioc;
         const role m_role;
         const int m_connection_count;

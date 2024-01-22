@@ -45,7 +45,7 @@ public:
 private:
     config_registry m_config_registry;
     service_registry m_service_registry;
-    datanode_services m_datanode_services;
+    storage_services m_datanode_services;
 
     std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
     boost::asio::io_context m_ioc;

@@ -5,29 +5,44 @@ There are three major types of resources we want to distinguish:
 * State
 
 ## Service announcements
-Using the `service_registry` class, each service instance announces its availability by setting temporary keys as follows:
+Using the `service_registry` class, each service instance announces its availability by setting the announced keys as follows: 
+
 ```
-/<namespace>/services/<service_class>/<service_id>/endpoint_host
-/<namespace>/services/<service_class>/<service_id>/endpoint_port
-/<namespace>/services/<service_class>/<service_id>/<optional: further parameters>
+/<namespace>/services/announced/<service_class>/<service_id>
+```
+The purpose of this key is to indicate that a certain service is available and is helpful to use it as a prefix to listen to since any changes to this key
+means that a service was either added or removed. Example of storage service with index 0 and 1 being announced in etcd:
+```
+/uh/services/announced/storage/0
+/uh/services/announced/storage/1
+```
+
+Each service has runtime variables that needs to be exposed in the etcd such that other services can get the information like the hostname and the port of the service.
+These runtime variables are exposed by the `/attributes/` path as follows:
+
+```
+/<namespace>/services/attributes/<service_class>/<service_id>/endpoint_host
+/<namespace>/services/attributes/<service_class>/<service_id>/endpoint_host
+/<namespace>/services/attributes/<service_class>/<service_id>/endpoint_port
+/<namespace>/services/attributes/<service_class>/<service_id>/<optional: further parameters>
 ```
 Each service instance *must* provide the exposed attributes `endpoint_host` and `endpoint_port`. 
 Optionally, services may choose to export further attributes.
 
 Example of entries representing a cluster comprised of 2 storage instances, 1 deduplicator instance, 1 directory instance, and 2 entrypoint instances:
 ```
-/uh/services/storage/0/endpoint_host -> storage0.ultihash.io
-/uh/services/storage/0/endoint_port  -> 9200
-/uh/services/storage/1/endpoint_host -> storage1.ultihash.io
-/uh/services/storage/1/endoint_port  -> 9200
-/uh/services/deduplicator/0/endpoint_host -> dedupe0.ultihash.io
-/uh/services/deduplicator/0/endoint_port  -> 9300
-/uh/services/directory/0/endpoint_host -> dir0.ultihash.io
-/uh/services/directory/0/endoint_port  -> 9400
-/uh/services/entrypoint/0/endpoint_host -> ep0.ultihash.io
-/uh/services/entrypoint/0/endoint_port  -> 8080
-/uh/services/entrypoint/1/endpoint_host -> ep1.ultihash.io
-/uh/services/entrypoint/1/endoint_port  -> 8080
+/uh/services/attributes/storage/0/endpoint_host -> storage0.ultihash.io
+/uh/services/attributes/storage/0/endoint_port  -> 9200
+/uh/services/attributes/storage/1/endpoint_host -> storage1.ultihash.io
+/uh/services/attributes/storage/1/endoint_port  -> 9200
+/uh/services/attributes/deduplicator/0/endpoint_host -> dedupe0.ultihash.io
+/uh/services/attributes/deduplicator/0/endoint_port  -> 9300
+/uh/services/attributes/directory/0/endpoint_host -> dir0.ultihash.io
+/uh/services/attributes/directory/0/endoint_port  -> 9400
+/uh/services/attributes/entrypoint/0/endpoint_host -> ep0.ultihash.io
+/uh/services/attributes/entrypoint/0/endoint_port  -> 8080
+/uh/services/attributes/entrypoint/1/endpoint_host -> ep1.ultihash.io
+/uh/services/attributes/entrypoint/1/endoint_port  -> 8080
 ```
 All entries in the services hierarchy *must* be temporary values that are set using a time-to-live (TTL) to make sure the likelihood of stale entries is as little as possible.
 

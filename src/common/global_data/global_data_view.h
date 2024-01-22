@@ -23,9 +23,9 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, datanode_services& datanode_services):
+    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, storage_services& datanode_services):
             m_io_service (ioc),
-            m_datanode_services(datanode_services),
+            m_storage_services(datanode_services),
             m_config(config),
             m_cache_l1 (m_config.read_cache_capacity_l1),
             m_cache_l2 (m_config.read_cache_capacity_l2)
@@ -34,7 +34,7 @@ public:
 
     address write (const std::string_view& data) {
 
-        const auto client = m_datanode_services.get();
+        const auto client = m_storage_services.get();
 
         address addr;
         boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
@@ -76,7 +76,7 @@ public:
             read_size = h.size;
             m.get().register_read_buffer (buffer, read_size);
             co_await m.get().recv_buffers(h);
-        } (m_datanode_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
+        } (m_storage_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
         shared_buffer <char> l1_buf (std::min (read_size, make_global_data_view_config().l1_sample_size));
@@ -102,7 +102,7 @@ public:
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_datanode_services.get (frag.pointer);
+            auto n = m_storage_services.get (frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(n);
@@ -129,7 +129,7 @@ public:
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
-        auto m = m_datanode_services.get(pointer)->acquire_messenger();
+        auto m = m_storage_services.get(pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         co_await m.get().recv_header();
     }
@@ -145,7 +145,7 @@ public:
 
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_datanode_services.get(frag.pointer);
+            auto n = m_storage_services.get(frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(std::move (n));
@@ -161,7 +161,7 @@ public:
 
     [[nodiscard]] uint128_t get_used_space () {
 
-        auto nodes = m_datanode_services.get_clients_list();
+        auto nodes = m_storage_services.get_clients_list();
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
@@ -180,7 +180,7 @@ public:
         std::vector<service_endpoint> ds_instances = service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
         for(const auto& instance : ds_instances) {
-            m_datanode_services.add_service(instance);
+            m_storage_services.add_service(instance);
         }
     }
 
@@ -196,7 +196,7 @@ private:
 
     boost::asio::io_context& m_io_service;
 
-    datanode_services& m_datanode_services;
+    storage_services& m_storage_services;
     global_data_view_config m_config;
 
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
