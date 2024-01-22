@@ -73,17 +73,21 @@ int main (int argc, char* args[]) {
         }
     };
 
-    uh::log::init(lc);
+    try {
+        uh::log::init(lc);
 
-    const auto role_str = std::string(args[1]);
-    const std::size_t id = std::stoul(args[2]);
-    std::string registry_url = default_registry_url;
-    if(argc == 4) {
-        registry_url = std::string(args[3]);
+        const auto role_str = std::string(args[1]);
+        const std::size_t id = std::stoul(args[2]);
+        std::string registry_url = default_registry_url;
+        if(argc == 4) {
+            registry_url = std::string(args[3]);
+        }
+        const auto role = get_service_role (role_str);
+
+        LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""  << boost::asio::ip::host_name() <<
+            "\" using service role \"" << role_str << "\", service id \"" << id << "\" and service registry endpoints \"" << registry_url << "\"." ;
+        execute_role (role, id, registry_url);
+    } catch (const std::exception& e) {
+        std::cerr << "Failure during startup: " << e.what() << "\n";
     }
-    const auto role = get_service_role (role_str);
-
-    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""  << boost::asio::ip::host_name() <<
-        "\" using service role \"" << role_str << "\", service id \"" << id << "\" and service registry endpoints \"" << registry_url << "\"." ;
-    execute_role (role, id, registry_url);
 }
