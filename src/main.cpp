@@ -14,76 +14,108 @@
 
 using namespace uh::cluster;
 
-void execute_role (const uh::cluster::role role, const std::size_t id, const std::string& registry_url) {
-
-    switch (role) {
-        case uh::cluster::STORAGE_SERVICE: {
-            uh::cluster::storage ds(id, registry_url);
-            ds.run();
-            break;
-        }
-
-        case uh::cluster::DEDUPLICATOR_SERVICE: {
-            uh::cluster::deduplicator dd (id, registry_url);
-            dd.run();
-            break;
-        }
-
-        case uh::cluster::DIRECTORY_SERVICE: {
-            uh::cluster::directory dr (id, registry_url);
-            dr.run();
-            break;
-        }
-
-        case uh::cluster::ENTRYPOINT_SERVICE: {
-            uh::cluster::entrypoint en (id, registry_url);
-            en.run();
-            break;
-        }
-
-    }
-
-}
-
-const std::string default_registry_url = "http://127.0.0.1:2379";
-
-int main (int argc, char* args[]) {
-    if (argc < 3 || argc > 4) {
-        std::cerr << "Usage: " << args[0] << " <role> <id> <optional: registry>" << std::endl;
-        std::cerr << "\t<role>\t\t" <<
-            get_service_string(uh::cluster::STORAGE_SERVICE) << ", " <<
-            get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", " <<
-            get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or " <<
-            get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "." << std::endl;
-        std::cerr << "\t<id>\t\t" << "Non-negative integer used to identify service instances of the same role." << std::endl;
-        std::cerr << "\t<registry>\t" << "Optionally, a URL to an etcd endpoint can be provided to override the default (\"" <<
-            default_registry_url << "\")." << std::endl;
-        exit(EINVAL);
-    }
-
-    uh::log::config lc {
-        .sinks = {
-            uh::log::sink_config {
-                .type = uh::log::sink_type::cout
-            },
-            uh::log::sink_config {
-                .type = uh::log::sink_type::file,
-                .filename = "log.log"
-            }
-        }
+struct config {
+    enum action {
+        start_service,
+        print_vcsid
     };
 
-    uh::log::init(lc);
+    static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
 
-    const auto role_str = std::string(args[1]);
-    const std::size_t id = std::stoul(args[2]);
-    std::string registry_url = default_registry_url;
-    if(argc == 4) {
-        registry_url = std::string(args[3]);
+    action task;
+    uh::cluster::role role;
+    std::size_t id;
+    std::string etcd_url;
+};
+
+void execute_role(const config& cfg) {
+
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""
+        << boost::asio::ip::host_name() << "\" using service role \"" << get_service_string(cfg.role)
+        << "\", service id \"" << cfg.id << "\" and service registry endpoints \"" << cfg.etcd_url << "\"." ;
+
+    switch (cfg.role) {
+        case STORAGE_SERVICE:
+            storage(cfg.id, cfg.etcd_url).run();
+            break;
+
+        case DEDUPLICATOR_SERVICE:
+            deduplicator(cfg.id, cfg.etcd_url).run();
+            break;
+
+        case DIRECTORY_SERVICE:
+            directory(cfg.id, cfg.etcd_url).run();
+            break;
+
+        case ENTRYPOINT_SERVICE:
+            entrypoint(cfg.id, cfg.etcd_url).run();
+            break;
     }
-    const auto role = get_service_role (role_str);
+}
 
-    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""  << boost::asio::ip::host_name() <<
-        "\" using service role \"" << role_str << "\", service id \"" << id << "\" and service registry endpoints \"" << registry_url << "\"." ;
-    execute_role (role, id, registry_url);
+std::optional<config> parse_command_line(int argc, const char* args[]) {
+
+    if (argc > 1 && std::string(args[1]) == "--vcsid") {
+        return config{ .task = config::print_vcsid };
+    }
+
+    if (argc < 3 || argc > 4) {
+        return {};
+    }
+
+    return config{
+        .task = config::start_service,
+        .role = get_service_role(args[1]),
+        .id = std::stoul(args[2]),
+        .etcd_url = argc == 4 ? args[3] : config::default_registry_url,
+    };
+}
+
+void print_help(std::ostream& out) {
+    out << "Usage: " << PROJECT_NAME << " <role> <id> [registry]\n"
+        << "\trole\t\t" << "service role, ie. "
+            << get_service_string(uh::cluster::STORAGE_SERVICE) << ", "
+            << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
+            << get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or "
+            << get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "\n"
+        << "\tid\t\t" << "non-negative integer used to identify service instances of the same role\n"
+        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n";
+}
+
+void print_vcsid(std::ostream& out) {
+    out << PROJECT_NAME << " " << PROJECT_VERSION << " (" << __DATE__ << " " << __TIME__ << ")\n"
+        << PROJECT_REPOSITORY << " (" << PROJECT_VCSID << ")\n";
+}
+
+int main (int argc, const char* args[]) {
+    try {
+        auto cfg = parse_command_line(argc, args);
+        if (!cfg) {
+            print_help(std::cerr);
+            return 1;
+        }
+
+        if (cfg->task == config::print_vcsid) {
+            print_vcsid(std::cout);
+            return 0;
+        }
+
+        uh::log::config lc {
+            .sinks = {
+                uh::log::sink_config {
+                    .type = uh::log::sink_type::cout
+                },
+                uh::log::sink_config {
+                    .type = uh::log::sink_type::file,
+                    .filename = "log.log"
+                }
+            }
+        };
+
+        uh::log::init(lc);
+
+        execute_role(*cfg);
+    } catch (const std::exception& e) {
+        std::cerr << "Failure during startup: " << e.what() << "\n";
+    }
 }

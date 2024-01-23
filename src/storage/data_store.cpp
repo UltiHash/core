@@ -134,7 +134,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
 void data_store::sync() {
     std::lock_guard <std::shared_mutex> lock (m);
 
-    for (const auto modification: m_modified_files) {
+    for (const auto& modification: m_modified_files) {
 
         const auto fd = modification.first;
         const auto data_end = modification.second;
