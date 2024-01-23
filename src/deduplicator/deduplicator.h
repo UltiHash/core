@@ -19,10 +19,11 @@ namespace uh::cluster {
         explicit deduplicator(const std::string& registry_url) :
                 m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, registry_url),
                 m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE, m_config_registry.get_service_id(), registry_url),
-                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
+                m_config(m_config_registry.get_deduplicator_config()),
+                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
                 m_storage (m_config_registry.get_global_data_view_config()),
                 m_server (m_config_registry.get_server_config(), m_service_registry.get_service_name(),
-                          std::make_unique <deduplicator_handler>(make_deduplicator_config(), m_storage, m_dedupe_workers)) {
+                          std::make_unique <deduplicator_handler>(m_config, m_storage, m_dedupe_workers)) {
         }
 
         void run() override {
@@ -45,11 +46,13 @@ namespace uh::cluster {
     private:
         config_registry m_config_registry;
         service_registry m_service_registry;
+        deduplicator_config m_config;
         std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
         global_data_view m_storage;
         server m_server;
 
         std::unique_ptr<service_registry::registration> m_registration;
+
     };
 } // end namespace uh::cluster
 

@@ -44,7 +44,7 @@ public:
                 addr = co_await m.get().recv_address(message_header);
             } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
 
-        shared_buffer <char> l1_buf (std::min (addr.first().size, make_global_data_view_config().l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (addr.first().size, m_config.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
         m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
         return addr;
@@ -80,7 +80,7 @@ public:
         } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        shared_buffer <char> l1_buf (std::min (read_size, make_global_data_view_config().l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (read_size, m_config.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
@@ -199,8 +199,8 @@ public:
 
         int i = 0;
         for(const auto& instance : storage_instances) {
-            auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, make_deduplicator_config().data_node_connection_count);
-            const uint128_t offset = make_storage_config().max_data_store_size * (instance.id);
+            auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, m_config.storage_service_connection_count);
+            const uint128_t offset = m_config.max_data_store_size * (instance.id);
             m_data_node_offsets.emplace(offset, std::move(cl));
             i++;
         }
@@ -212,7 +212,11 @@ public:
     }
 
     [[nodiscard]] inline std::size_t l1_cache_sample_size () const noexcept {
-        return make_global_data_view_config().l1_sample_size;
+        return m_config.l1_sample_size;
+    }
+
+    [[nodiscard]] inline std::size_t get_storage_service_connection_count() const noexcept {
+        return m_config.storage_service_connection_count;
     }
 
 private:

@@ -23,7 +23,8 @@ public:
     explicit entrypoint(const std::string& registry_url) :
             m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url),
             m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, m_config_registry.get_service_id() , registry_url),
-            m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
+            m_config(m_config_registry.get_entrypoint_config()),
+            m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
             m_rest_server (m_config_registry.get_server_config(), m_dedupe_nodes, m_directory_nodes, m_workers)
     {
     }
@@ -46,6 +47,7 @@ public:
 private:
     config_registry m_config_registry;
     service_registry m_service_registry;
+    entrypoint_config m_config;
 
     std::vector <std::shared_ptr <client>> m_dedupe_nodes;
     std::vector <std::shared_ptr <client>> m_directory_nodes;
@@ -59,13 +61,13 @@ private:
         for(const auto& instance : m_service_registry.get_service_instances(uh::cluster::DEDUPLICATOR_SERVICE)) {
             m_dedupe_nodes.emplace_back (std::make_shared <client> (m_rest_server.get_executor(), instance.host,
                                                                     instance.port,
-                                                                    make_entrypoint_config().dedupe_node_connection_count));
+                                                                    m_config.dedupe_node_connection_count));
         }
 
         for(const auto& instance : m_service_registry.get_service_instances(uh::cluster::DIRECTORY_SERVICE)) {
             m_directory_nodes.emplace_back(std::make_shared <client> (m_rest_server.get_executor(), instance.host,
                                                                       instance.port,
-                                                                      make_entrypoint_config().directory_connection_count));
+                                                                      m_config.directory_connection_count));
         }
     }
 
