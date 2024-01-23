@@ -302,7 +302,7 @@ public:
 
     void sync () {
 
-        for (const auto modification: m_modified_files) {
+        for (const auto& modification: m_modified_files) {
 
             const auto fd = modification.first;
             const auto data_end = modification.second;
