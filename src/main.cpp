@@ -62,8 +62,7 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
     return config{
         .task = config::start_service,
         .role = get_service_role(args[1]),
-        .id = std::stoul(args[2]),
-        .etcd_url = argc == 4 ? args[3] : config::default_registry_url,
+        .etcd_url = argc == 3 ? args[2] : config::default_registry_url,
     };
 }
 
