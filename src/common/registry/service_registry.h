@@ -14,7 +14,6 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
 #include "namespace.h"
-#include "etcd/Watcher.hpp"
 #include "etcd/v3/Transaction.hpp"
 
 namespace uh::cluster {
@@ -43,57 +42,8 @@ namespace uh::cluster {
                 m_etcd_host(std::move(etcd_host)),
                 m_service_index(index),
                 m_service_name(get_service_string(role) + "/" + std::to_string(index)),
-                m_etcd_client(m_etcd_host),
-                m_watcher(m_etcd_host, m_etcd_services_announced_key_prefix, [this](etcd::Response response) {return handle_state_changes(response);}, true)
+                m_etcd_client(m_etcd_host)
         {
-        }
-
-        ~service_registry() {
-            m_watcher.Cancel();
-        }
-
-        void handle_state_changes(const etcd::Response& response)
-        {
-            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
-
-            const auto& key = response.value().key();
-
-            const std::string service_role = std::filesystem::path(key).parent_path().filename();
-            const auto service_role_enum = get_service_role(service_role);
-
-            const std::string service_id = std::filesystem::path(key).filename().string();
-
-            const auto etcd_action = get_etcd_action_enum(response.action());
-            switch (etcd_action) {
-                case etcd_action::create:
-                    if (m_add_service_callbacks.contains(service_role_enum)) {
-
-                        const auto service_prefix_path = m_etcd_services_attributes_key_prefix + service_role + '/' + service_id + '/';
-                        const etcd::Response host_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get();
-                        const etcd::Response port_response = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get();
-
-                        m_add_service_callbacks[service_role_enum]({.role = get_service_role(service_role),
-                                                                           .id = std::stoul(service_id),
-                                                                           .host = host_response.value().as_string(),
-                                                                           .port = static_cast<uint16_t>(std::stoul(port_response.value().as_string()))});
-                    }
-                    break;
-
-                case etcd_action::erase:
-                    if (m_remove_service_callbacks.contains(service_role_enum))
-                        m_remove_service_callbacks[service_role_enum]({.role = get_service_role(service_role),
-                                                                       .id = std::stoul(service_id)
-                                                                      });
-                    break;
-            }
-        }
-
-        void register_callback_add_service(uh::cluster::role service_role, std::function<void(const service_endpoint&)> callback) {
-            m_add_service_callbacks[service_role] = std::move(callback);
-        }
-
-        void register_callback_remove_service(uh::cluster::role service_role, std::function<void(const service_endpoint&)> callback) {
-            m_remove_service_callbacks[service_role] = std::move(callback);
         }
 
         [[nodiscard]] const std::string& get_service_name() const {
@@ -207,10 +157,6 @@ namespace uh::cluster {
         const std::string m_service_name;
 
         etcd::Client m_etcd_client;
-
-        etcd::Watcher m_watcher;
-        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_add_service_callbacks;
-        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_remove_service_callbacks;
     };
 
 }

@@ -8,6 +8,7 @@
 #include "log.h"
 #include "common/network/client.h"
 #include "common/registry/service_registry.h"
+#include "etcd/Watcher.hpp"
 
 namespace uh::cluster {
 
@@ -50,9 +51,46 @@ namespace uh::cluster {
     class services {
     public:
 
-        services(service_registry& registry, boost::asio::io_context& ioc, const int connection_count): m_service_registry(registry), m_ioc(ioc), m_connection_count(connection_count) {
-            m_service_registry.register_callback_add_service(r, [this](const service_endpoint& service) { add_service_callback(service); });
-            m_service_registry.register_callback_remove_service(r, [this](const service_endpoint& service) { remove_service_callback(service); });
+        services(boost::asio::io_context& ioc, const int connection_count, std::string etcd_host):
+                m_ioc(ioc),
+                m_connection_count(connection_count),
+                m_etcd_client(etcd_host),
+                m_watcher(etcd_host, m_etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true)
+        {}
+
+        ~services() {
+            // joins all the watcher thread
+            m_watcher.Cancel();
+        }
+
+        void handle_state_changes(const etcd::Response& response)
+        {
+            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
+
+            const auto& key = response.value().key();
+
+            const std::string service_id = std::filesystem::path(key).filename().string();
+            const auto etcd_action = get_etcd_action_enum(response.action());
+            const auto service_prefix_path = m_etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
+
+            switch (etcd_action) {
+                case etcd_action::create:
+
+                    add_service_callback({.role = r,
+                                          .id = std::stoul(service_id),
+                                          .host = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST))
+                                                  .get().value().as_string(),
+                                          .port = static_cast<uint16_t>(std::stoul(m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT))
+                                                  .get().value().as_string()))});
+                    break;
+
+                case etcd_action::erase:
+                    remove_service_callback({.role = r,
+                                              .id = std::stoul(service_id)
+                                            });
+                    break;
+            }
+
         }
 
         [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
@@ -118,26 +156,30 @@ namespace uh::cluster {
         }
 
     private:
+
+        boost::asio::io_context& m_ioc;
+        const int m_connection_count;
+        etcd::Client m_etcd_client;
+        etcd::Watcher m_watcher;
+
         mutable std::shared_mutex m_shared_mutex;
         std::map <size_t, std::shared_ptr <client>> m_clients;
 
         std::atomic <size_t> m_nodes_index {};
-
-        service_registry& m_service_registry;
-        boost::asio::io_context& m_ioc;
-        const int m_connection_count;
-
         services_index<r> m_services_index;
+
+        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_add_service_callbacks;
+        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_remove_service_callbacks;
 
         void add_service_callback(const service_endpoint& service) {
 
-            LOG_INFO() << "add callback for service " << r << " called.";
+            LOG_INFO() << "add callback for service " << service.role << " called.";
 
             add_service(service);
         }
 
         void remove_service_callback(const service_endpoint& service) {
-            LOG_INFO() << "removed callback for service " << r << " called.";
+            LOG_INFO() << "removed callback for service " << service.role << " called.";
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service.id);
