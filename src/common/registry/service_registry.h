@@ -6,9 +6,10 @@
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
 #include <string>
-#include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
-#include "third-party/etcd-cpp-apiv3/etcd/KeepAlive.hpp"
 #include <boost/asio.hpp>
+#include "etcd/Client.hpp"
+#include "etcd/KeepAlive.hpp"
+#include "etcd/v3/Transaction.hpp"
 
 #include "common/utils/common.h"
 #include "common/utils/cluster_config.h"
@@ -45,8 +46,10 @@ namespace uh::cluster {
                   m_lease(m_client.leasegrant(ttl).get().value().lease()),
                   m_keepalive(m_client, ttl, m_lease)
             {
+                etcdv3::Transaction txn;
                 for(const auto& pair : kv_pairs)
-                    m_client.set(pair.first, pair.second, m_lease); // TODO: introduce transaction in this loop so that all the information is written to etcd at once
+                    txn.add_success_put(pair.first, pair.second, m_lease);
+                m_client.txn(txn).get();
             }
 
             ~registration()
