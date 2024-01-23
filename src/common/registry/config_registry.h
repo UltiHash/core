@@ -130,7 +130,7 @@ private:
     };
 
     std::size_t generate_service_id() {
-        std::string current_id_key = m_etcd_current_id_prefix_key + get_service_string(m_service_role);
+        std::string current_id_key = etcd_current_id_prefix_key + get_service_string(m_service_role);
         registry_lock lock(m_etcd_client);
 
         if(!key_exists(current_id_key)) {
