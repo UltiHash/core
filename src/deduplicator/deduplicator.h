@@ -16,9 +16,9 @@ namespace uh::cluster {
     class deduplicator : public service_interface {
     public:
 
-        explicit deduplicator(std::size_t id, const std::string& registry_url) :
-                m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, id, registry_url),
-                m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE, id, registry_url),
+        explicit deduplicator(const std::string& registry_url) :
+                m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, registry_url),
+                m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE, m_config_registry.get_service_id(), registry_url),
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
                 m_storage (m_config_registry.get_global_data_view_config()),
                 m_server (m_config_registry.get_server_config(), m_service_registry.get_service_name(),

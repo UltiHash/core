@@ -17,13 +17,17 @@ namespace uh::cluster {
 class config_registry {
 
 public:
-    config_registry(uh::cluster::role role, std::size_t index, std::string etcd_host) :
-            m_service_name(get_service_string(role) + "/" + std::to_string(index)),
-            m_etcd_host(std::move(etcd_host)),
+    config_registry(uh::cluster::role role, const std::string& etcd_host) :
+            m_etcd_client(etcd_host),
             m_service_role(role),
-            m_etcd_client(m_etcd_host)
+            m_service_id(generate_service_id()),
+            m_service_name(get_service_string(m_service_role) + "/" + std::to_string(m_service_id))
     {
         init_default_config_values();
+    }
+
+    [[nodiscard]] std::size_t get_service_id() const noexcept {
+        return m_service_id;
     }
 
     server_config get_server_config() {
@@ -43,10 +47,11 @@ public:
     }
 
 private:
-    const std::string m_service_name;
-    const std::string m_etcd_host;
-    const uh::cluster::role m_service_role;
     etcd::Client m_etcd_client;
+    const uh::cluster::role m_service_role;
+    const std::size_t m_service_id;
+    const std::string m_service_name;
+
 
 
 
@@ -68,6 +73,22 @@ private:
         etcd::Client& m_client;
         etcd::Response m_response;
     };
+
+    std::size_t generate_service_id() {
+        std::string current_id_key = m_etcd_current_id_prefix_key + get_service_string(m_service_role);
+        registry_lock lock(m_etcd_client);
+
+        if(!key_exists(current_id_key)) {
+            set(current_id_key, std::to_string(0));
+            return 0;
+        }
+
+        std::size_t current_id = std::stoull(get(current_id_key));
+        current_id++;
+        set(current_id_key, std::to_string(current_id));
+        return current_id;
+
+    }
 
     void init_default_config_values() {
         //these are only default settings

@@ -15,8 +15,9 @@ static constexpr const char* m_etcd_global_state_key_prefix       = "/" NAMESPAC
 static constexpr const char* m_etcd_instance_state_key_prefix     = "/" NAMESPACE "/state/instance/";
 static constexpr const char* m_etcd_services_key_prefix           = "/" NAMESPACE "/services/";
 
-static constexpr const char* m_etcd_global_lock_key    = "/" NAMESPACE "/config/class/cluster/lock";
-static constexpr const char* m_etcd_initialized_key    = "/" NAMESPACE "/config/class/cluster/initialized";
+static constexpr const char* m_etcd_global_lock_key         = "/" NAMESPACE "/config/class/cluster/lock";
+static constexpr const char* m_etcd_initialized_key         = "/" NAMESPACE "/config/class/cluster/initialized";
+static constexpr const char* m_etcd_current_id_prefix_key   = "/" NAMESPACE "/config/class/cluster/current_id/";
 
 }
 

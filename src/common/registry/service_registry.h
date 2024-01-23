@@ -20,20 +20,15 @@ namespace uh::cluster {
     class service_registry {
 
     public:
-        service_registry(uh::cluster::role role, std::size_t index, std::string etcd_host) :
-                m_etcd_host(std::move(etcd_host)),
+        service_registry(uh::cluster::role role, std::size_t index, const std::string& etcd_host) :
                 m_service_index(index),
                 m_service_name(get_service_string(role) + "/" + std::to_string(index)),
-                m_etcd_client(m_etcd_host)
+                m_etcd_client(etcd_host)
         {
         }
 
         [[nodiscard]] const std::string& get_service_name() const {
             return m_service_name;
-        }
-
-        [[nodiscard]] std::size_t get_service_index() const {
-            return m_service_index;
         }
 
         class registration
