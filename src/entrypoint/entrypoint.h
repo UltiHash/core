@@ -25,8 +25,8 @@ public:
             m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
-            m_dedupe_nodes(DEDUPLICATOR_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().dedupe_node_connection_count),
-            m_directory_nodes(DIRECTORY_SERVICE, m_service_registry, m_ioc, make_entrypoint_config().directory_connection_count),
+            m_dedupe_nodes(m_service_registry, m_ioc, make_entrypoint_config().dedupe_node_connection_count),
+            m_directory_nodes(m_service_registry, m_ioc, make_entrypoint_config().directory_connection_count),
             m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
             m_rest_server (m_config_registry.get_server_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
     {
@@ -55,15 +55,16 @@ private:
     service_registry m_service_registry;
     boost::asio::io_context m_ioc;
 
-    services m_dedupe_nodes;
-    services m_directory_nodes;
+    services<DEDUPLICATOR_SERVICE> m_dedupe_nodes;
+    services<DIRECTORY_SERVICE> m_directory_nodes;
 
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
 
-    void create_connections (services& clients) {
+    template<typename T>
+    void create_connections (T& clients) {
 
         std::vector<service_endpoint> instances = m_service_registry.get_service_instances(clients.get_role());
 

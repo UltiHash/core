@@ -52,8 +52,8 @@ class entrypoint_rest_handler {
 public:
 
     entrypoint_rest_handler (boost::asio::io_context& ioc,
-                             services& dedupe_nodes,
-                             services& directory_nodes,
+                             services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
+                             services<DIRECTORY_SERVICE>& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers):
             m_ioc (ioc),
             m_workers (std::move (workers)),
@@ -783,8 +783,8 @@ public:
         boost::asio::io_context& m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
 
-        services& m_dedupe_nodes;
-        services& m_directory_nodes;
+        services<DEDUPLICATOR_SERVICE>& m_dedupe_nodes;
+        services<DIRECTORY_SERVICE>& m_directory_nodes;
 
     };
 

@@ -23,7 +23,7 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, storage_services& datanode_services):
+    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, services<STORAGE_SERVICE>& datanode_services):
             m_io_service (ioc),
             m_storage_services(datanode_services),
             m_config(config),
@@ -196,7 +196,7 @@ private:
 
     boost::asio::io_context& m_io_service;
 
-    storage_services& m_storage_services;
+    services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
 
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;

@@ -13,8 +13,8 @@ namespace uh::cluster::rest
 //------------------------------------------------------------------------------
 
     rest_server::rest_server(server_config config,
-                             services& dedupe_nodes,
-                             services& directory_nodes,
+                             services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
+                             services<DIRECTORY_SERVICE>& directory_nodes,
                              std::shared_ptr <boost::asio::thread_pool> workers,
                              boost::asio::io_context& ioc) :
         m_ioc(ioc),

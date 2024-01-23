@@ -19,7 +19,7 @@ namespace uh::cluster {
         explicit deduplicator(std::size_t id, const std::string& registry_url) :
                 m_config_registry(DEDUPLICATOR_SERVICE, id, registry_url),
                 m_service_registry(DEDUPLICATOR_SERVICE, id, registry_url),
-                m_datanode_services(STORAGE_SERVICE, m_service_registry, m_ioc, make_deduplicator_config().data_node_connection_count),
+                m_datanode_services(m_service_registry, m_ioc, make_deduplicator_config().data_node_connection_count),
                 m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (make_deduplicator_config().worker_thread_count)),
                 m_ioc (boost::asio::io_context (m_config_registry.get_server_config().threads)),
                 m_storage (m_config_registry.get_global_data_view_config(), m_ioc, m_datanode_services),
@@ -49,7 +49,7 @@ namespace uh::cluster {
     private:
         config_registry m_config_registry;
         service_registry m_service_registry;
-        storage_services m_datanode_services;
+        services<STORAGE_SERVICE> m_datanode_services;
 
         std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
         boost::asio::io_context m_ioc;

@@ -11,20 +11,68 @@
 
 namespace uh::cluster {
 
+    template<role r>
+    class services_index {
+    public:
+        void erase(const std::size_t& id) {};
+        void emplace(const uint128_t& offset, std::shared_ptr <client> client) {}
+    };
+
+    template<>
+    class services_index<STORAGE_SERVICE> {
+    public:
+        [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
+
+            const auto pfd = m_data_node_offsets.upper_bound (offset);
+
+            if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            }
+            const auto n = std::prev (pfd);
+            return n->second;
+        }
+
+        void erase(const std::size_t& id) {
+            // ASSUMPTION made to convert id to offset
+            const uint128_t offset = make_storage_config().max_data_store_size * (id);
+            m_data_node_offsets.erase(offset);
+        }
+
+        void emplace(const uint128_t& offset, std::shared_ptr <client> client) {
+            m_data_node_offsets.emplace(offset, std::move(client));
+        }
+
+    private:
+        std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+    };
+
+    template <role r>
     class services {
     public:
 
-        services (const role r, service_registry& registry, boost::asio::io_context& ioc, const int connection_count):
-                  m_service_registry(registry),
-                  m_ioc(ioc),
-                  m_role(r),
-                  m_connection_count(connection_count) {
-
-            m_service_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
-            m_service_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
+        services(service_registry& registry, boost::asio::io_context& ioc, const int connection_count): m_service_registry(registry), m_ioc(ioc), m_connection_count(connection_count) {
+            m_service_registry.register_callback_add_service(r, [this](const service_endpoint& service) { add_service_callback(service); });
+            m_service_registry.register_callback_remove_service(r, [this](const service_endpoint& service) { remove_service_callback(service); });
         }
 
-        std::shared_ptr <client> get()
+        [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
+            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            return m_services_index.get(offset);
+        }
+
+        [[nodiscard]] std::shared_ptr <client> get(const std::size_t& id) const {
+            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+
+            auto map_iterator = m_clients.find(id);
+
+            if (map_iterator == m_clients.end()) {
+                return nullptr;
+            } else {
+                return map_iterator->second;
+            }
+        }
+
+        [[nodiscard]] std::shared_ptr <client> get()
         {
             auto index = m_nodes_index.load();
 
@@ -38,124 +86,6 @@ namespace uh::cluster {
             }
 
             return services.at(index);
-        }
-
-        std::shared_ptr <client> get(const std::size_t id) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-
-            auto map_iterator = m_clients.find(id);
-
-            if (map_iterator == m_clients.end()) {
-                return nullptr;
-            } else {
-                return map_iterator->second;
-            }
-        }
-
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients_list() const {
-            std::vector <std::shared_ptr <client>> clients_list;
-
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            clients_list.reserve(m_clients.size());
-            std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
-
-            return clients_list;
-        }
-
-        void add_service(const service_endpoint& service) {
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-
-            if (m_clients.contains(service.id)) [[unlikely]]
-                return;
-
-            m_clients.insert({service.id, std::make_shared<client>(m_ioc, service.host,
-                                                                   service.port,
-                                                                   m_connection_count)});
-        }
-
-        [[nodiscard]] inline const role get_role() const noexcept {
-            return m_role;
-        }
-
-    private:
-        mutable std::shared_mutex m_shared_mutex;
-        std::map <size_t, std::shared_ptr <client>> m_clients;
-
-        std::atomic <size_t> m_nodes_index {};
-
-        service_registry& m_service_registry;
-        boost::asio::io_context& m_ioc;
-        const role m_role;
-        const int m_connection_count;
-
-        void add_service_callback(const service_endpoint& service) {
-
-            LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
-
-            add_service(service);
-        }
-
-        void remove_service_callback(const service_endpoint& service) {
-            LOG_INFO() << "removed callback for service " << get_service_string(m_role) << " called.";
-
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-            m_clients.erase(service.id);
-        }
-    };
-
-    class storage_services {
-    public:
-
-        storage_services (const role r, service_registry& registry, boost::asio::io_context& ioc,
-                           const int connection_count):
-                            m_service_registry(registry),
-                            m_ioc(ioc),
-                            m_role(r),
-                            m_connection_count(connection_count) {
-
-            m_service_registry.register_callback_add_service(m_role, [this](const service_endpoint& service) { add_service_callback(service); });
-            m_service_registry.register_callback_remove_service(m_role, [this](const service_endpoint& service) { remove_service_callback(service); });
-        }
-
-        std::shared_ptr <client> get() {
-            auto index = m_data_node_index.load();
-
-            // TODO: optimize this
-            const auto services = get_clients_list();
-            const auto services_size = services.size();
-
-            auto new_val = (index + 1) % services_size;
-            while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
-                index = m_data_node_index.load();
-                new_val = (index + 1) % services_size;
-            }
-
-            return m_clients.at(index);
-        }
-
-        std::shared_ptr <client> get(const std::size_t id) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-
-            auto map_iterator = m_clients.find(id);
-
-            if (map_iterator == m_clients.end()) {
-                return nullptr;
-            } else {
-                return map_iterator->second;
-            }
-        }
-
-        // Question: What happens if we have 1 2 3 4 data index and we remove 2.
-        std::shared_ptr <client> get(const uint128_t& pointer) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-
-            const auto pfd = m_data_node_offsets.upper_bound (pointer);
-
-            if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
-                throw std::out_of_range ("The pointer is not in the range of data nodes");
-            }
-            const auto n = std::prev (pfd);
-            return n->second;
         }
 
         [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients_list() const {
@@ -180,35 +110,40 @@ namespace uh::cluster {
 
             m_clients.insert({service.id, cl});
             const uint128_t offset = make_storage_config().max_data_store_size * (service.id);
-            m_data_node_offsets.emplace(offset, std::move(cl));
+            m_services_index.emplace(offset, std::move(cl));
+        }
+
+        [[nodiscard]] inline const role get_role() const noexcept {
+            return r;
         }
 
     private:
         mutable std::shared_mutex m_shared_mutex;
-        std::map <const size_t, std::shared_ptr <client>> m_clients;
-        std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-        std::atomic <size_t> m_data_node_index {};
+        std::map <size_t, std::shared_ptr <client>> m_clients;
+
+        std::atomic <size_t> m_nodes_index {};
 
         service_registry& m_service_registry;
         boost::asio::io_context& m_ioc;
-        const role m_role;
         const int m_connection_count;
 
+        services_index<r> m_services_index;
+
         void add_service_callback(const service_endpoint& service) {
-            LOG_INFO() << "add callback for service " << get_service_string(m_role) << " called.";
+
+            LOG_INFO() << "add callback for service " << r << " called.";
 
             add_service(service);
         }
 
         void remove_service_callback(const service_endpoint& service) {
-            LOG_INFO() << "remove callback for service " << get_service_string(m_role) << " called.";
+            LOG_INFO() << "removed callback for service " << r << " called.";
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-
             m_clients.erase(service.id);
-            const uint128_t offset = make_storage_config().max_data_store_size * (service.id);
-            m_data_node_offsets.erase(offset);
+            m_services_index.erase(service.id);
         }
+
     };
 
 } // end namespace uh::cluster
