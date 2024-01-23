@@ -23,8 +23,7 @@ struct config_fixture
 {
     static uh::cluster::storage_config make_data_store_config () {
         return {
-                .directory = "root/dn",
-                .hole_log = "root/dn/log",
+                .root_dir = "root/dn",
                 .min_file_size = 1024ul,
                 .max_file_size = 8ul * 1024ul,
                 .max_data_store_size = 16 * 1024ul,
