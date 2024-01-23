@@ -72,7 +72,7 @@ public:
 
     directory_config get_directory_config() {
         if(m_service_role != uh::cluster::DIRECTORY_SERVICE)
-            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) + "' may access the " + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + " DIRECTORY_SERVICE!");
+            throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) + "' may access the " + get_service_string(uh::cluster::DIRECTORY_SERVICE) + " configuration!");
         return {
                 .directory_store_conf = {
                         .root_dir = get_config_value_string(CFG_DIR_ROOT_DIR),
@@ -102,6 +102,7 @@ private:
     const std::string m_etcd_host;
     const uh::cluster::role m_service_role;
     etcd::Client m_etcd_client;
+    const std::string m_default_root_dir_base = "/var/lib/uh/";
 
 
 
@@ -111,7 +112,7 @@ private:
         explicit registry_lock(etcd::Client& client) :
                 m_client(client)
         {
-            m_response = m_client.lock(m_etcd_global_lock_key).get();
+            m_response = m_client.lock(etcd_global_lock_key).get();
         }
 
         ~registry_lock()
@@ -128,25 +129,12 @@ private:
         //these are only default settings
         //TODO: check if config file is available and use values from there if available
         registry_lock lock(m_etcd_client);
-        if(!key_exists(m_etcd_initialized_key)) {
+        if(!key_exists(etcd_initialized_key)) {
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_PORT, 9200);
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_THREADS, 16);
-
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_PORT, 9300);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
-
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_PORT, 9400);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
-
-            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_PORT, 8080);
-            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
-            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
-
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_ROOT_DIR,
-                                   "/tmp/lib/uh/" + get_service_string(uh::cluster::STORAGE_SERVICE));
+                                   m_default_root_dir_base + get_service_string(uh::cluster::STORAGE_SERVICE));
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_MIN_FILE_SIZE,
                                    1ul * 1024ul * 1024ul * 1024ul);
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_MAX_FILE_SIZE,
@@ -154,8 +142,11 @@ private:
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_MAX_DATA_STORE_SIZE,
                                    64ul * 1024ul * 1024ul * 1024ul);
 
+            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_PORT, 9300);
+            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_ROOT_DIR,
-                                   "/tmp/lib/uh/" + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE));
+                                   m_default_root_dir_base + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE));
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE,
                                    32ul);
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE,
@@ -175,7 +166,9 @@ private:
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE,
                                    64ul * 1024ul * 1024ul * 1024ul);
 
-
+            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_PORT, 9400);
+            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_DIR_ROOT_DIR,
                                    "/tmp/lib/uh/" + get_service_string(uh::cluster::DIRECTORY_SERVICE));
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_DIR_MIN_FILE_SIZE,
@@ -199,6 +192,9 @@ private:
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE,
                                    64ul * 1024ul * 1024ul * 1024ul);
 
+            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_PORT, 8080);
+            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
+            set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
                                    4ul);
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
@@ -206,7 +202,7 @@ private:
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE, uh::cluster::CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
                                    12ul);
 
-            m_etcd_client.set(m_etcd_initialized_key, "1");
+            m_etcd_client.set(etcd_initialized_key, "1");
         }
     }
 
@@ -215,20 +211,20 @@ private:
     }
 
     void set_class_config_value(const uh::cluster::role service_role, const uh::cluster::config_parameter parameter, const std::string& value) {
-        std::string key = m_etcd_global_config_key_prefix +
+        std::string key = etcd_global_config_key_prefix +
                           get_service_string(service_role) + "/" +
                           get_config_string(parameter);
         set(key, value);
     }
 
     std::string get_config_value_string(const uh::cluster::config_parameter& parameter) {
-        std::string key = m_etcd_instance_config_key_prefix +
-                m_service_name + "/" +
-                get_config_string(parameter);
+        std::string key = etcd_instance_config_key_prefix +
+                          m_service_name + "/" +
+                          get_config_string(parameter);
         try {
             return get(key);
         } catch (std::invalid_argument const &e_instance) {
-            std::string global_key = m_etcd_global_config_key_prefix +
+            std::string global_key = etcd_global_config_key_prefix +
                                      get_service_string(m_service_role) + "/" +
                                      get_config_string(parameter);
             return get(global_key);
