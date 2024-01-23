@@ -33,3 +33,9 @@ jobs:
           etcdctl del "" --from-key=true
           ctest -C ${{ matrix.build }} --output-on-failure
           etcdctl del "" --from-key=true
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: LastTest.log
+          path: ${{github.workspace}}/build/Testing/Temporary/LastTest.log
