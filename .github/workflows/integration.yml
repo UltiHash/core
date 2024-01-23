@@ -9,7 +9,7 @@ on:
 
 jobs:
   integration-test-docker:
-    runs-on: uh-x86_64-ubuntu-22.04
+    runs-on: docker-image-builder
 
     steps:
       - uses: actions/checkout@v4
