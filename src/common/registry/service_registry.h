@@ -18,23 +18,6 @@
 
 namespace uh::cluster {
 
-    enum class etcd_action : uint8_t {
-        create = 0,
-        erase,
-    };
-
-    static etcd_action get_etcd_action_enum(const std::string &action_str) {
-        static const std::map<std::string, etcd_action> etcd_action = {
-                {"create", etcd_action::create},
-                {"delete", etcd_action::erase},
-        };
-
-        if (etcd_action.contains(action_str))
-            return etcd_action.at(action_str);
-        else
-            throw std::invalid_argument("invalid etcd action");
-    }
-
     class service_registry {
 
     public:
