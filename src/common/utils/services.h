@@ -7,7 +7,7 @@
 
 #include "log.h"
 #include "common/network/client.h"
-#include "common/registry/service_registry.h"
+#include "common/registry/config_registry.h"
 #include "etcd/Watcher.hpp"
 
 namespace uh::cluster {
@@ -32,13 +32,22 @@ namespace uh::cluster {
     template<role r>
     class services_index {
     public:
+        explicit services_index(const uint128_t max_data_store_size) : m_max_data_store_size(max_data_store_size) {
+        }
+
         void erase(const std::size_t& id) {};
-        void emplace(const uint128_t& offset, std::shared_ptr <client> client) {}
+        void add(const uint128_t& offset, std::shared_ptr <client> client) {}
+    private:
+        const uint128_t m_max_data_store_size;
     };
 
     template<>
     class services_index<STORAGE_SERVICE> {
     public:
+
+        explicit services_index(const uint128_t max_data_store_size) : m_max_data_store_size(max_data_store_size) {
+        }
+
         [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
 
             const auto pfd = m_data_node_offsets.upper_bound (offset);
@@ -52,27 +61,29 @@ namespace uh::cluster {
 
         void erase(const std::size_t& id) {
             // ASSUMPTION made to convert id to offset
-            const uint128_t offset = make_storage_config().max_data_store_size * (id);
-            m_data_node_offsets.erase(offset);
+            m_data_node_offsets.erase(m_max_data_store_size * (id));
         }
 
-        void emplace(const uint128_t& offset, std::shared_ptr <client> client) {
-            m_data_node_offsets.emplace(offset, std::move(client));
+        void add(const std::size_t& id, std::shared_ptr <client> client) {
+            m_data_node_offsets.emplace(m_max_data_store_size * (id), std::move(client));
         }
 
     private:
         std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+        const uint128_t m_max_data_store_size;
     };
 
     template <role r>
     class services {
     public:
 
-        services(boost::asio::io_context& ioc, const int connection_count, std::string etcd_host):
+        services(boost::asio::io_context& ioc, config_registry& config_registry, const int connection_count, std::string etcd_host):
                 m_ioc(ioc),
+                // How can we pass config_registry only and try to get the connection count according to the role
                 m_connection_count(connection_count),
                 m_etcd_client(etcd_host),
-                m_watcher(etcd_host, m_etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true)
+                m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true),
+                m_services_index(config_registry.get_global_data_view_config().max_data_store_size)
         {}
 
         ~services() {
@@ -88,7 +99,7 @@ namespace uh::cluster {
 
             const std::string service_id = std::filesystem::path(key).filename().string();
             const auto etcd_action = get_etcd_action_enum(response.action());
-            const auto service_prefix_path = m_etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
+            const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
 
             switch (etcd_action) {
                 case etcd_action::create:
@@ -164,11 +175,10 @@ namespace uh::cluster {
                                                m_connection_count);
 
             m_clients.insert({service.id, cl});
-            const uint128_t offset = make_storage_config().max_data_store_size * (service.id);
-            m_services_index.emplace(offset, std::move(cl));
+            m_services_index.add(service.id, std::move(cl));
         }
 
-        [[nodiscard]] inline const role get_role() const noexcept {
+        [[nodiscard]] inline role get_role() const noexcept {
             return r;
         }
 
@@ -184,9 +194,6 @@ namespace uh::cluster {
 
         std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
-
-        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_add_service_callbacks;
-        std::map<uh::cluster::role, std::function<void(const service_endpoint&)>> m_remove_service_callbacks;
 
         void add_service_callback(const service_endpoint& service) {
 

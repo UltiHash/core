@@ -23,9 +23,9 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, services<STORAGE_SERVICE>& datanode_services):
+    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, services<STORAGE_SERVICE>& storage_services):
             m_io_service (ioc),
-            m_storage_services(datanode_services),
+            m_storage_services(storage_services),
             m_config(config),
             m_cache_l1 (m_config.read_cache_capacity_l1),
             m_cache_l2 (m_config.read_cache_capacity_l2)
@@ -43,7 +43,7 @@ public:
                 addr = co_await m.get().recv_address(message_header);
             } (client->acquire_messenger()), boost::asio::use_future).get();
 
-        shared_buffer <char> l1_buf (std::min (addr.first().size, make_global_data_view_config().l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (addr.first().size, m_config.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
         m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
         return addr;
@@ -79,7 +79,7 @@ public:
         } (m_storage_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        shared_buffer <char> l1_buf (std::min (read_size, make_global_data_view_config().l1_sample_size));
+        shared_buffer <char> l1_buf (std::min (read_size, m_config.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
@@ -98,7 +98,6 @@ public:
         std::unordered_map <std::shared_ptr <client>, std::vector <size_t>> node_data_offsets_map;
         std::vector <std::shared_ptr <client>> nodes;
 
-        // TODO: consult this
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
@@ -176,7 +175,7 @@ public:
         return used;
     }
 
-    void create_data_node_connections (service_registry& service_registry) {
+    void create_storage_service_connections (service_registry& service_registry) {
         std::vector<service_endpoint> ds_instances = service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
         for(const auto& instance : ds_instances) {
@@ -189,7 +188,11 @@ public:
     }
 
     [[nodiscard]] inline std::size_t l1_cache_sample_size () const noexcept {
-        return make_global_data_view_config().l1_sample_size;
+        return m_config.l1_sample_size;
+    }
+
+    [[nodiscard]] inline std::size_t get_storage_service_connection_count() const noexcept {
+        return m_config.storage_service_connection_count;
     }
 
 private:

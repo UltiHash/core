@@ -16,8 +16,8 @@ namespace uh::cluster {
     public:
 
         directory_handler(directory_config config, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
-                m_config(config),
-                m_directory(config.directory_store_conf),
+                m_config(std::move(config)),
+                m_directory(m_config.directory_store_conf),
                 m_storage(storage),
                 m_directory_workers (std::move (directory_workers))
         {
@@ -181,7 +181,7 @@ namespace uh::cluster {
             co_await m.send(RECOVER_RESP, {});
         }
 
-        directory_config m_config;
+        const directory_config m_config;
         directory_store m_directory;
         global_data_view& m_storage;
         std::shared_ptr <boost::asio::thread_pool> m_directory_workers;

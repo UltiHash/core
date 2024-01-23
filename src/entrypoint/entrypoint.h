@@ -24,11 +24,12 @@ public:
     explicit entrypoint(std::size_t id, const std::string& registry_url) :
             m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
             m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
+            m_config(m_config_registry.get_entrypoint_config()),
             m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
-            m_dedupe_nodes(m_ioc, make_entrypoint_config().dedupe_node_connection_count, registry_url),
-            m_directory_nodes(m_ioc, make_entrypoint_config().directory_connection_count, registry_url),
-            m_workers (std::make_shared <boost::asio::thread_pool> (make_entrypoint_config().worker_thread_count)),
-            m_rest_server (m_config_registry.get_server_config(), m_dedupe_nodes, m_directory_nodes, m_workers, m_ioc)
+            m_dedupe_services(m_ioc, m_config_registry, m_config.dedupe_node_connection_count, registry_url),
+            m_directory_services(m_ioc, m_config_registry, m_config.directory_connection_count, registry_url),
+            m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
+            m_rest_server (m_config_registry.get_server_config(), m_dedupe_services, m_directory_services, m_workers, m_ioc)
     {
     }
 
@@ -36,8 +37,8 @@ public:
         m_service_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
         m_service_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
 
-        create_connections(m_dedupe_nodes);
-        create_connections(m_directory_nodes);
+        create_connections(m_dedupe_services);
+        create_connections(m_directory_services);
 
         m_registration = m_service_registry.register_service(m_rest_server.get_server_config());
         m_rest_server.run();
@@ -53,10 +54,13 @@ private:
 
     config_registry m_config_registry;
     service_registry m_service_registry;
+
+    entrypoint_config m_config;
+
     boost::asio::io_context m_ioc;
 
-    services<DEDUPLICATOR_SERVICE> m_dedupe_nodes;
-    services<DIRECTORY_SERVICE> m_directory_nodes;
+    services<DEDUPLICATOR_SERVICE> m_dedupe_services;
+    services<DIRECTORY_SERVICE> m_directory_services;
 
     std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
@@ -71,7 +75,6 @@ private:
         for(const auto& instance : instances) {
             clients.add_service(instance);
         }
-
     }
 
 };

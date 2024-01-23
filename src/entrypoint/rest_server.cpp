@@ -13,15 +13,15 @@ namespace uh::cluster::rest
 //------------------------------------------------------------------------------
 
     rest_server::rest_server(server_config config,
-                             services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
-                             services<DIRECTORY_SERVICE>& directory_nodes,
+                             services<DEDUPLICATOR_SERVICE>& dedupe_services,
+                             services<DIRECTORY_SERVICE>& directory_services,
                              std::shared_ptr <boost::asio::thread_pool> workers,
                              boost::asio::io_context& ioc) :
         m_ioc(ioc),
         m_config(std::move(config)),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.threads-1),
-        m_handler (m_ioc, dedupe_nodes, directory_nodes, std::move (workers))
+        m_handler (m_ioc, dedupe_services, directory_services, std::move (workers))
     {
         m_server_address = boost::asio::ip::make_address(m_config.bind_address);
         boost::asio::co_spawn(m_ioc,
