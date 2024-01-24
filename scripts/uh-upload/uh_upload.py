@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import concurrent
 import boto3
 import os
 import pathlib
+import sys
 import time
 
 
@@ -20,54 +22,82 @@ def parse_args():
         action='store_true', dest='verbose')
     parser.add_argument('-B', '--bucket', help='upload all files to the given bucket',
         action='store')
+    parser.add_argument('-j', '--jobs', help='number of concurrent jobs',
+        action='store', default=8, type=int)
 
     return parser.parse_args()
 
-def upload_path(s3, path, config, stats):
-    path = path.resolve()
+class uploader:
+    def __init__(self, config):
+        self.threads = concurrent.futures.ThreadPoolExecutor(max_workers=config.jobs)
+        self.s3 = boto3.client('s3', endpoint_url=config.url)
+        self.config = config
 
-    if config.bucket is not None:
-        bucket_name = config.bucket
-    else:
-        bucket_name = path.name
-    print("uploading " + str(path) + " to bucket " + bucket_name)
+    def upload(self, bucket, path):
+        stats = dict()
 
-    s3.create_bucket(Bucket=bucket_name)
-    for (root, dirs, files) in os.walk(path):
-        for file in files:
-            fullpath = pathlib.Path(root) / file
+        with open(path, 'rb') as f:
+            resp = s3.put_object(Bucket=bucket, Key=path.name, Body=f)
 
-            if config.verbose:
-                print(fullpath)
+            headers = resp['ResponseMetadata']['HTTPHeaders']
+            stats['uploaded_bytes'] = float(headers['uh-original-size'])
+            stats['stored_bytes'] = float(headers['uh-effective-size'])
 
-            with open(fullpath, 'rb') as f:
-                resp = s3.put_object(Bucket=bucket_name, Key=file, Body=f)
-                headers = resp['ResponseMetadata']['HTTPHeaders']
-                stats['uploaded_bytes'] += float(headers['uh-original-size'])
-                stats['stored_bytes'] += float(headers['uh-effective-size'])
+        return stats
+
+    def push(self, path):
+        results = []
+        path = path.resolve()
+
+        if self.config.bucket is not None:
+            bucket_name = self.config.bucket
+        else:
+            bucket_name = path.name
+
+        print(f"uploading {path} to bucket {bucket_name}")
+
+        self.s3.create_bucket(Bucket=bucket_name)
+        for (root, dirs, files) in os.walk(path):
+            for file in files:
+                fullpath = pathlib.Path(root) / file
+
+                if self.config.verbose:
+                    print(fullpath)
+
+                results += [(fullpath, self.threads.submit(self.upload, bucket_name, fullpath))]
+
+        return results
 
 if __name__ == "__main__":
     config = parse_args()
 
     s3 = boto3.client('s3', endpoint_url=config.url)
 
-    stats = {
-        'uploaded_bytes': 0,
-        'stored_bytes': 0
-    }
-
     start_time = time.monotonic_ns()
 
+    up = uploader(config)
+    results = []
+
     for path in config.path:
-        upload_path(s3, path, config, stats)
+        results += up.push(path)
+
+    uploaded_bytes = 0
+    stored_bytes = 0
+    for f in results:
+        try:
+            info = f[1].result()
+            uploaded_bytes += info['uploaded_bytes']
+            stored_bytes += info['stored_bytes']
+        except Exception as e:
+            print("Error uploading %s: %s" % (f[0], str(e)), file=sys.stderr)
 
     end_time = time.monotonic_ns()
 
     elapsed_s = (end_time - start_time) / 1000000000
-    uploaded_mb = stats['uploaded_bytes'] / (1024 * 1024)
+    uploaded_mb = uploaded_bytes / (1024 * 1024)
 
     print("elapsed time: %.02f s" % elapsed_s)
-    print("uploaded bytes: %d" % stats['uploaded_bytes'])
-    print("stored bytes: %d" % stats['stored_bytes'])
+    print("uploaded bytes: %d" % uploaded_bytes)
+    print("stored bytes: %d" % stored_bytes)
     print("upload bandwidth: %.02f MB/s" % (uploaded_mb / elapsed_s))
-    print("storage reduction: %.02f %%" % (100 * (1 - stats['stored_bytes'] / stats['uploaded_bytes'])))
+    print("storage reduction: %.02f %%" % (100 * (1 - stored_bytes / uploaded_bytes)))
