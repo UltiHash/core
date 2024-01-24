@@ -46,7 +46,7 @@ namespace uh::cluster {
         [[nodiscard]] std::size_t get(const std::size_t& id) const {
             auto set_iterator = m_service_index.find(id);
             if (set_iterator == m_service_index.end()) {
-                throw std::out_of_range ("The pointer is not in the range of data nodes");
+                throw std::out_of_range ("service id is out of range");
             } else {
                 return id;
             }
@@ -68,7 +68,7 @@ namespace uh::cluster {
         }
 
         void erase(const std::size_t& id) {
-            m_storage_service_offsets.erase(id);
+            m_storage_service_offsets.erase(m_max_data_store_size * id);
         }
 
         [[nodiscard]] std::size_t get(const uint128_t& offset) const {
@@ -88,7 +88,7 @@ namespace uh::cluster {
 
             auto map_iterator = m_storage_service_offsets.find(offset);
             if (map_iterator == m_storage_service_offsets.end()) {
-                throw std::out_of_range ("The pointer is not in the range of data nodes");
+                throw std::out_of_range ("service id is our of range");
             } else {
                 return id;
             }
@@ -123,8 +123,8 @@ namespace uh::cluster {
             const auto& key = response.value().key();
 
             const std::string service_id = std::filesystem::path(key).filename().string();
-            const auto etcd_action = get_etcd_action_enum(response.action());
             const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
+            const auto etcd_action = get_etcd_action_enum(response.action());
 
             switch (etcd_action) {
                 case etcd_action::create:
