@@ -43,8 +43,8 @@ def upload_path(s3, path, config, stats):
             with open(fullpath, 'rb') as f:
                 resp = s3.put_object(Bucket=bucket_name, Key=file, Body=f)
                 headers = resp['ResponseMetadata']['HTTPHeaders']
-                stats['uploaded_bytes'] += float(headers['uh-original-size-mb']) * (1024 * 1024)
-                stats['stored_bytes'] += float(headers['uh-effective-size-mb']) * (1024 * 1024)
+                stats['uploaded_bytes'] += float(headers['uh-original-size'])
+                stats['stored_bytes'] += float(headers['uh-effective-size'])
 
 if __name__ == "__main__":
     config = parse_args()
