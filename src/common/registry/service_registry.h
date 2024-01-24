@@ -65,7 +65,6 @@ namespace uh::cluster {
 
         std::unique_ptr<registration> register_service(const server_config& config) {
 
-            // expose the announced
             const std::string announced_key_base = etcd_services_announced_key_prefix + m_service_name;
 
             const std::string key_base = etcd_services_attributes_key_prefix + m_service_name + "/";

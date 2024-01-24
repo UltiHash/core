@@ -108,18 +108,22 @@ Using the `state_registry` class (not yet available), services can persist their
 ```
 
 # Reacting to cluster changes
-## Watcher Class
-`service_registry` has a `watcher` member variable which is responsible for watching any changes in etcd. 
-When there is some change in the etcd server, the `watcher` client in the `service_registry` calls a handler function
-which we assign. This handler function gets `etcd Response` object responsible for communicating what happened in the
-etcd server. This then allows us to call the registered functions from the handler function which can be used to react
-to addition/removal of any services.
+## Watcher class
+`watcher` class listens to a specific prefix in the etcd server. If a service with specified prefix gets added/removed, then
+the watcher class calls a handler function which is registereed to it. This handler function receives an `etcd Response` object 
+which can be used to infer what happened in the etcd server. This mechanism can be used to add or remove clients to services 
+depending on whether those services were added or removed.
 
-## Registering callback functions
-We can register callback functions to be called in order to add/remove clients to the added/removed services. `services` 
-class is responsible for registering such callbacks. The purpose of `services` class is to maintain all the
-client connections to the required services. Thus, it is `service` class's responsibility to register callbacks 
-which allows a mechanism to add/remove clients accordingly to the services' addition/removal. 
+## Services class
+The purpose of `service` class is to maintain all the client connections to the required service. Thus, it is `service` 
+class's responsibility to react and adjust the clients according to the addition or removal of the service. This is why we
+have a `watcher` class as a member variable in the `service` class responsible for reacting to changes on a specific prefix in etcd server. 
+`service` class has methods that add/remove clients to the specified service and these methods are called via the handler
+function registered to the `watcher` class. This overall gives us a mechanism to listen to addition/removal of service detected via the addition/removal 
+of the announced key in the etcd server, and we simply react to it by adding/removing clients to the service.
 
+Eg: we have `service<STORAGE_SERVICE>` as a member variable in the deduplicator service and it listens to any changes in `uh/services/announced/storage/`
+prefix. If something happens in the etcd server related to this specified prefix then it simply calls the callback to add/remove clients to the
+added/removed storage service.
 
 All further details need to be fleshed out alongside the implementation of the `state_registry` class.

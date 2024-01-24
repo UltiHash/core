@@ -160,7 +160,7 @@ public:
 
     [[nodiscard]] uint128_t get_used_space () {
 
-        auto nodes = m_storage_services.get_clients_list();
+        auto nodes = m_storage_services.get_clients();
 
         std::vector <uint128_t> used_spaces (nodes.size());
 

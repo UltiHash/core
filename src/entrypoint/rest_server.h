@@ -55,7 +55,6 @@ namespace uh::cluster::rest
 
         const server_config m_config;
 
-        boost::asio::ssl::context m_ssl; // TODO:
         std::vector<std::thread> m_thread_container {};
         entrypoint_rest_handler m_handler;
 
@@ -65,8 +64,8 @@ namespace uh::cluster::rest
 
     public:
         rest_server(server_config config,
-                    services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
-                    services<DIRECTORY_SERVICE>& directory_nodes,
+                    const services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
+                    const services<DIRECTORY_SERVICE>& directory_nodes,
                     std::shared_ptr <boost::asio::thread_pool> workers,
                     boost::asio::io_context& ioc);
 

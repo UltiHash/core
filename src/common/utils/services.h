@@ -32,21 +32,13 @@ namespace uh::cluster {
     template<role r>
     class services_index {
     public:
-        explicit services_index(const uint128_t max_data_store_size) : m_max_data_store_size(max_data_store_size) {
-        }
-
-        void erase(const std::size_t& id) {};
+        void erase(const uint128_t& offset) {};
         void add(const uint128_t& offset, std::shared_ptr <client> client) {}
-    private:
-        const uint128_t m_max_data_store_size;
     };
 
     template<>
     class services_index<STORAGE_SERVICE> {
     public:
-
-        explicit services_index(const uint128_t max_data_store_size) : m_max_data_store_size(max_data_store_size) {
-        }
 
         [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
 
@@ -59,18 +51,16 @@ namespace uh::cluster {
             return n->second;
         }
 
-        void erase(const std::size_t& id) {
-            // ASSUMPTION made to convert id to offset
-            m_data_node_offsets.erase(m_max_data_store_size * (id));
+        void erase(const uint128_t& offset) {
+            m_data_node_offsets.erase(offset);
         }
 
-        void add(const std::size_t& id, std::shared_ptr <client> client) {
-            m_data_node_offsets.emplace(m_max_data_store_size * (id), std::move(client));
+        void add(const uint128_t& offset, std::shared_ptr <client> client) {
+            m_data_node_offsets.emplace(offset, std::move(client));
         }
 
     private:
         std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-        const uint128_t m_max_data_store_size;
     };
 
     template <role r>
@@ -83,7 +73,7 @@ namespace uh::cluster {
                 m_connection_count(connection_count),
                 m_etcd_client(etcd_host),
                 m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true),
-                m_services_index(config_registry.get_global_data_view_config().max_data_store_size)
+                m_config_registry(config_registry)
         {}
 
         ~services() {
@@ -138,11 +128,11 @@ namespace uh::cluster {
             }
         }
 
-        [[nodiscard]] std::shared_ptr <client> get()
+        [[nodiscard]] std::shared_ptr <client> get() const
         {
             auto index = m_nodes_index.load();
 
-            const auto services = get_clients_list();
+            const auto services = get_clients();
             const auto services_size = services.size();
 
             auto new_val = (index + 1) % services_size;
@@ -154,7 +144,7 @@ namespace uh::cluster {
             return services.at(index);
         }
 
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients_list() const {
+        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
             std::vector <std::shared_ptr <client>> clients_list;
 
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
@@ -175,7 +165,9 @@ namespace uh::cluster {
                                                m_connection_count);
 
             m_clients.insert({service.id, cl});
-            m_services_index.add(service.id, std::move(cl));
+
+            auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
+            m_services_index.add(service.id * max_storage_size, std::move(cl));
         }
 
         [[nodiscard]] inline role get_role() const noexcept {
@@ -192,8 +184,10 @@ namespace uh::cluster {
         mutable std::shared_mutex m_shared_mutex;
         std::map <size_t, std::shared_ptr <client>> m_clients;
 
-        std::atomic <size_t> m_nodes_index {};
+        mutable std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
+
+        config_registry& m_config_registry;
 
         void add_service_callback(const service_endpoint& service) {
 
@@ -207,7 +201,8 @@ namespace uh::cluster {
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service.id);
-            m_services_index.erase(service.id);
+            auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
+            m_services_index.erase(service.id * max_storage_size);
         }
 
     };

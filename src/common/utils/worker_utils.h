@@ -37,6 +37,15 @@ namespace uh::cluster {
             }
         }
 
+        // wrapper for keeping std::shared_ptr as it would be dereferenced if we use client& because now the services can go down
+        template<typename Func>
+        static coro <void> wrapper_io_thread_acquire_messenger_and_post_in_io_threads(boost::asio::thread_pool& workers,
+                     boost::asio::io_context& ioc,
+                     std::shared_ptr<client> cl,
+                     Func func) {
+            co_await io_thread_acquire_messenger_and_post_in_io_threads(workers, ioc, *cl, func);
+        }
+
         template<typename Func>
         requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m))} -> std::same_as <coro <void>>;}
         static coro <void> io_thread_acquire_messenger_and_post_in_io_threads (boost::asio::thread_pool& workers,
