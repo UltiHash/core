@@ -170,10 +170,6 @@ namespace uh::cluster {
             m_services_index.add(max_storage_size * service.id, std::move(cl));
         }
 
-        [[nodiscard]] inline role get_role() const noexcept {
-            return r;
-        }
-
     private:
 
         boost::asio::io_context& m_ioc;
