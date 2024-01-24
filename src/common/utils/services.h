@@ -86,12 +86,7 @@ namespace uh::cluster {
         [[nodiscard]] std::size_t get(const std::size_t& id) const {
             auto offset = m_max_data_store_size * id;
 
-            auto map_iterator = m_storage_service_offsets.find(offset);
-            if (map_iterator == m_storage_service_offsets.end()) {
-                throw std::out_of_range ("service id is our of range");
-            } else {
-                return id;
-            }
+            return m_storage_service_offsets.at(offset);
         }
 
     private:
