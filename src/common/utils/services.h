@@ -167,7 +167,7 @@ namespace uh::cluster {
             m_clients.insert({service.id, cl});
 
             auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
-            m_services_index.add(service.id * max_storage_size, std::move(cl));
+            m_services_index.add(max_storage_size * service.id, std::move(cl));
         }
 
         [[nodiscard]] inline role get_role() const noexcept {
@@ -202,7 +202,7 @@ namespace uh::cluster {
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service.id);
             auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
-            m_services_index.erase(service.id * max_storage_size);
+            m_services_index.erase(max_storage_size * service.id);
         }
 
     };
