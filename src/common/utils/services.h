@@ -4,6 +4,7 @@
 #include <shared_mutex>
 #include <ranges>
 #include <utility>
+#include <set>
 
 #include "log.h"
 #include "common/network/client.h"
@@ -32,35 +33,70 @@ namespace uh::cluster {
     template<role r>
     class services_index {
     public:
-        void erase(const uint128_t& offset) {};
-        void add(const uint128_t& offset, std::shared_ptr <client> client) {}
+        explicit services_index(config_registry& config_reg) {}
+
+        void add(const std::size_t& id) {
+            m_service_index.insert(id);
+        }
+
+        void erase(const std::size_t& id) {
+            m_service_index.erase(id);
+        }
+
+        [[nodiscard]] std::size_t get(const std::size_t& id) const {
+            auto set_iterator = m_service_index.find(id);
+            if (set_iterator == m_service_index.end()) {
+                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            } else {
+                return id;
+            }
+        }
+
+    private:
+        std::set<std::size_t> m_service_index;
     };
 
     template<>
     class services_index<STORAGE_SERVICE> {
     public:
 
-        [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
+        explicit services_index(config_registry& config_reg) : m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
+        }
 
-            const auto pfd = m_data_node_offsets.upper_bound (offset);
+        void add(const std::size_t& id) {
+            m_storage_service_offsets.emplace(m_max_data_store_size * id, id);
+        }
 
-            if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+        void erase(const std::size_t& id) {
+            m_storage_service_offsets.erase(id);
+        }
+
+        [[nodiscard]] std::size_t get(const uint128_t& offset) const {
+
+            const auto pfd = m_storage_service_offsets.upper_bound (offset);
+
+            if (pfd == m_storage_service_offsets.cbegin()) [[unlikely]] {
                 throw std::out_of_range ("The pointer is not in the range of data nodes");
             }
+
             const auto n = std::prev (pfd);
             return n->second;
         }
 
-        void erase(const uint128_t& offset) {
-            m_data_node_offsets.erase(offset);
-        }
+        [[nodiscard]] std::size_t get(const std::size_t& id) const {
+            auto offset = m_max_data_store_size * id;
 
-        void add(const uint128_t& offset, std::shared_ptr <client> client) {
-            m_data_node_offsets.emplace(offset, std::move(client));
+            auto map_iterator = m_storage_service_offsets.find(offset);
+            if (map_iterator == m_storage_service_offsets.end()) {
+                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            } else {
+                return id;
+            }
         }
 
     private:
-        std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+        std::map < const uint128_t, const std::size_t> m_storage_service_offsets;
+        const uint128_t m_max_data_store_size;
     };
 
     template <role r>
@@ -69,11 +105,10 @@ namespace uh::cluster {
 
         services(boost::asio::io_context& ioc, config_registry& config_registry, const int connection_count, std::string etcd_host):
                 m_ioc(ioc),
-                // How can we pass config_registry only and try to get the connection count according to the role
                 m_connection_count(connection_count),
                 m_etcd_client(etcd_host),
                 m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true),
-                m_config_registry(config_registry)
+                m_services_index(config_registry)
         {}
 
         ~services() {
@@ -111,21 +146,10 @@ namespace uh::cluster {
 
         }
 
-        [[nodiscard]] std::shared_ptr <client> get(const uint128_t& offset) const {
+        template<typename key>
+        std::shared_ptr <client> get(key k) const {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            return m_services_index.get(offset);
-        }
-
-        [[nodiscard]] std::shared_ptr <client> get(const std::size_t& id) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-
-            auto map_iterator = m_clients.find(id);
-
-            if (map_iterator == m_clients.end()) {
-                return nullptr;
-            } else {
-                return map_iterator->second;
-            }
+            return m_clients.at(m_services_index.get(k));
         }
 
         [[nodiscard]] std::shared_ptr <client> get() const
@@ -165,9 +189,7 @@ namespace uh::cluster {
                                                m_connection_count);
 
             m_clients.insert({service.id, cl});
-
-            auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
-            m_services_index.add(max_storage_size * service.id, std::move(cl));
+            m_services_index.add(service.id);
         }
 
     private:
@@ -178,12 +200,10 @@ namespace uh::cluster {
         etcd::Watcher m_watcher;
 
         mutable std::shared_mutex m_shared_mutex;
-        std::map <size_t, std::shared_ptr <client>> m_clients;
+        std::map <std::size_t, std::shared_ptr <client>> m_clients;
 
         mutable std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
-
-        config_registry& m_config_registry;
 
         void add_service_callback(const service_endpoint& service) {
 
@@ -197,8 +217,7 @@ namespace uh::cluster {
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service.id);
-            auto max_storage_size = m_config_registry.get_global_data_view_config().max_data_store_size;
-            m_services_index.erase(max_storage_size * service.id);
+            m_services_index.erase(service.id);
         }
 
     };
