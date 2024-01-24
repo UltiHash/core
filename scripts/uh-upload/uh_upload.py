@@ -70,3 +70,4 @@ if __name__ == "__main__":
     print("uploaded bytes: %d" % stats['uploaded_bytes'])
     print("stored bytes: %d" % stats['stored_bytes'])
     print("upload bandwidth: %.02f MB/s" % (uploaded_mb / elapsed_s))
+    print("storage reduction: %.02f %%" % (100 * (1 - stats['stored_bytes'] / stats['uploaded_bytes'])))
