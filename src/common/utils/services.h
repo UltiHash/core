@@ -96,8 +96,8 @@ namespace uh::cluster {
 
             const std::string service_id = std::filesystem::path(key).filename().string();
             const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
-            const auto etcd_action = get_etcd_action_enum(response.action());
 
+            const auto etcd_action = get_etcd_action_enum(response.action());
             switch (etcd_action) {
                 case etcd_action::create:
 
@@ -189,13 +189,11 @@ namespace uh::cluster {
         std::vector<service_endpoint> get_service_instances() {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
 
-            // extract
             const std::string service_prefix_path(etcd_services_attributes_key_prefix + get_service_string(r) + "/");
 
             etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
             for (size_t i = 0; i < service_instances.keys().size(); i++) {
 
-                // extract by key - get service endpoint struct
                 const auto& service_instance = service_instances.value(i);
                 std::string service_relative_path = service_instance.key().substr(service_prefix_path.length());
 
