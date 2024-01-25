@@ -18,10 +18,10 @@ namespace uh::cluster {
 class config_registry {
 
 public:
-    config_registry(uh::cluster::role role, const std::string& etcd_host, const std::string& working_dir) :
+    config_registry(uh::cluster::role role, const std::string& etcd_host, const std::filesystem::path& working_dir) :
             m_etcd_client(etcd_host),
             m_service_role(role),
-            m_working_dir(working_dir + "/" + get_service_string(m_service_role)),
+            m_working_dir(working_dir / get_service_string(m_service_role)),
             m_service_id(generate_service_id()),
             m_service_name(get_service_string(m_service_role) + "/" + std::to_string(m_service_id))
     {
@@ -103,10 +103,10 @@ public:
     }
 
 private:
-    const std::string m_identity_file = "/identity";
+    const std::string m_identity_file = "identity";
     etcd::Client m_etcd_client;
     const uh::cluster::role m_service_role;
-    const std::string m_working_dir;
+    const std::filesystem::path m_working_dir;
     const std::size_t m_service_id;
     const std::string m_service_name;
 
@@ -131,7 +131,7 @@ private:
     };
 
     std::pair<bool, std::size_t> read_id_from_disk() {
-        std::filesystem::path id_file_path(m_working_dir + m_identity_file);
+        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
 
         if(std::filesystem::exists(id_file_path)) {
             std::ifstream id_file(id_file_path, std::ios::binary);
@@ -148,7 +148,7 @@ private:
     }
 
     void write_id_to_disk(std::size_t id) {
-        std::filesystem::path id_file_path(m_working_dir + m_identity_file);
+        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
 
         if(!std::filesystem::exists(id_file_path.parent_path()))
             std::filesystem::create_directories(id_file_path.parent_path());
