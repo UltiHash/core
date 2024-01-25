@@ -21,9 +21,9 @@ namespace uh::cluster {
 class entrypoint: public service_interface {
 public:
 
-    explicit entrypoint(std::size_t id, const std::string& registry_url) :
-            m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
-            m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, id , registry_url),
+    explicit entrypoint(const std::string& registry_url, const std::filesystem::path& working_dir) :
+            m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url, working_dir),
+            m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, m_config_registry.get_service_id() , registry_url),
             m_config(m_config_registry.get_entrypoint_config()),
             m_ioc (boost::asio::io_context(m_config_registry.get_server_config().threads)),
             m_dedupe_services(m_ioc, m_config_registry, m_config.dedupe_node_connection_count, registry_url),

@@ -96,6 +96,14 @@ The `lock` key is a temporary value and expires based on a TTL in case of an uno
 /<namespace>/config/class/cluster/lock
 ```
 
+#### automatic id generation
+For each service class, a counter value is maintained to indicate the highest, currently used id for that service class.
+```
+/<namespace>/config/class/cluster/current_id/storage -> 0
+/<namespace>/config/class/cluster/current_id/deduplicator -> 0
+/<namespace>/config/class/cluster/current_id/directory -> 0
+/<namespace>/config/class/cluster/current_id/entrypoint -> 0
+```
 
 ## State
 Using the `state_registry` class (not yet available), services can persist their state on two scopes:

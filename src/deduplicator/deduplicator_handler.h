@@ -20,7 +20,7 @@ public:
 
     deduplicator_handler (deduplicator_config config, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
         m_dedupe_conf (std::move(config)),
-        m_fragment_set (m_dedupe_conf.root_dir / "log", storage),
+        m_fragment_set (m_dedupe_conf.working_dir / "log", storage),
         m_storage (storage),
         m_dedupe_workers (std::move (dedupe_workers))
     {

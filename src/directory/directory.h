@@ -16,9 +16,9 @@ namespace uh::cluster {
 class directory: public service_interface {
 public:
 
-    explicit directory(std::size_t id, const std::string& registry_url) :
-            m_config_registry(uh::cluster::DIRECTORY_SERVICE, id, registry_url),
-            m_service_registry(uh::cluster::DIRECTORY_SERVICE, id, registry_url),
+    explicit directory(const std::string& registry_url, const std::filesystem::path& working_dir) :
+            m_config_registry(uh::cluster::DIRECTORY_SERVICE, registry_url, working_dir),
+            m_service_registry(uh::cluster::DIRECTORY_SERVICE, m_config_registry.get_service_id(), registry_url),
             m_config(m_config_registry.get_directory_config()),
             m_storage_services(m_ioc, m_config_registry, m_config_registry.get_global_data_view_config().storage_service_connection_count, registry_url),
             m_directory_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
@@ -55,7 +55,6 @@ private:
     global_data_view m_storage;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
-
 };
 
 } // end namespace uh::cluster

@@ -16,8 +16,9 @@ static constexpr const char* etcd_instance_state_key_prefix     = "/" NAMESPACE 
 static constexpr const char* etcd_services_announced_key_prefix           = "/" NAMESPACE "/services/announced/";
 static constexpr const char* etcd_services_attributes_key_prefix           = "/" NAMESPACE "/services/attributes/";
 
-static constexpr const char* etcd_global_lock_key    = "/" NAMESPACE "/config/class/cluster/lock";
-static constexpr const char* etcd_initialized_key    = "/" NAMESPACE "/config/class/cluster/initialized";
+static constexpr const char* etcd_global_lock_key = "/" NAMESPACE "/config/class/cluster/lock";
+static constexpr const char* etcd_initialized_key = "/" NAMESPACE "/config/class/cluster/initialized";
+static constexpr const char* etcd_current_id_prefix_key = "/" NAMESPACE "/config/class/cluster/current_id/";
 
 }
 
