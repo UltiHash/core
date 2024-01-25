@@ -6,6 +6,7 @@
 #define UH_CLUSTER_CONFIG_REGISTRY_H
 
 #include <string>
+#include <fstream>
 #include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
 #include "common/utils/common.h"
 #include "common/utils/cluster_config.h"
@@ -102,6 +103,10 @@ public:
         };
     }
 
+    [[nodiscard]] inline const std::string get_service_name() const noexcept {
+        return m_service_name;
+    }
+
 private:
     const std::string m_identity_file = "identity";
     etcd::Client m_etcd_client;
@@ -109,7 +114,6 @@ private:
     const std::filesystem::path m_working_dir;
     const std::size_t m_service_id;
     const std::string m_service_name;
-
 
     class registry_lock
     {

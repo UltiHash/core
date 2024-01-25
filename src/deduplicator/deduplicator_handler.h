@@ -76,8 +76,9 @@ private:
                                       static_cast <double> (m_dedupe_conf.dedupe_worker_minimum_data_size))));
         size_t piece_size = std::ceil (static_cast <double> (data.size()) / pieces);
         std::vector <dedupe_response> responses (pieces);
+
         std::atomic <std::size_t> resp = 0;
-        boost::asio::steady_timer waiter (*m_storage.get_executor(), boost::asio::steady_timer::clock_type::duration::max ());
+        boost::asio::steady_timer waiter (m_storage.get_executor(), boost::asio::steady_timer::clock_type::duration::max ());
 
         for (std::size_t i = 0; i < pieces; ++i) {
             boost::asio::post(*m_dedupe_workers, [&responses, i, &data, piece_size, &resp, pieces, &waiter, this] () {

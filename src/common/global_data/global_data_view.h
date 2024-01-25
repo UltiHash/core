@@ -13,6 +13,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/worker_utils.h"
 #include "common/utils/shared_buffer.h"
+#include "common/utils/services.h"
 
 namespace uh::cluster {
 
@@ -20,29 +21,27 @@ using namespace std::placeholders;
 
 class global_data_view {
 
-
 public:
 
-    explicit global_data_view (const global_data_view_config& config):
+    explicit global_data_view (const global_data_view_config& config, boost::asio::io_context& ioc, services<STORAGE_SERVICE>& storage_services):
+            m_io_service (ioc),
+            m_storage_services(storage_services),
             m_config(config),
             m_cache_l1 (m_config.read_cache_capacity_l1),
-            m_cache_l2 (m_config.read_cache_capacity_l2) {
+            m_cache_l2 (m_config.read_cache_capacity_l2)
+    {
     }
 
     address write (const std::string_view& data) {
-        auto index = m_data_node_index.load();
-        auto new_val = (index + 1) % m_data_node_offsets.size();
-        while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
-            index = m_data_node_index.load();
-            new_val = (index + 1) % m_data_node_offsets.size();
-        }
+
+        const auto client = m_storage_services.get();
 
         address addr;
-        boost::asio::co_spawn(*m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
+        boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
                 co_await m.get().send(WRITE_REQ, data);
                 const auto message_header = co_await m.get().recv_header();
                 addr = co_await m.get().recv_address(message_header);
-            } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
+            } (client->acquire_messenger()), boost::asio::use_future).get();
 
         shared_buffer <char> l1_buf (std::min (addr.first().size, m_config.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
@@ -71,13 +70,13 @@ public:
     size_t read (char* buffer, const uint128_t pointer, const size_t size) {
         const fragment frag {pointer, size};
         size_t read_size = 0;
-        boost::asio::co_spawn(*m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
+        boost::asio::co_spawn(m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
             co_await m.get().send_fragment(READ_REQ, frag);
             const auto h = co_await m.get().recv_header();
             read_size = h.size;
             m.get().register_read_buffer (buffer, read_size);
             co_await m.get().recv_buffers(h);
-        } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
+        } (m_storage_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
         shared_buffer <char> l1_buf (std::min (read_size, m_config.l1_sample_size));
@@ -102,7 +101,7 @@ public:
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = get_data_node (frag.pointer);
+            auto n = m_storage_services.get (frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(n);
@@ -112,7 +111,7 @@ public:
             offset += frag.size;
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
             const auto node = nodes.at(id);
             const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
@@ -129,7 +128,7 @@ public:
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
-        auto m = get_data_node (pointer)->acquire_messenger();
+        auto m = m_storage_services.get(pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         co_await m.get().recv_header();
     }
@@ -145,7 +144,7 @@ public:
 
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = get_data_node (frag.pointer);
+            auto n = m_storage_services.get(frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(std::move (n));
@@ -153,7 +152,7 @@ public:
             node_address.push_fragment(frag);
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&nodes, &node_address_map] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send_address(SYNC_REQ, node_address_map.at(nodes [id]));
             co_await m.get().recv_header();
         });
@@ -161,13 +160,11 @@ public:
 
     [[nodiscard]] uint128_t get_used_space () {
 
-        std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve (m_data_node_offsets.size());
-        for (const auto& n: m_data_node_offsets) {nodes.emplace_back(n.second);};
+        auto nodes = m_storage_services.get_clients();
 
         std::vector <uint128_t> used_spaces (nodes.size());
 
-        worker_utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
+        worker_utils::broadcast_from_worker_in_io_threads (nodes, m_io_service, [&used_spaces] (client::acquired_messenger m, long id) -> coro <void> {
             co_await m.get().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             used_spaces [id] = co_await m.get().recv_uint128_t (message_header);
@@ -178,36 +175,15 @@ public:
         return used;
     }
 
-    [[nodiscard]] std::size_t get_data_node_count() {
-        return m_data_node_offsets.size();
-    }
+    void create_storage_service_connections (service_registry& service_registry) {
+        std::vector<service_endpoint> ds_instances = service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
 
-    void stop () {
-
-        for (const auto& n: m_data_node_offsets) {
-            auto m = n.second->acquire_messenger();
-            boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
-                co_await m.get ().send(STOP, {});
-            } (std::move (m)), boost::asio::detached);
+        for(const auto& instance : ds_instances) {
+            m_storage_services.add_service(instance);
         }
     }
 
-
-    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, const std::vector<service_endpoint>& storage_instances) {
-
-        m_io_service = io_service;
-
-        int i = 0;
-        for(const auto& instance : storage_instances) {
-            auto cl = std::make_shared <client> (m_io_service, instance.host, instance.port, m_config.storage_service_connection_count);
-            const uint128_t offset = m_config.max_data_store_size * (instance.id);
-            m_data_node_offsets.emplace(offset, std::move(cl));
-            i++;
-        }
-
-    }
-
-    [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
+    [[nodiscard]] boost::asio::io_context& get_executor () const {
         return m_io_service;
     }
 
@@ -221,20 +197,11 @@ public:
 
 private:
 
-    std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
-        const auto pfd = m_data_node_offsets.upper_bound (pointer);
+    boost::asio::io_context& m_io_service;
 
-       if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
-            throw std::out_of_range ("The pointer is not in the range of data nodes");
-       }
-       const auto n = std::prev (pfd);
-       return n->second;
-    }
-
+    services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
-    std::shared_ptr <boost::asio::io_context> m_io_service;
-    std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-    std::atomic <size_t> m_data_node_index {};
+
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l1;
     lru_cache <uint128_t, shared_buffer <char>> m_cache_l2;
 

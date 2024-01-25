@@ -65,7 +65,7 @@ int main (int argc, char* args[]) {
         LOG_ERROR() << dump_usage ();
     }
 
-    auto ioc = std::make_shared <boost::asio::io_context> ();
+    auto ioc = boost::asio::io_context();
     messenger m (ioc, ps.address, static_cast <std::uint16_t> (ps.port));
 
     LOG_INFO() << "Connected to the server";
@@ -79,7 +79,7 @@ int main (int argc, char* args[]) {
     std::chrono::time_point <std::chrono::steady_clock> timer;
     const auto start = std::chrono::steady_clock::now();
 
-    boost::asio::co_spawn (*ioc, perform_operation(m, ps.req_type, buf.get_span()), [] (const std::exception_ptr& eptr) {
+    boost::asio::co_spawn (ioc, perform_operation(m, ps.req_type, buf.get_span()), [] (const std::exception_ptr& eptr) {
         if (eptr) {
             try {
                 std::rethrow_exception(eptr);
@@ -88,7 +88,7 @@ int main (int argc, char* args[]) {
             }
         }
     });
-    ioc->run();
+    ioc.run();
 
     const auto stop = std::chrono::steady_clock::now ();
     const std::chrono::duration <double> duration = stop - start;

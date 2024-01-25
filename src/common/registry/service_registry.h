@@ -15,6 +15,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
 #include "namespace.h"
+#include "etcd/v3/Transaction.hpp"
 
 namespace uh::cluster {
 
@@ -51,18 +52,23 @@ namespace uh::cluster {
                 m_client.leaserevoke(m_lease);
             }
 
-                    private:
+            private:
             etcd::Client& m_client;
             int64_t m_lease;
             etcd::KeepAlive m_keepalive;
         };
 
         std::unique_ptr<registration> register_service(const server_config& config) {
-            const std::string key_base = etcd_services_key_prefix + m_service_name + "/";
+
+            const std::string announced_key_base = etcd_services_announced_key_prefix + m_service_name;
+
+            const std::string key_base = etcd_services_attributes_key_prefix + m_service_name + "/";
+
             const std::map<std::string, std::string> kv_pairs =
                     {
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), boost::asio::ip::host_name()},
-                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)}
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)},
+                        {announced_key_base , {}},
                     };
 
             return std::make_unique<registration>(
@@ -74,9 +80,13 @@ namespace uh::cluster {
         std::vector<service_endpoint> get_service_instances(uh::cluster::role service_role) {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
 
-            const std::string service_prefix_path(etcd_services_key_prefix + get_service_string(service_role) + "/");
+            // extract
+            const std::string service_prefix_path(etcd_services_attributes_key_prefix + get_service_string(service_role) + "/");
+
             etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
             for (size_t i = 0; i < service_instances.keys().size(); i++) {
+
+                // extract by key - get service endpoint struct
                 const auto& service_instance = service_instances.value(i);
                 std::string service_relative_path = service_instance.key().substr(service_prefix_path.length());
 
@@ -103,7 +113,8 @@ namespace uh::cluster {
         }
 
         void wait_for_dependency(uh::cluster::role dependency) {
-            const std::string dependency_key(etcd_services_key_prefix + get_service_string(dependency));
+            const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(dependency));
+
             while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
                 sleep(5);

@@ -34,15 +34,15 @@ namespace uh::cluster
     class server {
 
     public:
-        server(server_config config, std::string server_name, std::unique_ptr <protocol_handler> handler) :
+        server(server_config config, std::string server_name, std::unique_ptr <protocol_handler> handler, boost::asio::io_context& ioc):
                 m_config (std::move(config)),
-                m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)),
+                m_ioc (ioc),
                 m_handler (std::move (handler)),
                 m_server_name (std::move(server_name)) {
             m_is_running = true;
 
             auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(m_config.bind_address), m_config.port});
-            boost::asio::co_spawn(*m_ioc,
+            boost::asio::co_spawn(m_ioc,
 
                                   do_accept (std::move (acceptor)),
                                   [&](const std::exception_ptr &e) {
@@ -71,7 +71,7 @@ namespace uh::cluster
                 m_thread_container.emplace_back(
                         [&] {
                             try {
-                                m_ioc->run();
+                                m_ioc.run();
                             } catch
                             (std::exception& e) {
                                 excp_ptr = std::current_exception();
@@ -80,7 +80,7 @@ namespace uh::cluster
 
             // the calling thread is also running the I/O service
             try {
-                m_ioc->run();
+                m_ioc.run();
             } catch
                     (std::exception& e) {
                 excp_ptr = std::current_exception();
@@ -98,11 +98,6 @@ namespace uh::cluster
 
         void stop() {
             m_is_running = false;
-            m_ioc->stop();
-        }
-
-        [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
-            return m_ioc;
         }
 
         [[nodiscard]] const server_config& get_server_config() const {
@@ -121,7 +116,7 @@ namespace uh::cluster
         boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>
         do_listen (const boost::asio::ip::tcp::endpoint& endpoint) {
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
-                    boost::asio::ip::tcp::acceptor(*m_ioc));
+                    boost::asio::ip::tcp::acceptor(m_ioc));
 
             acceptor.open(endpoint.protocol());
             acceptor.set_option(boost::asio::socket_base::reuse_address(true));
@@ -175,7 +170,8 @@ namespace uh::cluster
 
 
         const server_config m_config;
-        std::shared_ptr <boost::asio::io_context> m_ioc;
+        boost::asio::io_context& m_ioc;
+
         std::vector<std::thread> m_thread_container {};
         std::vector<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>> m_acceptors;
         std::unique_ptr <protocol_handler> m_handler;
