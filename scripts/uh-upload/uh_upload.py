@@ -37,7 +37,7 @@ class uploader:
         stats = dict()
 
         with open(path, 'rb') as f:
-            resp = s3.put_object(Bucket=bucket, Key=path.name, Body=f)
+            resp = self.s3.put_object(Bucket=bucket, Key=path.name, Body=f)
 
             headers = resp['ResponseMetadata']['HTTPHeaders']
             stats['uploaded_bytes'] = float(headers['uh-original-size'])
@@ -68,6 +68,29 @@ class uploader:
 
         return results
 
+class progress_bar(object):
+    def __init__(self, start, files):
+        self.files = files
+        self.done = 0
+        self.uploaded = 0
+        self.stored = 0
+        self.start = start
+
+    def update(self, uploaded, stored):
+        self.done += 1
+        self.uploaded += uploaded
+        self.stored += stored
+
+    def print(self):
+        elapsed_s = (time.monotonic_ns() - self.start) / 1000000000
+        uploaded_mb = self.uploaded / (1024 * 1024)
+        reduction = 0 if self.uploaded == 0 else (1 - self.stored / self.uploaded)
+
+        print(f"\rUploaded {uploaded_mb: .02f} MB of data @ {uploaded_mb / elapsed_s: .02f} MB/s, " +
+              f"storage reduction {100 * reduction: .02f} %    { 100 * self.done / self.files: .02f} % ",
+              end='')
+
+
 if __name__ == "__main__":
     config = parse_args()
 
@@ -81,23 +104,24 @@ if __name__ == "__main__":
     for path in config.path:
         results += up.push(path)
 
-    uploaded_bytes = 0
-    stored_bytes = 0
-    for f in results:
-        try:
-            info = f[1].result()
-            uploaded_bytes += info['uploaded_bytes']
-            stored_bytes += info['stored_bytes']
-        except Exception as e:
-            print("Error uploading %s: %s" % (f[0], str(e)), file=sys.stderr)
+    prg = progress_bar(start_time, len(results))
 
-    end_time = time.monotonic_ns()
+    while len(results) > 0:
+        results_remain = []
 
-    elapsed_s = (end_time - start_time) / 1000000000
-    uploaded_mb = uploaded_bytes / (1024 * 1024)
+        for f in results:
+            if f[1].done():
+                try:
+                    info = f[1].result()
+                    prg.update(info['uploaded_bytes'], info['stored_bytes'])
+                except Exception as e:
+                    print(f"Error uploading {f[0]}: {str(e)}", file=sys.stderr)
+            else:
+                results_remain += [ f ]
 
-    print("elapsed time: %.02f s" % elapsed_s)
-    print("uploaded bytes: %d" % uploaded_bytes)
-    print("stored bytes: %d" % stored_bytes)
-    print("upload bandwidth: %.02f MB/s" % (uploaded_mb / elapsed_s))
-    print("storage reduction: %.02f %%" % (100 * (1 - stored_bytes / uploaded_bytes)))
+        time.sleep(0.1)
+
+        results = results_remain
+        prg.print()
+
+    print()
