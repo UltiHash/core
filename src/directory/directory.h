@@ -30,8 +30,8 @@ public:
     }
 
     void run() override {
-        m_service_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-        m_storage.create_storage_service_connections(m_service_registry);
+        m_storage_services.wait_for_dependency();
+
         m_registration = m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }

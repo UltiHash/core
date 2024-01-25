@@ -34,11 +34,8 @@ public:
     }
 
     void run() override {
-        m_service_registry.wait_for_dependency(uh::cluster::DEDUPLICATOR_SERVICE);
-        m_service_registry.wait_for_dependency(uh::cluster::DIRECTORY_SERVICE);
-
-        create_connections(m_dedupe_services);
-        create_connections(m_directory_services);
+        m_dedupe_services.wait_for_dependency();
+        m_directory_services.wait_for_dependency();
 
         m_registration = m_service_registry.register_service(m_rest_server.get_server_config());
         m_rest_server.run();
@@ -66,16 +63,6 @@ private:
     rest::rest_server m_rest_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
-
-    template<role r>
-    void create_connections (services<r>& clients) {
-
-        std::vector<service_endpoint> instances = m_service_registry.get_service_instances(r);
-
-        for(const auto& instance : instances) {
-            clients.add_service(instance);
-        }
-    }
 
 };
 

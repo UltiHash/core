@@ -168,7 +168,67 @@ namespace uh::cluster {
             m_services_index.add(service.id, std::move(cl));
         }
 
+        void wait_for_dependency() {
+            const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
+
+            while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
+                LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
+                sleep(5);
+            }
+            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
+
+            std::vector<service_endpoint> ds_instances = get_service_instances();
+
+            for(const auto& instance : ds_instances) {
+                add_service(instance);
+            }
+        }
+
     private:
+
+        std::vector<service_endpoint> get_service_instances() {
+            std::map<std::size_t, service_endpoint> endpoints_by_id;
+
+            // extract
+            const std::string service_prefix_path(etcd_services_attributes_key_prefix + get_service_string(r) + "/");
+
+            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
+
+                // extract by key - get service endpoint struct
+                const auto& service_instance = service_instances.value(i);
+                std::string service_relative_path = service_instance.key().substr(service_prefix_path.length());
+
+                std::size_t service_index = get_valid_index (service_relative_path.substr(0, service_relative_path.find('/')));
+                auto [it, success] =
+                        endpoints_by_id.insert(std::pair(std::size_t(service_index),
+                                                         service_endpoint{.role = r, .id = service_index}));
+
+                const std::string config_string(service_relative_path.substr(service_relative_path.rfind('/') + 1));
+                if (config_string == get_config_string(uh::cluster::CFG_ENDPOINT_HOST)) {
+                    it->second.host = service_instance.as_string();
+                } else if (config_string == get_config_string(uh::cluster::CFG_ENDPOINT_PORT)) {
+                    it->second.port = std::stoull(service_instance.as_string());
+                }
+            }
+
+            std::vector<service_endpoint> result;
+            result.reserve(endpoints_by_id.size());
+
+            std::transform(endpoints_by_id.begin(), endpoints_by_id.end(), std::back_inserter(result),
+                           [](const auto& pair) { return pair.second; });
+
+            return result;
+        }
+
+        static size_t get_valid_index(const std::string& str) {
+            size_t pos;
+            const size_t num = std::stoull(str, &pos);
+            if (pos != str.length()) {
+                throw std::invalid_argument("Invalid service index detected.");
+            }
+            return num;
+        }
 
         boost::asio::io_context& m_ioc;
         const int m_connection_count;
