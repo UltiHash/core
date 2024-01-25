@@ -21,30 +21,32 @@ struct config {
     };
 
     static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
+    static constexpr const char* default_working_dir = "/var/lib/uh";
 
     action task;
     uh::cluster::role role;
     std::size_t id;
     std::string etcd_url;
+    std::string working_dir;
 };
 
 void execute_role(const config& cfg) {
 
     switch (cfg.role) {
         case STORAGE_SERVICE:
-            storage(cfg.etcd_url).run();
+            storage(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case DEDUPLICATOR_SERVICE:
-            deduplicator(cfg.etcd_url).run();
+            deduplicator(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case DIRECTORY_SERVICE:
-            directory(cfg.etcd_url).run();
+            directory(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case ENTRYPOINT_SERVICE:
-            entrypoint(cfg.etcd_url).run();
+            entrypoint(cfg.etcd_url, cfg.working_dir).run();
             break;
     }
 }
@@ -55,7 +57,7 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
         return config{ .task = config::print_vcsid };
     }
 
-    if (argc < 2 || argc > 3) {
+    if (argc < 2 || argc > 4) {
         return {};
     }
 
@@ -63,6 +65,7 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
         .task = config::start_service,
         .role = get_service_role(args[1]),
         .etcd_url = argc == 3 ? args[2] : config::default_registry_url,
+        .working_dir = argc == 4 ? args[3] : config::default_working_dir,
     };
 }
 
@@ -73,7 +76,8 @@ void print_help(std::ostream& out) {
             << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
             << get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or "
             << get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "\n"
-        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n";
+        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n"
+        << "\tworking_dir\t" << "path to working directory (default: " << config::default_working_dir << ")\n";
 }
 
 void print_vcsid(std::ostream& out) {

@@ -20,8 +20,8 @@ namespace uh::cluster {
 class entrypoint: public service_interface {
 public:
 
-    explicit entrypoint(const std::string& registry_url) :
-            m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url),
+    explicit entrypoint(const std::string& registry_url, const std::string& working_dir) :
+            m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url, working_dir),
             m_service_registry(uh::cluster::ENTRYPOINT_SERVICE, m_config_registry.get_service_id() , registry_url),
             m_config(m_config_registry.get_entrypoint_config()),
             m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),

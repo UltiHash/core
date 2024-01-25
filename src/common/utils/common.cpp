@@ -32,18 +32,15 @@ static const std::map<uh::cluster::config_parameter, std::string> string_by_para
         {uh::cluster::CFG_GDV_L1_SAMPLE_SIZE,                   "gdv_l1_sample_size"},
         {uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE,              "gdv_max_data_store_size"},
 
-        {uh::cluster::CFG_STORAGE_ROOT_DIR,             "root_dir"},
         {uh::cluster::CFG_STORAGE_MIN_FILE_SIZE,        "min_file_size"},
         {uh::cluster::CFG_STORAGE_MAX_FILE_SIZE,        "max_file_size"},
         {uh::cluster::CFG_STORAGE_MAX_DATA_STORE_SIZE,  "max_data_store_size"},
 
-        {uh::cluster::CFG_DEDUP_ROOT_DIR,               "root_dir"},
         {uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE,      "min_fragment_size"},
         {uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE,      "max_fragment_size"},
         {uh::cluster::CFG_DEDUP_WORKER_MIN_DATA_SIZE,   "worker_min_data_size"},
         {uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT,    "worker_thread_count"},
 
-        {uh::cluster::CFG_DIR_ROOT_DIR,                 "root_dir"},
         {uh::cluster::CFG_DIR_MIN_FILE_SIZE,            "min_file_size"},
         {uh::cluster::CFG_DIR_MAX_FILE_SIZE,            "max_file_size"},
         {uh::cluster::CFG_DIR_MAX_STORAGE_SIZE,         "max_storage_size"},
