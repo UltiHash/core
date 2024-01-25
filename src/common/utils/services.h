@@ -33,49 +33,32 @@ namespace uh::cluster {
     template<role r>
     class services_index {
     public:
-        explicit services_index(config_registry& config_reg) {}
-
-        void add(const std::size_t& id) {
-            m_service_index.insert(id);
-        }
-
-        void erase(const std::size_t& id) {
-            m_service_index.erase(id);
-        }
-
-        [[nodiscard]] std::size_t get(const std::size_t& id) const {
-            auto set_iterator = m_service_index.find(id);
-            if (set_iterator == m_service_index.end()) {
-                throw std::out_of_range ("service id is out of range");
-            } else {
-                return id;
-            }
-        }
-
-    private:
-        std::set<std::size_t> m_service_index;
+        explicit services_index(config_registry&) {}
+        void add(const std::size_t&, std::shared_ptr <client>) {}
+        void erase(const std::size_t&) {}
     };
 
     template<>
     class services_index<STORAGE_SERVICE> {
     public:
 
-        explicit services_index(config_registry& config_reg) : m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
+        explicit services_index(config_registry& config_reg) :
+            m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
         }
 
-        void add(const std::size_t& id) {
-            m_storage_service_offsets.emplace(m_max_data_store_size * id, id);
+        void add(const std::size_t& id, std::shared_ptr <client> cl) {
+            m_offsets.emplace(m_max_data_store_size * id, std::move(cl));
         }
 
         void erase(const std::size_t& id) {
-            m_storage_service_offsets.erase(m_max_data_store_size * id);
+            m_offsets.erase(m_max_data_store_size * id);
         }
 
-        [[nodiscard]] std::size_t get(const uint128_t& offset) const {
+        [[nodiscard]] std::shared_ptr <client> get(const uint128_t& pointer) const {
 
-            const auto pfd = m_storage_service_offsets.upper_bound (offset);
+            const auto pfd = m_offsets.upper_bound (pointer);
 
-            if (pfd == m_storage_service_offsets.cbegin()) [[unlikely]] {
+            if (pfd == m_offsets.cbegin()) [[unlikely]] {
                 throw std::out_of_range ("The pointer is not in the range of data nodes");
             }
 
@@ -83,14 +66,8 @@ namespace uh::cluster {
             return n->second;
         }
 
-        [[nodiscard]] std::size_t get(const std::size_t& id) const {
-            auto offset = m_max_data_store_size * id;
-
-            return m_storage_service_offsets.at(offset);
-        }
-
     private:
-        std::map < const uint128_t, const std::size_t> m_storage_service_offsets;
+        std::map < uint128_t, std::shared_ptr <client>> m_offsets;
         const uint128_t m_max_data_store_size;
     };
 
@@ -144,23 +121,27 @@ namespace uh::cluster {
         template<typename key>
         std::shared_ptr <client> get(key k) const {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            return m_clients.at(m_services_index.get(k));
+            return m_services_index.get(k);
+        }
+
+        [[nodiscard]] std::shared_ptr<client> get(const std::size_t& id) const {
+            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            return m_clients.at(id);
         }
 
         [[nodiscard]] std::shared_ptr <client> get() const
         {
             auto index = m_nodes_index.load();
 
-            const auto services = get_clients();
-            const auto services_size = services.size();
+            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
 
-            auto new_val = (index + 1) % services_size;
+            auto new_val = (index + 1) % m_clients.size();
             while (!m_nodes_index.compare_exchange_weak (index, new_val)) {
                 index = m_nodes_index.load();
-                new_val = (index + 1) % services_size;
+                new_val = (index + 1) % m_clients.size();
             }
 
-            return services.at(index);
+            return m_clients.at(index);
         }
 
         [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
@@ -183,8 +164,8 @@ namespace uh::cluster {
                                                service.port,
                                                m_connection_count);
 
-            m_clients.insert({service.id, cl});
-            m_services_index.add(service.id);
+            m_clients.emplace(service.id, cl);
+            m_services_index.add(service.id, std::move(cl));
         }
 
     private:

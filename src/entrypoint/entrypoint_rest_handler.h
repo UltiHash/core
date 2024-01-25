@@ -206,7 +206,7 @@ public:
                 }
             };
 
-            co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
                                                                                        m_directory_services.get(),
                                                                                        std::bind_front (func, std::ref (res), std::cref (req_bucket_id)));
@@ -242,7 +242,7 @@ public:
             }
         };
 
-        co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+        co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                    m_ioc,
                                                                                    m_directory_services.get(),
                                                                                    std::bind_front (func, std::ref (res)));
@@ -350,7 +350,7 @@ public:
 
             };
 
-            co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
                                                                                        m_directory_services.get(),
                                                                                        std::bind_front (func, std::ref (buffer), std::cref (req)));
@@ -421,7 +421,7 @@ public:
                 }
             };
 
-            co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
                                                                                        m_directory_services.get(),
                                                                                        std::bind_front (func, std::ref (res), std::cref (req)));
@@ -469,7 +469,7 @@ public:
 
         };
 
-        co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+        co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                    m_ioc,
                                                                                    m_directory_services.get(),
                                                                                    std::bind_front (func, std::ref (res), std::cref (req)));
@@ -487,7 +487,7 @@ public:
           {
               res = std::make_unique<http::model::init_multi_part_upload_response>(req);
 
-              co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+              co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                          m_ioc,
                                                                                          m_directory_services.get(),
                                                                                          [&res, &req] (client::acquired_messenger m) -> coro <void>
@@ -599,7 +599,7 @@ public:
                 co_await m.get().recv_header();
             };
 
-            co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+            co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                        m_ioc,
                                                                                        m_directory_services.get(),
                                                                                        std::bind_front (func, std::cref (req)));
@@ -699,7 +699,7 @@ public:
                     res->add_deleted_keys(key);
                 };
 
-                co_await worker_utils::wrapper_io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
+                co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                                            m_ioc,
                                                                                            m_directory_services.get(),
                                                                                            std::bind_front(func2, key, std::cref (bucket_id), std::ref (res)));
