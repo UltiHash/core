@@ -10,14 +10,14 @@ namespace uh::cluster {
 data_store::data_store(storage_config conf, std::size_t id, bool adaptive) :
         m_data_id (id),
         m_conf (std::move (conf)),
-        m_free_spot_manager (m_conf.root_dir / "log") {
+        m_free_spot_manager (m_conf.working_dir / "log") {
 
-    if (!std::filesystem::exists(m_conf.root_dir)) {
-        std::filesystem::create_directories(m_conf.root_dir);
+    if (!std::filesystem::exists(m_conf.working_dir)) {
+        std::filesystem::create_directories(m_conf.working_dir);
     }
 
     std::unordered_map <int, std::size_t> file_sizes;
-    for (const auto& entry: std::filesystem::directory_iterator (m_conf.root_dir)) {
+    for (const auto& entry: std::filesystem::directory_iterator (m_conf.working_dir)) {
         if (!is_data_file(entry.path())) {
             continue;
         }
@@ -246,7 +246,7 @@ data_store::alloc_t data_store::allocate_internal (std::size_t size) {
 }
 
 int data_store::add_new_file(const uint128_t &offset, long file_size) {
-    const auto file_path = m_conf.root_dir / get_name(offset);
+    const auto file_path = m_conf.working_dir / get_name(offset);
     const int fd = open (file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
     if (fd <= 0) [[unlikely]] {
         throw std::filesystem::filesystem_error ("Could not create new files in the data store root",

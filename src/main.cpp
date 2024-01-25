@@ -21,34 +21,32 @@ struct config {
     };
 
     static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
+    static constexpr const char* default_working_dir = "/var/lib/uh";
 
     action task;
     uh::cluster::role role;
     std::size_t id;
     std::string etcd_url;
+    std::filesystem::path working_dir;
 };
 
 void execute_role(const config& cfg) {
 
-    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION << " executable on host \""
-        << boost::asio::ip::host_name() << "\" using service role \"" << get_service_string(cfg.role)
-        << "\", service id \"" << cfg.id << "\" and service registry endpoints \"" << cfg.etcd_url << "\"." ;
-
     switch (cfg.role) {
         case STORAGE_SERVICE:
-            storage(cfg.id, cfg.etcd_url).run();
+            storage(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case DEDUPLICATOR_SERVICE:
-            deduplicator(cfg.id, cfg.etcd_url).run();
+            deduplicator(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case DIRECTORY_SERVICE:
-            directory(cfg.id, cfg.etcd_url).run();
+            directory(cfg.etcd_url, cfg.working_dir).run();
             break;
 
         case ENTRYPOINT_SERVICE:
-            entrypoint(cfg.id, cfg.etcd_url).run();
+            entrypoint(cfg.etcd_url, cfg.working_dir).run();
             break;
     }
 }
@@ -59,27 +57,27 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
         return config{ .task = config::print_vcsid };
     }
 
-    if (argc < 3 || argc > 4) {
+    if (argc < 2 || argc > 4) {
         return {};
     }
 
     return config{
         .task = config::start_service,
         .role = get_service_role(args[1]),
-        .id = std::stoul(args[2]),
-        .etcd_url = argc == 4 ? args[3] : config::default_registry_url,
+        .etcd_url = argc == 3 ? args[2] : config::default_registry_url,
+        .working_dir = argc == 4 ? args[3] : config::default_working_dir,
     };
 }
 
 void print_help(std::ostream& out) {
-    out << "Usage: " << PROJECT_NAME << " <role> <id> [registry]\n"
+    out << "Usage: " << PROJECT_NAME << " <role> [registry] [working_dir]\n"
         << "\trole\t\t" << "service role, ie. "
             << get_service_string(uh::cluster::STORAGE_SERVICE) << ", "
             << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
             << get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or "
             << get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "\n"
-        << "\tid\t\t" << "non-negative integer used to identify service instances of the same role\n"
-        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n";
+        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n"
+        << "\tworking_dir\t" << "path to working directory (default: " << config::default_working_dir << ")\n";
 }
 
 void print_vcsid(std::ostream& out) {

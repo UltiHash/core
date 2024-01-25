@@ -38,7 +38,7 @@ struct bucket_config {
 };
 
 struct directory_store_config {
-    std::filesystem::path root_dir;
+    std::filesystem::path working_dir;
     bucket_config bucket_conf;
 };
 
@@ -53,7 +53,7 @@ struct global_data_view_config {
 // roles config
 
 struct deduplicator_config {
-    std::filesystem::path root_dir;
+    std::filesystem::path working_dir;
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
     std::size_t dedupe_worker_minimum_data_size{};
@@ -61,7 +61,7 @@ struct deduplicator_config {
 };
 
 struct storage_config {
-    std::filesystem::path root_dir;
+    std::filesystem::path working_dir;
     std::size_t min_file_size;
     std::size_t max_file_size;
     uint128_t max_data_store_size;

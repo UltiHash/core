@@ -18,13 +18,18 @@ namespace uh::cluster {
 class config_registry {
 
 public:
-    config_registry(uh::cluster::role role, std::size_t index, std::string etcd_host) :
-            m_service_name(get_service_string(role) + "/" + std::to_string(index)),
-            m_etcd_host(std::move(etcd_host)),
+    config_registry(uh::cluster::role role, const std::string& etcd_host, const std::filesystem::path& working_dir) :
+            m_etcd_client(etcd_host),
             m_service_role(role),
-            m_etcd_client(m_etcd_host)
+            m_working_dir(working_dir / get_service_string(m_service_role)),
+            m_service_id(generate_service_id()),
+            m_service_name(get_service_string(m_service_role) + "/" + std::to_string(m_service_id))
     {
         init_default_config_values();
+    }
+
+    [[nodiscard]] std::size_t get_service_id() const noexcept {
+        return m_service_id;
     }
 
     server_config get_server_config() {
@@ -51,7 +56,7 @@ public:
         if(m_service_role != uh::cluster::STORAGE_SERVICE)
             throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::STORAGE_SERVICE) + "' may access the " + get_service_string(uh::cluster::STORAGE_SERVICE) + " configuration!");
         return {
-            .root_dir = get_config_value_string(CFG_STORAGE_ROOT_DIR),
+            .working_dir = m_working_dir,
             .min_file_size = get_config_value_ull(CFG_STORAGE_MIN_FILE_SIZE),
             .max_file_size = get_config_value_ull(CFG_STORAGE_MAX_FILE_SIZE),
             .max_data_store_size = get_config_value_ull(CFG_STORAGE_MAX_DATA_STORE_SIZE),
@@ -62,7 +67,7 @@ public:
         if(m_service_role != uh::cluster::DEDUPLICATOR_SERVICE)
             throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + "' may access the " + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) + " configuration!");
         return {
-            .root_dir = get_config_value_string(CFG_DEDUP_ROOT_DIR),
+            .working_dir = m_working_dir,
             .min_fragment_size = get_config_value_ull(CFG_DEDUP_MIN_FRAGMENT_SIZE),
             .max_fragment_size = get_config_value_ull(CFG_DEDUP_MAX_FRAGMENT_SIZE),
             .dedupe_worker_minimum_data_size = get_config_value_ull(CFG_DEDUP_WORKER_MIN_DATA_SIZE),
@@ -74,16 +79,16 @@ public:
         if(m_service_role != uh::cluster::DIRECTORY_SERVICE)
             throw std::invalid_argument("Only service instances of the type '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) + "' may access the " + get_service_string(uh::cluster::DIRECTORY_SERVICE) + " configuration!");
         return {
-                .directory_store_conf = {
-                        .root_dir = get_config_value_string(CFG_DIR_ROOT_DIR),
-                        .bucket_conf = {
-                                .min_file_size = get_config_value_ull(CFG_DIR_MIN_FILE_SIZE),
-                                .max_file_size = get_config_value_ull(CFG_DIR_MAX_FILE_SIZE),
-                                .max_storage_size = get_config_value_ull(CFG_DIR_MAX_STORAGE_SIZE),
-                                .max_chunk_size = get_config_value_ull(CFG_DIR_MAX_CHUNK_SIZE),
-                        },
+            .directory_store_conf = {
+                .working_dir = m_working_dir,
+                .bucket_conf = {
+                    .min_file_size = get_config_value_ull(CFG_DIR_MIN_FILE_SIZE),
+                    .max_file_size = get_config_value_ull(CFG_DIR_MAX_FILE_SIZE),
+                    .max_storage_size = get_config_value_ull(CFG_DIR_MAX_STORAGE_SIZE),
+                    .max_chunk_size = get_config_value_ull(CFG_DIR_MAX_CHUNK_SIZE),
                 },
-                .worker_thread_count = get_config_value_ull(CFG_DIR_WORKER_THREAD_COUNT),
+            },
+            .worker_thread_count = get_config_value_ull(CFG_DIR_WORKER_THREAD_COUNT),
         };
     }
 
@@ -98,12 +103,12 @@ public:
     }
 
 private:
-    const std::string m_service_name;
-    const std::string m_etcd_host;
-    const uh::cluster::role m_service_role;
+    const std::string m_identity_file = "identity";
     etcd::Client m_etcd_client;
-    const std::string m_default_root_dir_base = "/var/lib/uh/";
-
+    const uh::cluster::role m_service_role;
+    const std::filesystem::path m_working_dir;
+    const std::size_t m_service_id;
+    const std::string m_service_name;
 
 
     class registry_lock
@@ -125,6 +130,65 @@ private:
         etcd::Response m_response;
     };
 
+    std::pair<bool, std::size_t> read_id_from_disk() {
+        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
+
+        if(std::filesystem::exists(id_file_path)) {
+            std::ifstream id_file(id_file_path, std::ios::binary);
+            if(id_file.is_open()) {
+                std::size_t persisted_id;
+                id_file.read(reinterpret_cast<char*>(&persisted_id), sizeof(std::size_t));
+                id_file.close();
+                return {true, persisted_id};
+            } else {
+                throw std::system_error(EIO, std::generic_category(), "reading back persisted service id from file " + id_file_path.string() + " failed.");
+            }
+        }
+        return std::pair(false, 0);
+    }
+
+    void write_id_to_disk(std::size_t id) {
+        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
+
+        if(!std::filesystem::exists(id_file_path.parent_path()))
+            std::filesystem::create_directories(id_file_path.parent_path());
+
+        if(std::filesystem::exists(id_file_path))
+            throw std::system_error(EIO, std::generic_category(), "the file " + id_file_path.string() + " already exists, which it should not.");
+
+        std::ofstream id_file(id_file_path, std::ios::binary);
+        if(id_file.is_open()) {
+            id_file.write(reinterpret_cast<const char*>(&id), sizeof(id));
+        } else {
+            throw std::system_error(EIO, std::generic_category(), "could not open file " + id_file_path.string() + " for storing persisted service id.");
+        }
+
+    }
+
+    std::size_t generate_service_id() {
+        auto [success, persisted_id] = read_id_from_disk();
+        if(success) {
+            return persisted_id;
+        }
+
+        std::string current_id_key = etcd_current_id_prefix_key + get_service_string(m_service_role);
+        registry_lock lock(m_etcd_client);
+
+        if(!key_exists(current_id_key)) {
+            set(current_id_key, std::to_string(0));
+            write_id_to_disk(0);
+            return 0;
+        }
+
+        std::size_t current_id = std::stoull(get(current_id_key));
+        current_id++;
+        set(current_id_key, std::to_string(current_id));
+
+        write_id_to_disk(current_id);
+        return current_id;
+
+    }
+
     void init_default_config_values() {
         //these are only default settings
         //TODO: check if config file is available and use values from there if available
@@ -133,8 +197,6 @@ private:
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_PORT, 9200);
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_SERVER_THREADS, 16);
-            set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_ROOT_DIR,
-                                   m_default_root_dir_base + get_service_string(uh::cluster::STORAGE_SERVICE));
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_MIN_FILE_SIZE,
                                    1ul * 1024ul * 1024ul * 1024ul);
             set_class_config_value(uh::cluster::STORAGE_SERVICE, uh::cluster::CFG_STORAGE_MAX_FILE_SIZE,
@@ -145,8 +207,6 @@ private:
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_PORT, 9300);
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_ROOT_DIR,
-                                   m_default_root_dir_base + get_service_string(uh::cluster::DEDUPLICATOR_SERVICE));
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE,
                                    32ul);
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE, uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE,
@@ -169,8 +229,6 @@ private:
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_PORT, 9400);
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_BIND_ADDR, "0.0.0.0");
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_SERVER_THREADS, 4);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_DIR_ROOT_DIR,
-                                   "/tmp/lib/uh/" + get_service_string(uh::cluster::DIRECTORY_SERVICE));
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_DIR_MIN_FILE_SIZE,
                                    2ul * 1024ul * 1024ul * 1024ul);
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE, uh::cluster::CFG_DIR_MAX_FILE_SIZE,
@@ -217,6 +275,13 @@ private:
         set(key, value);
     }
 
+    std::string get_class_config_value(const uh::cluster::config_parameter& parameter) {
+        std::string global_key = etcd_global_config_key_prefix +
+                                 get_service_string(m_service_role) + "/" +
+                                 get_config_string(parameter);
+        return get(global_key);
+    }
+
     std::string get_config_value_string(const uh::cluster::config_parameter& parameter) {
         std::string key = etcd_instance_config_key_prefix +
                           m_service_name + "/" +
@@ -224,10 +289,7 @@ private:
         try {
             return get(key);
         } catch (std::invalid_argument const &e_instance) {
-            std::string global_key = etcd_global_config_key_prefix +
-                                     get_service_string(m_service_role) + "/" +
-                                     get_config_string(parameter);
-            return get(global_key);
+            return get_class_config_value(parameter);
         }
     }
 
