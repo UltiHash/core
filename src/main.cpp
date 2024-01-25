@@ -70,7 +70,7 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
 }
 
 void print_help(std::ostream& out) {
-    out << "Usage: " << PROJECT_NAME << " <role> <id> [registry]\n"
+    out << "Usage: " << PROJECT_NAME << " <role> [registry] [working_dir]\n"
         << "\trole\t\t" << "service role, ie. "
             << get_service_string(uh::cluster::STORAGE_SERVICE) << ", "
             << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
