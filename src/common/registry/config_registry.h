@@ -6,6 +6,7 @@
 #define UH_CLUSTER_CONFIG_REGISTRY_H
 
 #include <string>
+#include <fstream>
 #include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
 #include "common/utils/common.h"
 #include "common/utils/cluster_config.h"
