@@ -131,7 +131,7 @@ setup_bare_cluster ()
     fi
 
     for role in deduplicator directory storage entrypoint; do
-        start_service "$dir" "$role" "$uhc $role 0"
+        start_service "$dir" "$role" "$uhc $role"
     done
 
     trap "stop_bare_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
