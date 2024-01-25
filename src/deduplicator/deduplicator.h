@@ -16,7 +16,7 @@ namespace uh::cluster {
     class deduplicator : public service_interface {
     public:
 
-        explicit deduplicator(const std::string& registry_url, const std::string& working_dir) :
+        explicit deduplicator(const std::string& registry_url, const std::filesystem::path& working_dir) :
                 m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, registry_url, working_dir),
                 m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE, m_config_registry.get_service_id(), registry_url),
                 m_config(m_config_registry.get_deduplicator_config()),

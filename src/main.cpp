@@ -27,7 +27,7 @@ struct config {
     uh::cluster::role role;
     std::size_t id;
     std::string etcd_url;
-    std::string working_dir;
+    std::filesystem::path working_dir;
 };
 
 void execute_role(const config& cfg) {
