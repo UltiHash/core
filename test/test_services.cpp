@@ -1,66 +1,56 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "service_registry tests"
+#define BOOST_TEST_MODULE "services tests"
 #endif
 
-#define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
 
+#include <boost/test/unit_test.hpp>
+#include <boost/bind/bind.hpp>
 #include "common/registry/service_registry.h"
+#include "common/utils/services.h"
+
+#define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
+#define WORKING_DIRECTORY "/var/lib/uh"
+
 
 // ------------- Tests Suites Follow --------------
 
-// Create two services, one storage another dedup. Upon adding and removing storage service, the dedup node
-// should be able to add/remove the clients in the list -> watcher functionality when storage is not there yet
-// non watcher functionality addition/removal -> when sotrage is already there
+namespace uh::cluster {
 
-//namespace uh::cluster {
-//
-//    BOOST_AUTO_TEST_CASE ( basic_register_retrieve_deregister )
-//            {
-//                    service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-//
-////        {
-////            auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-////            BOOST_CHECK(service_endpoints.empty());
-////        }
-//
-//            {
-//                service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
-//                auto reg = registering_registry.register_service({.port = 9200});
-//
-//                querying_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-//                auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-//                BOOST_CHECK(service_endpoints.size() == 1);
-//                BOOST_CHECK(service_endpoints.begin()->role == uh::cluster::STORAGE_SERVICE);
-//                BOOST_CHECK(service_endpoints.begin()->id == 42);
-//                BOOST_CHECK(service_endpoints.begin()->host == boost::asio::ip::host_name());
-//                BOOST_CHECK(service_endpoints.begin()->port == 9200);
-//            }
-//
-//            {
-//                auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-//                BOOST_CHECK(service_endpoints.empty());
-//            }
-//
-//            }
-//
-//    BOOST_AUTO_TEST_CASE( wait_for_dependencies, *boost::unit_test::timeout(30) )
-//{
-//    service_registry querying_registry(uh::cluster::DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-//
-//{
-//    auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-//    BOOST_CHECK(service_endpoints.empty());
-//}
-//
-//service_registry registering_registry(uh::cluster::STORAGE_SERVICE, 42, REGISTRY_ENDPOINT);
-//auto reg = registering_registry.register_service({.port = 9200});
-//
-//querying_registry.wait_for_dependency(uh::cluster::STORAGE_SERVICE);
-//
-//
-//auto service_endpoints = querying_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-//BOOST_CHECK(service_endpoints.size() == 1);
-//}
-//} // end namespace uh::cluster
+    BOOST_AUTO_TEST_CASE ( basic_services_functionality_test ) {
+
+        const auto index = 42;
+        const auto port_address = 9200;
+
+        auto ioc = boost::asio::io_context();
+
+        config_registry config_registry(DEDUPLICATOR_SERVICE, REGISTRY_ENDPOINT, WORKING_DIRECTORY);
+
+        services<STORAGE_SERVICE> storage_services(ioc, config_registry, 1, REGISTRY_ENDPOINT );
+
+        {
+            // before registration
+            auto clients = storage_services.get_clients();
+            BOOST_CHECK(clients.empty());
+        }
+
+        {
+            service_registry registering_registry(STORAGE_SERVICE, index, REGISTRY_ENDPOINT);
+            auto res = registering_registry.register_service({.port = port_address});
+
+            BOOST_CHECK_THROW(storage_services.wait_for_dependency(), std::runtime_error);
+
+            auto clients = storage_services.get_clients();
+            BOOST_CHECK(clients.size() == 1);
+        }
+
+        {
+            // after unregistering the service
+            storage_services.cancel();
+            auto clients = storage_services.get_clients();
+            BOOST_CHECK(clients.empty());
+        }
+    }
+
+} // end namespace uh::cluster
