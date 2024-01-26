@@ -10,7 +10,9 @@ RUN mkdir build \
 
 # Execute tests
 WORKDIR /core/build
-RUN ctest -C Release --output-on-failure
+RUN etcd & \
+    sleep 5 && \
+    ctest -C Release --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 
@@ -20,26 +22,17 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends curl ncat
+    && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1
 
 COPY --from=build /core/build/uh-cluster /usr/local/bin
-#COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
-
-#RUN chmod +x /usr/local/bin/start.sh
+COPY --from=build /core/build/lib/third-party/etcd-cpp-apiv3/src/libetcd-cpp-api.so /usr/local/lib
+COPY --from=build /usr/local/lib/libcpprest.so.2.10 /usr/local/lib
 
 RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
 
-# required for agency-node metrics persistence
-#RUN install -d -m 0755 -o uh -g uh /var/lib/uh-agency-node
-
-# required for data-node storage
-#RUN install -d -m 0755 -o uh -g uh /var/lib/uh-data-node && ls -lh /var/lib/
+# create working directory
+RUN install -d -m 0755 -o uh -g uh /var/lib/uh
 
 USER uh
 WORKDIR /home/uh
-
-EXPOSE 21832
-EXPOSE 8080
-
-#CMD ["start.sh"]
