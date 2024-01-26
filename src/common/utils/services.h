@@ -88,36 +88,6 @@ namespace uh::cluster {
             m_watcher.Cancel();
         }
 
-        void handle_state_changes(const etcd::Response& response)
-        {
-            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
-
-            const auto& key = response.value().key();
-
-            const std::string service_id = std::filesystem::path(key).filename().string();
-            const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
-
-            const auto etcd_action = get_etcd_action_enum(response.action());
-            switch (etcd_action) {
-                case etcd_action::create:
-
-                    add_service_callback({.role = r,
-                                          .id = std::stoul(service_id),
-                                          .host = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST))
-                                                  .get().value().as_string(),
-                                          .port = static_cast<uint16_t>(std::stoul(m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT))
-                                                  .get().value().as_string()))});
-                    break;
-
-                case etcd_action::erase:
-                    remove_service_callback({.role = r,
-                                              .id = std::stoul(service_id)
-                                            });
-                    break;
-            }
-
-        }
-
         template<typename key>
         std::shared_ptr <client> get(key k) const {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
@@ -185,6 +155,36 @@ namespace uh::cluster {
         }
 
     private:
+
+        void handle_state_changes(const etcd::Response& response)
+        {
+            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
+
+            const auto& key = response.value().key();
+
+            const std::string service_id = std::filesystem::path(key).filename().string();
+            const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
+
+            const auto etcd_action = get_etcd_action_enum(response.action());
+            switch (etcd_action) {
+                case etcd_action::create:
+
+                    add_service_callback({.role = r,
+                                             .id = std::stoul(service_id),
+                                             .host = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST))
+                                                     .get().value().as_string(),
+                                             .port = static_cast<uint16_t>(std::stoul(m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT))
+                                                                                                  .get().value().as_string()))});
+                    break;
+
+                case etcd_action::erase:
+                    remove_service_callback({.role = r,
+                                                    .id = std::stoul(service_id)
+                                            });
+                    break;
+            }
+
+        }
 
         std::vector<service_endpoint> get_service_instances() {
             std::map<std::size_t, service_endpoint> endpoints_by_id;
