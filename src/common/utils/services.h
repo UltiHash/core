@@ -16,14 +16,12 @@ namespace uh::cluster {
     enum class etcd_action : uint8_t {
         create = 0,
         erase,
-        set,
     };
 
     static etcd_action get_etcd_action_enum(const std::string &action_str) {
         static const std::map<std::string, etcd_action> etcd_action = {
                 {"create", etcd_action::create},
                 {"delete", etcd_action::erase},
-                {"set", etcd_action::set},
         };
 
         if (etcd_action.contains(action_str))
@@ -81,17 +79,11 @@ namespace uh::cluster {
                 m_ioc(ioc),
                 m_connection_count(connection_count),
                 m_etcd_client(etcd_host),
-                m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {
-                    return handle_state_changes(response);}, true),
+                m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true),
                 m_services_index(config_registry)
         {}
 
         ~services() {
-            join();
-        }
-
-        void join() {
-            // joins all the watcher thread
             if (!m_watcher.Cancelled()) {
                 m_watcher.Cancel();
             }
