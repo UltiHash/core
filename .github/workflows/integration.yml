@@ -17,6 +17,13 @@ jobs:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+
       - name: Install tox
         run: sudo apt install tox
 
