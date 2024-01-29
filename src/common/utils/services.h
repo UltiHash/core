@@ -170,7 +170,6 @@ namespace uh::cluster {
 
             switch (etcd_action) {
                 case etcd_action::create:
-                case etcd_action::set:
                     add_service_callback({.role = r,
                                              .id = std::stoul(service_id),
                                              .host = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST))
