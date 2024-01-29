@@ -160,19 +160,22 @@ namespace uh::cluster {
             LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key()
                         << ", value: " << response.value().as_string();
 
-            const auto& etcd_path = response.value().key();
-            const auto etcd_action = get_etcd_action_enum(response.action());
+            try {
+                const auto& etcd_path = response.value().key();
+                const auto etcd_action = get_etcd_action_enum(response.action());
 
-            switch (etcd_action) {
-                case etcd_action::create:
-                    add(etcd_path);
-                    break;
+                switch (etcd_action) {
+                    case etcd_action::create:
+                        add(etcd_path);
+                        break;
 
-                case etcd_action::erase:
-                    remove(etcd_path);
-                    break;
+                    case etcd_action::erase:
+                        remove(etcd_path);
+                        break;
+                }
+            } catch (const std::exception& e) {
+                LOG_WARN() << "error while handling service state change: " << e.what();
             }
-
         }
 
         service_endpoint extract(const std::string& path) {
