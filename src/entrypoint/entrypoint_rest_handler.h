@@ -287,7 +287,6 @@ public:
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_services.get_clients(), m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
 
-
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
             auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
             const auto stop = std::chrono::steady_clock::now ();
@@ -302,8 +301,8 @@ public:
 
             rest::utils::hashing::MD5 md5;
             res->set_etag(md5.calculateMD5(req.get_body()));
-            res->set_size(size_mb);
-            res->set_effective_size(effective_size);
+            res->set_size(body_size);
+            res->set_effective_size(resp.effective_size);
             res->set_space_savings(space_saving);
             res->set_bandwidth(bandwidth);
 
@@ -571,8 +570,8 @@ public:
 
         rest::utils::hashing::MD5 md5;
         res->set_etag(md5.calculateMD5(req.get_body()));
-        res->set_size(size_mb);
-        res->set_effective_size(effective_size);
+        res->set_size(up_info->data_size);
+        res->set_effective_size(up_info->effective_size);
         res->set_space_savings(space_saving);
         res->set_bandwidth(bandwidth);
 
