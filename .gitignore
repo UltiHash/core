@@ -6,3 +6,4 @@ cmake-build-*/*
 server-db/src/config.hpp
 server-agency/src/config.hpp
 .vscode
+testing/.venv

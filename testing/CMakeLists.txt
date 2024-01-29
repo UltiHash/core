@@ -2,7 +2,7 @@ find_package(Python3 COMPONENTS Interpreter)
 
 if (NOT Python3_Interpreter_FOUND)
 
-    if (${ENABLE_E2E_TESTS})
+    if (${ENABLE_INTEGRATION_TESTS})
         message(FATAL_ERROR "Python3 could not be found. Extended testing via PyTest is disabled.")
     else()
         message(WARNING "Python3 could not be found. Extended testing via PyTest is disabled.")
@@ -31,17 +31,17 @@ else()
 
     file(GENERATE
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/docker-compose.yml
-        INPUT ${CMAKE_CURRENT_SOURCE_DIR}/docker-compose.yml.in)
+        INPUT ${CMAKE_CURRENT_SOURCE_DIR}/docker-compose.yml)
 
 endif()
 
 set(TESTING_VENV_DIR "${CMAKE_CURRENT_BINARY_DIR}/venv")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start-e2e.sh.in
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start-e2e.sh
             ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh
             FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini.in
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini
         ${CMAKE_CURRENT_BINARY_DIR}/pytest.ini)
 
 file(CREATE_LINK
@@ -60,8 +60,7 @@ add_executable(${PROJECT_NAME}-client ${CMAKE_CURRENT_SOURCE_DIR}/client/main.cp
 target_link_libraries(${PROJECT_NAME}-client ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-client PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-if (${ENABLE_E2E_TESTS})
-    add_test(NAME pytest_e2e
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh)
-endif()
+
+add_test(NAME pytest_e2e
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh)

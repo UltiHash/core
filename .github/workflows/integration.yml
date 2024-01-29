@@ -17,26 +17,15 @@ jobs:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
-      - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DENABLE_E2E_TESTS=On
+      - name: Install tox
+        run: sudo apt install tox
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config Release --parallel $(nproc)
 
-      - name: Test
-        env:
-          ETCDCTL_API: 3
-        working-directory: ${{github.workspace}}/build
-        run: |
-          etcd&
-          sleep 5
-          etcdctl del "" --from-key=true
-          ctest -C ${{ matrix.build }} --output-on-failure
-          etcdctl del "" --from-key=true
+      - name: Build Docker image
+        run: docker build --file Dockerfile --tag ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1) .
 
-      - name: Upload test logs
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: LastTest.log
-          path: ${{github.workspace}}/build/Testing/Temporary/LastTest.log
+      - name: Running integration tests
+        working-directory: ${{github.workspace}}/testing
+        run: ./start-e2e.sh

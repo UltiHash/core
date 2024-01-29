@@ -22,7 +22,7 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1
+    && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1 lsof
 
 COPY --from=build /core/build/uh-cluster /usr/local/bin
 COPY --from=build /core/build/lib/third-party/etcd-cpp-apiv3/src/libetcd-cpp-api.so /usr/local/lib

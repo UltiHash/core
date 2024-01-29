@@ -15,7 +15,7 @@ find_package(OpenSSL REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
 
-option(ENABLE_E2E_TESTS "Enable End-to-End tests" OFF)
+option(ENABLE_INTEGRATION_TESTS "Enable integration tests" OFF)
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -60,10 +60,15 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
 # Testing
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 enable_testing()
+if (${ENABLE_INTEGRATION_TESTS})
+    message(STATUS "Configuring the integration test suite...")
+    add_subdirectory(testing)
+else()
+    message(STATUS "Configuring the unit test suite...")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
+endif()
 
-add_subdirectory(testing)
 add_subdirectory(experiments)
 
 # Packaging
