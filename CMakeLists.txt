@@ -15,8 +15,6 @@ find_package(OpenSSL REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
 
-option(ENABLE_INTEGRATION_TESTS "Enable integration tests" OFF)
-
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
@@ -61,13 +59,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIR
 
 # Testing
 enable_testing()
-if (${ENABLE_INTEGRATION_TESTS})
-    message(STATUS "Configuring the integration test suite...")
-    add_subdirectory(testing)
-else()
-    message(STATUS "Configuring the unit test suite...")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
-endif()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 
 add_subdirectory(experiments)
 
