@@ -28,7 +28,7 @@ jobs:
         run: sudo apt install tox
 
       - name: Build Docker image
-        run: docker build --file Dockerfile --tag ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1) .
+        run: docker build --file Dockerfile --tag uh-cluster:testing .
 
       - name: Running integration tests
         working-directory: ${{github.workspace}}/testing
