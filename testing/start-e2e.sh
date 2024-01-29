@@ -51,6 +51,13 @@ while [ -n "$1" ]; do
     shift
 done
 
+if [ "$(basename $(pwd))" == "testing" ]; then
+    echo "Script is executed from the testing directory, proceeding..."
+else
+    echo "Script is not executed from the testing directory, exiting..."
+    exit 1
+fi
+
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     echo "Creating virtual environment ..."
 
