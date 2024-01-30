@@ -36,6 +36,10 @@ public:
 
         const auto client = m_storage_services.get();
 
+        // check if it is in the dependency manager
+        // dependency_manager.put(offset)  : if new then add it to etcd
+        // on startup dependency manager fills everything up
+
         address addr;
         boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
                 co_await m.get().send(WRITE_REQ, data);
