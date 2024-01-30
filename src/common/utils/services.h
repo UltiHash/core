@@ -156,8 +156,8 @@ namespace uh::cluster {
 
             if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-                m_cv.wait(lk, [this]() { return !m_clients.empty(); });
+                std::unique_lock<std::mutex> lk(m_mutex);
+                m_cv.wait(lk, [this]() { return !empty; });
             } else {
                 add_service_instances();
             }
@@ -206,7 +206,7 @@ namespace uh::cluster {
                         << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                         << service_endpoint.port ;
 
-            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> shared_lk(m_shared_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
                 return;
 
@@ -216,8 +216,9 @@ namespace uh::cluster {
 
             m_clients.emplace(service_endpoint.id, cl);
             m_services_index.add(service_endpoint.id, std::move(cl));
+            empty = m_clients.empty();
 
-            lk.unlock();
+            shared_lk.unlock();
             m_cv.notify_one();
         }
 
@@ -231,6 +232,7 @@ namespace uh::cluster {
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service_endpoint.id);
             m_services_index.erase(service_endpoint.id);
+            empty = m_clients.empty();
         }
 
         boost::asio::io_context& m_ioc;
@@ -240,7 +242,9 @@ namespace uh::cluster {
 
         mutable std::shared_mutex m_shared_mutex;
         std::condition_variable m_cv;
+        mutable std::mutex m_mutex;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
+        std::atomic<bool> empty = false;
 
         mutable std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
