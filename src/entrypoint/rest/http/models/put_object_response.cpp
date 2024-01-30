@@ -6,13 +6,13 @@ namespace uh::cluster::rest::http::model
     put_object_response::put_object_response(const http_request& req) : http_response(req)
     {}
 
-    void put_object_response::set_size(double size)
+    void put_object_response::set_size(std::size_t size)
     {
         m_originalSize = size;
         m_originalSizeHasBeenSet = true;
     }
 
-    void put_object_response::set_effective_size(double effective_size)
+    void put_object_response::set_effective_size(std::size_t effective_size)
     {
         m_effectiveSize = effective_size;
         m_effectiveSizeHasBeenSet = true;
@@ -112,12 +112,14 @@ namespace uh::cluster::rest::http::model
 
         if (m_originalSizeHasBeenSet)
         {
-            m_res.set("uh-original-size-mb", std::to_string(m_originalSize));
+            m_res.set("uh-original-size", std::to_string(m_originalSize));
+            m_res.set("uh-original-size-mb", std::to_string(static_cast<double>(m_originalSize) / (1024 * 1024)));
         }
 
         if (m_effectiveSizeHasBeenSet)
         {
-            m_res.set("uh-effective-size-mb", std::to_string(m_effectiveSize));
+            m_res.set("uh-effective-size", std::to_string(m_effectiveSize));
+            m_res.set("uh-effective-size-mb", std::to_string(static_cast<double>(m_effectiveSize) / (1024 * 1024)));
         }
 
         if (m_spaceSavingsHasBeenSet)
