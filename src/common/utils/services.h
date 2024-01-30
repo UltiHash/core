@@ -154,13 +154,15 @@ namespace uh::cluster {
         void wait_for_dependency() {
             const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
 
-            while(m_etcd_client.ls(dependency_key).get().keys().empty()) {
+            if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                sleep(5);
+                std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+                m_cv.wait(lk, [this]() { return !m_clients.empty(); });
+            } else {
+                add_service_instances();
             }
-            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
 
-            add_service_instances();
+            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
         }
 
         void add_service_instances() {
@@ -223,6 +225,8 @@ namespace uh::cluster {
 
             m_clients.emplace(service_endpoint.id, cl);
             m_services_index.add(service_endpoint.id, std::move(cl));
+
+            m_cv.notify_one();
         }
 
         void remove(const std::string& path) {
@@ -243,6 +247,7 @@ namespace uh::cluster {
         etcd::Watcher m_watcher;
 
         mutable std::shared_mutex m_shared_mutex;
+        std::condition_variable m_cv;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
 
         mutable std::atomic <size_t> m_nodes_index {};
