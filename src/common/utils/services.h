@@ -187,7 +187,6 @@ namespace uh::cluster {
             const auto id = std::filesystem::path(path).filename().string();
             service_endpoint service_endpoint;
             service_endpoint.id = std::stoul(id);
-            service_endpoint.role = r;
 
             const std::string attributes_prefix(etcd_services_attributes_key_prefix +
                                                 get_service_string(r) + '/' + id  + '/');
@@ -204,16 +203,15 @@ namespace uh::cluster {
                 }
             }
 
-            std::cout << "HOST: " << service_endpoint.host << " PORT: " << service_endpoint.port << std::endl;
-
             return service_endpoint;
         }
 
         void add(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_DEBUG() << "add callback for service " << get_service_string(service_endpoint.role) << ": "
-                        << service_endpoint.id << " called." ;
+            LOG_INFO() << "add callback for service " << get_service_string(r) << ": "
+                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
+                        << service_endpoint.port ;
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
@@ -230,8 +228,9 @@ namespace uh::cluster {
         void remove(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_DEBUG() << "add callback for service " << get_service_string(service_endpoint.role) << ": "
-                        << service_endpoint.id << " called." ;
+            LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
+                       << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
+                       << service_endpoint.port ;
 
             std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
             m_clients.erase(service_endpoint.id);
