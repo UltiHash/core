@@ -156,7 +156,7 @@ namespace uh::cluster {
 
             if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+                std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
                 m_cv.wait(lk, [this]() { return !m_clients.empty(); });
             } else {
                 add_service_instances();
@@ -173,15 +173,6 @@ namespace uh::cluster {
             for (size_t i = 0; i < service_instances.keys().size(); i++) {
                 add(service_instances.key(i));
             }
-        }
-
-        static size_t get_valid_index(const std::string& str) {
-            size_t pos;
-            const size_t num = std::stoull(str, &pos);
-            if (pos != str.length()) {
-                throw std::invalid_argument("Invalid service index detected.");
-            }
-            return num;
         }
 
         service_endpoint extract(const std::string& path) const {
@@ -215,7 +206,7 @@ namespace uh::cluster {
                         << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                         << service_endpoint.port ;
 
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
                 return;
 
@@ -226,6 +217,7 @@ namespace uh::cluster {
             m_clients.emplace(service_endpoint.id, cl);
             m_services_index.add(service_endpoint.id, std::move(cl));
 
+            lk.unlock();
             m_cv.notify_one();
         }
 
