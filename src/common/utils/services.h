@@ -249,7 +249,7 @@ namespace uh::cluster {
         std::condition_variable m_cv;
         mutable std::mutex m_mutex;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
-        bool empty = false;
+        bool empty = true;
 
         mutable std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
