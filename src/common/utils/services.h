@@ -71,25 +71,47 @@ namespace uh::cluster {
         const uint128_t m_max_data_store_size;
     };
 
-    class dependency {
-    public:
-        explicit dependency(const config_registry& config_reg) :
-            m_cur_role(get_service_role(config_reg.get_service_name())),
-            m_cur_id(config_reg.get_service_id())
-        {}
-
-        void fetch(etcd::SyncClient) {
-
-        }
-
-    private:
-        const role m_cur_role;
-        const std::size_t m_cur_id;
-    };
-
     template <role r>
     class services {
     public:
+
+        class dependency {
+        public:
+
+//            enum class property : uint8_t
+
+            dependency(const config_registry& config_reg, etcd::SyncClient& etcd_client, const services& services) :
+                    m_services(services),
+                    m_cur_role(get_service_role(config_reg.get_service_name())),
+                    m_cur_id(config_reg.get_service_id())
+            {}
+
+            const dependency& fetch() {
+                return *this;
+            }
+
+            void wait() const {
+                const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
+
+                // if no dependency then we can wait for at least one node to become available
+                if(m_dependent_services.empty()) {
+                    LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
+                    std::unique_lock<std::shared_mutex> lk(m_services.m_shared_mutex);
+                    m_services.m_cv.wait(lk, [this]() { return !m_services.m_clients.empty(); });
+                } else {
+                    // we need to wait for each dependent service connections
+                }
+
+                LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
+            }
+
+        private:
+            const services& m_services;
+
+            std::set<std::size_t> m_dependent_services;
+            const role m_cur_role;
+            const std::size_t m_cur_id;
+        };
 
         services(boost::asio::io_context& ioc,
                  config_registry& config_registry,
@@ -101,9 +123,11 @@ namespace uh::cluster {
                  m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
-                 m_services_index(config_registry)
+                 m_services_index(config_registry),
+                 m_dependency(config_registry, m_etcd_client, std::ref(*this))
         {
-            wait_for_dependency();
+            // fetch based on property
+            m_dependency.fetch().wait();
         }
 
         ~services() {
@@ -171,29 +195,15 @@ namespace uh::cluster {
 
         }
 
-        void wait_for_dependency() {
-            const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
-
-            if(m_etcd_client.ls(dependency_key).keys().empty()) {
-                LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
-                m_cv.wait(lk, [this]() { return !m_clients.empty(); });
-            } else {
-                add_service_instances();
-            }
-
-            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
-        }
-
-        void add_service_instances() {
-            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
-
-            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
-
-            for (size_t i = 0; i < service_instances.keys().size(); i++) {
-                add(service_instances.key(i));
-            }
-        }
+//        void add_service_instances() {
+//            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
+//
+//            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
+//
+//            for (size_t i = 0; i < service_instances.keys().size(); i++) {
+//                add(service_instances.key(i));
+//            }
+//        }
 
         service_endpoint extract(const std::string& path) {
 
@@ -274,6 +284,9 @@ namespace uh::cluster {
 
         mutable std::map<std::size_t, std::shared_ptr<client>>::const_iterator m_robin_index;
         services_index<r> m_services_index;
+
+        dependency m_dependency;
+
     };
 
 } // end namespace uh::cluster
