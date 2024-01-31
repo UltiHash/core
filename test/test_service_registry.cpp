@@ -24,7 +24,7 @@ namespace uh::cluster {
         const auto index = 42;
         const auto port_address = 9200;
 
-        auto etcd_client = etcd::Client(REGISTRY_ENDPOINT);
+        auto etcd_client = etcd::SyncClient(REGISTRY_ENDPOINT);
         service_registry registering_registry(STORAGE_SERVICE, index, REGISTRY_ENDPOINT);
 
         const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(STORAGE_SERVICE) + '/' + std::to_string(index) + '/';
@@ -32,9 +32,9 @@ namespace uh::cluster {
 
         {
             // check if the keys already exist or not
-            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get().value().as_string();
-            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get().value().as_string();
-            const auto announced_path_registry = etcd_client.get(announced_path).get().value().key();
+            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).value().as_string();
+            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).value().as_string();
+            const auto announced_path_registry = etcd_client.get(announced_path).value().key();
 
             BOOST_CHECK(host.empty());
             BOOST_CHECK(port.empty());
@@ -45,9 +45,9 @@ namespace uh::cluster {
             // check for registry
             auto reg = registering_registry.register_service({.port = port_address});
 
-            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get().value().as_string();
-            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get().value().as_string();
-            const auto announced_etcd_path = std::filesystem::path(etcd_client.get(announced_path).get().value().key());
+            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).value().as_string();
+            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).value().as_string();
+            const auto announced_etcd_path = std::filesystem::path(etcd_client.get(announced_path).value().key());
 
             BOOST_CHECK(std::stoi(announced_etcd_path.filename()) == index);
             BOOST_CHECK(announced_etcd_path.parent_path().filename() == get_service_string(STORAGE_SERVICE));
@@ -57,9 +57,9 @@ namespace uh::cluster {
 
         {
             // check for de-registry
-            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).get().value().as_string();
-            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).get().value().as_string();
-            const auto announced_path_registry = etcd_client.get(announced_path).get().value().key();
+            const auto host = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST)).value().as_string();
+            const auto port = etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT)).value().as_string();
+            const auto announced_path_registry = etcd_client.get(announced_path).value().key();
 
             BOOST_CHECK(host.empty());
             BOOST_CHECK(port.empty());

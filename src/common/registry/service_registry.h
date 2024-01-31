@@ -7,7 +7,7 @@
 
 #include <string>
 #include <boost/asio.hpp>
-#include "etcd/Client.hpp"
+#include "etcd/SyncClient.hpp"
 #include "etcd/KeepAlive.hpp"
 #include "etcd/v3/Transaction.hpp"
 
@@ -35,15 +35,15 @@ namespace uh::cluster {
         class registration
         {
         public:
-            registration(etcd::Client& client, const std::map<std::string, std::string>& kv_pairs, std::size_t ttl)
+            registration(etcd::SyncClient& client, const std::map<std::string, std::string>& kv_pairs, std::size_t ttl)
                 : m_client(client),
-                  m_lease(m_client.leasegrant(ttl).get().value().lease()),
+                  m_lease(m_client.leasegrant(ttl).value().lease()),
                   m_keepalive(m_client, ttl, m_lease)
             {
                 etcdv3::Transaction txn;
                 for(const auto& pair : kv_pairs)
                     txn.add_success_put(pair.first, pair.second, m_lease);
-                m_client.txn(txn).get();
+                m_client.txn(txn);
             }
 
             ~registration()
@@ -52,7 +52,7 @@ namespace uh::cluster {
             }
 
             private:
-            etcd::Client& m_client;
+            etcd::SyncClient& m_client;
             int64_t m_lease;
             etcd::KeepAlive m_keepalive;
         };
@@ -83,7 +83,7 @@ namespace uh::cluster {
         const std::string m_etcd_host;
         const std::string m_service_name;
 
-        etcd::Client m_etcd_client;
+        etcd::SyncClient m_etcd_client;
     };
 
 }

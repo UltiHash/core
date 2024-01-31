@@ -18,7 +18,6 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
         entrypoint: [ "/uh-cluster", "deduplicator", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8084" ]
@@ -35,7 +34,6 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
         entrypoint: [ "/uh-cluster", "storage", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8082" ]
@@ -52,7 +50,6 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
         entrypoint: [ "/uh-cluster", "directory", "etcd:2380" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "UDP:8083" ]
@@ -69,7 +66,6 @@ services:
         restart: always
         volumes:
             - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-            - "$<TARGET_FILE:etcd-cpp-api>:/usr/lib/libetcd-cpp-api.so"
         entrypoint: [ "/uh-cluster", "entrypoint", "etcd:2380" ]
         depends_on:
             etcd:
