@@ -86,8 +86,9 @@ namespace uh::cluster {
                  m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_services_index(config_registry)
+                 // constructor to dependency manager that fills dependency with correct dependencies
         {
-            wait_for_dependency();
+            wait_for_dependency(); // -> uses dependency manager to wait for dependency
         }
 
         ~services() {
@@ -131,6 +132,12 @@ namespace uh::cluster {
         }
 
     private:
+
+        class dependency_manager {
+        public:
+        private:
+
+        };
 
         void handle_state_changes(const etcd::Response& response)
         {
