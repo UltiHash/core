@@ -43,8 +43,8 @@ namespace uh::cluster {
     public:
 
         explicit services_index(config_registry& config_reg) :
-            m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
-        }
+            m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size)
+        {}
 
         void add(const std::size_t& id, std::shared_ptr <client> cl) {
             m_offsets.emplace(m_max_data_store_size * id, std::move(cl));
@@ -71,6 +71,21 @@ namespace uh::cluster {
         const uint128_t m_max_data_store_size;
     };
 
+    class dependency {
+    public:
+        explicit dependency(const config_registry& config_reg) :
+            m_cur_role(get_service_role(config_reg.get_service_name())),
+            m_cur_id(config_reg.get_service_id())
+        {}
+
+        void fetch(etcd::SyncClient) {
+
+        }
+
+    private:
+        const role m_cur_role;
+        const std::size_t m_cur_id;
+    };
 
     template <role r>
     class services {
@@ -87,9 +102,8 @@ namespace uh::cluster {
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
                  m_services_index(config_registry)
-                 // constructor to dependency manager that fills dependency with correct dependencies
         {
-            wait_for_dependency(); // -> uses dependency manager to wait for dependency
+            wait_for_dependency();
         }
 
         ~services() {
@@ -112,7 +126,7 @@ namespace uh::cluster {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
 
             if (m_clients.empty()) {
-                return std::shared_ptr<client>();
+                return {};
             }
 
             if (m_robin_index == m_clients.end()) {
@@ -136,12 +150,6 @@ namespace uh::cluster {
         }
 
     private:
-
-        class dependency_manager {
-        public:
-        private:
-
-        };
 
         void handle_state_changes(const etcd::Response& response)
         {
