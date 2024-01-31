@@ -71,8 +71,6 @@ namespace uh::cluster {
         const uint128_t m_max_data_store_size;
     };
 
-    // create dependency manager here
-    // on startup it would collect the dependent nodes
 
     template <role r>
     class services {
