@@ -76,47 +76,22 @@ namespace uh::cluster {
     class services {
     public:
 
-        services(boost::asio::io_context& ioc, config_registry& config_registry, const int connection_count, std::string etcd_host):
-                m_ioc(ioc),
-                m_connection_count(connection_count),
-                m_etcd_client(etcd_host),
-                m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r), [this](etcd::Response response) {return handle_state_changes(response);}, true),
-                m_services_index(config_registry)
-        {}
-
-        ~services() {
-            // joins all the watcher thread
-            m_watcher.Cancel();
+        services(boost::asio::io_context& ioc,
+                 config_registry& config_registry,
+                 const int connection_count,
+                 std::string etcd_host) :
+                 m_ioc(ioc),
+                 m_connection_count(connection_count),
+                 m_etcd_client(etcd_host),
+                 m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
+                          [this](etcd::Response response) {return handle_state_changes(response);}, true),
+                 m_services_index(config_registry)
+        {
+            wait_for_dependency();
         }
 
-        void handle_state_changes(const etcd::Response& response)
-        {
-            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key() << ", value: " << response.value().as_string();
-
-            const auto& key = response.value().key();
-
-            const std::string service_id = std::filesystem::path(key).filename().string();
-            const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(r) + '/' + service_id + '/';
-            const auto etcd_action = get_etcd_action_enum(response.action());
-
-            switch (etcd_action) {
-                case etcd_action::create:
-
-                    add_service_callback({.role = r,
-                                          .id = std::stoul(service_id),
-                                          .host = m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_HOST))
-                                                  .get().value().as_string(),
-                                          .port = static_cast<uint16_t>(std::stoul(m_etcd_client.get(service_prefix_path + get_config_string(uh::cluster::CFG_ENDPOINT_PORT))
-                                                  .get().value().as_string()))});
-                    break;
-
-                case etcd_action::erase:
-                    remove_service_callback({.role = r,
-                                              .id = std::stoul(service_id)
-                                            });
-                    break;
-            }
-
+        ~services() {
+            m_watcher.Cancel();
         }
 
         template<typename key>
@@ -155,47 +130,120 @@ namespace uh::cluster {
             return clients_list;
         }
 
-        void add_service(const service_endpoint& service) {
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
+    private:
 
-            if (m_clients.contains(service.id)) [[unlikely]]
-                return;
+        void handle_state_changes(const etcd::Response& response)
+        {
+            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key()
+                        << ", value: " << response.value().as_string();
 
-            auto cl = std::make_shared<client>(m_ioc, service.host,
-                                               service.port,
-                                               m_connection_count);
+            const auto& etcd_path = response.value().key();
+            const auto etcd_action = get_etcd_action_enum(response.action());
 
-            m_clients.emplace(service.id, cl);
-            m_services_index.add(service.id, std::move(cl));
+            switch (etcd_action) {
+                case etcd_action::create:
+                    add(etcd_path);
+                    break;
+
+                case etcd_action::erase:
+                    remove(etcd_path);
+                    break;
+            }
+
         }
 
-    private:
+        void wait_for_dependency() {
+            const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
+
+            if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
+                LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
+                std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+                m_cv.wait(lk, [this]() { return !m_clients.empty(); });
+            } else {
+                add_service_instances();
+            }
+
+            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
+        }
+
+        void add_service_instances() {
+            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
+
+            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
+
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
+                add(service_instances.key(i));
+            }
+        }
+
+        service_endpoint extract(const std::string& path) const {
+
+            const auto id = std::filesystem::path(path).filename().string();
+            service_endpoint service_endpoint;
+            service_endpoint.id = std::stoul(id);
+
+            const std::string attributes_prefix(etcd_services_attributes_key_prefix +
+                                                get_service_string(r) + '/' + id  + '/');
+            etcd::Response attributes = m_etcd_client.ls(attributes_prefix).get();
+
+            for (size_t i = 0; i < attributes.keys().size(); i++) {
+                const auto attribute_name = std::filesystem::path(attributes.key(i))
+                                            .filename().string();
+
+                if (attribute_name == get_config_string(CFG_ENDPOINT_HOST)) {
+                    service_endpoint.host = attributes.value(i).as_string();
+                } else if (attribute_name == get_config_string(CFG_ENDPOINT_PORT)) {
+                    service_endpoint.port = std::stoul(attributes.value(i).as_string());
+                }
+            }
+
+            return service_endpoint;
+        }
+
+        void add(const std::string& path) {
+            const auto service_endpoint = extract(path);
+
+            LOG_INFO() << "add callback for service " << get_service_string(r) << ": "
+                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
+                        << service_endpoint.port ;
+
+            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+            if (m_clients.contains(service_endpoint.id)) [[unlikely]]
+                return;
+
+            auto cl = std::make_shared<client>(m_ioc, service_endpoint.host,
+                                               service_endpoint.port,
+                                               m_connection_count);
+
+            m_clients.emplace(service_endpoint.id, cl);
+            m_services_index.add(service_endpoint.id, std::move(cl));
+            lk.unlock();
+            m_cv.notify_one();
+        }
+
+        void remove(const std::string& path) {
+            const auto service_endpoint = extract(path);
+
+            LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
+                       << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
+                       << service_endpoint.port ;
+
+            std::lock_guard<std::shared_mutex> shared_lk(m_shared_mutex);
+            m_clients.erase(service_endpoint.id);
+            m_services_index.erase(service_endpoint.id);
+        }
 
         boost::asio::io_context& m_ioc;
         const int m_connection_count;
-        etcd::Client m_etcd_client;
+        mutable etcd::Client m_etcd_client;
         etcd::Watcher m_watcher;
 
         mutable std::shared_mutex m_shared_mutex;
+        std::condition_variable_any m_cv;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
 
         mutable std::atomic <size_t> m_nodes_index {};
         services_index<r> m_services_index;
-
-        void add_service_callback(const service_endpoint& service) {
-
-            LOG_INFO() << "add callback for service " << service.role << " called.";
-
-            add_service(service);
-        }
-
-        void remove_service_callback(const service_endpoint& service) {
-            LOG_INFO() << "removed callback for service " << service.role << " called.";
-
-            std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
-            m_clients.erase(service.id);
-            m_services_index.erase(service.id);
-        }
 
     };
 

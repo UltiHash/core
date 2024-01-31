@@ -179,14 +179,6 @@ public:
         return used;
     }
 
-    void create_storage_service_connections (service_registry& service_registry) {
-        std::vector<service_endpoint> ds_instances = service_registry.get_service_instances(uh::cluster::STORAGE_SERVICE);
-
-        for(const auto& instance : ds_instances) {
-            m_storage_services.add_service(instance);
-        }
-    }
-
     [[nodiscard]] boost::asio::io_context& get_executor () const {
         return m_io_service;
     }
