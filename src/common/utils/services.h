@@ -156,7 +156,7 @@ namespace uh::cluster {
 
             if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                std::lock_guard<std::shared_mutex> lk(m_shared_mutex);
+                std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
                 m_cv.wait(lk, [this]() { return !m_clients.empty(); });
             } else {
                 add_service_instances();
