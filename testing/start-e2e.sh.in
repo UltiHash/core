@@ -130,6 +130,22 @@ setup_bare_cluster ()
         start_service "$dir" "etcd" "etcd"
     fi
 
+    timeout=30
+    while [ "$timeout" -gt "0" ]; do
+
+        if curl --silent --output /dev/null http://localhost:2380; then
+            break
+        fi
+
+        timeout=$((timeout - 1))
+        sleep 1
+    done
+
+    if [ "$timeout" -eq "0" ]; then
+        echo "timeout waiting for etcd"
+        exit 1
+    fi
+
     for role in deduplicator directory storage entrypoint; do
         start_service "$dir" "$role" "$uhc $role"
     done
