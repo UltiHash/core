@@ -7,7 +7,7 @@
 
 #include <string>
 #include <fstream>
-#include "third-party/etcd-cpp-apiv3/etcd/Client.hpp"
+#include "etcd/SyncClient.hpp"
 #include "common/utils/common.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
@@ -109,7 +109,7 @@ public:
 
 private:
     const std::string m_identity_file = "identity";
-    etcd::Client m_etcd_client;
+    etcd::SyncClient m_etcd_client;
     const uh::cluster::role m_service_role;
     const std::filesystem::path m_working_dir;
     const std::size_t m_service_id;
@@ -118,19 +118,19 @@ private:
     class registry_lock
     {
     public:
-        explicit registry_lock(etcd::Client& client) :
+        explicit registry_lock(etcd::SyncClient& client) :
                 m_client(client)
         {
-            m_response = m_client.lock(etcd_global_lock_key).get();
+            m_response = m_client.lock(etcd_global_lock_key);
         }
 
         ~registry_lock()
         {
-            m_client.unlock(m_response.lock_key()).get();
+            m_client.unlock(m_response.lock_key());
         }
 
     private:
-        etcd::Client& m_client;
+        etcd::SyncClient& m_client;
         etcd::Response m_response;
     };
 
@@ -314,7 +314,7 @@ private:
         etcd::Response response;
 
         try {
-            response= m_etcd_client.get(key).get();
+            response= m_etcd_client.get(key);
         } catch (std::exception const & ex) {
             throw std::system_error(EIO, std::generic_category(), "retrieval of configuration parameter " + key + " failed due to communication problem, details: " + ex.what());
         }
@@ -326,7 +326,7 @@ private:
     }
 
     std::string set(const std::string &key, const std::string &value) {
-        auto response = m_etcd_client.set(key, value).get();
+        auto response = m_etcd_client.set(key, value);
         try
         {
             if (response.is_ok())
