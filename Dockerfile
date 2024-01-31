@@ -25,8 +25,6 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1 lsof
 
 COPY --from=build /core/build/uh-cluster /usr/local/bin
-COPY --from=build /core/build/lib/third-party/etcd-cpp-apiv3/src/libetcd-cpp-api.so /usr/local/lib
-COPY --from=build /usr/local/lib/libcpprest.so.2.10 /usr/local/lib
 
 RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
