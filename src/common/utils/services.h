@@ -158,7 +158,7 @@ namespace uh::cluster {
         void wait_for_dependency() {
             const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
 
-            if(m_etcd_client.ls(dependency_key).get().keys().empty()) {
+            if(m_etcd_client.ls(dependency_key).keys().empty()) {
                 LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
                 std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
                 m_cv.wait(lk, [this]() { return !m_clients.empty(); });
@@ -172,14 +172,14 @@ namespace uh::cluster {
         void add_service_instances() {
             const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
 
-            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path).get();
+            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
 
             for (size_t i = 0; i < service_instances.keys().size(); i++) {
                 add(service_instances.key(i));
             }
         }
 
-        service_endpoint extract(const std::string& path) const {
+        service_endpoint extract(const std::string& path) {
 
             const auto id = std::filesystem::path(path).filename().string();
             service_endpoint service_endpoint;
@@ -187,7 +187,7 @@ namespace uh::cluster {
 
             const std::string attributes_prefix(etcd_services_attributes_key_prefix +
                                                 get_service_string(r) + '/' + id  + '/');
-            etcd::Response attributes = m_etcd_client.ls(attributes_prefix).get();
+            etcd::Response attributes = m_etcd_client.ls(attributes_prefix);
 
             for (size_t i = 0; i < attributes.keys().size(); i++) {
                 const auto attribute_name = std::filesystem::path(attributes.key(i))
@@ -249,7 +249,7 @@ namespace uh::cluster {
 
         boost::asio::io_context& m_ioc;
         const int m_connection_count;
-        mutable etcd::Client m_etcd_client;
+        etcd::SyncClient m_etcd_client;
         etcd::Watcher m_watcher;
 
         mutable std::shared_mutex m_shared_mutex;
