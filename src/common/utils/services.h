@@ -116,13 +116,13 @@ namespace uh::cluster {
             return it->second;
         }
 
-        [[nodiscard]] std::shared_ptr <client> get() const
+        std::shared_ptr <client> get() const
         {
             std::unique_lock<std::shared_mutex> lk(m_mutex);
             return lockfree_get();
         }
 
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
+        std::vector <std::shared_ptr <client>> get_clients() const {
             std::vector <std::shared_ptr <client>> clients_list;
 
             std::shared_lock<std::shared_mutex> lk(m_mutex);
@@ -142,7 +142,7 @@ namespace uh::cluster {
     private:
         std::shared_ptr<client> lockfree_get() const {
             if (m_clients.empty()) {
-                return std::shared_ptr<client>();
+                throw std::runtime_error("no client available");
             }
 
             if (m_robin_index == m_clients.end()) {
