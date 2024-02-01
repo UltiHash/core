@@ -36,28 +36,14 @@ struct fixture
 
 BOOST_FIXTURE_TEST_CASE(Empty, fixture)
 {
-    {
-        const auto& clients = services.get_clients();
-        BOOST_CHECK(clients.empty());
-    }
-
-    {
-        auto client = services.get();
-        BOOST_CHECK(!client);
-    }
-
-    {
-        auto client = services.get(static_cast<std::size_t>(0u));
-        BOOST_CHECK(!client);
-    }
+    BOOST_CHECK(services.get_clients().empty());
+    BOOST_CHECK_THROW(services.get(), std::exception);
+    BOOST_CHECK_THROW(services.get(static_cast<std::size_t>(0u)), std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture)
 {
-    {
-        const auto& clients = services.get_clients();
-        BOOST_CHECK(clients.empty());
-    }
+    BOOST_CHECK(services.get_clients().empty());
 
     {
         test::server srv("0.0.0.0", 8081);
@@ -69,17 +55,12 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture)
         }
     }
 
-    {
-        WAIT_UNTIL_CHECK(1000, services.get_clients().empty());
-    }
+    WAIT_UNTIL_CHECK(1000, services.get_clients().empty());
 }
 
 BOOST_FIXTURE_TEST_CASE(GetClient, fixture)
 {
-    {
-        const auto& clients = services.get_clients();
-        BOOST_CHECK(clients.empty());
-    }
+    BOOST_CHECK(services.get_clients().empty());
 
     {
         test::server srv("0.0.0.0", 8081);
@@ -87,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture)
         auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
 
         {
-            WAIT_UNTIL_CHECK(1000, !!services.get());
+            WAIT_UNTIL_NO_THROW(1000, services.get());
         }
     }
 }
