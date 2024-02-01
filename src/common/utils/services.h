@@ -101,19 +101,46 @@ namespace uh::cluster {
 
         template<typename key>
         std::shared_ptr <client> get(key k) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
             return m_services_index.get(k);
         }
 
-        [[nodiscard]] std::shared_ptr<client> get(const std::size_t& id) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            return m_clients.at(id);
+        std::shared_ptr<client> get(std::size_t id) const {
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
+
+            auto it = m_clients.find(id);
+            if (it == m_clients.end()) {
+                throw std::runtime_error("no client with id " + std::to_string(id));
+            }
+
+            return it->second;
         }
 
         [[nodiscard]] std::shared_ptr <client> get() const
         {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
+            return lockfree_get();
+        }
 
+        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
+            std::vector <std::shared_ptr <client>> clients_list;
+
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
+            clients_list.reserve(m_clients.size());
+            std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
+
+            return clients_list;
+        }
+
+        std::shared_ptr<client> wait() {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            m_cv.wait(lock, [this](){ return !m_clients.empty(); });
+
+            return lockfree_get();
+        }
+
+    private:
+        std::shared_ptr<client> lockfree_get() const {
             if (m_clients.empty()) {
                 return std::shared_ptr<client>();
             }
@@ -127,18 +154,6 @@ namespace uh::cluster {
 
             return rv;
         }
-
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
-            std::vector <std::shared_ptr <client>> clients_list;
-
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            clients_list.reserve(m_clients.size());
-            std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
-
-            return clients_list;
-        }
-
-    private:
 
         void handle_state_changes(const etcd::Response& response)
         {
@@ -191,7 +206,7 @@ namespace uh::cluster {
                         << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                         << service_endpoint.port ;
 
-            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
                 return;
 
@@ -212,7 +227,7 @@ namespace uh::cluster {
                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                        << service_endpoint.port ;
 
-            std::lock_guard<std::shared_mutex> shared_lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
             auto it = m_clients.find(service_endpoint.id);
             if (it == m_clients.end())
             {
@@ -233,7 +248,7 @@ namespace uh::cluster {
         etcd::SyncClient m_etcd_client;
         etcd::Watcher m_watcher;
 
-        mutable std::shared_mutex m_shared_mutex;
+        mutable std::shared_mutex m_mutex;
         std::condition_variable_any m_cv;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
 
