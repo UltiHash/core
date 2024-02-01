@@ -90,4 +90,21 @@ BOOST_AUTO_TEST_CASE(FindInitial)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(GetClientById, fixture)
+{
+    BOOST_CHECK(services.get_clients().empty());
+
+    std::size_t test_id = 0xdeadbeef;
+
+    {
+        test::server srv("0.0.0.0", 8081);
+        service_registry sr(DEDUPLICATOR_SERVICE, test_id, REGISTRY_ENDPOINT);
+        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+
+        WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
+        BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
+        BOOST_CHECK_NO_THROW(services.get(test_id));
+    }
+}
+
 }
