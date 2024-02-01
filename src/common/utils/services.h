@@ -56,14 +56,28 @@ namespace uh::cluster {
 
         [[nodiscard]] std::shared_ptr <client> get(const uint128_t& pointer) const {
 
-            const auto pfd = m_offsets.upper_bound (pointer);
+            auto it = m_offsets.upper_bound(pointer);
 
-            if (pfd == m_offsets.cbegin()) [[unlikely]] {
-                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            if (it == m_offsets.cbegin()) [[unlikely]] {
+                throw std::out_of_range("pointer out of range");
             }
 
-            const auto n = std::prev (pfd);
-            return n->second;
+            if (it == m_offsets.end()) {
+                auto last = m_offsets.rbegin();
+                if (!(last->first > pointer)
+                    && last->first + m_max_data_store_size > pointer) {
+                    return last->second;
+                }
+
+                throw std::out_of_range("pointer out of range");
+            }
+
+            it = std::prev(it);
+            if (!(it->first > pointer) && it->first + m_max_data_store_size > pointer) {
+                return it->second;
+            }
+
+            throw std::out_of_range("pointer out of range");
         }
 
     private:
