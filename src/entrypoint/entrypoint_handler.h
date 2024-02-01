@@ -54,6 +54,7 @@ namespace uh::cluster {
     coro <void> handle (messenger m) override {
         LOG_INFO() << "connection from: " << m.get_socket().remote_endpoint();
 
+        boost::beast::error_code ec;
         try {
 
             for (;;) {
@@ -86,21 +87,21 @@ namespace uh::cluster {
                 LOG_ERROR() << se.what();
                 uh::cluster::rest::http::model::custom_error_response_exception err(boost::beast::http::status::bad_request);
                 boost::beast::http::write(m.get_socket(), err.get_response_specific_object());
-                m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+                m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (uh::cluster::rest::http::model::custom_error_response_exception& res_exc) {
             LOG_ERROR() << res_exc.what();
             boost::beast::http::write(m.get_socket(), res_exc.get_response_specific_object());
-            m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+            m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
             throw;
         }
         catch (const std::exception& e) {
             LOG_ERROR() << e.what();
             uh::cluster::rest::http::model::custom_error_response_exception err(boost::beast::http::status::internal_server_error);
             boost::beast::http::write(m.get_socket(), err.get_response_specific_object());
-            m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send);
+            m.get_socket().shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
             throw;
         }
 
