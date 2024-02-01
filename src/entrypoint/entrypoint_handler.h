@@ -58,8 +58,6 @@ namespace uh::cluster {
 
             for (;;) {
 
-                m.get_socket().set_option(boost::asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>{
-                        std::numeric_limits<int>::max()});
                 boost::beast::flat_buffer buffer;
 
                 boost::beast::http::request_parser<boost::beast::http::empty_body> received_request;
