@@ -49,7 +49,7 @@ namespace uh::cluster::rest::http
 
         [[maybe_unused]] virtual void validate_request_specific_criteria() { };
 
-        virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
+        virtual coro<void> read_body(boost::asio::ip::tcp::socket& stream, boost::beast::flat_buffer& buffer);
 
         [[maybe_unused]] virtual inline void clear_body() { m_body.clear(); }
 

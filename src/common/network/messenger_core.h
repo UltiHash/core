@@ -50,8 +50,6 @@ namespace uh::cluster {
                 m_write_size (m.m_write_size) {
         }
 
-
-
         template <typename T>
         requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
         inline void register_read_buffer (T& t) {
@@ -197,6 +195,10 @@ namespace uh::cluster {
         void clear_buffers () {
             reset_write_buffers();
             reset_read_buffers();
+        }
+
+        inline boost::asio::ip::tcp::socket& get_socket () noexcept {
+            return m_socket;
         }
 
         ~messenger_core() {
