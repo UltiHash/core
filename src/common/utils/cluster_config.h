@@ -24,7 +24,6 @@ struct server_config
 
 
 struct service_endpoint {
-    uh::cluster::role role;
     std::size_t id;
     std::string host;
     std::uint16_t port;

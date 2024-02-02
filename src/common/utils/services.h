@@ -78,37 +78,72 @@ namespace uh::cluster {
         class dependency {
         public:
 
-//            enum class property : uint8_t
-
-            dependency(const config_registry& config_reg, etcd::SyncClient& etcd_client, const services& services) :
+            dependency(const config_registry& config_reg, services& services) :
                     m_services(services),
                     m_cur_role(get_service_role(config_reg.get_service_name())),
                     m_cur_id(config_reg.get_service_id())
             {}
 
-            const dependency& fetch() {
-                return *this;
+            void publish(const std::size_t& id) {
+                if (!m_dependent.contains(id)) {
+                    // send it to etcd
+                }
             }
 
-            void wait() const {
-                const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
+            void wait() {
+                fetch();
 
-                // if no dependency then we can wait for at least one node to become available
-                if(m_dependent_services.empty()) {
-                    LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
+                if(m_dependent.empty()) {
+                    LOG_INFO() << "waiting for dependency " << get_service_string(r) << " to become available...";
+
                     std::unique_lock<std::shared_mutex> lk(m_services.m_shared_mutex);
                     m_services.m_cv.wait(lk, [this]() { return !m_services.m_clients.empty(); });
-                } else {
-                    // we need to wait for each dependent service connections
-                }
 
-                LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
+                } else {
+                    for (const auto& id: m_dependent) {
+
+                        const std::string announced_prefix(etcd_services_announced_key_prefix +
+                                                            get_service_string(r) + '/' +
+                                                            std::to_string(id));
+                        etcd::Response attributes = m_services.m_etcd_client.ls(announced_prefix);
+
+                        if ( !attributes.key(0).empty() ) {
+                            m_services.add(announced_prefix);
+                        } else {
+                            std::unique_lock<std::shared_mutex> lk(m_services.m_shared_mutex);
+                            m_services.m_cv.wait(lk, [this, &id]()
+                                                {
+                                                    if (m_services.m_clients.contains(id))
+                                                        return true;
+                                                    else
+                                                        return false;
+                                                });
+                        }
+                    }
+                }
             }
 
         private:
-            const services& m_services;
+            void fetch() {
+                // populate the m_dependent_services by template r
+                // ex: /uh/state/deduplicator/2/dependency/storage/id value
+                // basically fetch by role/id/dependency/r --> ls and get all the id and value
+                // put value maybe
+                const std::string dependency_prefix(etcd_instance_state_key_prefix +
+                                                    get_service_string(m_cur_role) + '/' +
+                                                    std::to_string(m_cur_id) + '/' +
+                                                    get_service_string(r) + "/id"
+                                                    );
+                etcd::Response dependencies = m_services.m_etcd_client.ls(dependency_prefix);
 
-            std::set<std::size_t> m_dependent_services;
+                for (size_t i = 0; i < dependencies.keys().size(); i++) {
+                    m_dependent.emplace(std::stoul(dependencies.value(i).as_string()));
+                }
+            }
+
+            services& m_services;
+            std::set<std::size_t> m_dependent;
+
             const role m_cur_role;
             const std::size_t m_cur_id;
         };
@@ -124,10 +159,9 @@ namespace uh::cluster {
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
                  m_services_index(config_registry),
-                 m_dependency(config_registry, m_etcd_client, std::ref(*this))
+                 m_dependency(config_registry, *this)
         {
-            // fetch based on property
-            m_dependency.fetch().wait();
+            m_dependency.wait();
         }
 
         ~services() {
@@ -171,6 +205,10 @@ namespace uh::cluster {
             std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
 
             return clients_list;
+        }
+
+        void publish(const std::size_t& id) {
+            m_dependency.publish(id);
         }
 
     private:
