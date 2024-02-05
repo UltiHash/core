@@ -6,7 +6,7 @@
 #include <utility>
 #include <set>
 
-#include "log.h"
+#include "common/utils/log.h"
 #include "common/network/client.h"
 #include "common/registry/config_registry.h"
 #include "etcd/Watcher.hpp"

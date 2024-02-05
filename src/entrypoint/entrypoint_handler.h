@@ -13,7 +13,7 @@
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
 #include "common/utils/worker_utils.h"
-#include "common/utils/services.h"
+#include "common/registry/services.h"
 #include "entrypoint/rest/utils/parser/s3_parser.h"
 #include "entrypoint/rest/http/http_response.h"
 #include "entrypoint/rest/http/models/create_bucket_response.h"
