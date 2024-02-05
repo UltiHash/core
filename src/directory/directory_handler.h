@@ -58,8 +58,6 @@ namespace uh::cluster {
                 case DIR_BUCKET_EXISTS:
                     co_await handle_bucket_exists(m, message_header);
                     break;
-                case STOP:
-                    co_return;
                 default:
                     throw std::invalid_argument ("Invalid message type!");
                 }

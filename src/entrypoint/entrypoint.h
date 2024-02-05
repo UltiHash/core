@@ -43,6 +43,7 @@ public:
 
     void stop() override {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
+        m_server.stop();
         m_workers->join();
         m_workers->stop();
     }

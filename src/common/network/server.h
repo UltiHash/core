@@ -100,6 +100,7 @@ namespace uh::cluster
             LOG_INFO() << "stopping server " << m_server_name;
             m_is_running = false;
             m_ioc.stop();
+            LOG_INFO() << "stopped server " << m_server_name;
         }
 
         [[nodiscard]] const server_config& get_server_config() const {

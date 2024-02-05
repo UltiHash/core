@@ -36,6 +36,7 @@ public:
         for (auto& fn: m_callbacks) {
             fn ();
         }
+        sleep(2);
     }
 
 };
