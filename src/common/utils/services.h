@@ -86,7 +86,10 @@ namespace uh::cluster {
 
             void publish(const std::size_t& id) {
                 if (!m_dependent.contains(id)) {
-                    // send it to etcd
+                    m_services.m_etcd_client.put(etcd_instance_state_key_prefix +
+                                                 get_service_string(m_cur_role) + '/' +
+                                                 std::to_string(m_cur_id) + '/' +
+                                                 get_service_string(r) + "/id", std::to_string(id));
                 }
             }
 
@@ -94,20 +97,23 @@ namespace uh::cluster {
                 fetch();
 
                 if(m_dependent.empty()) {
-                    LOG_INFO() << "waiting for dependency " << get_service_string(r) << " to become available...";
+                    LOG_INFO() << "waiting for any " << get_service_string(r) << " service to become available...";
+
+                    m_services.add_service_instances();
 
                     std::unique_lock<std::shared_mutex> lk(m_services.m_shared_mutex);
                     m_services.m_cv.wait(lk, [this]() { return !m_services.m_clients.empty(); });
 
                 } else {
                     for (const auto& id: m_dependent) {
+                        LOG_INFO() << "waiting for " << get_service_string(r) << ": " << id <<  " service to become available...";
 
                         const std::string announced_prefix(etcd_services_announced_key_prefix +
                                                             get_service_string(r) + '/' +
                                                             std::to_string(id));
                         etcd::Response attributes = m_services.m_etcd_client.ls(announced_prefix);
 
-                        if ( !attributes.key(0).empty() ) {
+                        if ( !attributes.keys().empty() ) {
                             m_services.add(announced_prefix);
                         } else {
                             std::unique_lock<std::shared_mutex> lk(m_services.m_shared_mutex);
@@ -125,10 +131,6 @@ namespace uh::cluster {
 
         private:
             void fetch() {
-                // populate the m_dependent_services by template r
-                // ex: /uh/state/deduplicator/2/dependency/storage/id value
-                // basically fetch by role/id/dependency/r --> ls and get all the id and value
-                // put value maybe
                 const std::string dependency_prefix(etcd_instance_state_key_prefix +
                                                     get_service_string(m_cur_role) + '/' +
                                                     std::to_string(m_cur_id) + '/' +
@@ -174,12 +176,18 @@ namespace uh::cluster {
             return m_services_index.get(k);
         }
 
-        [[nodiscard]] std::shared_ptr<client> get(const std::size_t& id) const {
+        std::shared_ptr<client> get(std::size_t id) const {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
             return m_clients.at(id);
         }
 
-        [[nodiscard]] std::shared_ptr <client> get() const
+        std::shared_ptr <client> wait(std::size_t id) {
+            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+            m_cv.wait(lk, [this, &id]() { return m_clients.contains(id); });
+            return m_clients.at(id);
+        }
+
+        std::shared_ptr <client> get() const
         {
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
 
@@ -197,7 +205,7 @@ namespace uh::cluster {
             return rv;
         }
 
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
+        std::vector <std::shared_ptr <client>> get_clients() const {
             std::vector <std::shared_ptr <client>> clients_list;
 
             std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
@@ -205,10 +213,6 @@ namespace uh::cluster {
             std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
 
             return clients_list;
-        }
-
-        void publish(const std::size_t& id) {
-            m_dependency.publish(id);
         }
 
     private:
@@ -233,16 +237,6 @@ namespace uh::cluster {
 
         }
 
-//        void add_service_instances() {
-//            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
-//
-//            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
-//
-//            for (size_t i = 0; i < service_instances.keys().size(); i++) {
-//                add(service_instances.key(i));
-//            }
-//        }
-
         service_endpoint extract(const std::string& path) {
 
             const auto id = std::filesystem::path(path).filename().string();
@@ -265,6 +259,16 @@ namespace uh::cluster {
             }
 
             return service_endpoint;
+        }
+
+        void add_service_instances() {
+            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
+
+            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
+
+            for (size_t i = 0; i < service_instances.keys().size(); i++) {
+                add(service_instances.key(i));
+            }
         }
 
         void add(const std::string& path) {

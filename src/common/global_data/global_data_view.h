@@ -34,11 +34,7 @@ public:
 
     address write (const std::string_view& data) {
 
-        const auto client = m_storage_services.get();
-
-        // check if it is in the dependency manager
-        // dependency_manager.put(offset)  : if new then add it to etcd
-        // on startup dependency manager fills everything up
+        const auto [id, client] = m_storage_services.get_client_w_id();
 
         address addr;
         boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
