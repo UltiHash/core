@@ -97,7 +97,9 @@ namespace uh::cluster
         }
 
         void stop() {
+            LOG_INFO() << "stopping server " << m_server_name;
             m_is_running = false;
+            m_ioc.stop();
         }
 
         [[nodiscard]] const server_config& get_server_config() const {
@@ -108,13 +110,11 @@ namespace uh::cluster
             for (auto& thread: m_thread_container) {
                 thread.join();
             }
-            stop ();
         }
 
     private:
 
-        boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>
-        do_listen (const boost::asio::ip::tcp::endpoint& endpoint) {
+        boost::asio::ip::tcp::acceptor do_listen (const boost::asio::ip::tcp::endpoint& endpoint) {
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
                     boost::asio::ip::tcp::acceptor(m_ioc));
 
@@ -127,42 +127,26 @@ namespace uh::cluster
         }
         
         // Accepts incoming connections and launches the sessions
-        boost::asio::awaitable<void> do_accept (auto acceptor) {
-
-
+        coro <void> do_accept (auto acceptor) {
             while (m_is_running) {
-                boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
-                auto conn_address = stream.remote_endpoint().address().to_string();
-                auto conn_port = stream.remote_endpoint().port();
+                boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept(boost::asio::use_awaitable);
+                const auto conn_address = stream.remote_endpoint().address().to_string();
+                const auto conn_port = stream.remote_endpoint().port();
 
-                boost::asio::co_spawn(
-                        acceptor.get_executor(),
-                        do_session(std::move(stream)),
+                boost::asio::co_spawn(m_ioc, do_session(std::move(stream)),
                         [&](const std::exception_ptr &e) {
                             if (e)
                                 try {
                                     std::rethrow_exception(e);
                                 }
                                 catch (const std::exception &e) {
-                                    LOG_ERROR() << "in session: [" << conn_address << ":" << conn_port << "] "
-                                         << e.what();
-
+                                    LOG_ERROR() << "in session: [" << conn_address << ":" << conn_port << "] " << e.what();
                                 }
-
-                            if(m_handler->stop_received()) {
-                                m_is_running = false;
-                                try {
-                                    acceptor.close();
-                                    while(acceptor.is_open()) {};
-                                } catch (boost::system::system_error &e) {
-                                    LOG_ERROR() << "Error in closing the server acceptor in " << m_server_name;
-                                }
-                            }
-                        });
+                            });
             }
         }
 
-        boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
+        coro <void> do_session(boost::asio::ip::tcp::socket stream) {
             LOG_INFO() << m_server_name << " connection from: " << stream.remote_endpoint();
             co_await m_handler->handle (messenger(std::move(stream)));
             co_return;

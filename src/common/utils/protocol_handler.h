@@ -18,10 +18,6 @@ namespace uh::cluster {
 
     virtual ~protocol_handler() = default;
 
-    [[nodiscard]] virtual bool stop_received() const {
-        return false;
-    }
-
 };
 
 } // namespace uh::cluster

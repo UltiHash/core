@@ -16,9 +16,7 @@ class storage_handler: public protocol_handler {
 public:
 
     storage_handler(storage_config config, size_t index) :
-            m_data_store(std::move(config), index),
-            m_is_stopped(false)
-    {
+            m_data_store(std::move(config), index) {
     }
 
     coro <void> handle (messenger m) override {
@@ -46,9 +44,6 @@ public:
                     case USED_REQ:
                         co_await handle_get_used(m, message_header);
                         break;
-                    case STOP:
-                        m_is_stopped = true;
-                        co_return;
                     default:
                         throw std::invalid_argument("Invalid message type!");
                 }
@@ -63,10 +58,6 @@ public:
                 co_await m.send_error (*err);
             }
         }
-    }
-
-    bool stop_received() const override {
-        return m_is_stopped;
     }
 
 private:
@@ -121,7 +112,6 @@ private:
     }
 
     uh::cluster::data_store m_data_store;
-    bool m_is_stopped;
 };
 
 } // end namespace uh::cluster
