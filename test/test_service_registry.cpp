@@ -27,8 +27,8 @@ namespace uh::cluster {
         auto etcd_client = etcd::SyncClient(REGISTRY_ENDPOINT);
         service_registry registering_registry(STORAGE_SERVICE, index, REGISTRY_ENDPOINT);
 
-        const auto service_prefix_path = etcd_services_attributes_key_prefix + get_service_string(STORAGE_SERVICE) + '/' + std::to_string(index) + '/';
-        const auto announced_path = etcd_services_announced_key_prefix + get_service_string(STORAGE_SERVICE) + '/' + std::to_string(index);
+        const auto service_prefix_path = etcd_services_attributes_key_prefix + to_string(STORAGE_SERVICE) + '/' + std::to_string(index) + '/';
+        const auto announced_path = etcd_services_announced_key_prefix + to_string(STORAGE_SERVICE) + '/' + std::to_string(index);
 
         {
             // check if the keys already exist or not
@@ -50,7 +50,7 @@ namespace uh::cluster {
             const auto announced_etcd_path = std::filesystem::path(etcd_client.get(announced_path).value().key());
 
             BOOST_CHECK(std::stoi(announced_etcd_path.filename()) == index);
-            BOOST_CHECK(announced_etcd_path.parent_path().filename() == get_service_string(STORAGE_SERVICE));
+            BOOST_CHECK(announced_etcd_path.parent_path().filename() == to_string(STORAGE_SERVICE));
             BOOST_CHECK(host == boost::asio::ip::host_name());
             BOOST_CHECK(std::stoul(port) == port_address);
         }

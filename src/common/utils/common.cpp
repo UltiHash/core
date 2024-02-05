@@ -5,20 +5,6 @@
 
 namespace uh::cluster {
 
-static const std::map<uh::cluster::role, std::string> abbreviation_by_role = {
-        {uh::cluster::STORAGE_SERVICE,      "storage"},
-        {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
-        {uh::cluster::DIRECTORY_SERVICE,    "directory"},
-        {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"}
-};
-
-static const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-        {"storage", uh::cluster::STORAGE_SERVICE},
-        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-        {"directory", uh::cluster::DIRECTORY_SERVICE},
-        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
-};
-
 static const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
         {uh::cluster::CFG_SERVER_THREADS,   "server_threads"},
         {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
@@ -53,15 +39,14 @@ static const std::map<uh::cluster::config_parameter, std::string> string_by_para
 };
 
 
-
-const std::string& get_service_string(const role &service_role) {
-    if (auto search = abbreviation_by_role.find(service_role); search != abbreviation_by_role.end())
-        return search->second;
-    else
-        throw std::invalid_argument("Invalid role!");
-}
-
 uh::cluster::role get_service_role(const std::string &service_role_str) {
+    static const std::map<std::string, role> role_by_abbreviation = {
+            {"storage", STORAGE_SERVICE},
+            {"deduplicator", DEDUPLICATOR_SERVICE},
+            {"directory", DIRECTORY_SERVICE},
+            {"entrypoint", ENTRYPOINT_SERVICE}
+    };
+
     if (auto search = role_by_abbreviation.find(service_role_str); search != role_by_abbreviation.end())
         return search->second;
     else

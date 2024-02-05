@@ -23,7 +23,7 @@ namespace uh::cluster {
 
     public:
         service_registry(uh::cluster::role role, std::size_t index, const std::string& etcd_host) :
-                m_service_name(get_service_string(role) + "/" + std::to_string(index)),
+                m_service_name(to_string(role) + "/" + std::to_string(index)),
                 m_etcd_client(etcd_host)
         {
         }

@@ -95,9 +95,20 @@ enum config_parameter  {
 
 uh::cluster::role get_service_role (const std::string& service_role_str);
 
-const std::string& get_service_string(const uh::cluster::role& service_role);
+constexpr std::string to_string(role r);
 
 const std::string& get_config_string (const uh::cluster::config_parameter& cfg_param);
+
+constexpr std::string to_string(role r) {
+    switch (r) {
+        case STORAGE_SERVICE: return "storage";
+        case DEDUPLICATOR_SERVICE: return "deduplicator";
+        case DIRECTORY_SERVICE: return "directory";
+        case ENTRYPOINT_SERVICE: return "entrypoint";
+    }
+
+    throw std::invalid_argument("unsupported role type");
+}
 
 } // end namespace uh::cluster
 

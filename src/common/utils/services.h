@@ -96,12 +96,12 @@ namespace uh::cluster {
                  m_ioc(ioc),
                  m_connection_count(connection_count),
                  m_etcd_client(etcd_host),
-                 m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
+                 m_watcher(etcd_host, etcd_services_announced_key_prefix + to_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
                  m_services_index(config_registry)
         {
-            auto path = etcd_services_announced_key_prefix + get_service_string(r);
+            auto path = etcd_services_announced_key_prefix + to_string(r);
 
             auto resp = m_etcd_client.ls(path);
             for (const auto& key : resp.keys()) {
@@ -199,7 +199,7 @@ namespace uh::cluster {
             service_endpoint.id = std::stoul(id);
 
             const std::string attributes_prefix(etcd_services_attributes_key_prefix +
-                                                get_service_string(r) + '/' + id  + '/');
+                                                to_string(r) + '/' + id  + '/');
             etcd::Response attributes = m_etcd_client.ls(attributes_prefix);
 
             for (size_t i = 0; i < attributes.keys().size(); i++) {
@@ -219,7 +219,7 @@ namespace uh::cluster {
         void add(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_INFO() << "add callback for service " << get_service_string(r) << ": "
+            LOG_INFO() << "add callback for service " << to_string(r) << ": "
                         << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                         << service_endpoint.port ;
 
@@ -240,7 +240,7 @@ namespace uh::cluster {
         void remove(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
+            LOG_INFO() << "remove callback for service " << to_string(r) << ": "
                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                        << service_endpoint.port ;
 

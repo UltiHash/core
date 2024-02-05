@@ -72,10 +72,10 @@ std::optional<config> parse_command_line(int argc, const char* args[]) {
 void print_help(std::ostream& out) {
     out << "Usage: " << PROJECT_NAME << " <role> [registry] [working_dir]\n"
         << "\trole\t\t" << "service role, ie. "
-            << get_service_string(uh::cluster::STORAGE_SERVICE) << ", "
-            << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
-            << get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or "
-            << get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "\n"
+            << to_string(STORAGE_SERVICE) << ", "
+            << to_string(DEDUPLICATOR_SERVICE) << ", "
+            << to_string(DIRECTORY_SERVICE) << ", or "
+            << to_string(ENTRYPOINT_SERVICE) << "\n"
         << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n"
         << "\tworking_dir\t" << "path to working directory (default: " << config::default_working_dir << ")\n";
 }
