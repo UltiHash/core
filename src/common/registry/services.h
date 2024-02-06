@@ -56,14 +56,28 @@ namespace uh::cluster {
 
         [[nodiscard]] std::shared_ptr <client> get(const uint128_t& pointer) const {
 
-            const auto pfd = m_offsets.upper_bound (pointer);
+            auto it = m_offsets.upper_bound(pointer);
 
-            if (pfd == m_offsets.cbegin()) [[unlikely]] {
-                throw std::out_of_range ("The pointer is not in the range of data nodes");
+            if (it == m_offsets.cbegin()) [[unlikely]] {
+                throw std::out_of_range("pointer out of range");
             }
 
-            const auto n = std::prev (pfd);
-            return n->second;
+            if (it == m_offsets.end()) {
+                auto last = m_offsets.rbegin();
+                if (!(last->first > pointer)
+                    && last->first + m_max_data_store_size > pointer) {
+                    return last->second;
+                }
+
+                throw std::out_of_range("pointer out of range");
+            }
+
+            it = std::prev(it);
+            if (!(it->first > pointer) && it->first + m_max_data_store_size > pointer) {
+                return it->second;
+            }
+
+            throw std::out_of_range("pointer out of range");
         }
 
     private:
@@ -87,7 +101,12 @@ namespace uh::cluster {
                  m_robin_index(m_clients.end()),
                  m_services_index(config_registry)
         {
-            wait_for_dependency();
+            auto path = etcd_services_announced_key_prefix + get_service_string(r);
+
+            auto resp = m_etcd_client.ls(path);
+            for (const auto& key : resp.keys()) {
+                add(key);
+            }
         }
 
         ~services() {
@@ -96,21 +115,48 @@ namespace uh::cluster {
 
         template<typename key>
         std::shared_ptr <client> get(key k) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
             return m_services_index.get(k);
         }
 
-        [[nodiscard]] std::shared_ptr<client> get(const std::size_t& id) const {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            return m_clients.at(id);
+        std::shared_ptr<client> get(std::size_t id) const {
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
+
+            auto it = m_clients.find(id);
+            if (it == m_clients.end()) {
+                throw std::runtime_error("no client with id " + std::to_string(id));
+            }
+
+            return it->second;
         }
 
-        [[nodiscard]] std::shared_ptr <client> get() const
+        std::shared_ptr <client> get() const
         {
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
+            return lockfree_get();
+        }
 
+        std::vector <std::shared_ptr <client>> get_clients() const {
+            std::vector <std::shared_ptr <client>> clients_list;
+
+            std::shared_lock<std::shared_mutex> lk(m_mutex);
+            clients_list.reserve(m_clients.size());
+            std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
+
+            return clients_list;
+        }
+
+        std::shared_ptr<client> wait() {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            m_cv.wait(lock, [this](){ return !m_clients.empty(); });
+
+            return lockfree_get();
+        }
+
+    private:
+        std::shared_ptr<client> lockfree_get() const {
             if (m_clients.empty()) {
-                return std::shared_ptr<client>();
+                throw std::runtime_error("no client available");
             }
 
             if (m_robin_index == m_clients.end()) {
@@ -123,59 +169,26 @@ namespace uh::cluster {
             return rv;
         }
 
-        [[nodiscard]] std::vector <std::shared_ptr <client>> get_clients() const {
-            std::vector <std::shared_ptr <client>> clients_list;
-
-            std::shared_lock<std::shared_mutex> lk(m_shared_mutex);
-            clients_list.reserve(m_clients.size());
-            std::ranges::copy(m_clients | std::views::values, std::back_inserter(clients_list));
-
-            return clients_list;
-        }
-
-    private:
-
         void handle_state_changes(const etcd::Response& response)
         {
             LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key()
                         << ", value: " << response.value().as_string();
 
-            const auto& etcd_path = response.value().key();
-            const auto etcd_action = get_etcd_action_enum(response.action());
+            try {
+                const auto& etcd_path = response.value().key();
+                const auto etcd_action = get_etcd_action_enum(response.action());
 
-            switch (etcd_action) {
-                case etcd_action::create:
-                    add(etcd_path);
-                    break;
+                switch (etcd_action) {
+                    case etcd_action::create:
+                        add(etcd_path);
+                        break;
 
-                case etcd_action::erase:
-                    remove(etcd_path);
-                    break;
-            }
-
-        }
-
-        void wait_for_dependency() {
-            const std::string dependency_key(etcd_services_announced_key_prefix + get_service_string(r));
-
-            if(m_etcd_client.ls(dependency_key).keys().empty()) {
-                LOG_INFO() << "waiting for dependency " << dependency_key << " to become available...";
-                std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
-                m_cv.wait(lk, [this]() { return !m_clients.empty(); });
-            } else {
-                add_service_instances();
-            }
-
-            LOG_INFO() << "dependency " << dependency_key << " seems to be available.";
-        }
-
-        void add_service_instances() {
-            const std::string service_prefix_path(etcd_services_announced_key_prefix + get_service_string(r) + "/");
-
-            etcd::Response service_instances = m_etcd_client.ls(service_prefix_path);
-
-            for (size_t i = 0; i < service_instances.keys().size(); i++) {
-                add(service_instances.key(i));
+                    case etcd_action::erase:
+                        remove(etcd_path);
+                        break;
+                }
+            } catch (const std::exception& e) {
+                LOG_WARN() << "error while handling service state change: " << e.what();
             }
         }
 
@@ -210,7 +223,7 @@ namespace uh::cluster {
                         << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                         << service_endpoint.port ;
 
-            std::unique_lock<std::shared_mutex> lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
                 return;
 
@@ -231,7 +244,7 @@ namespace uh::cluster {
                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                        << service_endpoint.port ;
 
-            std::lock_guard<std::shared_mutex> shared_lk(m_shared_mutex);
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
             auto it = m_clients.find(service_endpoint.id);
             if (it == m_clients.end())
             {
@@ -252,7 +265,7 @@ namespace uh::cluster {
         etcd::SyncClient m_etcd_client;
         etcd::Watcher m_watcher;
 
-        mutable std::shared_mutex m_shared_mutex;
+        mutable std::shared_mutex m_mutex;
         std::condition_variable_any m_cv;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
 

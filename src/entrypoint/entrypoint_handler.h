@@ -403,6 +403,7 @@ namespace uh::cluster {
                 LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
                 res = std::make_unique<rest::http::model::get_object_response>(req);
+                res->set_body(std::move (buffer));
                 res->set_bandwidth(bandwidth);
 
             }
