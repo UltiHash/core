@@ -14,7 +14,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::GET_BUCKET; }
 
-        inline coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override { co_return; }
+        inline coro<void> read_body(boost::asio::ip::tcp::socket& stream, boost::beast::flat_buffer& buffer) override { co_return; }
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 

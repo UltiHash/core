@@ -21,7 +21,7 @@ struct config {
     };
 
     static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
-    static constexpr const char* default_working_dir = "/var/lib/uh";
+    static constexpr const char* default_working_dir = "ultihash_root";
 
     action task;
     uh::cluster::role role;
