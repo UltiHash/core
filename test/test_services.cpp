@@ -193,20 +193,11 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture)
     BOOST_CHECK_THROW(services.wait(node_addr_range-1), std::runtime_error);
 
     {
-        std::atomic<bool> has_result = false;
-
-        std::thread waiter([&]{
-            test::server svr("0.0.0.0", 8081);
-            service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
-            auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
-
-            WAIT_UNTIL_CHECK(1000, has_result);
-        });
+        test::server svr("0.0.0.0", 8081);
+        service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
+        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
 
         WAIT_UNTIL_NO_THROW(1000, services.wait(5));
-        has_result = true;
-
-        waiter.join();
     }
 }
 }
