@@ -123,7 +123,7 @@ namespace uh::cluster {
         }
 
         template <typename key>
-        std::shared_ptr <client> wait_and_get(key k) const {
+        std::shared_ptr <client> wait(key k) const {
             std::shared_ptr <client> client;
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
