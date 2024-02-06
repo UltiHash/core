@@ -6,4 +6,4 @@
 	url = https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3.git
 [submodule "testing/s3-tests"]
 	path = testing/s3-tests
-	url = org-104891910@github.com:UltiHash/s3-tests.git
+	url = https://github.com/UltiHash/s3-tests.git

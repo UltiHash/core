@@ -1,13 +1,11 @@
 #!/bin/bash
 
-TESTING_BASE_DIR="@CMAKE_CURRENT_SOURCE_DIR@"
-TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
-PYTHON3="@Python3_EXECUTABLE@"
-venv_dir="@TESTING_VENV_DIR@"
-requirements_file="$TESTING_BASE_DIR/python-requirements.txt"
+venv_dir="$(pwd)/.venv"
+requirements_file="$(pwd)/python-requirements.txt"
 AWS_ACCESS_KEY_ID="aws_access_key_id"
 AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
-SAMPLE_CEPH_S3TESTS_CONF="$TESTING_BASE_DIR/ceph-s3tests.conf.in"
+SAMPLE_CEPH_S3TESTS_CONF="$(pwd)/ceph-s3tests.conf.in"
+CEPH_CONF="$(pwd)/ceph_s3_test.conf"
 
 cluster_url=""
 run_ultihash=1
@@ -53,11 +51,17 @@ while [ -n "$1" ]; do
     shift
 done
 
+if [ "$(basename $(pwd))" != "testing" ]; then
+    echo "Script is not executed from the testing directory, exiting..."
+    exit 1
+fi
+
+docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..
 
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     echo "Creating virtual environment ..."
 
-    $PYTHON3 -m venv "$venv_dir"
+    python3 -m venv "$venv_dir"
 
     . "$venv_dir/bin/activate"
 
@@ -74,99 +78,13 @@ fi
 . "$venv_dir/bin/activate"
 
 
-setup_docker_compose_cluster ()
-{
-    compose_file="$1"
-    docker-compose -f "$compose_file" up --detach
-    trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
-}
-
-start_service ()
-{
-    runtime="$1"
-    service="$2"
-    command="$3"
-
-    mkdir -p "$runtime/$service/log"
-    mkdir -p "$runtime/$service/data"
-
-    (
-        cd "$runtime/$service"
-        $command 2> "log/stderr" 1> "log/stdout" &
-        echo $! > "service.pid"
-    )
-}
-
-stop_service ()
-{
-    runtime="$1"
-    service="$2"
-
-    if [ -e "$runtime/$service/service.pid" ]; then
-        kill -TERM $(cat "$runtime/$service/service.pid")
-    fi
-}
-
-stop_bare_cluster ()
-{
-    dir="$1"
-
-    stop_service "$dir" "etcd"
-
-    for role in entrypoint storage directory deduplicator; do
-        stop_service "$dir" "$role"
-    done
-
-    wait
-    rm -rf "$dir"
-}
-
-setup_bare_cluster ()
-{
-    dir=$(mktemp --directory)
-    uhc=$(realpath --canonicalize-existing "$TESTING_BINARY_DIR/../uh-cluster")
-
-    if ! curl --silent http://localhost:2380; then
-        start_service "$dir" "etcd" "etcd"
-    fi
-
-    timeout=30
-    while [ "$timeout" -gt "0" ]; do
-
-        if curl --silent --output /dev/null http://localhost:2380; then
-            break
-        fi
-
-        timeout=$((timeout - 1))
-        sleep 1
-    done
-
-    if [ "$timeout" -eq "0" ]; then
-        echo "timeout waiting for etcd"
-        exit 1
-    fi
-
-    for role in deduplicator directory storage entrypoint; do
-        start_service "$dir" "$role" "$uhc $role"
-    done
-
-    trap "stop_bare_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
-}
-
-compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
 if [ -z "$cluster_url" ]; then
-    if [ ! -e "$compose_file" ] || [ "$E2E_RUN_BARE" == "1" ]; then
-        echo "No compose file was found or running bare-metal was requested."
-        echo "The servers are started directly on the machine."
-
-        setup_bare_cluster
-    else
-        setup_docker_compose_cluster "$compose_file"
-    fi
+    docker compose up --detach
+    trap "docker-compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
 
-timeout=30
+timeout=60
 while [ "$timeout" -gt "0" ]; do
 
     if curl --silent --output /dev/null $cluster_url; then
@@ -188,7 +106,7 @@ success=1
 
 if [ "$run_ultihash" -eq "1" ]; then
     echo "*** running UltiHash test suite ..."
-    pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
+    pytest "tests" --cluster-url="$cluster_url" \
         --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
     if [ "$?" != "0" ]; then
         success=0
@@ -200,14 +118,13 @@ if [ "$run_ceph" -eq "1" ]; then
     cluster_port=$(echo "$cluster_url" | grep -oE '[0-9]+$')
 
     echo "*** running Ceph test suite ..."
-    conf="$TESTING_BINARY_DIR/ceph_s3_test.conf"
     sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
         -e "s/%TESTING_S3_PORT%/$cluster_port/" \
         -e "s/%TESTING_AWS_KEY_ID%/$AWS_ACCESS_KEY_ID/" \
         -e "s/%TESTING_AWS_SECRET_ACCESS_KEY%/$AWS_SECRET_ACCESS_KEY/" \
-        < $SAMPLE_CEPH_S3TESTS_CONF > $conf
+        < $SAMPLE_CEPH_S3TESTS_CONF > $CEPH_CONF
 
-    S3TEST_CONF=$conf tox -c "$TESTING_BINARY_DIR/s3-tests/tox.ini" --workdir "$TESTING_BINARY_DIR/s3-tests" -- -m 'uhclustertest'
+    S3TEST_CONF=$CEPH_CONF tox -c "s3-tests/tox.ini" --workdir "s3-tests" -- -m 'uhclustertest'
     if [ "$?" != "0" ]; then
         success=0
     fi

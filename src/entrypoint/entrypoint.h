@@ -15,7 +15,7 @@
 #include "common/registry/service_registry.h"
 #include "common/network/server.h"
 #include "common/network/client.h"
-#include "rest_server.h"
+#include "entrypoint_handler.h"
 
 namespace uh::cluster {
 class entrypoint: public service_interface {
@@ -29,13 +29,16 @@ public:
             m_dedupe_services(m_ioc, m_config_registry, m_config.dedupe_node_connection_count, registry_url),
             m_directory_services(m_ioc, m_config_registry, m_config.directory_connection_count, registry_url),
             m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
-            m_rest_server (m_config_registry.get_server_config(), m_dedupe_services, m_directory_services, m_workers, m_ioc)
+            m_server (m_config_registry.get_server_config(),
+                      m_config_registry.get_service_name(),
+                      std::make_unique <entrypoint_handler> (m_ioc, m_dedupe_services, m_directory_services, m_workers),
+                    m_ioc)
     {
     }
 
     void run() override {
-        m_registration = m_service_registry.register_service(m_rest_server.get_server_config());
-        m_rest_server.run();
+        m_registration = m_service_registry.register_service(m_server.get_server_config());
+        m_server.run();
     }
 
     void stop() override {
@@ -57,7 +60,7 @@ private:
     services<DIRECTORY_SERVICE> m_directory_services;
 
     std::shared_ptr <boost::asio::thread_pool> m_workers;
-    rest::rest_server m_rest_server;
+    server m_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
 

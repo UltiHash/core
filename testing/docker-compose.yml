@@ -7,20 +7,15 @@ services:
         environment:
             - ALLOW_NONE_AUTHENTICATION=yes
         healthcheck:
-            test: [ "CMD", "lsof", "-i", "TCP:2380" ]
-            timeout: 1s
-            interval: 5s
-            retries: 5
+            test: etcdctl endpoint health
 
     deduplicator:
-        image: uh/test
+        image: uh-cluster:testing
         container_name: dedupe
         restart: always
-        volumes:
-            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "deduplicator", "etcd:2380" ]
+        entrypoint: [ "uh-cluster", "deduplicator", "etcd:2379" ]
         healthcheck:
-            test: [ "CMD", "lsof", "-i", "UDP:8084" ]
+            test: [ "CMD", "lsof", "-i", "TCP:9300" ]
             timeout: 1s
             interval: 5s
             retries: 5
@@ -29,14 +24,12 @@ services:
                 condition: service_healthy
 
     storage:
-        image: uh/test
+        image: uh-cluster:testing
         container_name: data
         restart: always
-        volumes:
-            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "storage", "etcd:2380" ]
+        entrypoint: [ "uh-cluster", "storage", "etcd:2379" ]
         healthcheck:
-            test: [ "CMD", "lsof", "-i", "UDP:8082" ]
+            test: [ "CMD", "lsof", "-i", "TCP:9200" ]
             timeout: 1s
             interval: 5s
             retries: 5
@@ -45,14 +38,12 @@ services:
                 condition: service_healthy
 
     directory:
-        image: uh/test
+        image: uh-cluster:testing
         container_name: directory
         restart: always
-        volumes:
-            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "directory", "etcd:2380" ]
+        entrypoint: [ "uh-cluster", "directory", "etcd:2379" ]
         healthcheck:
-            test: [ "CMD", "lsof", "-i", "UDP:8083" ]
+            test: [ "CMD", "lsof", "-i", "TCP:9400" ]
             timeout: 1s
             interval: 5s
             retries: 5
@@ -61,12 +52,10 @@ services:
                 condition: service_healthy
 
     entrypoint:
-        image: uh/test
+        image: uh-cluster:testing
         container_name: entrypoint
         restart: always
-        volumes:
-            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
-        entrypoint: [ "/uh-cluster", "entrypoint", "etcd:2380" ]
+        entrypoint: [ "uh-cluster", "entrypoint", "etcd:2379" ]
         depends_on:
             etcd:
                 condition: service_healthy

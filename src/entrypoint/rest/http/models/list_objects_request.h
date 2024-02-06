@@ -16,7 +16,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-        inline coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override { co_return; }
+        inline coro<void> read_body(boost::asio::ip::tcp::socket& stream, boost::beast::flat_buffer& buffer) override { co_return; }
 
 
     private:

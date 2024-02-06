@@ -15,8 +15,6 @@ find_package(OpenSSL REQUIRED)
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
 
-option(ENABLE_E2E_TESTS "Enable End-to-End tests" OFF)
-
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
@@ -60,10 +58,9 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
 # Testing
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 enable_testing()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 
-add_subdirectory(testing)
 add_subdirectory(experiments)
 
 # Packaging
