@@ -13,7 +13,6 @@
 
 #define TIMEOUT_PERIOD_S 5
 
-
 namespace uh::cluster {
 
     enum class etcd_action : uint8_t {
@@ -46,7 +45,7 @@ namespace uh::cluster {
     public:
 
         explicit services_index(config_registry& config_reg) :
-                m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
+            m_max_data_store_size(config_reg.get_global_data_view_config().max_data_store_size) {
         }
 
         void add(const std::size_t& id, std::shared_ptr <client> cl) {
@@ -96,13 +95,13 @@ namespace uh::cluster {
                  config_registry& config_registry,
                  const int connection_count,
                  std::string etcd_host) :
-                m_ioc(ioc),
-                m_connection_count(connection_count),
-                m_etcd_client(etcd_host),
-                m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
+                 m_ioc(ioc),
+                 m_connection_count(connection_count),
+                 m_etcd_client(etcd_host),
+                 m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
-                m_robin_index(m_clients.end()),
-                m_services_index(config_registry)
+                 m_robin_index(m_clients.end()),
+                 m_services_index(config_registry)
         {
             auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
