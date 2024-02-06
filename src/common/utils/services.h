@@ -11,7 +11,7 @@
 #include "common/registry/config_registry.h"
 #include "etcd/Watcher.hpp"
 
-#define TIMEOUT_PERIOD_S 10
+#define TIMEOUT_PERIOD_S 5
 
 
 namespace uh::cluster {
@@ -139,7 +139,7 @@ namespace uh::cluster {
                               }))
             {}
             else
-                throw std::runtime_error("dependent node not available");
+                throw std::runtime_error("dependent client not available");
 
             return client;
         }
