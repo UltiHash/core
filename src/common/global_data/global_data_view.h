@@ -34,7 +34,7 @@ public:
 
     address write (const std::string_view& data) {
 
-        const auto [id, client] = m_storage_services.get_client_w_id();
+        const auto client = m_storage_services.get();
 
         address addr;
         boost::asio::co_spawn(m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
@@ -76,7 +76,7 @@ public:
             read_size = h.size;
             m.get().register_read_buffer (buffer, read_size);
             co_await m.get().recv_buffers(h);
-        } (m_storage_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
+        } (m_storage_services.wait_and_get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
         shared_buffer <char> l1_buf (std::min (read_size, m_config.l1_sample_size));
@@ -101,7 +101,7 @@ public:
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_storage_services.get (frag.pointer);
+            auto n = m_storage_services.wait_and_get (frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(n);
@@ -128,7 +128,7 @@ public:
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
-        auto m = m_storage_services.get(pointer)->acquire_messenger();
+        auto m = m_storage_services.wait_and_get(pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         co_await m.get().recv_header();
     }
@@ -144,7 +144,7 @@ public:
 
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_storage_services.get(frag.pointer);
+            auto n = m_storage_services.wait_and_get(frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(std::move (n));
