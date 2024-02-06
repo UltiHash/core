@@ -17,6 +17,7 @@
 #include "common/registry/service_registry.h"
 #include "common/network/server.h"
 #include "storage_handler.h"
+#include "common/utils/signal_handler.h"
 
 namespace uh::cluster {
 class storage: public service_interface {
@@ -28,7 +29,8 @@ public:
             m_service_registry(uh::cluster::STORAGE_SERVICE, m_config_registry.get_service_id(), registry_url),
             m_server(m_config_registry.get_server_config(), m_service_registry.get_service_name(),
                      std::make_unique<storage_handler>(m_config_registry.get_storage_config(), m_config_registry.get_service_id()), m_ioc)
-    {}
+    {
+    }
 
     void run() override {
         m_registration = m_service_registry.register_service(m_server.get_server_config());

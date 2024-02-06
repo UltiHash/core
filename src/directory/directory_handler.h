@@ -29,7 +29,10 @@ namespace uh::cluster {
             std::optional<error> err;
 
             try {
+                std::cout << "wait msg" << std::endl;
+
                 const auto message_header = co_await m.recv_header ();
+                std::cout << "recv msg" << std::endl;
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
                     co_await handle_put_obj (m, message_header);
@@ -64,6 +67,8 @@ namespace uh::cluster {
             } catch (const error_exception& e) {
                 err = e.error();
             } catch (const std::exception& e) {
+                std::cout << "recv msg" << std::endl;
+
                 err = error(error::unknown, e.what());
             }
 

@@ -11,7 +11,6 @@
 #include <common/utils/common.h>
 #include <config.h>
 #include "common/utils/log.h"
-#include "common/utils/signal_handler.h"
 
 using namespace uh::cluster;
 
@@ -33,28 +32,30 @@ struct config {
 
 void execute_role(const config& cfg) {
 
+    signal_handler sh;
+
     switch (cfg.role) {
         case STORAGE_SERVICE: {
             auto st = storage(cfg.etcd_url, cfg.working_dir);
-            signal_handler::add_callback([&st]() { st.stop(); });
+            sh.add_callback([&st]() { st.stop(); });
             st.run();
             break;
         }
         case DEDUPLICATOR_SERVICE: {
             auto dd = deduplicator(cfg.etcd_url, cfg.working_dir);
-            signal_handler::add_callback([&dd]() { dd.stop(); });
+            sh.add_callback([&dd]() { dd.stop(); });
             dd.run();
             break;
         }
         case DIRECTORY_SERVICE: {
             auto dr = directory(cfg.etcd_url, cfg.working_dir);
-            signal_handler::add_callback([&dr]() { dr.stop(); });
+            sh.add_callback([&dr]() { dr.stop(); });
             dr.run();
             break;
         }
         case ENTRYPOINT_SERVICE: {
             auto en = entrypoint(cfg.etcd_url, cfg.working_dir);
-            signal_handler::add_callback([&en]() { en.stop(); });
+            sh.add_callback([&en]() { en.stop(); });
             en.run();
             break;
         }
@@ -120,7 +121,6 @@ int main (int argc, const char* args[]) {
             }
         };
 
-        signal_handler::init_signals();
         uh::log::init(lc);
 
         execute_role(*cfg);

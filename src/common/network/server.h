@@ -100,7 +100,6 @@ namespace uh::cluster
             LOG_INFO() << "stopping server " << m_server_name;
             m_is_running = false;
             m_ioc.stop();
-            LOG_INFO() << "stopped server " << m_server_name;
         }
 
         [[nodiscard]] const server_config& get_server_config() const {
@@ -152,6 +151,7 @@ namespace uh::cluster
             co_await m_handler->handle (messenger(std::move(stream)));
             co_return;
         }
+
 
 
         const server_config m_config;

@@ -25,6 +25,7 @@ public:
 
             try {
                 const auto message_header = co_await m.recv_header();
+
                 switch (message_header.type) {
                     case WRITE_REQ:
                         co_await handle_write(m, message_header);

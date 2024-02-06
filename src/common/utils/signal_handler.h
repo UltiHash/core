@@ -9,35 +9,37 @@
 #include <vector>
 #include <functional>
 
-namespace {
-    volatile std::sig_atomic_t gSignalStatus;
-}
-
-void signal_handler_fn (int signal) {
-
-}
 namespace uh::cluster {
 class signal_handler {
 
-    inline static std::vector <std::function <void (void)>> m_callbacks;
+    boost::asio::io_context m_ioc;
+    boost::asio::signal_set m_signals;
+    std::thread m_signal_handler_thread;
+    std::vector <std::function <void (void)>> m_callbacks;
 
 public:
 
-    static void init_signals () {
-        std::signal(SIGINT, signal_handler_fn);
-        std::signal(SIGTERM, signal_handler_fn);
+    signal_handler (): m_ioc (1),
+                    m_signals (m_ioc, SIGINT, SIGTERM) {
+
+        m_signals.async_wait([this] (const boost::system::error_code& error, int signal) {
+            signal_handler_fn (error, signal);});
+        m_signal_handler_thread = std::thread ([this] () {m_ioc.run();});
     }
 
-    static void add_callback (const std::function <void (void)>& fn) {
+    void add_callback (const std::function <void (void)>& fn) {
         m_callbacks.emplace_back(fn);
     }
 
-    static void signal_handler_fn (int signal) {
+     void signal_handler_fn (const boost::system::error_code& error, int signal) {
         for (auto& fn: m_callbacks) {
             fn ();
         }
-        sleep(2);
     }
+
+    ~signal_handler() {
+        m_signal_handler_thread.join();
+     }
 
 };
 
