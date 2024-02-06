@@ -115,14 +115,8 @@ namespace uh::cluster {
             m_watcher.Cancel();
         }
 
-        template<typename key>
-        std::shared_ptr <client> get(key k) const {
-            std::shared_lock<std::shared_mutex> lk(m_mutex);
-            return m_services_index.get(k);
-        }
-
         template <typename key>
-        std::shared_ptr <client> wait(key k) const {
+        std::shared_ptr <client> get(key k) const {
             std::shared_ptr <client> client;
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
@@ -144,20 +138,37 @@ namespace uh::cluster {
         }
 
         std::shared_ptr<client> get(std::size_t id) const {
-            std::shared_lock<std::shared_mutex> lk(m_mutex);
+            std::shared_ptr <client> client;
 
-            auto it = m_clients.find(id);
-            if (it == m_clients.end()) {
-                throw std::runtime_error("no client with id " + std::to_string(id));
-            }
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
+            if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
+                              [this, &id, &client]() {
+                                  auto it = m_clients.find(id);
+                                  if (it == m_clients.end()) {
+                                      return false;
+                                  }
 
-            return it->second;
+                                  client = it->second;
+                                  return true;
+                              }))
+            {}
+            else
+                throw std::runtime_error("dependent client not available");
         }
 
         std::shared_ptr <client> get() const
         {
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            return lockfree_get();
+            m_cv.wait(lk, [this](){ return !m_clients.empty(); });
+
+            if (m_robin_index == m_clients.end()) {
+                m_robin_index = m_clients.begin();
+            }
+
+            auto rv = m_robin_index->second;
+            ++m_robin_index;
+
+            return rv;
         }
 
         std::vector <std::shared_ptr <client>> get_clients() const {
@@ -170,28 +181,7 @@ namespace uh::cluster {
             return clients_list;
         }
 
-        std::shared_ptr<client> wait() {
-            std::unique_lock<std::shared_mutex> lock(m_mutex);
-            m_cv.wait(lock, [this](){ return !m_clients.empty(); });
-
-            return lockfree_get();
-        }
-
     private:
-        std::shared_ptr<client> lockfree_get() const {
-            if (m_clients.empty()) {
-                throw std::runtime_error("no client available");
-            }
-
-            if (m_robin_index == m_clients.end()) {
-                m_robin_index = m_clients.begin();
-            }
-
-            auto rv = m_robin_index->second;
-            ++m_robin_index;
-
-            return rv;
-        }
 
         void handle_state_changes(const etcd::Response& response)
         {

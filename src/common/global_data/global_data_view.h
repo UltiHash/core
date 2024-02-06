@@ -30,7 +30,7 @@ public:
             m_cache_l1 (m_config.read_cache_capacity_l1),
             m_cache_l2 (m_config.read_cache_capacity_l2)
     {
-        m_storage_services.wait();
+        m_storage_services.get();
     }
 
     address write (const std::string_view& data) {
@@ -77,7 +77,7 @@ public:
             read_size = h.size;
             m.get().register_read_buffer (buffer, read_size);
             co_await m.get().recv_buffers(h);
-        } (m_storage_services.wait(pointer)->acquire_messenger()), boost::asio::use_future).get();
+        } (m_storage_services.get(pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
         shared_buffer <char> l1_buf (std::min (read_size, m_config.l1_sample_size));
@@ -102,7 +102,7 @@ public:
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_storage_services.wait (frag.pointer);
+            auto n = m_storage_services.get (frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(n);
@@ -129,7 +129,7 @@ public:
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
-        auto m = m_storage_services.wait(pointer)->acquire_messenger();
+        auto m = m_storage_services.get(pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         co_await m.get().recv_header();
     }
@@ -145,7 +145,7 @@ public:
 
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto n = m_storage_services.wait(frag.pointer);
+            auto n = m_storage_services.get(frag.pointer);
             auto& node_address = node_address_map [n];
             if (node_address.empty()) {
                 nodes.emplace_back(std::move (n));
