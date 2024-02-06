@@ -83,7 +83,7 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture)
     {
         std::atomic<bool> has_result = false;
         std::thread waiter([&]{
-                services.wait();
+                services.get();
                 has_result = true;
             });
 
@@ -190,14 +190,14 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture)
     auto node_addr_range = reg.get_global_data_view_config().max_data_store_size;
 
     BOOST_CHECK(services.get_clients().empty());
-    BOOST_CHECK_THROW(services.wait(node_addr_range-1), std::runtime_error);
+    BOOST_CHECK_THROW(services.get(node_addr_range-1), std::runtime_error);
 
     {
         test::server svr("0.0.0.0", 8081);
         service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
         auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
 
-        WAIT_UNTIL_NO_THROW(1000, services.wait(5));
+        WAIT_UNTIL_NO_THROW(1000, services.get(5));
     }
 }
 }
