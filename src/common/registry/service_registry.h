@@ -5,8 +5,6 @@
 #ifndef UH_CLUSTER_SERVICE_REGISTRY_H
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
-#include <string>
-#include <boost/asio.hpp>
 #include "etcd/SyncClient.hpp"
 #include "etcd/KeepAlive.hpp"
 #include "etcd/v3/Transaction.hpp"
@@ -14,6 +12,7 @@
 #include "common/utils/common.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
+#include "common/network/interface_helper.h"
 #include "namespace.h"
 #include "etcd/v3/Transaction.hpp"
 
@@ -65,7 +64,7 @@ namespace uh::cluster {
 
             const std::map<std::string, std::string> kv_pairs =
                     {
-                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), boost::asio::ip::host_name()},
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), interface_helper::retrieve_ip_address()},
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)},
                         {announced_key_base , {}},
                     };
@@ -77,7 +76,6 @@ namespace uh::cluster {
         }
 
     private:
-
         static constexpr std::size_t m_etcd_default_ttl = 10;
 
         const std::string m_etcd_host;
