@@ -76,6 +76,29 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(Wait, fixture)
+{
+    BOOST_CHECK(services.get_clients().empty());
+
+    {
+        std::atomic<bool> has_result = false;
+        std::thread waiter([&]{
+            services.get();
+            has_result = true;
+        });
+
+        CHECK_STABLE(100, !has_result);
+
+        test::server srv("0.0.0.0", 8081);
+        service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
+        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+
+        WAIT_UNTIL_CHECK(100, has_result);
+
+        waiter.join();
+    }
+}
+
 BOOST_AUTO_TEST_CASE(FindInitial)
 {
     {
@@ -162,4 +185,17 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture)
+{
+    BOOST_CHECK(services.get_clients().empty());
+    BOOST_CHECK_THROW(services.get(uint128_t()), std::runtime_error);
+
+    {
+        test::server svr("0.0.0.0", 8081);
+        service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
+        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+
+        WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
+    }
+}
 }

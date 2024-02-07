@@ -29,8 +29,9 @@
 
 /**
  * Repeatedly execute a statement until it does not throw an
- * exception. The call evaluates to true when the statement could
- * be executed without exception once.
+ * exception or when a timeout is hit. The call evaluates to
+ * true when the statement could be executed without exception
+ * once.
  *
  * TIMEOUT_MS   timeout in milliseconds
  * STATEMENT    statement to execute
@@ -45,6 +46,30 @@
                 success = true; \
                 break; \
             } catch (...) { \
+            } \
+        } \
+        while ((std::chrono::steady_clock::now() - start) \
+                < std::chrono::milliseconds(TIMEOUT_MS)); \
+        BOOST_CHECK(success); \
+    } while (false)
+
+
+/**
+ * Repeatedly check a condition until a timeout is hit. `BOOST_CHECK`
+ * passes if a 'true' condition was passed and it was not changed during 
+ * the entire elapsed time.
+ *
+ * TIMEOUT_MS   timeout in milliseconds
+ * CONDITION    condition to evaluate. must be 'true' initially
+ */
+#define CHECK_STABLE(TIMEOUT_MS, CONDITION) \
+    do { \
+        auto start = std::chrono::steady_clock::now(); \
+        bool success = true; \
+        do { \
+            if (!(CONDITION)) { \
+                success = false; \
+                break; \
             } \
         } \
         while ((std::chrono::steady_clock::now() - start) \
