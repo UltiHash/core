@@ -46,4 +46,4 @@ jobs:
         if: matrix.build == 'Release'
         with:
           name: ultihash-cluster_${{ github.sha }}_arm64.deb
-          path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_arm64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cluster_0.1.0_arm64.deb
