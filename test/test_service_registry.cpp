@@ -9,7 +9,6 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <boost/asio/ip/host_name.hpp>
 #include "common/registry/service_registry.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
@@ -51,7 +50,7 @@ namespace uh::cluster {
 
             BOOST_CHECK(std::stoi(announced_etcd_path.filename()) == index);
             BOOST_CHECK(announced_etcd_path.parent_path().filename() == get_service_string(STORAGE_SERVICE));
-            BOOST_CHECK(host == boost::asio::ip::host_name());
+            BOOST_CHECK(host == interface_helper::retrieve_ip_address());
             BOOST_CHECK(std::stoul(port) == port_address);
         }
 
