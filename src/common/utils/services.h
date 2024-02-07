@@ -154,6 +154,8 @@ namespace uh::cluster {
             {}
             else
                 throw std::runtime_error("dependent client not available");
+
+            return client;
         }
 
         std::shared_ptr <client> get() const
