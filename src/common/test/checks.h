@@ -17,12 +17,17 @@
     { \
         auto start = std::chrono::steady_clock::now(); \
         do { \
-            if ((CONDITION)) { \
-                break; \
+            if ((CONDITION)) {                  \
+                              std::cerr << "success\n";                                        \
+break; \
             } \
         } \
         while ((std::chrono::steady_clock::now() - start) \
                 < std::chrono::milliseconds(TIMEOUT_MS)); \
+        if (!(CONDITION)     )                    \
+        {                                       \
+              std::cerr << "fail\n";                                        \
+        }\
         BOOST_CHECK(CONDITION); \
     } while (false)
 

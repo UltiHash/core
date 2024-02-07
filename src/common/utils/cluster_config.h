@@ -24,9 +24,9 @@ struct server_config
 
 
 struct service_endpoint {
-    std::size_t id;
-    std::string host;
-    std::uint16_t port;
+    std::size_t id{};
+    std::string host{};
+    std::uint16_t port{};
 };
 
 struct bucket_config {
