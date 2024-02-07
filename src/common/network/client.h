@@ -28,7 +28,7 @@ public:
     class acquired_messenger {
     public:
         acquired_messenger (std::unique_ptr <messenger> m,
-                            std::reference_wrapper <client> cl):
+                            const std::reference_wrapper <client> cl):
                 m_messenger(std::move (m)),
                 m_client(cl),
                 m_owning (true) {
