@@ -231,9 +231,8 @@ namespace uh::cluster {
                 }
             }
 
-            // throw
             if (!host || !port) {
-                throw std::runtime_error("kaputt!");
+                throw std::runtime_error("client not available");
             }
 
             service_endpoint.port = *port;
