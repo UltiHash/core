@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost" });
+        auto reg = sr.register_service({ .port=8081 });
 
         {
             WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg = sr.register_service({ .port=8081 });
 
         {
             WAIT_UNTIL_NO_THROW(1000, services.get());
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(FindInitial)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg = sr.register_service({ .port=8081 });
 
         fixture f;
         BOOST_CHECK(!f.services.get_clients().empty());
@@ -102,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, test_id, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg = sr.register_service({ .port=8081 });
 
         WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
         BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
@@ -130,7 +130,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg = sr.register_service({ .port=8081 });
 
         WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
         BOOST_CHECK_NO_THROW(services.get(uint128_t()));
@@ -139,7 +139,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(STORAGE_SERVICE, 1, REGISTRY_ENDPOINT);
-        auto reg = sr.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg = sr.register_service({ .port=8081 });
 
         WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
@@ -150,9 +150,9 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr1(STORAGE_SERVICE, 1, REGISTRY_ENDPOINT);
-        auto reg1 = sr1.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg1 = sr1.register_service({ .port=8081 });
         service_registry sr2(STORAGE_SERVICE, 3, REGISTRY_ENDPOINT);
-        auto reg2 = sr2.register_service({ .threads = 1, .port=8081, .bind_address="localhost"});
+        auto reg2 = sr2.register_service({ .port=8081 });
 
         WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 2u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
