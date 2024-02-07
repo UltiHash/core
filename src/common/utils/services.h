@@ -11,8 +11,6 @@
 #include "common/registry/config_registry.h"
 #include "etcd/Watcher.hpp"
 
-#define TIMEOUT_PERIOD_S 5
-
 namespace uh::cluster {
 
     enum class etcd_action : uint8_t {
@@ -94,14 +92,15 @@ namespace uh::cluster {
         services(boost::asio::io_context& ioc,
                  config_registry& config_registry,
                  const int connection_count,
-                 std::string etcd_host) :
+                 std::string etcd_host, std::size_t timeout_s = 10) :
                  m_ioc(ioc),
                  m_connection_count(connection_count),
                  m_etcd_client(etcd_host),
                  m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
-                 m_services_index(config_registry)
+                 m_services_index(config_registry),
+                 m_timeout_s(timeout_s)
         {
             auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
@@ -120,7 +119,7 @@ namespace uh::cluster {
             std::shared_ptr <client> client;
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
                               [this, &k, &client]() {
                                     try {
                                         client = m_services_index.get(k);
@@ -132,7 +131,7 @@ namespace uh::cluster {
                               }))
             {}
             else
-                throw std::runtime_error("dependent client not available");
+                throw std::runtime_error("timeout waiting for client");
 
             return client;
         }
@@ -141,7 +140,7 @@ namespace uh::cluster {
             std::shared_ptr <client> client;
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
                               [this, &id, &client]() {
                                   auto it = m_clients.find(id);
 
@@ -153,7 +152,7 @@ namespace uh::cluster {
                               }))
             {}
             else
-                throw std::runtime_error("dependent client not available");
+                throw std::runtime_error("timeout waiting for client");
 
             return client;
         }
@@ -161,11 +160,11 @@ namespace uh::cluster {
         std::shared_ptr <client> get() const
         {
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
                           [this](){ return !m_clients.empty(); }))
             {}
             else
-                throw std::runtime_error("no client available");
+                throw std::runtime_error("timeout waiting for client");
 
             if (m_robin_index == m_clients.end()) {
                 m_robin_index = m_clients.begin();
@@ -298,6 +297,8 @@ namespace uh::cluster {
 
         mutable std::map<std::size_t, std::shared_ptr<client>>::const_iterator m_robin_index;
         services_index<r> m_services_index;
+
+        std::size_t m_timeout_s;
     };
 
 } // end namespace uh::cluster
