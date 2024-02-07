@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "common_types.h"
+#include "common/types/common_types.h"
 
 namespace uh::cluster {
 

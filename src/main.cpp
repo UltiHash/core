@@ -11,6 +11,7 @@
 #include <common/utils/common.h>
 #include <config.h>
 #include "common/utils/log.h"
+#include "common/utils/signal_handler.h"
 
 using namespace uh::cluster;
 
@@ -32,22 +33,22 @@ struct config {
 
 void execute_role(const config& cfg) {
 
+    signal_handler sh;
+
+    auto start_service = [&sh] (auto&& service) -> void {
+        sh.add_callback([&service]() { service.stop(); });
+        service.run ();
+    };
+
     switch (cfg.role) {
         case STORAGE_SERVICE:
-            storage(cfg.etcd_url, cfg.working_dir).run();
-            break;
-
+            return start_service(storage(cfg.etcd_url, cfg.working_dir));
         case DEDUPLICATOR_SERVICE:
-            deduplicator(cfg.etcd_url, cfg.working_dir).run();
-            break;
-
+            return start_service (deduplicator(cfg.etcd_url, cfg.working_dir));
         case DIRECTORY_SERVICE:
-            directory(cfg.etcd_url, cfg.working_dir).run();
-            break;
-
+            return start_service (directory(cfg.etcd_url, cfg.working_dir));
         case ENTRYPOINT_SERVICE:
-            entrypoint(cfg.etcd_url, cfg.working_dir).run();
-            break;
+            return start_service (entrypoint(cfg.etcd_url, cfg.working_dir));
     }
 }
 

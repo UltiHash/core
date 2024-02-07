@@ -23,12 +23,15 @@ namespace uh::cluster {
         {
         }
 
-    coro <void> handle (messenger m) override {
+    coro <void> handle (boost::asio::ip::tcp::socket s) override {
+
+        messenger m (std::move (s));
 
         for (;;) {
             std::optional<error> err;
 
             try {
+
                 const auto message_header = co_await m.recv_header ();
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
@@ -58,8 +61,6 @@ namespace uh::cluster {
                 case DIR_BUCKET_EXISTS:
                     co_await handle_bucket_exists(m, message_header);
                     break;
-                case STOP:
-                    co_return;
                 default:
                     throw std::invalid_argument ("Invalid message type!");
                 }

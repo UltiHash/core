@@ -13,7 +13,7 @@
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
 #include "common/utils/worker_utils.h"
-#include "common/utils/services.h"
+#include "common/registry/services.h"
 #include "entrypoint/rest/utils/parser/s3_parser.h"
 #include "entrypoint/rest/http/http_response.h"
 #include "entrypoint/rest/http/models/create_bucket_response.h"
@@ -51,8 +51,8 @@ namespace uh::cluster {
         {
         }
 
-    coro <void> handle (messenger m) override {
-        LOG_INFO() << "connection from: " << m.get_socket().remote_endpoint();
+    coro <void> handle (boost::asio::ip::tcp::socket s) override {
+        LOG_INFO() << "connection from: " << s.remote_endpoint();
 
         try {
 
@@ -62,16 +62,16 @@ namespace uh::cluster {
 
                 boost::beast::http::request_parser<boost::beast::http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
-                co_await boost::beast::http::async_read_header(m.get_socket(), buffer, received_request,
+                co_await boost::beast::http::async_read_header(s, buffer, received_request,
                                                                boost::asio::use_awaitable);
                 LOG_INFO() << "received request: " << received_request.get().base();
                 uh::cluster::rest::utils::parser::s3_parser s3_parser(received_request, m_server_state);
                 auto s3_request = s3_parser.parse();
-                co_await s3_request->read_body(m.get_socket(), buffer);
+                co_await s3_request->read_body(s, buffer);
                 s3_request->validate_request_specific_criteria();
                 auto s3_res = co_await handle_request(*s3_request, m_server_state);
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
-                co_await boost::beast::http::async_write(m.get_socket(), s3_res_specific_object,
+                co_await boost::beast::http::async_write(s, s3_res_specific_object,
                                                          boost::asio::use_awaitable);
                 LOG_INFO() << "sent response: " << s3_res_specific_object.base();
 
@@ -85,26 +85,32 @@ namespace uh::cluster {
             if (se.code() != boost::beast::http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
                 uh::cluster::rest::http::model::custom_error_response_exception err(boost::beast::http::status::bad_request);
-                boost::beast::http::write(m.get_socket(), err.get_response_specific_object());
+                boost::beast::http::write(s, err.get_response_specific_object());
+                s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+                s.close();
                 throw;
             }
         }
         catch (uh::cluster::rest::http::model::custom_error_response_exception& res_exc) {
             LOG_ERROR() << res_exc.what();
-            boost::beast::http::write(m.get_socket(), res_exc.get_response_specific_object());
-            throw;
+            boost::beast::http::write(s, res_exc.get_response_specific_object());
+            s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+            s.close();            throw;
         }
         catch (const std::exception& e) {
             LOG_ERROR() << e.what();
             uh::cluster::rest::http::model::custom_error_response_exception err(boost::beast::http::status::internal_server_error);
-            boost::beast::http::write(m.get_socket(), err.get_response_specific_object());
+            boost::beast::http::write(s, err.get_response_specific_object());
+            s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+            s.close();
             throw;
         }
 
+        s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+        s.close();
     }
 
-        coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state)
-        {
+    coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {
 
             std::unique_ptr<rest::http::http_response> res;
 
