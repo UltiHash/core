@@ -42,9 +42,6 @@ public:
     awaitable_future& operator = (const awaitable_future&) = delete;
     awaitable_future& operator = (const awaitable_future&&) = delete;
 
-    ~awaitable_future () {
-        m_waiter.cancel();
-    }
 };
 
 template <typename T>

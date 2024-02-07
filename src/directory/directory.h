@@ -38,7 +38,6 @@ public:
         m_server.stop();
         m_directory_workers->join();
         m_directory_workers->stop();
-        m_ioc.stop();
     }
 
 private:

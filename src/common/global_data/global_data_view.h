@@ -7,13 +7,11 @@
 
 #include <map>
 #include "common/network/client.h"
-#include "ec.h"
-#include "ec_factory.h"
 #include "lru_cache.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/worker_utils.h"
-#include "common/utils/shared_buffer.h"
-#include "common/utils/services.h"
+#include "common/types/shared_buffer.h"
+#include "common/registry/services.h"
 
 namespace uh::cluster {
 

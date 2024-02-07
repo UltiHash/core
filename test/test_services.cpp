@@ -9,7 +9,7 @@
 #include "common/utils/common.h"
 #include "common/utils/temp_dir.h"
 #include "common/registry/service_registry.h"
-#include "common/utils/services.h"
+#include "common/registry/services.h"
 #include "common/test/checks.h"
 #include "common/test/server.h"
 

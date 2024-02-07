@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <cstring>
 #include <fcntl.h>
-#include "common/utils/common_types.h"
+#include "common/types/common_types.h"
 #include <common/global_data/global_data_view.h>
 
 namespace uh::cluster {
@@ -79,6 +79,11 @@ public:
         }
 
         recreate (set);
+    }
+
+    ~set_log() {
+        fsync(m_log_file);
+        close (m_log_file);
     }
 
 private:
