@@ -144,9 +144,9 @@ namespace uh::cluster {
             if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
                               [this, &id, &client]() {
                                   auto it = m_clients.find(id);
-                                  if (it == m_clients.end()) {
+
+                                  if (it == m_clients.end())
                                       return false;
-                                  }
 
                                   client = it->second;
                                   return true;
