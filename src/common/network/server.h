@@ -126,7 +126,6 @@ namespace uh::cluster
             return acceptor;
         }
         
-        // Accepts incoming connections and launches the sessions
         coro <void> do_accept (auto acceptor) {
             while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept(boost::asio::use_awaitable);
@@ -148,7 +147,7 @@ namespace uh::cluster
 
         coro <void> do_session(boost::asio::ip::tcp::socket stream) {
             LOG_INFO() << m_server_name << " connection from: " << stream.remote_endpoint();
-            co_await m_handler->handle (messenger(std::move(stream)));
+            co_await m_handler->handle (std::move(stream));
             co_return;
         }
 
