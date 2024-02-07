@@ -10,7 +10,7 @@
 
 #include "common/utils/cluster_config.h"
 #include "common/utils/service_interface.h"
-#include "common/utils/services.h"
+#include "common/registry/services.h"
 #include "common/registry/config_registry.h"
 #include "common/registry/service_registry.h"
 #include "common/network/server.h"
@@ -43,6 +43,7 @@ public:
 
     void stop() override {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
+        m_server.stop();
         m_workers->join();
         m_workers->stop();
     }
