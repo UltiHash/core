@@ -74,7 +74,7 @@ namespace uh::cluster {
 
     private:
 
-        static constexpr std::size_t m_etcd_default_ttl = 0;
+        static constexpr std::size_t m_etcd_default_ttl = 30;
 
         const std::string m_etcd_host;
         const std::string m_service_name;

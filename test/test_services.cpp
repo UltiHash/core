@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
         service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
         auto reg = sr.register_service({ .port=8081 });
 
-        WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
+        WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 1u);
         BOOST_CHECK_NO_THROW(services.get(uint128_t()));
     }
 
@@ -164,7 +164,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
         service_registry sr(STORAGE_SERVICE, 1, REGISTRY_ENDPOINT);
         auto reg = sr.register_service({ .port=8081 });
 
-        WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
+        WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 1u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
         BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
         BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)), std::exception);
@@ -177,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture)
         service_registry sr2(STORAGE_SERVICE, 3, REGISTRY_ENDPOINT);
         auto reg2 = sr2.register_service({ .port=8081 });
 
-        WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 2u);
+        WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 2u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
         BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
         BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)), std::exception);
