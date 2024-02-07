@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/27/23.
-//
-
 #ifndef CORE_GLOBAL_DATA_VIEW_H
 #define CORE_GLOBAL_DATA_VIEW_H
 

@@ -1,7 +1,3 @@
-//
-// Created by masi on 10/2/23.
-//
-
 #ifndef CORE_DIRECTORY_STORE_H
 #define CORE_DIRECTORY_STORE_H
 

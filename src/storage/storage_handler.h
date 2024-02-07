@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/29/23.
-//
-
 #ifndef CORE_DATA_STORE_SERVICE_HANDLER_H
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
