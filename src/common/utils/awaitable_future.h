@@ -18,15 +18,9 @@ template <typename T>
 class awaitable_future {
     boost::asio::io_context& m_ioc;
     boost::asio::steady_timer m_waiter;
-    std::atomic <bool> m_canceled = false;
 
     friend awaitable_promise <T>;
     std::enable_if <!std::is_same_v <T, void>, T> data;
-
-    inline void cancel () {
-        m_waiter.cancel();
-        m_canceled = true;
-    }
 
 public:
     explicit awaitable_future (boost::asio::io_context& ioc):
@@ -48,10 +42,6 @@ public:
     awaitable_future& operator = (const awaitable_future&) = delete;
     awaitable_future& operator = (const awaitable_future&&) = delete;
 
-    ~awaitable_future () {
-        if (!m_canceled)
-            m_waiter.cancel();
-    }
 };
 
 template <typename T>
@@ -63,7 +53,7 @@ public:
 
     inline void set (T&& data) {
         m_future.data = std::move (data);
-        m_future.cancel();
+        m_future.m_waiter.cancel();
     }
 
     coro <T> get () {
