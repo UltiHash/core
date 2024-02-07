@@ -1,7 +1,3 @@
-//
-// Created by max on 13.12.23.
-//
-
 #ifndef UH_CLUSTER_SERVICE_REGISTRY_H
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
@@ -78,7 +74,7 @@ namespace uh::cluster {
 
     private:
 
-        static constexpr std::size_t m_etcd_default_ttl = 20;
+        static constexpr std::size_t m_etcd_default_ttl = 0;
 
         const std::string m_etcd_host;
         const std::string m_service_name;

@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/19/23.
-//
-
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
 #include <string>

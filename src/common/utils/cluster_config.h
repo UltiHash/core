@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
-
 #ifndef CORE_CLUSTER_CONFIG_H
 #define CORE_CLUSTER_CONFIG_H
 

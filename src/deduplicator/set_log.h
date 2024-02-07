@@ -1,7 +1,3 @@
-//
-// Created by massi on 11/24/23.
-//
-
 #ifndef UH_CLUSTER_SET_LOG_H
 #define UH_CLUSTER_SET_LOG_H
 

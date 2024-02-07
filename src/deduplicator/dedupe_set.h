@@ -1,7 +1,3 @@
-//
-// Created by masi on 11/7/23.
-//
-
 #ifndef UH_CLUSTER_DEDUPE_SET_H
 #define UH_CLUSTER_DEDUPE_SET_H
 

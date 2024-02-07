@@ -1,6 +1,3 @@
-//
-// Created by massi on 1/11/24.
-//
 #include "common.h"
 
 namespace uh::cluster {

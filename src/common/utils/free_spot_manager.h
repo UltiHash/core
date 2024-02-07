@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/21/23.
-//
-
 #ifndef CORE_FREE_SPOT_MANAGER_H
 #define CORE_FREE_SPOT_MANAGER_H
 

@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/24/23.
-//
-
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
