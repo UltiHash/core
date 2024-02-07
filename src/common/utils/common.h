@@ -93,6 +93,8 @@ enum config_parameter  {
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
+static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+
 uh::cluster::role get_service_role (const std::string& service_role_str);
 
 const std::string& get_service_string(const uh::cluster::role& service_role);

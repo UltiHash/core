@@ -65,7 +65,7 @@ namespace uh::cluster {
 
             const std::map<std::string, std::string> kv_pairs =
                     {
-                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), boost::asio::ip::host_name()},
+                        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST), get_host() },
                         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),std::to_string(config.port)},
                         {announced_key_base , {}},
                     };
@@ -84,6 +84,27 @@ namespace uh::cluster {
         const std::string m_service_name;
 
         etcd::SyncClient m_etcd_client;
+
+        static std::string get_host() {
+            const char* var_value = std::getenv(ENV_CFG_ENDPOINT_HOST);
+            if (var_value == nullptr) {
+                return boost::asio::ip::host_name();
+            } else {
+                if(is_valid_ip(var_value))
+                    return {var_value};
+                else
+                    throw std::invalid_argument("the environmental variable " + std::string(ENV_CFG_ENDPOINT_HOST) + " does not contain a valid IPv4 or IPv6 address: '" + std::string(var_value) + "'");
+            }
+        }
+
+        static bool is_valid_ip(const std::string& ip) {
+            try {
+                boost::asio::ip::address address = boost::asio::ip::address::from_string(ip);
+                return address.is_v4() || address.is_v6();
+            } catch (const std::exception& e) {
+                return false;
+            }
+        }
     };
 
 }
