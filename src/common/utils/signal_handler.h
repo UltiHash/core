@@ -23,7 +23,7 @@ public:
                     m_signals (m_ioc, SIGINT, SIGTERM) {
 
         m_signals.async_wait([this] (const boost::system::error_code& error, int signal) {
-            signal_handler_fn (error, signal);});
+            handle_signal (error, signal);});
         m_signal_handler_thread = std::thread ([this] () {m_ioc.run();});
     }
 
@@ -31,7 +31,7 @@ public:
         m_callbacks.emplace_back(fn);
     }
 
-     void signal_handler_fn (const boost::system::error_code& error, int signal) {
+     void handle_signal (const boost::system::error_code& error, int signal) {
         for (auto& fn: m_callbacks) {
             fn ();
         }
