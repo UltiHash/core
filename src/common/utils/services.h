@@ -185,7 +185,7 @@ namespace uh::cluster {
 
         void handle_state_changes(const etcd::Response& response)
         {
-            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key()
+            LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key()
                         << ", value: " << response.value().as_string();
 
             try {
@@ -216,17 +216,26 @@ namespace uh::cluster {
                                                 get_service_string(r) + '/' + id  + '/');
             etcd::Response attributes = m_etcd_client.ls(attributes_prefix);
 
+            std::optional<std::string> host;
+            std::optional<uint16_t> port;
             for (size_t i = 0; i < attributes.keys().size(); i++) {
                 const auto attribute_name = std::filesystem::path(attributes.key(i))
                         .filename().string();
 
                 if (attribute_name == get_config_string(CFG_ENDPOINT_HOST)) {
-                    service_endpoint.host = attributes.value(i).as_string();
+                    host = attributes.value(i).as_string();
                 } else if (attribute_name == get_config_string(CFG_ENDPOINT_PORT)) {
-                    service_endpoint.port = std::stoul(attributes.value(i).as_string());
+                    port = std::stoul(attributes.value(i).as_string());
                 }
             }
 
+            // throw
+            if (!host || !port) {
+                throw std::runtime_error("kaputt!");
+            }
+
+            service_endpoint.port = *port;
+            service_endpoint.host = *host;
             return service_endpoint;
         }
 
@@ -252,14 +261,13 @@ namespace uh::cluster {
         }
 
         void remove(const std::string& path) {
-            const auto service_endpoint = extract(path);
+            const auto id = std::stoull(std::filesystem::path(path).filename().string());
 
             LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
-                       << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
-                       << service_endpoint.port ;
+                       << id << " called. ";
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            auto it = m_clients.find(service_endpoint.id);
+            auto it = m_clients.find(id);
             if (it == m_clients.end())
             {
                 return;
@@ -271,7 +279,7 @@ namespace uh::cluster {
                 m_clients.erase(it);
             }
 
-            m_services_index.erase(service_endpoint.id);
+            m_services_index.erase(id);
         }
 
         boost::asio::io_context& m_ioc;
