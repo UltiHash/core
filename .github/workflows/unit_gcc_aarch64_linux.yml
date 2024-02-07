@@ -1,4 +1,4 @@
-name: Unit Tests (Linux, GCC)
+name: Unit Tests (Linux, GCC, aarch64)
 
 on:
   schedule:
