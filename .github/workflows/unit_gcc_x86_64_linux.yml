@@ -1,4 +1,4 @@
-name: Unit Tests (Linux, GCC)
+name: Unit Tests (Linux, GCC, x86_64)
 
 on:
   push:
@@ -10,12 +10,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-test-linux-gcc:
+  unit-gcc-x86_64-linux:
     strategy:
       matrix:
         build: [Release, Debug]
-        os: [uh-x86_64-ubuntu-22.04, uh-aarch64-ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
+    runs-on: uh-x86_64-ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -24,22 +23,15 @@ jobs:
           submodules: recursive
 
       - name: Configure CMake
-        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCPACK_COMPONENTS_ALL="uh-cluster"
 
       - name: Build
-        # Build your program with the given configuration
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
 
       - name: Test
         env:
-          MALLOC_CHECK_: 2
-          LD_LIBRARY_PATH: /usr/local/lib
           ETCDCTL_API: 3
         working-directory: ${{github.workspace}}/build
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: |
           etcd&
           sleep 5
@@ -55,14 +47,8 @@ jobs:
 
       - name: Upload uh-cluster (amd64)
         uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04' && runner.arch == 'X64'
+        if: matrix.build == 'Release'
         with:
           name: ultihash-cluster_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_amd64.deb
 
-      - name: Upload uh-cluster (arm64)
-        uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64'
-        with:
-          name: ultihash-cluster_${{ github.sha }}_arm64.deb
-          path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_arm64.deb
