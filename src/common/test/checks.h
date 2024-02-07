@@ -56,8 +56,8 @@
 
 /**
  * Repeatedly check a condition until a timeout is hit. `BOOST_CHECK`
- * passes if the condition passed was not changed during the entire
- * elapsed time.
+ * passes if a 'true' condition was passed and it was not changed during 
+ * the entire elapsed time.
  *
  * TIMEOUT_MS   timeout in milliseconds
  * CONDITION    condition to evaluate. must be 'true' initially
