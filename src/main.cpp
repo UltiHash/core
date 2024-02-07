@@ -11,6 +11,7 @@
 #include <common/utils/common.h>
 #include <config.h>
 #include "common/utils/log.h"
+#include "common/utils/signal_handler.h"
 
 using namespace uh::cluster;
 
@@ -34,31 +35,20 @@ void execute_role(const config& cfg) {
 
     signal_handler sh;
 
+    auto start_service = [&sh] (auto&& service) -> void {
+        sh.add_callback([&service]() { service.stop(); });
+        service.run ();
+    };
+
     switch (cfg.role) {
-        case STORAGE_SERVICE: {
-            auto st = storage(cfg.etcd_url, cfg.working_dir);
-            sh.add_callback([&st]() { st.stop(); });
-            st.run();
-            break;
-        }
-        case DEDUPLICATOR_SERVICE: {
-            auto dd = deduplicator(cfg.etcd_url, cfg.working_dir);
-            sh.add_callback([&dd]() { dd.stop(); });
-            dd.run();
-            break;
-        }
-        case DIRECTORY_SERVICE: {
-            auto dr = directory(cfg.etcd_url, cfg.working_dir);
-            sh.add_callback([&dr]() { dr.stop(); });
-            dr.run();
-            break;
-        }
-        case ENTRYPOINT_SERVICE: {
-            auto en = entrypoint(cfg.etcd_url, cfg.working_dir);
-            sh.add_callback([&en]() { en.stop(); });
-            en.run();
-            break;
-        }
+        case STORAGE_SERVICE:
+            return start_service(storage(cfg.etcd_url, cfg.working_dir));
+        case DEDUPLICATOR_SERVICE:
+            return start_service (deduplicator(cfg.etcd_url, cfg.working_dir));
+        case DIRECTORY_SERVICE:
+            return start_service (directory(cfg.etcd_url, cfg.working_dir));
+        case ENTRYPOINT_SERVICE:
+            return start_service (entrypoint(cfg.etcd_url, cfg.working_dir));
     }
 }
 

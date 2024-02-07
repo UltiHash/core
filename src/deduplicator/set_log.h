@@ -81,6 +81,11 @@ public:
         recreate (set);
     }
 
+    ~set_log() {
+        fsync(m_log_file);
+        close (m_log_file);
+    }
+
 private:
 
     static int get_log_file (const std::filesystem::path& path) {

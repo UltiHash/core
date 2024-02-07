@@ -17,7 +17,6 @@
 #include "common/registry/service_registry.h"
 #include "common/network/server.h"
 #include "storage_handler.h"
-#include "common/utils/signal_handler.h"
 
 namespace uh::cluster {
 class storage: public service_interface {
