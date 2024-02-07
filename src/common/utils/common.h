@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/19/23.
-//
-
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
 #include <string>
@@ -92,6 +88,8 @@ enum config_parameter  {
     CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
+
+static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 
 uh::cluster::role get_service_role (const std::string& service_role_str);
 

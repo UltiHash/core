@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/29/23.
-//
-
 #ifndef ENTRYPOINT_HANDLER_H
 #define ENTRYPOINT_HANDLER_H
 

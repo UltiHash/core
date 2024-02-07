@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/24/23.
-//
-
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 

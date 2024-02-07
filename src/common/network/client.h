@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/26/23.
-//
-
 #ifndef CORE_CLIENT_H
 #define CORE_CLIENT_H
 

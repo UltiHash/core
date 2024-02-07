@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 12.10.22.
-//
-
 #ifndef UH_LOGGING_LOGGING_BOOST_H
 #define UH_LOGGING_LOGGING_BOOST_H
 

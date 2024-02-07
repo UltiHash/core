@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/16/23.
-//
-
 #ifndef CORE_SERVER_H
 #define CORE_SERVER_H
 

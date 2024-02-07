@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/18/23.
-//
-
 #ifndef CORE_BIG_INT_H
 #define CORE_BIG_INT_H
 

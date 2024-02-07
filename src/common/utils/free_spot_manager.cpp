@@ -1,6 +1,3 @@
-//
-// Created by masi on 7/25/23.
-//
 #include "free_spot_manager.h"
 
 namespace uh::cluster {

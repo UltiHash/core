@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
-
 #include <system_error>
 #include "common/utils/cluster_config.h"
 #include "storage/storage.h"
