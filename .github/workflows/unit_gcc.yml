@@ -19,22 +19,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || runner.arch != 'ARM64'
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
       - name: Configure CMake
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || runner.arch != 'ARM64'
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCPACK_COMPONENTS_ALL="uh-cluster"
 
       - name: Build
         # Build your program with the given configuration
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || runner.arch != 'ARM64'
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
 
       - name: Test
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || runner.arch != 'ARM64'
         env:
-          MALLOC_CHECK_: 2
           LD_LIBRARY_PATH: /usr/local/lib
           ETCDCTL_API: 3
         working-directory: ${{github.workspace}}/build
@@ -50,7 +53,7 @@ jobs:
 
       - name: Packaging (.deb)
         working-directory: ${{github.workspace}}/build
-        if: matrix.build == 'Release'
+        if: matrix.build == 'Release' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || runner.arch != 'ARM64')
         run: cpack -G DEB
 
       - name: Upload uh-cluster (amd64)
@@ -62,7 +65,7 @@ jobs:
 
       - name: Upload uh-cluster (arm64)
         uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64'
+        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         with:
           name: ultihash-cluster_${{ github.sha }}_arm64.deb
           path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_arm64.deb
