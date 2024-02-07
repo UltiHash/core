@@ -11,8 +11,6 @@ namespace uh::cluster::rest::http
 {
     namespace http = boost::beast::http;           // from <boost/beast/http.hpp>
     namespace net = boost::asio;
-    using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
-            net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
     template <typename T>
     using coro =  boost::asio::awaitable <T>;   // for coroutine
 

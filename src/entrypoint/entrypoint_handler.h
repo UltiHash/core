@@ -35,7 +35,12 @@
 #include "entrypoint/rest/utils/parser/xml_parser.h"
 #include "entrypoint/rest/http/models/get_bucket_response.h"
 
-namespace uh::cluster {
+// REFACTORED
+#include "dispatcher.h"
+#include "http_requests/put_object.h"
+#include "http_requests/get_object.h"
+
+namespace uh::cluster::entry {
 
     class entrypoint_handler: public protocol_handler {
     public:
@@ -62,13 +67,17 @@ namespace uh::cluster {
 
                 boost::beast::http::request_parser<boost::beast::http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
+
                 co_await boost::beast::http::async_read_header(s, buffer, received_request,
                                                                boost::asio::use_awaitable);
-                LOG_INFO() << "received request: " << received_request.get().base();
+                LOG_DEBUG() << "received request: " << received_request.get().base();
+
                 uh::cluster::rest::utils::parser::s3_parser s3_parser(received_request, m_server_state);
                 auto s3_request = s3_parser.parse();
+
                 co_await s3_request->read_body(s, buffer);
                 s3_request->validate_request_specific_criteria();
+
                 auto s3_res = co_await handle_request(*s3_request, m_server_state);
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await boost::beast::http::async_write(s, s3_res_specific_object,
@@ -95,7 +104,8 @@ namespace uh::cluster {
             LOG_ERROR() << res_exc.what();
             boost::beast::http::write(s, res_exc.get_response_specific_object());
             s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
-            s.close();            throw;
+            s.close();
+            throw;
         }
         catch (const std::exception& e) {
             LOG_ERROR() << e.what();
@@ -108,6 +118,13 @@ namespace uh::cluster {
 
         s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
         s.close();
+    }
+
+
+    http_response handle_request(const http_request& req) {
+        return dispatcher::dispatch(req,
+                                    put_object(),
+                                    get_object());
     }
 
     coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {
