@@ -1,0 +1,54 @@
+name: Unit Tests (Linux, GCC)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  unit-gcc-x86_64-linux:
+    strategy:
+      matrix:
+        build: [Release, Debug]
+    runs-on: uh-x86_64-ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCPACK_COMPONENTS_ALL="uh-cluster"
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
+
+      - name: Test
+        env:
+          ETCDCTL_API: 3
+        working-directory: ${{github.workspace}}/build
+        run: |
+          etcd&
+          sleep 5
+          etcdctl del "" --from-key=true
+          ctest -C ${{ matrix.build }} --output-on-failure
+          etcdctl del "" --from-key=true
+          
+
+      - name: Packaging (.deb)
+        working-directory: ${{github.workspace}}/build
+        if: matrix.build == 'Release'
+        run: cpack -G DEB
+
+      - name: Upload uh-cluster (amd64)
+        uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release'
+        with:
+          name: ultihash-cluster_${{ github.sha }}_amd64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_amd64.deb
+
