@@ -27,7 +27,8 @@ namespace uh::cluster {
                 m_server (m_config_registry.get_server_config(), m_config_registry.get_service_name(),
                           std::make_unique <deduplicator_handler>(m_config, m_storage, m_dedupe_workers),
                           m_ioc)
-        {}
+        {
+        }
 
         void run() override {
             m_registration = m_service_registry.register_service(m_server.get_server_config());

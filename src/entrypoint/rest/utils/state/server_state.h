@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include "entrypoint/rest/utils/hashing/hash.h"
-#include "common/utils/common_types.h"
+#include "common/types/common_types.h"
 #include <chrono>
 #include <map>
 

@@ -33,7 +33,9 @@ public:
         boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
     }
 
-    coro <void> handle (messenger m) override {
+    coro <void> handle (boost::asio::ip::tcp::socket s) override {
+
+        messenger m (std::move (s));
 
         for (;;) {
             std::optional<error> err;

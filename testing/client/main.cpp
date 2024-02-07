@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include "common/network/messenger.h"
-#include "common/utils/common_types.h"
+#include "common/types/common_types.h"
 #include "common/utils/log.h"
 #include <filesystem>
 #include <boost/asio/co_spawn.hpp>
