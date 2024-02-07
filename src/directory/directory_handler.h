@@ -23,7 +23,9 @@ namespace uh::cluster {
         {
         }
 
-    coro <void> handle (messenger m) override {
+    coro <void> handle (boost::asio::ip::tcp::socket s) override {
+
+        messenger m (std::move (s));
 
         for (;;) {
             std::optional<error> err;
