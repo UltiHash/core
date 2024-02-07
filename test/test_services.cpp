@@ -83,9 +83,9 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture)
     {
         std::atomic<bool> has_result = false;
         std::thread waiter([&]{
-                services.get();
-                has_result = true;
-            });
+            services.get();
+            has_result = true;
+        });
 
         CHECK_STABLE(100, !has_result);
 

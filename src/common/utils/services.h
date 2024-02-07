@@ -161,7 +161,11 @@ namespace uh::cluster {
         std::shared_ptr <client> get() const
         {
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            m_cv.wait(lk, [this](){ return !m_clients.empty(); });
+            if (m_cv.wait_for(lk, std::chrono::seconds(TIMEOUT_PERIOD_S),
+                          [this](){ return !m_clients.empty(); }))
+            {}
+            else
+                throw std::runtime_error("no client available");
 
             if (m_robin_index == m_clients.end()) {
                 m_robin_index = m_clients.begin();
