@@ -40,15 +40,21 @@ void execute_role(const config& cfg) {
         service.run ();
     };
 
-    switch (cfg.role) {
-        case STORAGE_SERVICE:
-            return start_service(storage(cfg.etcd_url, cfg.working_dir));
-        case DEDUPLICATOR_SERVICE:
-            return start_service (deduplicator(cfg.etcd_url, cfg.working_dir));
-        case DIRECTORY_SERVICE:
-            return start_service (directory(cfg.etcd_url, cfg.working_dir));
-        case ENTRYPOINT_SERVICE:
-            return start_service (entrypoint(cfg.etcd_url, cfg.working_dir));
+    try {
+        switch (cfg.role) {
+            case STORAGE_SERVICE:
+                return start_service(storage(cfg.etcd_url, cfg.working_dir));
+            case DEDUPLICATOR_SERVICE:
+                return start_service(deduplicator(cfg.etcd_url, cfg.working_dir));
+            case DIRECTORY_SERVICE:
+                return start_service(directory(cfg.etcd_url, cfg.working_dir));
+            case ENTRYPOINT_SERVICE:
+                return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR() << "Error in executing role: " << e.what();
+        sh.stop();
     }
 }
 

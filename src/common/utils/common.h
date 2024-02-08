@@ -30,9 +30,6 @@ enum message_type: uint8_t {
     DIR_PUT_BUCKET_REQ = 31,
     SUCCESS = 32,
     FAILURE = 33,
-    STOP = 34,
-    RECOVER_REQ = 35,
-    RECOVER_RESP = 36,
     DIR_LIST_BUCKET_REQ = 37,
     DIR_LIST_BUCKET_RESP = 38,
     DIR_LIST_OBJ_REQ = 39,
@@ -50,11 +47,6 @@ enum role: uint8_t {
     DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
-};
-
-enum ec_type: uint8_t {
-    NONE = 0,
-    XOR = 1,
 };
 
 enum config_parameter  {

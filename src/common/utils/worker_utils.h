@@ -24,7 +24,7 @@ namespace uh::cluster {
             auto f = [] (auto& f, auto& eptr, auto& promise) {
                 try {
                     f ();
-                } catch (std::exception& e) {
+                } catch (const std::exception& e) {
                     eptr = std::current_exception();
                 }
                 promise.set();
