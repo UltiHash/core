@@ -43,7 +43,7 @@ namespace uh::cluster {
                                                                                boost::asio::io_context& ioc,
                                                                                std::shared_ptr<client> cl,
                                                                                Func func) {
-
+            
             auto f = [] (auto& ioc, auto& func, auto& cl) {
                 boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
             };
