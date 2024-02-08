@@ -56,7 +56,10 @@ if [ "$(basename $(pwd))" != "testing" ]; then
     exit 1
 fi
 
-docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..
+if ! docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..; then
+    echo "docker build failed" 1>&2
+    exit 1
+fi
 
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     echo "Creating virtual environment ..."
