@@ -9,15 +9,14 @@ namespace uh::cluster::entry {
     public:
         get_object() = default;
 
-        bool can_handle(const http_request& req) const {
+        static bool can_handle(const http_request& req) {
             return true;
         }
 
-        http_response handle(const http_request& req) {
-            return {};
+        coro <http_response> handle(const http_request& req) {
         }
 
     private:
     };
 
-} // uh::cluster::entrypoint namespace
+} // uh::cluster::entry

@@ -121,10 +121,17 @@ namespace uh::cluster::entry {
     }
 
 
-    http_response handle_request(const http_request& req) {
-        return dispatcher::dispatch(req,
-                                    put_object(),
-                                    get_object());
+    coro <http_response> handle_request(const http_request& req) {
+
+        auto func = [this](const std::list <std::string_view>& data_pieces) -> coro <dedupe_response> {
+            co_return co_await integrate_data(data_pieces);
+        };
+
+        co_return co_await dispatcher::dispatch(req,
+                                        put_object(func,
+                                                   m_directory_services,
+                                                   m_ioc,
+                                                   m_workers));
     }
 
     coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {

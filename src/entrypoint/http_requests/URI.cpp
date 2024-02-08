@@ -115,4 +115,4 @@ namespace uh::cluster::entry
 
     }
 
-} // uh::cluster::rest::http
+} // uh::cluster::entry

@@ -49,4 +49,4 @@ namespace uh::cluster::entry
         std::map<std::string, std::string> m_query_parameters;
     };
 
-} // uh::cluster::rest::http
+} // uh::cluster::entry

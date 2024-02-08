@@ -5,16 +5,15 @@
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
 #include "URI.h"
+#include "entrypoint/utils/hash.h"
 
 namespace uh::cluster::entry
 {
-    namespace http = boost::beast::http;           // from <boost/beast/http.hpp>
+    namespace http = boost::beast::http;        // from <boost/beast/http.hpp>
     template <typename T>
     using coro =  boost::asio::awaitable <T>;   // for coroutine
 
-    /**
-     * Abstract class to represent an HTTP request.
-     */
+
     class http_request
     {
     public:
@@ -32,12 +31,49 @@ namespace uh::cluster::entry
             return m_etag;
         }
 
-        inline std::string_view get_body() const {
+        inline const std::string& get_body() const {
             return m_body;
+        }
+
+        inline std::size_t get_body_size() const {
+            return m_body.size();
         }
 
         inline method get_method() const {
             return m_uri.get_method();
+        }
+
+        coro<void> read_body(boost::asio::ip::tcp::socket& stream, boost::beast::flat_buffer& buffer)
+        {
+            if (m_req.get().has_content_length())
+            {
+                if (m_req.content_length().value() != 0)
+                {
+                    std::size_t content_length = m_req.content_length().value();
+                    m_body.append(content_length, 0);
+
+                    auto data_left = content_length - buffer.size();
+
+                    // copy remaining bytes from flat buffer to body_buffer
+                    boost::asio::buffer_copy(boost::asio::buffer(m_body), buffer.data());
+                    auto size_transferred = co_await boost::asio::async_read(stream, boost::asio::buffer(m_body.data() + buffer.size(), data_left),
+                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                    if (size_transferred + buffer.size() != content_length)
+                    {
+                        throw std::runtime_error("error reading the http body");
+                    }
+
+                    MD5 md5 {};
+                    m_etag = md5.calculateMD5(m_body);
+                }
+            }
+            else
+            {
+                throw std::runtime_error("please specify the content length on requests as other methods without content length are currently not supported");
+            }
+
+            co_return;
         }
 
     private:
@@ -47,4 +83,4 @@ namespace uh::cluster::entry
         std::string m_body {};
     };
 
-} // uh::cluster::rest::http
+} // uh::cluster::entry
