@@ -8,23 +8,16 @@
 #include <config.h>
 #include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
+#include <CLI/CLI.hpp>
 
 using namespace uh::cluster;
 
 struct config {
-    enum action {
-        start_service,
-        print_vcsid
-    };
-
-    static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
-    static constexpr const char* default_working_dir = "/var/lib/uh";
-
-    action task;
     uh::cluster::role role;
     std::size_t id;
     std::string etcd_url;
     std::filesystem::path working_dir;
+    boost::log::trivial::severity_level log_level;
 };
 
 void execute_role(const config& cfg) {
@@ -48,68 +41,50 @@ void execute_role(const config& cfg) {
     }
 }
 
-std::optional<config> parse_command_line(int argc, const char* args[]) {
-
-    if (argc > 1 && std::string(args[1]) == "--vcsid") {
-        return config{ .task = config::print_vcsid };
-    }
-
-    if (argc < 2 || argc > 4) {
-        return {};
-    }
-
-    return config{
-        .task = config::start_service,
-        .role = get_service_role(args[1]),
-        .etcd_url = argc == 3 ? args[2] : config::default_registry_url,
-        .working_dir = argc == 4 ? args[3] : config::default_working_dir,
-    };
-}
-
-void print_help(std::ostream& out) {
-    out << "Usage: " << PROJECT_NAME << " <role> [registry] [working_dir]\n"
-        << "\trole\t\t" << "service role, ie. "
-            << get_service_string(uh::cluster::STORAGE_SERVICE) << ", "
-            << get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) << ", "
-            << get_service_string(uh::cluster::DIRECTORY_SERVICE) << ", or "
-            << get_service_string(uh::cluster::ENTRYPOINT_SERVICE) << "\n"
-        << "\tregistry\t" << "URL to etcd endpoint (default: " << config::default_registry_url << ")\n"
-        << "\tworking_dir\t" << "path to working directory (default: " << config::default_working_dir << ")\n";
-}
-
-void print_vcsid(std::ostream& out) {
-    out << PROJECT_NAME << " " << PROJECT_VERSION << " (" << __DATE__ << " " << __TIME__ << ")\n"
+void print_vcsid() {
+    std::cout << PROJECT_NAME << " " << PROJECT_VERSION << " (" << __DATE__ << " " << __TIME__ << ")\n"
         << PROJECT_REPOSITORY << " (" << PROJECT_VCSID << ")\n";
+    exit(0);
 }
 
-int main (int argc, const char* args[]) {
+int main(int argc, char** argv) {
+    CLI::App app{"UltiHash Object Storage Cluster"};
+    argv = app.ensure_utf8(argv);
+
+    config cfg;
+    app.add_option("role", cfg.role, "service role, i.e. storage, deduplicator, directory, or entrypoint")
+        ->required()
+        ->transform([](const std::string& role_str) {return std::to_string(get_service_role(role_str));});
+    app.add_option("registry", cfg.etcd_url, "URL to etcd endpoint")
+        ->default_val("http://127.0.0.1:2379");
+    app.add_option("working_dir", cfg.working_dir, "path to working directory ")
+        ->default_val("/var/lib/uh")->check(CLI::ExistingDirectory);
+    app.add_option("--log-level,-L", cfg.log_level , "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
+        ->transform([](const std::string& severity_str) { return std::to_string(uh::log::severity_from_string(severity_str));})
+        ->default_val(uh::log::to_string(boost::log::trivial::info));
+
+    app.add_flag_callback("--vcsid", print_vcsid, "Print the VCS commit id this executable was compiled from");
+
+    CLI11_PARSE(app, argc, argv);
+
     try {
-        auto cfg = parse_command_line(argc, args);
-        if (!cfg) {
-            print_help(std::cerr);
-            return 1;
-        }
-
-        if (cfg->task == config::print_vcsid) {
-            print_vcsid(std::cout);
-            return 0;
-        }
-
         uh::log::config lc {
             .sinks = {
                 uh::log::sink_config {
-                    .type = uh::log::sink_type::cout
+                    .type = uh::log::sink_type::cout,
+                    .level = cfg.log_level
                 },
                 uh::log::sink_config {
                     .type = uh::log::sink_type::file,
-                    .filename = "log.log"
+                    .filename = "log.log",
+                    .level = cfg.log_level
                 }
             }
         };
 
         uh::log::init(lc);
 
-        execute_role(*cfg);
+        execute_role(cfg);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }

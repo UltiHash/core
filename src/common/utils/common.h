@@ -48,11 +48,6 @@ enum role: uint8_t {
     ENTRYPOINT_SERVICE,
 };
 
-enum ec_type: uint8_t {
-    NONE = 0,
-    XOR = 1,
-};
-
 enum config_parameter  {
     CFG_SERVER_THREADS,
     CFG_SERVER_BIND_ADDR,
@@ -87,6 +82,13 @@ enum config_parameter  {
     CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
     CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
+};
+
+const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+        {"storage", uh::cluster::STORAGE_SERVICE},
+        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
+        {"directory", uh::cluster::DIRECTORY_SERVICE},
+        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
 };
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
