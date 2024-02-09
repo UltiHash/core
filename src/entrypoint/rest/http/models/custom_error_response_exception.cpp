@@ -22,6 +22,7 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"BadUploadId", "upload id is invalid"},
     {"BadPartNumber", "part number is invalid"},
     {"TooManyElements", "too many elements in the request"},
+    {"StorageLimitExceeded", "insufficient storage"},
 };
 
 static const std::pair<std::string, std::string> error_out_of_range = {

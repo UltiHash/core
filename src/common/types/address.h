@@ -49,6 +49,10 @@ struct address {
         sizes.resize(count);
     }
 
+    std::size_t data_size() const {
+        return std::accumulate(sizes.begin(), sizes.end(), 0ull);
+    }
+
     [[nodiscard]] fragment get_fragment(size_t i) const {
         return {{pointers[2 * i], pointers[2 * i + 1]}, sizes[i]};
     }
