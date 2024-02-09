@@ -10,6 +10,11 @@
 
 namespace uh::cluster {
 
+static constexpr std::size_t KILO_BYTE = 1024;
+static constexpr std::size_t MEGA_BYTE = 1024 * KILO_BYTE;
+static constexpr std::size_t GIGA_BYTE = 1024 * MEGA_BYTE;
+static constexpr std::size_t TERA_BYTE = 1024 * GIGA_BYTE;
+
 struct dedupe_response {
     std::size_t effective_size{};
     address addr;
