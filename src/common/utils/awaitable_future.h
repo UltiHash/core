@@ -10,7 +10,7 @@
 #include "common/network/messenger_core.h"
 
 namespace uh::cluster {
-
+/*
 template <typename T>
 class awaitable_promise;
 
@@ -18,9 +18,9 @@ template <typename T>
 class awaitable_future {
     boost::asio::io_context& m_ioc;
     boost::asio::steady_timer m_waiter;
+    std::optional <T> data;
 
     friend awaitable_promise <T>;
-    std::optional <T> data;
 
 public:
     explicit awaitable_future (boost::asio::io_context& ioc):
@@ -67,48 +67,49 @@ public:
     awaitable_future& operator = (const awaitable_future&&) = delete;
 
 };
-
+*/
 template <typename T>
 class awaitable_promise {
-    awaitable_future <T> m_future;
+
+    boost::asio::steady_timer m_waiter;
+    std::optional <T> m_data;
 
 public:
-    explicit awaitable_promise(boost::asio::io_context& ioc): m_future (ioc) {}
+    explicit awaitable_promise(boost::asio::io_context& ioc):
+            m_waiter (ioc, boost::asio::steady_timer::clock_type::duration::max ()) {}
 
     inline void set (T&& data) {
-        m_future.data.emplace (std::move (data));
-        m_future.m_waiter.cancel();
+        m_data.emplace (std::move (data));
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        m_waiter.cancel();
     }
 
     coro <T> get () {
-        co_return std::move (co_await m_future.get());
+        co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+        co_return std::move (*m_data);
     }
 
-    [[nodiscard]] inline const awaitable_future <T>& get_future () const {
-        return m_future;
-    }
 };
 
 template <>
 class awaitable_promise <void> {
-    awaitable_future <void> m_future;
+
+    boost::asio::steady_timer m_waiter;
 
 public:
-    explicit awaitable_promise(boost::asio::io_context& ioc): m_future (ioc) {}
+    explicit awaitable_promise(boost::asio::io_context& ioc):
+            m_waiter (ioc, boost::asio::steady_timer::clock_type::duration::max ()) {}
 
     inline void set () {
-        m_future.m_waiter.cancel();
+        m_waiter.cancel();
     }
 
     coro <void> get () {
-        co_await m_future.wait ();
+        co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
     }
 
-    [[nodiscard]] inline const awaitable_future <void>& get_future () const {
-        return m_future;
-    }
 };
-
 }
 
 #endif //UH_CLUSTER_AWAITABLE_FUTURE_H
