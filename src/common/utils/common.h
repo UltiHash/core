@@ -92,6 +92,7 @@ const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
 };
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 
 uh::cluster::role get_service_role (const std::string& service_role_str);
 

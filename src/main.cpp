@@ -61,7 +61,8 @@ int main(int argc, char** argv) {
         ->default_val("/var/lib/uh")->check(CLI::ExistingDirectory);
     app.add_option("--log-level,-L", cfg.log_level , "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
         ->transform([](const std::string& severity_str) { return std::to_string(uh::log::severity_from_string(severity_str));})
-        ->default_val(uh::log::to_string(boost::log::trivial::info));
+        ->default_val(uh::log::to_string(boost::log::trivial::info))
+        ->envname(ENV_CFG_LOG_LEVEL);
 
     app.add_flag_callback("--vcsid", print_vcsid, "Print the VCS commit id this executable was compiled from");
 
