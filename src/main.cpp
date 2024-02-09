@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
-
 #include <system_error>
 #include "common/utils/cluster_config.h"
 #include "storage/storage.h"
@@ -22,7 +18,7 @@ struct config {
     };
 
     static constexpr const char* default_registry_url = "http://127.0.0.1:2379";
-    static constexpr const char* default_working_dir = "ultihash_root";
+    static constexpr const char* default_working_dir = "/var/lib/uh";
 
     action task;
     uh::cluster::role role;

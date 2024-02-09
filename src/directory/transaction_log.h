@@ -1,7 +1,3 @@
-//
-// Created by masi on 10/2/23.
-//
-
 #ifndef CORE_TRANSACTION_LOG_H
 #define CORE_TRANSACTION_LOG_H
 

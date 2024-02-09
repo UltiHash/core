@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/27/23.
-//
-
 #ifndef CORE_GLOBAL_DATA_VIEW_H
 #define CORE_GLOBAL_DATA_VIEW_H
 
@@ -28,7 +24,7 @@ public:
             m_cache_l1 (m_config.read_cache_capacity_l1),
             m_cache_l2 (m_config.read_cache_capacity_l2)
     {
-        m_storage_services.wait();
+        m_storage_services.get();
     }
 
     address write (const std::string_view& data) {

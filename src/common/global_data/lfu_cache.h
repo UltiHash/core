@@ -1,7 +1,3 @@
-//
-// Created by masi on 11/8/23.
-//
-
 #ifndef UH_CLUSTER_LFU_CACHE_H
 #define UH_CLUSTER_LFU_CACHE_H
 

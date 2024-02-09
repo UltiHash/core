@@ -1,7 +1,3 @@
-//
-// Created by max on 17.01.24.
-//
-
 #ifndef UH_CLUSTER_CONFIG_REGISTRY_H
 #define UH_CLUSTER_CONFIG_REGISTRY_H
 
