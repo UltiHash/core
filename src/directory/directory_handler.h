@@ -39,9 +39,6 @@ namespace uh::cluster {
                 case DIR_PUT_BUCKET_REQ:
                     co_await handle_put_bucket (m, message_header);
                     break;
-                case RECOVER_REQ:
-                    co_await handle_recovery (m, message_header);
-                    break;
                 case DIR_LIST_BUCKET_REQ:
                     co_await handle_list_buckets(m, message_header);
                     break;
@@ -172,10 +169,6 @@ namespace uh::cluster {
             };
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref(response), std::ref(request)));
             co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
-        }
-
-        coro <void> handle_recovery (messenger& m, const messenger::header& h) {
-            co_await m.send(RECOVER_RESP, {});
         }
 
         const directory_config m_config;

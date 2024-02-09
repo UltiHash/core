@@ -11,7 +11,6 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
 #include "namespace.h"
-#include "etcd/v3/Transaction.hpp"
 
 namespace uh::cluster {
 
