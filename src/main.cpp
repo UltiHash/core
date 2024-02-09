@@ -55,11 +55,11 @@ int main(int argc, char** argv) {
     app.add_option("role", cfg.role, "service role, i.e. storage, deduplicator, directory, or entrypoint")
         ->required()
         ->transform([](const std::string& role_str) {return std::to_string(get_service_role(role_str));});
-    app.add_option("registry", cfg.etcd_url, "URL to etcd endpoint")
+    app.add_option("registry,--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
         ->default_val("http://127.0.0.1:2379");
-    app.add_option("working_dir", cfg.working_dir, "path to working directory ")
+    app.add_option("working_dir,--workdir,-w", cfg.working_dir, "path to working directory ")
         ->default_val("/var/lib/uh")->check(CLI::ExistingDirectory);
-    app.add_option("--log-level,-L", cfg.log_level , "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
+    app.add_option("--log-level,-l", cfg.log_level , "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
         ->transform([](const std::string& severity_str) { return std::to_string(uh::log::severity_from_string(severity_str));})
         ->default_val(uh::log::to_string(boost::log::trivial::info))
         ->envname(ENV_CFG_LOG_LEVEL);
