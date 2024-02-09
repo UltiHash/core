@@ -31,7 +31,7 @@ namespace uh::cluster {
             };
 
             boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(pr)));
-            std::invoke_result_t <Func, Args...> r = co_await pr.get();
+            auto r = co_await pr.get();
             if (eptr) {
                 std::rethrow_exception(eptr);
             }
