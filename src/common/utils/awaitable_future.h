@@ -20,7 +20,7 @@ class awaitable_future {
     boost::asio::steady_timer m_waiter;
 
     friend awaitable_promise <T>;
-    std::enable_if <!std::is_same_v <T, void>, T> data;
+    std::optional <T> data;
 
 public:
     explicit awaitable_future (boost::asio::io_context& ioc):
@@ -30,7 +30,31 @@ public:
 
     inline coro <T> get () requires (!std::is_void_v <T>){
         co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
-        co_return std::move (data);
+        co_return std::move (*data);
+    }
+
+    inline coro <void> wait () {
+        co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+    }
+
+    awaitable_future (awaitable_future&&) noexcept = delete;
+    awaitable_future (const awaitable_future&) = delete;
+    awaitable_future& operator = (const awaitable_future&) = delete;
+    awaitable_future& operator = (const awaitable_future&&) = delete;
+
+};
+
+
+template<> class awaitable_future <void> {
+    boost::asio::io_context& m_ioc;
+    boost::asio::steady_timer m_waiter;
+
+    friend awaitable_promise <void>;
+
+public:
+    explicit awaitable_future (boost::asio::io_context& ioc):
+            m_ioc (ioc),
+            m_waiter (m_ioc, boost::asio::steady_timer::clock_type::duration::max ()) {
     }
 
     inline coro <void> wait () {
@@ -52,12 +76,12 @@ public:
     explicit awaitable_promise(boost::asio::io_context& ioc): m_future (ioc) {}
 
     inline void set (T&& data) {
-        m_future.data = std::move (data);
+        m_future.data.emplace (std::move (data));
         m_future.m_waiter.cancel();
     }
 
     coro <T> get () {
-        co_return m_future.get();
+        co_return std::move (co_await m_future.get());
     }
 
     [[nodiscard]] inline const awaitable_future <T>& get_future () const {

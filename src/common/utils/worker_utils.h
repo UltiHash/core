@@ -16,7 +16,30 @@ namespace uh::cluster {
 
     struct worker_utils {
 
-        template<typename Func>
+        template<typename Func, typename... Args>
+        requires (!std::is_void_v <std::invoke_result_t <Func, Args...>>)
+        static coro <std::invoke_result_t <Func, Args...>> post_in_workers (boost::asio::thread_pool& workers, boost::asio::io_context& ioc, Func func) {
+            std::exception_ptr eptr;
+            awaitable_promise <std::invoke_result_t <Func, Args...>> pr (ioc);
+
+            auto f = [] (auto& f, auto& eptr, auto& promise) {
+                try {
+                    promise.set(f ());
+                } catch (const std::exception& e) {
+                    eptr = std::current_exception();
+                }
+            };
+
+            boost::asio::post (workers, std::bind (f, std::ref (func), std::ref(eptr), std::ref(pr)));
+            std::invoke_result_t <Func, Args...> r = co_await pr.get();
+            if (eptr) {
+                std::rethrow_exception(eptr);
+            }
+            co_return std::move (r);
+        }
+
+        template<typename Func, typename... Args>
+        requires (std::is_void_v <std::invoke_result_t <Func, Args...>>)
         static coro <void> post_in_workers (boost::asio::thread_pool& workers, boost::asio::io_context& ioc, Func func) {
             std::exception_ptr eptr;
             awaitable_promise <void> pr (ioc);
@@ -43,12 +66,12 @@ namespace uh::cluster {
                                                                                boost::asio::io_context& ioc,
                                                                                std::shared_ptr<client> cl,
                                                                                Func func) {
-            
-            auto f = [] (auto& ioc, auto& func, auto& cl) {
-                boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
-            };
-            co_await post_in_workers (workers, ioc, std::bind (f, std::ref(ioc), std::ref (func), std::ref(*cl)));
 
+            auto f = [] (auto& cl) -> client::acquired_messenger {
+                return cl->acquire_messenger ();
+            };
+            auto m = co_await post_in_workers (workers, ioc, std::bind (f, std::ref(cl)));
+            co_await func (std::move (m));
         }
 
         template<typename Func>
