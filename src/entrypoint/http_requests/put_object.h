@@ -1,25 +1,18 @@
 #pragma once
 
 #include <utility>
-
+#include "entrypoint/common.h"
+#include "entrypoint/entrypoint_handler.h"
 #include "http_request.h"
 #include "http_response.h"
-#include "entrypoint/state/server_state.h"
 
 namespace uh::cluster::entry {
 
-    template <typename Func>
     class put_object {
     public:
 
-        put_object(Func func,
-                   const services<DIRECTORY_SERVICE>& directory_services,
-                   boost::asio::io_context& ioc,
-                   std::shared_ptr <boost::asio::thread_pool> workers) :
-                    m_integrate(std::move(func)),
-                    m_directory_services(directory_services),
-                    m_ioc(ioc),
-                    m_workers(std::move(workers))
+        explicit put_object(entrypoint_state entry_state) :
+                    m_state(entry_state)
         {}
 
         static bool can_handle(const http_request& req) {
@@ -51,7 +44,7 @@ namespace uh::cluster::entry {
                 dedupe_response resp {.effective_size = 0};
                 if (body_size > 0) [[likely]] {
                     std::list <std::string_view> data {req.get_body()};
-                    resp = co_await m_integrate(data);
+                    resp = co_await for_some_reason::integrate_data(data, m_state.ioc, m_state.workers, m_state.dedup_services);
                 }
 
 
@@ -65,8 +58,8 @@ namespace uh::cluster::entry {
                     co_await m.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
                     co_await m.get().recv_header();
                 };
-                co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_directory_services.get_clients(),
-                                                                               m_ioc, *m_workers, std::bind_front(func, std::cref (dir_req)));
+                co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_state.directory_services.get_clients(),
+                                                                               m_state.ioc, m_state.workers, std::bind_front(func, std::cref (dir_req)));
 
                 auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
                 auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
@@ -101,10 +94,7 @@ namespace uh::cluster::entry {
         }
 
     private:
-        Func m_integrate;
-        const services<DIRECTORY_SERVICE>& m_directory_services;
-        boost::asio::io_context& m_ioc;
-        std::shared_ptr <boost::asio::thread_pool> m_workers;
+        entrypoint_state m_state;
     };
 
 } // uh::cluster::entry

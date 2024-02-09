@@ -36,9 +36,9 @@
 #include "entrypoint/rest/http/models/get_bucket_response.h"
 
 // REFACTORED
+#include "common.h"
 #include "dispatcher.h"
 #include "http_requests/put_object.h"
-#include "http_requests/get_object.h"
 
 namespace uh::cluster::entry {
 
@@ -122,16 +122,9 @@ namespace uh::cluster::entry {
 
 
     coro <http_response> handle_request(const http_request& req) {
-
-        auto func = [this](const std::list <std::string_view>& data_pieces) -> coro <dedupe_response> {
-            co_return co_await integrate_data(data_pieces);
-        };
-
-        co_return co_await dispatcher::dispatch(req,
-                                        put_object(func,
-                                                   m_directory_services,
-                                                   m_ioc,
-                                                   m_workers));
+        co_return co_await dispatch(req,
+                                    put_object(get_entrypoint_state())
+                                    );
     }
 
     coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {
@@ -845,6 +838,15 @@ namespace uh::cluster::entry {
             }
             co_return resp;
         }
+
+        entrypoint_state get_entrypoint_state() {
+            return {.ioc = m_ioc,
+                    .workers = *m_workers,
+                    .dedup_services = m_dedupe_services,
+                    .directory_services = m_directory_services,
+                    .server_state = m_server_state};
+        }
+
         boost::asio::io_context& m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
         const services<DEDUPLICATOR_SERVICE>& m_dedupe_services;

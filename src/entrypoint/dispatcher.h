@@ -7,40 +7,18 @@
 
 namespace uh::cluster::entry {
 
-    class dispatcher {
-    public:
+    template <typename ...args>
+    static coro <http_response> dispatch(const http_request& req, args&&... commands) {
 
-        template <typename ...args>
-        static coro <http_response> dispatch(const http_request& req, args... a) {
-            runner r(req);
+        std::optional<http_response> response;
 
-            co_await (r << ... << a);
+//        auto command_references = std::tie(commands...);
 
-            if (r.m_res) {
-                co_return *r.m_res;
-            }
-
-            throw std::runtime_error("request cannot be handled");
+        if (response) {
+            co_return *response;
         }
 
-    private:
-
-        struct runner {
-            explicit runner(const http_request& req) : m_req(req) {}
-
-            template <typename request_type>
-            coro <runner&> operator<<(request_type& req_type) {
-                if (!m_res && req_type.can_handle(m_req)) {
-                    m_res = co_await req_type.handle(m_req);
-                }
-
-                co_return *this;
-            }
-
-            const http_request& m_req;
-            std::optional<http_response> m_res;
-        };
-
+        throw std::runtime_error("request cannot be handled");
     };
 
 } // uh::cluster::entrypoint  namespace
