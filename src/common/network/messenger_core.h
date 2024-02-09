@@ -198,9 +198,14 @@ namespace uh::cluster {
         }
 
         ~messenger_core() {
-            if(m_socket.is_open()) {
-                m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
-                m_socket.close();
+            try {
+                if (m_socket.is_open()) {
+                    m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                    m_socket.close();
+                }
+            }
+            catch (const std::exception& e) {
+                LOG_ERROR () << "Error in closing the socket: " << e.what ();
             }
         }
 
