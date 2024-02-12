@@ -43,7 +43,7 @@ namespace uh::cluster::entry {
                 dedupe_response resp {.effective_size = 0};
                 if (body_size > 0) [[likely]] {
                     std::list <std::string_view> data {req.get_body()};
-                    resp = co_await for_some_reason::integrate_data(data, m_state.ioc, m_state.workers, m_state.dedup_services);
+                    resp = co_await for_some_reason::integrate_data(data, m_state);
                 }
 
                 const directory_message dir_req {
@@ -57,7 +57,7 @@ namespace uh::cluster::entry {
                     co_await m.get().recv_header();
                 };
                 co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_state.directory_services.get_clients(),
-                                                                               m_state.ioc, m_state.workers, std::bind_front(func, std::cref (dir_req)));
+                                                                               m_state.ioc, *m_state.workers, std::bind_front(func, std::cref (dir_req)));
 
                 auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
                 auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);

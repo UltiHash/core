@@ -2,6 +2,7 @@
 
 namespace uh::cluster::entry {
 
+    namespace beast = boost::beast::http;
     class http_response
     {
     public:
@@ -38,7 +39,8 @@ namespace uh::cluster::entry {
         }
 
     private:
-        http::response<http::string_body> m_res;
+        http::response<http::string_body> m_res {beast::response<beast::string_body>
+                                                {beast::status::ok, 11}};
         std::optional<std::string> m_etag;
 
         void set_etag(std::string etag) {
