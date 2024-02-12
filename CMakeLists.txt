@@ -8,14 +8,13 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
+
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
-
-find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
-
 find_package(Git REQUIRED)
+
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
     if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
