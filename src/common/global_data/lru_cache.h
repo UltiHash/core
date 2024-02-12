@@ -1,7 +1,3 @@
-//
-// Created by masi on 11/8/23.
-//
-
 #ifndef UH_CLUSTER_LRU_CACHE_H
 #define UH_CLUSTER_LRU_CACHE_H
 

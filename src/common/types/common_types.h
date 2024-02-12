@@ -1,7 +1,3 @@
-//
-// Created by masi on 9/6/23.
-//
-
 #ifndef CORE_COMMON_TYPES_H
 #define CORE_COMMON_TYPES_H
 

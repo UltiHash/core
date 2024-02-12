@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/29/23.
-//
-
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 

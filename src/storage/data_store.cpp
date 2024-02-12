@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/21/23.
-//
-
 #include <mutex>
 #include "data_store.h"
 

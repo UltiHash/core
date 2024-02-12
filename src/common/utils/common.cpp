@@ -1,6 +1,3 @@
-//
-// Created by massi on 1/11/24.
-//
 #include "common.h"
 
 namespace uh::cluster {
@@ -12,12 +9,7 @@ static const std::map<uh::cluster::role, std::string> abbreviation_by_role = {
         {uh::cluster::ENTRYPOINT_SERVICE,   "entrypoint"}
 };
 
-static const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-        {"storage", uh::cluster::STORAGE_SERVICE},
-        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-        {"directory", uh::cluster::DIRECTORY_SERVICE},
-        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
-};
+
 
 static const std::map<uh::cluster::config_parameter, std::string> string_by_param = {
         {uh::cluster::CFG_SERVER_THREADS,   "server_threads"},

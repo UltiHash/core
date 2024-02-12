@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
-
 #ifndef CORE_CLUSTER_CONFIG_H
 #define CORE_CLUSTER_CONFIG_H
 
@@ -24,9 +20,9 @@ struct server_config
 
 
 struct service_endpoint {
-    std::size_t id;
-    std::string host;
-    std::uint16_t port;
+    std::size_t id{};
+    std::string host{};
+    std::uint16_t port{};
 };
 
 struct bucket_config {
