@@ -7,12 +7,12 @@
 
 namespace uh::cluster::entry {
 
-    coro<http_response> call(const http_request& req) {
+    static coro<http_response> call(const http_request& req) {
         throw command_unknown_exception();
     }
 
     template <typename command, typename ... commands>
-    coro<http_response> call(http_request& req, command&& head, commands&& ... tail) {
+    static coro<http_response> call(http_request& req, command& head, commands& ... tail) {
         if (head.can_handle(req)) {
             return head.handle(req);
         }

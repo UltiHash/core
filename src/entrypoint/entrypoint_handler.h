@@ -848,7 +848,7 @@ namespace uh::cluster::entry {
 
         entrypoint_state get_entrypoint_state() {
             return {.ioc = m_ioc,
-                    .workers = m_workers,
+                    .workers = *m_workers,
                     .dedup_services = m_dedupe_services,
                     .directory_services = m_directory_services,
                     .server_state = m_server_state};

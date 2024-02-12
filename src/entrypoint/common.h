@@ -8,7 +8,7 @@ namespace uh::cluster::entry {
 
     typedef struct {
         boost::asio::io_context& ioc;
-        std::shared_ptr <boost::asio::thread_pool> workers; // can change to reference
+        boost::asio::thread_pool& workers; // can change to reference
         const services<DEDUPLICATOR_SERVICE>& dedup_services;
         const services<DIRECTORY_SERVICE>& directory_services;
         rest::utils::server_state& server_state;
@@ -16,7 +16,7 @@ namespace uh::cluster::entry {
 
     struct for_some_reason{
         static coro <dedupe_response> integrate_data (const std::list <std::string_view>& data_pieces,
-                                                      entrypoint_state& state) {
+                                                      const entrypoint_state& state) {
 
             size_t total_size = 0;
             std::map <size_t, std::string_view> offset_pieces;
@@ -62,7 +62,7 @@ namespace uh::cluster::entry {
 
             co_await worker_utils::broadcast_from_io_thread_in_io_threads (dedup_services,
                                                                            state.ioc,
-                                                                           *state.workers,
+                                                                           state.workers,
                                                                            std::bind_front (func, part_size, std::cref (offset_pieces), std::ref (responses)));
 
 

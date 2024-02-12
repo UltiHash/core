@@ -11,8 +11,8 @@ namespace uh::cluster::entry {
     class put_object {
     public:
 
-        explicit put_object(entrypoint_state entry_state) :
-                    m_state(entry_state)
+        explicit put_object(const entrypoint_state&& entry_state) :
+                    m_state(std::move(entry_state))
         {}
 
         static bool can_handle(const http_request& req) {
@@ -29,7 +29,7 @@ namespace uh::cluster::entry {
             return false;
         }
 
-        coro <http_response> handle(http_request& req) {
+        coro <http_response> handle(http_request& req) const {
 
             try
             {
@@ -57,7 +57,7 @@ namespace uh::cluster::entry {
                     co_await m.get().recv_header();
                 };
                 co_await worker_utils::broadcast_from_io_thread_in_io_threads (m_state.directory_services.get_clients(),
-                                                                               m_state.ioc, *m_state.workers, std::bind_front(func, std::cref (dir_req)));
+                                                                               m_state.ioc, m_state.workers, std::bind_front(func, std::cref (dir_req)));
 
                 auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
                 auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
@@ -93,7 +93,7 @@ namespace uh::cluster::entry {
         }
 
     private:
-        entrypoint_state m_state;
+        const entrypoint_state m_state;
     };
 
 } // uh::cluster::entry
