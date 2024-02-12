@@ -13,7 +13,7 @@
 #include "common/network/client.h"
 #include "entrypoint_handler.h"
 
-namespace uh::cluster::entry {
+namespace uh::cluster {
 
 class entrypoint: public service_interface {
 public:
@@ -28,8 +28,7 @@ public:
             m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
             m_server (m_config_registry.get_server_config(),
                       m_config_registry.get_service_name(),
-                      std::make_unique <entry::entrypoint_handler> (m_ioc, m_dedupe_services, m_directory_services, m_workers,
-                                                                    commands_factory()),
+                      std::make_unique <entry::entrypoint_handler> (m_ioc, m_dedupe_services, m_directory_services, m_workers),
                     m_ioc)
     {
     }
@@ -46,14 +45,14 @@ public:
         m_workers->stop();
     }
 
-    std::tuple<put_object> commands_factory() {
-        return std::make_tuple(put_object({
-            .ioc = m_ioc,
-            .workers = *m_workers,
-            .dedup_services = m_dedupe_services,
-            .directory_services = m_directory_services,
-        }));
-    }
+//    std::tuple<put_object> commands_factory() {
+//        return std::make_tuple(put_object({
+//            .ioc = m_ioc,
+//            .workers = *m_workers,
+//            .dedup_services = m_dedupe_services,
+//            .directory_services = m_directory_services,
+//        }));
+//    }
 
 private:
 
