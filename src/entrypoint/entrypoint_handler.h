@@ -38,19 +38,22 @@
 
 namespace uh::cluster::entry {
 
+
+    template <typename ... commands>
     class entrypoint_handler: public protocol_handler {
     public:
 
         entrypoint_handler(boost::asio::io_context& ioc,
                            const services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
                            const services<DIRECTORY_SERVICE>& directory_nodes,
-                           std::shared_ptr <boost::asio::thread_pool> workers) :
+                           std::shared_ptr <boost::asio::thread_pool> workers,
+                           std::tuple<commands...>&& cmds) :
                 m_ioc (ioc),
                 m_workers (std::move (workers)),
                 m_dedupe_services (dedupe_nodes),
-                m_directory_services (directory_nodes)
-        {
-        }
+                m_directory_services (directory_nodes),
+                m_commands(std::move(cmds))
+        {}
 
     coro <void> handle (boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -130,7 +133,7 @@ namespace uh::cluster::entry {
 
     coro <http_response> handle_request(http_request& req) {
         return dispatch(req,
-                        put_object(get_entrypoint_state())
+
                         );
     }
 
@@ -851,7 +854,7 @@ namespace uh::cluster::entry {
                     .workers = *m_workers,
                     .dedup_services = m_dedupe_services,
                     .directory_services = m_directory_services,
-                    .server_state = m_server_state};
+                    };
         }
 
         boost::asio::io_context& m_ioc;
@@ -860,6 +863,7 @@ namespace uh::cluster::entry {
         const services<DIRECTORY_SERVICE>& m_directory_services;
         rest::utils::server_state m_server_state;
 
+        std::tuple<commands...> m_commands;
     };
 } // end namespace uh::cluster
 

@@ -11,7 +11,7 @@ namespace uh::cluster::entry {
     class put_object {
     public:
 
-        explicit put_object(const entrypoint_state&& entry_state) :
+        explicit put_object(entrypoint_state&& entry_state) :
                     m_state(std::move(entry_state))
         {}
 
@@ -33,6 +33,7 @@ namespace uh::cluster::entry {
 
             try
             {
+                std::cout << "han" << std::endl;
                 co_await req.read_body();
                 std::chrono::time_point <std::chrono::steady_clock> timer;
                 const auto start = std::chrono::steady_clock::now();
@@ -90,6 +91,10 @@ namespace uh::cluster::entry {
                         throw rest::http::model::custom_error_response_exception(boost::beast::http::status::internal_server_error);
                 }
             }
+        }
+
+        ~put_object() {
+            std::cout << "ds" << std::endl;
         }
 
     private:

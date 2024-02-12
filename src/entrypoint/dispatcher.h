@@ -12,7 +12,7 @@ namespace uh::cluster::entry {
     }
 
     template <typename command, typename ... commands>
-    static coro<http_response> call(http_request& req, command& head, commands& ... tail) {
+    static coro<http_response> call(http_request& req, command&& head, commands&& ... tail) {
         if (head.can_handle(req)) {
             return head.handle(req);
         }

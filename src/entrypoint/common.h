@@ -11,7 +11,6 @@ namespace uh::cluster::entry {
         boost::asio::thread_pool& workers; // can change to reference
         const services<DEDUPLICATOR_SERVICE>& dedup_services;
         const services<DIRECTORY_SERVICE>& directory_services;
-        rest::utils::server_state& server_state;
     } entrypoint_state;
 
     struct for_some_reason{
