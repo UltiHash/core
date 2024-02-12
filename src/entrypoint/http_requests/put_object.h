@@ -29,10 +29,11 @@ namespace uh::cluster::entry {
             return false;
         }
 
-        coro <http_response> handle(const http_request& req) {
+        coro <http_response> handle(http_request& req) {
 
             try
             {
+                co_await req.read_body();
                 std::chrono::time_point <std::chrono::steady_clock> timer;
                 const auto start = std::chrono::steady_clock::now();
 

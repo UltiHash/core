@@ -12,7 +12,7 @@ namespace uh::cluster::entry {
     }
 
     template <typename command, typename ... commands>
-    coro<http_response> call(const http_request& req, command&& head, commands&& ... tail) {
+    coro<http_response> call(http_request& req, command&& head, commands&& ... tail) {
         if (head.can_handle(req)) {
             return head.handle(req);
         }
@@ -21,7 +21,7 @@ namespace uh::cluster::entry {
     }
 
     template <typename ...commands>
-    static coro <http_response> dispatch(const http_request& req, commands&&... a) {
+    static coro <http_response> dispatch(http_request& req, commands&&... a) {
          return call(req, a...);
     }
 

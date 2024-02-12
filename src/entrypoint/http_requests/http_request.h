@@ -18,8 +18,12 @@ namespace uh::cluster::entry
     {
     public:
 
-        explicit http_request(const http::request_parser<http::empty_body>& req) :
+        explicit http_request(const http::request_parser<http::empty_body>& req,
+                              boost::asio::ip::tcp::socket& stream,
+                              boost::beast::flat_buffer& buffer) :
         m_req(req),
+        m_stream(stream),
+        m_buffer(buffer),
         m_uri(req)
         {}
 
@@ -43,7 +47,7 @@ namespace uh::cluster::entry
             return m_uri.get_method();
         }
 
-        coro<void> read_body(boost::asio::ip::tcp::socket& stream, boost::beast::flat_buffer& buffer)
+        coro<void> read_body()
         {
             if (m_req.get().has_content_length())
             {
@@ -52,14 +56,14 @@ namespace uh::cluster::entry
                     std::size_t content_length = m_req.content_length().value();
                     m_body.append(content_length, 0);
 
-                    auto data_left = content_length - buffer.size();
+                    auto data_left = content_length - m_buffer.size();
 
                     // copy remaining bytes from flat buffer to body_buffer
-                    boost::asio::buffer_copy(boost::asio::buffer(m_body), buffer.data());
-                    auto size_transferred = co_await boost::asio::async_read(stream, boost::asio::buffer(m_body.data() + buffer.size(), data_left),
+                    boost::asio::buffer_copy(boost::asio::buffer(m_body), m_buffer.data());
+                    auto size_transferred = co_await boost::asio::async_read(m_stream, boost::asio::buffer(m_body.data() + m_buffer.size(), data_left),
                                                                              boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
 
-                    if (size_transferred + buffer.size() != content_length)
+                    if (size_transferred + m_buffer.size() != content_length)
                     {
                         throw std::runtime_error("error reading the http body");
                     }
@@ -78,6 +82,9 @@ namespace uh::cluster::entry
 
     private:
         const http::request_parser<http::empty_body>& m_req;
+        boost::asio::ip::tcp::socket& m_stream;
+        boost::beast::flat_buffer& m_buffer;
+
         URI m_uri;
         std::string m_etag {};
         std::string m_body {};

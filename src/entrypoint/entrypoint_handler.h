@@ -69,7 +69,7 @@ namespace uh::cluster::entry {
                 LOG_DEBUG() << "received request: " << received_request.get().base();
 
                 try {
-                    http_request req(received_request);
+                    http_request req(received_request, s, buffer);
                     auto resp = co_await handle_request(req);
                     co_await boost::beast::http::async_write(s,
                                                              resp.get_prepared_response(),
@@ -128,11 +128,10 @@ namespace uh::cluster::entry {
     }
 
 
-    coro <http_response> handle_request(const http_request& req) {
+    coro <http_response> handle_request(http_request& req) {
         return dispatch(req,
                         put_object(get_entrypoint_state())
                         );
-
     }
 
     coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {
