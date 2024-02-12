@@ -33,8 +33,6 @@ namespace uh::cluster::entry {
 
             try
             {
-                http_response res;
-
                 std::chrono::time_point <std::chrono::steady_clock> timer;
                 const auto start = std::chrono::steady_clock::now();
 
@@ -46,7 +44,6 @@ namespace uh::cluster::entry {
                     std::list <std::string_view> data {req.get_body()};
                     resp = co_await for_some_reason::integrate_data(data, m_state.ioc, m_state.workers, m_state.dedup_services);
                 }
-
 
                 const directory_message dir_req {
                         .bucket_id = req.get_URI().get_bucket_id(),
@@ -73,6 +70,7 @@ namespace uh::cluster::entry {
                 LOG_INFO() << "integration duration " << duration.count() << " s";
                 LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
 
+                http_response res;
                 res.set_effective_size(resp.effective_size);
                 res.set_space_savings(space_saving);
                 res.set_bandwidth(bandwidth);
