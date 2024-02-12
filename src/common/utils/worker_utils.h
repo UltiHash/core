@@ -1,7 +1,3 @@
-//
-// Created by massi on 12/6/23.
-//
-
 #ifndef UH_CLUSTER_WORKER_UTILS_H
 #define UH_CLUSTER_WORKER_UTILS_H
 

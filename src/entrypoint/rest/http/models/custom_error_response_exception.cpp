@@ -81,7 +81,7 @@ namespace uh::cluster::rest::http::model
 
         m_res.prepare_payload();
 
-        LOG_INFO() << m_res.base() << std::endl;
+        LOG_DEBUG() << m_res.base();
 
         return m_res;
     }

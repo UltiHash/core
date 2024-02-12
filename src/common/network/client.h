@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/26/23.
-//
-
 #ifndef CORE_CLIENT_H
 #define CORE_CLIENT_H
 
@@ -28,7 +24,7 @@ public:
     class acquired_messenger {
     public:
         acquired_messenger (std::unique_ptr <messenger> m,
-                            std::reference_wrapper <client> cl):
+                            const std::reference_wrapper <client> cl):
                 m_messenger(std::move (m)),
                 m_client(cl),
                 m_owning (true) {

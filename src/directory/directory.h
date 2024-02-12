@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
-
 #ifndef CORE_DIRECTORY_NODE_H
 #define CORE_DIRECTORY_NODE_H
 

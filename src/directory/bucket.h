@@ -1,7 +1,3 @@
-//
-// Created by max on 04.10.23.
-//
-
 #ifndef CORE_BUCKET_H
 #define CORE_BUCKET_H
 

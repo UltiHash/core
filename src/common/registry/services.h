@@ -92,14 +92,15 @@ namespace uh::cluster {
         services(boost::asio::io_context& ioc,
                  config_registry& config_registry,
                  const int connection_count,
-                 std::string etcd_host) :
+                 std::string etcd_host, std::size_t timeout_s = 10) :
                  m_ioc(ioc),
                  m_connection_count(connection_count),
                  m_etcd_client(etcd_host),
                  m_watcher(etcd_host, etcd_services_announced_key_prefix + get_service_string(r),
                           [this](etcd::Response response) {return handle_state_changes(response);}, true),
                  m_robin_index(m_clients.end()),
-                 m_services_index(config_registry)
+                 m_services_index(config_registry),
+                 m_timeout_s(timeout_s)
         {
             auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
@@ -113,27 +114,66 @@ namespace uh::cluster {
             m_watcher.Cancel();
         }
 
-        template<typename key>
+        template <typename key>
         std::shared_ptr <client> get(key k) const {
-            std::shared_lock<std::shared_mutex> lk(m_mutex);
-            return m_services_index.get(k);
+            std::shared_ptr <client> client;
+
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
+                              [this, &k, &client]() {
+                                    try {
+                                        client = m_services_index.get(k);
+                                        return true;
+                                    }
+                                    catch(const std::out_of_range& range_exception) {
+                                        return false;
+                                    }
+                              }))
+            {}
+            else
+                throw std::runtime_error("timeout waiting for client");
+
+            return client;
         }
 
         std::shared_ptr<client> get(std::size_t id) const {
-            std::shared_lock<std::shared_mutex> lk(m_mutex);
+            std::shared_ptr <client> client;
 
-            auto it = m_clients.find(id);
-            if (it == m_clients.end()) {
-                throw std::runtime_error("no client with id " + std::to_string(id));
-            }
+            std::unique_lock<std::shared_mutex> lk(m_mutex);
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
+                              [this, &id, &client]() {
+                                  auto it = m_clients.find(id);
 
-            return it->second;
+                                  if (it == m_clients.end())
+                                      return false;
+
+                                  client = it->second;
+                                  return true;
+                              }))
+            {}
+            else
+                throw std::runtime_error("timeout waiting for client");
+
+            return client;
         }
 
         std::shared_ptr <client> get() const
         {
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            return lockfree_get();
+            if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
+                          [this](){ return !m_clients.empty(); }))
+            {}
+            else
+                throw std::runtime_error("timeout waiting for client");
+
+            if (m_robin_index == m_clients.end()) {
+                m_robin_index = m_clients.begin();
+            }
+
+            auto rv = m_robin_index->second;
+            ++m_robin_index;
+
+            return rv;
         }
 
         std::vector <std::shared_ptr <client>> get_clients() const {
@@ -146,28 +186,7 @@ namespace uh::cluster {
             return clients_list;
         }
 
-        std::shared_ptr<client> wait() {
-            std::unique_lock<std::shared_mutex> lock(m_mutex);
-            m_cv.wait(lock, [this](){ return !m_clients.empty(); });
-
-            return lockfree_get();
-        }
-
     private:
-        std::shared_ptr<client> lockfree_get() const {
-            if (m_clients.empty()) {
-                throw std::runtime_error("no client available");
-            }
-
-            if (m_robin_index == m_clients.end()) {
-                m_robin_index = m_clients.begin();
-            }
-
-            auto rv = m_robin_index->second;
-            ++m_robin_index;
-
-            return rv;
-        }
 
         void handle_state_changes(const etcd::Response& response)
         {
@@ -202,26 +221,34 @@ namespace uh::cluster {
                                                 get_service_string(r) + '/' + id  + '/');
             etcd::Response attributes = m_etcd_client.ls(attributes_prefix);
 
+            std::optional<std::string> host;
+            std::optional<uint16_t> port;
             for (size_t i = 0; i < attributes.keys().size(); i++) {
                 const auto attribute_name = std::filesystem::path(attributes.key(i))
-                                            .filename().string();
+                        .filename().string();
 
                 if (attribute_name == get_config_string(CFG_ENDPOINT_HOST)) {
-                    service_endpoint.host = attributes.value(i).as_string();
+                    host = attributes.value(i).as_string();
                 } else if (attribute_name == get_config_string(CFG_ENDPOINT_PORT)) {
-                    service_endpoint.port = std::stoul(attributes.value(i).as_string());
+                    port = std::stoul(attributes.value(i).as_string());
                 }
             }
 
+            if (!host || !port) {
+                throw std::runtime_error("client not available");
+            }
+
+            service_endpoint.port = *port;
+            service_endpoint.host = *host;
             return service_endpoint;
         }
 
         void add(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_INFO() << "add callback for service " << get_service_string(r) << ": "
-                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
-                        << service_endpoint.port ;
+            LOG_DEBUG() << "add callback for service " << get_service_string(r) << ": "
+                       << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
+                       << service_endpoint.port ;
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
             if (m_clients.contains(service_endpoint.id)) [[unlikely]]
@@ -238,14 +265,13 @@ namespace uh::cluster {
         }
 
         void remove(const std::string& path) {
-            const auto service_endpoint = extract(path);
+            const auto id = std::stoull(std::filesystem::path(path).filename().string());
 
-            LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
-                       << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
-                       << service_endpoint.port ;
+            LOG_DEBUG() << "remove callback for service " << get_service_string(r) << ": "
+                       << id << " called. ";
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);
-            auto it = m_clients.find(service_endpoint.id);
+            auto it = m_clients.find(id);
             if (it == m_clients.end())
             {
                 return;
@@ -257,7 +283,7 @@ namespace uh::cluster {
                 m_clients.erase(it);
             }
 
-            m_services_index.erase(service_endpoint.id);
+            m_services_index.erase(id);
         }
 
         boost::asio::io_context& m_ioc;
@@ -266,11 +292,13 @@ namespace uh::cluster {
         etcd::Watcher m_watcher;
 
         mutable std::shared_mutex m_mutex;
-        std::condition_variable_any m_cv;
+        mutable std::condition_variable_any m_cv;
         std::map <std::size_t, std::shared_ptr <client>> m_clients;
 
         mutable std::map<std::size_t, std::shared_ptr<client>>::const_iterator m_robin_index;
         services_index<r> m_services_index;
+
+        std::size_t m_timeout_s;
     };
 
 } // end namespace uh::cluster

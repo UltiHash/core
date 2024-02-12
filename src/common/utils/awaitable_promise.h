@@ -1,7 +1,3 @@
-//
-// Created by massi on 12/12/23.
-//
-
 #ifndef UH_CLUSTER_AWAITABLE_PROMISE_H
 #define UH_CLUSTER_AWAITABLE_PROMISE_H
 
