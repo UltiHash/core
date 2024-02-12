@@ -14,6 +14,11 @@ namespace uh::cluster
  */
 std::vector<std::string_view> split(std::string_view data, char delimiter = ' ');
 
+/**
+ * Decode a base64 encoded string to a buffer.
+ */
+std::vector<char> base64_decode(std::string_view b64);
+
 }
 
 #endif
