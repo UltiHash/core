@@ -45,15 +45,6 @@ public:
         m_workers->stop();
     }
 
-//    std::tuple<put_object> commands_factory() {
-//        return std::make_tuple(put_object({
-//            .ioc = m_ioc,
-//            .workers = *m_workers,
-//            .dedup_services = m_dedupe_services,
-//            .directory_services = m_directory_services,
-//        }));
-//    }
-
 private:
 
     config_registry m_config_registry;
