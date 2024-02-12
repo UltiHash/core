@@ -2,8 +2,8 @@
 // Created by massi on 12/12/23.
 //
 
-#ifndef UH_CLUSTER_AWAITABLE_FUTURE_H
-#define UH_CLUSTER_AWAITABLE_FUTURE_H
+#ifndef UH_CLUSTER_AWAITABLE_PROMISE_H
+#define UH_CLUSTER_AWAITABLE_PROMISE_H
 
 #include <boost/asio/steady_timer.hpp>
 #include <type_traits>
@@ -55,4 +55,4 @@ public:
 };
 }
 
-#endif //UH_CLUSTER_AWAITABLE_FUTURE_H
+#endif //UH_CLUSTER_AWAITABLE_PROMISE_H
