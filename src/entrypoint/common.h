@@ -15,7 +15,6 @@ namespace uh::cluster::entry {
     } entrypoint_state;
 
     struct for_some_reason{
-    public:
         static coro <dedupe_response> integrate_data (const std::list <std::string_view>& data_pieces,
                                                       boost::asio::io_context& ioc,
                                                       boost::asio::thread_pool& workers,
@@ -78,5 +77,12 @@ namespace uh::cluster::entry {
             co_return resp;
         }
     };
+
+class command_unknown_exception : public std::exception {
+public:
+    const char* what() const noexcept override {
+        return "command not found";
+    }
+};
 
 } // uh::cluster::entry

@@ -7,18 +7,22 @@
 
 namespace uh::cluster::entry {
 
-    template <typename ...args>
-    static coro <http_response> dispatch(const http_request& req, args&&... commands) {
+    coro<http_response> call(const http_request& req) {
+        throw command_unknown_exception();
+    }
 
-        std::optional<http_response> response;
-
-//        auto command_references = std::tie(commands...);
-
-        if (response) {
-            co_return *response;
+    template <typename command, typename ... commands>
+    coro<http_response> call(const http_request& req, command&& head, commands&& ... tail) {
+        if (head.can_handle(req)) {
+            return head.handle(req);
         }
 
-        throw std::runtime_error("request cannot be handled");
-    };
+        return call(req, tail...);
+    }
 
-} // uh::cluster::entrypoint  namespace
+    template <typename ...commands>
+    static coro <http_response> dispatch(const http_request& req, commands&&... a) {
+         return call(req, a...);
+    }
+
+} // uh::cluster::entry  namespace
