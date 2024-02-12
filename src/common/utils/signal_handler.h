@@ -1,7 +1,3 @@
-//
-// Created by massi on 2/5/24.
-//
-
 #ifndef UH_CLUSTER_SIGNAL_HANDLER_H
 #define UH_CLUSTER_SIGNAL_HANDLER_H
 
@@ -31,15 +27,20 @@ public:
         m_callbacks.emplace_back(fn);
     }
 
+    void stop () {
+        m_ioc.stop();
+    }
+
+    ~signal_handler() {
+        m_signal_handler_thread.join();
+    }
+
+private:
      void handle_signal (const boost::system::error_code& error, int signal) {
         for (auto& fn: m_callbacks) {
             fn ();
         }
     }
-
-    ~signal_handler() {
-        m_signal_handler_thread.join();
-     }
 
 };
 

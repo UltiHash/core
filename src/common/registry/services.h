@@ -246,7 +246,7 @@ namespace uh::cluster {
         void add(const std::string& path) {
             const auto service_endpoint = extract(path);
 
-            LOG_INFO() << "add callback for service " << get_service_string(r) << ": "
+            LOG_DEBUG() << "add callback for service " << get_service_string(r) << ": "
                        << service_endpoint.id << " called. host: " << service_endpoint.host << " port: "
                        << service_endpoint.port ;
 
@@ -267,7 +267,7 @@ namespace uh::cluster {
         void remove(const std::string& path) {
             const auto id = std::stoull(std::filesystem::path(path).filename().string());
 
-            LOG_INFO() << "remove callback for service " << get_service_string(r) << ": "
+            LOG_DEBUG() << "remove callback for service " << get_service_string(r) << ": "
                        << id << " called. ";
 
             std::unique_lock<std::shared_mutex> lk(m_mutex);

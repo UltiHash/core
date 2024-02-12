@@ -1,7 +1,3 @@
-//
-// Created by masi on 9/4/23.
-//
-
 #ifndef CORE_MESSENGER_H
 #define CORE_MESSENGER_H
 
@@ -62,11 +58,7 @@ namespace uh::cluster {
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_lst_entities_message req;
-            try {
-                zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
-            }catch (std::exception& e) {
-                std::cout << "afa " << message_header.size << std::endl;
-            }
+            zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
             co_return std::move (req);
         }
 

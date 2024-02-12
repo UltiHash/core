@@ -7,3 +7,6 @@
 [submodule "testing/s3-tests"]
 	path = testing/s3-tests
 	url = https://github.com/UltiHash/s3-tests.git
+[submodule "lib/third-party/CLI11"]
+	path = lib/third-party/CLI11
+	url = https://github.com/CLIUtils/CLI11.git

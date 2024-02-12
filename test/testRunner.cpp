@@ -1,6 +1,3 @@
-//
-// Created by masi on 7/17/23.
-//
 #define BOOST_TEST_MODULE header-only multiunit single test runner
 #define BOOST_TEST_NO_MAIN
 #define BOOST_TEST_ALTERNATIVE_INIT_API

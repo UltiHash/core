@@ -1,7 +1,3 @@
-//
-// Created by massi on 12/6/23.
-//
-
 #ifndef UH_CLUSTER_WORKER_UTILS_H
 #define UH_CLUSTER_WORKER_UTILS_H
 
@@ -24,7 +20,7 @@ namespace uh::cluster {
             auto f = [] (auto& f, auto& eptr, auto& promise) {
                 try {
                     f ();
-                } catch (std::exception& e) {
+                } catch (const std::exception& e) {
                     eptr = std::current_exception();
                 }
                 promise.set();
@@ -43,7 +39,7 @@ namespace uh::cluster {
                                                                                boost::asio::io_context& ioc,
                                                                                std::shared_ptr<client> cl,
                                                                                Func func) {
-
+            
             auto f = [] (auto& ioc, auto& func, auto& cl) {
                 boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
             };

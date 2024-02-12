@@ -1,7 +1,3 @@
-//
-// Created by masi on 10/24/23.
-//
-
 #ifndef CORE_NODE_INTERFACE_H
 #define CORE_NODE_INTERFACE_H
 

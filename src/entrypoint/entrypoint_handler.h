@@ -1,7 +1,3 @@
-//
-// Created by masi on 8/29/23.
-//
-
 #ifndef ENTRYPOINT_HANDLER_H
 #define ENTRYPOINT_HANDLER_H
 
@@ -93,7 +89,7 @@ namespace uh::cluster::entry {
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await boost::beast::http::async_write(s, s3_res_specific_object,
                                                          boost::asio::use_awaitable);
-                LOG_INFO() << "sent response: " << s3_res_specific_object.base();
+                LOG_DEBUG() << "sent response: " << s3_res_specific_object.base();
 
                 if (!received_request.keep_alive()) {
                     break;
@@ -369,11 +365,11 @@ namespace uh::cluster::entry {
                 const std::chrono::duration <double> duration = stop - start;
                 const auto bandwidth = size_mb / duration.count();
 
-                LOG_INFO() << "original size " << size_mb << " MB";
-                LOG_INFO() << "effective size " << effective_size << " MB";
-                LOG_INFO() << "space saving " << space_saving;
-                LOG_INFO() << "integration duration " << duration.count() << " s";
-                LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
+                LOG_DEBUG() << "original size " << size_mb << " MB";
+                LOG_DEBUG() << "effective size " << effective_size << " MB";
+                LOG_DEBUG() << "space saving " << space_saving;
+                LOG_DEBUG() << "integration duration " << duration.count() << " s";
+                LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
 
                 rest::utils::hashing::MD5 md5;
                 res->set_etag(md5.calculateMD5(req.get_body()));
@@ -434,8 +430,8 @@ namespace uh::cluster::entry {
                 const std::chrono::duration <double> duration = stop - start;
                 const auto size = static_cast <double> (buffer.size ()) / static_cast <double> (1024ul * 1024ul);
                 const auto bandwidth = size / duration.count();
-                LOG_INFO() << "retrieval duration " << duration.count() << " s";
-                LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
+                LOG_DEBUG() << "retrieval duration " << duration.count() << " s";
+                LOG_DEBUG() << "retrieval bandwidth " << bandwidth << " MB/s";
 
                 res = std::make_unique<rest::http::model::get_object_response>(req);
                 res->set_body(std::move (buffer));
@@ -637,12 +633,12 @@ namespace uh::cluster::entry {
             const double dur_s = static_cast <double> (dur_ms) / 1000.0;
             const auto bandwidth = size_mb / dur_s;
 
-            LOG_INFO() << "upload size: " << req.get_body_size();
-            LOG_INFO() << "original size " << size_mb << " MB";
-            LOG_INFO() << "effective size " << effective_size << " MB";
-            LOG_INFO() << "space saving " << space_saving;
-            LOG_INFO() << "integration duration " << dur_s << " s";
-            LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
+            LOG_DEBUG() << "upload size: " << req.get_body_size();
+            LOG_DEBUG() << "original size " << size_mb << " MB";
+            LOG_DEBUG() << "effective size " << effective_size << " MB";
+            LOG_DEBUG() << "space saving " << space_saving;
+            LOG_DEBUG() << "integration duration " << dur_s << " s";
+            LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
 
             rest::utils::hashing::MD5 md5;
             res->set_etag(md5.calculateMD5(req.get_body()));

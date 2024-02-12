@@ -14,7 +14,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
         void add_bucket(std::string bucket_to_add);
-        const std::string& get_bucket() const;
+        [[nodiscard]] const std::string& get_bucket() const;
 
     private:
 

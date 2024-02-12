@@ -1,7 +1,3 @@
-//
-// Created by masi on 7/19/23.
-//
-
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
 #include <string>
@@ -30,9 +26,6 @@ enum message_type: uint8_t {
     DIR_PUT_BUCKET_REQ = 31,
     SUCCESS = 32,
     FAILURE = 33,
-    STOP = 34,
-    RECOVER_REQ = 35,
-    RECOVER_RESP = 36,
     DIR_LIST_BUCKET_REQ = 37,
     DIR_LIST_BUCKET_RESP = 38,
     DIR_LIST_OBJ_REQ = 39,
@@ -50,11 +43,6 @@ enum role: uint8_t {
     DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
-};
-
-enum ec_type: uint8_t {
-    NONE = 0,
-    XOR = 1,
 };
 
 enum config_parameter  {
@@ -92,6 +80,16 @@ enum config_parameter  {
     CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
+
+const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+        {"storage", uh::cluster::STORAGE_SERVICE},
+        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
+        {"directory", uh::cluster::DIRECTORY_SERVICE},
+        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
+};
+
+static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 
 uh::cluster::role get_service_role (const std::string& service_role_str);
 

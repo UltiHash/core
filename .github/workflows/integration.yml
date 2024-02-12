@@ -30,3 +30,11 @@ jobs:
       - name: Running integration tests
         working-directory: ${{github.workspace}}/testing
         run: ./start-e2e.sh
+
+      - name: Upload working directory of failed run
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: workspace
+          path: ${{github.workspace}}
+          retention-days: 1
