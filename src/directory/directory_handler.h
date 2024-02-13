@@ -92,6 +92,7 @@ namespace uh::cluster {
                 zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
                 directory.insert (request.bucket_id, *request.object_key, address_data);
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front (func, std::ref (m_directory), std::cref (request)));
 
             co_await m.send(SUCCESS, {});
@@ -128,7 +129,9 @@ namespace uh::cluster {
             auto func = [] (directory_store& directory, const directory_message& request) {
                 directory.add_bucket(request.bucket_id);
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+
             co_await m.send(SUCCESS, {});
 
         }
@@ -138,7 +141,9 @@ namespace uh::cluster {
             auto func = [] (directory_store& directory, const directory_message& request) {
                 directory.remove_bucket(request.bucket_id);
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+
             co_await m.send(SUCCESS, {});
         }
 
@@ -147,7 +152,9 @@ namespace uh::cluster {
             auto func = [] (directory_store& directory, const directory_message& request) {
                 directory.remove_object(request.bucket_id, *request.object_key);
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+
             co_await m.send(SUCCESS, {});
         }
 
@@ -157,7 +164,9 @@ namespace uh::cluster {
             auto func = [] (directory_store& directory, directory_lst_entities_message& response) {
                 response.entities = directory.list_buckets();
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref (response)));
+
             co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
         }
 
@@ -167,7 +176,9 @@ namespace uh::cluster {
             auto func = [] (directory_store& directory, directory_lst_entities_message& response, directory_message& request) {
                 response.entities = directory.list_keys(request.bucket_id);
             };
+
             co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref(response), std::ref(request)));
+
             co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
         }
 

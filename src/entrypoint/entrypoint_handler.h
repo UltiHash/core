@@ -592,7 +592,9 @@ namespace uh::cluster {
                                                             std::stoi (req.get_URI().get_query_parameters().at("partNumber")), resp,
                                                             req.get_body());
                 };
+
                 co_await worker_utils::post_in_workers (*m_workers, m_ioc, std::bind_front(func, std::ref (state), std::cref (req), std::cref (resp)));
+
             }
             std::unique_ptr<rest::http::model::multi_part_upload_response> res = std::make_unique<rest::http::model::multi_part_upload_response>(req);
             co_return std::move(res);
@@ -744,7 +746,6 @@ namespace uh::cluster {
             };
 
             co_await worker_utils::post_in_workers (*m_workers, m_ioc, std::bind_front(func, std::ref (req), std::ref (object_nodes_set)));
-
 
             auto bucket_id = req.get_URI().get_bucket_id();
             for (const auto& objectNode : object_nodes_set)
