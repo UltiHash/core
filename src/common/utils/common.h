@@ -89,6 +89,7 @@ const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
+static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
