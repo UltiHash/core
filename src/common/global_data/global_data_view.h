@@ -11,8 +11,6 @@
 
 namespace uh::cluster {
 
-using namespace std::placeholders;
-
 class global_data_view {
 
 public:

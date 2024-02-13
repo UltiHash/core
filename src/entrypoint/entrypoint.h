@@ -14,6 +14,7 @@
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
+
 class entrypoint: public service_interface {
 public:
 
