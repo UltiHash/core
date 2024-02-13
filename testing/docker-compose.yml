@@ -13,6 +13,8 @@ services:
         image: uh-cluster:testing
         container_name: dedupe
         restart: always
+        environment:
+            - UH_LICENSE=${UH_LICENSE}
         entrypoint: [ "uh-cluster", "deduplicator", "etcd:2379" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9300" ]
@@ -27,6 +29,8 @@ services:
         image: uh-cluster:testing
         container_name: data
         restart: always
+        environment:
+            - UH_LICENSE=${UH_LICENSE}
         entrypoint: [ "uh-cluster", "storage", "etcd:2379" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9200" ]
@@ -41,6 +45,8 @@ services:
         image: uh-cluster:testing
         container_name: directory
         restart: always
+        environment:
+            - UH_LICENSE=${UH_LICENSE}
         entrypoint: [ "uh-cluster", "directory", "etcd:2379" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9400" ]
@@ -55,6 +61,8 @@ services:
         image: uh-cluster:testing
         container_name: entrypoint
         restart: always
+        environment:
+            - UH_LICENSE=${UH_LICENSE}
         entrypoint: [ "uh-cluster", "entrypoint", "etcd:2379" ]
         depends_on:
             etcd:
