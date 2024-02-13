@@ -2,12 +2,30 @@
 #define CORE_DIRECTORY_NODE_H
 
 #include "common/utils/cluster_config.h"
+#include "common/license/license.h"
 #include "directory_handler.h"
 #include <common/utils/log.h>
 #include <functional>
 #include <iostream>
 
 namespace uh::cluster {
+
+directory_config get_config(config_registry& reg) {
+    auto conf = reg.get_directory_config();
+
+    auto lic_env = std::getenv(ENV_CFG_LICENSE);
+    if (!lic_env) {
+        throw std::runtime_error("no license defined");
+    }
+
+    auto license = check_license(lic_env);
+    conf.max_data_store_size = license.max_data_store_size;
+
+    LOG_INFO() << "license loaded for " << license.customer
+        << " -- storage size: " << license.max_data_store_size << " GB";
+
+    return conf;
+}
 
 class directory : public service_interface {
   public:
@@ -23,7 +41,7 @@ class directory : public service_interface {
                              m_config_registry.get_global_data_view_config()
                                  .storage_service_connection_count,
                              registry_url),
-          m_config(m_config_registry.get_directory_config()),
+          m_config(get_config(m_config_registry)),
           m_directory_workers(std::make_shared<boost::asio::thread_pool>(
               m_config.worker_thread_count)),
           m_storage(m_config_registry.get_global_data_view_config(), m_ioc,
