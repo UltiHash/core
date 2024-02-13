@@ -80,6 +80,7 @@ fi
 
 . "$venv_dir/bin/activate"
 
+export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
 
 if [ -z "$cluster_url" ]; then
     docker compose up --detach

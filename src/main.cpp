@@ -1,3 +1,4 @@
+#include "common/license/license.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
@@ -24,6 +25,8 @@ void execute_role(const config& cfg) {
 
     signal_handler sh;
 
+    auto license = load_license();
+
     auto start_service = [&sh](auto&& service) -> void {
         sh.add_callback([&service]() { service.stop(); });
         service.run();
@@ -36,7 +39,8 @@ void execute_role(const config& cfg) {
         case DEDUPLICATOR_SERVICE:
             return start_service(deduplicator(cfg.etcd_url, cfg.working_dir));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg.etcd_url, cfg.working_dir));
+            return start_service(
+                directory(cfg.etcd_url, cfg.working_dir, license));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
         }
