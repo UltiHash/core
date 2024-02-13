@@ -25,6 +25,7 @@ jobs:
           password: ${{ secrets.PAT }}
 
       - name: Install tox
+        if: ${{ runner.name }} != 'docker-image-builder'
         run: sudo apt install tox
 
       - name: Running integration tests
