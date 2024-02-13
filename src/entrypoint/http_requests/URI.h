@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ENTRYPOINT_HTTP_URI_H
+#define ENTRYPOINT_HTTP_URI_H
 
 #include <string>
 #include <boost/beast/http.hpp>
@@ -8,7 +9,7 @@
 #include "boost/url/decode_view.hpp"
 #include "boost/url/url.hpp"
 
-namespace uh::cluster::entry
+namespace uh::cluster
 {
 
     namespace http = boost::beast::http;           // from <boost/beast/http.hpp>
@@ -50,3 +51,5 @@ namespace uh::cluster::entry
     };
 
 } // uh::cluster::entry
+
+#endif

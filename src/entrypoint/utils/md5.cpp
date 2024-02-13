@@ -1,35 +1,9 @@
-#include "hash.h"
+#include "md5.h"
 
-namespace uh::cluster::entry
+namespace uh::cluster
 {
 
-    int hash_string(const char* strToHash)
-    {
-        if (!strToHash)
-            return 0;
-
-        unsigned hash = 0;
-        while (char charValue = *strToHash++)
-        {
-            hash = charValue + 31 * hash;
-        }
-
-        return hash;
-    }
-
-    MD5::MD5()
-    {
-        pEvpContext = EVP_MD_CTX_create();
-        EVP_MD_CTX_init(pEvpContext);
-        EVP_DigestInit_ex(pEvpContext, EVP_md5(), nullptr);
-    }
-
-    MD5::~MD5()
-    {
-        EVP_MD_CTX_destroy(pEvpContext);
-    }
-
-    std::string MD5::toHex(unsigned char value)
+    std::string md5::toHex(unsigned char value)
     {
         static const char hexChars[] = "0123456789abcdef";
         std::string result;
@@ -38,8 +12,13 @@ namespace uh::cluster::entry
         return result;
     }
 
-    std::string MD5::calculateMD5(const std::string& input)
+    std::string md5::calculateMD5(const std::string& input)
     {
+        EVP_MD_CTX* pEvpContext;
+        pEvpContext = EVP_MD_CTX_create();
+        EVP_MD_CTX_init(pEvpContext);
+        EVP_DigestInit_ex(pEvpContext, EVP_md5(), nullptr);
+
         unsigned char unMdValue[EVP_MAX_MD_SIZE];
         unsigned int uiMdLength;
 
@@ -57,6 +36,8 @@ namespace uh::cluster::entry
         {
             md5hex += toHex(unMdValue[i]);
         }
+
+        EVP_MD_CTX_destroy(pEvpContext);
 
         return md5hex;
     }

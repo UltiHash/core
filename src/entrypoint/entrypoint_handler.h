@@ -36,7 +36,7 @@
 #include "dispatcher.h"
 #include "http_requests/put_object.h"
 
-namespace uh::cluster::entry {
+namespace uh::cluster {
 
     class entrypoint_handler: public protocol_handler {
     public:

@@ -1,18 +1,19 @@
-#pragma once
+#ifndef ENTRYPOINT_DISPATCHER_H
+#define ENTRYPOINT_DISPATCHER_H
 
 #include <optional>
 #include "common/utils/log.h"
 #include "http_requests/http_request.h"
 #include "http_requests/http_response.h"
 
-namespace uh::cluster::entry {
+namespace uh::cluster {
 
-    static coro<http_response> call(const http_request& req) {
+    coro<http_response> call(const http_request& req) {
         throw command_unknown_exception();
     }
 
     template <typename command, typename ... commands>
-    static coro<http_response> call(http_request& req, command&& head, commands&& ... tail) {
+    coro<http_response> call(http_request& req, command&& head, commands&& ... tail) {
         if (head.can_handle(req)) {
             return head.handle(req);
         }
@@ -21,8 +22,10 @@ namespace uh::cluster::entry {
     }
 
     template <typename ...commands>
-    static coro <http_response> dispatch(http_request& req, commands&&... a) {
+    coro <http_response> dispatch(http_request& req, commands&&... a) {
          return call(req, a...);
     }
 
 } // uh::cluster::entry  namespace
+
+#endif

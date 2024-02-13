@@ -190,7 +190,7 @@ namespace uh::cluster {
 
         void handle_state_changes(const etcd::Response& response)
         {
-            LOG_INFO() << "action: " << response.action() << ", key: " << response.value().key()
+            LOG_DEBUG() << "action: " << response.action() << ", key: " << response.value().key()
                         << ", value: " << response.value().as_string();
 
             try {

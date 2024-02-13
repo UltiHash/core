@@ -3,7 +3,7 @@
 #include "entrypoint/rest/utils/string/string_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 
-namespace uh::cluster::entry
+namespace uh::cluster
 {
 
     URI::URI(const http::request_parser<http::empty_body>& req)

@@ -28,7 +28,7 @@ public:
             m_workers (std::make_shared <boost::asio::thread_pool> (m_config.worker_thread_count)),
             m_server (m_config_registry.get_server_config(),
                       m_config_registry.get_service_name(),
-                      std::make_unique <entry::entrypoint_handler> (m_ioc, m_dedupe_services, m_directory_services, m_workers),
+                      std::make_unique <entrypoint_handler> (m_ioc, m_dedupe_services, m_directory_services, m_workers),
                     m_ioc)
     {
     }
