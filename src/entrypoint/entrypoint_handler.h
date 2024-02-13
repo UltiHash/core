@@ -31,6 +31,11 @@
 #include "entrypoint/rest/utils/parser/xml_parser.h"
 #include "entrypoint/rest/http/models/get_bucket_response.h"
 
+// REFACTORED
+#include "common.h"
+#include "dispatcher.h"
+#include "http_requests/put_object.h"
+
 namespace uh::cluster {
 
     class entrypoint_handler: public protocol_handler {
@@ -44,8 +49,7 @@ namespace uh::cluster {
                 m_workers (std::move (workers)),
                 m_dedupe_services (dedupe_nodes),
                 m_directory_services (directory_nodes)
-        {
-        }
+        {}
 
     coro <void> handle (boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -58,13 +62,28 @@ namespace uh::cluster {
 
                 boost::beast::http::request_parser<boost::beast::http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
+
                 co_await boost::beast::http::async_read_header(s, buffer, received_request,
                                                                boost::asio::use_awaitable);
                 LOG_DEBUG() << "received request: " << received_request.get().base();
+
+                try {
+                    http_request req(received_request, s, buffer);
+                    auto resp = co_await handle_request(req);
+                    co_await boost::beast::http::async_write(s,
+                                                             resp.get_prepared_response(),
+                                                             boost::asio::use_awaitable);
+                    co_return;
+                }
+                catch (const command_unknown_exception&) {
+                }
+
                 uh::cluster::rest::utils::parser::s3_parser s3_parser(received_request, m_server_state);
                 auto s3_request = s3_parser.parse();
+
                 co_await s3_request->read_body(s, buffer);
                 s3_request->validate_request_specific_criteria();
+
                 auto s3_res = co_await handle_request(*s3_request, m_server_state);
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await boost::beast::http::async_write(s, s3_res_specific_object,
@@ -91,7 +110,8 @@ namespace uh::cluster {
             LOG_ERROR() << res_exc.what();
             boost::beast::http::write(s, res_exc.get_response_specific_object());
             s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
-            s.close();            throw;
+            s.close();
+            throw;
         }
         catch (const std::exception& e) {
             LOG_ERROR() << e.what();
@@ -104,6 +124,11 @@ namespace uh::cluster {
 
         s.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
         s.close();
+    }
+
+
+    coro <http_response> handle_request(http_request& req) {
+        co_return co_await dispatch(req, put_object(get_entrypoint_state()));
     }
 
     coro < std::unique_ptr<rest::http::http_response> > handle_request (rest::http::http_request& req, rest::utils::server_state& state) {
@@ -817,12 +842,20 @@ namespace uh::cluster {
             }
             co_return resp;
         }
+
+        entrypoint_state get_entrypoint_state() {
+            return {.ioc = m_ioc,
+                    .workers = *m_workers,
+                    .dedup_services = m_dedupe_services,
+                    .directory_services = m_directory_services,
+                    };
+        }
+
         boost::asio::io_context& m_ioc;
         std::shared_ptr <boost::asio::thread_pool> m_workers;
         const services<DEDUPLICATOR_SERVICE>& m_dedupe_services;
         const services<DIRECTORY_SERVICE>& m_directory_services;
         rest::utils::server_state m_server_state;
-
     };
 } // end namespace uh::cluster
 
