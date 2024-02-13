@@ -3,48 +3,19 @@
 #include "entrypoint/rest/utils/string/string_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 
-namespace uh::cluster::rest::http
+namespace uh::cluster
 {
 
-    const char* to_string(scheme scheme)
+    URI::URI(const http::request_parser<http::empty_body>& req)
     {
-        switch (scheme)
-        {
-            case scheme::HTTP:
-                return "http";
-            case scheme::HTTPS:
-                return "https";
-            default:
-                return "http";
-        }
-    }
-
-    scheme from_string(const char* name)
-    {
-        std::string lower_case_string  = rest::utils::string_utils::to_lower(name);
-
-        if (lower_case_string == "http")
-        {
-            return scheme::HTTP;
-        }
-        else if (lower_case_string == "https")
-        {
-            return scheme::HTTPS;
-        }
-
-        return scheme::HTTPS;
-    }
-
-    URI::URI(const http::request_parser<http::empty_body>& req) : m_req(req)
-    {
-        if (m_req.get().base().version() != 11)
+        if (req.get().base().version() != 11)
         {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        m_method = get_http_method_from_beast(req.get().method());
+        m_method = req.get().method();
 
-        auto target = m_req.get().target();
+        auto target = req.get().target();
 
         auto query_index = target.find('?');
 
@@ -62,8 +33,8 @@ namespace uh::cluster::rest::http
             m_url.set_encoded_path(target.substr(0));
         }
 
-        extract_and_set_bucket_id_and_object_key();
-        extract_and_set_query_parameters();
+        extract_bucket_and_object();
+        extract_query_parameters();
     }
 
     const std::string& URI::get_bucket_id() const
@@ -76,7 +47,7 @@ namespace uh::cluster::rest::http
         return m_object_key;
     }
 
-    [[nodiscard]] http_method URI::get_http_method() const
+    method URI::get_method() const
     {
         return m_method;
     }
@@ -104,7 +75,7 @@ namespace uh::cluster::rest::http
         return m_query_parameters;
     }
 
-    void URI::extract_and_set_query_parameters()
+    void URI::extract_query_parameters()
     {
         for (const auto& param : m_url.params())
         {
@@ -112,7 +83,7 @@ namespace uh::cluster::rest::http
         }
     }
 
-    void URI::extract_and_set_bucket_id_and_object_key()
+    void URI::extract_bucket_and_object()
     {
         for (const auto& seg : m_url.segments())
         {
@@ -144,4 +115,4 @@ namespace uh::cluster::rest::http
 
     }
 
-} // uh::cluster::rest::http
+} // uh::cluster::entry

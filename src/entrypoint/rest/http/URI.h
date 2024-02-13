@@ -14,8 +14,6 @@ namespace uh::cluster::rest::http
 
     namespace http = boost::beast::http;           // from <boost/beast/http.hpp>
     namespace net = boost::asio;
-    using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
-            net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
     /**
     * Enum representing URI scheme.
@@ -47,7 +45,7 @@ namespace uh::cluster::rest::http
         void extract_and_set_query_parameters();
 
         const http::request_parser<http::empty_body>& m_req;
-        scheme m_scheme = scheme::HTTP; // TODO: mechanism to determin whether HTTP or HTTPS
+        scheme m_scheme = scheme::HTTP;
         http_method m_method;
         std::string m_bucket_id {};
         std::string m_object_key {};
