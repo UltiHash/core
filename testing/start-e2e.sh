@@ -56,11 +56,6 @@ if [ "$(basename $(pwd))" != "testing" ]; then
     exit 1
 fi
 
-if ! docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..; then
-    echo "docker build failed" 1>&2
-    exit 1
-fi
-
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     echo "Creating virtual environment ..."
 
@@ -82,6 +77,17 @@ fi
 
 
 if [ -z "$cluster_url" ]; then
+    if ! docker pull ghcr.io/ultihash/build-base:latest; then
+        echo "pulling build-base image failed" 1>&2
+        exit 1
+    fi
+
+    docker image rm uh-cluster:testing
+
+    if ! docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..; then
+        echo "docker build failed" 1>&2
+        exit 1
+    fi
     docker compose up --detach
     trap "docker-compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
