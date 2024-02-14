@@ -4,6 +4,7 @@
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 #include "common/utils/log.h"
+#include "common/utils/metrics.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -35,6 +36,12 @@ class messenger_core {
 
     explicit messenger_core(boost::asio::ip::tcp::socket&& socket)
         : m_socket(std::move(socket)) {
+        clear_buffers();
+    }
+
+    explicit messenger_core(boost::asio::ip::tcp::socket&& socket,
+                            std::shared_ptr<metrics> metrics_handler)
+        : m_socket(std::move(socket)), m_metrics_handler(metrics_handler) {
         clear_buffers();
     }
 
@@ -114,6 +121,9 @@ class messenger_core {
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
             throw error_exception(e);
+        } else {
+            if (m_metrics_handler)
+                m_metrics_handler->increment_served_request_counter(h.type);
         }
 
         co_return h;
@@ -216,6 +226,7 @@ class messenger_core {
 
   private:
     boost::asio::ip::tcp::socket m_socket;
+    std::shared_ptr<metrics> m_metrics_handler;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;

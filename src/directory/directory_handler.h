@@ -12,14 +12,16 @@ class directory_handler : public protocol_handler {
   public:
     directory_handler(
         directory_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> directory_workers)
+        std::shared_ptr<boost::asio::thread_pool> directory_workers,
+        std::shared_ptr<metrics> metrics_handler)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf), m_storage(storage),
-          m_directory_workers(std::move(directory_workers)) {}
+          m_directory_workers(std::move(directory_workers)),
+          m_metrics_handler(metrics_handler) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s));
+        messenger m(std::move(s), m_metrics_handler);
 
         for (;;) {
             std::optional<error> err;
@@ -49,7 +51,7 @@ class directory_handler : public protocol_handler {
                 case DIRECTORY_OBJECT_DELETE_REQ:
                     co_await handle_delete_object(m, message_header);
                     break;
-                case DIRECTORY_BUCKET_EXISTS:
+                case DIRECTORY_BUCKET_EXISTS_REQ:
                     co_await handle_bucket_exists(m, message_header);
                     break;
                 default:
@@ -207,6 +209,7 @@ class directory_handler : public protocol_handler {
     directory_store m_directory;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
+    std::shared_ptr<uh::cluster::metrics> m_metrics_handler;
 };
 } // end namespace uh::cluster
 
