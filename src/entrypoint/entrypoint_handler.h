@@ -34,6 +34,8 @@
 // REFACTORED
 #include "common.h"
 #include "dispatcher.h"
+#include "entrypoint/http_requests/create_bucket.h"
+#include "http_requests/get_object.h"
 #include "http_requests/put_object.h"
 
 namespace uh::cluster {
@@ -134,7 +136,9 @@ class entrypoint_handler : public protocol_handler {
     }
 
     coro<http_response> handle_request(http_request& req) {
-        co_return co_await dispatch(req, put_object(get_entrypoint_state()));
+        co_return co_await dispatch(req, create_bucket(get_entrypoint_state()),
+                                    put_object(get_entrypoint_state()),
+                                    get_object(get_entrypoint_state()));
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
@@ -144,9 +148,6 @@ class entrypoint_handler : public protocol_handler {
         std::unique_ptr<rest::http::http_response> res;
 
         switch (req.get_request_name()) {
-        case rest::http::http_request_type::CREATE_BUCKET:
-            res = co_await handle_create_bucket(req);
-            break;
         case rest::http::http_request_type::GET_BUCKET:
             res = co_await handle_get_bucket(req);
             break;
@@ -161,9 +162,6 @@ class entrypoint_handler : public protocol_handler {
             break;
         case rest::http::http_request_type::PUT_OBJECT:
             res = co_await handle_put_object(req);
-            break;
-        case rest::http::http_request_type::GET_OBJECT:
-            res = co_await handle_get_object(req);
             break;
         case rest::http::http_request_type::DELETE_OBJECT:
             res = co_await handle_delete_object(req);
@@ -195,35 +193,6 @@ class entrypoint_handler : public protocol_handler {
         default:
             throw std::runtime_error(
                 "request not supported by the backend yet.");
-        }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_create_bucket(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::create_object_response> res =
-            std::make_unique<rest::http::model::create_object_response>(req);
-        auto bucket_id = req.get_URI().get_bucket_id();
-
-        try {
-            auto func = [&bucket_id](const auto& bucket,
-                                     client::acquired_messenger m,
-                                     long id) -> coro<void> {
-                directory_message dir_req{.bucket_id = bucket_id};
-                co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ,
-                                                        dir_req);
-                co_await m.get().recv_header();
-            };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-                m_directory_services.get_clients(), m_ioc, *m_workers,
-                std::bind_front(func, std::cref(bucket_id)));
-        } catch (const error_exception& e) {
-            LOG_ERROR() << "Failed to add the bucket " << bucket_id
-                        << " to the directory: " << e;
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::not_found);
         }
 
         co_return std::move(res);
@@ -416,67 +385,6 @@ class entrypoint_handler : public protocol_handler {
                 throw rest::http::model::custom_error_response_exception(
                     boost::beast::http::status::not_found,
                     rest::http::model::error::bucket_not_found);
-            default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
-            }
-        }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_get_object(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::get_object_response> res;
-
-        try {
-
-            std::chrono::time_point<std::chrono::steady_clock> timer;
-            const auto start = std::chrono::steady_clock::now();
-            std::string buffer;
-
-            auto func = [](std::string& buffer,
-                           const rest::http::http_request& req,
-                           client::acquired_messenger m) -> coro<void> {
-                directory_message dir_req;
-                dir_req.bucket_id = req.get_URI().get_bucket_id();
-                dir_req.object_key = std::make_unique<std::string>(
-                    req.get_URI().get_object_key());
-
-                co_await m.get().send_directory_message(DIR_GET_OBJ_REQ,
-                                                        dir_req);
-                const auto h_dir = co_await m.get().recv_header();
-
-                buffer.resize(h_dir.size);
-                m.get().register_read_buffer(buffer);
-                co_await m.get().recv_buffers(h_dir);
-            };
-
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
-                    std::bind_front(func, std::ref(buffer), std::cref(req)));
-
-            const auto stop = std::chrono::steady_clock::now();
-            const std::chrono::duration<double> duration = stop - start;
-            const auto size = static_cast<double>(buffer.size()) /
-                              static_cast<double>(1024ul * 1024ul);
-            const auto bandwidth = size / duration.count();
-            LOG_DEBUG() << "retrieval duration " << duration.count() << " s";
-            LOG_DEBUG() << "retrieval bandwidth " << bandwidth << " MB/s";
-
-            res = std::make_unique<rest::http::model::get_object_response>(req);
-            res->set_body(std::move(buffer));
-            res->set_bandwidth(bandwidth);
-
-        } catch (const error_exception& e) {
-            LOG_ERROR() << e.what();
-            switch (*e.error()) {
-            case error::object_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::object_not_found);
             default:
                 throw rest::http::model::custom_error_response_exception(
                     boost::beast::http::status::internal_server_error);

@@ -9,7 +9,7 @@ namespace uh::cluster {
 
 struct entrypoint_state {
     boost::asio::io_context& ioc;
-    boost::asio::thread_pool& workers; // can change to reference
+    boost::asio::thread_pool& workers;
     const services<DEDUPLICATOR_SERVICE>& dedup_services;
     const services<DIRECTORY_SERVICE>& directory_services;
 };
