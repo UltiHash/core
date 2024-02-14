@@ -3,7 +3,6 @@
 #define UH_CLUSTER_TIMEOUT_H
 
 #include <chrono>
-#include <iostream>
 #include <thread>
 
 namespace uh::cluster {
