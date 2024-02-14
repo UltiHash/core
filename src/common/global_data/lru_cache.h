@@ -1,16 +1,15 @@
 #ifndef UH_CLUSTER_LRU_CACHE_H
 #define UH_CLUSTER_LRU_CACHE_H
 
-#include <unordered_map>
-#include <optional>
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
+#include <unordered_map>
 
 namespace uh::cluster {
 
-template <typename K, typename V>
-class lru_cache {
+template <typename K, typename V> class lru_cache {
 
     struct Node {
         K key;
@@ -22,27 +21,26 @@ class lru_cache {
     size_t m_capacity;
     std::mutex m;
 
-public:
-    explicit lru_cache(size_t capacity): m_capacity {capacity} {
-    }
+  public:
+    explicit lru_cache(size_t capacity) : m_capacity{capacity} {}
 
-    void put (const K& key, V&& value) {
-        std::lock_guard <std::mutex> lock (m);
-        if (const auto f = m_map.find(key) ; f != m_map.cend()) {
-            f->second->value = std::forward <V> (value);
+    void put(const K& key, V&& value) {
+        std::lock_guard<std::mutex> lock(m);
+        if (const auto f = m_map.find(key); f != m_map.cend()) {
+            f->second->value = std::forward<V>(value);
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
         } else {
             if (m_map.size() >= m_capacity) {
                 m_map.erase(m_lruList.front().key);
                 m_lruList.pop_front();
             }
-            m_lruList.emplace_back (key, std::forward <V> (value));
-            m_map.emplace_hint(f, key, std::prev (m_lruList.end()));
+            m_lruList.emplace_back(key, std::forward<V>(value));
+            m_map.emplace_hint(f, key, std::prev(m_lruList.end()));
         }
     }
 
-    std::optional <std::reference_wrapper <const V>> get (const K& key) noexcept {
-        std::lock_guard <std::mutex> lock (m);
+    std::optional<std::reference_wrapper<const V>> get(const K& key) noexcept {
+        std::lock_guard<std::mutex> lock(m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;
@@ -50,8 +48,8 @@ public:
         return std::nullopt;
     }
 
-    V get (const K& key, V&& default_value) noexcept {
-        std::lock_guard <std::mutex> lock (m);
+    V get(const K& key, V&& default_value) noexcept {
+        std::lock_guard<std::mutex> lock(m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;
@@ -59,15 +57,13 @@ public:
         return default_value;
     }
 
-
-    void print () {
-        for (const auto n: m_lruList) {
+    void print() {
+        for (const auto n : m_lruList) {
             std::cout << "key " << n.key << std::endl;
         }
         std::cout << std::endl;
     }
-
 };
 } // end namespace uh::cluster
 
-#endif //UH_CLUSTER_LRU_CACHE_H
+#endif // UH_CLUSTER_LRU_CACHE_H

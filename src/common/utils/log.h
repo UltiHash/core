@@ -4,39 +4,36 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
 
-#include <boost/log/trivial.hpp>
 #include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/trivial.hpp>
 
 #include <filesystem>
 #include <list>
 #include <optional>
 
-
 #ifdef DEBUG
-# define LOCATION "[" << __FILE__ << ":" << __LINE__ << "] (" << __FUNCTION__ << ") "
+#define LOCATION                                                               \
+    "[" << __FILE__ << ":" << __LINE__ << "] (" << __FUNCTION__ << ") "
 #else
-# define LOCATION ""
+#define LOCATION ""
 #endif
 
-#define LOG_DEBUG() BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::debug) << LOCATION
-#define LOG_INFO() BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::info) << LOCATION
-#define LOG_WARN() BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::warning) << LOCATION
-#define LOG_ERROR() BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::error) << LOCATION
-#define LOG_FATAL() BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::fatal) << LOCATION
+#define LOG_DEBUG()                                                            \
+    BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::debug) << LOCATION
+#define LOG_INFO()                                                             \
+    BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::info) << LOCATION
+#define LOG_WARN()                                                             \
+    BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::warning) << LOCATION
+#define LOG_ERROR()                                                            \
+    BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::error) << LOCATION
+#define LOG_FATAL()                                                            \
+    BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::fatal) << LOCATION
 
-
-namespace uh::log
-{
+namespace uh::log {
 
 // ---------------------------------------------------------------------
 
-enum class sink_type
-{
-    file,
-    clog,
-    cerr,
-    cout
-};
+enum class sink_type { file, clog, cerr, cout };
 
 // ---------------------------------------------------------------------
 
@@ -52,8 +49,7 @@ std::string to_string(boost::log::trivial::severity_level level);
 
 // ---------------------------------------------------------------------
 
-struct sink_config
-{
+struct sink_config {
     sink_type type;
     std::optional<std::filesystem::path> filename;
 
@@ -64,8 +60,7 @@ struct sink_config
 
 // ---------------------------------------------------------------------
 
-struct config
-{
+struct config {
     std::list<sink_config> sinks;
 };
 
@@ -74,7 +69,6 @@ struct config
 std::ostream& operator<<(std::ostream& out, const sink_config& c);
 
 // ---------------------------------------------------------------------
-
 
 /**
  * Initialize application logging.
@@ -85,7 +79,8 @@ void init(const config& cfg);
 
 // ---------------------------------------------------------------------
 
-static boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
+static boost::log::sources::severity_logger<boost::log::trivial::severity_level>
+    lg;
 
 // ---------------------------------------------------------------------
 

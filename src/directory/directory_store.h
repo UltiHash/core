@@ -6,82 +6,85 @@
 #include <string>
 #include <utility>
 
-#include "common/utils/common.h"
 #include "bucket.h"
 #include "common/registry/service_registry.h"
+#include "common/utils/common.h"
 
 namespace uh::cluster {
 
 class directory_store {
 
-    std::unordered_map <std::string, std::unique_ptr <bucket>> m_buckets;
+    std::unordered_map<std::string, std::unique_ptr<bucket>> m_buckets;
     directory_store_config m_conf;
     std::filesystem::path m_root_dir;
 
-public:
-
-    explicit directory_store (directory_store_config  conf):
-            m_conf (std::move(conf)),
-        m_root_dir (m_conf.working_dir / "buckets")
-    {
-        std::filesystem::create_directories (m_root_dir);
-        for (const auto& entry: std::filesystem::directory_iterator (m_root_dir)) {
-            m_buckets.emplace (entry.path().filename(), std::make_unique <bucket> (m_root_dir, entry.path().filename(), m_conf.bucket_conf));
+  public:
+    explicit directory_store(directory_store_config conf)
+        : m_conf(std::move(conf)), m_root_dir(m_conf.working_dir / "buckets") {
+        std::filesystem::create_directories(m_root_dir);
+        for (const auto& entry :
+             std::filesystem::directory_iterator(m_root_dir)) {
+            m_buckets.emplace(entry.path().filename(),
+                              std::make_unique<bucket>(m_root_dir,
+                                                       entry.path().filename(),
+                                                       m_conf.bucket_conf));
         }
     }
 
-    void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+    void insert(const std::string& bucket, const std::string& key,
+                const std::span<char>& data) {
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
+            [[likely]] {
             b->second->insert_object(key, data);
-        }
-        else {
+        } else {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    void bucket_exists(const std::string& bucket)
-    {
+    void bucket_exists(const std::string& bucket) {
         if (m_buckets.find(bucket) == m_buckets.end()) {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    unique_buffer <char> get (const std::string& bucket, const std::string& key) {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+    unique_buffer<char> get(const std::string& bucket, const std::string& key) {
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
+            [[likely]] {
             return b->second->get_obj(key);
-        }
-        else {
+        } else {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    void add_bucket (const std::string& bucket_id) {
-        m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root_dir, bucket_id, m_conf.bucket_conf));
+    void add_bucket(const std::string& bucket_id) {
+        m_buckets.emplace(bucket_id,
+                          std::make_unique<bucket>(m_root_dir, bucket_id,
+                                                   m_conf.bucket_conf));
     }
 
-    void remove_object (const std::string& bucket_id, const std::string& object_key) {
-        if (const auto& b = m_buckets.find(bucket_id); b != m_buckets.cend()) [[likely]] {
+    void remove_object(const std::string& bucket_id,
+                       const std::string& object_key) {
+        if (const auto& b = m_buckets.find(bucket_id); b != m_buckets.cend())
+            [[likely]] {
             b->second->delete_object(object_key);
-        }
-        else {
+        } else {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    void remove (const std::string& bucket, const std::string& key) {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+    void remove(const std::string& bucket, const std::string& key) {
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
+            [[likely]] {
             b->second->delete_object(key);
-        }
-        else {
+        } else {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    void remove_bucket (const std::string& name) {
+    void remove_bucket(const std::string& name) {
         auto b = m_buckets.find(name);
 
-        if (b == m_buckets.end())
-        {
+        if (b == m_buckets.end()) {
             throw error_exception(error::bucket_not_found);
         }
 
@@ -95,33 +98,34 @@ public:
         m_buckets.erase(b);
     }
 
-    std::vector <std::string> list_keys (const std::string& bucket, const std::string& lower_bound = "", const std::string& prefix = "") {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+    std::vector<std::string> list_keys(const std::string& bucket,
+                                       const std::string& lower_bound = "",
+                                       const std::string& prefix = "") {
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
+            [[likely]] {
             return b->second->list_keys(lower_bound, prefix);
-        }
-        else
-        {
+        } else {
             throw error_exception(error::bucket_not_found);
         }
     }
 
-    std::vector <std::string> list_buckets () {
-        std::vector <std::string> buckets;
+    std::vector<std::string> list_buckets() {
+        std::vector<std::string> buckets;
         buckets.reserve(m_buckets.size());
-        for (const auto& bucket_name: m_buckets) {
-            buckets.emplace_back (bucket_name.first);
+        for (const auto& bucket_name : m_buckets) {
+            buckets.emplace_back(bucket_name.first);
         }
         return buckets;
     }
 
-    size_t get_used_space () {
+    size_t get_used_space() {
         size_t used_space = 0;
-        for (const auto& bucket: m_buckets) {
+        for (const auto& bucket : m_buckets) {
             used_space += bucket.second->get_used_space();
         }
         return used_space;
     }
 };
 
-}
-#endif //CORE_DIRECTORY_STORE_H
+} // namespace uh::cluster
+#endif // CORE_DIRECTORY_STORE_H

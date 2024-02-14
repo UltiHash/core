@@ -13,22 +13,19 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-struct config_fixture
-{
-    static std::filesystem::path get_log_path () {
+struct config_fixture {
+    static std::filesystem::path get_log_path() {
         return "_tmp_transaction_log_test_path";
     }
 
-    static void cleanup () {
-        std::filesystem::remove ("_tmp_transaction_log_test_path");
+    static void cleanup() {
+        std::filesystem::remove("_tmp_transaction_log_test_path");
     }
 };
 
-
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
-{
+BOOST_FIXTURE_TEST_CASE(transaction_log_test, config_fixture) {
 
     cleanup();
 
@@ -51,7 +48,7 @@ BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
         kl.append("key1", 100, transaction_log::INSERT_END);
 
         const auto m2 = kl.replay();
-        BOOST_TEST (m2.size() == 5);
+        BOOST_TEST(m2.size() == 5);
         BOOST_CHECK(m2.at("key1") == 100);
         BOOST_CHECK(m2.at("key2") == 200);
         BOOST_CHECK(m2.at("key3") == 300);
@@ -67,11 +64,10 @@ BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
     {
         uh::cluster::transaction_log kl(get_log_path());
         const auto m1 = kl.replay();
-        BOOST_TEST (m1.size() == 3);
+        BOOST_TEST(m1.size() == 3);
         BOOST_CHECK(m1.at("key3") == 300);
         BOOST_CHECK(m1.at("key4") == 400);
         BOOST_CHECK(m1.at("key5") == 500);
-
 
         kl.append("key3", 600, transaction_log::UPDATE_START);
         kl.append("key5", 1000, transaction_log::UPDATE_START);
@@ -79,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
         kl.append("key5", 1000, transaction_log::UPDATE_END);
 
         const auto m2 = kl.replay();
-        BOOST_TEST (m2.size() == 3);
+        BOOST_TEST(m2.size() == 3);
         BOOST_CHECK(m2.at("key3") == 600);
         BOOST_CHECK(m2.at("key4") == 400);
         BOOST_CHECK(m2.at("key5") == 1000);
@@ -89,7 +85,7 @@ BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
 
     {
         uh::cluster::transaction_log kl(get_log_path());
-        BOOST_CHECK_THROW (kl.replay(), std::runtime_error);
+        BOOST_CHECK_THROW(kl.replay(), std::runtime_error);
     }
 
     cleanup();

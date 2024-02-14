@@ -1,9 +1,9 @@
-//#ifndef REST_NODE_SRC_S3_AUTHENTICATOR
-//#define REST_NODE_SRC_S3_AUTHENTICATOR
+// #ifndef REST_NODE_SRC_S3_AUTHENTICATOR
+// #define REST_NODE_SRC_S3_AUTHENTICATOR
 //
-//#include "s3_parser.h"
+// #include "s3_parser.h"
 //
-//namespace uh::cluster {
+// namespace uh::cluster {
 //
 ////------------------------------------------------------------------------------
 //
@@ -60,7 +60,8 @@
 //        hmac_sha_256(const std::string& payload) const;
 //
 //        [[nodiscard]] std::string
-//        hmac_sha_256(const std::string& payload, const std::string& signing_key) const;
+//        hmac_sha_256(const std::string& payload, const std::string&
+//        signing_key) const;
 //
 //    public:
 //        s3_authenticator(parsed_request_wrapper& parsed_request);
@@ -74,4 +75,4 @@
 //
 //} // namespace uh::cluster
 //
-//#endif
+// #endif

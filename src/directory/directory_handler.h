@@ -3,41 +3,39 @@
 
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
-#include "directory_store.h"
 #include "common/utils/worker_utils.h"
+#include "directory_store.h"
 
 namespace uh::cluster {
 
-    class directory_handler: public protocol_handler {
-    public:
+class directory_handler : public protocol_handler {
+  public:
+    directory_handler(
+        directory_config config, global_data_view& storage,
+        std::shared_ptr<boost::asio::thread_pool> directory_workers)
+        : m_config(std::move(config)),
+          m_directory(m_config.directory_store_conf), m_storage(storage),
+          m_directory_workers(std::move(directory_workers)) {}
 
-        directory_handler(directory_config config, global_data_view &storage, std::shared_ptr <boost::asio::thread_pool> directory_workers) :
-                m_config(std::move(config)),
-                m_directory(m_config.directory_store_conf),
-                m_storage(storage),
-                m_directory_workers (std::move (directory_workers))
-        {
-        }
+    coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-    coro <void> handle (boost::asio::ip::tcp::socket s) override {
-
-        messenger m (std::move (s));
+        messenger m(std::move(s));
 
         for (;;) {
             std::optional<error> err;
 
             try {
 
-                const auto message_header = co_await m.recv_header ();
+                const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
-                    co_await handle_put_obj (m, message_header);
+                    co_await handle_put_obj(m, message_header);
                     break;
                 case DIR_GET_OBJ_REQ:
-                    co_await handle_get_obj (m, message_header);
+                    co_await handle_get_obj(m, message_header);
                     break;
                 case DIR_PUT_BUCKET_REQ:
-                    co_await handle_put_bucket (m, message_header);
+                    co_await handle_put_bucket(m, message_header);
                     break;
                 case DIR_LIST_BUCKET_REQ:
                     co_await handle_list_buckets(m, message_header);
@@ -55,7 +53,7 @@ namespace uh::cluster {
                     co_await handle_bucket_exists(m, message_header);
                     break;
                 default:
-                    throw std::invalid_argument ("Invalid message type!");
+                    throw std::invalid_argument("Invalid message type!");
                 }
             } catch (const error_exception& e) {
                 err = e.error();
@@ -63,131 +61,153 @@ namespace uh::cluster {
                 err = error(error::unknown, e.what());
             }
 
-            if (err)
-            {
-                co_await m.send_error (*err);
+            if (err) {
+                co_await m.send_error(*err);
             }
         }
-
     }
 
-    private:
-      
-        coro <void> handle_bucket_exists (messenger& m, const messenger::header& h)
-        {
-            directory_message request = co_await m.recv_directory_message (h);
+  private:
+    coro<void> handle_bucket_exists(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
 
-            m_directory.bucket_exists(request.bucket_id);
+        m_directory.bucket_exists(request.bucket_id);
 
-            co_await m.send(SUCCESS, {});
-            co_return;
-        }
+        co_await m.send(SUCCESS, {});
+        co_return;
+    }
 
-        coro <void> handle_put_obj (messenger& m, const messenger::header& h)
-        {
-            directory_message request = co_await m.recv_directory_message (h);
+    coro<void> handle_put_obj(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
 
-            auto func = [] (directory_store& directory, const directory_message& request) {
-                std::vector<char> address_data;
-                zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
-                directory.insert (request.bucket_id, *request.object_key, address_data);
-            };
+        auto func = [](directory_store& directory,
+                       const directory_message& request) {
+            std::vector<char> address_data;
+            zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr)
+                .or_throw();
+            directory.insert(request.bucket_id, *request.object_key,
+                             address_data);
+        };
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front (func, std::ref (m_directory), std::cref (request)));
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-            co_await m.send(SUCCESS, {});
-            co_return;
-        }
+        co_await m.send(SUCCESS, {});
+        co_return;
+    }
 
-        coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
+    coro<void> handle_get_obj(messenger& m, const messenger::header& h) {
 
-            directory_message request = co_await m.recv_directory_message (h);
+        directory_message request = co_await m.recv_directory_message(h);
 
-            unique_buffer <char> buffer;
+        unique_buffer<char> buffer;
 
-            auto func = [](directory_store& directory, global_data_view& storage, const directory_message& request, unique_buffer <char>& buffer) {
-                address addr;
-                const auto buf = directory.get(request.bucket_id, *request.object_key);
-                zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
-                std::size_t buffer_size = 0;
-                for(auto frag_size : addr.sizes){
-                    buffer_size += frag_size;
-                }
-                buffer = unique_buffer <char> (buffer_size);
-                storage.read_address(buffer.data(), addr);
-            };
+        auto func = [](directory_store& directory, global_data_view& storage,
+                       const directory_message& request,
+                       unique_buffer<char>& buffer) {
+            address addr;
+            const auto buf =
+                directory.get(request.bucket_id, *request.object_key);
+            zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
+            std::size_t buffer_size = 0;
+            for (auto frag_size : addr.sizes) {
+                buffer_size += frag_size;
+            }
+            buffer = unique_buffer<char>(buffer_size);
+            storage.read_address(buffer.data(), addr);
+        };
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref (m_storage), std::cref(request), std::ref((buffer))));
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::ref(m_storage),
+                            std::cref(request), std::ref((buffer))));
 
-            m.register_write_buffer(buffer);
-            co_await m.send_buffers(DIR_GET_OBJ_RESP);
+        m.register_write_buffer(buffer);
+        co_await m.send_buffers(DIR_GET_OBJ_RESP);
+    }
 
-        }
+    coro<void> handle_put_bucket(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
+        auto func = [](directory_store& directory,
+                       const directory_message& request) {
+            directory.add_bucket(request.bucket_id);
+        };
 
-        coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
-            directory_message request = co_await m.recv_directory_message (h);
-            auto func = [] (directory_store& directory, const directory_message& request) {
-                directory.add_bucket(request.bucket_id);
-            };
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+        co_await m.send(SUCCESS, {});
+    }
 
-            co_await m.send(SUCCESS, {});
+    coro<void> handle_delete_bucket(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
+        auto func = [](directory_store& directory,
+                       const directory_message& request) {
+            directory.remove_bucket(request.bucket_id);
+        };
 
-        }
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
-            directory_message request = co_await m.recv_directory_message (h);
-            auto func = [] (directory_store& directory, const directory_message& request) {
-                directory.remove_bucket(request.bucket_id);
-            };
+        co_await m.send(SUCCESS, {});
+    }
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+    coro<void> handle_delete_object(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
+        auto func = [](directory_store& directory,
+                       const directory_message& request) {
+            directory.remove_object(request.bucket_id, *request.object_key);
+        };
 
-            co_await m.send(SUCCESS, {});
-        }
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
-            directory_message request = co_await m.recv_directory_message (h);
-            auto func = [] (directory_store& directory, const directory_message& request) {
-                directory.remove_object(request.bucket_id, *request.object_key);
-            };
+        co_await m.send(SUCCESS, {});
+    }
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::cref (request)));
+    coro<void> handle_list_buckets(messenger& m, const messenger::header& h) {
+        directory_lst_entities_message response;
 
-            co_await m.send(SUCCESS, {});
-        }
+        auto func = [](directory_store& directory,
+                       directory_lst_entities_message& response) {
+            response.entities = directory.list_buckets();
+        };
 
-        coro <void> handle_list_buckets (messenger& m, const messenger::header &h) {
-            directory_lst_entities_message response;
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
-            auto func = [] (directory_store& directory, directory_lst_entities_message& response) {
-                response.entities = directory.list_buckets();
-            };
+        co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP,
+                                                        response);
+    }
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref (response)));
+    coro<void> handle_list_objects(messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message(h);
+        directory_lst_entities_message response;
+        auto func = [](directory_store& directory,
+                       directory_lst_entities_message& response,
+                       directory_message& request) {
+            response.entities = directory.list_keys(request.bucket_id);
+        };
 
-            co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
-        }
+        co_await worker_utils::post_in_workers(
+            *m_directory_workers, m_storage.get_executor(),
+            std::bind_front(func, std::ref(m_directory), std::ref(response),
+                            std::ref(request)));
 
-        coro <void> handle_list_objects (messenger& m, const messenger::header &h) {
-            directory_message request = co_await m.recv_directory_message (h);
-            directory_lst_entities_message response;
-            auto func = [] (directory_store& directory, directory_lst_entities_message& response, directory_message& request) {
-                response.entities = directory.list_keys(request.bucket_id);
-            };
+        co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP,
+                                                        response);
+    }
 
-            co_await worker_utils::post_in_workers (*m_directory_workers, m_storage.get_executor(), std::bind_front(func, std::ref (m_directory), std::ref(response), std::ref(request)));
-
-            co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
-        }
-
-        const directory_config m_config;
-        directory_store m_directory;
-        global_data_view& m_storage;
-        std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
-
-    };
+    const directory_config m_config;
+    directory_store m_directory;
+    global_data_view& m_storage;
+    std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
+};
 } // end namespace uh::cluster
 
-#endif //CORE_DIRECTORY_NODE_HANDLER_H
+#endif // CORE_DIRECTORY_NODE_HANDLER_H

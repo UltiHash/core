@@ -2,26 +2,20 @@
 
 #include "common/utils/random.h"
 
+namespace uh::cluster {
 
-namespace uh::cluster
-{
-
-namespace
-{
+namespace {
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path make_temp_dir(const std::filesystem::path& parent)
-{
+std::filesystem::path make_temp_dir(const std::filesystem::path& parent) {
     std::filesystem::path path;
     std::error_code ec;
 
-    do
-    {
-        path = parent / (std::string("tmp." ) + random_string(8));
+    do {
+        path = parent / (std::string("tmp.") + random_string(8));
         std::filesystem::create_directory(path, ec);
-    }
-    while (ec);
+    } while (ec);
 
     return path;
 }
@@ -33,29 +27,20 @@ std::filesystem::path make_temp_dir(const std::filesystem::path& parent)
 // ---------------------------------------------------------------------
 
 temp_directory::temp_directory()
-    : m_path(make_temp_dir(std::filesystem::temp_directory_path()))
-{
-}
+    : m_path(make_temp_dir(std::filesystem::temp_directory_path())) {}
 
 // ---------------------------------------------------------------------
 
-temp_directory::~temp_directory()
-{
-    try
-    {
+temp_directory::~temp_directory() {
+    try {
         std::filesystem::remove_all(m_path);
-    }
-    catch (...)
-    {
+    } catch (...) {
     }
 }
 
 // ---------------------------------------------------------------------
 
-const std::filesystem::path& temp_directory::path() const
-{
-    return m_path;
-}
+const std::filesystem::path& temp_directory::path() const { return m_path; }
 
 // ---------------------------------------------------------------------
 
