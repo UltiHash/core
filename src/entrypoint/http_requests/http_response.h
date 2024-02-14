@@ -17,6 +17,8 @@ class http_response {
 
     void set_space_savings(std::size_t space_savings);
 
+    void set_request_charged(std::size_t space_savings);
+
     const http::response<http::string_body>& get_prepared_response();
 
     void set_bandwidth(double bandwidth);
