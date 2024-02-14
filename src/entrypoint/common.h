@@ -10,8 +10,9 @@ namespace uh::cluster {
 struct entrypoint_state {
     boost::asio::io_context& ioc;
     boost::asio::thread_pool& workers; // can change to reference
-    const services<DEDUPLICATOR_SERVICE>& dedup_services;
+    const services<DEDUPLICATOR_SERVICE>& dedupe_services;
     const services<DIRECTORY_SERVICE>& directory_services;
+    rest::utils::server_state server_state;
 };
 
 struct integration {
@@ -22,7 +23,7 @@ struct integration {
 
 class command_unknown_exception : public std::exception {
   public:
-    const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 };
 
 } // namespace uh::cluster

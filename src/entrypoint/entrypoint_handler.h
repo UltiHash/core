@@ -33,20 +33,19 @@
 
 // REFACTORED
 #include "common.h"
-#include "dispatcher.h"
 #include "http_requests/put_object.h"
 
 namespace uh::cluster {
 
+template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
   public:
-    entrypoint_handler(boost::asio::io_context& ioc,
-                       const services<DEDUPLICATOR_SERVICE>& dedupe_nodes,
-                       const services<DIRECTORY_SERVICE>& directory_nodes,
-                       std::shared_ptr<boost::asio::thread_pool> workers)
-        : m_ioc(ioc), m_workers(std::move(workers)),
-          m_dedupe_services(dedupe_nodes),
-          m_directory_services(directory_nodes) {}
+    explicit entrypoint_handler(entrypoint_state& state,
+                                RequestTypes&&... request_types)
+        : m_state(state), m_ioc(state.ioc), m_workers(state.workers),
+          m_dedupe_services(state.dedupe_services),
+          m_directory_services(state.directory_services),
+          m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -68,31 +67,34 @@ class entrypoint_handler : public protocol_handler {
                 LOG_DEBUG()
                     << "received request: " << received_request.get().base();
 
+                bool fallback = false;
                 try {
                     http_request req(received_request, s, buffer);
                     auto resp = co_await handle_request(req);
                     co_await boost::beast::http::async_write(
                         s, resp.get_prepared_response(),
                         boost::asio::use_awaitable);
-                    co_return;
                 } catch (const command_unknown_exception&) {
+                    fallback = true;
                 }
 
-                uh::cluster::rest::utils::parser::s3_parser s3_parser(
-                    received_request, m_server_state);
-                auto s3_request = s3_parser.parse();
+                if (fallback) {
+                    uh::cluster::rest::utils::parser::s3_parser s3_parser(
+                        received_request, m_state.server_state);
+                    auto s3_request = s3_parser.parse();
 
-                co_await s3_request->read_body(s, buffer);
-                s3_request->validate_request_specific_criteria();
+                    co_await s3_request->read_body(s, buffer);
+                    s3_request->validate_request_specific_criteria();
 
-                auto s3_res =
-                    co_await handle_request(*s3_request, m_server_state);
-                auto s3_res_specific_object =
-                    s3_res->get_response_specific_object();
-                co_await boost::beast::http::async_write(
-                    s, s3_res_specific_object, boost::asio::use_awaitable);
-                LOG_DEBUG()
-                    << "sent response: " << s3_res_specific_object.base();
+                    auto s3_res = co_await handle_request(*s3_request,
+                                                          m_state.server_state);
+                    auto s3_res_specific_object =
+                        s3_res->get_response_specific_object();
+                    co_await boost::beast::http::async_write(
+                        s, s3_res_specific_object, boost::asio::use_awaitable);
+                    LOG_DEBUG()
+                        << "sent response: " << s3_res_specific_object.base();
+                }
 
                 if (!received_request.keep_alive()) {
                     break;
@@ -134,7 +136,31 @@ class entrypoint_handler : public protocol_handler {
     }
 
     coro<http_response> handle_request(http_request& req) {
-        co_return co_await dispatch(req, put_object(get_entrypoint_state()));
+        return dispatch_unpack_tuple(
+            req, m_req_types,
+            std::make_index_sequence<
+                std::tuple_size_v<decltype(m_req_types)>>());
+    }
+
+    template <std::size_t... Is>
+    coro<http_response> dispatch_unpack_tuple(http_request& req,
+                                              auto&& req_types,
+                                              std::index_sequence<Is...>) {
+        return dispatch_front(req, std::get<Is>(req_types)...);
+    }
+
+    template <typename command, typename... commands>
+    coro<http_response> dispatch_front(http_request& req, command&& head,
+                                       commands&&... tail) {
+        if (head.can_handle(req)) {
+            return head.handle(req);
+        }
+
+        return dispatch_front(req, tail...);
+    }
+
+    coro<http_response> dispatch_front(const http_request& req) {
+        throw command_unknown_exception();
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
@@ -217,7 +243,7 @@ class entrypoint_handler : public protocol_handler {
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-                m_directory_services.get_clients(), m_ioc, *m_workers,
+                m_directory_services.get_clients(), m_ioc, m_workers,
                 std::bind_front(func, std::cref(bucket_id)));
         } catch (const error_exception& e) {
             LOG_ERROR() << "Failed to add the bucket " << bucket_id
@@ -248,7 +274,7 @@ class entrypoint_handler : public protocol_handler {
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-                m_directory_services.get_clients(), m_ioc, *m_workers,
+                m_directory_services.get_clients(), m_ioc, m_workers,
                 std::bind_front(func, std::cref(req)));
         } catch (const error_exception& e) {
             LOG_ERROR() << "Failed to delete bucket: " << e;
@@ -301,7 +327,7 @@ class entrypoint_handler : public protocol_handler {
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
+                    m_workers, m_ioc, m_directory_services.get(),
                     std::bind_front(func, std::ref(res),
                                     std::cref(req_bucket_id)));
 
@@ -342,7 +368,7 @@ class entrypoint_handler : public protocol_handler {
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
-                *m_workers, m_ioc, m_directory_services.get(),
+                m_workers, m_ioc, m_directory_services.get(),
                 std::bind_front(func, std::ref(res)));
 
         co_return std::move(res);
@@ -384,7 +410,7 @@ class entrypoint_handler : public protocol_handler {
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-                m_directory_services.get_clients(), m_ioc, *m_workers,
+                m_directory_services.get_clients(), m_ioc, m_workers,
                 std::bind_front(func, std::cref(dir_req)));
 
             auto effective_size = static_cast<double>(resp.effective_size) /
@@ -455,7 +481,7 @@ class entrypoint_handler : public protocol_handler {
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
+                    m_workers, m_ioc, m_directory_services.get(),
                     std::bind_front(func, std::ref(buffer), std::cref(req)));
 
             const auto stop = std::chrono::steady_clock::now();
@@ -535,7 +561,7 @@ class entrypoint_handler : public protocol_handler {
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
+                    m_workers, m_ioc, m_directory_services.get(),
                     std::bind_front(func, std::ref(res), std::cref(req)));
 
         } catch (const error_exception& e) {
@@ -585,7 +611,7 @@ class entrypoint_handler : public protocol_handler {
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
-                *m_workers, m_ioc, m_directory_services.get(),
+                m_workers, m_ioc, m_directory_services.get(),
                 std::bind_front(func, std::ref(res), std::cref(req)));
 
         co_return std::move(res);
@@ -601,7 +627,7 @@ class entrypoint_handler : public protocol_handler {
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
+                    m_workers, m_ioc, m_directory_services.get(),
                     [&res, &req](client::acquired_messenger m) -> coro<void> {
                         directory_message dir_req{
                             .bucket_id = req.get_URI().get_bucket_id()};
@@ -647,7 +673,7 @@ class entrypoint_handler : public protocol_handler {
             };
 
             co_await worker_utils::post_in_workers(
-                *m_workers, m_ioc,
+                m_workers, m_ioc,
                 std::bind_front(func, std::ref(state), std::cref(req),
                                 std::cref(resp)));
         }
@@ -681,7 +707,7 @@ class entrypoint_handler : public protocol_handler {
         };
 
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_directory_services.get_clients(), m_ioc, *m_workers,
+            m_directory_services.get_clients(), m_ioc, m_workers,
             std::bind_front(func_dir, std::cref(dir_req)));
 
         const auto size_mb = static_cast<double>(up_info->data_size) /
@@ -743,7 +769,7 @@ class entrypoint_handler : public protocol_handler {
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    *m_workers, m_ioc, m_directory_services.get(),
+                    m_workers, m_ioc, m_directory_services.get(),
                     std::bind_front(func, std::cref(req)));
 
         } catch (const error_exception& e) {
@@ -794,7 +820,7 @@ class entrypoint_handler : public protocol_handler {
             };
 
         co_await worker_utils::post_in_workers(
-            *m_workers, m_ioc,
+            m_workers, m_ioc,
             std::bind_front(func, std::ref(res), std::ref(state),
                             std::cref(req)));
 
@@ -829,7 +855,7 @@ class entrypoint_handler : public protocol_handler {
         };
 
         co_await worker_utils::post_in_workers(
-            *m_workers, m_ioc,
+            m_workers, m_ioc,
             std::bind_front(func, std::ref(req), std::ref(object_nodes_set)));
 
         auto bucket_id = req.get_URI().get_bucket_id();
@@ -857,7 +883,7 @@ class entrypoint_handler : public protocol_handler {
 
                 co_await worker_utils::
                     io_thread_acquire_messenger_and_post_in_io_threads(
-                        *m_workers, m_ioc, m_directory_services.get(),
+                        m_workers, m_ioc, m_directory_services.get(),
                         std::bind_front(func2, key, std::cref(bucket_id),
                                         std::ref(res)));
 
@@ -921,7 +947,7 @@ class entrypoint_handler : public protocol_handler {
         };
 
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            dedup_services, m_ioc, *m_workers,
+            dedup_services, m_ioc, m_workers,
             std::bind_front(func, part_size, std::cref(offset_pieces),
                             std::ref(responses)));
 
@@ -934,21 +960,25 @@ class entrypoint_handler : public protocol_handler {
         co_return resp;
     }
 
-    entrypoint_state get_entrypoint_state() {
-        return {
-            .ioc = m_ioc,
-            .workers = *m_workers,
-            .dedup_services = m_dedupe_services,
-            .directory_services = m_directory_services,
-        };
-    }
-
+    entrypoint_state& m_state;
     boost::asio::io_context& m_ioc;
-    std::shared_ptr<boost::asio::thread_pool> m_workers;
+    boost::asio::thread_pool& m_workers;
     const services<DEDUPLICATOR_SERVICE>& m_dedupe_services;
     const services<DIRECTORY_SERVICE>& m_directory_services;
-    rest::utils::server_state m_server_state;
+    std::tuple<RequestTypes...> m_req_types;
 };
+
+template <typename... RequestTypes>
+auto define_entrypoint_handler(entrypoint_state& state,
+                               RequestTypes&&... request_types) {
+    return std::make_unique<entrypoint_handler<RequestTypes...>>(
+        state, std::forward<RequestTypes...>(request_types...));
+}
+
+auto make_entrypoint_handler(entrypoint_state& state) {
+    return define_entrypoint_handler(state, put_object(state));
+}
+
 } // end namespace uh::cluster
 
 #endif // ENTRYPOINT_HANDLER_H
