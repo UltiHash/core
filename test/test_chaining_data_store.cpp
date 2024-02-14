@@ -4,10 +4,10 @@
 #define BOOST_TEST_MODULE "chaining_data_store tests"
 #endif
 
-#include <boost/test/unit_test.hpp>
 #include "common/utils/common.h"
 #include "common/utils/free_spot_manager.h"
 #include "directory/chaining_data_store.h"
+#include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------
 
@@ -15,98 +15,95 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-struct config_fixture
-{
-    static uh::cluster::chaining_data_store_config make_chaining_data_store_config () {
+struct config_fixture {
+    static uh::cluster::chaining_data_store_config
+    make_chaining_data_store_config() {
         return {
-                .directory = "root/dn",
-                .free_spot_log = "root/dn/log",
-                .min_file_size = 1024ul,
-                .max_file_size = 8ul * 1024ul,
-                .max_storage_size = 16 * 1024ul,
-                .max_chunk_size = 16 * 1024ul,
+            .directory = "root/dn",
+            .free_spot_log = "root/dn/log",
+            .min_file_size = 1024ul,
+            .max_file_size = 8ul * 1024ul,
+            .max_storage_size = 16 * 1024ul,
+            .max_chunk_size = 16 * 1024ul,
         };
     }
 
-    static void cleanup () {
-        std::filesystem::remove_all("root");
-    }
+    static void cleanup() { std::filesystem::remove_all("root"); }
 };
-
 
 // ---------------------------------------------------------------------
 
 void fill_random2(char* buf, size_t size) {
     for (size_t i = 0; i < size; ++i) {
-        buf[i] = rand()&0xff;
+        buf[i] = rand() & 0xff;
     }
 }
 
-BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
-{
+BOOST_FIXTURE_TEST_CASE(chaining_data_store_test, config_fixture) {
 
     cleanup();
 
-    char data1 [512];
-    char data2 [1024];
-    char data3 [164];
-    char data4 [1520];
-    char data5 [2572];
-    char data6 [3021];
-    char data7 [102];
-    char data8 [5021];
-    char data9 [2048];
-    char data10 [3202];
-    char data11 [2021];
+    char data1[512];
+    char data2[1024];
+    char data3[164];
+    char data4[1520];
+    char data5[2572];
+    char data6[3021];
+    char data7[102];
+    char data8[5021];
+    char data9[2048];
+    char data10[3202];
+    char data11[2021];
 
-    fill_random2 (data1, sizeof (data1));
-    fill_random2 (data2, sizeof (data2));
-    fill_random2 (data3, sizeof (data3));
-    fill_random2 (data4, sizeof (data4));
-    fill_random2 (data5, sizeof (data5));
-    fill_random2 (data6, sizeof (data6));
-    fill_random2 (data7, sizeof (data7));
-    fill_random2 (data8, sizeof (data8));
-    fill_random2 (data9, sizeof (data9));
-    fill_random2 (data10, sizeof (data10));
-    fill_random2 (data11, sizeof (data11));
+    fill_random2(data1, sizeof(data1));
+    fill_random2(data2, sizeof(data2));
+    fill_random2(data3, sizeof(data3));
+    fill_random2(data4, sizeof(data4));
+    fill_random2(data5, sizeof(data5));
+    fill_random2(data6, sizeof(data6));
+    fill_random2(data7, sizeof(data7));
+    fill_random2(data8, sizeof(data8));
+    fill_random2(data9, sizeof(data9));
+    fill_random2(data10, sizeof(data10));
+    fill_random2(data11, sizeof(data11));
 
-
-    char zero [8*1024];
+    char zero[8 * 1024];
     std::memset(zero, 0, sizeof(zero));
 
     uint64_t addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9;
 
-    size_t expected_size = sizeof (size_t);
+    size_t expected_size = sizeof(size_t);
     {
 
-        chaining_data_store ds (make_chaining_data_store_config());
+        chaining_data_store ds(make_chaining_data_store_config());
         addr1 = ds.write(data1);
-        expected_size += sizeof (data1) + sizeof (uint32_t);
+        expected_size += sizeof(data1) + sizeof(uint32_t);
         BOOST_CHECK(ds.get_used_space() == expected_size);
         addr2 = ds.write(data2);
-        expected_size += sizeof (data2) + sizeof (uint32_t);
+        expected_size += sizeof(data2) + sizeof(uint32_t);
         BOOST_CHECK(ds.get_used_space() == expected_size);
         addr3 = ds.write(data3);
-        expected_size += sizeof (data3) + sizeof (uint32_t);
+        expected_size += sizeof(data3) + sizeof(uint32_t);
         BOOST_CHECK(ds.get_used_space() == expected_size);
         addr4 = ds.write(data4);
-        expected_size += sizeof (data4) + sizeof (uint32_t);
+        expected_size += sizeof(data4) + sizeof(uint32_t);
         addr5 = ds.write(data5);
-        expected_size += sizeof (data5) + sizeof (uint32_t);
+        expected_size += sizeof(data5) + sizeof(uint32_t);
         BOOST_CHECK(ds.get_used_space() == expected_size);
         addr6 = ds.write(data6);
-        expected_size += sizeof (data6) + sizeof (std::size_t) + 2 * sizeof (uint32_t) + 2 * sizeof (uint64_t); // new file
+        expected_size += sizeof(data6) + sizeof(std::size_t) +
+                         2 * sizeof(uint32_t) +
+                         2 * sizeof(uint64_t); // new file
         BOOST_TEST(ds.get_used_space() == expected_size);
         addr7 = ds.write(data7);
-        expected_size += sizeof (data7) + sizeof (uint32_t);
+        expected_size += sizeof(data7) + sizeof(uint32_t);
         addr8 = ds.write(data8);
-        expected_size += sizeof (data8) + sizeof (uint32_t);
+        expected_size += sizeof(data8) + sizeof(uint32_t);
         addr9 = ds.write(data9);
-        expected_size += sizeof (data9) + sizeof (uint32_t);
+        expected_size += sizeof(data9) + sizeof(uint32_t);
         BOOST_TEST(ds.get_used_space() == expected_size);
 
-        BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
+        BOOST_CHECK_THROW(ds.write(data10), std::bad_alloc);
         BOOST_TEST(ds.get_used_space() == expected_size);
 
         const auto d1 = ds.read(addr1);
@@ -149,25 +146,26 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
 
         ds.remove(addr9);
         const auto dd9 = ds.read(addr9);
-        expected_size -= sizeof(data9) + sizeof (uint32_t);
-        BOOST_TEST(dd9.size() == sizeof (data9));
+        expected_size -= sizeof(data9) + sizeof(uint32_t);
+        BOOST_TEST(dd9.size() == sizeof(data9));
         BOOST_CHECK(std::memcmp(dd9.data(), zero, dd9.size()) == 0);
 
-        BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
+        BOOST_CHECK_THROW(ds.write(data10), std::bad_alloc);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         ds.remove(addr2);
         const auto dd2 = ds.read(addr2);
-        expected_size -= sizeof(data2) + sizeof (uint32_t);
-        BOOST_TEST(dd2.size() == sizeof (data2));
+        expected_size -= sizeof(data2) + sizeof(uint32_t);
+        BOOST_TEST(dd2.size() == sizeof(data2));
         BOOST_CHECK(std::memcmp(dd2.data(), zero, dd2.size()) == 0);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         const auto addr10 = ds.write(data10);
-        expected_size += sizeof (data10) + 3 * sizeof (uint32_t) + sizeof (size_t) + 2*sizeof(uint64_t);
-        BOOST_TEST (ds.get_used_space() == expected_size);
+        expected_size += sizeof(data10) + 3 * sizeof(uint32_t) +
+                         sizeof(size_t) + 2 * sizeof(uint64_t);
+        BOOST_TEST(ds.get_used_space() == expected_size);
 
-        BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
+        BOOST_CHECK_THROW(ds.write(data11), std::bad_alloc);
 
         const auto dd1 = ds.read(addr1);
         BOOST_TEST(dd1.size() == sizeof(data1));
@@ -204,11 +202,10 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         BOOST_TEST(ds.get_used_space() == expected_size);
 
         ds.sync();
-
     }
 
     {
-        chaining_data_store ds (make_chaining_data_store_config());
+        chaining_data_store ds(make_chaining_data_store_config());
         BOOST_TEST(ds.get_used_space() == expected_size);
         const auto d1 = ds.read(addr1);
         BOOST_TEST(d1.size() == sizeof(data1));
@@ -238,9 +235,7 @@ BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
         BOOST_TEST(d8.size() == sizeof(data8));
         BOOST_CHECK(std::memcmp(d8.data(), data8, d8.size()) == 0);
 
-
-        BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
-
+        BOOST_CHECK_THROW(ds.write(data11), std::bad_alloc);
     }
     cleanup();
 }

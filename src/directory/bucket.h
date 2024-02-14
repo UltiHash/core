@@ -2,129 +2,132 @@
 #define CORE_BUCKET_H
 
 #include "chaining_data_store.h"
+#include "common/utils/error.h"
 #include "transaction_log.h"
 #include <memory>
-#include <shared_mutex>
 #include <mutex>
-#include "common/utils/error.h"
+#include <shared_mutex>
 
-namespace uh::cluster{
+namespace uh::cluster {
 
 class bucket {
 
-public:
-    bucket (const std::filesystem::path& root, const std::string& bucket_name, const bucket_config& conf):
-        m_bucket_path (root/bucket_name),
-        m_data_store({
-            .directory = m_bucket_path/"ds",
-            .free_spot_log = m_bucket_path/"ds/free_spot_log",
-            .min_file_size = conf.min_file_size,
-            .max_file_size = conf.max_file_size,
-            .max_storage_size = conf.max_storage_size,
-            .max_chunk_size = conf.max_chunk_size,
-        }),
-        m_transaction_log(m_bucket_path/"transaction_log"),
-        m_object_ptrs (m_transaction_log.replay()) {
-    }
+  public:
+    bucket(const std::filesystem::path& root, const std::string& bucket_name,
+           const bucket_config& conf)
+        : m_bucket_path(root / bucket_name),
+          m_data_store({
+              .directory = m_bucket_path / "ds",
+              .free_spot_log = m_bucket_path / "ds/free_spot_log",
+              .min_file_size = conf.min_file_size,
+              .max_file_size = conf.max_file_size,
+              .max_storage_size = conf.max_storage_size,
+              .max_chunk_size = conf.max_chunk_size,
+          }),
+          m_transaction_log(m_bucket_path / "transaction_log"),
+          m_object_ptrs(m_transaction_log.replay()) {}
 
-    std::vector <std::string> list_keys (const std::string& lower_bound, const std::string& prefix) {
-        std::vector <std::string> keys;
-        keys.reserve (m_object_ptrs.size());
-        for (const auto& obj: m_object_ptrs) {
-            keys.emplace_back (obj.first);
+    std::vector<std::string> list_keys(const std::string& lower_bound,
+                                       const std::string& prefix) {
+        std::vector<std::string> keys;
+        keys.reserve(m_object_ptrs.size());
+        for (const auto& obj : m_object_ptrs) {
+            keys.emplace_back(obj.first);
         }
 
         std::vector<std::string> filtered_keys;
-        auto lower_bound_it = lower_bound.empty() ? keys.begin() : std::lower_bound(keys.begin(), keys.end(), lower_bound);
-        std::copy_if(lower_bound_it, keys.end(), std::back_inserter(filtered_keys),
+        auto lower_bound_it =
+            lower_bound.empty()
+                ? keys.begin()
+                : std::lower_bound(keys.begin(), keys.end(), lower_bound);
+        std::copy_if(lower_bound_it, keys.end(),
+                     std::back_inserter(filtered_keys),
                      [prefix](const std::string& key) {
                          return prefix.empty() || key.find(prefix) == 0;
-                     }
-        );
+                     });
 
         return filtered_keys;
     }
 
-    void insert_object (const std::string& key, std::span<char> data) {
-        std::unique_lock <std::shared_mutex> lock (m_mutex);
+    void insert_object(const std::string& key, std::span<char> data) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         const auto index = m_data_store.post_write(data);
-        m_transaction_log.append(key, index, transaction_log::operation::INSERT_START);
+        m_transaction_log.append(key, index,
+                                 transaction_log::operation::INSERT_START);
 
-        //TODO: handle rollback in case something goes up in smoke during the transaction
+        // TODO: handle rollback in case something goes up in smoke during the
+        // transaction
         m_data_store.apply_write();
         m_object_ptrs[key] = index;
         lock.unlock();
 
-        m_transaction_log.append(key, index, transaction_log::operation::INSERT_END);
+        m_transaction_log.append(key, index,
+                                 transaction_log::operation::INSERT_END);
     }
 
     unique_buffer<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});
+            throw error_exception(
+                {error::object_not_found, "Attempt to get object '" + key +
+                                              "' failed: no such object."});
         }
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
     }
 
-    void delete_object (const std::string& key) {
-        std::unique_lock <std::shared_mutex> lock(m_mutex);
-        if (m_object_ptrs.contains(key)) [[unlikely]]
-        {
+    void delete_object(const std::string& key) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        if (m_object_ptrs.contains(key)) [[unlikely]] {
             const auto index = m_object_ptrs.at(key);
-            m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
+            m_transaction_log.append(key, index,
+                                     transaction_log::operation::REMOVE_START);
 
             m_object_ptrs.erase(key);
             m_data_store.remove(index);
-            m_transaction_log.append(key, index, transaction_log::operation::REMOVE_END);
+            m_transaction_log.append(key, index,
+                                     transaction_log::operation::REMOVE_END);
         }
         lock.unlock();
-
     }
 
-    void update_object (const std::string &key, std::span<char> data) {
-        std::unique_lock <std::shared_mutex> lock(m_mutex);
+    void update_object(const std::string& key, std::span<char> data) {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
         const auto index = m_data_store.post_write(data);
-        m_transaction_log.append(key, index, transaction_log::operation::UPDATE_START);
+        m_transaction_log.append(key, index,
+                                 transaction_log::operation::UPDATE_START);
 
-        //TODO: handle rollback in case something goes up in smoke during the transaction
+        // TODO: handle rollback in case something goes up in smoke during the
+        // transaction
         m_data_store.apply_write();
         const auto old_index = m_object_ptrs.at(key);
         m_data_store.remove(old_index);
         m_object_ptrs[key] = index;
         lock.unlock();
 
-        m_transaction_log.append(key, index, transaction_log::operation::UPDATE_END);
+        m_transaction_log.append(key, index,
+                                 transaction_log::operation::UPDATE_END);
     }
 
-    bool contains_object (const std::string &key) const {
+    bool contains_object(const std::string& key) const {
         return m_object_ptrs.contains(key);
     }
 
-    bool is_empty () const {
-        return m_object_ptrs.empty();
-    }
+    bool is_empty() const { return m_object_ptrs.empty(); }
 
-    size_t get_used_space () const {
-        return m_data_store.get_used_space();
-    }
+    size_t get_used_space() const { return m_data_store.get_used_space(); }
 
-    void destroy_bucket () {
-        std::filesystem::remove_all(m_bucket_path);
-    }
+    void destroy_bucket() { std::filesystem::remove_all(m_bucket_path); }
 
-private:
+  private:
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::map<std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
-    //ACLs, other meta-data
-
-
-
+    // ACLs, other meta-data
 };
 
-}
+} // namespace uh::cluster
 
-#endif //CORE_BUCKET_H
+#endif // CORE_BUCKET_H

@@ -2,9 +2,8 @@
 
 #include <iostream>
 
-namespace uh::cluster::rest::utils::generator
-{
+namespace uh::cluster::rest::utils::generator {
 
-    std::string generate_unique_id();
+std::string generate_unique_id();
 
-} // uh::cluster::rest::utils::generator
+} // namespace uh::cluster::rest::utils::generator

@@ -2,25 +2,23 @@
 #define CORE_BIG_INT_H
 
 #include <cstdint>
-#include <string>
-#include <numeric>
 #include <functional>
+#include <numeric>
+#include <string>
 
 namespace uh::cluster {
 
 class big_int {
-    uint64_t num[2];  // 0 = high, 1 = low
-public:
-    constexpr big_int () noexcept: num {0,0} {
-    }
+    uint64_t num[2]; // 0 = high, 1 = low
+  public:
+    constexpr big_int() noexcept : num{0, 0} {}
 
-    constexpr big_int (unsigned long number) noexcept: num {0, number} {
-    }
+    constexpr big_int(unsigned long number) noexcept : num{0, number} {}
 
-    constexpr big_int (unsigned long nh, unsigned long nl) noexcept: num {nh, nl} {
-    }
+    constexpr big_int(unsigned long nh, unsigned long nl) noexcept
+        : num{nh, nl} {}
 
-    explicit big_int (const std::string& num_str): big_int () {
+    explicit big_int(const std::string& num_str) : big_int() {
         const auto index = num_str.find('_') + 1;
         const auto num0_str = num_str.substr(0, index - 1);
         const auto num1_str = num_str.substr(index, num_str.size());
@@ -28,76 +26,81 @@ public:
         num[1] = std::stoul(num1_str);
     }
 
-    constexpr inline big_int& operator += (const big_int& other) noexcept {
+    constexpr inline big_int& operator+=(const big_int& other) noexcept {
         num[0] += other.num[0];
         num[1] += other.num[1];
         return *this;
     }
 
-    constexpr inline bool operator < (const big_int& other) const noexcept {
-        return num[0] < other.num[0] or ((num[0] == other.num[0]) and (num[1] < other.num[1]));
+    constexpr inline bool operator<(const big_int& other) const noexcept {
+        return num[0] < other.num[0] or
+               ((num[0] == other.num[0]) and (num[1] < other.num[1]));
     }
 
-    constexpr inline bool operator > (const big_int& other) const noexcept {
-        return num[0] > other.num[0] or ((num[0] == other.num[0]) and (num[1] > other.num[1]));
+    constexpr inline bool operator>(const big_int& other) const noexcept {
+        return num[0] > other.num[0] or
+               ((num[0] == other.num[0]) and (num[1] > other.num[1]));
     }
 
-    constexpr inline bool operator == (const big_int& other) const noexcept {
+    constexpr inline bool operator==(const big_int& other) const noexcept {
         return num[1] == other.num[1] and num[0] == other.num[0];
     }
 
-    constexpr inline big_int operator+ (const big_int& other) const noexcept {
-        big_int res {num[0] + other.num[0], num[1] + other.num[1]};
+    constexpr inline big_int operator+(const big_int& other) const noexcept {
+        big_int res{num[0] + other.num[0], num[1] + other.num[1]};
         const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
         if (other.num[1] > max_no_overflow) [[unlikely]] {
             res.num[1] = other.num[1] - max_no_overflow;
-            res.num[0] ++;
+            res.num[0]++;
         }
         return res;
     }
 
-    constexpr inline big_int operator- (const big_int& other) const noexcept {
-        big_int res {num[0] - other.num[0], num[1] - other.num[1]};
+    constexpr inline big_int operator-(const big_int& other) const noexcept {
+        big_int res{num[0] - other.num[0], num[1] - other.num[1]};
 
         if (other.num[1] > num[1]) [[unlikely]] {
             res.num[1] = UNSIGNED_MAX_8 - other.num[1] + num[1];
-            res.num[0] --;
+            res.num[0]--;
         }
         return res;
     }
 
-    constexpr inline bool operator < (const unsigned long other) const noexcept {
+    constexpr inline bool operator<(const unsigned long other) const noexcept {
         return num[0] == 0 and num[1] < other;
     }
 
-    constexpr inline bool operator > (const unsigned long other) const noexcept {
+    constexpr inline bool operator>(const unsigned long other) const noexcept {
         return num[0] == 0 and num[1] > other;
     }
 
-    constexpr inline bool operator == (const unsigned long other) const noexcept {
+    constexpr inline bool operator==(const unsigned long other) const noexcept {
         return num[0] == 0 and num[1] == other;
     }
-    constexpr inline big_int operator+ (const unsigned long other) const noexcept {
-        big_int res {num[0], num[1] + other};
+    constexpr inline big_int
+    operator+(const unsigned long other) const noexcept {
+        big_int res{num[0], num[1] + other};
         const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
         if (other > max_no_overflow) [[unlikely]] {
             res.num[1] = other - max_no_overflow;
-            res.num[0] ++;
+            res.num[0]++;
         }
         return res;
     }
 
-    constexpr inline big_int operator- (const unsigned long other) const noexcept {
-        big_int res {num[0], num[1] - other};
+    constexpr inline big_int
+    operator-(const unsigned long other) const noexcept {
+        big_int res{num[0], num[1] - other};
         const auto max_no_underflow = UNSIGNED_MAX_8 - num[1];
         if (other > max_no_underflow) [[unlikely]] {
             res.num[1] = UNSIGNED_MAX_8 - other + max_no_underflow;
-            res.num[0] --;
+            res.num[0]--;
         }
         return res;
     }
 
-    constexpr inline big_int operator* (const unsigned long other) const noexcept {
+    constexpr inline big_int
+    operator*(const unsigned long other) const noexcept {
         const unsigned long sub_num11 = num[1] & UNSIGNED_MAX_4;
         const unsigned long sub_num10 = num[1] >> 32;
         const unsigned long sub_num01 = num[0] & UNSIGNED_MAX_4;
@@ -126,64 +129,60 @@ public:
 
         if (const auto max_no_overflow = UNSIGNED_MAX_8 - res0;
             max_no_overflow < lshifted_res32) [[unlikely]] {
-            num0 ++;
+            num0++;
         }
 
         if (const auto max_no_overflow = UNSIGNED_MAX_8 - mul110;
-                max_no_overflow < mul011) [[unlikely]] {
+            max_no_overflow < mul011) [[unlikely]] {
             num0 += (1ul << 32);
         }
 
         return {num0, num1};
     }
 
-    constexpr inline big_int& operator+= (const unsigned long other) noexcept {
+    constexpr inline big_int& operator+=(const unsigned long other) noexcept {
         const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
         if (other > max_no_overflow) [[unlikely]] {
             num[1] = other - max_no_overflow;
-            num[0] ++;
-        }
-        else {
+            num[0]++;
+        } else {
             num[1] += other;
         }
         return *this;
     }
 
-    [[nodiscard]] inline std::string to_string () const {
+    [[nodiscard]] inline std::string to_string() const {
         return std::to_string(num[0]) + "_" + std::to_string(num[1]);
     }
 
-    [[nodiscard]] constexpr inline uint64_t get_high () const noexcept {
+    [[nodiscard]] constexpr inline uint64_t get_high() const noexcept {
         return num[0];
     }
 
-    [[nodiscard]] constexpr inline uint64_t get_low () const noexcept {
+    [[nodiscard]] constexpr inline uint64_t get_low() const noexcept {
         return num[1];
     }
 
-    [[nodiscard]] constexpr inline const auto& get_data () const noexcept {
+    [[nodiscard]] constexpr inline const auto& get_data() const noexcept {
         return num;
     }
 
-    constexpr inline auto& ref_data () noexcept {
-        return num;
-    }
+    constexpr inline auto& ref_data() noexcept { return num; }
 
-    constexpr static auto UNSIGNED_MAX_8 = std::numeric_limits <unsigned long>::max();
-    constexpr static auto UNSIGNED_MAX_4 = std::numeric_limits <uint32_t>::max();
-
+    constexpr static auto UNSIGNED_MAX_8 =
+        std::numeric_limits<unsigned long>::max();
+    constexpr static auto UNSIGNED_MAX_4 = std::numeric_limits<uint32_t>::max();
 };
 
 typedef big_int uint128_t;
 
 } // end namespace uh::cluster
 
-template <>
-struct std::hash <uh::cluster::big_int> {
-    std::size_t operator()(const uh::cluster::big_int &num) const {
-        const auto hash_func = std::hash <uint64_t> ();
-        return hash_func (num.get_data()[0] + num.get_data()[1]);
+template <> struct std::hash<uh::cluster::big_int> {
+    std::size_t operator()(const uh::cluster::big_int& num) const {
+        const auto hash_func = std::hash<uint64_t>();
+        return hash_func(num.get_data()[0] + num.get_data()[1]);
     }
 };
 
-#endif //CORE_BIG_INT_H
+#endif // CORE_BIG_INT_H
