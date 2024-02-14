@@ -4,6 +4,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
 #include "common/utils/log.h"
+#include "common/utils/time_utils.h"
 #include "etcd/SyncClient.hpp"
 #include "namespace.h"
 #include <fstream>
@@ -218,7 +219,9 @@ class config_registry {
 
         std::string current_id_key =
             etcd_current_id_prefix_key + get_service_string(m_service_role);
-        registry_lock lock(m_etcd_client);
+        const auto lock =
+            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
+                             [this]() { return registry_lock(m_etcd_client); });
 
         if (!key_exists(current_id_key)) {
             set(current_id_key, std::to_string(0));
@@ -236,9 +239,11 @@ class config_registry {
 
     void init_default_config_values() {
         // these are only default settings
-        // TODO: check if config file is available and use values from there if
-        // available
-        registry_lock lock(m_etcd_client);
+
+        const auto lock =
+            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
+                             [this]() { return registry_lock(m_etcd_client); });
+
         if (!key_exists(etcd_initialized_key)) {
             set_class_config_value(uh::cluster::STORAGE_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 9200);
@@ -346,7 +351,7 @@ class config_registry {
                 uh::cluster::ENTRYPOINT_SERVICE,
                 uh::cluster::CFG_ENTRYPOINT_WORKER_THREAD_COUNT, 12ul);
 
-            m_etcd_client.set(etcd_initialized_key, "1");
+            set(etcd_initialized_key, "1");
         }
     }
 
@@ -399,17 +404,9 @@ class config_registry {
     }
 
     std::string get(const std::string& key) {
-        etcd::Response response;
-
-        try {
-            response = m_etcd_client.get(key);
-        } catch (std::exception const& ex) {
-            throw std::system_error(
-                EIO, std::generic_category(),
-                "retrieval of configuration parameter " + key +
-                    " failed due to communication problem, details: " +
-                    ex.what());
-        }
+        const auto response =
+            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
+                             [this, &key]() { return m_etcd_client.get(key); });
 
         if (response.is_ok())
             return response.value().as_string();
@@ -420,21 +417,15 @@ class config_registry {
     }
 
     std::string set(const std::string& key, const std::string& value) {
-        auto response = m_etcd_client.set(key, value);
-        try {
-            if (response.is_ok())
-                return response.value().as_string();
-            else
-                throw std::invalid_argument(
-                    "setting the configuration parameter " + key +
-                    " failed, details: " + response.error_message());
-        } catch (std::exception const& ex) {
-            throw std::system_error(
-                EIO, std::generic_category(),
+        const auto response = wait_for_success(
+            ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
+            [this, &key, &value]() { return m_etcd_client.set(key, value); });
+        if (response.is_ok())
+            return response.value().as_string();
+        else
+            throw std::invalid_argument(
                 "setting the configuration parameter " + key +
-                    " failed due to communication problem, details: " +
-                    ex.what());
-        }
+                " failed, details: " + response.error_message());
     }
 };
 
