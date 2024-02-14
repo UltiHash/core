@@ -212,8 +212,8 @@ class entrypoint_handler : public protocol_handler {
                                      client::acquired_messenger m,
                                      long id) -> coro<void> {
                 directory_message dir_req{.bucket_id = bucket_id};
-                co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_BUCKET_PUT_REQ, dir_req);
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
@@ -243,8 +243,8 @@ class entrypoint_handler : public protocol_handler {
                            long id) -> coro<void> {
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
-                co_await m.get().send_directory_message(DIR_DELETE_BUCKET_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_BUCKET_DELETE_REQ, dir_req);
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
@@ -283,7 +283,7 @@ class entrypoint_handler : public protocol_handler {
                 [](std::unique_ptr<rest::http::model::get_bucket_response>& res,
                    const std::string& req_bucket_id,
                    client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
+                co_await m.get().send(DIRECTORY_BUCKET_LIST_REQ, {});
                 const auto h = co_await m.get().recv_header();
                 const auto list_buckets_res =
                     co_await m.get().recv_directory_list_entities_message(h);
@@ -331,7 +331,7 @@ class entrypoint_handler : public protocol_handler {
         auto func =
             [](std::unique_ptr<rest::http::model::list_buckets_response>& res,
                client::acquired_messenger m) -> coro<void> {
-            co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
+            co_await m.get().send(DIRECTORY_BUCKET_LIST_REQ, {});
             const auto h = co_await m.get().recv_header();
             auto list_buckets_res =
                 co_await m.get().recv_directory_list_entities_message(h);
@@ -379,8 +379,8 @@ class entrypoint_handler : public protocol_handler {
             auto func = [](const directory_message& dir_req,
                            client::acquired_messenger m,
                            long id) -> coro<void> {
-                co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_PUT_REQ, dir_req);
                 co_await m.get().recv_header();
             };
             co_await worker_utils::broadcast_from_io_thread_in_io_threads(
@@ -444,8 +444,8 @@ class entrypoint_handler : public protocol_handler {
                 dir_req.object_key = std::make_unique<std::string>(
                     req.get_URI().get_object_key());
 
-                co_await m.get().send_directory_message(DIR_GET_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_GET_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 buffer.resize(h_dir.size);
@@ -517,8 +517,8 @@ class entrypoint_handler : public protocol_handler {
                 directory_message dir_req;
                 dir_req.bucket_id = req.get_URI().get_bucket_id();
 
-                co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_LIST_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 unique_buffer<char> buffer(h_dir.size);
@@ -568,7 +568,8 @@ class entrypoint_handler : public protocol_handler {
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
 
-            co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
+                                                    dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
             unique_buffer<char> buffer(h_dir.size);
@@ -607,7 +608,7 @@ class entrypoint_handler : public protocol_handler {
                             .bucket_id = req.get_URI().get_bucket_id()};
 
                         co_await m.get().send_directory_message(
-                            DIR_BUCKET_EXISTS, dir_req);
+                            DIRECTORY_BUCKET_EXISTS, dir_req);
                         co_await m.get().recv_header();
 
                         res->set_upload_id(req.get_eTag());
@@ -676,7 +677,8 @@ class entrypoint_handler : public protocol_handler {
         auto func_dir = [](const directory_message& dir_req,
                            client::acquired_messenger m,
                            long id) -> coro<void> {
-            co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
+                                                    dir_req);
             co_await m.get().recv_header();
         };
 
@@ -736,8 +738,8 @@ class entrypoint_handler : public protocol_handler {
                     .bucket_id = req.get_URI().get_bucket_id(),
                     .object_key = std::make_unique<std::string>(
                         req.get_URI().get_object_key())};
-                co_await m.get().send_directory_message(DIR_DELETE_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_DELETE_REQ, dir_req);
                 co_await m.get().recv_header();
             };
 
@@ -847,8 +849,8 @@ class entrypoint_handler : public protocol_handler {
                     dir_req.bucket_id = bucket_id;
                     dir_req.object_key = std::make_unique<std::string>(key);
 
-                    co_await m.get().send_directory_message(DIR_DELETE_OBJ_REQ,
-                                                            dir_req);
+                    co_await m.get().send_directory_message(
+                        DIRECTORY_OBJECT_DELETE_REQ, dir_req);
 
                     co_await m.get().recv_header();
 
@@ -915,7 +917,7 @@ class entrypoint_handler : public protocol_handler {
                 }
             }
 
-            co_await m.get().send_buffers(DEDUPE_REQ);
+            co_await m.get().send_buffers(DEDUPLICATOR_REQ);
             const auto h_dedup = co_await m.get().recv_header();
             responses[i] = co_await m.get().recv_dedupe_response(h_dedup);
         };

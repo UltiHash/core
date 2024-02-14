@@ -1,6 +1,4 @@
 #include "put_object.h"
-#include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 
 namespace uh::cluster {
 
@@ -45,7 +43,8 @@ coro<http_response> put_object::handle(http_request& req) const {
 
         auto func = [](const directory_message& dir_req,
                        client::acquired_messenger m, long id) -> coro<void> {
-            co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
+                                                    dir_req);
             co_await m.get().recv_header();
         };
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(

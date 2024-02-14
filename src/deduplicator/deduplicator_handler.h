@@ -40,7 +40,7 @@ class deduplicator_handler : public protocol_handler {
             try {
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
-                case DEDUPE_REQ:
+                case DEDUPLICATOR_REQ:
 
                     co_await handle_dedupe(m, message_header);
                     break;
@@ -105,7 +105,7 @@ class deduplicator_handler : public protocol_handler {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
-        co_await m.send_dedupe_response(DEDUPE_RESP, responses[0]);
+        co_await m.send_dedupe_response(DEDUPLICATOR_RESP, responses[0]);
     }
 
     dedupe_response deduplicate(std::string_view data) {

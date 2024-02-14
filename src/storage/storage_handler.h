@@ -24,22 +24,22 @@ class storage_handler : public protocol_handler {
                 const auto message_header = co_await m.recv_header();
 
                 switch (message_header.type) {
-                case WRITE_REQ:
+                case STORAGE_WRITE_REQ:
                     co_await handle_write(m, message_header);
                     break;
-                case READ_REQ:
-                    co_await handle_read(m, message_header);
+                case STORAGE_READ_FRAGMENT_REQ:
+                    co_await handle_read_fragment(m, message_header);
                     break;
-                case READ_ADDRESS_REQ:
+                case STORAGE_READ_ADDRESS_REQ:
                     co_await handle_read_address(m, message_header);
                     break;
-                case REMOVE_REQ:
-                    co_await handle_remove(m, message_header);
+                case STORAGE_REMOVE_FRAGMENT_REQ:
+                    co_await handle_remove_fragment(m, message_header);
                     break;
-                case SYNC_REQ:
+                case STORAGE_SYNC_REQ:
                     co_await handle_sync(m, message_header);
                     break;
-                case USED_REQ:
+                case STORAGE_USED_REQ:
                     co_await handle_get_used(m, message_header);
                     break;
                 default:
@@ -63,15 +63,15 @@ class storage_handler : public protocol_handler {
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
-        co_await m.send_address(WRITE_RESP, addr);
+        co_await m.send_address(STORAGE_WRITE_RESP, addr);
     }
 
-    coro<void> handle_read(messenger& m, const messenger::header& h) {
+    coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         unique_buffer<char> buffer(resp.size);
         const auto size =
             m_data_store.read(buffer.data(), resp.pointer, resp.size);
-        co_await m.send(READ_RESP, {buffer.data(), size});
+        co_await m.send(STORAGE_READ_FRAGMENT_RESP, {buffer.data(), size});
     }
 
     coro<void> handle_read_address(messenger& m, const messenger::header& h) {
@@ -91,24 +91,24 @@ class storage_handler : public protocol_handler {
             }
             offset += frag.size;
         }
-        co_await m.send(READ_ADDRESS_RESP, {buffer.data(), offset});
+        co_await m.send(STORAGE_READ_ADDRESS_RESP, {buffer.data(), offset});
     }
 
-    coro<void> handle_remove(messenger& m, const messenger::header& h) {
+    coro<void> handle_remove_fragment(messenger& m,
+                                      const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         m_data_store.remove(resp.pointer, resp.size);
-        co_await m.send(REMOVE_OK, {});
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
-        co_await m.recv_address(h);
         m_data_store.sync();
-        co_await m.send(SYNC_OK, {});
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
         const auto used = m_data_store.get_used_space();
-        co_await m.send_uint128_t(USED_RESP, used);
+        co_await m.send_uint128_t(STORAGE_USED_RESP, used);
     }
 
     uh::cluster::data_store m_data_store;

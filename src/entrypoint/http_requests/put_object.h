@@ -1,9 +1,13 @@
 #ifndef ENTRYPOINT_HTTP_PUT_OBJECT_H
 #define ENTRYPOINT_HTTP_PUT_OBJECT_H
 
+#include "common/utils/common.h"
+#include "common/utils/worker_utils.h"
 #include "entrypoint/common.h"
+#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "http_request.h"
 #include "http_response.h"
+
 #include <utility>
 
 namespace uh::cluster {
