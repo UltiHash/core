@@ -4,6 +4,7 @@
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 
+#include "common/utils/log.h"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/ip/tcp.hpp>

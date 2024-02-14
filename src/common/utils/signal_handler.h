@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_SIGNAL_HANDLER_H
 #define UH_CLUSTER_SIGNAL_HANDLER_H
 
+#include <boost/asio.hpp>
 #include <csignal>
 #include <functional>
 #include <vector>
