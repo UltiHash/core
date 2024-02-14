@@ -60,7 +60,7 @@ coro<http_response> get_object::handle(const http_request& req) const {
         res.set_body(std::move(buffer));
         res.set_bandwidth(bandwidth);
 
-        co_return std::move(res);
+        co_return res;
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
