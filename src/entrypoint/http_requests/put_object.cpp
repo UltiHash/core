@@ -4,7 +4,7 @@
 
 namespace uh::cluster {
 
-put_object::put_object(entrypoint_state&& entry_state) : m_state(entry_state) {}
+put_object::put_object(entrypoint_state& entry_state) : m_state(entry_state) {}
 
 bool put_object::can_handle(const http_request& req) {
     if (req.get_method() == method::put) {
