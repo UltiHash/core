@@ -1,7 +1,3 @@
-//
-// Created by massi on 11/27/23.
-//
-
 #include <cmath>
 #include <filesystem>
 #include <fstream>
