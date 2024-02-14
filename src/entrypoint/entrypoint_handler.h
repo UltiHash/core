@@ -608,7 +608,7 @@ class entrypoint_handler : public protocol_handler {
                             .bucket_id = req.get_URI().get_bucket_id()};
 
                         co_await m.get().send_directory_message(
-                            DIRECTORY_BUCKET_EXISTS, dir_req);
+                            DIRECTORY_BUCKET_EXISTS_REQ, dir_req);
                         co_await m.get().recv_header();
 
                         res->set_upload_id(req.get_eTag());

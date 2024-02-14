@@ -1,4 +1,5 @@
 #include "common/utils/cluster_config.h"
+#include "common/utils/common.h"
 #include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
 #include "deduplicator/deduplicator.h"
@@ -6,7 +7,6 @@
 #include "entrypoint/entrypoint.h"
 #include "storage/storage.h"
 #include <CLI/CLI.hpp>
-#include <common/utils/common.h>
 #include <config.h>
 #include <system_error>
 

@@ -28,7 +28,8 @@ class storage : public service_interface {
                    m_service_registry.get_service_name(),
                    std::make_unique<storage_handler>(
                        m_config_registry.get_storage_config(),
-                       m_config_registry.get_service_id()),
+                       m_config_registry.get_service_id(),
+                       std::make_shared<metrics>(uh::cluster::STORAGE_SERVICE)),
                    m_ioc) {}
 
     void run() override {
