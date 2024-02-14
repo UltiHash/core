@@ -6,11 +6,6 @@ add_subdirectory(etcd-cpp-apiv3)
 
 add_subdirectory(CLI11)
 
-option(WITH_OTLP_GRPC ON)
-option(WITH_JAEGER OFF)
-option(BUILD_TESTING OFF)
-add_subdirectory(opentelemetry-cpp)
-
 add_library(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits)
 
