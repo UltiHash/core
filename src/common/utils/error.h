@@ -1,16 +1,16 @@
 #ifndef CORE_COMMON_ERROR_H
 #define CORE_COMMON_ERROR_H
 
+#include <cstdint>
 #include <exception>
 #include <iosfwd>
 #include <string>
 #include <utility>
-#include <cstdint>
 
 namespace uh::cluster {
 
 class error {
-public:
+  public:
     enum type {
         success = 0,
         unknown = 1,
@@ -28,24 +28,21 @@ public:
 
     static type from_code(uint32_t code);
 
-private:
+  private:
     type m_type;
     std::string m_message;
 };
 
 class error_exception : public std::exception {
-public:
+  public:
     error_exception(uh::cluster::error e = uh::cluster::error())
-        : m_error(std::move(e)) {
-    }
+        : m_error(std::move(e)) {}
 
     const char* what() const noexcept override;
 
-    const uh::cluster::error& error() const {
-        return m_error;
-    }
+    const uh::cluster::error& error() const { return m_error; }
 
-private:
+  private:
     uh::cluster::error m_error;
 };
 

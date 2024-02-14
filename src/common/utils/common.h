@@ -1,13 +1,13 @@
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
+#include "common/types/common_types.h"
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include "common/types/common_types.h"
 
 namespace uh::cluster {
 
-enum message_type: uint8_t {
+enum message_type : uint8_t {
     READ_REQ = 10,
     READ_RESP = 11,
     WRITE_REQ = 12,
@@ -38,14 +38,14 @@ enum message_type: uint8_t {
     DIR_BUCKET_EXISTS = 46,
 };
 
-enum role: uint8_t {
+enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
 };
 
-enum config_parameter  {
+enum config_parameter {
     CFG_SERVER_THREADS,
     CFG_SERVER_BIND_ADDR,
     CFG_SERVER_PORT,
@@ -82,22 +82,21 @@ enum config_parameter  {
 };
 
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-        {"storage", uh::cluster::STORAGE_SERVICE},
-        {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-        {"directory", uh::cluster::DIRECTORY_SERVICE},
-        {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}
-};
+    {"storage", uh::cluster::STORAGE_SERVICE},
+    {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
+    {"directory", uh::cluster::DIRECTORY_SERVICE},
+    {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 
-uh::cluster::role get_service_role (const std::string& service_role_str);
+uh::cluster::role get_service_role(const std::string& service_role_str);
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
 
-const std::string& get_config_string (const uh::cluster::config_parameter& cfg_param);
+const std::string&
+get_config_string(const uh::cluster::config_parameter& cfg_param);
 
 } // end namespace uh::cluster
 
-
-#endif //CORE_COMMON_H
+#endif // CORE_COMMON_H

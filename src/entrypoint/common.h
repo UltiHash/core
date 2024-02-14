@@ -7,24 +7,24 @@
 
 namespace uh::cluster {
 
-    struct entrypoint_state {
-        boost::asio::io_context& ioc;
-        boost::asio::thread_pool& workers; // can change to reference
-        const services<DEDUPLICATOR_SERVICE>& dedup_services;
-        const services<DIRECTORY_SERVICE>& directory_services;
-    };
+struct entrypoint_state {
+    boost::asio::io_context& ioc;
+    boost::asio::thread_pool& workers; // can change to reference
+    const services<DEDUPLICATOR_SERVICE>& dedup_services;
+    const services<DIRECTORY_SERVICE>& directory_services;
+};
 
-    struct integration{
-        static coro <dedupe_response> integrate_data (const std::list <std::string_view>& data_pieces,
-                                                      const entrypoint_state& state);
-
-    };
+struct integration {
+    static coro<dedupe_response>
+    integrate_data(const std::list<std::string_view>& data_pieces,
+                   const entrypoint_state& state);
+};
 
 class command_unknown_exception : public std::exception {
-public:
+  public:
     const char* what() const noexcept override;
 };
 
-} // uh::cluster::entry
+} // namespace uh::cluster
 
 #endif

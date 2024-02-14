@@ -3,21 +3,18 @@
 
 #include <filesystem>
 
-
-namespace uh::cluster
-{
+namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-class temp_directory
-{
-public:
+class temp_directory {
+  public:
     temp_directory();
     ~temp_directory();
 
     const std::filesystem::path& path() const;
 
-private:
+  private:
     std::filesystem::path m_path;
 };
 
