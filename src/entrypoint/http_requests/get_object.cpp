@@ -10,9 +10,9 @@ get_object::get_object(const entrypoint_state& entry_state)
 bool get_object::can_handle(const http_request& req) {
 
     if (req.get_method() == method::get) {
-        const auto& uri = req.get_URI();
 
-        if (!uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
+        if (const auto& uri = req.get_URI();
+            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
             !uri.query_string_exists("attributes")) {
             return true;
         }

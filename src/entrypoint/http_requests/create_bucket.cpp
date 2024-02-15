@@ -10,9 +10,9 @@ create_bucket::create_bucket(const uh::cluster::entrypoint_state& entry_state)
 bool create_bucket::can_handle(const http_request& req) {
 
     if (req.get_method() == method::put) {
-        const auto& uri = req.get_URI();
 
-        if (!uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
+        if (const auto& uri = req.get_URI();
+            !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
             uri.get_query_parameters().empty()) {
             return true;
         }
