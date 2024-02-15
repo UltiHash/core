@@ -15,7 +15,6 @@ using namespace uh::cluster;
 
 struct config {
     uh::cluster::role role;
-    std::size_t id;
     std::string etcd_url;
     std::filesystem::path working_dir;
     boost::log::trivial::severity_level log_level;
