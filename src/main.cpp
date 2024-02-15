@@ -26,14 +26,13 @@ void execute_role(cluster::role role, const service_config& cfg) {
     try {
         switch (role) {
         case STORAGE_SERVICE:
-            return start_service(storage(cfg.etcd_url, cfg.working_dir));
+            return start_service(storage(cfg));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(cfg.etcd_url, cfg.working_dir));
+            return start_service(deduplicator(cfg));
         case DIRECTORY_SERVICE:
-            return start_service(
-                directory(cfg.etcd_url, cfg.working_dir, cfg.license));
+            return start_service(directory(cfg));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
+            return start_service(entrypoint(cfg));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
