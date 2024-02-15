@@ -14,7 +14,7 @@ directory_config update_config(directory_config conf, const license& license) {
     return conf;
 }
 
-class directory : public service_interface {
+class directory {
   public:
     explicit directory(const std::string& registry_url,
                        const std::filesystem::path& working_dir,
@@ -41,13 +41,13 @@ class directory : public service_interface {
                                                        m_directory_workers),
                    m_ioc) {}
 
-    void run() override {
+    void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
-    void stop() override {
+    void stop() {
         m_server.stop();
         m_directory_workers->join();
         m_directory_workers->stop();
