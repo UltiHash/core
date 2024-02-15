@@ -20,7 +20,6 @@
 #include "entrypoint/rest/http/models/list_buckets_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
-#include "entrypoint/rest/http/models/list_objectsv2_response.h"
 #include "entrypoint/rest/http/models/multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/put_object_response.h"
 #include "entrypoint/rest/utils/parser/s3_parser.h"
@@ -194,9 +193,6 @@ class entrypoint_handler : public protocol_handler {
             break;
         case rest::http::http_request_type::DELETE_OBJECT:
             res = co_await handle_delete_object(req);
-            break;
-        case rest::http::http_request_type::LIST_OBJECTS_V2:
-            res = co_await handle_list_objects_v2(req);
             break;
         case rest::http::http_request_type::LIST_OBJECTS:
             res = co_await handle_list_objects(req);
@@ -525,60 +521,6 @@ class entrypoint_handler : public protocol_handler {
             boost::beast::http::status::not_implemented);
 
         return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_list_objects_v2(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::list_objectsv2_response> res;
-
-        try {
-
-            auto func =
-                [](std::unique_ptr<rest::http::model::list_objectsv2_response>&
-                       res,
-                   const rest::http::http_request& req,
-                   client::acquired_messenger m) -> coro<void> {
-                res = std::make_unique<
-                    rest::http::model::list_objectsv2_response>(req);
-                directory_message dir_req;
-                dir_req.bucket_id = req.get_URI().get_bucket_id();
-
-                co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ,
-                                                        dir_req);
-                const auto h_dir = co_await m.get().recv_header();
-
-                unique_buffer<char> buffer(h_dir.size);
-                directory_lst_entities_message list_objects_res;
-
-                list_objects_res =
-                    co_await m.get().recv_directory_list_entities_message(
-                        h_dir);
-
-                for (const auto& content : list_objects_res.entities) {
-                    res->add_content(content);
-                }
-            };
-
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_workers, m_ioc, m_directory_services.get(),
-                    std::bind_front(func, std::ref(res), std::cref(req)));
-
-        } catch (const error_exception& e) {
-            LOG_ERROR() << e.what();
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
-            default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
-            }
-        }
-
-        co_return std::move(res);
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
