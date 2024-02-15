@@ -231,15 +231,14 @@ class list_objects_v2 {
         }
 
         http_response res;
-        res.set_body(
-            std::string("<ListBucketResult>\n"
-                        "<IsTruncated>" +
-                        truncated + "</IsTruncated>\n" + content_xml_string +
-                        name_xml_string + prefix_xml_string +
-                        delimiter_xml_string + max_keys_xml_string +
-                        common_prefixes_xml_string + encoding_type_xml_string +
-                        key_count_xml + continuation_token_xml_string +
-                        start_after_xml_string + "</ListBucketResult>"));
+        res.set_body("<ListBucketResult>\n"
+                     "<IsTruncated>" +
+                     truncated + "</IsTruncated>\n" + content_xml_string +
+                     name_xml_string + prefix_xml_string +
+                     delimiter_xml_string + max_keys_xml_string +
+                     common_prefixes_xml_string + encoding_type_xml_string +
+                     key_count_xml + continuation_token_xml_string +
+                     start_after_xml_string + "</ListBucketResult>");
 
         return res;
     }
