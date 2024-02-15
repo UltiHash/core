@@ -10,12 +10,11 @@
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
 #include "common/utils/cluster_config.h"
-#include "common/utils/service_interface.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
 
-class entrypoint : public service_interface {
+class entrypoint {
   public:
     explicit entrypoint(const std::string& registry_url,
                         const std::filesystem::path& working_dir)
@@ -38,13 +37,13 @@ class entrypoint : public service_interface {
                    m_config_registry.get_service_name(),
                    make_entrypoint_handler(m_state), m_ioc) {}
 
-    void run() override {
+    void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
-    void stop() override {
+    void stop() {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
         m_server.stop();
         m_workers.join();

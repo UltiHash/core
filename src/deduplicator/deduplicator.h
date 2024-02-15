@@ -6,14 +6,13 @@
 #include "common/registry/service_registry.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
-#include "common/utils/service_interface.h"
 #include "deduplicator_handler.h"
 #include <functional>
 #include <iostream>
 #include <utility>
 
 namespace uh::cluster {
-class deduplicator : public service_interface {
+class deduplicator {
   public:
     explicit deduplicator(const std::string& registry_url,
                           const std::filesystem::path& working_dir)
@@ -38,19 +37,19 @@ class deduplicator : public service_interface {
                                                           m_dedupe_workers),
                    m_ioc) {}
 
-    void run() override {
+    void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
-    void stop() override {
+    void stop() {
         m_server.stop();
         m_dedupe_workers->join();
         m_dedupe_workers->stop();
     }
 
-    ~deduplicator() override {
+    ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
         m_ioc.stop();
     }
