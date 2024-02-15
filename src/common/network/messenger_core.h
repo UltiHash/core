@@ -1,10 +1,10 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
+#include "common/telemetry/metrics_handler.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 #include "common/utils/log.h"
-#include "common/utils/metrics.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -40,7 +40,7 @@ class messenger_core {
     }
 
     explicit messenger_core(boost::asio::ip::tcp::socket&& socket,
-                            std::shared_ptr<metrics> metrics_handler)
+                            std::shared_ptr<metrics_handler> metrics_handler)
         : m_socket(std::move(socket)), m_metrics_handler(metrics_handler) {
         clear_buffers();
     }
@@ -123,7 +123,7 @@ class messenger_core {
             throw error_exception(e);
         } else {
             if (m_metrics_handler)
-                m_metrics_handler->increment_served_request_counter(h.type);
+                m_metrics_handler->increment_counter(h.type);
         }
 
         co_return h;
@@ -178,6 +178,8 @@ class messenger_core {
         const auto ec = e.code();
         register_write_buffer(ec);
         register_write_buffer(e.message());
+        if (m_metrics_handler)
+            m_metrics_handler->increment_counter(uh::cluster::FAILURE);
         co_await send_buffers(FAILURE);
     }
 
@@ -188,6 +190,13 @@ class messenger_core {
         register_read_buffer(msg);
         co_await recv_buffers(h);
         co_return error(ec, msg);
+    }
+
+    coro<void> send_success() {
+        if (m_metrics_handler)
+            m_metrics_handler->increment_counter(uh::cluster::SUCCESS);
+        co_await send(SUCCESS, {});
+        co_return;
     }
 
     coro<void> send(const message_type type, std::span<const char> data) {
@@ -226,7 +235,7 @@ class messenger_core {
 
   private:
     boost::asio::ip::tcp::socket m_socket;
-    std::shared_ptr<metrics> m_metrics_handler;
+    std::shared_ptr<metrics_handler> m_metrics_handler;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;

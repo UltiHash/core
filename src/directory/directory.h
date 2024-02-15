@@ -12,6 +12,7 @@ namespace uh::cluster {
 class directory : public service_interface {
   public:
     explicit directory(const std::string& registry_url,
+                       const std::string& telemetry_endpoint,
                        const std::filesystem::path& working_dir)
         : m_config_registry(uh::cluster::DIRECTORY_SERVICE, registry_url,
                             working_dir),
@@ -28,13 +29,13 @@ class directory : public service_interface {
               m_config.worker_thread_count)),
           m_storage(m_config_registry.get_global_data_view_config(), m_ioc,
                     m_storage_services),
-          m_server(
-              m_config_registry.get_server_config(),
-              m_config_registry.get_service_name(),
-              std::make_unique<directory_handler>(
-                  m_config, m_storage, m_directory_workers,
-                  std::make_shared<metrics>(uh::cluster::DIRECTORY_SERVICE)),
-              m_ioc) {}
+          m_server(m_config_registry.get_server_config(),
+                   m_config_registry.get_service_name(),
+                   std::make_unique<directory_handler>(
+                       m_config, m_storage, m_directory_workers,
+                       std::make_shared<metrics_handler>(
+                           uh::cluster::DIRECTORY_SERVICE, telemetry_endpoint)),
+                   m_ioc) {}
 
     void run() override {
         m_registration =

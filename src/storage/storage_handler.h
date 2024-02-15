@@ -1,8 +1,8 @@
 #ifndef CORE_DATA_STORE_SERVICE_HANDLER_H
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
+#include "common/telemetry/metrics_handler.h"
 #include "common/utils/common.h"
-#include "common/utils/metrics.h"
 #include "common/utils/protocol_handler.h"
 #include "data_store.h"
 #include <utility>
@@ -12,7 +12,7 @@ namespace uh::cluster {
 class storage_handler : public protocol_handler {
   public:
     storage_handler(storage_config config, size_t index,
-                    std::shared_ptr<metrics> metrics_handler)
+                    std::shared_ptr<metrics_handler> metrics_handler)
         : m_data_store(std::move(config), index),
           m_metrics_handler(metrics_handler) {}
 
@@ -101,12 +101,12 @@ class storage_handler : public protocol_handler {
                                       const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         m_data_store.remove(resp.pointer, resp.size);
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
         m_data_store.sync();
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
     }
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
@@ -115,7 +115,7 @@ class storage_handler : public protocol_handler {
     }
 
     uh::cluster::data_store m_data_store;
-    std::shared_ptr<uh::cluster::metrics> m_metrics_handler;
+    std::shared_ptr<uh::cluster::metrics_handler> m_metrics_handler;
 };
 
 } // end namespace uh::cluster

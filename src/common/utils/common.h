@@ -156,6 +156,7 @@ constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 25>
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
+static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 
 uh::cluster::role get_service_role(const std::string& service_role_str);
 const std::unordered_set<uh::cluster::message_type>&

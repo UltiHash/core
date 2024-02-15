@@ -16,6 +16,7 @@ namespace uh::cluster {
 class deduplicator : public service_interface {
   public:
     explicit deduplicator(const std::string& registry_url,
+                          const std::string& telemetry_endpoint,
                           const std::filesystem::path& working_dir)
         : m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, registry_url,
                             working_dir),
@@ -37,7 +38,8 @@ class deduplicator : public service_interface {
               m_config_registry.get_service_name(),
               std::make_unique<deduplicator_handler>(
                   m_config, m_storage, m_dedupe_workers,
-                  std::make_shared<metrics>(uh::cluster::DEDUPLICATOR_SERVICE)),
+                  std::make_shared<metrics_handler>(
+                      uh::cluster::DEDUPLICATOR_SERVICE, telemetry_endpoint)),
               m_ioc) {}
 
     void run() override {

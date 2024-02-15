@@ -13,7 +13,7 @@ class directory_handler : public protocol_handler {
     directory_handler(
         directory_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> directory_workers,
-        std::shared_ptr<metrics> metrics_handler)
+        std::shared_ptr<metrics_handler> metrics_handler)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf), m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
@@ -75,7 +75,7 @@ class directory_handler : public protocol_handler {
 
         m_directory.bucket_exists(request.bucket_id);
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
         co_return;
     }
 
@@ -95,7 +95,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
         co_return;
     }
 
@@ -140,7 +140,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
     }
 
     coro<void> handle_delete_bucket(messenger& m, const messenger::header& h) {
@@ -154,7 +154,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
     }
 
     coro<void> handle_delete_object(messenger& m, const messenger::header& h) {
@@ -168,7 +168,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send_success();
     }
 
     coro<void> handle_list_buckets(messenger& m, const messenger::header& h) {
@@ -209,7 +209,7 @@ class directory_handler : public protocol_handler {
     directory_store m_directory;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
-    std::shared_ptr<uh::cluster::metrics> m_metrics_handler;
+    std::shared_ptr<uh::cluster::metrics_handler> m_metrics_handler;
 };
 } // end namespace uh::cluster
 
