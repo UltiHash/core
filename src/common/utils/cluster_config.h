@@ -2,12 +2,17 @@
 #define CORE_CLUSTER_CONFIG_H
 
 #include "common.h"
+#include "common/license/license.h"
 #include "common/types/big_int.h"
 #include <filesystem>
 
 namespace uh::cluster {
 
-// fundamental config
+struct service_config {
+    std::string etcd_url;
+    std::filesystem::path working_dir;
+    uh::cluster::license license;
+};
 
 struct server_config {
     std::size_t threads;
@@ -34,8 +39,6 @@ struct global_data_view_config {
     std::size_t l1_sample_size{};
     uint128_t max_data_store_size;
 };
-
-// roles config
 
 struct deduplicator_config {
     std::filesystem::path working_dir;
