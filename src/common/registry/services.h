@@ -101,7 +101,9 @@ template <role r> class services {
           m_timeout_s(timeout_s) {
         auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
-        auto resp = m_etcd_client.ls(path);
+        auto resp = wait_for_success(
+            ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
+            [this, &path]() { return m_etcd_client.ls(path); });
         for (const auto& key : resp.keys()) {
             add(key);
         }
@@ -210,7 +212,11 @@ template <role r> class services {
         const std::string attributes_prefix(
             etcd_services_attributes_key_prefix + get_service_string(r) + '/' +
             id + '/');
-        etcd::Response attributes = m_etcd_client.ls(attributes_prefix);
+
+        const auto attributes = wait_for_success(
+            ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this, &attributes_prefix]() {
+                return m_etcd_client.ls(attributes_prefix);
+            });
 
         std::optional<std::string> host;
         std::optional<uint16_t> port;

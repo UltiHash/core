@@ -14,13 +14,13 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
         total_size += dp.size();
     }
 
-    auto dedup_services = state.dedup_services.get_clients();
-    auto dedup_services_size = dedup_services.size();
+    auto dedupe_services = state.dedupe_services.get_clients();
+    auto dedupe_services_size = dedupe_services.size();
     const auto part_size = static_cast<size_t>(
         std::ceil(static_cast<double>(total_size) /
-                  static_cast<double>(dedup_services_size)));
+                  static_cast<double>(dedupe_services_size)));
 
-    std::vector<dedupe_response> responses(dedup_services_size);
+    std::vector<dedupe_response> responses(dedupe_services_size);
 
     auto func = [](size_t part_size,
                    const std::map<size_t, std::string_view>& offset_pieces,
@@ -53,7 +53,7 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     };
 
     co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-        dedup_services, state.ioc, state.workers,
+        dedupe_services, state.ioc, state.workers,
         std::bind_front(func, part_size, std::cref(offset_pieces),
                         std::ref(responses)));
 
