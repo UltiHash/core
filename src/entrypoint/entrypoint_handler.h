@@ -8,21 +8,18 @@
 #include "entrypoint/rest/http/http_response.h"
 #include "entrypoint/rest/http/models/abort_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/complete_multi_part_upload_response.h"
-#include "entrypoint/rest/http/models/create_bucket_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/delete_bucket_response.h"
 #include "entrypoint/rest/http/models/delete_object_response.h"
 #include "entrypoint/rest/http/models/delete_objects_response.h"
 #include "entrypoint/rest/http/models/get_bucket_response.h"
 #include "entrypoint/rest/http/models/get_object_attributes_response.h"
-#include "entrypoint/rest/http/models/get_object_response.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_buckets_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
 #include "entrypoint/rest/http/models/list_objectsv2_response.h"
 #include "entrypoint/rest/http/models/multi_part_upload_response.h"
-#include "entrypoint/rest/http/models/put_object_response.h"
 #include "entrypoint/rest/utils/parser/s3_parser.h"
 #include "entrypoint/rest/utils/parser/xml_parser.h"
 #include <boost/beast/core/flat_buffer.hpp>
@@ -158,7 +155,7 @@ class entrypoint_handler : public protocol_handler {
             return head.handle(req);
         }
 
-        return dispatch_front(req, tail...);
+        return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
     coro<http_response> dispatch_front(const http_request& req) {
