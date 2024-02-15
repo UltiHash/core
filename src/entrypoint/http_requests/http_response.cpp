@@ -22,7 +22,7 @@ void http_response::set_effective_size(std::size_t effective_size) {
         std::to_string(static_cast<double>(effective_size) / (1024 * 1024)));
 }
 
-void http_response::set_space_savings(std::size_t space_savings) {
+void http_response::set_space_savings(double space_savings) {
     m_res.set("uh-space-savings-ratio", std::to_string(space_savings));
 }
 

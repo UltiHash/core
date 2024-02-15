@@ -15,7 +15,7 @@ class http_response {
 
     void set_effective_size(std::size_t effective_size);
 
-    void set_space_savings(std::size_t space_savings);
+    void set_space_savings(double space_savings);
 
     void set_bandwidth(double bandwidth);
 
