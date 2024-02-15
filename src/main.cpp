@@ -11,10 +11,11 @@
 #include <config.h>
 #include <system_error>
 
+using namespace uh;
 using namespace uh::cluster;
 
 struct config {
-    uh::cluster::role role;
+    cluster::role role;
     std::string etcd_url;
     std::filesystem::path working_dir;
     boost::log::trivial::severity_level log_level;
@@ -106,7 +107,7 @@ int main(int argc, char** argv) {
                                            .filename = "log.log",
                                            .level = cfg.log_level}}};
 
-        uh::log::init(lc);
+        log::init(lc);
 
         LOG_INFO() << "license loaded for " << cfg.license.customer
                    << " -- storage size: " << cfg.license.max_data_store_size
