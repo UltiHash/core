@@ -16,7 +16,7 @@ class deduplicator_handler : public protocol_handler {
     deduplicator_handler(
         deduplicator_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> dedupe_workers,
-        std::shared_ptr<metrics> metrics_handler)
+        std::shared_ptr<metrics_handler> metrics_handler)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage), m_dedupe_workers(std::move(dedupe_workers)),
@@ -188,7 +188,7 @@ class deduplicator_handler : public protocol_handler {
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
-    std::shared_ptr<uh::cluster::metrics> m_metrics_handler;
+    std::shared_ptr<uh::cluster::metrics_handler> m_metrics_handler;
 };
 
 } // end namespace uh::cluster

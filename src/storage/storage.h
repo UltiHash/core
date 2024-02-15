@@ -18,6 +18,7 @@ namespace uh::cluster {
 class storage : public service_interface {
   public:
     explicit storage(const std::string& registry_url,
+                     const std::string& telemetry_endpoint,
                      const std::filesystem::path& working_dir)
         : m_config_registry(uh::cluster::STORAGE_SERVICE, registry_url,
                             working_dir),
@@ -29,7 +30,8 @@ class storage : public service_interface {
                    std::make_unique<storage_handler>(
                        m_config_registry.get_storage_config(),
                        m_config_registry.get_service_id(),
-                       std::make_shared<metrics>(uh::cluster::STORAGE_SERVICE)),
+                       std::make_shared<metrics_handler>(
+                           uh::cluster::STORAGE_SERVICE, telemetry_endpoint)),
                    m_ioc) {}
 
     void run() override {

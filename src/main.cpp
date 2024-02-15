@@ -18,6 +18,7 @@ struct config {
     std::string etcd_url;
     std::filesystem::path working_dir;
     boost::log::trivial::severity_level log_level;
+    std::string telemetry_endpoint;
 };
 
 void execute_role(const config& cfg) {
@@ -32,11 +33,14 @@ void execute_role(const config& cfg) {
     try {
         switch (cfg.role) {
         case STORAGE_SERVICE:
-            return start_service(storage(cfg.etcd_url, cfg.working_dir));
+            return start_service(
+                storage(cfg.etcd_url, cfg.telemetry_endpoint, cfg.working_dir));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(cfg.etcd_url, cfg.working_dir));
+            return start_service(deduplicator(
+                cfg.etcd_url, cfg.telemetry_endpoint, cfg.working_dir));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg.etcd_url, cfg.working_dir));
+            return start_service(directory(cfg.etcd_url, cfg.telemetry_endpoint,
+                                           cfg.working_dir));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
         }
@@ -79,6 +83,9 @@ int main(int argc, char** argv) {
         })
         ->default_val(uh::log::to_string(boost::log::trivial::info))
         ->envname(ENV_CFG_LOG_LEVEL);
+    app.add_option("--telemetry-endpoint,-e", cfg.telemetry_endpoint,
+                   "URL to opentelemetry endpoint")
+        ->envname(ENV_CFG_OTEL_ENDPOINT);
 
     app.add_flag_callback(
         "--vcsid", print_vcsid,
