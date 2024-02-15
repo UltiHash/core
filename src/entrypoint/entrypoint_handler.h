@@ -33,10 +33,8 @@
 
 // REFACTORED
 #include "common.h"
-#include "dispatcher.h"
 #include "entrypoint/http_requests/create_bucket.h"
 #include "http_requests/get_object.h"
-
 #include "http_requests/put_object.h"
 
 namespace uh::cluster {
@@ -185,9 +183,6 @@ class entrypoint_handler : public protocol_handler {
             break;
         case rest::http::http_request_type::DELETE_OBJECTS:
             res = co_await handle_delete_objects(req);
-            break;
-        case rest::http::http_request_type::PUT_OBJECT:
-            res = co_await handle_put_object(req);
             break;
         case rest::http::http_request_type::DELETE_OBJECT:
             res = co_await handle_delete_object(req);

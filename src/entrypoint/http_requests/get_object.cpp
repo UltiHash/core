@@ -4,7 +4,8 @@
 
 namespace uh::cluster {
 
-get_object::get_object(entrypoint_state&& entry_state) : m_state(entry_state) {}
+get_object::get_object(const entrypoint_state& entry_state)
+    : m_state(entry_state) {}
 
 bool get_object::can_handle(const http_request& req) {
 

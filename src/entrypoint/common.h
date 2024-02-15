@@ -10,7 +10,7 @@ namespace uh::cluster {
 struct entrypoint_state {
     boost::asio::io_context& ioc;
     boost::asio::thread_pool& workers;
-    const services<DEDUPLICATOR_SERVICE>& dedup_services;
+    const services<DEDUPLICATOR_SERVICE>& dedupe_services;
     const services<DIRECTORY_SERVICE>& directory_services;
     rest::utils::server_state server_state;
 };

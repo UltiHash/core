@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 class put_object {
   public:
-    explicit put_object(entrypoint_state& entry_state);
+    explicit put_object(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
