@@ -13,6 +13,7 @@ namespace uh::cluster {
 
 class list_objects_v2 {
 
+  public:
     explicit list_objects_v2(entrypoint_state& state) : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
@@ -91,13 +92,13 @@ class list_objects_v2 {
         }
     }
 
-    http_response get_response(const std::vector<std::string>& content,
-                               const http_request& req) {
+    static http_response get_response(const std::vector<std::string>& content,
+                                      const http_request& req) {
 
         http_response res;
         const auto& uri = req.get_URI();
 
-        int max_keys = 0;
+        size_t max_keys = 0;
         if (uri.query_string_exists("max-keys")) {
             max_keys = std::stoi(uri.get_query_string_value("max-keys"));
         }
@@ -248,6 +249,7 @@ class list_objects_v2 {
         return res;
     }
 
+  private:
     entrypoint_state& m_state;
 };
 

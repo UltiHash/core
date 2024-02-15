@@ -33,6 +33,7 @@
 
 // REFACTORED
 #include "common.h"
+#include "entrypoint/http_requests/list_objects_v2.h"
 #include "http_requests/put_object.h"
 
 namespace uh::cluster {
@@ -156,7 +157,7 @@ class entrypoint_handler : public protocol_handler {
             return head.handle(req);
         }
 
-        return dispatch_front(req, tail...);
+        return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
     coro<http_response> dispatch_front(const http_request& req) {
@@ -972,11 +973,12 @@ template <typename... RequestTypes>
 auto define_entrypoint_handler(entrypoint_state& state,
                                RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        state, std::forward<RequestTypes...>(request_types...));
+        state, std::forward<RequestTypes>(request_types)...);
 }
 
 auto make_entrypoint_handler(entrypoint_state& state) {
-    return define_entrypoint_handler(state, put_object(state));
+    return define_entrypoint_handler(state, put_object(state),
+                                     list_objects_v2(state));
 }
 
 } // end namespace uh::cluster
