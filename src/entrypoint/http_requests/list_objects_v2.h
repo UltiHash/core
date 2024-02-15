@@ -95,40 +95,35 @@ class list_objects_v2 {
     static http_response get_response(const std::vector<std::string>& content,
                                       const http_request& req) {
 
-        http_response res;
         const auto& uri = req.get_URI();
 
+        const auto get_if_exists =
+            [&uri](auto&& key) -> std::optional<std::string> {
+            if (uri.query_string_exists(key)) {
+                if (auto& val = uri.get_query_string_value(key); !val.empty())
+                    return std::make_optional<std::string>(std::move(val));
+            }
+            return std::nullopt;
+        };
+
+        const auto start_after = get_if_exists("start-after");
+        const auto prefix = get_if_exists("prefix");
+        const auto delimiter = get_if_exists("delimiter");
+        const auto encoding_type = get_if_exists("encoding-type");
+        const auto continuation_token = get_if_exists("continuation-token");
+
         size_t max_keys = 0;
-        if (uri.query_string_exists("max-keys")) {
-            max_keys = std::stoi(uri.get_query_string_value("max-keys"));
+        if (const auto max_keys_str = get_if_exists("max-keys");
+            max_keys_str.has_value()) {
+            max_keys = std::stoul(*max_keys_str);
         }
 
         bool fetch_owner_set = false;
-        if (uri.query_string_exists("fetch-owner")) {
-            if (const auto& fetch_owner =
-                    uri.get_query_string_value("fetch-owner");
-                !fetch_owner.empty()) {
-                if (rest::utils::string_utils::is_bool(fetch_owner))
-                    fetch_owner_set = true;
-            }
+        if (const auto fetch_owner = get_if_exists("fetch-owner");
+            fetch_owner.has_value()) {
+            if (rest::utils::string_utils::is_bool(*fetch_owner))
+                fetch_owner_set = true;
         }
-
-        std::string start_after;
-        if (uri.query_string_exists("start-after")) {
-            start_after = uri.get_query_string_value("start-after");
-        }
-
-        std::string prefix;
-        if (uri.query_string_exists("prefix")) {
-            prefix = uri.get_query_string_value("prefix");
-        }
-
-        const auto& delimeter = uri.get_query_string_value("delimiter");
-
-        const auto& encoding_type = uri.get_query_string_value("encoding-type");
-
-        const auto& m_continuation_token =
-            uri.get_query_string_value("continuation-token");
 
         std::set<std::string> common_prefixes;
         std::string content_xml_string;
@@ -138,31 +133,31 @@ class list_objects_v2 {
 
             for (const auto& c : content) {
 
-                if (!delimeter.empty()) {
+                if (delimiter) {
                     size_t delimiter_index;
-                    if (!prefix.empty()) {
-                        delimiter_index = c.find(delimeter, prefix.size());
+                    if (prefix) {
+                        delimiter_index = c.find(*delimiter, prefix->size());
                     } else {
-                        delimiter_index = c.find(delimeter);
+                        delimiter_index = c.find(*delimiter);
                     }
 
                     if (delimiter_index != std::string::npos) {
                         auto delimeter_prefix =
                             c.substr(0, delimiter_index + 1);
                         common_prefixes.emplace(
-                            (encoding_type.empty()
-                                 ? delimeter_prefix
-                                 : rest::utils::string_utils::URL_encode(
-                                       delimeter_prefix)));
+                            (encoding_type
+                                 ? rest::utils::string_utils::URL_encode(
+                                       delimeter_prefix)
+                                 : delimeter_prefix));
                     }
 
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
                         "<Key>" +
-                        (encoding_type.empty()
-                             ? c
-                             : rest::utils::string_utils::URL_encode(c)) +
+                        (encoding_type
+                             ? rest::utils::string_utils::URL_encode(c)
+                             : c) +
                         "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
@@ -184,12 +179,12 @@ class list_objects_v2 {
         }
 
         std::string delimiter_xml_string;
-        if (!delimeter.empty()) {
+        if (delimiter) {
             delimiter_xml_string =
                 "<Delimiter>" +
-                (encoding_type.empty()
-                     ? delimeter
-                     : rest::utils::string_utils::URL_encode(delimeter)) +
+                (encoding_type
+                     ? rest::utils::string_utils::URL_encode(*delimiter)
+                     : *delimiter) +
                 "</Delimiter>\n";
         }
 
@@ -211,34 +206,34 @@ class list_objects_v2 {
             "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
 
         std::string encoding_type_xml_string;
-        if (!encoding_type.empty()) {
+        if (encoding_type) {
             encoding_type_xml_string =
-                "<EncodingType>" + encoding_type + "</EncodingType>\n";
+                "<EncodingType>" + *encoding_type + "</EncodingType>\n";
         }
 
         std::string continuation_token_xml_string;
-        if (!m_continuation_token.empty()) {
+        if (continuation_token) {
             continuation_token_xml_string = "<ContinuationToken>" +
-                                            m_continuation_token +
+                                            *continuation_token +
                                             "</ContinuationToken>\n";
         }
 
         std::string start_after_xml_string;
-        if (!start_after.empty()) {
+        if (start_after) {
             encoding_type_xml_string =
-                "<StartAfter>" + start_after + "</StartAfter>\n";
+                "<StartAfter>" + *start_after + "</StartAfter>\n";
         }
 
         std::string prefix_xml_string;
-        if (!prefix.empty()) {
+        if (prefix) {
             prefix_xml_string =
                 "<Prefix>" +
-                (encoding_type.empty()
-                     ? prefix
-                     : rest::utils::string_utils::URL_encode(prefix)) +
+                (encoding_type ? rest::utils::string_utils::URL_encode(*prefix)
+                               : *prefix) +
                 "</Prefix>\n";
         }
 
+        http_response res;
         res.set_body(
             std::string("<ListBucketResult>\n"
                         "<IsTruncated>" +
