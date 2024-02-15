@@ -5,7 +5,6 @@
 
 #include <string>
 
-
 namespace uh::cluster {
 
 struct license {
@@ -24,12 +23,6 @@ struct license {
  */
 license check_license(std::string_view license_code);
 
-/**
- * Load license from environment variables, print log information and
- * call check_license.
- */
-license load_license();
-
-}
+} // namespace uh::cluster
 
 #endif

@@ -101,19 +101,4 @@ license check_license(std::string_view license_code) {
     return parse_license(data);
 }
 
-license load_license() {
-    auto lic_env = std::getenv(ENV_CFG_LICENSE);
-    if (!lic_env) {
-        throw std::runtime_error("no license defined");
-    }
-
-    auto license = check_license(lic_env);
-
-    LOG_INFO() << "license loaded for " << license.customer
-               << " -- storage size: " << license.max_data_store_size
-               << " bytes";
-
-    return license;
-}
-
 } // namespace uh::cluster
