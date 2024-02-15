@@ -4,13 +4,14 @@
 
 namespace uh::cluster {
 
-put_object::put_object(entrypoint_state& entry_state) : m_state(entry_state) {}
+put_object::put_object(const entrypoint_state& entry_state)
+    : m_state(entry_state) {}
 
 bool put_object::can_handle(const http_request& req) {
     if (req.get_method() == method::put) {
 
-        const auto& uri = req.get_URI();
-        if (!uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
+        if (const auto& uri = req.get_URI();
+            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
             uri.get_query_parameters().empty()) {
             return true;
         }
@@ -67,6 +68,7 @@ coro<http_response> put_object::handle(http_request& req) const {
                    << "integration bandwidth " << bandwidth << " MB/s";
 
         http_response res;
+        res.set_original_size(req.get_body_size());
         res.set_effective_size(resp.effective_size);
         res.set_space_savings(space_saving);
         res.set_bandwidth(bandwidth);
