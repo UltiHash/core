@@ -68,6 +68,7 @@ coro<http_response> put_object::handle(http_request& req) const {
                    << "integration bandwidth " << bandwidth << " MB/s";
 
         http_response res;
+        res.set_original_size(req.get_body_size());
         res.set_effective_size(resp.effective_size);
         res.set_space_savings(space_saving);
         res.set_bandwidth(bandwidth);

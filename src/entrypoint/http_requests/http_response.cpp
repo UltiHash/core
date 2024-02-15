@@ -8,12 +8,14 @@ void http_response::set_body(std::string&& body) {
     set_etag(md5::calculateMD5(m_res.body()));
 }
 
-void http_response::set_effective_size(std::size_t effective_size) {
-    m_res.set("uh-original-size", std::to_string(m_res.body().size()));
-    m_res.set("uh-original-size-mb",
-              std::to_string(static_cast<double>(m_res.body().size()) /
-                             (1024 * 1024)));
+void http_response::set_original_size(std::size_t original_size) {
+    m_res.set("uh-original-size", std::to_string(original_size));
+    m_res.set(
+        "uh-original-size-mb",
+        std::to_string(static_cast<double>(original_size) / (1024 * 1024)));
+}
 
+void http_response::set_effective_size(std::size_t effective_size) {
     m_res.set("uh-effective-size", std::to_string(effective_size));
     m_res.set(
         "uh-effective-size-mb",
