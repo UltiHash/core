@@ -103,11 +103,14 @@ class list_objects_v2 {
             max_keys = std::stoi(uri.get_query_string_value("max-keys"));
         }
 
-        const auto& fetch_owner = uri.get_query_string_value("fetch-owner");
         bool fetch_owner_set = false;
-        if (!fetch_owner.empty()) {
-            if (rest::utils::string_utils::is_bool(fetch_owner))
-                fetch_owner_set = true;
+        if (uri.query_string_exists("fetch-owner")) {
+            if (const auto& fetch_owner =
+                    uri.get_query_string_value("fetch-owner");
+                !fetch_owner.empty()) {
+                if (rest::utils::string_utils::is_bool(fetch_owner))
+                    fetch_owner_set = true;
+            }
         }
 
         std::string start_after;
