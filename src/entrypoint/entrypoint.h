@@ -16,21 +16,18 @@ namespace uh::cluster {
 
 class entrypoint {
   public:
-    explicit entrypoint(const std::string& registry_url,
-                        const std::filesystem::path& working_dir)
-        : m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url,
-                            working_dir),
+    explicit entrypoint(const service_config& sc)
+        : m_config_registry(ENTRYPOINT_SERVICE, sc.etcd_url, sc.working_dir),
           m_ioc(boost::asio::io_context(
               m_config_registry.get_server_config().threads)),
-          m_service_registry(uh::cluster::ENTRYPOINT_SERVICE,
-                             m_config_registry.get_service_id(), registry_url),
+          m_service_registry(ENTRYPOINT_SERVICE,
+                             m_config_registry.get_service_id(), sc.etcd_url),
           m_config(m_config_registry.get_entrypoint_config()),
           m_dedupe_services(m_ioc, m_config_registry,
-                            m_config.dedupe_node_connection_count,
-                            registry_url),
+                            m_config.dedupe_node_connection_count, sc.etcd_url),
           m_directory_services(m_ioc, m_config_registry,
                                m_config.directory_connection_count,
-                               registry_url),
+                               sc.etcd_url),
           m_workers(m_config.worker_thread_count),
           m_state(get_entrypoint_state()),
           m_server(m_config_registry.get_server_config(),
