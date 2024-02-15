@@ -17,12 +17,6 @@ struct server_config {
     std::string bind_address;
 };
 
-struct service_endpoint {
-    std::size_t id{};
-    std::string host{};
-    std::uint16_t port{};
-};
-
 struct bucket_config {
     size_t min_file_size;
     size_t max_file_size;

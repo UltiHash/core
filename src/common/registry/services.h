@@ -179,6 +179,12 @@ template <role r> class services {
     }
 
   private:
+    struct service_endpoint {
+        std::size_t id{};
+        std::string host{};
+        std::uint16_t port{};
+    };
+
     void handle_state_changes(const etcd::Response& response) {
         LOG_DEBUG() << "action: " << response.action()
                     << ", key: " << response.value().key()
