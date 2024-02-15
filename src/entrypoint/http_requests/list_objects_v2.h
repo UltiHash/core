@@ -112,7 +112,7 @@ class list_objects_v2 {
         const auto encoding_type = get_if_exists("encoding-type");
         const auto continuation_token = get_if_exists("continuation-token");
 
-        size_t max_keys = 0;
+        size_t max_keys = 1000;
         if (const auto max_keys_str = get_if_exists("max-keys");
             max_keys_str.has_value()) {
             max_keys = std::stoul(*max_keys_str);
@@ -189,12 +189,9 @@ class list_objects_v2 {
         }
 
         std::string key_count_xml;
-        if (!content.empty()) {
-            content_xml_string +=
-                "<KeyCount>" +
-                std::to_string(counter + common_prefixes.size()) +
-                "</KeyCount>\n";
-        }
+        content_xml_string += "<KeyCount>" +
+                              std::to_string(counter + common_prefixes.size()) +
+                              "</KeyCount>\n";
 
         std::string name_xml_string;
 

@@ -191,7 +191,15 @@ class directory_handler : public protocol_handler {
         auto func = [](directory_store& directory,
                        directory_lst_entities_message& response,
                        directory_message& request) {
-            response.entities = directory.list_keys(request.bucket_id);
+            std::string lower_bound, prefix;
+            if (request.object_key) {
+                lower_bound = *request.object_key;
+            }
+            if (request.object_key_prefix) {
+                prefix = *request.object_key_prefix;
+            }
+            response.entities =
+                directory.list_keys(request.bucket_id, lower_bound, prefix);
         };
 
         co_await worker_utils::post_in_workers(
