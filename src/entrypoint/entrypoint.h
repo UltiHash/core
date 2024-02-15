@@ -32,14 +32,11 @@ class entrypoint : public service_interface {
           m_directory_services(m_ioc, m_config_registry,
                                m_config.directory_connection_count,
                                registry_url),
-          m_workers(std::make_shared<boost::asio::thread_pool>(
-              m_config.worker_thread_count)),
-          m_server(
-              m_config_registry.get_server_config(),
-              m_config_registry.get_service_name(),
-              std::make_unique<entrypoint_handler>(
-                  m_ioc, m_dedupe_services, m_directory_services, m_workers),
-              m_ioc) {}
+          m_workers(m_config.worker_thread_count),
+          m_state(get_entrypoint_state()),
+          m_server(m_config_registry.get_server_config(),
+                   m_config_registry.get_service_name(),
+                   make_entrypoint_handler(m_state), m_ioc) {}
 
     void run() override {
         m_registration =
@@ -50,11 +47,20 @@ class entrypoint : public service_interface {
     void stop() override {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
         m_server.stop();
-        m_workers->join();
-        m_workers->stop();
+        m_workers.join();
+        m_workers.stop();
     }
 
   private:
+    entrypoint_state get_entrypoint_state() {
+        return {
+            .ioc = m_ioc,
+            .workers = m_workers,
+            .dedupe_services = m_dedupe_services,
+            .directory_services = m_directory_services,
+        };
+    }
+
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
 
@@ -65,7 +71,8 @@ class entrypoint : public service_interface {
     services<DEDUPLICATOR_SERVICE> m_dedupe_services;
     services<DIRECTORY_SERVICE> m_directory_services;
 
-    std::shared_ptr<boost::asio::thread_pool> m_workers;
+    boost::asio::thread_pool m_workers;
+    entrypoint_state m_state;
     server m_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
