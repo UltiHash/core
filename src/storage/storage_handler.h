@@ -66,6 +66,7 @@ class storage_handler : public protocol_handler {
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
+        m_metrics_handler->increment_counter(SUCCESS);
         co_await m.send_address(STORAGE_WRITE_RESP, addr);
     }
 
@@ -74,6 +75,7 @@ class storage_handler : public protocol_handler {
         unique_buffer<char> buffer(resp.size);
         const auto size =
             m_data_store.read(buffer.data(), resp.pointer, resp.size);
+        m_metrics_handler->increment_counter(SUCCESS);
         co_await m.send(STORAGE_READ_FRAGMENT_RESP, {buffer.data(), size});
     }
 
@@ -94,6 +96,7 @@ class storage_handler : public protocol_handler {
             }
             offset += frag.size;
         }
+        m_metrics_handler->increment_counter(SUCCESS);
         co_await m.send(STORAGE_READ_ADDRESS_RESP, {buffer.data(), offset});
     }
 
@@ -111,6 +114,7 @@ class storage_handler : public protocol_handler {
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
         const auto used = m_data_store.get_used_space();
+        m_metrics_handler->increment_counter(SUCCESS);
         co_await m.send_uint128_t(STORAGE_USED_RESP, used);
     }
 
