@@ -1,20 +1,19 @@
-#ifndef ENTRYPOINT_HTTP_PUT_OBJECT_H
-#define ENTRYPOINT_HTTP_PUT_OBJECT_H
+#ifndef ENTRYPOINT_HTTP_CREATE_BUCKET_H
+#define ENTRYPOINT_HTTP_CREATE_BUCKET_H
 
 #include "entrypoint/common.h"
 #include "http_request.h"
 #include "http_response.h"
-#include <utility>
 
 namespace uh::cluster {
 
-class put_object {
+class create_bucket {
   public:
-    explicit put_object(const entrypoint_state& entry_state);
+    explicit create_bucket(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(const http_request& req) const;
 
   private:
     const entrypoint_state& m_state;
