@@ -798,11 +798,12 @@ template <typename... RequestTypes>
 auto define_entrypoint_handler(entrypoint_state& state,
                                RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        state, std::forward<RequestTypes...>(request_types...));
+        state, std::forward<RequestTypes>(request_types)...);
 }
 
 auto make_entrypoint_handler(entrypoint_state& state) {
-    return define_entrypoint_handler(state, put_object(state));
+    return define_entrypoint_handler(state, create_bucket(state),
+                                     put_object(state), get_object(state));
 }
 
 } // end namespace uh::cluster
