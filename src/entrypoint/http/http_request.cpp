@@ -7,7 +7,7 @@ http_request::http_request(const http::request_parser<http::empty_body>& req,
                            boost::beast::flat_buffer& buffer)
     : m_req(req), m_stream(stream), m_buffer(buffer), m_uri(req) {}
 
-const URI& http_request::get_URI() const { return m_uri; }
+const uri& http_request::get_URI() const { return m_uri; }
 
 const std::string& http_request::get_body() const { return m_body; }
 

@@ -20,10 +20,10 @@ typedef boost::urls::url url;
  */
 enum class scheme { HTTP, HTTPS };
 
-class URI {
+class uri {
   public:
-    explicit URI(const http::request_parser<http::empty_body>&);
-    ~URI() = default;
+    explicit uri(const http::request_parser<http::empty_body>&);
+    ~uri() = default;
 
     const std::string& get_bucket_id() const;
     const std::string& get_object_key() const;

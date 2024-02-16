@@ -3,11 +3,11 @@
 #define UH_CLUSTER_LIST_OBJECTSV2_H
 
 #include "common/utils/worker_utils.h"
-#include "entrypoint/common.h"
+#include "entrypoint/http/http_request.h"
+#include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/utils/string/string_utils.h"
-#include "http_request.h"
-#include "http_response.h"
+#include "utils.h"
 
 namespace uh::cluster {
 
@@ -29,24 +29,25 @@ class list_objects_v2 {
 
     coro<http_response> handle(const http_request& req) {
         try {
-            const auto& uri = req.get_URI();
+            const auto& req_uri = req.get_URI();
             directory_message dir_req;
-            dir_req.bucket_id = uri.get_bucket_id();
+            dir_req.bucket_id = req_uri.get_bucket_id();
 
             if (dir_req.bucket_id.empty()) {
                 throw error_exception(error::invalid_bucket_name);
             }
 
-            if (uri.query_string_exists("prefix")) {
-                if (const auto& prefix = uri.get_query_string_value("prefix");
+            if (req_uri.query_string_exists("prefix")) {
+                if (const auto& prefix =
+                        req_uri.get_query_string_value("prefix");
                     !prefix.empty()) {
                     dir_req.object_key_prefix =
                         std::make_unique<std::string>(prefix);
                 }
             }
-            if (uri.query_string_exists("start-after")) {
+            if (req_uri.query_string_exists("start-after")) {
                 if (const auto& start_after =
-                        uri.get_query_string_value("start-after");
+                        req_uri.get_query_string_value("start-after");
                     !start_after.empty()) {
                     dir_req.object_key_lower_bound =
                         std::make_unique<std::string>(start_after);
@@ -103,12 +104,13 @@ class list_objects_v2 {
     static http_response get_response(const std::vector<std::string>& content,
                                       const http_request& req) {
 
-        const auto& uri = req.get_URI();
+        const auto& req_uri = req.get_URI();
 
         const auto get_if_exists =
-            [&uri](auto&& key) -> std::optional<std::string> {
-            if (uri.query_string_exists(key)) {
-                if (auto& val = uri.get_query_string_value(key); !val.empty())
+            [&req_uri](auto&& key) -> std::optional<std::string> {
+            if (req_uri.query_string_exists(key)) {
+                if (auto& val = req_uri.get_query_string_value(key);
+                    !val.empty())
                     return std::make_optional<std::string>(std::move(val));
             }
             return std::nullopt;

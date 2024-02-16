@@ -26,10 +26,6 @@ void http_response::set_space_savings(double space_savings) {
     m_res.set("uh-space-savings-ratio", std::to_string(space_savings));
 }
 
-void http_response::set_request_charged(std::size_t space_savings) {
-    m_res.set("uh-space-savings-ratio", std::to_string(space_savings));
-}
-
 const http::response<http::string_body>&
 http_response::get_prepared_response() {
     m_res.prepare_payload();

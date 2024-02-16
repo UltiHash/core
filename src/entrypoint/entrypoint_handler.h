@@ -28,11 +28,10 @@
 #include <pugixml.hpp>
 
 // REFACTORED
-#include "common.h"
-#include "entrypoint/http_requests/list_objects_v2.h"
-#include "entrypoint/http_requests/create_bucket.h"
-#include "http_requests/get_object.h"
-#include "http_requests/put_object.h"
+#include "requests//list_objects_v2.h"
+#include "requests/create_bucket.h"
+#include "requests/get_object.h"
+#include "requests/put_object.h"
 
 namespace uh::cluster {
 
@@ -743,8 +742,7 @@ auto define_entrypoint_handler(entrypoint_state& state,
 
 auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(state, get_object(state),
-                                     put_object(state), 
-                                     create_bucket(state),
+                                     put_object(state), create_bucket(state),
                                      list_objects_v2(state));
 }
 
