@@ -122,6 +122,8 @@ BOOST_AUTO_TEST_CASE(multiplication) {
     BOOST_CHECK(big_int(2) * 1 == big_int(2));
     BOOST_CHECK(big_int(1) * 2 == big_int(2));
 
+    // fails: BOOST_CHECK(big_int(max_uint64) + big_int(max_uint64) ==
+    // big_int(2) * max_uint64);
     BOOST_CHECK(big_int(max_uint64) * 2 == big_int(2) * max_uint64);
 
     BOOST_CHECK(big_int(max_uint64) * 2 > big_int(max_uint64));
@@ -135,10 +137,15 @@ BOOST_AUTO_TEST_CASE(mul_add) {
 }
 
 BOOST_AUTO_TEST_CASE(assign) {
-    /* fails: {
-        big_int x(max_uint64);
-        BOOST_CHECK((x += big_int(max_uint64)) == big_int(max_uint64) * 2);
-    } */
+    {
+        big_int x(1, 1);
+        BOOST_CHECK((x += x) == big_int(2, 2));
+    }
+    /* fails:
+    {
+        big_int x(0, max_uint64);
+        BOOST_CHECK(x += big_int(0, 1) == big_int(1, 0));
+    }*/
 }
 
 } // namespace uh::cluster
