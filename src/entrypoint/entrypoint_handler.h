@@ -28,9 +28,9 @@
 #include <pugixml.hpp>
 
 // REFACTORED
-#include "requests//list_objects_v2.h"
 #include "requests/create_bucket.h"
 #include "requests/get_object.h"
+#include "requests/list_objects_v2.h"
 #include "requests/put_object.h"
 
 namespace uh::cluster {
