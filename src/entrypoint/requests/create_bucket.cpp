@@ -8,17 +8,9 @@ create_bucket::create_bucket(const uh::cluster::entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool create_bucket::can_handle(const http_request& req) {
-
-    if (req.get_method() == method::put) {
-
-        if (const auto& uri = req.get_uri();
-            !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
-            uri.get_query_parameters().empty()) {
-            return true;
-        }
-    }
-
-    return false;
+    const auto& uri = req.get_uri();
+    return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
+           uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
 coro<http_response> create_bucket::handle(const http_request& req) const {

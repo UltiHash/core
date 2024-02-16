@@ -67,27 +67,31 @@ class bucket {
 
     unique_buffer<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
-        if (!m_object_ptrs.contains(key)) [[unlikely]] {
+
+        const auto it = m_object_ptrs.find(key);
+        if (it == m_object_ptrs.end()) [[unlikely]] {
             throw error_exception(
                 {error::object_not_found, "Attempt to get object '" + key +
                                               "' failed: no such object."});
         }
-        const auto index = m_object_ptrs.at(key);
-        return m_data_store.read(index);
+
+        return m_data_store.read(it->second);
     }
 
     void delete_object(const std::string& key) {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
-        if (m_object_ptrs.contains(key)) [[unlikely]] {
-            const auto index = m_object_ptrs.at(key);
-            m_transaction_log.append(key, index,
+
+        if (const auto it = m_object_ptrs.find(key); it != m_object_ptrs.end())
+            [[unlikely]] {
+            m_transaction_log.append(key, it->second,
                                      transaction_log::operation::REMOVE_START);
 
             m_object_ptrs.erase(key);
-            m_data_store.remove(index);
-            m_transaction_log.append(key, index,
+            m_data_store.remove(it->second);
+            m_transaction_log.append(key, it->second,
                                      transaction_log::operation::REMOVE_END);
         }
+
         lock.unlock();
     }
 
@@ -125,7 +129,6 @@ class bucket {
     transaction_log m_transaction_log;
     std::map<std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
-    // ACLs, other meta-data
 };
 
 } // namespace uh::cluster

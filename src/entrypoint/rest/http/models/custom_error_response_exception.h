@@ -29,6 +29,7 @@ class error {
         bad_upload_id,
         bad_part_number,
         too_many_elements,
+        insufficient_storage,
     };
 
     explicit error(type t = unknown);

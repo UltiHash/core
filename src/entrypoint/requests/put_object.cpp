@@ -8,15 +8,9 @@ put_object::put_object(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool put_object::can_handle(const http_request& req) {
-    if (req.get_method() == method::put) {
-        if (const auto& uri = req.get_uri();
-            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-            uri.get_query_parameters().empty()) {
-            return true;
-        }
-    }
-
-    return false;
+    const auto& uri = req.get_uri();
+    return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
+           !uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
 coro<http_response> put_object::handle(http_request& req) const {
@@ -82,6 +76,11 @@ coro<http_response> put_object::handle(http_request& req) const {
             throw rest::http::model::custom_error_response_exception(
                 boost::beast::http::status::not_found,
                 rest::http::model::error::bucket_not_found);
+        case error::storage_limit_exceeded:
+            throw rest::http::model::custom_error_response_exception(
+                boost::beast::http::status::insufficient_storage,
+                rest::http::model::error::insufficient_storage);
+
         default:
             throw rest::http::model::custom_error_response_exception(
                 boost::beast::http::status::internal_server_error);

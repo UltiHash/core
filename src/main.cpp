@@ -1,3 +1,4 @@
+#include "common/license/license.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
@@ -18,6 +19,7 @@ struct config {
     std::string etcd_url;
     std::filesystem::path working_dir;
     boost::log::trivial::severity_level log_level;
+    uh::cluster::license license;
 };
 
 void execute_role(const config& cfg) {
@@ -36,7 +38,8 @@ void execute_role(const config& cfg) {
         case DEDUPLICATOR_SERVICE:
             return start_service(deduplicator(cfg.etcd_url, cfg.working_dir));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg.etcd_url, cfg.working_dir));
+            return start_service(
+                directory(cfg.etcd_url, cfg.working_dir, cfg.license));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
         }
@@ -54,39 +57,49 @@ void print_vcsid() {
 }
 
 int main(int argc, char** argv) {
-    CLI::App app{"UltiHash Object Storage Cluster"};
-    argv = app.ensure_utf8(argv);
-
-    config cfg;
-    app.add_option(
-           "role", cfg.role,
-           "service role, i.e. storage, deduplicator, directory, or entrypoint")
-        ->required()
-        ->transform([](const std::string& role_str) {
-            return std::to_string(get_service_role(role_str));
-        });
-    app.add_option("registry,--registry,-r", cfg.etcd_url,
-                   "URL to etcd endpoint")
-        ->default_val("http://127.0.0.1:2379");
-    app.add_option("working_dir,--workdir,-w", cfg.working_dir,
-                   "path to working directory ")
-        ->default_val("/var/lib/uh")
-        ->check(CLI::ExistingDirectory);
-    app.add_option("--log-level,-l", cfg.log_level,
-                   "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
-        ->transform([](const std::string& severity_str) {
-            return std::to_string(uh::log::severity_from_string(severity_str));
-        })
-        ->default_val(uh::log::to_string(boost::log::trivial::info))
-        ->envname(ENV_CFG_LOG_LEVEL);
-
-    app.add_flag_callback(
-        "--vcsid", print_vcsid,
-        "Print the VCS commit id this executable was compiled from");
-
-    CLI11_PARSE(app, argc, argv);
-
     try {
+        CLI::App app{"UltiHash Object Storage Cluster"};
+        argv = app.ensure_utf8(argv);
+
+        config cfg;
+        app.add_option("role", cfg.role,
+                       "service role, i.e. storage, deduplicator, directory, "
+                       "or entrypoint")
+            ->required()
+            ->transform([](const std::string& role_str) {
+                return std::to_string(get_service_role(role_str));
+            });
+        app.add_option(
+               "--license,-L",
+               [&cfg](CLI::results_t res) {
+                   cfg.license = check_license(res[0]);
+                   return true;
+               },
+               "UltiHash license string")
+            ->envname(ENV_CFG_LICENSE)
+            ->required();
+        app.add_option("registry,--registry,-r", cfg.etcd_url,
+                       "URL to etcd endpoint")
+            ->default_val("http://127.0.0.1:2379");
+        app.add_option("working_dir,--workdir,-w", cfg.working_dir,
+                       "path to working directory ")
+            ->default_val("/var/lib/uh")
+            ->check(CLI::ExistingDirectory);
+        app.add_option(
+               "--log-level,-l", cfg.log_level,
+               "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
+            ->transform([](const std::string& severity_str) {
+                return std::to_string(
+                    uh::log::severity_from_string(severity_str));
+            })
+            ->default_val(uh::log::to_string(boost::log::trivial::info))
+            ->envname(ENV_CFG_LOG_LEVEL);
+        app.add_flag_callback(
+            "--vcsid", print_vcsid,
+            "Print the VCS commit id this executable was compiled from");
+
+        CLI11_PARSE(app, argc, argv);
+
         uh::log::config lc{
             .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,
                                            .level = cfg.log_level},
@@ -95,6 +108,10 @@ int main(int argc, char** argv) {
                                            .level = cfg.log_level}}};
 
         uh::log::init(lc);
+
+        LOG_INFO() << "license loaded for " << cfg.license.customer
+                   << " -- storage size: " << cfg.license.max_data_store_size
+                   << " bytes";
 
         execute_role(cfg);
     } catch (const std::exception& e) {
