@@ -28,13 +28,10 @@ class big_int {
     auto operator<=>(const big_int&) const = default;
 
     constexpr inline big_int& operator+=(const big_int& other) noexcept {
-        const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
-
         num[0] += other.num[0];
         num[1] += other.num[1];
 
-        if (other.num[1] > max_no_overflow) [[unlikely]] {
-            num[1] = other.num[1] - max_no_overflow;
+        if (other.num[1] > num[1]) [[unlikely]] {
             num[0]++;
         }
 

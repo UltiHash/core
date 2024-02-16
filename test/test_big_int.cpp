@@ -91,10 +91,8 @@ BOOST_AUTO_TEST_CASE(addition) {
     BOOST_CHECK(big_int(1) == big_int() + big_int(1));
     BOOST_CHECK(big_int(max_uint64) < big_int(max_uint64) + big_int(1));
 
-    // fails: BOOST_CHECK(big_int(0, std::numeric_limits<uint64_t>::max()) +
-    // big_int(0, 1) == big_int(1, 0)); fails:
-    // BOOST_CHECK(big_int(std::numeric_limits<uint64_t>::max()) + big_int(1) ==
-    // big_int(1, 0));
+    BOOST_CHECK(big_int(0, max_uint64) + big_int(0, 1) == big_int(1, 0));
+    BOOST_CHECK(big_int(max_uint64) + big_int(1) == big_int(1, 0));
 }
 
 BOOST_AUTO_TEST_CASE(substraction) {
@@ -122,8 +120,8 @@ BOOST_AUTO_TEST_CASE(multiplication) {
     BOOST_CHECK(big_int(2) * 1 == big_int(2));
     BOOST_CHECK(big_int(1) * 2 == big_int(2));
 
-    // fails: BOOST_CHECK(big_int(max_uint64) + big_int(max_uint64) ==
-    // big_int(2) * max_uint64);
+    BOOST_CHECK(big_int(max_uint64) + big_int(max_uint64) ==
+                big_int(2) * max_uint64);
     BOOST_CHECK(big_int(max_uint64) * 2 == big_int(2) * max_uint64);
 
     BOOST_CHECK(big_int(max_uint64) * 2 > big_int(max_uint64));
@@ -132,8 +130,8 @@ BOOST_AUTO_TEST_CASE(multiplication) {
 
 BOOST_AUTO_TEST_CASE(mul_add) {
     BOOST_CHECK(big_int(2) * 3 == big_int(3) + big_int(3));
-    // fails: BOOST_CHECK(big_int(2) * max_uint64 == big_int(max_uint64) +
-    // big_int(max_uint64));
+    BOOST_CHECK(big_int(2) * max_uint64 ==
+                big_int(max_uint64) + big_int(max_uint64));
 }
 
 BOOST_AUTO_TEST_CASE(assign) {
@@ -141,11 +139,14 @@ BOOST_AUTO_TEST_CASE(assign) {
         big_int x(1, 1);
         BOOST_CHECK((x += x) == big_int(2, 2));
     }
-    /* fails:
     {
         big_int x(0, max_uint64);
-        BOOST_CHECK(x += big_int(0, 1) == big_int(1, 0));
-    }*/
+        BOOST_CHECK((x += big_int(0, 1)) == big_int(1, 0));
+    }
+    {
+        big_int x(0, max_uint64);
+        BOOST_CHECK((x += big_int(0, 2)) == big_int(1, 1));
+    }
 }
 
 } // namespace uh::cluster
