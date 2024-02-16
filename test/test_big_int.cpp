@@ -25,12 +25,16 @@ BOOST_AUTO_TEST_CASE(high_low) {
 BOOST_AUTO_TEST_CASE(equality) {
     BOOST_CHECK(big_int() == big_int());
     BOOST_CHECK(big_int() == big_int(0));
+    BOOST_CHECK(big_int() == 0);
     BOOST_CHECK(big_int() == big_int(0, 0));
     BOOST_CHECK(big_int(1) == big_int(0, 1));
+    BOOST_CHECK(big_int(1) == 1);
 }
 
 BOOST_AUTO_TEST_CASE(greater_than) {
     BOOST_CHECK(big_int(1) > big_int());
+    // compilation fails: BOOST_CHECK(1 > big_int());
+    BOOST_CHECK(big_int(1) > 0);
     BOOST_CHECK(!(big_int() > big_int()));
     BOOST_CHECK(!(big_int() > big_int(1)));
 
@@ -41,6 +45,8 @@ BOOST_AUTO_TEST_CASE(greater_than) {
 
 BOOST_AUTO_TEST_CASE(less_than) {
     BOOST_CHECK(big_int() < big_int(1));
+    // compilation fails: BOOST_CHECK(0 < big_int(1));
+    BOOST_CHECK(big_int() < 1);
     BOOST_CHECK(!(big_int() < big_int()));
     BOOST_CHECK(!(big_int(1) < big_int()));
 
@@ -55,6 +61,8 @@ BOOST_AUTO_TEST_CASE(string) {
 
 BOOST_AUTO_TEST_CASE(addition) {
     BOOST_CHECK(big_int() == big_int() + big_int());
+    BOOST_CHECK(big_int() == big_int() + 0);
+    // compilation fails: BOOST_CHECK(big_int() == 0 + big_int());
     BOOST_CHECK(big_int(1) == big_int(1) + big_int());
     BOOST_CHECK(big_int(1) == big_int() + big_int(1));
     BOOST_CHECK(big_int(max_uint64) < big_int(max_uint64) + big_int(1));
@@ -67,7 +75,9 @@ BOOST_AUTO_TEST_CASE(addition) {
 
 BOOST_AUTO_TEST_CASE(substraction) {
     BOOST_CHECK(big_int() == big_int() - big_int());
+    BOOST_CHECK(big_int() == big_int() - 0);
     BOOST_CHECK(big_int(1) == big_int(1) - big_int());
+    // compilation fails: BOOST_CHECK(big_int(1) == 1 - big_int());
     BOOST_CHECK(big_int(max_uint64) > big_int(max_uint64) - big_int(1));
 
     // why this format?
