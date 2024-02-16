@@ -6,6 +6,8 @@
 #include "common/utils/worker_utils.h"
 #include "directory_store.h"
 
+#include <fstream>
+
 namespace uh::cluster {
 
 class directory_handler : public protocol_handler {
@@ -15,7 +17,10 @@ class directory_handler : public protocol_handler {
         std::shared_ptr<boost::asio::thread_pool> directory_workers)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf), m_storage(storage),
-          m_directory_workers(std::move(directory_workers)) {}
+          m_directory_workers(std::move(directory_workers)),
+          m_stored_size(get_stored_size()) {}
+
+    ~directory_handler() { write_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
@@ -77,8 +82,72 @@ class directory_handler : public protocol_handler {
         co_return;
     }
 
+    void write_stored_size() const {
+        try {
+            std::ofstream out(
+                (m_config.directory_store_conf.working_dir / "cache").string());
+            out << m_stored_size.to_string();
+        } catch (...) {
+        }
+    }
+
+    /**
+     * Return the size of data referenced by the directory.
+     *
+     * @note The value is cached in the directory's working dir. If the
+     * value is not cached, this will traverse all buckets and keys. This is
+     * potentially very expensive. As a result this function is private and
+     * only called during construction.
+     */
+    uint128_t get_stored_size() {
+        try {
+            std::ifstream in(m_config.directory_store_conf.working_dir /
+                             "cache");
+            std::string s;
+            in >> s;
+            return uint128_t(s);
+        } catch (const std::exception&) {
+        }
+
+        uint128_t rv;
+        for (const auto& bucket : m_directory.list_buckets()) {
+            for (const auto& key : m_directory.list_keys(bucket)) {
+                address addr;
+                const auto& data = m_directory.get(bucket, key);
+                try {
+                    zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(addr)
+                        .or_throw();
+                    rv += addr.data_size();
+                } catch (const std::exception& e) {
+                }
+            }
+        }
+
+        return rv;
+    }
+
+    void lower_size_limit(const uint128_t& decrement) {
+        std::unique_lock<std::mutex> lk(m_mutex_size);
+
+        m_stored_size = m_stored_size - decrement;
+    }
+
+    void check_size_limit(const uint128_t& increment) {
+        std::unique_lock<std::mutex> lk(m_mutex_size);
+
+        auto new_size = m_stored_size + increment;
+
+        if (new_size > m_config.max_data_store_size) {
+            throw error_exception(error::storage_limit_exceeded);
+        }
+
+        m_stored_size = new_size;
+    }
+
     coro<void> handle_put_obj(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
+
+        check_size_limit(request.addr->data_size());
 
         auto func = [](directory_store& directory,
                        const directory_message& request) {
@@ -157,9 +226,19 @@ class directory_handler : public protocol_handler {
 
     coro<void> handle_delete_object(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
-        auto func = [](directory_store& directory,
-                       const directory_message& request) {
-            directory.remove_object(request.bucket_id, *request.object_key);
+        auto func = [this](directory_store& directory,
+                           const directory_message& request) {
+            try {
+                address addr;
+                auto buf =
+                    directory.get(request.bucket_id, *request.object_key);
+                zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
+                    .or_throw();
+                lower_size_limit(addr.data_size());
+
+                directory.remove_object(request.bucket_id, *request.object_key);
+            } catch (const std::exception&) {
+            }
         };
 
         co_await worker_utils::post_in_workers(
@@ -207,6 +286,8 @@ class directory_handler : public protocol_handler {
     directory_store m_directory;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
+    std::mutex m_mutex_size;
+    uint128_t m_stored_size;
 };
 } // end namespace uh::cluster
 

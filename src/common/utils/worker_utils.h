@@ -19,21 +19,16 @@ struct worker_utils {
                     boost::asio::io_context& ioc, Func func) {
         auto pr = std::make_shared<
             awaitable_promise<std::invoke_result_t<Func, Args...>>>(ioc);
-        std::exception_ptr eptr;
 
-        auto f = [](auto& f, auto& eptr, auto promise) {
+        auto f = [](auto& f, auto promise) {
             try {
                 promise->set(f());
-            } catch (const std::exception& e) {
-                eptr = std::current_exception();
+            } catch (const std::exception&) {
+                promise->set_exception(std::current_exception());
             }
         };
 
-        boost::asio::post(workers,
-                          std::bind(f, std::ref(func), std::ref(eptr), pr));
-        if (eptr) [[unlikely]] {
-            std::rethrow_exception(eptr);
-        }
+        boost::asio::post(workers, std::bind(f, std::ref(func), pr));
 
         co_return co_await pr->get();
     }
@@ -43,22 +38,18 @@ struct worker_utils {
     static coro<void> post_in_workers(boost::asio::thread_pool& workers,
                                       boost::asio::io_context& ioc, Func func) {
         auto pr = std::make_shared<awaitable_promise<void>>(ioc);
-        std::exception_ptr eptr;
 
-        auto f = [](auto& f, auto& eptr, auto promise) {
+        auto f = [](auto& f, auto promise) {
             try {
                 f();
-            } catch (const std::exception& e) {
-                eptr = std::current_exception();
+                promise->set();
+            } catch (const std::exception&) {
+                promise->set_exception(std::current_exception());
             }
-            promise->set();
         };
 
-        boost::asio::post(workers,
-                          std::bind(f, std::ref(func), std::ref(eptr), pr));
-        if (eptr) [[unlikely]] {
-            std::rethrow_exception(eptr);
-        }
+        boost::asio::post(workers, std::bind(f, std::ref(func), pr));
+
         co_await pr->get();
     }
 
