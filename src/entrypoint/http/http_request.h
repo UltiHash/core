@@ -18,7 +18,7 @@ class http_request {
                  boost::asio::ip::tcp::socket& stream,
                  boost::beast::flat_buffer& buffer);
 
-    const uri& get_URI() const;
+    const uri& get_uri() const;
 
     const std::string& get_body() const;
 

@@ -18,7 +18,7 @@ class list_objects_v2 {
 
     static bool can_handle(const http_request& req) {
         if (req.get_method() == method::get) {
-            if (const auto& uri = req.get_URI();
+            if (const auto& uri = req.get_uri();
                 uri.query_string_exists("list-type") &&
                 uri.get_query_string_value("list-type") == "2") {
                 return true;
@@ -29,7 +29,7 @@ class list_objects_v2 {
 
     coro<http_response> handle(const http_request& req) {
         try {
-            const auto& req_uri = req.get_URI();
+            const auto& req_uri = req.get_uri();
             directory_message dir_req;
             dir_req.bucket_id = req_uri.get_bucket_id();
 
@@ -104,7 +104,7 @@ class list_objects_v2 {
     static http_response get_response(const std::vector<std::string>& content,
                                       const http_request& req) {
 
-        const auto& req_uri = req.get_URI();
+        const auto& req_uri = req.get_uri();
 
         const auto get_if_exists =
             [&req_uri](auto&& key) -> std::optional<std::string> {

@@ -11,7 +11,7 @@ bool get_object::can_handle(const http_request& req) {
 
     if (req.get_method() == method::get) {
 
-        if (const auto& uri = req.get_URI();
+        if (const auto& uri = req.get_uri();
             !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
             !uri.query_string_exists("attributes")) {
             return true;
@@ -32,9 +32,9 @@ coro<http_response> get_object::handle(const http_request& req) const {
         auto func = [](std::string& buffer, const http_request& req,
                        client::acquired_messenger m) -> coro<void> {
             directory_message dir_req;
-            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            dir_req.bucket_id = req.get_uri().get_bucket_id();
             dir_req.object_key =
-                std::make_unique<std::string>(req.get_URI().get_object_key());
+                std::make_unique<std::string>(req.get_uri().get_object_key());
 
             co_await m.get().send_directory_message(DIR_GET_OBJ_REQ, dir_req);
             const auto h_dir = co_await m.get().recv_header();

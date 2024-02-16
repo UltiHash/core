@@ -11,7 +11,7 @@ bool create_bucket::can_handle(const http_request& req) {
 
     if (req.get_method() == method::put) {
 
-        if (const auto& uri = req.get_URI();
+        if (const auto& uri = req.get_uri();
             !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
             uri.get_query_parameters().empty()) {
             return true;
@@ -23,7 +23,7 @@ bool create_bucket::can_handle(const http_request& req) {
 
 coro<http_response> create_bucket::handle(const http_request& req) const {
 
-    auto bucket_id = req.get_URI().get_bucket_id();
+    auto bucket_id = req.get_uri().get_bucket_id();
     try {
         auto func = [&bucket_id](const auto& bucket,
                                  client::acquired_messenger m,
