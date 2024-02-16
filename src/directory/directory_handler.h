@@ -192,8 +192,8 @@ class directory_handler : public protocol_handler {
                        directory_lst_entities_message& response,
                        directory_message& request) {
             std::string lower_bound, prefix;
-            if (request.object_key) {
-                lower_bound = *request.object_key;
+            if (request.object_key_lower_bound) {
+                lower_bound = *request.object_key_lower_bound;
             }
             if (request.object_key_prefix) {
                 prefix = *request.object_key_prefix;
