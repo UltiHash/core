@@ -116,6 +116,14 @@ class big_int {
     constexpr static auto UNSIGNED_MAX_4 = std::numeric_limits<uint32_t>::max();
 };
 
+constexpr big_int operator+(uint64_t a, const big_int& b) {
+    return big_int(a) + b;
+}
+
+constexpr big_int operator-(uint64_t a, const big_int& b) {
+    return big_int(a) - b;
+}
+
 typedef big_int uint128_t;
 
 } // end namespace uh::cluster

@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(string) {
 BOOST_AUTO_TEST_CASE(addition) {
     BOOST_CHECK(big_int() == big_int() + big_int());
     BOOST_CHECK(big_int() == big_int() + 0);
-    // compilation fails: BOOST_CHECK(big_int() == 0 + big_int());
+    BOOST_CHECK(big_int() == 0 + big_int());
     BOOST_CHECK(big_int(1) == big_int(1) + big_int());
     BOOST_CHECK(big_int(1) == big_int() + big_int(1));
     BOOST_CHECK(big_int(max_uint64) < big_int(max_uint64) + big_int(1));
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(substraction) {
     BOOST_CHECK(big_int() == big_int() - big_int());
     BOOST_CHECK(big_int() == big_int() - 0);
     BOOST_CHECK(big_int(1) == big_int(1) - big_int());
-    // compilation fails: BOOST_CHECK(big_int(1) == 1 - big_int());
+    BOOST_CHECK(big_int(1) == 1 - big_int());
     BOOST_CHECK(big_int(max_uint64) > big_int(max_uint64) - big_int(1));
 
     // why this format?
