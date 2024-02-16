@@ -126,10 +126,17 @@ class directory_handler : public protocol_handler {
         return rv;
     }
 
-    void update_size_limit(int64_t diff) {
+    void lower_size_limit(const uint128_t& decrement) {
         std::unique_lock<std::mutex> lk(m_mutex_size);
 
-        auto new_size = m_stored_size + diff;
+        m_stored_size = m_stored_size - decrement;
+    }
+
+    void check_size_limit(const uint128_t& increment) {
+        std::unique_lock<std::mutex> lk(m_mutex_size);
+
+        auto new_size = m_stored_size + increment;
+
         if (new_size > m_config.max_data_store_size) {
             throw error_exception(error::storage_limit_exceeded);
         }
@@ -140,7 +147,7 @@ class directory_handler : public protocol_handler {
     coro<void> handle_put_obj(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
 
-        update_size_limit(request.addr->data_size());
+        check_size_limit(request.addr->data_size());
 
         auto func = [](directory_store& directory,
                        const directory_message& request) {
@@ -227,7 +234,7 @@ class directory_handler : public protocol_handler {
                     directory.get(request.bucket_id, *request.object_key);
                 zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
                     .or_throw();
-                update_size_limit(addr.data_size());
+                lower_size_limit(addr.data_size());
 
                 directory.remove_object(request.bucket_id, *request.object_key);
             } catch (const std::exception&) {
