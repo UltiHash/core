@@ -102,14 +102,12 @@ BOOST_AUTO_TEST_CASE(substraction) {
     BOOST_CHECK(big_int(1) == 1 - big_int());
     BOOST_CHECK(big_int(max_uint64) > big_int(max_uint64) - big_int(1));
 
-    // why this format?
-    BOOST_CHECK(big_int(max_uint64, max_uint64 - 1) == big_int() - big_int(1));
+    BOOST_CHECK(big_int(max_uint64, max_uint64) == big_int() - big_int(1));
 }
 
 BOOST_AUTO_TEST_CASE(sub_and_add) {
     BOOST_CHECK((big_int() + big_int(1)) - big_int(1) == big_int());
-
-    // fails: BOOST_CHECK((big_int() - big_int(1)) + big_int(1) == big_int());
+    BOOST_CHECK((big_int() - big_int(1)) + big_int(1) == big_int());
 }
 
 BOOST_AUTO_TEST_CASE(multiplication) {
