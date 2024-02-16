@@ -17,6 +17,8 @@ class error {
         bucket_not_found = 2,
         object_not_found = 3,
         bucket_not_empty = 4,
+        invalid_bucket_name = 5,
+
     };
 
     error(type t = unknown, const std::string& message = "");

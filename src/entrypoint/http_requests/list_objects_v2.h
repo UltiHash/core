@@ -29,32 +29,35 @@ class list_objects_v2 {
 
     coro<http_response> handle(const http_request& req) {
         try {
+            const auto& uri = req.get_URI();
+            directory_message dir_req;
+            dir_req.bucket_id = uri.get_bucket_id();
+
+            if (dir_req.bucket_id.empty()) {
+                throw error_exception(error::invalid_bucket_name);
+            }
+
+            if (uri.query_string_exists("prefix")) {
+                if (const auto& prefix = uri.get_query_string_value("prefix");
+                    !prefix.empty()) {
+                    dir_req.object_key_prefix =
+                        std::make_unique<std::string>(prefix);
+                }
+            }
+            if (uri.query_string_exists("start-after")) {
+                if (const auto& start_after =
+                        uri.get_query_string_value("start-after");
+                    !start_after.empty()) {
+                    dir_req.object_key_lower_bound =
+                        std::make_unique<std::string>(start_after);
+                }
+            }
+
             std::vector<std::string> content;
 
-            auto func = [](const http_request& req,
+            auto func = [](const directory_message& dir_req,
                            std::vector<std::string>& content,
                            client::acquired_messenger m) -> coro<void> {
-                const auto& uri = req.get_URI();
-
-                directory_message dir_req;
-                dir_req.bucket_id = uri.get_bucket_id();
-                if (uri.query_string_exists("prefix")) {
-                    if (const auto& prefix =
-                            uri.get_query_string_value("prefix");
-                        !prefix.empty()) {
-                        dir_req.object_key_prefix =
-                            std::make_unique<std::string>(prefix);
-                    }
-                }
-                if (uri.query_string_exists("start-after")) {
-                    if (const auto& start_after =
-                            uri.get_query_string_value("start-after");
-                        !start_after.empty()) {
-                        dir_req.object_key_lower_bound =
-                            std::make_unique<std::string>(start_after);
-                    }
-                }
-
                 co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ,
                                                         dir_req);
                 const auto h_dir = co_await m.get().recv_header();
@@ -75,7 +78,8 @@ class list_objects_v2 {
                 io_thread_acquire_messenger_and_post_in_io_threads(
                     m_state.workers, m_state.ioc,
                     m_state.directory_services.get(),
-                    std::bind_front(func, std::cref(req), std::ref(content)));
+                    std::bind_front(func, std::cref(dir_req),
+                                    std::ref(content)));
             co_return get_response(content, req);
 
         } catch (const error_exception& e) {
@@ -85,6 +89,10 @@ class list_objects_v2 {
                 throw rest::http::model::custom_error_response_exception(
                     boost::beast::http::status::not_found,
                     rest::http::model::error::bucket_not_found);
+            case error::invalid_bucket_name:
+                throw rest::http::model::custom_error_response_exception(
+                    boost::beast::http::status::bad_request,
+                    rest::http::model::error::invalid_bucket_name);
             default:
                 throw rest::http::model::custom_error_response_exception(
                     boost::beast::http::status::internal_server_error);
