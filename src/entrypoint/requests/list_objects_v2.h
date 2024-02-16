@@ -142,25 +142,21 @@ class list_objects_v2 {
         if (!content.empty() && max_keys != 0) {
 
             for (const auto& c : content) {
+                size_t delimiter_index = std::string::npos;
 
                 if (delimiter) {
-                    size_t delimiter_index;
                     if (prefix) {
                         delimiter_index = c.find(*delimiter, prefix->size());
                     } else {
                         delimiter_index = c.find(*delimiter);
                     }
-
-                    if (delimiter_index != std::string::npos) {
-                        auto delimeter_prefix =
-                            c.substr(0, delimiter_index + 1);
-                        common_prefixes.emplace(
-                            (encoding_type
-                                 ? rest::utils::string_utils::URL_encode(
-                                       delimeter_prefix)
-                                 : delimeter_prefix));
-                    }
-
+                }
+                if (delimiter_index != std::string::npos) {
+                    auto delimeter_prefix = c.substr(0, delimiter_index + 1);
+                    common_prefixes.emplace(
+                        (encoding_type ? rest::utils::string_utils::URL_encode(
+                                             delimeter_prefix)
+                                       : delimeter_prefix));
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
@@ -172,8 +168,8 @@ class list_objects_v2 {
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
                         "</Contents>\n";
+                    counter++;
                 }
-                counter++;
 
                 if (counter + common_prefixes.size() == max_keys)
                     break;
