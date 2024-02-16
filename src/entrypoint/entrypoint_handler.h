@@ -155,7 +155,6 @@ class entrypoint_handler : public protocol_handler {
         if (head.can_handle(req)) {
             return head.handle(req);
         }
-
         return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
@@ -524,6 +523,7 @@ class entrypoint_handler : public protocol_handler {
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
+
     handle_list_objects(const rest::http::http_request& req) {
         std::unique_ptr<rest::http::model::list_objects_response> res;
 
