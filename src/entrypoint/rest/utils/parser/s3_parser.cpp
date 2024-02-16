@@ -5,7 +5,6 @@
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/delete_object_request.h"
 #include "entrypoint/rest/http/models/delete_objects_request.h"
-#include "entrypoint/rest/http/models/get_object_attributes_request.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include "entrypoint/rest/http/models/list_objects_request.h"
@@ -93,9 +92,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
     case http::http_method::HTTP_GET:
         if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
             if (uri->query_string_exists("attributes")) {
-                return std::make_unique<
-                    rest::http::model::get_object_attributes_request>(
-                    m_recv_req, std::move(uri));
+                return nullptr;
             } else {
                 return nullptr;
             }
@@ -140,9 +137,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                     rest::http::model::abort_multi_part_upload_request>(
                     m_recv_req, m_server_state, std::move(uri));
             } else {
-                return std::make_unique<
-                    rest::http::model::delete_object_request>(m_recv_req,
-                                                              std::move(uri));
+                return nullptr;
             }
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {

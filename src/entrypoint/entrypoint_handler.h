@@ -11,7 +11,6 @@
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/delete_object_response.h"
 #include "entrypoint/rest/http/models/delete_objects_response.h"
-#include "entrypoint/rest/http/models/get_object_attributes_response.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
@@ -28,6 +27,7 @@
 // REFACTORED
 #include "common.h"
 #include "entrypoint/http_requests/create_bucket.h"
+#include "entrypoint/http_requests/get_object_attributes.h"
 #include "http_requests/delete_bucket.h"
 #include "http_requests/get_bucket.h"
 #include "http_requests/get_object.h"
@@ -181,9 +181,6 @@ class entrypoint_handler : public protocol_handler {
         case rest::http::http_request_type::LIST_OBJECTS:
             res = co_await handle_list_objects(req);
             break;
-        case rest::http::http_request_type::GET_OBJECT_ATTRIBUTES:
-            res = handle_get_object_attributes(req);
-            break;
         case rest::http::http_request_type::INIT_MULTIPART_UPLOAD:
             res = co_await handle_init_mp_upload(req, state);
             break;
@@ -205,20 +202,6 @@ class entrypoint_handler : public protocol_handler {
         }
 
         co_return std::move(res);
-    }
-
-    std::unique_ptr<rest::http::http_response>
-    handle_get_object_attributes(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::get_object_attributes_response> res;
-
-        res =
-            std::make_unique<rest::http::model::get_object_attributes_response>(
-                req);
-        throw rest::http::model::custom_error_response_exception(
-            boost::beast::http::status::not_implemented);
-
-        return std::move(res);
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
@@ -673,7 +656,8 @@ auto define_entrypoint_handler(entrypoint_state& state,
 auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(
         state, create_bucket(state), get_bucket(state), list_buckets(state),
-        delete_bucket(state), put_object(state), get_object(state));
+        delete_bucket(state), put_object(state), get_object(state),
+        get_object_attributes(state));
 }
 
 } // end namespace uh::cluster
