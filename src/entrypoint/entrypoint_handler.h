@@ -9,10 +9,8 @@
 #include "entrypoint/rest/http/models/abort_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/complete_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/http/models/delete_bucket_response.h"
 #include "entrypoint/rest/http/models/delete_object_response.h"
 #include "entrypoint/rest/http/models/delete_objects_response.h"
-#include "entrypoint/rest/http/models/get_bucket_response.h"
 #include "entrypoint/rest/http/models/get_object_attributes_response.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_buckets_response.h"
@@ -169,14 +167,8 @@ class entrypoint_handler : public protocol_handler {
         std::unique_ptr<rest::http::http_response> res;
 
         switch (req.get_request_name()) {
-        case rest::http::http_request_type::GET_BUCKET:
-            res = co_await handle_get_bucket(req);
-            break;
         case rest::http::http_request_type::LIST_BUCKETS:
             res = co_await handle_list_buckets(req);
-            break;
-        case rest::http::http_request_type::DELETE_BUCKET:
-            res = co_await handle_delete_bucket(req);
             break;
         case rest::http::http_request_type::DELETE_OBJECTS:
             res = co_await handle_delete_objects(req);
@@ -211,99 +203,6 @@ class entrypoint_handler : public protocol_handler {
         default:
             throw std::runtime_error(
                 "request not supported by the backend yet.");
-        }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_delete_bucket(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::delete_bucket_response> res;
-
-        try {
-            res = std::make_unique<rest::http::model::delete_bucket_response>(
-                req);
-
-            auto func = [](const rest::http::http_request& req,
-                           client::acquired_messenger m,
-                           long id) -> coro<void> {
-                directory_message dir_req;
-                dir_req.bucket_id = req.get_URI().get_bucket_id();
-                co_await m.get().send_directory_message(DIR_DELETE_BUCKET_REQ,
-                                                        dir_req);
-                co_await m.get().recv_header();
-            };
-            co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-                m_directory_services.get_clients(), m_ioc, m_workers,
-                std::bind_front(func, std::cref(req)));
-        } catch (const error_exception& e) {
-            LOG_ERROR() << "Failed to delete bucket: " << e;
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
-            case error::bucket_not_empty:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::conflict,
-                    rest::http::model::error::bucket_not_empty);
-            default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
-            }
-        }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_get_bucket(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::get_bucket_response> res =
-            std::make_unique<rest::http::model::get_bucket_response>(req);
-        auto req_bucket_id = req.get_URI().get_bucket_id();
-
-        try {
-
-            auto func =
-                [](std::unique_ptr<rest::http::model::get_bucket_response>& res,
-                   const std::string& req_bucket_id,
-                   client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
-                const auto h = co_await m.get().recv_header();
-                const auto list_buckets_res =
-                    co_await m.get().recv_directory_list_entities_message(h);
-                for (const auto& bucket : list_buckets_res.entities) {
-                    if (bucket == req_bucket_id) {
-                        res->add_bucket(bucket);
-                        break;
-                    }
-                }
-
-                if (res->get_bucket().empty()) {
-                    throw error_exception(error::bucket_not_found);
-                }
-            };
-
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_workers, m_ioc, m_directory_services.get(),
-                    std::bind_front(func, std::ref(res),
-                                    std::cref(req_bucket_id)));
-
-        } catch (const error_exception& e) {
-            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id
-                        << "`: " << e;
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
-            default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
-            }
         }
 
         co_return std::move(res);
