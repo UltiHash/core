@@ -8,16 +8,10 @@ put_object::put_object(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool put_object::can_handle(const http_request& req) {
-    if (req.get_method() == method::put) {
+    const auto& uri = req.get_URI();
 
-        if (const auto& uri = req.get_URI();
-            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-            uri.get_query_parameters().empty()) {
-            return true;
-        }
-    }
-
-    return false;
+    return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
+           !uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
 coro<http_response> put_object::handle(http_request& req) const {
