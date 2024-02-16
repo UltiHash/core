@@ -7,7 +7,6 @@
 #include "entrypoint/rest/http/models/delete_objects_request.h"
 #include "entrypoint/rest/http/models/get_object_attributes_request.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/list_buckets_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include "entrypoint/rest/http/models/list_objects_request.h"
 #include "entrypoint/rest/http/models/list_objectsv2_request.h"
@@ -122,8 +121,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
             }
         } else if (uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
-            return std::make_unique<rest::http::model::list_buckets_request>(
-                m_recv_req, std::move(uri));
+            return nullptr;
         } else {
             throw std::runtime_error("unknown request type");
         }

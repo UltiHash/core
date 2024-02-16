@@ -21,6 +21,16 @@ bool get_bucket::can_handle(const http_request& req) {
     return false;
 }
 
+static http_response get_response(const std::string& bucket_name) {
+    http_response res;
+
+    std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";
+    res.set_body(
+        std::string("<GetBucketResult>\n" + bucket_xml + "</GetBucketResult>"));
+
+    return res;
+}
+
 coro<http_response> get_bucket::handle(const http_request& req) const {
     auto req_bucket_id = req.get_URI().get_bucket_id();
 
@@ -28,7 +38,7 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
         http_response res;
         std::string bucket_name;
 
-        auto func = [](http_response& res, const std::string& req_bucket_id,
+        auto func = [](const std::string& req_bucket_id,
                        std::string& bucket_name,
                        client::acquired_messenger m) -> coro<void> {
             co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
@@ -38,7 +48,7 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
 
             for (const auto& bucket : list_buckets_res.entities) {
                 if (bucket == req_bucket_id) {
-                    bucket_name = std::move(bucket);
+                    bucket_name = bucket;
                     break;
                 }
             }
@@ -51,14 +61,10 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
                 m_state.workers, m_state.ioc, m_state.directory_services.get(),
-                std::bind_front(func, std::ref(res), std::cref(req_bucket_id),
+                std::bind_front(func, std::cref(req_bucket_id),
                                 std::ref(bucket_name)));
 
-        std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";
-        res.set_body(std::string("<GetBucketResult>\n" + bucket_xml +
-                                 "</GetBucketResult>"));
-
-        co_return res;
+        co_return get_response(bucket_name);
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;

@@ -13,7 +13,6 @@
 #include "entrypoint/rest/http/models/delete_objects_response.h"
 #include "entrypoint/rest/http/models/get_object_attributes_response.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
-#include "entrypoint/rest/http/models/list_buckets_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
 #include "entrypoint/rest/http/models/list_objectsv2_response.h"
@@ -29,7 +28,10 @@
 // REFACTORED
 #include "common.h"
 #include "entrypoint/http_requests/create_bucket.h"
+#include "http_requests/delete_bucket.h"
+#include "http_requests/get_bucket.h"
 #include "http_requests/get_object.h"
+#include "http_requests/list_buckets.h"
 #include "http_requests/put_object.h"
 
 namespace uh::cluster {
@@ -167,9 +169,6 @@ class entrypoint_handler : public protocol_handler {
         std::unique_ptr<rest::http::http_response> res;
 
         switch (req.get_request_name()) {
-        case rest::http::http_request_type::LIST_BUCKETS:
-            res = co_await handle_list_buckets(req);
-            break;
         case rest::http::http_request_type::DELETE_OBJECTS:
             res = co_await handle_delete_objects(req);
             break;
@@ -204,32 +203,6 @@ class entrypoint_handler : public protocol_handler {
             throw std::runtime_error(
                 "request not supported by the backend yet.");
         }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_list_buckets(const rest::http::http_request& req) {
-
-        std::unique_ptr<rest::http::model::list_buckets_response> res =
-            std::make_unique<rest::http::model::list_buckets_response>(req);
-
-        auto func =
-            [](std::unique_ptr<rest::http::model::list_buckets_response>& res,
-               client::acquired_messenger m) -> coro<void> {
-            co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
-            const auto h = co_await m.get().recv_header();
-            auto list_buckets_res =
-                co_await m.get().recv_directory_list_entities_message(h);
-            for (const auto& bucket : list_buckets_res.entities) {
-                res->add_bucket(bucket);
-            }
-        };
-
-        co_await worker_utils::
-            io_thread_acquire_messenger_and_post_in_io_threads(
-                m_workers, m_ioc, m_directory_services.get(),
-                std::bind_front(func, std::ref(res)));
 
         co_return std::move(res);
     }
@@ -698,8 +671,9 @@ auto define_entrypoint_handler(entrypoint_state& state,
 }
 
 auto make_entrypoint_handler(entrypoint_state& state) {
-    return define_entrypoint_handler(state, create_bucket(state),
-                                     put_object(state), get_object(state));
+    return define_entrypoint_handler(
+        state, create_bucket(state), get_bucket(state), list_buckets(state),
+        delete_bucket(state), put_object(state), get_object(state));
 }
 
 } // end namespace uh::cluster
