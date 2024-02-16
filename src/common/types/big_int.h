@@ -26,24 +26,12 @@ class big_int {
         num[1] = std::stoul(num1_str);
     }
 
+    auto operator<=>(const big_int&) const = default;
+
     constexpr inline big_int& operator+=(const big_int& other) noexcept {
         num[0] += other.num[0];
         num[1] += other.num[1];
         return *this;
-    }
-
-    constexpr inline bool operator<(const big_int& other) const noexcept {
-        return num[0] < other.num[0] or
-               ((num[0] == other.num[0]) and (num[1] < other.num[1]));
-    }
-
-    constexpr inline bool operator>(const big_int& other) const noexcept {
-        return num[0] > other.num[0] or
-               ((num[0] == other.num[0]) and (num[1] > other.num[1]));
-    }
-
-    constexpr inline bool operator==(const big_int& other) const noexcept {
-        return num[1] == other.num[1] and num[0] == other.num[0];
     }
 
     constexpr inline big_int operator+(const big_int& other) const noexcept {
