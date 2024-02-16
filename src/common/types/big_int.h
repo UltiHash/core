@@ -66,39 +66,6 @@ class big_int {
         return res;
     }
 
-    constexpr inline bool operator<(const unsigned long other) const noexcept {
-        return num[0] == 0 and num[1] < other;
-    }
-
-    constexpr inline bool operator>(const unsigned long other) const noexcept {
-        return num[0] == 0 and num[1] > other;
-    }
-
-    constexpr inline bool operator==(const unsigned long other) const noexcept {
-        return num[0] == 0 and num[1] == other;
-    }
-    constexpr inline big_int
-    operator+(const unsigned long other) const noexcept {
-        big_int res{num[0], num[1] + other};
-        const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
-        if (other > max_no_overflow) [[unlikely]] {
-            res.num[1] = other - max_no_overflow;
-            res.num[0]++;
-        }
-        return res;
-    }
-
-    constexpr inline big_int
-    operator-(const unsigned long other) const noexcept {
-        big_int res{num[0], num[1] - other};
-        const auto max_no_underflow = UNSIGNED_MAX_8 - num[1];
-        if (other > max_no_underflow) [[unlikely]] {
-            res.num[1] = UNSIGNED_MAX_8 - other + max_no_underflow;
-            res.num[0]--;
-        }
-        return res;
-    }
-
     constexpr inline big_int
     operator*(const unsigned long other) const noexcept {
         const unsigned long sub_num11 = num[1] & UNSIGNED_MAX_4;
@@ -138,17 +105,6 @@ class big_int {
         }
 
         return {num0, num1};
-    }
-
-    constexpr inline big_int& operator+=(const unsigned long other) noexcept {
-        const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
-        if (other > max_no_overflow) [[unlikely]] {
-            num[1] = other - max_no_overflow;
-            num[0]++;
-        } else {
-            num[1] += other;
-        }
-        return *this;
     }
 
     [[nodiscard]] inline std::string to_string() const {
