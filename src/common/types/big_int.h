@@ -46,9 +46,9 @@ class big_int {
         big_int res{num[0] - other.num[0], num[1] - other.num[1]};
 
         if (other.num[1] > num[1]) [[unlikely]] {
-            res.num[1] = UNSIGNED_MAX_8 - other.num[1] + num[1];
             res.num[0]--;
         }
+
         return res;
     }
 
