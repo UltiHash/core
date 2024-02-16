@@ -21,7 +21,7 @@ bool get_bucket::can_handle(const http_request& req) {
     return false;
 }
 
-static http_response get_response(const std::string& bucket_name) {
+static http_response get_response(const std::string& bucket_name) noexcept {
     http_response res;
 
     std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";

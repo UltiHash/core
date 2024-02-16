@@ -8,17 +8,11 @@ get_object_attributes::get_object_attributes(
     : m_state(entry_state) {}
 
 bool get_object_attributes::can_handle(const http_request& req) {
+    const auto& uri = req.get_URI();
 
-    if (req.get_method() == method::get) {
-
-        if (const auto& uri = req.get_URI();
-            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-            uri.query_string_exists("attributes")) {
-            return true;
-        }
-    }
-
-    return false;
+    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
+           !uri.get_object_key().empty() &&
+           uri.query_string_exists("attributes");
 }
 
 coro<http_response>
