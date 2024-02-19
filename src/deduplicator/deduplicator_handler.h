@@ -16,11 +16,11 @@ class deduplicator_handler : public protocol_handler {
     deduplicator_handler(
         deduplicator_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> dedupe_workers,
-        std::shared_ptr<metrics_handler> metrics_handler)
+        const std::string& metrics_endpoint)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage), m_dedupe_workers(std::move(dedupe_workers)),
-          m_metrics_handler(metrics_handler) {
+          m_metrics_endpoint(metrics_endpoint) {
         if (m_dedupe_conf.min_fragment_size >
             m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument("L1 cache sample size should not be "
@@ -34,7 +34,7 @@ class deduplicator_handler : public protocol_handler {
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s), m_metrics_handler);
+        messenger m(std::move(s), m_metrics_endpoint);
 
         for (;;) {
             std::optional<error> err;
@@ -188,7 +188,7 @@ class deduplicator_handler : public protocol_handler {
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
-    std::shared_ptr<uh::cluster::metrics_handler> m_metrics_handler;
+    const std::string& m_metrics_endpoint;
 };
 
 } // end namespace uh::cluster

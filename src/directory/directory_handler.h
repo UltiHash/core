@@ -15,18 +15,18 @@ class directory_handler : public protocol_handler {
     directory_handler(
         directory_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> directory_workers,
-        std::shared_ptr<metrics_handler> metrics_handler)
+        const std::string& metrics_endpoint)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf), m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
-          m_stored_size(get_stored_size()), m_metrics_handler(metrics_handler) {
-    }
+          m_stored_size(get_stored_size()),
+          m_metrics_endpoint(metrics_endpoint) {}
 
     ~directory_handler() { write_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s), m_metrics_handler);
+        messenger m(std::move(s), m_metrics_endpoint);
 
         for (;;) {
             std::optional<error> err;
@@ -296,7 +296,7 @@ class directory_handler : public protocol_handler {
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
     std::mutex m_mutex_size;
     uint128_t m_stored_size;
-    std::shared_ptr<uh::cluster::metrics_handler> m_metrics_handler;
+    const std::string& m_metrics_endpoint;
 };
 } // end namespace uh::cluster
 
