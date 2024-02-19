@@ -8,6 +8,9 @@ add_subdirectory(CLI11)
 
 option(WITH_OTLP_GRPC "Whether to include the OTLP gRPC exporter in the SDK" ON)
 option(BUILD_TESTING "Whether to enable tests" OFF)
+option(BUILD_SHARED_LIBS "Whether to build as shared library" OFF)
+option(WITH_EXAMPLES "Whether to include examples in build" OFF)
+
 add_subdirectory(opentelemetry-cpp)
 
 add_library(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits/zpp_bits.h)
