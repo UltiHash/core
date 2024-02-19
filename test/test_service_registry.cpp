@@ -20,8 +20,7 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
     const auto port_address = 9200;
 
     auto etcd_client = etcd::SyncClient(REGISTRY_ENDPOINT);
-    service_registry registering_registry(STORAGE_SERVICE, index,
-                                          REGISTRY_ENDPOINT);
+    service_registry registering_registry(STORAGE_SERVICE, index, etcd_client);
 
     const auto service_prefix_path = etcd_services_attributes_key_prefix +
                                      get_service_string(STORAGE_SERVICE) + '/' +
