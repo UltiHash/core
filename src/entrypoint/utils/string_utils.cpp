@@ -10,7 +10,8 @@ constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "0123456789"
     "-._~/";
 
-std::string string_utils::URL_encode(const std::string& str_to_encode) {
+std::string
+string_utils::URL_encode(const std::string& str_to_encode) noexcept {
     auto encoded_string =
         boost::urls::encode(str_to_encode, custom_unreserved_chars);
 
