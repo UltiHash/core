@@ -17,6 +17,9 @@ class list_buckets {
 
   private:
     const entrypoint_state& m_state;
+
+    static http_response
+    get_response(const std::vector<std::string>& buckets_found);
 };
 
 } // namespace uh::cluster

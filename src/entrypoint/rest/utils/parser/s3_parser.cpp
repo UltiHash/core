@@ -1,7 +1,5 @@
 #include "s3_parser.h"
 #include "entrypoint/rest/http/http_types.h"
-#include "entrypoint/rest/http/models/abort_multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include <iostream>
@@ -28,83 +26,16 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                 return std::make_unique<
                     rest::http::model::init_multi_part_upload_request>(
                     m_recv_req, m_server_state, std::move(uri));
-            } else if (uri->query_string_exists("uploadId")) {
-                return nullptr;
-            }
-        } else if (!uri->get_bucket_id().empty() &&
-                   uri->get_object_key().empty()) {
-            if (uri->query_string_exists("delete")) {
-                return nullptr;
-            }
-        } else {
-            throw std::runtime_error("unknown request type");
-        }
-    case http::http_method::HTTP_PUT:
-        if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
-            if (uri->get_query_parameters().empty()) {
-                return nullptr;
-            } else if (uri->query_string_exists("partNumber") &&
-                       uri->query_string_exists("uploadId")) {
-                return nullptr;
-            }
-        } else if (!uri->get_bucket_id().empty() &&
-                   uri->get_object_key().empty()) {
-            if (uri->get_query_parameters().empty()) {
-                return nullptr;
             }
         } else {
             throw std::runtime_error("unknown request type");
         }
     case http::http_method::HTTP_GET:
-        if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
-            if (uri->query_string_exists("attributes")) {
-                return nullptr;
-            } else {
-                return nullptr;
-            }
-        } else if (!uri->get_bucket_id().empty() &&
-                   uri->get_object_key().empty()) {
+        if (!uri->get_bucket_id().empty() && uri->get_object_key().empty()) {
             if (uri->query_string_exists("uploads")) {
                 return std::make_unique<
                     rest::http::model::list_multi_part_uploads_request>(
                     m_recv_req, std::move(uri));
-            } else if (uri->query_string_exists("list-type") &&
-                       uri->get_query_string_value("list-type") == "2") {
-                return nullptr;
-            } else if (uri->get_query_parameters().empty()) {
-                return nullptr;
-            } else // TODO: there is conflict between get_bucket_request and
-                   // list_objects_request if no query string is given
-            {
-                return nullptr;
-            }
-        } else if (uri->get_bucket_id().empty() &&
-                   uri->get_object_key().empty()) {
-            return nullptr;
-        } else {
-            throw std::runtime_error("unknown request type");
-        }
-
-    case http::http_method::HTTP_DELETE:
-        if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
-            if (uri->query_string_exists("uploadId")) {
-                // upload id should not be empty
-                if (uri->get_query_parameters().at("uploadId").empty()) {
-                    throw model::custom_error_response_exception(
-                        b_http::status::bad_request,
-                        model::error::type::bad_upload_id);
-                }
-
-                return std::make_unique<
-                    rest::http::model::abort_multi_part_upload_request>(
-                    m_recv_req, m_server_state, std::move(uri));
-            } else {
-                return nullptr;
-            }
-        } else if (!uri->get_bucket_id().empty() &&
-                   uri->get_object_key().empty()) {
-            if (uri->get_query_parameters().empty()) {
-                return nullptr;
             }
         } else {
             throw std::runtime_error("unknown request type");

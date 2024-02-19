@@ -15,8 +15,8 @@ bool list_buckets::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-static http_response
-get_response(const std::vector<std::string>& buckets_found) noexcept {
+http_response
+list_buckets::get_response(const std::vector<std::string>& buckets_found) {
     http_response res;
 
     std::string buckets_xml;

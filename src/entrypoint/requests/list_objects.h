@@ -17,6 +17,9 @@ class list_objects {
 
   private:
     const entrypoint_state& m_state;
+
+    static http_response get_response(const std::vector<std::string>& contents,
+                                      const http_request& req);
 };
 
 } // namespace uh::cluster

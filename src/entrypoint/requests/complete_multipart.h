@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class complete_multipart {
   public:
-    explicit complete_multipart(const entrypoint_state& entry_state);
+    explicit complete_multipart(entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
   private:
-    const entrypoint_state& m_state;
+    entrypoint_state& m_state;
 
     static void validate(const http_request& req);
 };

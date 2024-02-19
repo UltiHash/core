@@ -6,7 +6,6 @@
 #include "common/utils/protocol_handler.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/http_response.h"
-#include "entrypoint/rest/http/models/abort_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/complete_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
@@ -20,6 +19,7 @@
 #include <pugixml.hpp>
 
 // REFACTORED
+#include "requests/abort_multipart.h"
 #include "requests/complete_multipart.h"
 #include "requests/create_bucket.h"
 #include "requests/delete_bucket.h"
@@ -170,9 +170,6 @@ class entrypoint_handler : public protocol_handler {
         case rest::http::http_request_type::INIT_MULTIPART_UPLOAD:
             res = co_await handle_init_mp_upload(req, state);
             break;
-        case rest::http::http_request_type::ABORT_MULTIPART_UPLOAD:
-            res = handle_abort_mp_upload(req);
-            break;
         case rest::http::http_request_type::LIST_MULTI_PART_UPLOADS:
             res = co_await handle_list_mp_uploads(req, state);
             break;
@@ -221,14 +218,6 @@ class entrypoint_handler : public protocol_handler {
         }
 
         co_return std::move(res);
-    }
-
-    std::unique_ptr<rest::http::http_response>
-    handle_abort_mp_upload(const rest::http::http_request& req) {
-        std::unique_ptr<rest::http::model::abort_multi_part_upload_response>
-            res = std::make_unique<
-                rest::http::model::abort_multi_part_upload_response>(req);
-        return std::move(res);
     }
 
     coro<std::unique_ptr<rest::http::http_response>>
@@ -288,7 +277,7 @@ auto make_entrypoint_handler(entrypoint_state& state) {
         delete_bucket(state), put_object(state), get_object(state),
         get_object_attributes(state), list_objects(state),
         list_objects_v2(state), delete_object(state), delete_objects(state),
-        multipart(state), complete_multipart(state));
+        multipart(state), complete_multipart(state), abort_multipart(state));
 }
 
 } // end namespace uh::cluster

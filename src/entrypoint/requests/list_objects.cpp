@@ -15,8 +15,9 @@ bool list_objects::can_handle(const http_request& req) {
            !uri.query_string_exists("list-type");
 }
 
-static http_response get_response(const std::vector<std::string>& contents,
-                                  const http_request& req) {
+http_response
+list_objects::get_response(const std::vector<std::string>& contents,
+                           const http_request& req) {
 
     const auto& req_uri = req.get_uri();
 
