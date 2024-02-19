@@ -194,14 +194,9 @@ class messenger_core {
         co_return error(ec, msg);
     }
 
-    coro<void> send_success() {
-        if (m_metrics_handler)
-            m_metrics_handler->increment_counter(uh::cluster::SUCCESS);
-        co_await send(SUCCESS, {});
-        co_return;
-    }
-
     coro<void> send(const message_type type, std::span<const char> data) {
+        if (type == SUCCESS && m_metrics_handler)
+            m_metrics_handler->increment_counter(uh::cluster::SUCCESS);
         const auto size = static_cast<size_type>(data.size());
 
         std::vector<boost::asio::const_buffer> buffers{

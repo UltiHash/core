@@ -80,7 +80,7 @@ class directory_handler : public protocol_handler {
 
         m_directory.bucket_exists(request.bucket_id);
 
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
         co_return;
     }
 
@@ -164,7 +164,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
         co_return;
     }
 
@@ -209,7 +209,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_delete_bucket(messenger& m, const messenger::header& h) {
@@ -223,7 +223,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_delete_object(messenger& m, const messenger::header& h) {
@@ -247,7 +247,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_list_buckets(messenger& m, const messenger::header& h) {
