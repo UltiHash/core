@@ -16,33 +16,34 @@ enum role : uint8_t {
 };
 
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-    {"storage", uh::cluster::STORAGE_SERVICE},
-    {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-    {"directory", uh::cluster::DIRECTORY_SERVICE},
-    {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}};
+    {"storage", STORAGE_SERVICE},
+    {"deduplicator", DEDUPLICATOR_SERVICE},
+    {"directory", DIRECTORY_SERVICE},
+    {"entrypoint", ENTRYPOINT_SERVICE}};
 
 enum message_type : uint8_t {
-    STORAGE_READ_FRAGMENT_REQ = 10,
-    STORAGE_READ_ADDRESS_REQ = 43,
-    STORAGE_WRITE_REQ = 12,
-    STORAGE_SYNC_REQ = 20,
-    STORAGE_REMOVE_FRAGMENT_REQ = 22,
-    STORAGE_USED_REQ = 24,
+    STORAGE_READ_FRAGMENT_REQ,
+    STORAGE_READ_ADDRESS_REQ,
+    STORAGE_WRITE_REQ,
+    STORAGE_SYNC_REQ,
+    STORAGE_REMOVE_FRAGMENT_REQ,
+    STORAGE_USED_REQ,
 
-    DEDUPLICATOR_REQ = 26,
+    DEDUPLICATOR_REQ,
 
-    DIRECTORY_BUCKET_LIST_REQ = 37,
-    DIRECTORY_BUCKET_PUT_REQ = 31,
-    DIRECTORY_BUCKET_DELETE_REQ = 41,
-    DIRECTORY_BUCKET_EXISTS_REQ = 46,
+    DIRECTORY_BUCKET_LIST_REQ,
+    DIRECTORY_BUCKET_PUT_REQ,
+    DIRECTORY_BUCKET_DELETE_REQ,
+    DIRECTORY_BUCKET_EXISTS_REQ,
 
-    DIRECTORY_OBJECT_LIST_REQ = 39,
-    DIRECTORY_OBJECT_PUT_REQ = 28,
-    DIRECTORY_OBJECT_GET_REQ = 29,
-    DIRECTORY_OBJECT_DELETE_REQ = 45,
+    DIRECTORY_OBJECT_LIST_REQ,
+    DIRECTORY_OBJECT_PUT_REQ,
+    DIRECTORY_OBJECT_GET_REQ,
+    DIRECTORY_OBJECT_DELETE_REQ,
 
-    SUCCESS = 32,
-    FAILURE = 33,
+    SUCCESS,
+    FAILURE,
+    LAST // needed as a terminator to enable iterating over enum options
 };
 
 constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
@@ -61,6 +62,7 @@ constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
         {DIRECTORY_BUCKET_PUT_REQ, "directory_bucket_put_request"},
         {DIRECTORY_BUCKET_DELETE_REQ, "directory_bucket_delete_request"},
         {DIRECTORY_BUCKET_EXISTS_REQ, "directory_bucket_exists_request"},
+
         {DIRECTORY_OBJECT_LIST_REQ, "directory_object_list_request"},
         {DIRECTORY_OBJECT_PUT_REQ, "directory_object_put_request"},
         {DIRECTORY_OBJECT_GET_REQ, "directory_object_get_request"},
