@@ -9,6 +9,15 @@ namespace metrics_api = opentelemetry::metrics;
 namespace otlp_exporter = opentelemetry::exporter::otlp;
 
 namespace uh::cluster {
+
+constexpr metric_sdk::PeriodicExportingMetricReaderOptions ostream_options{
+    .export_interval_millis = std::chrono::milliseconds(10000),
+    .export_timeout_millis = std::chrono::milliseconds(500)};
+
+constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
+    .export_interval_millis = std::chrono::milliseconds(1000),
+    .export_timeout_millis = std::chrono::milliseconds(500)};
+
 metrics_handler::metrics_handler(const uh::cluster::role service_role,
                                  const std::string& telemetry_endpoint)
     : m_served_request_types(get_requests_served(service_role)) {
@@ -36,13 +45,8 @@ void metrics_handler::initialize_metrics_otlp_grpc_exporter(
     auto exporter =
         otlp_exporter::OtlpGrpcMetricExporterFactory::Create(exporter_options);
 
-    // Initialize and set the global MeterProvider
-    metric_sdk::PeriodicExportingMetricReaderOptions reader_options;
-    reader_options.export_interval_millis = std::chrono::milliseconds(1000);
-    reader_options.export_timeout_millis = std::chrono::milliseconds(500);
-
     auto reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
-        std::move(exporter), reader_options);
+        std::move(exporter), otlp_options);
 
     auto context = metric_sdk::MeterContextFactory::Create();
     context->AddMetricReader(std::move(reader));
@@ -59,13 +63,8 @@ void metrics_handler::initialize_metrics_ostream_exporter() {
     auto exporter = opentelemetry::exporter::metrics::
         OStreamMetricExporterFactory::Create();
 
-    // Initialize and set the global MeterProvider
-    metric_sdk::PeriodicExportingMetricReaderOptions options;
-    options.export_interval_millis = std::chrono::milliseconds(10000);
-    options.export_timeout_millis = std::chrono::milliseconds(500);
-
     auto reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
-        std::move(exporter), options);
+        std::move(exporter), ostream_options);
 
     auto context = metric_sdk::MeterContextFactory::Create();
     context->AddMetricReader(std::move(reader));
