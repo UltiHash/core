@@ -8,7 +8,7 @@ delete_bucket::delete_bucket(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
-    const auto& uri = req.get_URI();
+    const auto& uri = req.get_uri();
 
     return req.get_method() == method::delete_ &&
            !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
@@ -18,7 +18,7 @@ bool delete_bucket::can_handle(const http_request& req) {
 coro<http_response> delete_bucket::handle(const http_request& req) const {
 
     try {
-        std::string bucket_name = req.get_URI().get_bucket_id();
+        std::string bucket_name = req.get_uri().get_bucket_id();
 
         auto func = [](const std::string& bucket_name,
                        client::acquired_messenger m, long id) -> coro<void> {

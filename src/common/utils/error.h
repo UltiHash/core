@@ -17,7 +17,8 @@ class error {
         bucket_not_found = 2,
         object_not_found = 3,
         bucket_not_empty = 4,
-        storage_limit_exceeded = 5
+        invalid_bucket_name = 5,
+        storage_limit_exceeded = 6
     };
 
     error(type t = unknown, const std::string& message = "");
@@ -26,8 +27,6 @@ class error {
     const std::string& message() const;
     uint32_t code() const;
     type operator*() const;
-
-    static type from_code(uint32_t code);
 
   private:
     type m_type;
