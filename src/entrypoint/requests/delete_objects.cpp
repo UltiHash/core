@@ -13,7 +13,7 @@ delete_objects::delete_objects(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool delete_objects::can_handle(const http_request& req) {
-    const auto& uri = req.get_URI();
+    const auto& uri = req.get_uri();
 
     return req.get_method() == method::post && !uri.get_bucket_id().empty() &&
            uri.get_object_key().empty() && uri.query_string_exists("delete");
@@ -81,7 +81,7 @@ coro<http_response> delete_objects::handle(http_request& req) const {
     co_await req.read_body();
     auto object_nodes_set = co_await validate(req);
 
-    auto bucket_id = req.get_URI().get_bucket_id();
+    auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;
     std::vector<fail> failure;
     for (const auto& objectNode : object_nodes_set) {

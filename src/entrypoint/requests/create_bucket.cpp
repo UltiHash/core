@@ -8,15 +8,14 @@ create_bucket::create_bucket(const uh::cluster::entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool create_bucket::can_handle(const http_request& req) {
-    const auto& uri = req.get_URI();
-
+    const auto& uri = req.get_uri();
     return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
 coro<http_response> create_bucket::handle(const http_request& req) const {
 
-    auto bucket_id = req.get_URI().get_bucket_id();
+    auto bucket_id = req.get_uri().get_bucket_id();
     try {
         auto func = [&bucket_id](const auto& bucket,
                                  client::acquired_messenger m,

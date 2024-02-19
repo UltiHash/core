@@ -8,7 +8,7 @@ get_object_attributes::get_object_attributes(
     : m_state(entry_state) {}
 
 bool get_object_attributes::can_handle(const http_request& req) {
-    const auto& uri = req.get_URI();
+    const auto& uri = req.get_uri();
 
     return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
            !uri.get_object_key().empty() &&

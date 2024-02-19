@@ -8,7 +8,7 @@ delete_object::delete_object(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool delete_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_URI();
+    const auto& uri = req.get_uri();
 
     return req.get_method() == method::delete_ &&
            !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
@@ -20,9 +20,9 @@ coro<http_response> delete_object::handle(const http_request& req) const {
         auto func = [](const http_request& req,
                        client::acquired_messenger m) -> coro<void> {
             directory_message dir_req{
-                .bucket_id = req.get_URI().get_bucket_id(),
+                .bucket_id = req.get_uri().get_bucket_id(),
                 .object_key = std::make_unique<std::string>(
-                    req.get_URI().get_object_key())};
+                    req.get_uri().get_object_key())};
             co_await m.get().send_directory_message(DIR_DELETE_OBJ_REQ,
                                                     dir_req);
             co_await m.get().recv_header();

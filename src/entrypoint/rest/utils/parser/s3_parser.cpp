@@ -6,7 +6,6 @@
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include "entrypoint/rest/http/models/list_objects_request.h"
-#include "entrypoint/rest/http/models/list_objectsv2_request.h"
 #include "entrypoint/rest/http/models/multi_part_upload_request.h"
 #include <iostream>
 
@@ -100,9 +99,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                     m_recv_req, std::move(uri));
             } else if (uri->query_string_exists("list-type") &&
                        uri->get_query_string_value("list-type") == "2") {
-                return std::make_unique<
-                    rest::http::model::list_objectsv2_request>(m_recv_req,
-                                                               std::move(uri));
+                return nullptr;
             } else if (uri->get_query_parameters().empty()) {
                 return nullptr;
             } else // TODO: there is conflict between get_bucket_request and

@@ -1,10 +1,10 @@
 #ifndef ENTRYPOINT_HTTP_DELETE_OBJECTS_H
 #define ENTRYPOINT_HTTP_DELETE_OBJECTS_H
 
-#include "entrypoint/common.h"
+#include "entrypoint/http/http_request.h"
+#include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/utils/parser/xml_parser.h"
-#include "http_request.h"
-#include "http_response.h"
+#include "utils.h"
 
 namespace uh::cluster {
 
