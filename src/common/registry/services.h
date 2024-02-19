@@ -86,12 +86,12 @@ template <> class services_index<STORAGE_SERVICE> {
 template <role r> class services {
   public:
     services(boost::asio::io_context& ioc, config_registry& config_registry,
-             const int connection_count, std::string etcd_host,
+             const int connection_count, etcd::SyncClient& etcd_client,
              std::size_t timeout_s = 10)
         : m_ioc(ioc), m_connection_count(connection_count),
-          m_etcd_client(etcd_host),
+          m_etcd_client(etcd_client),
           m_watcher(
-              etcd_host,
+              m_etcd_client,
               etcd_services_announced_key_prefix + get_service_string(r),
               [this](etcd::Response response) {
                   return handle_state_changes(response);
@@ -292,7 +292,7 @@ template <role r> class services {
 
     boost::asio::io_context& m_ioc;
     const int m_connection_count;
-    etcd::SyncClient m_etcd_client;
+    etcd::SyncClient& m_etcd_client;
     etcd::Watcher m_watcher;
 
     mutable std::shared_mutex m_mutex;
