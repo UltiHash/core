@@ -23,8 +23,6 @@ class metrics_handler {
     metrics_handler(const uh::cluster::role service_role,
                     const std::string& telemetry_endpoint);
 
-    void create_uint_counter(const std::string& name);
-    void add_uint_counter_value(const std::string& name, std::uint64_t value);
     void increment_counter(const uh::cluster::message_type msg_type);
 
   private:
@@ -33,6 +31,9 @@ class metrics_handler {
         std::string, std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>>
         m_uint_counters;
     std::mutex m_mutex;
+
+    void create_uint_counter(const std::string& name);
+    void add_uint_counter_value(const std::string& name, std::uint64_t value);
 
     void initialize_metrics_exporter(const std::string& telemetry_endpoint);
     void initialize_metrics_ostream_exporter();
