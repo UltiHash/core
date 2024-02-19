@@ -107,7 +107,6 @@ class deduplicator_handler : public protocol_handler {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
-        m_metrics_handler->increment_counter(SUCCESS);
         co_await m.send_dedupe_response(DEDUPLICATOR_RESP, responses[0]);
     }
 

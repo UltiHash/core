@@ -164,6 +164,8 @@ class messenger_core {
     }
 
     coro<void> send_buffers(const message_type type) {
+        if (m_metrics_handler && succesful_responses.contains(type))
+            m_metrics_handler->increment_counter(uh::cluster::SUCCESS);
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
 
