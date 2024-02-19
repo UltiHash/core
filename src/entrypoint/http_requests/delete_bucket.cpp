@@ -8,23 +8,16 @@ delete_bucket::delete_bucket(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
+    const auto& uri = req.get_URI();
 
-    if (req.get_method() == method::delete_) {
-
-        if (const auto& uri = req.get_URI();
-            !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
-            uri.get_query_parameters().empty()) {
-            return true;
-        }
-    }
-
-    return false;
+    return req.get_method() == method::delete_ &&
+           !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
+           uri.get_query_parameters().empty();
 }
 
 coro<http_response> delete_bucket::handle(const http_request& req) const {
 
     try {
-        http_response res;
         std::string bucket_name = req.get_URI().get_bucket_id();
 
         auto func = [](const std::string& bucket_name,
@@ -39,7 +32,7 @@ coro<http_response> delete_bucket::handle(const http_request& req) const {
             m_state.directory_services.get_clients(), m_state.ioc,
             m_state.workers, std::bind_front(func, std::cref(bucket_name)));
 
-        co_return res;
+        co_return http_response();
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to delete bucket: " << e;
         switch (*e.error()) {

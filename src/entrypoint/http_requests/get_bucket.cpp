@@ -8,20 +8,13 @@ get_bucket::get_bucket(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
 bool get_bucket::can_handle(const http_request& req) {
+    const auto& uri = req.get_URI();
 
-    if (req.get_method() == method::get) {
-
-        if (const auto& uri = req.get_URI();
-            !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
-            uri.get_query_parameters().empty()) {
-            return true;
-        }
-    }
-
-    return false;
+    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
+           uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-static http_response get_response(const std::string& bucket_name) noexcept {
+static http_response get_response(const std::string& bucket_name) {
     http_response res;
 
     std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";
@@ -32,42 +25,27 @@ static http_response get_response(const std::string& bucket_name) noexcept {
 }
 
 coro<http_response> get_bucket::handle(const http_request& req) const {
-    auto req_bucket_id = req.get_URI().get_bucket_id();
+    auto bucket_name = req.get_URI().get_bucket_id();
 
     try {
-        http_response res;
-        std::string bucket_name;
-
-        auto func = [](const std::string& req_bucket_id,
-                       std::string& bucket_name,
+        auto func = [](const std::string& bucket_name,
                        client::acquired_messenger m) -> coro<void> {
-            co_await m.get().send(DIR_LIST_BUCKET_REQ, {});
-            const auto h = co_await m.get().recv_header();
-            const auto list_buckets_res =
-                co_await m.get().recv_directory_list_entities_message(h);
-
-            for (const auto& bucket : list_buckets_res.entities) {
-                if (bucket == req_bucket_id) {
-                    bucket_name = bucket;
-                    break;
-                }
-            }
-
-            if (bucket_name.empty()) {
-                throw error_exception(error::bucket_not_found);
-            }
+            directory_message dir_req;
+            dir_req.bucket_id = bucket_name;
+            co_await m.get().send_directory_message(DIR_BUCKET_EXISTS, dir_req);
+            co_await m.get().recv_header();
         };
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
                 m_state.workers, m_state.ioc, m_state.directory_services.get(),
-                std::bind_front(func, std::cref(req_bucket_id),
-                                std::ref(bucket_name)));
+                std::bind_front(func, std::cref(bucket_name)));
 
         co_return get_response(bucket_name);
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
+        LOG_ERROR() << "Failed to get bucket `" << bucket_name << "`: " << e;
+      
         switch (*e.error()) {
         case error::bucket_not_found:
             throw rest::http::model::custom_error_response_exception(
