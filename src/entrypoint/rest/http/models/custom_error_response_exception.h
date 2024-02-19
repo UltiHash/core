@@ -30,6 +30,8 @@ class error {
         bad_part_number,
         too_many_elements,
         insufficient_storage,
+        command_not_found,
+        no_mp_uploads
     };
 
     explicit error(type t = unknown);

@@ -44,7 +44,7 @@ delete_objects::validate(const http_request& req) const {
 
 http_response
 delete_objects::get_response(const std::vector<std::string>& success,
-                             const std::vector<fail>& failure) {
+                             const std::vector<fail>& failure) noexcept {
     http_response res;
 
     std::string xml_string;

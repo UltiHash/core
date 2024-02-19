@@ -26,8 +26,9 @@ class delete_objects {
         std::string key;
     };
 
-    static http_response get_response(const std::vector<std::string>& success,
-                                      const std::vector<fail>& failure);
+    static http_response
+    get_response(const std::vector<std::string>& success,
+                 const std::vector<fail>& failure) noexcept;
 };
 
 } // namespace uh::cluster

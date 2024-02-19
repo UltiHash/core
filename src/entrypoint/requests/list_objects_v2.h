@@ -6,7 +6,7 @@
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/utils/string/string_utils.h"
+#include "entrypoint/utils/string_utils.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
@@ -125,7 +125,7 @@ class list_objects_v2 {
         bool fetch_owner_set = false;
         if (const auto fetch_owner = get_if_exists("fetch-owner");
             fetch_owner.has_value()) {
-            if (rest::utils::string_utils::is_bool(*fetch_owner))
+            if (string_utils::is_bool(*fetch_owner))
                 fetch_owner_set = true;
         }
 
@@ -148,16 +148,14 @@ class list_objects_v2 {
                 if (delimiter_index != std::string::npos) {
                     auto delimeter_prefix = c.substr(0, delimiter_index + 1);
                     common_prefixes.emplace(
-                        (encoding_type ? rest::utils::string_utils::URL_encode(
-                                             delimeter_prefix)
-                                       : delimeter_prefix));
+                        (encoding_type
+                             ? string_utils::url_encode(delimeter_prefix)
+                             : delimeter_prefix));
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
                         "<Key>" +
-                        (encoding_type
-                             ? rest::utils::string_utils::URL_encode(c)
-                             : c) +
+                        (encoding_type ? string_utils::url_encode(c) : c) +
                         "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
@@ -182,9 +180,8 @@ class list_objects_v2 {
         if (delimiter) {
             delimiter_xml_string =
                 "<Delimiter>" +
-                (encoding_type
-                     ? rest::utils::string_utils::URL_encode(*delimiter)
-                     : *delimiter) +
+                (encoding_type ? string_utils::url_encode(*delimiter)
+                               : *delimiter) +
                 "</Delimiter>\n";
         }
 
@@ -225,8 +222,7 @@ class list_objects_v2 {
         if (prefix) {
             prefix_xml_string =
                 "<Prefix>" +
-                (encoding_type ? rest::utils::string_utils::URL_encode(*prefix)
-                               : *prefix) +
+                (encoding_type ? string_utils::url_encode(*prefix) : *prefix) +
                 "</Prefix>\n";
         }
 

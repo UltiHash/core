@@ -11,6 +11,7 @@ class string_utils {
     static std::vector<std::string>::const_iterator
     find_lexically_closest(const std::vector<std::string>& strings,
                            const std::string& compareTo);
+    static bool is_bool(const std::string& str_to_eval);
 };
 
 } // namespace uh::cluster

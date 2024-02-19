@@ -70,4 +70,11 @@ const char* command_unknown_exception::what() const noexcept {
     return "command not found";
 }
 
+std::string generate_unique_id() {
+    boost::uuids::random_generator gen;
+    boost::uuids::uuid uuid = gen();
+
+    return boost::uuids::to_string(uuid);
+}
+
 } // namespace uh::cluster

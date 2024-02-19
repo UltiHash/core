@@ -74,13 +74,13 @@ list_objects::get_response(const std::vector<std::string>& contents,
             if (delimiter && delimiter_index != std::string::npos) {
                 auto delimiter_prefix = c.substr(0, delimiter_index + 1);
                 common_prefixes.emplace(
-                    (encoding_type ? string_utils::URL_encode(delimiter_prefix)
+                    (encoding_type ? string_utils::url_encode(delimiter_prefix)
                                    : delimiter_prefix));
             } else {
                 contents_xml +=
                     "<Contents>\n"
                     "<Key>" +
-                    (encoding_type ? string_utils::URL_encode(c) : c) +
+                    (encoding_type ? string_utils::url_encode(c) : c) +
                     "</Key>\n" + "</Contents>\n";
                 counter++;
             }
@@ -101,7 +101,7 @@ list_objects::get_response(const std::vector<std::string>& contents,
     if (delimiter) {
         delimiter_xml_string =
             "<Delimiter>" +
-            (encoding_type ? string_utils::URL_encode(*delimiter)
+            (encoding_type ? string_utils::url_encode(*delimiter)
                            : *delimiter) +
             "</Delimiter>\n";
     }
@@ -122,7 +122,7 @@ list_objects::get_response(const std::vector<std::string>& contents,
     if (prefix) {
         prefix_xml =
             "<Prefix>" +
-            (encoding_type ? string_utils::URL_encode(*prefix) : *prefix) +
+            (encoding_type ? string_utils::url_encode(*prefix) : *prefix) +
             "</Prefix>\n";
     }
 

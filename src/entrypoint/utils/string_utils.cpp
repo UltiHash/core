@@ -40,4 +40,13 @@ string_utils::find_lexically_closest(const std::vector<std::string>& strings,
     return nextDifferentItr;
 }
 
+bool string_utils::is_bool(const std::string& str_to_eval) {
+    if (str_to_eval == "true" || str_to_eval == "TRUE" ||
+        str_to_eval == "True") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 } // namespace uh::cluster
