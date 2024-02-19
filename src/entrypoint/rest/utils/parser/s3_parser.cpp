@@ -3,7 +3,6 @@
 #include "entrypoint/rest/http/models/abort_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/complete_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include "entrypoint/rest/http/models/list_objects_request.h"
 #include "entrypoint/rest/http/models/multi_part_upload_request.h"
@@ -28,9 +27,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
     case http::http_method::HTTP_POST:
         if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
             if (uri->query_string_exists("uploads")) {
-                return std::make_unique<
-                    rest::http::model::init_multi_part_upload_request>(
-                    m_recv_req, m_server_state, std::move(uri));
+                return nullptr;
             } else if (uri->query_string_exists("uploadId")) {
                 // upload id should not be empty
                 if (uri->get_query_parameters().at("uploadId").empty()) {
