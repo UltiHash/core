@@ -18,66 +18,46 @@ constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
     .export_interval_millis = std::chrono::milliseconds(1000),
     .export_timeout_millis = std::chrono::milliseconds(500)};
 
-metrics_handler::metrics_handler(const uh::cluster::role service_role,
-                                 const std::string& telemetry_endpoint)
-    : m_served_request_types(get_requests_served(service_role)) {
+metrics_handler::metrics_handler(const std::string& telemetry_endpoint) {
     initialize_metrics_exporter(telemetry_endpoint);
 
-    m_served_request_types.insert(uh::cluster::SUCCESS);
-    m_served_request_types.insert(uh::cluster::FAILURE);
-    for (auto message_type : m_served_request_types) {
-        create_uint_counter(get_message_string(message_type));
+    for (uint8_t msg_num = 0; msg_num != LAST; msg_num++) {
+        auto msg_type = static_cast<message_type>(msg_num);
+        create_uint_counter(get_message_string(msg_type));
     }
 }
 
 void metrics_handler::initialize_metrics_exporter(
     const std::string& telemetry_endpoint) {
-    if (telemetry_endpoint.empty())
-        initialize_metrics_ostream_exporter();
-    else
-        initialize_metrics_otlp_grpc_exporter(telemetry_endpoint);
-}
+    std::unique_ptr<metric_sdk::MetricReader> reader;
 
-void metrics_handler::initialize_metrics_otlp_grpc_exporter(
-    const std::string& telemetry_endpoint) {
-    otlp_exporter::OtlpGrpcMetricExporterOptions exporter_options;
-    exporter_options.endpoint = telemetry_endpoint;
-    auto exporter =
-        otlp_exporter::OtlpGrpcMetricExporterFactory::Create(exporter_options);
-
-    auto reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
-        std::move(exporter), otlp_options);
-
-    auto context = metric_sdk::MeterContextFactory::Create();
-    context->AddMetricReader(std::move(reader));
-
-    auto u_provider =
-        metric_sdk::MeterProviderFactory::Create(std::move(context));
-    std::shared_ptr<opentelemetry::metrics::MeterProvider> provider(
-        std::move(u_provider));
-
-    metrics_api::Provider::SetMeterProvider(provider);
-}
-
-void metrics_handler::initialize_metrics_ostream_exporter() {
-    auto exporter = opentelemetry::exporter::metrics::
-        OStreamMetricExporterFactory::Create();
-
-    auto reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
-        std::move(exporter), ostream_options);
+    if (telemetry_endpoint.empty()) {
+        auto exporter = opentelemetry::exporter::metrics::
+            OStreamMetricExporterFactory::Create();
+        reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
+            std::move(exporter), ostream_options);
+    } else {
+        otlp_exporter::OtlpGrpcMetricExporterOptions exporter_options;
+        exporter_options.endpoint = telemetry_endpoint;
+        auto exporter = otlp_exporter::OtlpGrpcMetricExporterFactory::Create(
+            exporter_options);
+        reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
+            std::move(exporter), otlp_options);
+    }
 
     auto context = metric_sdk::MeterContextFactory::Create();
     context->AddMetricReader(std::move(reader));
 
-    auto u_provider =
+    auto metrics_provider_unique =
         metric_sdk::MeterProviderFactory::Create(std::move(context));
-    std::shared_ptr<opentelemetry::metrics::MeterProvider> provider(
-        std::move(u_provider));
+    std::shared_ptr<opentelemetry::metrics::MeterProvider>
+        metrics_provider_shared(std::move(metrics_provider_unique));
 
-    metrics_api::Provider::SetMeterProvider(provider);
+    metrics_api::Provider::SetMeterProvider(metrics_provider_shared);
 }
 
 void metrics_handler::create_uint_counter(const std::string& name) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::string counter_name = name + "_counter";
     auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
     auto meter = provider->GetMeter(name);
@@ -86,14 +66,14 @@ void metrics_handler::create_uint_counter(const std::string& name) {
 }
 
 void metrics_handler::increment_counter(const message_type msg_type) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_served_request_types.contains(msg_type)) {
-        add_uint_counter_value(get_message_string(msg_type), 1);
+        increase_uint_counter(get_message_string(msg_type), 1);
     }
 }
 
-void metrics_handler::add_uint_counter_value(const std::string& name,
-                                             uint64_t value) {
+void metrics_handler::increase_uint_counter(const std::string& name,
+                                            std::uint64_t value) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_uint_counters[name]->Add(value);
 }
 } // namespace uh::cluster

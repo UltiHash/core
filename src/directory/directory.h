@@ -40,8 +40,7 @@ class directory : public service_interface {
                    m_config_registry.get_service_name(),
                    std::make_unique<directory_handler>(
                        m_config, m_storage, m_directory_workers,
-                       std::make_shared<metrics_handler>(
-                           uh::cluster::DIRECTORY_SERVICE, telemetry_endpoint)),
+                       std::make_shared<metrics_handler>(telemetry_endpoint)),
                    m_ioc) {}
 
     void run() override {
