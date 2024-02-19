@@ -107,7 +107,7 @@ class deduplicator_handler : public protocol_handler {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
-        co_await m.send_dedupe_response(DEDUPLICATOR_RESP, responses[0]);
+        co_await m.send_dedupe_response(SUCCESS, responses[0]);
     }
 
     dedupe_response deduplicate(std::string_view data) {

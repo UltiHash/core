@@ -23,45 +23,30 @@ const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
 
 enum message_type : uint8_t {
     STORAGE_READ_FRAGMENT_REQ = 10,
-    STORAGE_READ_FRAGMENT_RESP = 11,
     STORAGE_READ_ADDRESS_REQ = 43,
-    STORAGE_READ_ADDRESS_RESP = 44,
     STORAGE_WRITE_REQ = 12,
-    STORAGE_WRITE_RESP = 13,
     STORAGE_SYNC_REQ = 20,
     STORAGE_REMOVE_FRAGMENT_REQ = 22,
     STORAGE_USED_REQ = 24,
-    STORAGE_USED_RESP = 25,
 
     DEDUPLICATOR_REQ = 26,
-    DEDUPLICATOR_RESP = 27,
 
     DIRECTORY_BUCKET_LIST_REQ = 37,
-    DIRECTORY_BUCKET_LIST_RESP = 38,
     DIRECTORY_BUCKET_PUT_REQ = 31,
     DIRECTORY_BUCKET_DELETE_REQ = 41,
     DIRECTORY_BUCKET_EXISTS_REQ = 46,
 
     DIRECTORY_OBJECT_LIST_REQ = 39,
-    DIRECTORY_OBJECT_LIST_RESP = 40,
     DIRECTORY_OBJECT_PUT_REQ = 28,
     DIRECTORY_OBJECT_GET_REQ = 29,
-    DIRECTORY_OBJECT_GET_RESP = 30,
     DIRECTORY_OBJECT_DELETE_REQ = 45,
 
     SUCCESS = 32,
     FAILURE = 33,
 };
 
-const std::unordered_set<uh::cluster::message_type> succesful_responses{
-    STORAGE_READ_FRAGMENT_RESP, STORAGE_READ_ADDRESS_RESP,
-    STORAGE_WRITE_RESP,         STORAGE_USED_RESP,
-    DEDUPLICATOR_RESP,          DIRECTORY_BUCKET_LIST_RESP,
-    DIRECTORY_OBJECT_LIST_RESP, DIRECTORY_OBJECT_GET_RESP,
-};
-
 constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
-                           25>
+                           17>
     string_by_message_type = {{
         {STORAGE_READ_FRAGMENT_REQ, "storage_read_fragment_request"},
         {STORAGE_READ_ADDRESS_REQ, "storage_read_address_request"},

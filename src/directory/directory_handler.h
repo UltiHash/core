@@ -195,7 +195,7 @@ class directory_handler : public protocol_handler {
                             std::cref(request), std::ref((buffer))));
 
         m.register_write_buffer(buffer);
-        co_await m.send_buffers(DIRECTORY_OBJECT_GET_RESP);
+        co_await m.send_buffers(SUCCESS);
     }
 
     coro<void> handle_put_bucket(messenger& m, const messenger::header& h) {
@@ -262,8 +262,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
-        co_await m.send_directory_list_entities_message(
-            DIRECTORY_BUCKET_LIST_RESP, response);
+        co_await m.send_directory_list_entities_message(SUCCESS, response);
     }
 
     coro<void> handle_list_objects(messenger& m, const messenger::header& h) {
@@ -288,8 +287,7 @@ class directory_handler : public protocol_handler {
             std::bind_front(func, std::ref(m_directory), std::ref(response),
                             std::ref(request)));
 
-        co_await m.send_directory_list_entities_message(
-            DIRECTORY_OBJECT_LIST_RESP, response);
+        co_await m.send_directory_list_entities_message(SUCCESS, response);
     }
 
     const directory_config m_config;
