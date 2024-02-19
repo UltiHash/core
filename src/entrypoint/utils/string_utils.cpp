@@ -11,7 +11,7 @@ constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "-._~/";
 
 std::string
-string_utils::URL_encode(const std::string& str_to_encode) noexcept {
+string_utils::url_encode(const std::string& str_to_encode) noexcept {
     auto encoded_string =
         boost::urls::encode(str_to_encode, custom_unreserved_chars);
 
@@ -29,15 +29,12 @@ string_utils::find_lexically_closest(const std::vector<std::string>& strings,
         return strings.begin();
     }
 
-    auto lexicalCompare = [](const std::string& a, const std::string& b) {
-        return a < b;
-    };
-
     auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(),
-                                             compareTo, lexicalCompare);
+                                             compareTo, std::less<>());
 
-    if (nextDifferentItr != strings.end() && *nextDifferentItr == compareTo) {
-        ++nextDifferentItr;
+    if (nextDifferentItr != strings.end()) {
+        if (*nextDifferentItr == compareTo)
+            ++nextDifferentItr;
     }
 
     return nextDifferentItr;
