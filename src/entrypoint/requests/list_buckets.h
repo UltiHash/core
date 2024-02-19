@@ -4,7 +4,6 @@
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "utils.h"
-#include <utility>
 
 namespace uh::cluster {
 

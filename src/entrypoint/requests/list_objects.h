@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_HTTP_PUT_OBJECT_H
-#define ENTRYPOINT_HTTP_PUT_OBJECT_H
+#ifndef ENTRYPOINT_HTTP_LIST_OBJECTS_H
+#define ENTRYPOINT_HTTP_LIST_OBJECTS_H
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
@@ -7,13 +7,13 @@
 
 namespace uh::cluster {
 
-class put_object {
+class list_objects {
   public:
-    explicit put_object(const entrypoint_state& entry_state);
+    explicit list_objects(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(const http_request& req) const;
 
   private:
     const entrypoint_state& m_state;

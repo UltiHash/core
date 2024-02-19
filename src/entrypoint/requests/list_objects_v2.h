@@ -17,14 +17,12 @@ class list_objects_v2 {
     explicit list_objects_v2(entrypoint_state& state) : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
-        if (req.get_method() == method::get) {
-            if (const auto& uri = req.get_uri();
-                uri.query_string_exists("list-type") &&
-                uri.get_query_string_value("list-type") == "2") {
-                return true;
-            }
-        }
-        return false;
+        const auto& uri = req.get_uri();
+
+        return req.get_method() == method::get &&
+               !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
+               uri.query_string_exists("list-type") &&
+               uri.get_query_string_value("list-type") == "2";
     }
 
     coro<http_response> handle(const http_request& req) {
@@ -32,10 +30,6 @@ class list_objects_v2 {
             const auto& req_uri = req.get_uri();
             directory_message dir_req;
             dir_req.bucket_id = req_uri.get_bucket_id();
-
-            if (dir_req.bucket_id.empty()) {
-                throw error_exception(error::invalid_bucket_name);
-            }
 
             if (req_uri.query_string_exists("prefix")) {
                 if (const auto& prefix =
@@ -111,7 +105,7 @@ class list_objects_v2 {
             if (req_uri.query_string_exists(key)) {
                 if (auto& val = req_uri.get_query_string_value(key);
                     !val.empty())
-                    return std::make_optional<std::string>(std::move(val));
+                    return std::make_optional<std::string>(val);
             }
             return std::nullopt;
         };

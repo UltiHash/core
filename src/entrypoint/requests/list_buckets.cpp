@@ -16,7 +16,7 @@ bool list_buckets::can_handle(const http_request& req) {
 }
 
 static http_response
-get_response(const std::vector<std::string>& buckets_found) {
+get_response(const std::vector<std::string>& buckets_found) noexcept {
     http_response res;
 
     std::string buckets_xml;
