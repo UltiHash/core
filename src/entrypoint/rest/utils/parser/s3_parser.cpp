@@ -2,21 +2,14 @@
 #include "entrypoint/rest/http/http_types.h"
 #include "entrypoint/rest/http/models/abort_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/complete_multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/create_bucket_request.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/http/models/delete_bucket_request.h"
 #include "entrypoint/rest/http/models/delete_object_request.h"
 #include "entrypoint/rest/http/models/delete_objects_request.h"
-#include "entrypoint/rest/http/models/get_bucket_request.h"
 #include "entrypoint/rest/http/models/get_object_attributes_request.h"
-#include "entrypoint/rest/http/models/get_object_request.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/list_buckets_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
 #include "entrypoint/rest/http/models/list_objects_request.h"
-#include "entrypoint/rest/http/models/list_objectsv2_request.h"
 #include "entrypoint/rest/http/models/multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/put_object_request.h"
 #include <iostream>
 
 namespace uh::cluster::rest::utils::parser {
@@ -66,8 +59,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
     case http::http_method::HTTP_PUT:
         if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty()) {
             if (uri->get_query_parameters().empty()) {
-                return std::make_unique<rest::http::model::put_object_request>(
-                    m_recv_req, std::move(uri));
+                return nullptr;
             } else if (uri->query_string_exists("partNumber") &&
                        uri->query_string_exists("uploadId")) {
                 auto upload_id = uri->get_query_parameters().at("uploadId");
@@ -92,9 +84,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
             if (uri->get_query_parameters().empty()) {
-                return std::make_unique<
-                    rest::http::model::create_bucket_request>(m_recv_req,
-                                                              std::move(uri));
+                return nullptr;
             }
         } else {
             throw std::runtime_error("unknown request type");
@@ -106,8 +96,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                     rest::http::model::get_object_attributes_request>(
                     m_recv_req, std::move(uri));
             } else {
-                return std::make_unique<rest::http::model::get_object_request>(
-                    m_recv_req, std::move(uri));
+                return nullptr;
             }
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
@@ -117,12 +106,9 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                     m_recv_req, std::move(uri));
             } else if (uri->query_string_exists("list-type") &&
                        uri->get_query_string_value("list-type") == "2") {
-                return std::make_unique<
-                    rest::http::model::list_objectsv2_request>(m_recv_req,
-                                                               std::move(uri));
+                return nullptr;
             } else if (uri->get_query_parameters().empty()) {
-                return std::make_unique<rest::http::model::get_bucket_request>(
-                    m_recv_req, std::move(uri));
+                return nullptr;
             } else // TODO: there is conflict between get_bucket_request and
                    // list_objects_request if no query string is given
             {
@@ -132,8 +118,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
             }
         } else if (uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
-            return std::make_unique<rest::http::model::list_buckets_request>(
-                m_recv_req, std::move(uri));
+            return nullptr;
         } else {
             throw std::runtime_error("unknown request type");
         }
@@ -159,9 +144,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
             if (uri->get_query_parameters().empty()) {
-                return std::make_unique<
-                    rest::http::model::delete_bucket_request>(m_recv_req,
-                                                              std::move(uri));
+                return nullptr;
             }
         } else {
             throw std::runtime_error("unknown request type");

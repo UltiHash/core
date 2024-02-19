@@ -75,6 +75,7 @@ fi
 
 . "$venv_dir/bin/activate"
 
+export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
 
 if [ -z "$cluster_url" ]; then
     if ! docker pull ghcr.io/ultihash/build-base:latest; then

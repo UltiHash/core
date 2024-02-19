@@ -15,6 +15,7 @@
 #include "storage_handler.h"
 
 namespace uh::cluster {
+
 class storage : public service_interface {
   public:
     explicit storage(const std::string& registry_url,
