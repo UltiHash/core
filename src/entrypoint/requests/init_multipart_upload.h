@@ -6,13 +6,13 @@
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "utils.h"
+#include "entrypoint/utils.h"
 
 namespace uh::cluster {
 
 class init_multipart_upload {
   public:
-    explicit init_multipart_upload(const entrypoint_state& entry_state)
+    explicit init_multipart_upload(entrypoint_state& entry_state)
         : m_state(entry_state) {}
 
     static bool can_handle(const http_request& req) {
@@ -23,7 +23,7 @@ class init_multipart_upload {
                uri.query_string_exists("uploads");
     }
 
-    [[nodiscard]] coro<http_response> handle(const http_request& req) const {
+    [[nodiscard]] coro<http_response> handle(const http_request& req) {
         try {
 
             co_await worker_utils::
@@ -53,11 +53,20 @@ class init_multipart_upload {
             }
         }
 
-        co_return get_response(req);
+        const auto upload_id = generate_unique_id();
+        if (!m_state.server_state.m_uploads.insert_upload(
+                upload_id, req.get_uri().get_bucket_id(),
+                req.get_uri().get_object_key())) {
+            throw rest::http::model::custom_error_response_exception(
+                http::status::internal_server_error);
+        }
+
+        co_return get_response(req, upload_id);
     }
 
   private:
-    static http_response get_response(const http_request& req) {
+    static http_response get_response(const http_request& req,
+                                      const std::string& upload_id) {
         http_response res;
 
         res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -69,14 +78,14 @@ class init_multipart_upload {
                      req.get_uri().get_object_key() +
                      "</Key>\n"
                      "<UploadId>" +
-                     generate_unique_id() +
+                     upload_id +
                      "</UploadId>\n"
                      "</InitiateMultipartUploadResult>");
 
         return res;
     }
 
-    const entrypoint_state& m_state;
+    entrypoint_state& m_state;
 };
 
 } // namespace uh::cluster
