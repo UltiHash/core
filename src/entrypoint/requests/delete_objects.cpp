@@ -14,37 +14,29 @@ bool delete_objects::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.query_string_exists("delete");
 }
 
-coro<pugi::xpath_node_set>
-delete_objects::validate(const http_request& req) const {
+pugi::xpath_node_set delete_objects::validate(const http_request& req) {
     pugi::xpath_node_set object_nodes_set;
 
-    auto func = [](const http_request& req,
-                   pugi::xpath_node_set& object_nodes_set) {
-        rest::utils::parser::xml_parser parsed_xml;
-        try {
-            if (!parsed_xml.parse(req.get_body()))
-                throw std::runtime_error("");
+    rest::utils::parser::xml_parser parsed_xml;
+    try {
+        if (!parsed_xml.parse(req.get_body()))
+            throw std::runtime_error("");
 
-            object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
-            if (object_nodes_set.empty())
-                throw std::runtime_error("");
-        } catch (const std::exception& e) {
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::bad_request,
-                rest::http::model::error::type::malformed_xml);
-        }
-    };
+        object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
+        if (object_nodes_set.empty())
+            throw std::runtime_error("");
+    } catch (const std::exception& e) {
+        throw rest::http::model::custom_error_response_exception(
+            boost::beast::http::status::bad_request,
+            rest::http::model::error::type::malformed_xml);
+    }
 
-    co_await worker_utils::post_in_workers(
-        m_state.workers, m_state.ioc,
-        std::bind_front(func, std::cref(req), std::ref(object_nodes_set)));
-
-    co_return object_nodes_set;
+    return object_nodes_set;
 }
 
 http_response
 delete_objects::get_response(const std::vector<std::string>& success,
-                             const std::vector<fail>& failure) {
+                             const std::vector<fail>& failure) noexcept {
     http_response res;
 
     std::string xml_string;
@@ -75,7 +67,7 @@ delete_objects::get_response(const std::vector<std::string>& success,
 
 coro<http_response> delete_objects::handle(http_request& req) const {
     co_await req.read_body();
-    auto object_nodes_set = co_await validate(req);
+    auto object_nodes_set = validate(req);
 
     auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;

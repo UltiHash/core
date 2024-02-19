@@ -4,8 +4,6 @@ namespace uh::cluster {
 
 void http_response::set_body(std::string&& body) noexcept {
     m_res.body() = std::move(body);
-
-    set_etag(md5::calculateMD5(m_res.body()));
 }
 
 void http_response::set_original_size(std::size_t original_size) {
@@ -36,8 +34,6 @@ void http_response::set_bandwidth(double bandwidth) {
     m_res.set("uh-bandwidth-mbps", std::to_string(bandwidth));
 }
 
-void http_response::set_etag(std::string etag) noexcept {
-    m_etag = std::move(etag);
-}
+void http_response::set_etag(std::string etag) { m_etag = std::move(etag); }
 
 } // namespace uh::cluster
