@@ -14,10 +14,8 @@ find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PugiXML REQUIRED)
 find_package(Git REQUIRED)
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-find_package(gRPC REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(opentelemetry-cpp REQUIRED)
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
@@ -42,7 +40,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} pugixml::shared etcd-cpp-api CLI11::CLI11 opentelemetry-cpp::metrics opentelemetry-cpp::otlp_grpc_metrics_exporter opentelemetry-cpp::ostream_metrics_exporter ${${PROJECT_NAME}_INTERNAL_DEPS})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} pugixml::shared etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 add_compile_options(-Wall -Werror)
 

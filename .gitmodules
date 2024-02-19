@@ -10,3 +10,6 @@
 [submodule "lib/third-party/CLI11"]
 	path = lib/third-party/CLI11
 	url = https://github.com/CLIUtils/CLI11.git
+[submodule "lib/third-party/opentelemetry-cpp"]
+	path = lib/third-party/opentelemetry-cpp
+	url = https://github.com/open-telemetry/opentelemetry-cpp
