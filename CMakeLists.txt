@@ -15,6 +15,8 @@ find_package(OpenSSL REQUIRED)
 find_package(PugiXML REQUIRED)
 find_package(Git REQUIRED)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
     if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
