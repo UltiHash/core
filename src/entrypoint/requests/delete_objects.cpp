@@ -4,11 +4,6 @@
 
 namespace uh::cluster {
 
-struct fail {
-    uint32_t code;
-    std::string key;
-};
-
 delete_objects::delete_objects(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
 
@@ -47,8 +42,9 @@ delete_objects::validate(const http_request& req) const {
     co_return object_nodes_set;
 }
 
-static http_response get_response(const std::vector<std::string>& success,
-                                  const std::vector<fail>& failure) noexcept {
+http_response
+delete_objects::get_response(const std::vector<std::string>& success,
+                             const std::vector<fail>& failure) {
     http_response res;
 
     std::string xml_string;

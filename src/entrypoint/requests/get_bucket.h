@@ -17,6 +17,8 @@ class get_bucket {
 
   private:
     const entrypoint_state& m_state;
+
+    static http_response get_response(const std::string& bucket_name);
 };
 
 } // namespace uh::cluster
