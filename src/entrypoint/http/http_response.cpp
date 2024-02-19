@@ -4,8 +4,6 @@ namespace uh::cluster {
 
 void http_response::set_body(std::string&& body) noexcept {
     m_res.body() = std::move(body);
-
-    set_etag(md5::calculateMD5(m_res.body()));
 }
 
 void http_response::set_original_size(std::size_t original_size) {
@@ -28,6 +26,7 @@ void http_response::set_space_savings(double space_savings) {
 
 const http::response<http::string_body>&
 http_response::get_prepared_response() {
+    m_res.set(http::field::server, "UltiHash");
     m_res.prepare_payload();
     return m_res;
 }

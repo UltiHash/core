@@ -6,7 +6,6 @@
 #include "common/utils/protocol_handler.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/http_response.h"
-#include "entrypoint/rest/http/models/complete_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
