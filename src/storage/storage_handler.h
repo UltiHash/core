@@ -101,12 +101,12 @@ class storage_handler : public protocol_handler {
                                       const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         m_data_store.remove(resp.pointer, resp.size);
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
         m_data_store.sync();
-        co_await m.send_success();
+        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
