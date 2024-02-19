@@ -39,7 +39,7 @@ class bucket {
         auto lower_bound_it =
             lower_bound.empty()
                 ? keys.begin()
-                : std::lower_bound(keys.begin(), keys.end(), lower_bound);
+                : std::upper_bound(keys.begin(), keys.end(), lower_bound);
         std::copy_if(lower_bound_it, keys.end(),
                      std::back_inserter(filtered_keys),
                      [prefix](const std::string& key) {

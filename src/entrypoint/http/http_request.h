@@ -1,8 +1,8 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "URI.h"
 #include "entrypoint/utils/md5.h"
+#include "uri.h"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -18,7 +18,7 @@ class http_request {
                  boost::asio::ip::tcp::socket& stream,
                  boost::beast::flat_buffer& buffer);
 
-    const URI& get_URI() const;
+    const uri& get_uri() const;
 
     const std::string& get_body() const;
 
@@ -33,7 +33,7 @@ class http_request {
     boost::asio::ip::tcp::socket& m_stream;
     boost::beast::flat_buffer& m_buffer;
 
-    URI m_uri;
+    uri m_uri;
     std::string m_etag{};
     std::string m_body{};
 };

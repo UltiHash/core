@@ -9,7 +9,7 @@ list_buckets::list_buckets(const entrypoint_state& entry_state)
 
 bool list_buckets::can_handle(const http_request& req) {
 
-    const auto& uri = req.get_URI();
+    const auto& uri = req.get_uri();
 
     return req.get_method() == method::get && uri.get_bucket_id().empty() &&
            uri.get_object_key().empty() && uri.get_query_parameters().empty();

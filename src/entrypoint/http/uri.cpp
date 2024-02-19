@@ -1,11 +1,11 @@
-#include "URI.h"
+#include "uri.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/utils/string/string_utils.h"
 #include <regex>
 
 namespace uh::cluster {
 
-URI::URI(const http::request_parser<http::empty_body>& req) {
+uri::uri(const http::request_parser<http::empty_body>& req) {
     if (req.get().base().version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
@@ -32,13 +32,13 @@ URI::URI(const http::request_parser<http::empty_body>& req) {
     extract_query_parameters();
 }
 
-const std::string& URI::get_bucket_id() const { return m_bucket_id; }
+const std::string& uri::get_bucket_id() const { return m_bucket_id; }
 
-const std::string& URI::get_object_key() const { return m_object_key; }
+const std::string& uri::get_object_key() const { return m_object_key; }
 
-method URI::get_method() const { return m_method; }
+method uri::get_method() const { return m_method; }
 
-bool URI::query_string_exists(const std::string& key) const {
+bool uri::query_string_exists(const std::string& key) const {
     auto itr = m_query_parameters.find(key);
     if (itr != m_query_parameters.end()) {
         return true;
@@ -47,21 +47,21 @@ bool URI::query_string_exists(const std::string& key) const {
     }
 }
 
-const std::string& URI::get_query_string_value(const std::string& key) const {
+const std::string& uri::get_query_string_value(const std::string& key) const {
     return m_query_parameters.at(key);
 }
 
-const std::map<std::string, std::string>& URI::get_query_parameters() const {
+const std::map<std::string, std::string>& uri::get_query_parameters() const {
     return m_query_parameters;
 }
 
-void URI::extract_query_parameters() {
+void uri::extract_query_parameters() {
     for (const auto& param : m_url.params()) {
         m_query_parameters[param.key] = param.value;
     }
 }
 
-void URI::extract_bucket_and_object() {
+void uri::extract_bucket_and_object() {
     for (const auto& seg : m_url.segments()) {
         if (m_bucket_id.empty())
             m_bucket_id = seg;

@@ -21,7 +21,6 @@ enum class http_request_type {
     PUT_OBJECT,
     GET_OBJECT,
     DELETE_OBJECT,
-    LIST_OBJECTS_V2,
     LIST_OBJECTS,
     GET_OBJECT_ATTRIBUTES,
     INIT_MULTIPART_UPLOAD,
