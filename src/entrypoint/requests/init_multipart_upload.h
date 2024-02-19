@@ -19,7 +19,7 @@ class init_multipart_upload {
         const auto& uri = req.get_uri();
 
         return req.get_method() == method::post &&
-               uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
+               !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
                uri.query_string_exists("uploads");
     }
 
