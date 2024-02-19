@@ -14,7 +14,7 @@ class list_buckets {
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(const http_request& req) const;
+    [[nodiscard]] coro<http_response> handle(const http_request& req) const;
 
   private:
     const entrypoint_state& m_state;
