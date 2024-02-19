@@ -4,6 +4,8 @@
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
 #include "entrypoint/rest/utils/state/server_state.h"
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 namespace uh::cluster {
 
@@ -20,6 +22,8 @@ struct integration {
     integrate_data(const std::list<std::string_view>& data_pieces,
                    const entrypoint_state& state);
 };
+
+std::string generate_unique_id();
 
 class command_unknown_exception : public std::exception {
   public:
