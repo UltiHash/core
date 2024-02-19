@@ -1,0 +1,78 @@
+#include "complete_multipart.h"
+#include "common/utils/worker_utils.h"
+#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+
+namespace uh::cluster {
+
+complete_multipart::complete_multipart(const entrypoint_state& entry_state)
+    : m_state(entry_state) {}
+
+bool complete_multipart::can_handle(const http_request& req) {
+    const auto& uri = req.get_uri();
+
+    return req.get_method() == method::post && !uri.get_bucket_id().empty() &&
+           !uri.get_object_key().empty() && uri.query_string_exists("uploadId");
+}
+
+void complete_multipart::validate(const http_request& req) {
+    if (req.get_uri().get_query_parameters().at("uploadId").empty()) {
+        throw rest::http::model::custom_error_response_exception(
+            boost::beast::http::status::bad_request,
+            rest::http::model::error::type::bad_upload_id);
+    }
+}
+
+coro<http_response> complete_multipart::handle(const http_request& req) const {
+
+    const auto& req_uri = req.get_uri();
+
+    auto up_info = m_state.server_state.m_uploads.get_upload_info(
+        req_uri.get_query_parameters().at("uploadId"));
+
+    const directory_message dir_req{
+        .bucket_id = req.get_uri().get_bucket_id(),
+        .object_key = std::make_unique<std::string>(req_uri.get_object_key()),
+        .addr = std::make_unique<address>(up_info->generate_total_address()),
+    };
+
+    auto func_dir = [](const directory_message& dir_req,
+                       client::acquired_messenger m, long id) -> coro<void> {
+        co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
+        co_await m.get().recv_header();
+    };
+
+    co_await worker_utils::broadcast_from_io_thread_in_io_threads(
+        m_state.directory_services.get_clients(), m_state.ioc, m_state.workers,
+        std::bind_front(func_dir, std::cref(dir_req)));
+
+    const auto size_mb = static_cast<double>(up_info->data_size) /
+                         static_cast<double>(1024ul * 1024ul);
+    auto effective_size = static_cast<double>(up_info->effective_size) /
+                          static_cast<double>(1024ul * 1024ul);
+    auto space_saving = 1.0 - effective_size / size_mb;
+    const auto stop = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now().time_since_epoch())
+                          .count();
+    const auto dur_ms = stop - up_info->upload_init_time;
+
+    const double dur_s = static_cast<double>(dur_ms) / 1000.0;
+    const auto bandwidth = size_mb / dur_s;
+
+    LOG_DEBUG() << "upload size: " << req.get_body_size();
+    LOG_DEBUG() << "original size " << size_mb << " MB";
+    LOG_DEBUG() << "effective size " << effective_size << " MB";
+    LOG_DEBUG() << "space saving " << space_saving;
+    LOG_DEBUG() << "integration duration " << dur_s << " s";
+    LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
+
+    http_response res;
+    res.set_etag(md5::calculateMD5(req.get_body()));
+    res.set_original_size(up_info->data_size);
+    res.set_effective_size(up_info->effective_size);
+    res.set_space_savings(space_saving);
+    res.set_bandwidth(bandwidth);
+
+    co_return std::move(res);
+}
+
+} // namespace uh::cluster

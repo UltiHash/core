@@ -1,11 +1,9 @@
 #include "s3_parser.h"
 #include "entrypoint/rest/http/http_types.h"
 #include "entrypoint/rest/http/models/abort_multi_part_upload_request.h"
-#include "entrypoint/rest/http/models/complete_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/init_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
-#include "entrypoint/rest/http/models/multi_part_upload_request.h"
 #include <iostream>
 
 namespace uh::cluster::rest::utils::parser {
@@ -31,16 +29,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                     rest::http::model::init_multi_part_upload_request>(
                     m_recv_req, m_server_state, std::move(uri));
             } else if (uri->query_string_exists("uploadId")) {
-                // upload id should not be empty
-                if (uri->get_query_parameters().at("uploadId").empty()) {
-                    throw model::custom_error_response_exception(
-                        b_http::status::bad_request,
-                        model::error::type::bad_upload_id);
-                }
-
-                return std::make_unique<
-                    rest::http::model::complete_multi_part_upload_request>(
-                    m_recv_req, m_server_state, std::move(uri));
+                return nullptr;
             }
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
@@ -56,24 +45,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
                 return nullptr;
             } else if (uri->query_string_exists("partNumber") &&
                        uri->query_string_exists("uploadId")) {
-                auto upload_id = uri->get_query_parameters().at("uploadId");
-                if (upload_id.empty()) {
-                    throw model::custom_error_response_exception(
-                        b_http::status::bad_request,
-                        model::error::type::bad_upload_id);
-                }
-
-                auto part_num =
-                    std::stoi(uri->get_query_parameters().at("partNumber"));
-                if (part_num < 1 || part_num > 10000) {
-                    throw model::custom_error_response_exception(
-                        b_http::status::bad_request,
-                        model::error::type::bad_part_number);
-                }
-
-                return std::make_unique<
-                    rest::http::model::multi_part_upload_request>(
-                    m_recv_req, std::move(uri));
+                return nullptr;
             }
         } else if (!uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
