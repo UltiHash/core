@@ -12,7 +12,6 @@
 #include "entrypoint/rest/http/models/delete_object_response.h"
 #include "entrypoint/rest/http/models/delete_objects_response.h"
 #include "entrypoint/rest/http/models/get_object_attributes_response.h"
-#include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
 #include "entrypoint/rest/http/models/multi_part_upload_response.h"
@@ -22,7 +21,6 @@
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
-#include <pugixml.hpp>
 
 // REFACTORED
 #include "entrypoint/requests/init_multipart_upload.h"
