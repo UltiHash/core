@@ -41,6 +41,8 @@ BOOST_AUTO_TEST_CASE(greater_than) {
     BOOST_CHECK(big_int(1, 0) > big_int());
     BOOST_CHECK(big_int(2, 0) > big_int(1, 0));
     BOOST_CHECK(big_int(1, 0) > big_int(0, 1));
+
+    BOOST_CHECK(big_int(2, 1) > big_int(1, 2));
 }
 
 BOOST_AUTO_TEST_CASE(greater_than_or_equal) {
