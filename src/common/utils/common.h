@@ -53,7 +53,7 @@ enum message_type : uint8_t {
     FAILURE = 33,
 };
 
-std::unordered_set<uh::cluster::message_type> succesful_responses{
+const std::unordered_set<uh::cluster::message_type> succesful_responses{
     STORAGE_READ_FRAGMENT_RESP, STORAGE_READ_ADDRESS_RESP,
     STORAGE_WRITE_RESP,         STORAGE_USED_RESP,
     DEDUPLICATOR_RESP,          DIRECTORY_BUCKET_LIST_RESP,
