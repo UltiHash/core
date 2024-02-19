@@ -53,6 +53,13 @@ enum message_type : uint8_t {
     FAILURE = 33,
 };
 
+std::unordered_set<uh::cluster::message_type> succesful_responses{
+    STORAGE_READ_FRAGMENT_RESP, STORAGE_READ_ADDRESS_RESP,
+    STORAGE_WRITE_RESP,         STORAGE_USED_RESP,
+    DEDUPLICATOR_RESP,          DIRECTORY_BUCKET_LIST_RESP,
+    DIRECTORY_OBJECT_LIST_RESP, DIRECTORY_OBJECT_GET_RESP,
+};
+
 constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
                            25>
     string_by_message_type = {{
