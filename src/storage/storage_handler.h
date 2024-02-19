@@ -66,7 +66,7 @@ class storage_handler : public protocol_handler {
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
-        co_await m.send_address(STORAGE_WRITE_RESP, addr);
+        co_await m.send_address(SUCCESS, addr);
     }
 
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
@@ -74,7 +74,7 @@ class storage_handler : public protocol_handler {
         unique_buffer<char> buffer(resp.size);
         const auto size =
             m_data_store.read(buffer.data(), resp.pointer, resp.size);
-        co_await m.send(STORAGE_READ_FRAGMENT_RESP, {buffer.data(), size});
+        co_await m.send(SUCCESS, {buffer.data(), size});
     }
 
     coro<void> handle_read_address(messenger& m, const messenger::header& h) {
@@ -94,7 +94,7 @@ class storage_handler : public protocol_handler {
             }
             offset += frag.size;
         }
-        co_await m.send(STORAGE_READ_ADDRESS_RESP, {buffer.data(), offset});
+        co_await m.send(SUCCESS, {buffer.data(), offset});
     }
 
     coro<void> handle_remove_fragment(messenger& m,
@@ -111,7 +111,7 @@ class storage_handler : public protocol_handler {
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
         const auto used = m_data_store.get_used_space();
-        co_await m.send_uint128_t(STORAGE_USED_RESP, used);
+        co_await m.send_uint128_t(SUCCESS, used);
     }
 
     uh::cluster::data_store m_data_store;
