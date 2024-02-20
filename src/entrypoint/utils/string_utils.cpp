@@ -1,0 +1,52 @@
+#include "string_utils.h"
+#include <boost/url.hpp>
+#include <boost/url/encode.hpp>
+
+namespace uh::cluster {
+
+constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789"
+    "-._~/";
+
+std::string
+string_utils::url_encode(const std::string& str_to_encode) noexcept {
+    auto encoded_string =
+        boost::urls::encode(str_to_encode, custom_unreserved_chars);
+
+    return encoded_string;
+}
+
+std::vector<std::string>::const_iterator
+string_utils::find_lexically_closest(const std::vector<std::string>& strings,
+                                     const std::string& compareTo) {
+    if (strings.empty()) {
+        return strings.end();
+    }
+
+    if (compareTo.empty()) {
+        return strings.begin();
+    }
+
+    auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(),
+                                             compareTo, std::less<>());
+
+    if (nextDifferentItr != strings.end()) {
+        if (*nextDifferentItr == compareTo)
+            ++nextDifferentItr;
+    }
+
+    return nextDifferentItr;
+}
+
+bool string_utils::is_bool(const std::string& str_to_eval) {
+    if (str_to_eval == "true" || str_to_eval == "TRUE" ||
+        str_to_eval == "True") {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+} // namespace uh::cluster
