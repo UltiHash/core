@@ -7,14 +7,15 @@
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/utils/string/string_utils.h"
-#include "entrypoint/utils.h"
+#include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
 
 class list_objects_v2 {
 
-  public:
-    explicit list_objects_v2(entrypoint_state& state) : m_state(state) {}
+public:
+    explicit list_objects_v2(entrypoint_state& state)
+        : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
         if (req.get_method() == method::get) {
@@ -249,7 +250,7 @@ class list_objects_v2 {
         return res;
     }
 
-  private:
+private:
     entrypoint_state& m_state;
 };
 

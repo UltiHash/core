@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_HTTP_GET_BUCKET_H
-#define ENTRYPOINT_HTTP_GET_BUCKET_H
+#ifndef ENTRYPOINT_HTTP_DELETE_OBJECT_H
+#define ENTRYPOINT_HTTP_DELETE_OBJECT_H
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
@@ -7,9 +7,9 @@
 
 namespace uh::cluster {
 
-class get_bucket {
+class delete_object {
   public:
-    explicit get_bucket(const entrypoint_state& entry_state);
+    explicit delete_object(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
@@ -17,8 +17,6 @@ class get_bucket {
 
   private:
     const entrypoint_state& m_state;
-
-    static http_response get_response(const std::string& bucket_name) noexcept;
 };
 
 } // namespace uh::cluster

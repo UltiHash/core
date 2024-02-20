@@ -6,12 +6,12 @@
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/utils.h"
+#include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
 
 class init_multipart_upload {
-  public:
+public:
     explicit init_multipart_upload(entrypoint_state& entry_state)
         : m_state(entry_state) {}
 
@@ -64,7 +64,7 @@ class init_multipart_upload {
         co_return get_response(req, upload_id);
     }
 
-  private:
+private:
     static http_response get_response(const http_request& req,
                                       const std::string& upload_id) {
         http_response res;
