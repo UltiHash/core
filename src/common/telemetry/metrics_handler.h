@@ -19,20 +19,19 @@
 namespace uh::cluster {
 
 class metrics_handler {
-  public:
+public:
     metrics_handler(const std::string& telemetry_endpoint);
 
+    void create_uint_counter(const std::string& name);
+    void increase_uint_counter(const std::string& name, std::uint64_t value);
     void increment_counter(const uh::cluster::message_type msg_type);
 
-  private:
+private:
     std::unordered_set<uh::cluster::message_type> m_served_request_types;
     std::unordered_map<
         std::string, std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>>
         m_uint_counters;
     std::mutex m_mutex;
-
-    void create_uint_counter(const std::string& name);
-    void increase_uint_counter(const std::string& name, std::uint64_t value);
 
     void initialize_metrics_exporter(const std::string& telemetry_endpoint);
 };
