@@ -26,7 +26,7 @@ struct integration {
 std::string generate_unique_id();
 
 class command_unknown_exception : public std::exception {
-  public:
+public:
     [[nodiscard]] const char* what() const noexcept override;
 };
 

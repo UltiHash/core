@@ -10,7 +10,7 @@
 namespace uh::cluster {
 
 class error {
-  public:
+public:
     enum type {
         success = 0,
         unknown = 1,
@@ -28,13 +28,13 @@ class error {
     uint32_t code() const;
     type operator*() const;
 
-  private:
+private:
     type m_type;
     std::string m_message;
 };
 
 class error_exception : public std::exception {
-  public:
+public:
     error_exception(uh::cluster::error e = uh::cluster::error())
         : m_error(std::move(e)) {}
 
@@ -42,7 +42,7 @@ class error_exception : public std::exception {
 
     const uh::cluster::error& error() const { return m_error; }
 
-  private:
+private:
     uh::cluster::error m_error;
 };
 

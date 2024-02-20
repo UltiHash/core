@@ -47,7 +47,7 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
             }
         }
 
-        co_await m.get().send_buffers(DEDUPE_REQ);
+        co_await m.get().send_buffers(DEDUPLICATOR_REQ);
         const auto h_dedup = co_await m.get().recv_header();
         responses[i] = co_await m.get().recv_dedupe_response(h_dedup);
     };

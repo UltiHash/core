@@ -30,7 +30,8 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
 static const std::pair<std::string, std::string> error_out_of_range = {
     "OutOfRange", "error out of range"};
 
-error::error(type t) : m_type(t) {}
+error::error(type t)
+    : m_type(t) {}
 
 const std::pair<std::string, std::string>& error::message() const {
 
@@ -61,7 +62,8 @@ const char* custom_error_response_exception::what() const noexcept {
 
 custom_error_response_exception::custom_error_response_exception(
     http::status status, error::type err)
-    : m_res(status, 11), m_error(err) {
+    : m_res(status, 11),
+      m_error(err) {
     m_res.set(http::field::server, "UltiHash");
     m_res.set(boost::beast::http::field::content_type, "application/xml");
 }

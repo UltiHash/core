@@ -18,9 +18,10 @@ class directory_store {
     directory_store_config m_conf;
     std::filesystem::path m_root_dir;
 
-  public:
+public:
     explicit directory_store(directory_store_config conf)
-        : m_conf(std::move(conf)), m_root_dir(m_conf.working_dir / "buckets") {
+        : m_conf(std::move(conf)),
+          m_root_dir(m_conf.working_dir / "buckets") {
         std::filesystem::create_directories(m_root_dir);
         for (const auto& entry :
              std::filesystem::directory_iterator(m_root_dir)) {

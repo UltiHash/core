@@ -2,18 +2,18 @@
 
 #include <boost/beast/core/detail/base64.hpp>
 
-
 using namespace boost;
 
-namespace uh::cluster
-{
+namespace uh::cluster {
 
 std::vector<std::string_view> split(std::string_view data, char delimiter) {
-    auto split = data
-        | std::ranges::views::split(delimiter)
-        | std::ranges::views::transform([](auto&& str) { return std::string_view(&*str.begin(), std::ranges::distance(str)); });
+    auto split =
+        data | std::ranges::views::split(delimiter) |
+        std::ranges::views::transform([](auto&& str) {
+            return std::string_view(&*str.begin(), std::ranges::distance(str));
+        });
 
-    return { split.begin(), split.end() };
+    return {split.begin(), split.end()};
 }
 
 std::vector<char> base64_decode(std::string_view b64) {
@@ -25,4 +25,4 @@ std::vector<char> base64_decode(std::string_view b64) {
     return rv;
 }
 
-}
+} // namespace uh::cluster

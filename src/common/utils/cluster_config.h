@@ -10,6 +10,7 @@ namespace uh::cluster {
 
 struct service_config {
     std::string etcd_url;
+    std::string telemetry_url;
     std::filesystem::path working_dir;
     uh::cluster::license license;
 };

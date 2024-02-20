@@ -26,8 +26,9 @@ template <typename Key, typename Value> class lfu_cache {
     std::map<Key, key_map_data> m_key_values;
     const size_t m_capacity;
 
-  public:
-    explicit lfu_cache(size_t capacity) : m_capacity{capacity} {}
+public:
+    explicit lfu_cache(size_t capacity)
+        : m_capacity{capacity} {}
 
     void put(const Key& key, Value&& val) {
 
@@ -60,7 +61,7 @@ template <typename Key, typename Value> class lfu_cache {
         return std::nullopt;
     }
 
-  private:
+private:
     void update_order(std::list<key_order_data>::iterator& pos) {
         pos->frequency++;
 

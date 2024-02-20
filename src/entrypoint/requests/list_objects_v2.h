@@ -54,8 +54,8 @@ public:
             auto func = [](const directory_message& dir_req,
                            std::vector<std::string>& content,
                            client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_LIST_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 unique_buffer<char> buffer(h_dir.size);

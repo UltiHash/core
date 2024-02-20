@@ -13,7 +13,7 @@ template <typename T> class awaitable_promise {
     std::optional<T> m_data;
     std::optional<std::exception_ptr> m_exception;
 
-  public:
+public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_waiter(ioc,
                    boost::asio::steady_timer::clock_type::duration::max()) {}
@@ -52,7 +52,7 @@ template <> class awaitable_promise<void> {
     boost::asio::steady_timer m_waiter;
     std::optional<std::exception_ptr> m_exception;
 
-  public:
+public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_waiter(ioc,
                    boost::asio::steady_timer::clock_type::duration::max()) {}

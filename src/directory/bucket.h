@@ -12,7 +12,7 @@ namespace uh::cluster {
 
 class bucket {
 
-  public:
+public:
     bucket(const std::filesystem::path& root, const std::string& bucket_name,
            const bucket_config& conf)
         : m_bucket_path(root / bucket_name),
@@ -123,7 +123,7 @@ class bucket {
 
     void destroy_bucket() { std::filesystem::remove_all(m_bucket_path); }
 
-  private:
+private:
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;

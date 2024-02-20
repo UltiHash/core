@@ -16,7 +16,7 @@ namespace uh::cluster {
 
 class service_registry {
 
-  public:
+public:
     service_registry(uh::cluster::role role, std::size_t index,
                      etcd::SyncClient& etcd_client)
         : m_service_name(get_service_string(role) + "/" +
@@ -28,7 +28,7 @@ class service_registry {
     }
 
     class registration {
-      public:
+    public:
         registration(etcd::SyncClient& client,
                      const std::map<std::string, std::string>& kv_pairs,
                      std::size_t ttl)
@@ -43,7 +43,7 @@ class service_registry {
 
         ~registration() { m_client.leaserevoke(m_lease); }
 
-      private:
+    private:
         etcd::SyncClient& m_client;
         int64_t m_lease;
         etcd::KeepAlive m_keepalive;
@@ -70,7 +70,7 @@ class service_registry {
                                               m_etcd_default_ttl);
     }
 
-  private:
+private:
     static constexpr std::size_t m_etcd_default_ttl = 30;
 
     const std::string m_service_name;

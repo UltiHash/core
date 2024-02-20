@@ -12,13 +12,16 @@ namespace uh::cluster {
 
 class deduplicator_handler : public protocol_handler {
 
-  public:
+public:
     deduplicator_handler(
         deduplicator_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> dedupe_workers)
+        std::shared_ptr<boost::asio::thread_pool> dedupe_workers,
+        metrics_handler& metrics_handler)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
-          m_storage(storage), m_dedupe_workers(std::move(dedupe_workers)) {
+          m_storage(storage),
+          m_dedupe_workers(std::move(dedupe_workers)),
+          m_metrics_handler(metrics_handler) {
         if (m_dedupe_conf.min_fragment_size >
             m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument("L1 cache sample size should not be "
@@ -32,7 +35,7 @@ class deduplicator_handler : public protocol_handler {
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s));
+        messenger m(std::move(s), m_metrics_handler);
 
         for (;;) {
             std::optional<error> err;
@@ -40,7 +43,7 @@ class deduplicator_handler : public protocol_handler {
             try {
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
-                case DEDUPE_REQ:
+                case DEDUPLICATOR_REQ:
 
                     co_await handle_dedupe(m, message_header);
                     break;
@@ -58,7 +61,7 @@ class deduplicator_handler : public protocol_handler {
         }
     }
 
-  private:
+private:
     coro<void> handle_dedupe(messenger& m, const messenger::header& h) {
 
         if (h.size == 0) [[unlikely]] {
@@ -105,7 +108,7 @@ class deduplicator_handler : public protocol_handler {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
-        co_await m.send_dedupe_response(DEDUPE_RESP, responses[0]);
+        co_await m.send_dedupe_response(SUCCESS, responses[0]);
     }
 
     dedupe_response deduplicate(std::string_view data) {
@@ -186,6 +189,7 @@ class deduplicator_handler : public protocol_handler {
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
+    metrics_handler& m_metrics_handler;
 };
 
 } // end namespace uh::cluster

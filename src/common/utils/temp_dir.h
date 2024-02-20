@@ -8,13 +8,13 @@ namespace uh::cluster {
 // ---------------------------------------------------------------------
 
 class temp_directory {
-  public:
+public:
     temp_directory();
     ~temp_directory();
 
     const std::filesystem::path& path() const;
 
-  private:
+private:
     std::filesystem::path m_path;
 };
 

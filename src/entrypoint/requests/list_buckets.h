@@ -8,14 +8,14 @@
 namespace uh::cluster {
 
 class list_buckets {
-  public:
+public:
     explicit list_buckets(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
-  private:
+private:
     const entrypoint_state& m_state;
 
     static http_response

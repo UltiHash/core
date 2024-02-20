@@ -8,12 +8,12 @@ namespace uh::test {
 // ---------------------------------------------------------------------
 
 class server {
-  public:
+public:
     server(const std::string& addr, uint16_t port);
 
     ~server();
 
-  private:
+private:
     void accept();
     void run();
 

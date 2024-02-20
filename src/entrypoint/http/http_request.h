@@ -13,7 +13,7 @@ namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class http_request {
-  public:
+public:
     http_request(const http::request_parser<http::empty_body>& req,
                  boost::asio::ip::tcp::socket& stream,
                  boost::beast::flat_buffer& buffer);
@@ -28,7 +28,7 @@ class http_request {
 
     coro<void> read_body();
 
-  private:
+private:
     const http::request_parser<http::empty_body>& m_req;
     boost::asio::ip::tcp::socket& m_stream;
     boost::beast::flat_buffer& m_buffer;
