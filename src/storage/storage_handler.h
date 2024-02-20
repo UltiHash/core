@@ -10,11 +10,11 @@
 namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
-  public:
+public:
     storage_handler(storage_config config, size_t index,
-                    const std::string& telemetry_endpoint)
+                    metrics_handler& metrics_handler)
         : m_data_store(std::move(config), index),
-          m_metrics_handler(telemetry_endpoint) {}
+          m_metrics_handler(metrics_handler) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
@@ -60,7 +60,7 @@ class storage_handler : public protocol_handler {
         }
     }
 
-  private:
+private:
     coro<void> handle_write(messenger& m, const messenger::header& h) {
         unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
@@ -115,7 +115,7 @@ class storage_handler : public protocol_handler {
     }
 
     uh::cluster::data_store m_data_store;
-    metrics_handler m_metrics_handler;
+    metrics_handler& m_metrics_handler;
 };
 
 } // end namespace uh::cluster

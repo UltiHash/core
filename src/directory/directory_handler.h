@@ -11,16 +11,17 @@
 namespace uh::cluster {
 
 class directory_handler : public protocol_handler {
-  public:
+public:
     directory_handler(
         directory_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> directory_workers,
-        const std::string& telemetry_endpoint)
+        metrics_handler& metrics_handler)
         : m_config(std::move(config)),
-          m_directory(m_config.directory_store_conf), m_storage(storage),
+          m_directory(m_config.directory_store_conf),
+          m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
           m_stored_size(get_stored_size()),
-          m_metrics_handler(telemetry_endpoint) {}
+          m_metrics_handler(metrics_handler) {}
 
     ~directory_handler() override { write_stored_size(); }
 
@@ -74,7 +75,7 @@ class directory_handler : public protocol_handler {
         }
     }
 
-  private:
+private:
     coro<void> handle_bucket_exists(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
 
@@ -296,7 +297,7 @@ class directory_handler : public protocol_handler {
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
     std::mutex m_mutex_size;
     uint128_t m_stored_size;
-    metrics_handler m_metrics_handler;
+    metrics_handler& m_metrics_handler;
 };
 } // end namespace uh::cluster
 
