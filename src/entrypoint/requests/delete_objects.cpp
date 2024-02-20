@@ -34,9 +34,14 @@ pugi::xpath_node_set delete_objects::validate(const http_request& req) {
     return object_nodes_set;
 }
 
-http_response
-delete_objects::get_response(const std::vector<std::string>& success,
-                             const std::vector<fail>& failure) noexcept {
+namespace {
+struct fail {
+    uint32_t code;
+    std::string key;
+};
+
+http_response get_response(const std::vector<std::string>& success,
+                           const std::vector<fail>& failure) noexcept {
     http_response res;
 
     std::string xml_string;
@@ -64,6 +69,7 @@ delete_objects::get_response(const std::vector<std::string>& success,
 
     return res;
 }
+} // namespace
 
 coro<http_response> delete_objects::handle(http_request& req) const {
     co_await req.read_body();
