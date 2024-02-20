@@ -22,12 +22,14 @@ namespace uh::cluster {
 template <role r, role service_role = r> struct base_fixture {
     temp_directory tmp;
     boost::asio::io_context ioc;
+    etcd::SyncClient etcd_client;
     config_registry reg;
     uh::cluster::services<r> services;
 
     base_fixture()
-        : reg(service_role, REGISTRY_ENDPOINT, tmp.path()),
-          services(ioc, reg, 2, REGISTRY_ENDPOINT) {}
+        : etcd_client(REGISTRY_ENDPOINT),
+          reg(service_role, etcd_client, tmp.path()),
+          services(ioc, reg, 2, etcd_client) {}
 };
 
 using fixture = base_fixture<DEDUPLICATOR_SERVICE>;
@@ -44,7 +46,7 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u); }
@@ -58,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_NO_THROW(1000, services.get()); }
@@ -78,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
         CHECK_STABLE(100, !has_result);
 
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(100, has_result);
@@ -95,7 +97,8 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, REGISTRY_ENDPOINT);
+        etcd::SyncClient etcd_client(REGISTRY_ENDPOINT);
+        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         fixture f;
@@ -110,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, test_id, REGISTRY_ENDPOINT);
+        service_registry sr(DEDUPLICATOR_SERVICE, test_id, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(1000, services.get_clients().size() == 1u);
@@ -138,7 +141,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 1u);
@@ -147,7 +150,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 1, REGISTRY_ENDPOINT);
+        service_registry sr(STORAGE_SERVICE, 1, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 1u);
@@ -159,9 +162,9 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr1(STORAGE_SERVICE, 1, REGISTRY_ENDPOINT);
+        service_registry sr1(STORAGE_SERVICE, 1, etcd_client);
         auto reg1 = sr1.register_service({.port = 8081});
-        service_registry sr2(STORAGE_SERVICE, 3, REGISTRY_ENDPOINT);
+        service_registry sr2(STORAGE_SERVICE, 3, etcd_client);
         auto reg2 = sr2.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_clients().size() == 2u);
@@ -179,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture) {
 
     {
         test::server svr("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, REGISTRY_ENDPOINT);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
