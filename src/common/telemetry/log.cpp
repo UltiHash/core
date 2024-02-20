@@ -1,19 +1,12 @@
 #include "log.h"
 
-#include <boost/core/null_deleter.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/shared_ptr.hpp>
-
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
-#include <boost/log/sinks.hpp>
-#include <boost/log/support/date_time.hpp>
-#include <boost/log/utility/setup/common_attributes.hpp>
-
 namespace logging = boost::log;
 namespace attrs = boost::log::attributes;
 namespace expr = boost::log::expressions;
+
+namespace otel_otlp = opentelemetry::exporter::otlp;
+namespace otel_logs_sdk = opentelemetry::sdk::logs;
+namespace otel_logs = opentelemetry::logs;
 
 using namespace boost::log;
 
@@ -41,14 +34,13 @@ boost::shared_ptr<std::ostream> open_stream(const sink_config& cfg) {
     case sink_type::file:
         return open_file(*cfg.filename);
     case sink_type::clog:
-        return boost::shared_ptr<std::ostream>(&std::clog,
-                                               boost::null_deleter());
+        return {&std::clog, boost::null_deleter()};
     case sink_type::cerr:
-        return boost::shared_ptr<std::ostream>(&std::cerr,
-                                               boost::null_deleter());
+        return {&std::cerr, boost::null_deleter()};
     case sink_type::cout:
-        return boost::shared_ptr<std::ostream>(&std::cout,
-                                               boost::null_deleter());
+        return {&std::cout, boost::null_deleter()};
+    case sink_type::otel:
+        return {};
     }
 
     throw std::runtime_error("unsupported log sink type");
@@ -90,6 +82,8 @@ std::string to_string(sink_type type) {
         return "sink_type::cerr";
     case sink_type::cout:
         return "sink_type::cout";
+    case sink_type::otel:
+        return "sink_type::otel";
     }
 
     throw std::runtime_error("unsupported log sink type");
@@ -147,11 +141,35 @@ std::ostream& operator<<(std::ostream& out, const sink_config& c) {
 
 // ---------------------------------------------------------------------
 
+boost::shared_ptr<sinks::sink> make_otel_sink(const sink_config& cfg) {
+    opentelemetry::exporter::otlp::OtlpGrpcLogRecordExporterOptions log_opts;
+    log_opts.endpoint = cfg.otel_endpoint;
+    auto exporter =
+        otel_otlp::OtlpGrpcLogRecordExporterFactory::Create(log_opts);
+    auto processor = otel_logs_sdk::SimpleLogRecordProcessorFactory::Create(
+        std::move(exporter));
+    std::shared_ptr<otel_logs::LoggerProvider> provider(
+        otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor)));
+
+    opentelemetry::logs::Provider::SetLoggerProvider(provider);
+
+    auto backend = boost::make_shared<
+        opentelemetry::instrumentation::boost_log::OpenTelemetrySinkBackend>();
+    auto otel_sink = boost::make_shared<boost::log::sinks::synchronous_sink<
+        opentelemetry::instrumentation::boost_log::OpenTelemetrySinkBackend>>(
+        backend);
+    return otel_sink;
+}
+
 void init(const config& cfg) {
     logging::add_common_attributes();
 
     for (const auto& sink : cfg.sinks) {
-        logging::core::get()->add_sink(make_sink(sink));
+        if (sink.type == sink_type::otel && !sink.otel_endpoint.empty()) {
+            boost::log::core::get()->add_sink(make_otel_sink(sink));
+        } else {
+            logging::core::get()->add_sink(make_sink(sink));
+        }
     }
 }
 

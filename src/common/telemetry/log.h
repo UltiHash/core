@@ -4,8 +4,29 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
 
+#include "common/telemetry/otel_log_sink.h"
+
+#include <boost/core/null_deleter.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/trivial.hpp>
+
+#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_options.h>
+#include <opentelemetry/logs/provider.h>
+#include <opentelemetry/sdk/logs/logger_provider.h>
+#include <opentelemetry/sdk/logs/logger_provider_factory.h>
+#include <opentelemetry/sdk/logs/processor.h>
+#include <opentelemetry/sdk/logs/simple_log_record_processor_factory.h>
 
 #include <filesystem>
 #include <list>
@@ -33,7 +54,7 @@ namespace uh::log {
 
 // ---------------------------------------------------------------------
 
-enum class sink_type { file, clog, cerr, cout };
+enum class sink_type { file, clog, cerr, cout, otel };
 
 // ---------------------------------------------------------------------
 
@@ -52,6 +73,7 @@ std::string to_string(boost::log::trivial::severity_level level);
 struct sink_config {
     sink_type type;
     std::optional<std::filesystem::path> filename;
+    std::string otel_endpoint;
 
     boost::log::trivial::severity_level level = boost::log::trivial::info;
 

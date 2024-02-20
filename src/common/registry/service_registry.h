@@ -7,9 +7,9 @@
 #include <boost/asio.hpp>
 #include <string>
 
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
-#include "common/utils/log.h"
 #include "namespace.h"
 
 namespace uh::cluster {

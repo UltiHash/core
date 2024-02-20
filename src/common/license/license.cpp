@@ -1,7 +1,6 @@
 #include "license.h"
 
 #include "common/utils/common.h"
-#include "common/utils/log.h"
 #include "common/utils/strings.h"
 #include "license-public-key.inc"
 

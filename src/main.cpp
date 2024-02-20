@@ -1,7 +1,7 @@
 #include "common/license/license.h"
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
-#include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
 #include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
@@ -97,12 +97,23 @@ int main(int argc, char** argv) {
 
         CLI11_PARSE(app, argc, argv);
 
-        uh::log::config lc{
-            .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,
-                                           .level = log_level},
-                      uh::log::sink_config{.type = uh::log::sink_type::file,
-                                           .filename = "log.log",
-                                           .level = log_level}}};
+        uh::log::config lc;
+
+        if (cfg.telemetry_url.empty()) {
+            lc = {
+                .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,
+                                               .level = log_level},
+                          uh::log::sink_config{.type = uh::log::sink_type::file,
+                                               .filename = "log.log",
+                                               .level = log_level}}};
+        } else {
+            lc = {
+                .sinks = {
+                    uh::log::sink_config{.type = uh::log::sink_type::cout,
+                                         .level = log_level},
+                    uh::log::sink_config{.type = uh::log::sink_type::otel,
+                                         .otel_endpoint = cfg.telemetry_url}}};
+        }
 
         log::init(lc);
 
