@@ -12,7 +12,6 @@
 #include "entrypoint/rest/http/models/delete_object_response.h"
 #include "entrypoint/rest/http/models/delete_objects_response.h"
 #include "entrypoint/rest/http/models/get_object_attributes_response.h"
-#include "entrypoint/rest/http/models/init_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
 #include "entrypoint/rest/http/models/list_objects_response.h"
 #include "entrypoint/rest/http/models/multi_part_upload_response.h"
@@ -22,9 +21,9 @@
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
-#include <pugixml.hpp>
 
 // REFACTORED
+#include "entrypoint/requests/init_multipart_upload.h"
 #include "requests/create_bucket.h"
 #include "requests/delete_bucket.h"
 #include "requests/get_bucket.h"
@@ -179,9 +178,6 @@ class entrypoint_handler : public protocol_handler {
         case rest::http::http_request_type::GET_OBJECT_ATTRIBUTES:
             res = handle_get_object_attributes(req);
             break;
-        case rest::http::http_request_type::INIT_MULTIPART_UPLOAD:
-            res = co_await handle_init_mp_upload(req, state);
-            break;
         case rest::http::http_request_type::MULTIPART_UPLOAD:
             res = co_await handle_mp_upload(req, state);
             break;
@@ -251,45 +247,6 @@ class entrypoint_handler : public protocol_handler {
             io_thread_acquire_messenger_and_post_in_io_threads(
                 m_workers, m_ioc, m_directory_services.get(),
                 std::bind_front(func, std::ref(res), std::cref(req)));
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-    handle_init_mp_upload(const rest::http::http_request& req,
-                          rest::utils::server_state& state) {
-        std::unique_ptr<rest::http::model::init_multi_part_upload_response> res;
-        try {
-            res = std::make_unique<
-                rest::http::model::init_multi_part_upload_response>(req);
-
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_workers, m_ioc, m_directory_services.get(),
-                    [&res, &req](client::acquired_messenger m) -> coro<void> {
-                        directory_message dir_req{
-                            .bucket_id = req.get_URI().get_bucket_id()};
-
-                        co_await m.get().send_directory_message(
-                            DIRECTORY_BUCKET_EXISTS_REQ, dir_req);
-                        co_await m.get().recv_header();
-
-                        res->set_upload_id(req.get_eTag());
-                    });
-
-        }
-
-        catch (const error_exception& e) {
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
-            default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
-            }
-        }
 
         co_return std::move(res);
     }
@@ -616,10 +573,10 @@ auto define_entrypoint_handler(entrypoint_state& state,
 
 auto make_entrypoint_handler(entrypoint_state& state) {
 
-    return define_entrypoint_handler(state, create_bucket(state),
-                                     get_bucket(state), list_buckets(state),
-                                     delete_bucket(state), put_object(state),
-                                     get_object(state), list_objects_v2(state));
+    return define_entrypoint_handler(
+        state, create_bucket(state), get_bucket(state), list_buckets(state),
+        delete_bucket(state), put_object(state), get_object(state),
+        list_objects_v2(state), init_multipart_upload(state));
 }
 
 } // end namespace uh::cluster

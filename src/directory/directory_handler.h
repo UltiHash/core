@@ -22,7 +22,7 @@ class directory_handler : public protocol_handler {
           m_stored_size(get_stored_size()),
           m_metrics_handler(telemetry_endpoint) {}
 
-    ~directory_handler() { write_stored_size(); }
+    ~directory_handler() override { write_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 

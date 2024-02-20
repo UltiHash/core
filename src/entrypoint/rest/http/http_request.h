@@ -13,13 +13,7 @@ namespace net = boost::asio;
 template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 enum class http_request_type {
-    CREATE_BUCKET,
-    GET_BUCKET,
-    LIST_BUCKETS,
-    DELETE_BUCKET,
     DELETE_OBJECTS,
-    PUT_OBJECT,
-    GET_OBJECT,
     DELETE_OBJECT,
     LIST_OBJECTS,
     GET_OBJECT_ATTRIBUTES,
