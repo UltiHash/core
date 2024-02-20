@@ -3,8 +3,7 @@
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
-#include <utility>
+#include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
 
@@ -18,6 +17,9 @@ class list_buckets {
 
   private:
     const entrypoint_state& m_state;
+
+    static http_response
+    get_response(const std::vector<std::string>& buckets_found) noexcept;
 };
 
 } // namespace uh::cluster

@@ -7,7 +7,7 @@
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/utils/string/string_utils.h"
-#include "entrypoint/utils.h"
+#include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
 
