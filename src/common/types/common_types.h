@@ -71,6 +71,8 @@ struct directory_lst_entities_message {
     std::vector<std::string> entities;
 };
 
+template <typename T> using opt_ref = std::optional<std::reference_wrapper<T>>;
+
 } // end namespace uh::cluster
 
 #endif // CORE_COMMON_TYPES_H
