@@ -20,6 +20,7 @@
 
 // REFACTORED
 #include "entrypoint/requests/init_multipart_upload.h"
+#include "entrypoint/requests/list_objects.h"
 #include "requests/create_bucket.h"
 #include "requests/delete_bucket.h"
 #include "requests/delete_object.h"
@@ -398,8 +399,8 @@ auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(
         state, create_bucket(state), get_bucket(state), list_buckets(state),
         delete_bucket(state), put_object(state), get_object(state),
-        list_objects_v2(state), delete_object(state), delete_objects(state),
-        init_multipart_upload(state));
+        list_objects(state), list_objects_v2(state), delete_object(state),
+        delete_objects(state), init_multipart_upload(state));
 }
 
 } // end namespace uh::cluster
