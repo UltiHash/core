@@ -7,7 +7,7 @@
 namespace uh::cluster {
 
 class messenger : public messenger_core {
-  public:
+public:
     using messenger_core::messenger_core;
 
     coro<address> recv_address(const header& message_header) {

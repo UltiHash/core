@@ -21,7 +21,8 @@ ip::tcp::acceptor acceptor(io_context& ctx, const std::string& addr,
 } // namespace
 
 server::server(const std::string& addr, uint16_t port)
-    : m_ctx(), m_acceptor(acceptor(m_ctx, addr, port)),
+    : m_ctx(),
+      m_acceptor(acceptor(m_ctx, addr, port)),
       m_thread([this]() { run(); }) {}
 
 server::~server() {

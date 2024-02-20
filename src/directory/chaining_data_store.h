@@ -98,9 +98,10 @@ class chaining_data_store {
         }
     };
 
-  public:
+public:
     explicit chaining_data_store(chaining_data_store_config conf)
-        : m_conf(std::move(conf)), m_free_spot_manager(m_conf.free_spot_log) {
+        : m_conf(std::move(conf)),
+          m_free_spot_manager(m_conf.free_spot_log) {
 
         if (!std::filesystem::exists(m_conf.directory)) {
             std::filesystem::create_directories(m_conf.directory);
@@ -354,7 +355,7 @@ class chaining_data_store {
         }
     }
 
-  private:
+private:
     struct partial_alloc_t {
         int fd{};
         std::int64_t seek{};

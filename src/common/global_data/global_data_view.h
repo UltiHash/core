@@ -13,12 +13,14 @@ namespace uh::cluster {
 
 class global_data_view {
 
-  public:
+public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
                               services<STORAGE_SERVICE>& storage_services)
-        : m_io_service(ioc), m_storage_services(storage_services),
-          m_config(config), m_cache_l1(m_config.read_cache_capacity_l1),
+        : m_io_service(ioc),
+          m_storage_services(storage_services),
+          m_config(config),
+          m_cache_l1(m_config.read_cache_capacity_l1),
           m_cache_l2(m_config.read_cache_capacity_l2) {
         m_storage_services.get();
     }
@@ -206,7 +208,7 @@ class global_data_view {
         return m_config.storage_service_connection_count;
     }
 
-  private:
+private:
     boost::asio::io_context& m_io_service;
 
     services<STORAGE_SERVICE>& m_storage_services;

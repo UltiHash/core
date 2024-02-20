@@ -14,8 +14,10 @@ class signal_handler {
     std::thread m_signal_handler_thread;
     std::vector<std::function<void(void)>> m_callbacks;
 
-  public:
-    signal_handler() : m_ioc(1), m_signals(m_ioc, SIGINT, SIGTERM) {
+public:
+    signal_handler()
+        : m_ioc(1),
+          m_signals(m_ioc, SIGINT, SIGTERM) {
 
         m_signals.async_wait(
             [this](const boost::system::error_code& error, int signal) {
@@ -32,7 +34,7 @@ class signal_handler {
 
     ~signal_handler() { m_signal_handler_thread.join(); }
 
-  private:
+private:
     void handle_signal(const boost::system::error_code& error, int signal) {
         for (auto& fn : m_callbacks) {
             fn();

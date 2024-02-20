@@ -17,7 +17,7 @@ namespace uh::cluster {
 
 class data_store {
 
-  public:
+public:
     explicit data_store(storage_config conf, std::size_t id,
                         bool adaptive = true);
 
@@ -34,7 +34,7 @@ class data_store {
 
     ~data_store();
 
-  private:
+private:
     struct partial_alloc_t {
         int fd{};
         std::int64_t offset{};

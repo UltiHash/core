@@ -16,7 +16,8 @@ namespace model = uh::cluster::rest::http::model;
 
 s3_parser::s3_parser(const b_http::request_parser<b_http::empty_body>& recv_req,
                      utils::server_state& server_state)
-    : m_recv_req(recv_req), m_server_state(server_state) {}
+    : m_recv_req(recv_req),
+      m_server_state(server_state) {}
 
 std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
     // parse the URI

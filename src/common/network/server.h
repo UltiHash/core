@@ -28,12 +28,14 @@ namespace uh::cluster {
 
 class server {
 
-  public:
+public:
     server(server_config config, std::string server_name,
            std::unique_ptr<protocol_handler> handler,
            boost::asio::io_context& ioc)
-        : m_config(std::move(config)), m_ioc(ioc),
-          m_handler(std::move(handler)), m_server_name(std::move(server_name)) {
+        : m_config(std::move(config)),
+          m_ioc(ioc),
+          m_handler(std::move(handler)),
+          m_server_name(std::move(server_name)) {
         m_is_running = true;
 
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
@@ -104,7 +106,7 @@ class server {
         }
     }
 
-  private:
+private:
     boost::asio::ip::tcp::acceptor
     do_listen(const boost::asio::ip::tcp::endpoint& endpoint) {
         auto acceptor =

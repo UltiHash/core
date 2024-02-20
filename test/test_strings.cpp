@@ -9,7 +9,6 @@
 #include <boost/test/unit_test.hpp>
 #include <cstring>
 
-
 namespace uh::cluster {
 
 BOOST_AUTO_TEST_CASE(string_split) {
@@ -51,9 +50,10 @@ BOOST_AUTO_TEST_CASE(string_base64_decode) {
         " tempora hic. Est non eaque occaecati dolor est voluptas at.";
 
     auto decoded = base64_decode(test_base64);
-    auto plain = std::vector<char>(test_plain, test_plain + ::strlen(test_plain));
+    auto plain =
+        std::vector<char>(test_plain, test_plain + ::strlen(test_plain));
 
     BOOST_CHECK(decoded == plain);
 }
 
-}
+} // namespace uh::cluster

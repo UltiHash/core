@@ -21,7 +21,7 @@ typedef boost::urls::url url;
 enum class scheme { HTTP, HTTPS };
 
 class uri {
-  public:
+public:
     explicit uri(const http::request_parser<http::empty_body>&);
     ~uri() = default;
 
@@ -32,7 +32,7 @@ class uri {
     const std::map<std::string, std::string>& get_query_parameters() const;
     method get_method() const;
 
-  private:
+private:
     void extract_bucket_and_object();
     void extract_query_parameters();
 

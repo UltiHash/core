@@ -21,8 +21,9 @@ template <typename K, typename V> class lru_cache {
     size_t m_capacity;
     std::mutex m;
 
-  public:
-    explicit lru_cache(size_t capacity) : m_capacity{capacity} {}
+public:
+    explicit lru_cache(size_t capacity)
+        : m_capacity{capacity} {}
 
     void put(const K& key, V&& value) {
         std::lock_guard<std::mutex> lock(m);

@@ -14,11 +14,11 @@ namespace b_http = boost::beast::http;
 namespace http = rest::http;
 
 class s3_parser {
-  private:
+private:
     const b_http::request_parser<b_http::empty_body>& m_recv_req;
     utils::server_state& m_server_state;
 
-  public:
+public:
     s3_parser(const b_http::request_parser<b_http::empty_body>&,
               utils::server_state&);
 

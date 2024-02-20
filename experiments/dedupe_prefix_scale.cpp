@@ -60,9 +60,10 @@ class dedupe_set {
         return i;
     }
 
-  public:
+public:
     dedupe_set(uint8_t min_char, uint16_t max_char)
-        : mmin_char(min_char), mmax_char(max_char) {}
+        : mmin_char(min_char),
+          mmax_char(max_char) {}
 
     std::size_t dedupe(std::string_view& integration_data) {
 

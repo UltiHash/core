@@ -28,7 +28,8 @@ scheme from_string(const char* name) {
     return scheme::HTTPS;
 }
 
-URI::URI(const http::request_parser<http::empty_body>& req) : m_req(req) {
+URI::URI(const http::request_parser<http::empty_body>& req)
+    : m_req(req) {
     if (m_req.get().base().version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");

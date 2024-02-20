@@ -19,7 +19,7 @@ using size_type = size_t;
 
 class messenger_core {
 
-  public:
+public:
     struct header {
         message_type type;
         size_type size;
@@ -36,7 +36,8 @@ class messenger_core {
 
     messenger_core(boost::asio::ip::tcp::socket&& socket,
                    metrics_handler& metrics_handler)
-        : m_socket(std::move(socket)), m_metrics_handler(metrics_handler) {
+        : m_socket(std::move(socket)),
+          m_metrics_handler(metrics_handler) {
         clear_buffers();
     }
 
@@ -44,7 +45,8 @@ class messenger_core {
         : m_socket(std::move(m.m_socket)),
           m_read_buffers(std::move(m.m_read_buffers)),
           m_write_buffers(std::move(m.m_write_buffers)),
-          m_read_size(m.m_read_size), m_write_size(m.m_write_size) {}
+          m_read_size(m.m_read_size),
+          m_write_size(m.m_write_size) {}
 
     template <typename T>
     requires(std::is_arithmetic_v<T> or std::is_enum_v<T>)
@@ -225,7 +227,7 @@ class messenger_core {
         }
     }
 
-  private:
+private:
     boost::asio::ip::tcp::socket m_socket;
     std::optional<std::reference_wrapper<metrics_handler>> m_metrics_handler;
 

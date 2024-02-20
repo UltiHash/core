@@ -16,7 +16,8 @@ static const std::string error_out_of_range = "error out of range";
 } // namespace
 
 error::error(type t, const std::string& message)
-    : m_type(t), m_message(message) {}
+    : m_type(t),
+      m_message(message) {}
 
 error::error(uint32_t t, const std::string& message)
     : error(static_cast<type>(t), message) {}

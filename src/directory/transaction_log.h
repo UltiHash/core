@@ -15,7 +15,7 @@ class transaction_log {
     std::filesystem::path m_log_path;
     int m_log_file;
 
-  public:
+public:
     enum operation : char {
         INSERT_START = 'i',
         INSERT_END = 'I',
@@ -119,7 +119,7 @@ class transaction_log {
 
     ~transaction_log() { close(m_log_file); }
 
-  private:
+private:
     struct entry {
         std::variant<std::string, std::string_view> key;
         operation op;

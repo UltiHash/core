@@ -26,7 +26,7 @@ class set_log {
         uint128_t prefix{0};
     };
 
-  public:
+public:
     explicit set_log(std::filesystem::path log_path)
         : m_log_path(std::move(log_path)),
           m_log_file(get_log_file(m_log_path)) {
@@ -81,7 +81,7 @@ class set_log {
         close(m_log_file);
     }
 
-  private:
+private:
     static int get_log_file(const std::filesystem::path& path) {
         std::filesystem::create_directories(path.parent_path());
         if (std::filesystem::exists(path)) {

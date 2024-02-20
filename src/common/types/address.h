@@ -22,7 +22,9 @@ struct address {
     std::vector<uint32_t> sizes;
 
     address() = default;
-    explicit address(std::size_t size) : pointers(size * 2), sizes(size) {}
+    explicit address(std::size_t size)
+        : pointers(size * 2),
+          sizes(size) {}
     explicit address(const fragment& frag) { push_fragment(frag); }
 
     void push_fragment(const fragment& frag) {
