@@ -1,5 +1,5 @@
-#ifndef UH_CLUSTER_MESSAGE_METRICS_HANDLER_H
-#define UH_CLUSTER_MESSAGE_METRICS_HANDLER_H
+#ifndef UH_CLUSTER_METRICS_HANDLER_H
+#define UH_CLUSTER_METRICS_HANDLER_H
 
 #include "common/utils/common.h"
 
@@ -18,9 +18,9 @@
 
 namespace uh::cluster {
 
-class message_metrics_handler {
+class metrics_handler {
   public:
-    message_metrics_handler(const std::string& telemetry_endpoint);
+    metrics_handler(const std::string& telemetry_endpoint);
 
     void increment_counter(const uh::cluster::message_type msg_type);
 
@@ -39,4 +39,4 @@ class message_metrics_handler {
 
 } // namespace uh::cluster
 
-#endif // UH_CLUSTER_MESSAGE_METRICS_HANDLER_H
+#endif // UH_CLUSTER_METRICS_HANDLER_H
