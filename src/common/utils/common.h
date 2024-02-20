@@ -157,9 +157,6 @@ static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 uh::cluster::role get_service_role(const std::string& service_role_str);
-const std::unordered_set<uh::cluster::message_type>&
-get_requests_served(uh::cluster::role message);
-
 const std::string& get_service_string(const uh::cluster::role& service_role);
 
 constexpr const char*
