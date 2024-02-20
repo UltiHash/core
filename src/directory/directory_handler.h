@@ -1,6 +1,7 @@
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
+#include "common/telemetry/log.h"
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
 #include "common/utils/worker_utils.h"
@@ -12,6 +13,11 @@ namespace uh::cluster {
 
 class directory_handler : public protocol_handler {
 public:
+    // warn about a nearly reached size limit at this percentage
+    static constexpr unsigned SIZE_LIMIT_WARNING_PERCENTAGE = 80;
+    // number of files to upload between two warnings
+    static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
+
     directory_handler(
         directory_config config, global_data_view& storage,
         std::shared_ptr<boost::asio::thread_pool> directory_workers,
@@ -142,6 +148,18 @@ private:
 
         if (new_size > m_config.max_data_store_size) {
             throw error_exception(error::storage_limit_exceeded);
+        }
+
+        static unsigned warn_counter = 0;
+        if (new_size * 100 >
+            m_config.max_data_store_size * SIZE_LIMIT_WARNING_PERCENTAGE) {
+            if (warn_counter == 0) {
+                LOG_WARN() << "over " << SIZE_LIMIT_WARNING_PERCENTAGE
+                           << "% of storage limit reached";
+                warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
+            }
+
+            --warn_counter;
         }
 
         m_stored_size = new_size;
