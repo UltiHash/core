@@ -35,7 +35,7 @@ public:
     }
 
     messenger_core(boost::asio::ip::tcp::socket&& socket,
-                   metrics_handler& metrics_handler)
+                   opt_ref<metrics_handler> metrics_handler = std::nullopt)
         : m_socket(std::move(socket)),
           m_metrics_handler(metrics_handler) {
         clear_buffers();
