@@ -11,19 +11,10 @@
 #include <config.h>
 #include <system_error>
 
+using namespace uh;
 using namespace uh::cluster;
 
-struct config {
-    uh::cluster::role role;
-    std::size_t id;
-    std::string etcd_url;
-    std::filesystem::path working_dir;
-    boost::log::trivial::severity_level log_level;
-    uh::cluster::license license;
-    std::string telemetry_endpoint;
-};
-
-void execute_role(const config& cfg) {
+void execute_role(cluster::role role, const service_config& cfg) {
 
     signal_handler sh;
 
@@ -33,18 +24,15 @@ void execute_role(const config& cfg) {
     };
 
     try {
-        switch (cfg.role) {
+        switch (role) {
         case STORAGE_SERVICE:
-            return start_service(
-                storage(cfg.etcd_url, cfg.telemetry_endpoint, cfg.working_dir));
+            return start_service(storage(cfg));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(
-                cfg.etcd_url, cfg.telemetry_endpoint, cfg.working_dir));
+            return start_service(deduplicator(cfg));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg.etcd_url, cfg.telemetry_endpoint,
-                                           cfg.working_dir, cfg.license));
+            return start_service(directory(cfg));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(cfg.etcd_url, cfg.working_dir));
+            return start_service(entrypoint(cfg));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
@@ -64,8 +52,10 @@ int main(int argc, char** argv) {
         CLI::App app{"UltiHash Object Storage Cluster"};
         argv = app.ensure_utf8(argv);
 
-        config cfg;
-        app.add_option("role", cfg.role,
+        service_config cfg;
+        cluster::role role;
+        boost::log::trivial::severity_level log_level;
+        app.add_option("role", role,
                        "service role, i.e. storage, deduplicator, directory, "
                        "or entrypoint")
             ->required()
@@ -89,7 +79,7 @@ int main(int argc, char** argv) {
             ->default_val("/var/lib/uh")
             ->check(CLI::ExistingDirectory);
         app.add_option(
-               "--log-level,-l", cfg.log_level,
+               "--log-level,-l", log_level,
                "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
             ->transform([](const std::string& severity_str) {
                 return std::to_string(
@@ -97,7 +87,7 @@ int main(int argc, char** argv) {
             })
             ->default_val(uh::log::to_string(boost::log::trivial::info))
             ->envname(ENV_CFG_LOG_LEVEL);
-        app.add_option("--telemetry-endpoint,-e", cfg.telemetry_endpoint,
+        app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
                        "URL to opentelemetry endpoint")
             ->envname(ENV_CFG_OTEL_ENDPOINT);
 
@@ -109,18 +99,18 @@ int main(int argc, char** argv) {
 
         uh::log::config lc{
             .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,
-                                           .level = cfg.log_level},
+                                           .level = log_level},
                       uh::log::sink_config{.type = uh::log::sink_type::file,
                                            .filename = "log.log",
-                                           .level = cfg.log_level}}};
+                                           .level = log_level}}};
 
-        uh::log::init(lc);
+        log::init(lc);
 
         LOG_INFO() << "license loaded for " << cfg.license.customer
                    << " -- storage size: " << cfg.license.max_data_store_size
                    << " bytes";
 
-        execute_role(cfg);
+        execute_role(role, cfg);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }

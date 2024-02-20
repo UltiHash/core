@@ -6,28 +6,26 @@
 #include "common/registry/service_registry.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/log.h"
-#include "common/utils/service_interface.h"
 #include "deduplicator_handler.h"
 #include <functional>
 #include <iostream>
 #include <utility>
 
 namespace uh::cluster {
-class deduplicator : public service_interface {
-  public:
-    explicit deduplicator(const std::string& registry_url,
-                          const std::string& telemetry_endpoint,
-                          const std::filesystem::path& working_dir)
-        : m_config_registry(uh::cluster::DEDUPLICATOR_SERVICE, registry_url,
-                            working_dir),
+class deduplicator {
+public:
+    explicit deduplicator(const service_config& sc)
+        : m_etcd_client(sc.etcd_url),
+          m_config_registry(DEDUPLICATOR_SERVICE, m_etcd_client,
+                            sc.working_dir),
           m_ioc(boost::asio::io_context(
               m_config_registry.get_server_config().threads)),
-          m_service_registry(uh::cluster::DEDUPLICATOR_SERVICE,
-                             m_config_registry.get_service_id(), registry_url),
+          m_service_registry(DEDUPLICATOR_SERVICE,
+                             m_config_registry.get_service_id(), m_etcd_client),
           m_storage_services(m_ioc, m_config_registry,
                              m_config_registry.get_global_data_view_config()
                                  .storage_service_connection_count,
-                             registry_url),
+                             m_etcd_client),
           m_config(m_config_registry.get_deduplicator_config()),
           m_dedupe_workers(std::make_shared<boost::asio::thread_pool>(
               m_config.worker_thread_count)),
@@ -35,29 +33,29 @@ class deduplicator : public service_interface {
                     m_storage_services),
           m_server(m_config_registry.get_server_config(),
                    m_config_registry.get_service_name(),
-                   std::make_unique<deduplicator_handler>(m_config, m_storage,
-                                                          m_dedupe_workers,
-                                                          telemetry_endpoint),
+                   std::make_unique<deduplicator_handler>(
+                       m_config, m_storage, m_dedupe_workers, sc.telemetry_url),
                    m_ioc) {}
 
-    void run() override {
+    void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
-    void stop() override {
+    void stop() {
         m_server.stop();
         m_dedupe_workers->join();
         m_dedupe_workers->stop();
     }
 
-    ~deduplicator() override {
+    ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
         m_ioc.stop();
     }
 
-  private:
+private:
+    etcd::SyncClient m_etcd_client;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
 

@@ -10,41 +10,39 @@
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
 #include "common/utils/cluster_config.h"
-#include "common/utils/service_interface.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
 
-class entrypoint : public service_interface {
+class entrypoint {
   public:
-    explicit entrypoint(const std::string& registry_url,
-                        const std::filesystem::path& working_dir)
-        : m_config_registry(uh::cluster::ENTRYPOINT_SERVICE, registry_url,
-                            working_dir),
+    explicit entrypoint(const service_config& sc)
+        : m_etcd_client(sc.etcd_url),
+          m_config_registry(ENTRYPOINT_SERVICE, m_etcd_client, sc.working_dir),
           m_ioc(boost::asio::io_context(
               m_config_registry.get_server_config().threads)),
-          m_service_registry(uh::cluster::ENTRYPOINT_SERVICE,
-                             m_config_registry.get_service_id(), registry_url),
+          m_service_registry(ENTRYPOINT_SERVICE,
+                             m_config_registry.get_service_id(), m_etcd_client),
           m_config(m_config_registry.get_entrypoint_config()),
           m_dedupe_services(m_ioc, m_config_registry,
                             m_config.dedupe_node_connection_count,
-                            registry_url),
+                            m_etcd_client),
           m_directory_services(m_ioc, m_config_registry,
                                m_config.directory_connection_count,
-                               registry_url),
+                               m_etcd_client),
           m_workers(m_config.worker_thread_count),
           m_state(get_entrypoint_state()),
           m_server(m_config_registry.get_server_config(),
                    m_config_registry.get_service_name(),
                    make_entrypoint_handler(m_state), m_ioc) {}
 
-    void run() override {
+    void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
-    void stop() override {
+    void stop() {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
         m_server.stop();
         m_workers.join();
@@ -61,6 +59,7 @@ class entrypoint : public service_interface {
         };
     }
 
+    etcd::SyncClient m_etcd_client;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
 
