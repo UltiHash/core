@@ -9,7 +9,8 @@ http_response::http_response(const http_request& orig_req)
 
 http_response::http_response(const http_request& req,
                              http::response<http::string_body> res)
-    : m_orig_req(req), m_res(std::move(res)) {}
+    : m_orig_req(req),
+      m_res(std::move(res)) {}
 
 void http_response::set_body(std::string&& body) {
     m_res.body() = std::move(body);

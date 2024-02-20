@@ -6,7 +6,7 @@
 namespace uh::cluster::rest::http::model {
 
 class complete_multi_part_upload_response : public http_response {
-  public:
+public:
     explicit complete_multi_part_upload_response(const http_request&);
     complete_multi_part_upload_response(const http_request&,
                                         http::response<http::string_body>);
@@ -19,7 +19,7 @@ class complete_multi_part_upload_response : public http_response {
     void set_space_savings(double);
     void set_bandwidth(double);
 
-  private:
+private:
     bool m_bandwidthHasBeenSet = false;
     double m_bandwidth;
 

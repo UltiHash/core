@@ -6,7 +6,7 @@
 namespace uh::cluster::rest::http::model {
 
 class complete_multi_part_upload_request : public rest::http::http_request {
-  public:
+public:
     complete_multi_part_upload_request(
         const http::request_parser<http::empty_body>&, utils::server_state&,
         std::unique_ptr<rest::http::URI>);
@@ -22,7 +22,7 @@ class complete_multi_part_upload_request : public rest::http::http_request {
 
     void validate_request_specific_criteria() override;
 
-  private:
+private:
     void validate_request() const;
 
     mutable std::string m_completed_body{};

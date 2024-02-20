@@ -48,7 +48,7 @@ enum class DayOfWeek {
 //    }
 
 class date_time {
-  public:
+public:
     date_time() = default;
     ~date_time() = default;
 
@@ -57,7 +57,7 @@ class date_time {
     [[nodiscard]] std::string to_gmt_string(const char* formatStr) const;
     [[nodiscard]] std::string get_date() const;
 
-  private:
+private:
     [[nodiscard]] tm convert_time_stamp_to_gmt_struct() const;
     std::chrono::system_clock::time_point m_time;
 };

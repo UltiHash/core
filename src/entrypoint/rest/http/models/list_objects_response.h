@@ -6,7 +6,7 @@
 namespace uh::cluster::rest::http::model {
 
 class list_objects_response : public http_response {
-  public:
+public:
     explicit list_objects_response(const http_request&);
     list_objects_response(const http_request&,
                           http::response<http::string_body>);
@@ -16,7 +16,7 @@ class list_objects_response : public http_response {
     void add_content(std::string);
     void add_name(std::string);
 
-  private:
+private:
     void populate_response_headers();
 
     bool m_isTruncatedHasBeenSet = false;

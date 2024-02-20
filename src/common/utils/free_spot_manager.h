@@ -12,7 +12,7 @@
 namespace uh::cluster {
 
 class free_spot_manager {
-  public:
+public:
     explicit free_spot_manager(std::filesystem::path hole_log);
 
     void note_free_spot(uint128_t pointer, std::size_t size);
@@ -31,7 +31,7 @@ class free_spot_manager {
 
     ~free_spot_manager();
 
-  private:
+private:
     std::fstream open_file();
 
     uint128_t get_total_free_size();

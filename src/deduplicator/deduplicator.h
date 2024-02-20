@@ -13,7 +13,7 @@
 
 namespace uh::cluster {
 class deduplicator {
-  public:
+public:
     explicit deduplicator(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
           m_config_registry(DEDUPLICATOR_SERVICE, m_etcd_client,
@@ -31,10 +31,12 @@ class deduplicator {
               m_config.worker_thread_count)),
           m_storage(m_config_registry.get_global_data_view_config(), m_ioc,
                     m_storage_services),
+          m_metrics_handler(sc.telemetry_url),
           m_server(m_config_registry.get_server_config(),
                    m_config_registry.get_service_name(),
                    std::make_unique<deduplicator_handler>(m_config, m_storage,
-                                                          m_dedupe_workers),
+                                                          m_dedupe_workers,
+                                                          m_metrics_handler),
                    m_ioc) {}
 
     void run() {
@@ -54,7 +56,7 @@ class deduplicator {
         m_ioc.stop();
     }
 
-  private:
+private:
     etcd::SyncClient m_etcd_client;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
@@ -67,6 +69,7 @@ class deduplicator {
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
 
     global_data_view m_storage;
+    metrics_handler m_metrics_handler;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };

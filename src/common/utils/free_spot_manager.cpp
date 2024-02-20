@@ -3,7 +3,8 @@
 namespace uh::cluster {
 
 free_spot_manager::free_spot_manager(std::filesystem::path hole_log)
-    : m_hole_log(std::move(hole_log)), m_file(open_file()),
+    : m_hole_log(std::move(hole_log)),
+      m_file(open_file()),
       m_total_free_size(get_total_free_size()) {
 
     shift_forward();

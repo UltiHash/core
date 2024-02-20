@@ -29,7 +29,8 @@ coro<http_response> get_object::handle(const http_request& req) const {
             dir_req.object_key =
                 std::make_unique<std::string>(req.get_uri().get_object_key());
 
-            co_await m.get().send_directory_message(DIR_GET_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_GET_REQ,
+                                                    dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
             buffer.resize(h_dir.size);

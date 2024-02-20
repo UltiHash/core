@@ -6,13 +6,13 @@
 namespace uh::cluster::rest::http::model {
 
 class multi_part_upload_response : public http_response {
-  public:
+public:
     explicit multi_part_upload_response(const http_request&);
 
     [[nodiscard]] const http::response<http::string_body>&
     get_response_specific_object() override;
 
-  private:
+private:
     bool m_checksumCRC32HasBeenSet = false;
     std::string m_checksumCRC32;
 

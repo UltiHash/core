@@ -1,5 +1,6 @@
 #include "common/license/license.h"
 #include "common/utils/cluster_config.h"
+#include "common/utils/common.h"
 #include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
 #include "deduplicator/deduplicator.h"
@@ -7,7 +8,6 @@
 #include "entrypoint/entrypoint.h"
 #include "storage/storage.h"
 #include <CLI/CLI.hpp>
-#include <common/utils/common.h>
 #include <config.h>
 #include <system_error>
 
@@ -87,6 +87,10 @@ int main(int argc, char** argv) {
             })
             ->default_val(uh::log::to_string(boost::log::trivial::info))
             ->envname(ENV_CFG_LOG_LEVEL);
+        app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
+                       "URL to opentelemetry endpoint")
+            ->envname(ENV_CFG_OTEL_ENDPOINT);
+
         app.add_flag_callback(
             "--vcsid", print_vcsid,
             "Print the VCS commit id this executable was compiled from");

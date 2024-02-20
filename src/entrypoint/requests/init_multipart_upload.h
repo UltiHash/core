@@ -11,7 +11,7 @@
 namespace uh::cluster {
 
 class init_multipart_upload {
-  public:
+public:
     explicit init_multipart_upload(entrypoint_state& entry_state)
         : m_state(entry_state) {}
 
@@ -35,7 +35,7 @@ class init_multipart_upload {
                             .bucket_id = req.get_uri().get_bucket_id()};
 
                         co_await m.get().send_directory_message(
-                            DIR_BUCKET_EXISTS, dir_req);
+                            DIRECTORY_BUCKET_EXISTS_REQ, dir_req);
                         co_await m.get().recv_header();
                     });
 
@@ -64,7 +64,7 @@ class init_multipart_upload {
         co_return get_response(req, upload_id);
     }
 
-  private:
+private:
     static http_response get_response(const http_request& req,
                                       const std::string& upload_id) {
         http_response res;

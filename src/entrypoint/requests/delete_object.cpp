@@ -23,7 +23,7 @@ coro<http_response> delete_object::handle(const http_request& req) const {
                 .bucket_id = req.get_uri().get_bucket_id(),
                 .object_key = std::make_unique<std::string>(
                     req.get_uri().get_object_key())};
-            co_await m.get().send_directory_message(DIR_DELETE_OBJ_REQ,
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
                                                     dir_req);
             co_await m.get().recv_header();
         };

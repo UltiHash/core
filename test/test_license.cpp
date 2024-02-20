@@ -4,13 +4,12 @@
 #define BOOST_TEST_MODULE "license tests"
 #endif
 
-#include <boost/test/unit_test.hpp>
 #include "common/license/license.h"
+#include <boost/test/unit_test.hpp>
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <test_config.h>
-
 
 using namespace uh::cluster;
 
@@ -18,7 +17,8 @@ namespace {
 
 std::filesystem::path LIC_1GB = TEST_DATA_DIR "/licenses/UltiHash-Test-1GB.lic";
 std::filesystem::path LIC_4TB = TEST_DATA_DIR "/licenses/UltiHash-Test-4TB.lic";
-std::filesystem::path LIC_128TB = TEST_DATA_DIR "/licenses/UltiHash-Test-128TB.lic";
+std::filesystem::path LIC_128TB =
+    TEST_DATA_DIR "/licenses/UltiHash-Test-128TB.lic";
 std::filesystem::path LIC_1PB = TEST_DATA_DIR "/licenses/UltiHash-Test-1PB.lic";
 
 std::string read_file(const std::filesystem::path& path) {
@@ -61,17 +61,17 @@ BOOST_AUTO_TEST_CASE(sample_licenses) {
 }
 
 BOOST_AUTO_TEST_CASE(exception) {
+    { BOOST_CHECK_THROW(check_license(""), std::exception); }
     {
-        BOOST_CHECK_THROW(check_license(""), std::exception);
-    }
-    {
-        auto code = read_file(LIC_1GB); code[0] ^= 1;
+        auto code = read_file(LIC_1GB);
+        code[0] ^= 1;
         BOOST_CHECK_THROW(check_license(code), std::exception);
     }
     {
-        auto code = read_file(LIC_1GB); code[code.size()/2] ^= 1;
+        auto code = read_file(LIC_1GB);
+        code[code.size() / 2] ^= 1;
         BOOST_CHECK_THROW(check_license(code), std::exception);
     }
 }
 
-}
+} // namespace

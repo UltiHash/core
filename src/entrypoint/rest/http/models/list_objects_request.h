@@ -5,7 +5,7 @@
 namespace uh::cluster::rest::http::model {
 
 class list_objects_request : public http_request {
-  public:
+public:
     explicit list_objects_request(const http::request_parser<http::empty_body>&,
                                   std::unique_ptr<rest::http::URI>);
 
@@ -23,7 +23,7 @@ class list_objects_request : public http_request {
         co_return;
     }
 
-  private:
+private:
     list_objects_request&
     operator=(const http::request_parser<http::empty_body>& recv_req);
 

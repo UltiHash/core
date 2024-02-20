@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http {
  * Abstract class for representing an Http Response.
  */
 class http_response {
-  public:
+public:
     explicit http_response(const http_request&);
     http_response(const http_request&, http::response<http::string_body>);
     virtual ~http_response() = default;
@@ -22,7 +22,7 @@ class http_response {
     void set_body(std::string&&);
     void set_etag(const std::string&);
 
-  protected:
+protected:
     const http_request& m_orig_req;
     http::response<http::string_body> m_res;
 

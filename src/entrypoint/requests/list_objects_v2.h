@@ -13,8 +13,9 @@ namespace uh::cluster {
 
 class list_objects_v2 {
 
-  public:
-    explicit list_objects_v2(entrypoint_state& state) : m_state(state) {}
+public:
+    explicit list_objects_v2(entrypoint_state& state)
+        : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
         if (req.get_method() == method::get) {
@@ -59,8 +60,8 @@ class list_objects_v2 {
             auto func = [](const directory_message& dir_req,
                            std::vector<std::string>& content,
                            client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_LIST_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 unique_buffer<char> buffer(h_dir.size);
@@ -249,7 +250,7 @@ class list_objects_v2 {
         return res;
     }
 
-  private:
+private:
     entrypoint_state& m_state;
 };
 

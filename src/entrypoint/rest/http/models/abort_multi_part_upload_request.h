@@ -6,7 +6,7 @@
 namespace uh::cluster::rest::http::model {
 
 class abort_multi_part_upload_request : public rest::http::http_request {
-  public:
+public:
     abort_multi_part_upload_request(
         const http::request_parser<http::empty_body>&, utils::server_state&,
         std::unique_ptr<rest::http::URI>);
@@ -20,7 +20,7 @@ class abort_multi_part_upload_request : public rest::http::http_request {
     [[nodiscard]] std::map<std::string, std::string>
     get_request_specific_headers() const override;
 
-  private:
+private:
     utils::server_state& m_server_state;
 
     std::string m_upload_id;

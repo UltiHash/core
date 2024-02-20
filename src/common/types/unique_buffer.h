@@ -10,7 +10,7 @@ template <typename T> class unique_buffer {
     std::size_t d_size{0};
     std::unique_ptr<T[]> data_ptr = nullptr;
 
-  public:
+public:
     constexpr unique_buffer() = default;
 
     constexpr explicit unique_buffer(size_t data_size)
@@ -18,12 +18,14 @@ template <typename T> class unique_buffer {
           data_ptr{std::make_unique_for_overwrite<T[]>(d_size)} {}
 
     constexpr unique_buffer(size_t data_size, std::unique_ptr<T[]>&& ptr)
-        : d_size(data_size), data_ptr{std::move(ptr)} {}
+        : d_size(data_size),
+          data_ptr{std::move(ptr)} {}
 
     constexpr unique_buffer(const std::nullptr_t&) {}
 
     constexpr unique_buffer(unique_buffer&& os) noexcept
-        : d_size(os.d_size), data_ptr(std::move(os.data_ptr)) {
+        : d_size(os.d_size),
+          data_ptr(std::move(os.data_ptr)) {
         os.d_size = 0;
         os.data_ptr = nullptr;
     }

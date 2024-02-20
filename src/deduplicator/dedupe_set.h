@@ -12,7 +12,7 @@ namespace uh::cluster {
 
 class dedupe_set {
 
-  public:
+public:
     struct fragment_element {
         std::reference_wrapper<global_data_view> m_storage;
         uint128_t pointer;
@@ -23,7 +23,10 @@ class dedupe_set {
         explicit fragment_element(const uint128_t& ptr, uint16_t size_,
                                   const uint128_t& prefix_,
                                   global_data_view& storage)
-            : m_storage(storage), pointer(ptr), size(size_), prefix(prefix_),
+            : m_storage(storage),
+              pointer(ptr),
+              size(size_),
+              prefix(prefix_),
               m_data(std::nullopt) {}
 
         fragment_element(const std::string_view& data,
@@ -34,15 +37,20 @@ class dedupe_set {
 
         fragment_element(const std::string_view& data, const uint128_t& ptr,
                          global_data_view& storage)
-            : m_storage(storage), pointer(ptr), size(data.size()),
+            : m_storage(storage),
+              pointer(ptr),
+              size(data.size()),
               m_data(std::nullopt) {
             std::memcpy(prefix.ref_data(), data.data(),
                         std::min(sizeof(uint128_t), data.size()));
         }
 
         fragment_element(fragment_element&& f) noexcept
-            : m_storage(f.m_storage), pointer(f.pointer), size(f.size),
-              prefix(f.prefix), m_data(f.m_data) {
+            : m_storage(f.m_storage),
+              pointer(f.pointer),
+              size(f.size),
+              prefix(f.prefix),
+              m_data(f.m_data) {
             f.size = 0;
             f.pointer = 0;
             f.prefix = 0;
@@ -132,7 +140,8 @@ class dedupe_set {
 
     dedupe_set(const std::filesystem::path& set_log_path,
                global_data_view& storage)
-        : m_storage(storage), m_set_log(set_log_path) {}
+        : m_storage(storage),
+          m_set_log(set_log_path) {}
 
     void load() { m_set_log.replay(m_set, m_storage, m); }
 
@@ -161,7 +170,7 @@ class dedupe_set {
         m_set.emplace_hint(hint, std::move(f));
     }
 
-  private:
+private:
     global_data_view& m_storage;
     std::set<fragment_element> m_set;
     std::shared_mutex m;
