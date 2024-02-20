@@ -118,17 +118,17 @@ private:
         auto integration_data = data;
 
         auto check_dedupe = [&](const dedupe_set::fragment_element& frag) {
-            auto frag_data = m_storage.read_l1_cache(frag.pointer, frag.size);
+            auto frag_data = m_storage.cached_sample(frag.pointer, frag.size);
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
-                frag_data = dedupe_set::load_fragment(frag, m_storage);
+                frag_data = m_storage.read(frag.pointer, frag.size);
             }
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                 if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data = dedupe_set::load_fragment(frag, m_storage);
+                    frag_data = m_storage.read(frag.pointer, frag.size);
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),
                         frag_data.get_str_view().substr(common_prefix));
