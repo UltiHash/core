@@ -1,7 +1,7 @@
 #include "list_objects.h"
+#include "common/utils/strings.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/utils/string_utils.h"
 
 namespace uh::cluster {
 
@@ -50,8 +50,7 @@ static http_response get_response(const std::vector<std::string>& contents,
 
         auto content_itr = contents.begin();
         if (marker) {
-            auto index_itr =
-                string_utils::find_lexically_closest(contents, *marker);
+            auto index_itr = find_lexically_closest(contents, *marker);
 
             if (index_itr != contents.end()) {
                 content_itr = index_itr++;
@@ -72,15 +71,14 @@ static http_response get_response(const std::vector<std::string>& contents,
             }
             if (delimiter && delimiter_index != std::string::npos) {
                 auto delimiter_prefix = c.substr(0, delimiter_index + 1);
-                common_prefixes.emplace(
-                    (encoding_type ? string_utils::url_encode(delimiter_prefix)
-                                   : delimiter_prefix));
+                common_prefixes.emplace((encoding_type
+                                             ? url_encode(delimiter_prefix)
+                                             : delimiter_prefix));
             } else {
-                contents_xml +=
-                    "<Contents>\n"
-                    "<Key>" +
-                    (encoding_type ? string_utils::url_encode(c) : c) +
-                    "</Key>\n" + "</Contents>\n";
+                contents_xml += "<Contents>\n"
+                                "<Key>" +
+                                (encoding_type ? url_encode(c) : c) +
+                                "</Key>\n" + "</Contents>\n";
                 counter++;
             }
 
@@ -100,8 +98,7 @@ static http_response get_response(const std::vector<std::string>& contents,
     if (delimiter) {
         delimiter_xml_string =
             "<Delimiter>" +
-            (encoding_type ? string_utils::url_encode(*delimiter)
-                           : *delimiter) +
+            (encoding_type ? url_encode(*delimiter) : *delimiter) +
             "</Delimiter>\n";
     }
 
@@ -119,10 +116,9 @@ static http_response get_response(const std::vector<std::string>& contents,
 
     std::string prefix_xml;
     if (prefix) {
-        prefix_xml =
-            "<Prefix>" +
-            (encoding_type ? string_utils::url_encode(*prefix) : *prefix) +
-            "</Prefix>\n";
+        prefix_xml = "<Prefix>" +
+                     (encoding_type ? url_encode(*prefix) : *prefix) +
+                     "</Prefix>\n";
     }
 
     std::string marker_xml;
