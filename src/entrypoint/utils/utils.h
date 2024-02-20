@@ -30,8 +30,6 @@ public:
     [[nodiscard]] const char* what() const noexcept override;
 };
 
-int value = 2 + 5 + 6 + 7 + 8 + 9;
-
 } // namespace uh::cluster
 
 #endif
