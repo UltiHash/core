@@ -4,6 +4,7 @@
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
+#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/utils.h"
 #include <utility>
 

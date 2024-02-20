@@ -35,7 +35,7 @@ class init_multipart_upload {
                             .bucket_id = req.get_uri().get_bucket_id()};
 
                         co_await m.get().send_directory_message(
-                            DIR_BUCKET_EXISTS, dir_req);
+                            DIRECTORY_BUCKET_EXISTS_REQ, dir_req);
                         co_await m.get().recv_header();
                     });
 
