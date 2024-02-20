@@ -22,6 +22,8 @@ print_help()
     echo " -C, --no-ceph        do not run Ceph test suite"
 }
 
+set -o errexit
+
 while [ -n "$1" ]; do
     if [ "$1" = "--" ]; then
         shift
@@ -99,6 +101,8 @@ if [ -z "$cluster_url" ]; then
     trap "docker compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
+
+set +o errexit
 
 timeout=60
 while [ "$timeout" -gt "0" ]; do
