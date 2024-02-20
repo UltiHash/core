@@ -96,7 +96,7 @@ if [ -z "$cluster_url" ]; then
         exit 1
     fi
     docker compose up --detach
-    trap "docker-compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
+    trap "docker compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
 
