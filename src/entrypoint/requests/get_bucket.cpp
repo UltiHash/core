@@ -14,7 +14,8 @@ bool get_bucket::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-static http_response get_response(const std::string& bucket_name) {
+http_response
+get_bucket::get_response(const std::string& bucket_name) noexcept {
     http_response res;
 
     std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";
@@ -45,6 +46,7 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << bucket_name << "`: " << e;
+
         switch (*e.error()) {
         case error::bucket_not_found:
             throw rest::http::model::custom_error_response_exception(

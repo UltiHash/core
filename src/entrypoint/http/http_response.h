@@ -11,7 +11,9 @@ class http_response {
   public:
     http_response() = default;
 
-    void set_body(std::string&& body);
+    void set_body(std::string&& body) noexcept;
+
+    void set_etag(std::string etag);
 
     void set_effective_size(std::size_t effective_size);
 
@@ -27,8 +29,6 @@ class http_response {
     http::response<http::string_body> m_res{
         http::response<http::string_body>{http::status::ok, 11}};
     std::optional<std::string> m_etag;
-
-    void set_etag(std::string etag);
 };
 
 } // namespace uh::cluster

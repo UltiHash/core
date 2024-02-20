@@ -2,10 +2,8 @@
 
 namespace uh::cluster {
 
-void http_response::set_body(std::string&& body) {
+void http_response::set_body(std::string&& body) noexcept {
     m_res.body() = std::move(body);
-
-    set_etag(md5::calculateMD5(m_res.body()));
 }
 
 void http_response::set_original_size(std::size_t original_size) {
