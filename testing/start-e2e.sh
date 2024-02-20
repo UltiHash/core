@@ -73,6 +73,12 @@ if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     touch "$venv_dir"
 fi
 
+echo "*** running start-e2e.sh on $(hostname --all-fqdns)"
+echo "*** uname: $(uname -a)"
+echo "*** id: $(id -a)"
+echo "*** pwd: $PWD, pid: $BASHPID"
+TERM=vt100 pstree -H $BASHPID
+
 . "$venv_dir/bin/activate"
 
 export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
