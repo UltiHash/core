@@ -22,28 +22,28 @@ const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
     {"entrypoint", ENTRYPOINT_SERVICE}};
 
 enum message_type : uint8_t {
-    STORAGE_READ_FRAGMENT_REQ,
-    STORAGE_READ_ADDRESS_REQ,
-    STORAGE_WRITE_REQ,
-    STORAGE_SYNC_REQ,
-    STORAGE_REMOVE_FRAGMENT_REQ,
-    STORAGE_USED_REQ,
+    STORAGE_READ_FRAGMENT_REQ = 0,
+    STORAGE_READ_ADDRESS_REQ = 1,
+    STORAGE_WRITE_REQ = 2,
+    STORAGE_SYNC_REQ = 3,
+    STORAGE_REMOVE_FRAGMENT_REQ = 4,
+    STORAGE_USED_REQ = 5,
 
-    DEDUPLICATOR_REQ,
+    DEDUPLICATOR_REQ = 6,
 
-    DIRECTORY_BUCKET_LIST_REQ,
-    DIRECTORY_BUCKET_PUT_REQ,
-    DIRECTORY_BUCKET_DELETE_REQ,
-    DIRECTORY_BUCKET_EXISTS_REQ,
+    DIRECTORY_BUCKET_LIST_REQ = 7,
+    DIRECTORY_BUCKET_PUT_REQ = 8,
+    DIRECTORY_BUCKET_DELETE_REQ = 9,
+    DIRECTORY_BUCKET_EXISTS_REQ = 10,
 
-    DIRECTORY_OBJECT_LIST_REQ,
-    DIRECTORY_OBJECT_PUT_REQ,
-    DIRECTORY_OBJECT_GET_REQ,
-    DIRECTORY_OBJECT_DELETE_REQ,
+    DIRECTORY_OBJECT_LIST_REQ = 11,
+    DIRECTORY_OBJECT_PUT_REQ = 12,
+    DIRECTORY_OBJECT_GET_REQ = 13,
+    DIRECTORY_OBJECT_DELETE_REQ = 14,
 
-    SUCCESS,
-    FAILURE,
-    LAST // needed as a terminator to enable iterating over enum options
+    SUCCESS = 15,
+    FAILURE = 16,
+    LAST = 17 // needed as a terminator to enable iterating over enum options
 };
 
 constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
