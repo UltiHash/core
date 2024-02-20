@@ -20,15 +20,6 @@ class delete_objects {
     const entrypoint_state& m_state;
 
     coro<pugi::xpath_node_set> validate(const http_request& req) const;
-
-    struct fail {
-        uint32_t code;
-        std::string key;
-    };
-
-    static http_response
-    get_response(const std::vector<std::string>& success,
-                 const std::vector<fail>& failure) noexcept;
 };
 
 } // namespace uh::cluster
