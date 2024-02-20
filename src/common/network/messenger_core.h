@@ -229,7 +229,7 @@ public:
 
 private:
     boost::asio::ip::tcp::socket m_socket;
-    std::optional<std::reference_wrapper<metrics_handler>> m_metrics_handler;
+    opt_ref<metrics_handler> m_metrics_handler;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;
