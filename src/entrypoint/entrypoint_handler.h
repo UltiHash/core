@@ -31,10 +31,11 @@ namespace uh::cluster {
 
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
-  public:
+public:
     explicit entrypoint_handler(entrypoint_state& state,
                                 RequestTypes&&... request_types)
-        : m_state(state), m_req_types(request_types...) {}
+        : m_state(state),
+          m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -136,7 +137,7 @@ class entrypoint_handler : public protocol_handler {
         throw command_unknown_exception();
     }
 
-  private:
+private:
     entrypoint_state& m_state;
     std::tuple<RequestTypes...> m_req_types;
 };

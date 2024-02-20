@@ -13,8 +13,9 @@ namespace uh::cluster {
 
 class list_objects_v2 {
 
-  public:
-    explicit list_objects_v2(entrypoint_state& state) : m_state(state) {}
+public:
+    explicit list_objects_v2(entrypoint_state& state)
+        : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
         const auto& uri = req.get_uri();
@@ -239,7 +240,7 @@ class list_objects_v2 {
         return res;
     }
 
-  private:
+private:
     entrypoint_state& m_state;
 };
 

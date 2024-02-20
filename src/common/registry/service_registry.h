@@ -18,10 +18,10 @@ class service_registry {
 
   public:
     service_registry(uh::cluster::role role, std::size_t index,
-                     const std::string& etcd_host)
+                     etcd::SyncClient& etcd_client)
         : m_service_name(get_service_string(role) + "/" +
                          std::to_string(index)),
-          m_etcd_client(etcd_host) {}
+          m_etcd_client(etcd_client) {}
 
     [[nodiscard]] const std::string& get_service_name() const {
         return m_service_name;
@@ -73,10 +73,9 @@ class service_registry {
   private:
     static constexpr std::size_t m_etcd_default_ttl = 30;
 
-    const std::string m_etcd_host;
     const std::string m_service_name;
 
-    etcd::SyncClient m_etcd_client;
+    etcd::SyncClient& m_etcd_client;
 
     static std::string get_host() {
         const char* var_value = std::getenv(ENV_CFG_ENDPOINT_HOST);
