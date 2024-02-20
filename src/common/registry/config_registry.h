@@ -15,9 +15,9 @@ namespace uh::cluster {
 class config_registry {
 
   public:
-    config_registry(uh::cluster::role role, const std::string& etcd_host,
+    config_registry(uh::cluster::role role, etcd::SyncClient& etcd_client,
                     const std::filesystem::path& working_dir)
-        : m_etcd_client(etcd_host), m_service_role(role),
+        : m_etcd_client(etcd_client), m_service_role(role),
           m_working_dir(working_dir / get_service_string(m_service_role)),
           m_service_id(generate_service_id()),
           m_service_name(get_service_string(m_service_role) + "/" +
@@ -148,7 +148,7 @@ class config_registry {
 
   private:
     const std::string m_identity_file = "identity";
-    etcd::SyncClient m_etcd_client;
+    etcd::SyncClient& m_etcd_client;
     const uh::cluster::role m_service_role;
     const std::filesystem::path m_working_dir;
     const std::size_t m_service_id;
