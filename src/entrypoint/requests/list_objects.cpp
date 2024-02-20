@@ -12,6 +12,7 @@ bool list_objects::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
     return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
            uri.get_object_key().empty() &&
+           !uri.query_string_exists("uploads") &&
            !uri.query_string_exists("list-type");
 }
 
