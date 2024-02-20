@@ -29,7 +29,7 @@ class dedupe_set {
     size_t min_fragment_size = 32ul;
     size_t max_fragment_size = 8ul * 1024ul;
 
-  public:
+public:
     std::size_t dedupe(std::string_view& integration_data) {
 
         auto check_dedupe = [&](const std::string_view frag_data) {

@@ -90,8 +90,8 @@ coro<http_response> delete_objects::handle(http_request& req) const {
                 dir_req.bucket_id = bucket_id;
                 dir_req.object_key = std::make_unique<std::string>(key);
 
-                co_await m.get().send_directory_message(DIR_DELETE_OBJ_REQ,
-                                                        dir_req);
+                co_await m.get().send_directory_message(
+                    DIRECTORY_OBJECT_DELETE_REQ, dir_req);
 
                 co_await m.get().recv_header();
 

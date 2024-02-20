@@ -16,18 +16,19 @@
 namespace uh::cluster {
 
 class storage {
-  public:
+public:
     explicit storage(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
           m_config_registry(STORAGE_SERVICE, m_etcd_client, sc.working_dir),
           m_ioc(m_config_registry.get_server_config().threads),
           m_service_registry(STORAGE_SERVICE,
                              m_config_registry.get_service_id(), m_etcd_client),
+          m_metrics_handler(sc.telemetry_url),
           m_server(m_config_registry.get_server_config(),
                    m_service_registry.get_service_name(),
                    std::make_unique<storage_handler>(
                        m_config_registry.get_storage_config(),
-                       m_config_registry.get_service_id()),
+                       m_config_registry.get_service_id(), m_metrics_handler),
                    m_ioc) {}
 
     void run() {
@@ -42,11 +43,12 @@ class storage {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
     }
 
-  private:
+private:
     etcd::SyncClient m_etcd_client;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
     service_registry m_service_registry;
+    metrics_handler m_metrics_handler;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };

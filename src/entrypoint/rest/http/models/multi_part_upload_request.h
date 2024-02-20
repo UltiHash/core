@@ -6,7 +6,7 @@
 namespace uh::cluster::rest::http::model {
 
 class multi_part_upload_request : public rest::http::http_request {
-  public:
+public:
     explicit multi_part_upload_request(
         const http::request_parser<http::empty_body>&,
         std::unique_ptr<rest::http::URI> uri);
@@ -20,7 +20,7 @@ class multi_part_upload_request : public rest::http::http_request {
     [[nodiscard]] std::map<std::string, std::string>
     get_request_specific_headers() const override;
 
-  private:
+private:
     std::string m_upload_id;
 };
 

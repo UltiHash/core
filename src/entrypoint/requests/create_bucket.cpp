@@ -21,7 +21,7 @@ coro<http_response> create_bucket::handle(const http_request& req) const {
                                  client::acquired_messenger m,
                                  long id) -> coro<void> {
             directory_message dir_req{.bucket_id = bucket_id};
-            co_await m.get().send_directory_message(DIR_PUT_BUCKET_REQ,
+            co_await m.get().send_directory_message(DIRECTORY_BUCKET_PUT_REQ,
                                                     dir_req);
             co_await m.get().recv_header();
         };

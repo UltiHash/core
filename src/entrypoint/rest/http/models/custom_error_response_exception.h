@@ -12,7 +12,7 @@ using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
     net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
 class error {
-  public:
+public:
     enum type {
         success = 0,
         unknown,
@@ -40,12 +40,12 @@ class error {
         get_code_message(uint32_t);
     type operator*() const;
 
-  private:
+private:
     type m_type;
 };
 
 class custom_error_response_exception : public std::exception {
-  public:
+public:
     custom_error_response_exception() = default;
     explicit custom_error_response_exception(
         http::status, error::type = error::type::unknown);
@@ -54,7 +54,7 @@ class custom_error_response_exception : public std::exception {
 
     [[nodiscard]] const char* what() const noexcept override;
 
-  private:
+private:
     http::response<http::string_body> m_res{http::status::bad_request, 11};
     error m_error;
 };

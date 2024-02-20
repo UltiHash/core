@@ -28,7 +28,7 @@ enum class http_request_type {
  * Abstract class to represent an HTTP request.
  */
 class http_request {
-  public:
+public:
     http_request(const http::request_parser<http::empty_body>& recv_request,
                  std::unique_ptr<URI> uri);
 
@@ -62,7 +62,7 @@ class http_request {
 
     [[nodiscard]] inline const std::string& get_eTag() const { return m_etag; }
 
-  protected:
+protected:
     const http::request_parser<http::empty_body>& m_req;
     http_method m_method;
     std::unique_ptr<URI> m_uri;

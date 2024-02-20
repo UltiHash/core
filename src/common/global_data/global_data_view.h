@@ -13,12 +13,14 @@ namespace uh::cluster {
 
 class global_data_view {
 
-  public:
+public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
                               services<STORAGE_SERVICE>& storage_services)
-        : m_io_service(ioc), m_storage_services(storage_services),
-          m_config(config), m_cache_l1(m_config.read_cache_capacity_l1),
+        : m_io_service(ioc),
+          m_storage_services(storage_services),
+          m_config(config),
+          m_cache_l1(m_config.read_cache_capacity_l1),
           m_cache_l2(m_config.read_cache_capacity_l2) {
         m_storage_services.get();
     }
@@ -31,7 +33,7 @@ class global_data_view {
         boost::asio::co_spawn(
             m_io_service,
             [&data, &addr](client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send(WRITE_REQ, data);
+                co_await m.get().send(STORAGE_WRITE_REQ, data);
                 const auto message_header = co_await m.get().recv_header();
                 addr = co_await m.get().recv_address(message_header);
             }(client->acquire_messenger()),
@@ -74,7 +76,7 @@ class global_data_view {
             m_io_service,
             [&frag, &buffer,
              &read_size](client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send_fragment(READ_REQ, frag);
+                co_await m.get().send_fragment(STORAGE_READ_FRAGMENT_REQ, frag);
                 const auto h = co_await m.get().recv_header();
                 read_size = h.size;
                 m.get().register_read_buffer(buffer, read_size);
@@ -124,7 +126,7 @@ class global_data_view {
                 const auto node = nodes.at(id);
                 const auto& add = node_address_map.at(node);
                 const auto& offsets = node_data_offsets_map.at(node);
-                co_await m.get().send_address(READ_ADDRESS_REQ, add);
+                co_await m.get().send_address(STORAGE_READ_ADDRESS_REQ, add);
                 const auto h = co_await m.get().recv_header();
                 m.get().reserve_read_buffers(add.size());
                 for (size_t i = 0; i < add.size(); ++i) {
@@ -139,7 +141,8 @@ class global_data_view {
 
     coro<void> remove(const uint128_t pointer, const size_t size) {
         auto m = m_storage_services.get(pointer)->acquire_messenger();
-        co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
+        co_await m.get().send_fragment(STORAGE_REMOVE_FRAGMENT_REQ,
+                                       {pointer, size});
         co_await m.get().recv_header();
     }
 
@@ -164,10 +167,8 @@ class global_data_view {
 
         worker_utils::broadcast_from_worker_in_io_threads(
             nodes, m_io_service,
-            [&nodes, &node_address_map](client::acquired_messenger m,
-                                        long id) -> coro<void> {
-                co_await m.get().send_address(SYNC_REQ,
-                                              node_address_map.at(nodes[id]));
+            [](client::acquired_messenger m, long id) -> coro<void> {
+                co_await m.get().send(STORAGE_SYNC_REQ, {});
                 co_await m.get().recv_header();
             });
     }
@@ -182,7 +183,7 @@ class global_data_view {
             nodes, m_io_service,
             [&used_spaces](client::acquired_messenger m,
                            long id) -> coro<void> {
-                co_await m.get().send(USED_REQ, {});
+                co_await m.get().send(STORAGE_USED_REQ, {});
                 const auto message_header = co_await m.get().recv_header();
                 used_spaces[id] =
                     co_await m.get().recv_uint128_t(message_header);
@@ -207,7 +208,7 @@ class global_data_view {
         return m_config.storage_service_connection_count;
     }
 
-  private:
+private:
     boost::asio::io_context& m_io_service;
 
     services<STORAGE_SERVICE>& m_storage_services;

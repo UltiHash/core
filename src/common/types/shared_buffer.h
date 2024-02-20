@@ -10,7 +10,7 @@ template <typename T> class shared_buffer {
     std::size_t d_size{0};
     std::shared_ptr<T[]> data_ptr = nullptr;
 
-  public:
+public:
     constexpr shared_buffer() = default;
 
     constexpr explicit shared_buffer(size_t data_size)
@@ -18,18 +18,21 @@ template <typename T> class shared_buffer {
           data_ptr{std::make_shared_for_overwrite<T[]>(d_size)} {}
 
     constexpr shared_buffer(size_t data_size, std::shared_ptr<T[]>&& ptr)
-        : d_size(data_size), data_ptr{std::move(ptr)} {}
+        : d_size(data_size),
+          data_ptr{std::move(ptr)} {}
 
     constexpr shared_buffer(const std::nullptr_t&) {}
 
     constexpr shared_buffer(shared_buffer&& ss) noexcept
-        : d_size(ss.d_size), data_ptr(std::move(ss.data_ptr)) {
+        : d_size(ss.d_size),
+          data_ptr(std::move(ss.data_ptr)) {
         ss.d_size = 0;
         ss.data_ptr = nullptr;
     }
 
     constexpr shared_buffer(const shared_buffer& ss) noexcept
-        : d_size(ss.d_size), data_ptr(ss.data_ptr) {}
+        : d_size(ss.d_size),
+          data_ptr(ss.data_ptr) {}
 
     inline T* data() const noexcept { return data_ptr.get(); }
 

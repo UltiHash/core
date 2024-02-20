@@ -23,7 +23,7 @@ const char* to_string(scheme scheme);
 scheme from_string(const char* name);
 
 class URI {
-  public:
+public:
     explicit URI(const http::request_parser<http::empty_body>&);
     ~URI() = default;
 
@@ -36,7 +36,7 @@ class URI {
     get_query_parameters() const;
     [[nodiscard]] http_method get_http_method() const;
 
-  private:
+private:
     void extract_and_set_bucket_id_and_object_key();
     void extract_and_set_query_parameters();
 

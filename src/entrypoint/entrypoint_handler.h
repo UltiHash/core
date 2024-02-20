@@ -35,10 +35,12 @@ namespace uh::cluster {
 
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
-  public:
+public:
     explicit entrypoint_handler(entrypoint_state& state,
                                 RequestTypes&&... request_types)
-        : m_state(state), m_ioc(state.ioc), m_workers(state.workers),
+        : m_state(state),
+          m_ioc(state.ioc),
+          m_workers(state.workers),
           m_dedupe_services(state.dedupe_services),
           m_directory_services(state.directory_services),
           m_req_types(request_types...) {}
@@ -203,7 +205,8 @@ class entrypoint_handler : public protocol_handler {
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
 
-            co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
+                                                    dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
             unique_buffer<char> buffer(h_dir.size);
@@ -272,7 +275,8 @@ class entrypoint_handler : public protocol_handler {
         auto func_dir = [](const directory_message& dir_req,
                            client::acquired_messenger m,
                            long id) -> coro<void> {
-            co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
+                                                    dir_req);
             co_await m.get().recv_header();
         };
 
@@ -355,7 +359,7 @@ class entrypoint_handler : public protocol_handler {
         co_return std::move(res);
     }
 
-  private:
+private:
     coro<dedupe_response>
     integrate_data(const std::list<std::string_view>& data_pieces) {
 
@@ -399,7 +403,7 @@ class entrypoint_handler : public protocol_handler {
                 }
             }
 
-            co_await m.get().send_buffers(DEDUPE_REQ);
+            co_await m.get().send_buffers(DEDUPLICATOR_REQ);
             const auto h_dedup = co_await m.get().recv_header();
             responses[i] = co_await m.get().recv_dedupe_response(h_dedup);
         };
@@ -437,7 +441,7 @@ auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(
         state, create_bucket(state), get_bucket(state), list_buckets(state),
         delete_bucket(state), put_object(state), get_object(state),
-        list_objects_v2(state), delete_object(state), delete_objects(state), 
+        list_objects_v2(state), delete_object(state), delete_objects(state),
         init_multipart_upload(state));
 }
 

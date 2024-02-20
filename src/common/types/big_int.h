@@ -10,14 +10,17 @@ namespace uh::cluster {
 
 class big_int {
     uint64_t num[2]; // 0 = high, 1 = low
-  public:
-    constexpr big_int() noexcept : num{0, 0} {}
+public:
+    constexpr big_int() noexcept
+        : num{0, 0} {}
 
-    constexpr big_int(unsigned long number) noexcept : num{0, number} {}
+    constexpr big_int(unsigned long number) noexcept
+        : num{0, number} {}
     constexpr big_int(unsigned long nh, unsigned long nl) noexcept
         : num{nh, nl} {}
 
-    explicit big_int(const std::string& num_str) : big_int() {
+    explicit big_int(const std::string& num_str)
+        : big_int() {
         const auto index = num_str.find('_') + 1;
         const auto num0_str = num_str.substr(0, index - 1);
         const auto num1_str = num_str.substr(index, num_str.size());

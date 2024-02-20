@@ -15,7 +15,7 @@
 namespace uh::cluster {
 
 class entrypoint {
-  public:
+public:
     explicit entrypoint(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
           m_config_registry(ENTRYPOINT_SERVICE, m_etcd_client, sc.working_dir),
@@ -49,7 +49,7 @@ class entrypoint {
         m_workers.stop();
     }
 
-  private:
+private:
     entrypoint_state get_entrypoint_state() {
         return {
             .ioc = m_ioc,

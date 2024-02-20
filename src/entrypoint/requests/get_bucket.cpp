@@ -33,7 +33,8 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
                        client::acquired_messenger m) -> coro<void> {
             directory_message dir_req;
             dir_req.bucket_id = bucket_name;
-            co_await m.get().send_directory_message(DIR_BUCKET_EXISTS, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
+                                                    dir_req);
             co_await m.get().recv_header();
         };
 

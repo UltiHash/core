@@ -8,7 +8,7 @@ namespace uh::cluster::rest::utils::parser {
 //------------------------------------------------------------------------------
 
 class xml_parser {
-  public:
+public:
     xml_parser() = default;
     ~xml_parser() = default;
 
@@ -19,7 +19,7 @@ class xml_parser {
     [[nodiscard]] std::string get_child_value(const pugi::xml_node& parent,
                                               const char* child_name) const;
 
-  private:
+private:
     pugi::xml_document m_doc;
 };
 

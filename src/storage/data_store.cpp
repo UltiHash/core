@@ -4,7 +4,8 @@
 namespace uh::cluster {
 
 data_store::data_store(storage_config conf, std::size_t id, bool adaptive)
-    : m_data_id(id), m_conf(std::move(conf)),
+    : m_data_id(id),
+      m_conf(std::move(conf)),
       m_free_spot_manager(m_conf.working_dir / "log") {
 
     if (!std::filesystem::exists(m_conf.working_dir)) {

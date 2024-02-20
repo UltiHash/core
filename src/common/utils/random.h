@@ -15,14 +15,15 @@ random_string(std::size_t length = 16,
 // ---------------------------------------------------------------------
 
 template <std::integral value_type> class random_generator {
-  public:
+public:
     random_generator(value_type min = {},
                      value_type max = std::numeric_limits<value_type>::max())
-        : m_rg(std::random_device{}()), m_pick(min, max) {}
+        : m_rg(std::random_device{}()),
+          m_pick(min, max) {}
 
     value_type operator()() { return m_pick(m_rg); }
 
-  private:
+private:
     std::mt19937 m_rg;
     std::uniform_int_distribution<value_type> m_pick;
 };

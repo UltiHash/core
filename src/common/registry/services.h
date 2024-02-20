@@ -31,14 +31,14 @@ static etcd_action get_etcd_action_enum(const std::string& action_str) {
 }
 
 template <role r> class services_index {
-  public:
+public:
     explicit services_index(config_registry&) {}
     void add(const std::size_t&, std::shared_ptr<client>) {}
     void erase(const std::size_t&) {}
 };
 
 template <> class services_index<STORAGE_SERVICE> {
-  public:
+public:
     explicit services_index(config_registry& config_reg)
         : m_max_data_store_size(
               config_reg.get_global_data_view_config().max_data_store_size) {}
@@ -78,17 +78,18 @@ template <> class services_index<STORAGE_SERVICE> {
         throw std::out_of_range("pointer out of range");
     }
 
-  private:
+private:
     std::map<uint128_t, std::shared_ptr<client>> m_offsets;
     const uint128_t m_max_data_store_size;
 };
 
 template <role r> class services {
-  public:
+public:
     services(boost::asio::io_context& ioc, config_registry& config_registry,
              const int connection_count, etcd::SyncClient& etcd_client,
              std::size_t timeout_s = 10)
-        : m_ioc(ioc), m_connection_count(connection_count),
+        : m_ioc(ioc),
+          m_connection_count(connection_count),
           m_etcd_client(etcd_client),
           m_watcher(
               m_etcd_client,
@@ -97,7 +98,8 @@ template <role r> class services {
                   return handle_state_changes(response);
               },
               true),
-          m_robin_index(m_clients.end()), m_services_index(config_registry),
+          m_robin_index(m_clients.end()),
+          m_services_index(config_registry),
           m_timeout_s(timeout_s) {
         auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
@@ -178,7 +180,7 @@ template <role r> class services {
         return clients_list;
     }
 
-  private:
+private:
     struct service_endpoint {
         std::size_t id{};
         std::string host{};

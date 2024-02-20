@@ -11,20 +11,23 @@
 namespace uh::cluster {
 
 class directory_handler : public protocol_handler {
-  public:
+public:
     directory_handler(
         directory_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> directory_workers)
+        std::shared_ptr<boost::asio::thread_pool> directory_workers,
+        metrics_handler& metrics_handler)
         : m_config(std::move(config)),
-          m_directory(m_config.directory_store_conf), m_storage(storage),
+          m_directory(m_config.directory_store_conf),
+          m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
-          m_stored_size(get_stored_size()) {}
+          m_stored_size(get_stored_size()),
+          m_metrics_handler(metrics_handler) {}
 
     ~directory_handler() override { write_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s));
+        messenger m(std::move(s), m_metrics_handler);
 
         for (;;) {
             std::optional<error> err;
@@ -33,28 +36,28 @@ class directory_handler : public protocol_handler {
 
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
-                case DIR_PUT_OBJ_REQ:
+                case DIRECTORY_OBJECT_PUT_REQ:
                     co_await handle_put_obj(m, message_header);
                     break;
-                case DIR_GET_OBJ_REQ:
+                case DIRECTORY_OBJECT_GET_REQ:
                     co_await handle_get_obj(m, message_header);
                     break;
-                case DIR_PUT_BUCKET_REQ:
+                case DIRECTORY_BUCKET_PUT_REQ:
                     co_await handle_put_bucket(m, message_header);
                     break;
-                case DIR_LIST_BUCKET_REQ:
+                case DIRECTORY_BUCKET_LIST_REQ:
                     co_await handle_list_buckets(m, message_header);
                     break;
-                case DIR_LIST_OBJ_REQ:
+                case DIRECTORY_OBJECT_LIST_REQ:
                     co_await handle_list_objects(m, message_header);
                     break;
-                case DIR_DELETE_BUCKET_REQ:
+                case DIRECTORY_BUCKET_DELETE_REQ:
                     co_await handle_delete_bucket(m, message_header);
                     break;
-                case DIR_DELETE_OBJ_REQ:
+                case DIRECTORY_OBJECT_DELETE_REQ:
                     co_await handle_delete_object(m, message_header);
                     break;
-                case DIR_BUCKET_EXISTS:
+                case DIRECTORY_BUCKET_EXISTS_REQ:
                     co_await handle_bucket_exists(m, message_header);
                     break;
                 default:
@@ -72,7 +75,7 @@ class directory_handler : public protocol_handler {
         }
     }
 
-  private:
+private:
     coro<void> handle_bucket_exists(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
 
@@ -193,7 +196,7 @@ class directory_handler : public protocol_handler {
                             std::cref(request), std::ref((buffer))));
 
         m.register_write_buffer(buffer);
-        co_await m.send_buffers(DIR_GET_OBJ_RESP);
+        co_await m.send_buffers(SUCCESS);
     }
 
     coro<void> handle_put_bucket(messenger& m, const messenger::header& h) {
@@ -260,8 +263,7 @@ class directory_handler : public protocol_handler {
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
-        co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP,
-                                                        response);
+        co_await m.send_directory_list_entities_message(SUCCESS, response);
     }
 
     coro<void> handle_list_objects(messenger& m, const messenger::header& h) {
@@ -286,8 +288,7 @@ class directory_handler : public protocol_handler {
             std::bind_front(func, std::ref(m_directory), std::ref(response),
                             std::ref(request)));
 
-        co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP,
-                                                        response);
+        co_await m.send_directory_list_entities_message(SUCCESS, response);
     }
 
     const directory_config m_config;
@@ -296,6 +297,7 @@ class directory_handler : public protocol_handler {
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
     std::mutex m_mutex_size;
     uint128_t m_stored_size;
+    metrics_handler& m_metrics_handler;
 };
 } // end namespace uh::cluster
 

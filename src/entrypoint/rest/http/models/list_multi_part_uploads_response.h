@@ -11,7 +11,7 @@ typedef struct {
 } key_and_uploadid;
 
 class list_multi_part_uploads_response : public http_response {
-  public:
+public:
     explicit list_multi_part_uploads_response(const http_request&);
     list_multi_part_uploads_response(const http_request&,
                                      http::response<http::string_body>);
@@ -21,7 +21,7 @@ class list_multi_part_uploads_response : public http_response {
 
     void add_key_and_uploadid(const std::string&, const std::string&);
 
-  private:
+private:
     void populate_response_headers();
 
     std::vector<key_and_uploadid> m_keys_and_uploadids;

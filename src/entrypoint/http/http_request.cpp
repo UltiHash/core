@@ -5,7 +5,10 @@ namespace uh::cluster {
 http_request::http_request(const http::request_parser<http::empty_body>& req,
                            boost::asio::ip::tcp::socket& stream,
                            boost::beast::flat_buffer& buffer)
-    : m_req(req), m_stream(stream), m_buffer(buffer), m_uri(req) {}
+    : m_req(req),
+      m_stream(stream),
+      m_buffer(buffer),
+      m_uri(req) {}
 
 const uri& http_request::get_uri() const { return m_uri; }
 

@@ -17,15 +17,18 @@ namespace uh::cluster {
 
 class client {
 
-  public:
+public:
     class acquired_messenger {
-      public:
+    public:
         acquired_messenger(std::unique_ptr<messenger> m,
                            const std::reference_wrapper<client> cl)
-            : m_messenger(std::move(m)), m_client(cl), m_owning(true) {}
+            : m_messenger(std::move(m)),
+              m_client(cl),
+              m_owning(true) {}
 
         acquired_messenger(acquired_messenger&& m) noexcept
-            : m_messenger(std::move(m.m_messenger)), m_client(m.m_client),
+            : m_messenger(std::move(m.m_messenger)),
+              m_client(m.m_client),
               m_owning(true) {
             m.m_owning = false;
         }
@@ -72,7 +75,8 @@ class client {
         }
     }
 
-    client(client&& cl) noexcept : m_messengers(std::move(cl.m_messengers)) {}
+    client(client&& cl) noexcept
+        : m_messengers(std::move(cl.m_messengers)) {}
 
     acquired_messenger acquire_messenger() {
         std::unique_lock<std::mutex> lk(m);
@@ -82,7 +86,7 @@ class client {
         return acquired_messenger{std::move(messenger), std::ref(*this)};
     }
 
-  private:
+private:
     void push_messenger(std::unique_ptr<messenger> msg) {
         std::unique_lock<std::mutex> lk(m);
         m_messengers.emplace_back(std::move(msg));

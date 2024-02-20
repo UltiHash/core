@@ -43,7 +43,7 @@ struct upload_state {
     std::map<std::string, std::string>
     list_multipart_uploads(const std::string&) const;
 
-  private:
+private:
     mutable std::mutex mutex{};
 
     std::unordered_map<std::string, std::shared_ptr<upload_info>>

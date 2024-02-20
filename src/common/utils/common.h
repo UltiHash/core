@@ -3,40 +3,10 @@
 #include "common/types/common_types.h"
 #include <map>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace uh::cluster {
-
-enum message_type : uint8_t {
-    READ_REQ = 10,
-    READ_RESP = 11,
-    WRITE_REQ = 12,
-    WRITE_RESP = 13,
-    SYNC_REQ = 20,
-    SYNC_OK = 21,
-    REMOVE_REQ = 22,
-    REMOVE_OK = 23,
-    USED_REQ = 24,
-    USED_RESP = 25,
-    DEDUPE_REQ = 26,
-    DEDUPE_RESP = 27,
-    DIR_PUT_OBJ_REQ = 28,
-    DIR_GET_OBJ_REQ = 29,
-    DIR_GET_OBJ_RESP = 30,
-    DIR_PUT_BUCKET_REQ = 31,
-    SUCCESS = 32,
-    FAILURE = 33,
-    DIR_LIST_BUCKET_REQ = 37,
-    DIR_LIST_BUCKET_RESP = 38,
-    DIR_LIST_OBJ_REQ = 39,
-    DIR_LIST_OBJ_RESP = 40,
-    DIR_DELETE_BUCKET_REQ = 41,
-    DIR_DELETE_BUCKET_RESP = 42,
-    READ_ADDRESS_REQ = 43,
-    READ_ADDRESS_RESP = 44,
-    DIR_DELETE_OBJ_REQ = 45,
-    DIR_BUCKET_EXISTS = 46,
-};
 
 enum role : uint8_t {
     STORAGE_SERVICE,
@@ -44,6 +14,63 @@ enum role : uint8_t {
     DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
 };
+
+const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+    {"storage", STORAGE_SERVICE},
+    {"deduplicator", DEDUPLICATOR_SERVICE},
+    {"directory", DIRECTORY_SERVICE},
+    {"entrypoint", ENTRYPOINT_SERVICE}};
+
+enum message_type : uint8_t {
+    STORAGE_READ_FRAGMENT_REQ = 0,
+    STORAGE_READ_ADDRESS_REQ = 1,
+    STORAGE_WRITE_REQ = 2,
+    STORAGE_SYNC_REQ = 3,
+    STORAGE_REMOVE_FRAGMENT_REQ = 4,
+    STORAGE_USED_REQ = 5,
+
+    DEDUPLICATOR_REQ = 6,
+
+    DIRECTORY_BUCKET_LIST_REQ = 7,
+    DIRECTORY_BUCKET_PUT_REQ = 8,
+    DIRECTORY_BUCKET_DELETE_REQ = 9,
+    DIRECTORY_BUCKET_EXISTS_REQ = 10,
+
+    DIRECTORY_OBJECT_LIST_REQ = 11,
+    DIRECTORY_OBJECT_PUT_REQ = 12,
+    DIRECTORY_OBJECT_GET_REQ = 13,
+    DIRECTORY_OBJECT_DELETE_REQ = 14,
+
+    SUCCESS = 15,
+    FAILURE = 16,
+    LAST = 17 // needed as a terminator to enable iterating over enum options
+};
+
+constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
+                           17>
+    string_by_message_type = {{
+        {STORAGE_READ_FRAGMENT_REQ, "storage_read_fragment_request"},
+        {STORAGE_READ_ADDRESS_REQ, "storage_read_address_request"},
+        {STORAGE_WRITE_REQ, "storage_write_request"},
+        {STORAGE_SYNC_REQ, "storage_sync_request"},
+        {STORAGE_REMOVE_FRAGMENT_REQ, "storage_remove_fragment_request"},
+        {STORAGE_USED_REQ, "storage_used_request"},
+
+        {DEDUPLICATOR_REQ, "deduplicator_request"},
+
+        {DIRECTORY_BUCKET_LIST_REQ, "directory_bucket_list_request"},
+        {DIRECTORY_BUCKET_PUT_REQ, "directory_bucket_put_request"},
+        {DIRECTORY_BUCKET_DELETE_REQ, "directory_bucket_delete_request"},
+        {DIRECTORY_BUCKET_EXISTS_REQ, "directory_bucket_exists_request"},
+
+        {DIRECTORY_OBJECT_LIST_REQ, "directory_object_list_request"},
+        {DIRECTORY_OBJECT_PUT_REQ, "directory_object_put_request"},
+        {DIRECTORY_OBJECT_GET_REQ, "directory_object_get_request"},
+        {DIRECTORY_OBJECT_DELETE_REQ, "directory_object_delete_request"},
+
+        {SUCCESS, "generic_success"},
+        {FAILURE, "generic_failure"},
+    }};
 
 enum config_parameter {
     CFG_SERVER_THREADS,
@@ -81,25 +108,76 @@ enum config_parameter {
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
-    {"storage", uh::cluster::STORAGE_SERVICE},
-    {"deduplicator", uh::cluster::DEDUPLICATOR_SERVICE},
-    {"directory", uh::cluster::DIRECTORY_SERVICE},
-    {"entrypoint", uh::cluster::ENTRYPOINT_SERVICE}};
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 25>
+    string_by_config_parameter = {{
+        {uh::cluster::CFG_SERVER_THREADS, "server_threads"},
+        {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
+        {uh::cluster::CFG_SERVER_PORT, "server_port"},
+        {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
+        {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
+
+        {uh::cluster::CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT,
+         "gdv_storage_service_connection_count"},
+        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L1,
+         "gdv_read_cache_capacity_l1"},
+        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L2,
+         "gdv_read_cache_capacity_l2"},
+        {uh::cluster::CFG_GDV_L1_SAMPLE_SIZE, "gdv_l1_sample_size"},
+        {uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE, "gdv_max_data_store_size"},
+
+        {uh::cluster::CFG_STORAGE_MIN_FILE_SIZE, "min_file_size"},
+        {uh::cluster::CFG_STORAGE_MAX_FILE_SIZE, "max_file_size"},
+        {uh::cluster::CFG_STORAGE_MAX_DATA_STORE_SIZE, "max_data_store_size"},
+
+        {uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE, "min_fragment_size"},
+        {uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE, "max_fragment_size"},
+        {uh::cluster::CFG_DEDUP_WORKER_MIN_DATA_SIZE, "worker_min_data_size"},
+        {uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT, "worker_thread_count"},
+
+        {uh::cluster::CFG_DIR_MIN_FILE_SIZE, "min_file_size"},
+        {uh::cluster::CFG_DIR_MAX_FILE_SIZE, "max_file_size"},
+        {uh::cluster::CFG_DIR_MAX_STORAGE_SIZE, "max_storage_size"},
+        {uh::cluster::CFG_DIR_MAX_CHUNK_SIZE, "max_chunk_size"},
+        {uh::cluster::CFG_DIR_WORKER_THREAD_COUNT, "worker_thread_count"},
+
+        {uh::cluster::CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
+         "dedup_service_connection_count"},
+        {uh::cluster::CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
+         "dir_service_connection_count"},
+        {uh::cluster::CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
+         "worker_thread_count"},
+    }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
+static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 uh::cluster::role get_service_role(const std::string& service_role_str);
-
 const std::string& get_service_string(const uh::cluster::role& service_role);
 
-const std::string&
-get_config_string(const uh::cluster::config_parameter& cfg_param);
+constexpr const char*
+get_config_string(const uh::cluster::config_parameter& cfg_param) {
+    for (const auto& entry : string_by_config_parameter) {
+        if (entry.first == cfg_param)
+            return entry.second;
+    }
+
+    throw std::invalid_argument("invalid configuration parameter");
+}
+
+constexpr const char*
+get_message_string(const uh::cluster::message_type& type) {
+    for (const auto& entry : string_by_message_type) {
+        if (entry.first == type)
+            return entry.second;
+    }
+
+    throw std::invalid_argument("invalid message type");
+}
 
 } // end namespace uh::cluster
 
