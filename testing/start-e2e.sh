@@ -22,6 +22,8 @@ print_help()
     echo " -C, --no-ceph        do not run Ceph test suite"
 }
 
+set -o errexit
+
 while [ -n "$1" ]; do
     if [ "$1" = "--" ]; then
         shift
@@ -73,6 +75,12 @@ if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     touch "$venv_dir"
 fi
 
+echo "*** running start-e2e.sh on $(hostname --all-fqdns)"
+echo "*** uname: $(uname -a)"
+echo "*** id: $(id -a)"
+echo "*** pwd: $PWD, pid: $BASHPID"
+TERM=vt100 pstree -H $BASHPID
+
 . "$venv_dir/bin/activate"
 
 export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
@@ -90,9 +98,11 @@ if [ -z "$cluster_url" ]; then
         exit 1
     fi
     docker compose up --detach
-    trap "docker-compose down" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
+    trap "docker compose rm --volumes --stop --force" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
+
+set +o errexit
 
 timeout=60
 while [ "$timeout" -gt "0" ]; do
