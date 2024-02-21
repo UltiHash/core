@@ -8,6 +8,8 @@ import pathlib
 import sys
 import time
 
+AWS_KEY_ID="key-id"
+AWS_KEY_SECRET="secret"
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -30,7 +32,8 @@ def parse_args():
 class uploader:
     def __init__(self, config):
         self.threads = concurrent.futures.ThreadPoolExecutor(max_workers=config.jobs)
-        self.s3 = boto3.client('s3', endpoint_url=config.url)
+        self.s3 = boto3.client('s3', endpoint_url=config.url,
+            aws_access_key_id=AWS_KEY_ID, aws_secret_access_key=AWS_KEY_SECRET)
         self.config = config
 
     def upload(self, bucket, path):
@@ -93,8 +96,6 @@ class progress_bar(object):
 
 if __name__ == "__main__":
     config = parse_args()
-
-    s3 = boto3.client('s3', endpoint_url=config.url)
 
     start_time = time.monotonic_ns()
 
