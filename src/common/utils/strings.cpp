@@ -1,6 +1,8 @@
 #include "strings.h"
 
 #include <boost/beast/core/detail/base64.hpp>
+#include <boost/url.hpp>
+#include <boost/url/encode.hpp>
 
 using namespace boost;
 
@@ -23,6 +25,41 @@ std::vector<char> base64_decode(std::string_view b64) {
     rv.resize(sizes.first);
 
     return rv;
+}
+
+constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789"
+    "-._~/";
+
+std::string url_encode(const std::string& str_to_encode) noexcept {
+    auto encoded_string =
+        boost::urls::encode(str_to_encode, custom_unreserved_chars);
+
+    return encoded_string;
+}
+
+std::vector<std::string>::const_iterator
+find_lexically_closest(const std::vector<std::string>& strings,
+                       const std::string& compareTo) {
+    if (strings.empty()) {
+        return strings.end();
+    }
+
+    if (compareTo.empty()) {
+        return strings.begin();
+    }
+
+    auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(),
+                                             compareTo, std::less<>());
+
+    if (nextDifferentItr != strings.end()) {
+        if (*nextDifferentItr == compareTo)
+            ++nextDifferentItr;
+    }
+
+    return nextDifferentItr;
 }
 
 } // namespace uh::cluster
