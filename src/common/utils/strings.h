@@ -31,6 +31,11 @@ std::vector<std::string>::const_iterator
 find_lexically_closest(const std::vector<std::string>& strings,
                        const std::string& compareTo);
 
+/**
+ * Check if the given string evaluates to boolean true.
+ */
+bool is_true(const std::string& str_to_eval);
+
 } // namespace uh::cluster
 
 #endif

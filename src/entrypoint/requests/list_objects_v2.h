@@ -2,11 +2,11 @@
 #ifndef UH_CLUSTER_LIST_OBJECTSV2_H
 #define UH_CLUSTER_LIST_OBJECTSV2_H
 
+#include "common/utils/strings.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/utils/string_utils.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
@@ -126,7 +126,7 @@ public:
         bool fetch_owner_set = false;
         if (const auto fetch_owner = get_if_exists("fetch-owner");
             fetch_owner.has_value()) {
-            if (string_utils::is_bool(*fetch_owner))
+            if (is_true(*fetch_owner))
                 fetch_owner_set = true;
         }
 
@@ -148,16 +148,14 @@ public:
                 }
                 if (delimiter_index != std::string::npos) {
                     auto delimeter_prefix = c.substr(0, delimiter_index + 1);
-                    common_prefixes.emplace(
-                        (encoding_type
-                             ? string_utils::url_encode(delimeter_prefix)
-                             : delimeter_prefix));
+                    common_prefixes.emplace((encoding_type
+                                                 ? url_encode(delimeter_prefix)
+                                                 : delimeter_prefix));
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
                         "<Key>" +
-                        (encoding_type ? string_utils::url_encode(c) : c) +
-                        "</Key>\n" +
+                        (encoding_type ? url_encode(c) : c) + "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
                         "</Contents>\n";
@@ -181,8 +179,7 @@ public:
         if (delimiter) {
             delimiter_xml_string =
                 "<Delimiter>" +
-                (encoding_type ? string_utils::url_encode(*delimiter)
-                               : *delimiter) +
+                (encoding_type ? url_encode(*delimiter) : *delimiter) +
                 "</Delimiter>\n";
         }
 
@@ -222,8 +219,7 @@ public:
         std::string prefix_xml_string;
         if (prefix) {
             prefix_xml_string =
-                "<Prefix>" +
-                (encoding_type ? string_utils::url_encode(*prefix) : *prefix) +
+                "<Prefix>" + (encoding_type ? url_encode(*prefix) : *prefix) +
                 "</Prefix>\n";
         }
 

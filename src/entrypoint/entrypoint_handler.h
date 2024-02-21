@@ -18,7 +18,6 @@
 #include "requests/delete_objects.h"
 #include "requests/get_bucket.h"
 #include "requests/get_object.h"
-#include "requests/get_object_attributes.h"
 #include "requests/init_multipart.h"
 #include "requests/list_buckets.h"
 #include "requests/list_multipart.h"
@@ -153,10 +152,10 @@ auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(
         state, create_bucket(state), get_bucket(state), list_buckets(state),
         delete_bucket(state), put_object(state), get_object(state),
-        get_object_attributes(state), list_objects(state),
-        list_objects_v2(state), delete_object(state), delete_objects(state),
-        init_multipart(state), multipart(state), complete_multipart(state),
-        abort_multipart(state), list_multipart(state));
+        list_objects(state), list_objects_v2(state), delete_object(state),
+        delete_objects(state), init_multipart(state), multipart(state),
+        complete_multipart(state), abort_multipart(state),
+        list_multipart(state));
 }
 
 } // end namespace uh::cluster

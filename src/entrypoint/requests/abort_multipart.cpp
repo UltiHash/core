@@ -26,8 +26,10 @@ static void validate(const http_request& req) {
 }
 
 coro<http_response> abort_multipart::handle(const http_request& req) const {
-    const auto& uri = req.get_uri();
 
+    validate(req);
+
+    const auto& uri = req.get_uri();
     const auto& upload_id = uri.get_query_parameters().at("uploadId");
     const auto& bucket_name = uri.get_bucket_id();
     const auto& object_name = uri.get_object_key();

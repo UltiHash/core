@@ -24,14 +24,15 @@ static void validate(const http_request& req) {
 
 coro<http_response> complete_multipart::handle(const http_request& req) const {
 
-    const auto& req_uri = req.get_uri();
+    validate(req);
 
+    const auto& req_uri = req.get_uri();
     const auto& upload_id = req_uri.get_query_parameters().at("uploadId");
+    const auto& bucket_name = req.get_uri().get_bucket_id();
+    const auto& object_name = req_uri.get_object_key();
 
     const auto& up_info =
         m_state.server_state.m_uploads.get_upload_info(upload_id);
-    const auto& bucket_name = req.get_uri().get_bucket_id();
-    const auto& object_name = req_uri.get_object_key();
 
     const directory_message dir_req{
         .bucket_id = bucket_name,

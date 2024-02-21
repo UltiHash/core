@@ -62,7 +62,7 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
                 boost::beast::http::status::not_found,
                 rest::http::model::error::no_mp_uploads);
         } else {
-            for (const auto& pair : multipart_map) {
+            for (auto& pair : multipart_map) {
                 ongoing.emplace_back(std::move(pair.first),
                                      std::move(pair.second));
             }
