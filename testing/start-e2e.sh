@@ -91,8 +91,10 @@ if [ -z "$cluster_url" ]; then
         exit 1
     fi
 
-    docker image rm uh-cluster:testing
-
+    if docker image inspect uh-cluster:testing &> /dev/null; then
+        docker image rm --force uh-cluster:testing
+    fi
+    
     if ! docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..; then
         echo "docker build failed" 1>&2
         exit 1
