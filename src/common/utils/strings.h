@@ -18,6 +18,19 @@ std::vector<std::string_view> split(std::string_view data,
  */
 std::vector<char> base64_decode(std::string_view b64);
 
+/**
+ * URL encode the special characters.
+ */
+std::string url_encode(const std::string&) noexcept;
+
+/**
+ * Find the closest matching string in a vector of strings given a comparison
+ * string.
+ */
+std::vector<std::string>::const_iterator
+find_lexically_closest(const std::vector<std::string>& strings,
+                       const std::string& compareTo);
+
 } // namespace uh::cluster
 
 #endif
