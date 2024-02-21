@@ -10,7 +10,6 @@
 #include "entrypoint/rest/http/models/complete_multi_part_upload_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_response.h"
-#include "entrypoint/rest/http/models/list_objects_response.h"
 #include "entrypoint/rest/http/models/multi_part_upload_response.h"
 #include "entrypoint/rest/utils/parser/s3_parser.h"
 #include "entrypoint/rest/utils/parser/xml_parser.h"
@@ -21,6 +20,7 @@
 
 // REFACTORED
 #include "entrypoint/requests/init_multipart_upload.h"
+#include "entrypoint/requests/list_objects.h"
 #include "requests/create_bucket.h"
 #include "requests/delete_bucket.h"
 #include "requests/delete_object.h"
@@ -167,9 +167,6 @@ public:
         std::unique_ptr<rest::http::http_response> res;
 
         switch (req.get_request_name()) {
-        case rest::http::http_request_type::LIST_OBJECTS:
-            res = co_await handle_list_objects(req);
-            break;
         case rest::http::http_request_type::MULTIPART_UPLOAD:
             res = co_await handle_mp_upload(req, state);
             break;
@@ -186,45 +183,6 @@ public:
             throw std::runtime_error(
                 "request not supported by the backend yet.");
         }
-
-        co_return std::move(res);
-    }
-
-    coro<std::unique_ptr<rest::http::http_response>>
-
-    handle_list_objects(const rest::http::http_request& req) {
-        std::unique_ptr<rest::http::model::list_objects_response> res;
-
-        auto func =
-            [](std::unique_ptr<rest::http::model::list_objects_response>& res,
-               const rest::http::http_request& req,
-               client::acquired_messenger m) -> coro<void> {
-            res =
-                std::make_unique<rest::http::model::list_objects_response>(req);
-
-            directory_message dir_req;
-            dir_req.bucket_id = req.get_URI().get_bucket_id();
-
-            co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
-                                                    dir_req);
-            const auto h_dir = co_await m.get().recv_header();
-
-            unique_buffer<char> buffer(h_dir.size);
-            directory_lst_entities_message list_objects_res;
-
-            list_objects_res =
-                co_await m.get().recv_directory_list_entities_message(h_dir);
-
-            for (const auto& content : list_objects_res.entities) {
-                res->add_content(content);
-            }
-            res->add_name(req.get_URI().get_bucket_id());
-        };
-
-        co_await worker_utils::
-            io_thread_acquire_messenger_and_post_in_io_threads(
-                m_workers, m_ioc, m_directory_services.get(),
-                std::bind_front(func, std::ref(res), std::cref(req)));
 
         co_return std::move(res);
     }
@@ -441,8 +399,8 @@ auto make_entrypoint_handler(entrypoint_state& state) {
     return define_entrypoint_handler(
         state, create_bucket(state), get_bucket(state), list_buckets(state),
         delete_bucket(state), put_object(state), get_object(state),
-        list_objects_v2(state), delete_object(state), delete_objects(state),
-        init_multipart_upload(state));
+        list_objects(state), list_objects_v2(state), delete_object(state),
+        delete_objects(state), init_multipart_upload(state));
 }
 
 } // end namespace uh::cluster

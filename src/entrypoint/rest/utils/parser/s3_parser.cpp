@@ -4,7 +4,6 @@
 #include "entrypoint/rest/http/models/complete_multi_part_upload_request.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/rest/http/models/list_multi_part_uploads_request.h"
-#include "entrypoint/rest/http/models/list_objects_request.h"
 #include "entrypoint/rest/http/models/multi_part_upload_request.h"
 #include <iostream>
 
@@ -103,9 +102,7 @@ std::unique_ptr<rest::http::http_request> s3_parser::parse() const {
             } else // TODO: there is conflict between get_bucket_request and
                    // list_objects_request if no query string is given
             {
-                return std::make_unique<
-                    rest::http::model::list_objects_request>(m_recv_req,
-                                                             std::move(uri));
+                return nullptr;
             }
         } else if (uri->get_bucket_id().empty() &&
                    uri->get_object_key().empty()) {
