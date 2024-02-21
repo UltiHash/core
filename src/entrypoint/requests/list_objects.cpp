@@ -1,7 +1,7 @@
 #include "list_objects.h"
+#include "common/utils/strings.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/utils/string_utils.h"
 
 namespace uh::cluster {
 
@@ -12,12 +12,12 @@ bool list_objects::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
     return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
            uri.get_object_key().empty() &&
+           !uri.query_string_exists("uploads") &&
            !uri.query_string_exists("list-type");
 }
 
-http_response
-list_objects::get_response(const std::vector<std::string>& contents,
-                           const http_request& req) {
+static http_response get_response(const std::vector<std::string>& contents,
+                                  const http_request& req) {
 
     const auto& req_uri = req.get_uri();
 
@@ -51,8 +51,7 @@ list_objects::get_response(const std::vector<std::string>& contents,
 
         auto content_itr = contents.begin();
         if (marker) {
-            auto index_itr =
-                string_utils::find_lexically_closest(contents, *marker);
+            auto index_itr = find_lexically_closest(contents, *marker);
 
             if (index_itr != contents.end()) {
                 content_itr = index_itr++;
@@ -73,15 +72,14 @@ list_objects::get_response(const std::vector<std::string>& contents,
             }
             if (delimiter && delimiter_index != std::string::npos) {
                 auto delimiter_prefix = c.substr(0, delimiter_index + 1);
-                common_prefixes.emplace(
-                    (encoding_type ? string_utils::url_encode(delimiter_prefix)
-                                   : delimiter_prefix));
+                common_prefixes.emplace((encoding_type
+                                             ? url_encode(delimiter_prefix)
+                                             : delimiter_prefix));
             } else {
-                contents_xml +=
-                    "<Contents>\n"
-                    "<Key>" +
-                    (encoding_type ? string_utils::url_encode(c) : c) +
-                    "</Key>\n" + "</Contents>\n";
+                contents_xml += "<Contents>\n"
+                                "<Key>" +
+                                (encoding_type ? url_encode(c) : c) +
+                                "</Key>\n" + "</Contents>\n";
                 counter++;
             }
 
@@ -101,8 +99,7 @@ list_objects::get_response(const std::vector<std::string>& contents,
     if (delimiter) {
         delimiter_xml_string =
             "<Delimiter>" +
-            (encoding_type ? string_utils::url_encode(*delimiter)
-                           : *delimiter) +
+            (encoding_type ? url_encode(*delimiter) : *delimiter) +
             "</Delimiter>\n";
     }
 
@@ -120,10 +117,9 @@ list_objects::get_response(const std::vector<std::string>& contents,
 
     std::string prefix_xml;
     if (prefix) {
-        prefix_xml =
-            "<Prefix>" +
-            (encoding_type ? string_utils::url_encode(*prefix) : *prefix) +
-            "</Prefix>\n";
+        prefix_xml = "<Prefix>" +
+                     (encoding_type ? url_encode(*prefix) : *prefix) +
+                     "</Prefix>\n";
     }
 
     std::string marker_xml;
@@ -180,7 +176,8 @@ coro<http_response> list_objects::handle(const http_request& req) const {
         auto func = [](const directory_message& dir_req,
                        std::vector<std::string>& contents,
                        client::acquired_messenger m) -> coro<void> {
-            co_await m.get().send_directory_message(DIR_LIST_OBJ_REQ, dir_req);
+            co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
+                                                    dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
             unique_buffer<char> buffer(h_dir.size);

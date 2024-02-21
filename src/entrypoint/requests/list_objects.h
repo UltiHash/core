@@ -8,18 +8,15 @@
 namespace uh::cluster {
 
 class list_objects {
-  public:
+public:
     explicit list_objects(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
-  private:
+private:
     const entrypoint_state& m_state;
-
-    static http_response get_response(const std::vector<std::string>& contents,
-                                      const http_request& req);
 };
 
 } // namespace uh::cluster

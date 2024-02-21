@@ -4,7 +4,8 @@
 
 namespace uh::cluster {
 
-multipart::multipart(entrypoint_state& entry_state) : m_state(entry_state) {}
+multipart::multipart(entrypoint_state& entry_state)
+    : m_state(entry_state) {}
 
 bool multipart::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -14,7 +15,7 @@ bool multipart::can_handle(const http_request& req) {
            uri.query_string_exists("uploadId");
 }
 
-void multipart::validate(const http_request& req) {
+static void validate(const http_request& req) {
     const auto& req_uri = req.get_uri();
 
     auto upload_id = req_uri.get_query_parameters().at("uploadId");

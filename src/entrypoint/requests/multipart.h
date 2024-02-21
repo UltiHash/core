@@ -8,17 +8,15 @@
 namespace uh::cluster {
 
 class multipart {
-  public:
+public:
     explicit multipart(entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(http_request& req) const;
 
-  private:
+private:
     entrypoint_state& m_state;
-
-    static void validate(const http_request& req);
 };
 
 } // namespace uh::cluster

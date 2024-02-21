@@ -15,7 +15,7 @@ bool abort_multipart::can_handle(const http_request& req) {
            uri.query_string_exists("uploadId");
 }
 
-void abort_multipart::validate(const http_request& req) {
+static void validate(const http_request& req) {
     const auto& uri = req.get_uri();
 
     if (uri.get_query_parameters().at("uploadId").empty()) {

@@ -13,9 +13,16 @@ bool list_multipart::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.query_string_exists("uploads");
 }
 
-http_response list_multipart::get_response(
-    const std::string& bucket_name,
-    const std::vector<key_and_uploadid>& ongoing) noexcept {
+namespace {
+
+struct upload_and_key {
+    std::string upload_id;
+    std::string object_name;
+};
+
+http_response
+get_response(const std::string& bucket_name,
+             const std::vector<upload_and_key>& ongoing) noexcept {
 
     std::string upload_xml_string;
 
@@ -38,14 +45,15 @@ http_response list_multipart::get_response(
 
     return res;
 }
+} // namespace
 
 coro<http_response> list_multipart::handle(const http_request& req) const {
     const std::string& bucket_name = req.get_uri().get_bucket_id();
-    std::vector<key_and_uploadid> ongoing;
+    std::vector<upload_and_key> ongoing;
 
     auto func = [](const entrypoint_state& state,
                    const std::string& bucket_name,
-                   std::vector<key_and_uploadid>& ongoing) {
+                   std::vector<upload_and_key>& ongoing) {
         auto multipart_map =
             state.server_state.m_uploads.list_multipart_uploads(bucket_name);
 

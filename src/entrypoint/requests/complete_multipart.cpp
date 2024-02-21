@@ -14,7 +14,7 @@ bool complete_multipart::can_handle(const http_request& req) {
            !uri.get_object_key().empty() && uri.query_string_exists("uploadId");
 }
 
-void complete_multipart::validate(const http_request& req) {
+static void validate(const http_request& req) {
     if (req.get_uri().get_query_parameters().at("uploadId").empty()) {
         throw rest::http::model::custom_error_response_exception(
             boost::beast::http::status::bad_request,
@@ -41,7 +41,8 @@ coro<http_response> complete_multipart::handle(const http_request& req) const {
 
     auto func_dir = [](const directory_message& dir_req,
                        client::acquired_messenger m, long id) -> coro<void> {
-        co_await m.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
+        co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
+                                                dir_req);
         co_await m.get().recv_header();
     };
 
