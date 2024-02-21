@@ -13,10 +13,13 @@ public:
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(const http_request& req) const;
+    coro<http_response> handle(http_request& req) const;
 
 private:
     entrypoint_state& m_state;
+    static constexpr size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
+
+    void validate(const http_request& req) const;
 };
 
 } // namespace uh::cluster
