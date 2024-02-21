@@ -20,8 +20,6 @@ template <typename K, typename V> class lru_cache {
     std::list<Node> m_lruList;
     size_t m_capacity;
     std::mutex m;
-    unsigned long m_hit{0};
-    unsigned long m_miss{0};
 
 public:
     explicit lru_cache(size_t capacity)
@@ -47,28 +45,19 @@ public:
     std::optional<std::reference_wrapper<const V>> get(const K& key) noexcept {
         std::lock_guard<std::mutex> lock(m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
-            m_hit++;
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;
         }
-        m_miss++;
         return std::nullopt;
     }
 
     V get(const K& key, V&& default_value) noexcept {
         std::lock_guard<std::mutex> lock(m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
-            m_hit++;
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;
         }
-        m_miss++;
         return default_value;
-    }
-
-    inline constexpr std::pair<unsigned long, unsigned long>
-    get_hit_miss() const noexcept {
-        return {m_hit, m_miss};
     }
 };
 } // end namespace uh::cluster

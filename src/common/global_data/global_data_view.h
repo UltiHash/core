@@ -16,13 +16,22 @@ class global_data_view {
 public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
-                              services<STORAGE_SERVICE>& storage_services)
+                              services<STORAGE_SERVICE>& storage_services,
+                              opt_ref<metrics_handler> metrics = std::nullopt)
         : m_io_service(ioc),
+          m_metrics(metrics),
           m_storage_services(storage_services),
           m_config(config),
           m_cache_l1(m_config.read_cache_capacity_l1),
           m_cache_l2(m_config.read_cache_capacity_l2) {
         m_storage_services.get();
+
+        if (m_metrics) {
+            m_metrics->get().create_uint_counter("l1_cache_hit_count");
+            m_metrics->get().create_uint_counter("l1_cache_miss_count");
+            m_metrics->get().create_uint_counter("l2_cache_hit_count");
+            m_metrics->get().create_uint_counter("l2_cache_miss_count");
+        }
     }
 
     address write(const std::string_view& data) {
@@ -52,20 +61,30 @@ public:
         if (const auto c = m_cache_l1.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
+                if (m_metrics) [[likely]]
+                    m_metrics->get().increase_uint_counter("l1_cache_hit_count",
+                                                           1);
                 return c;
             }
         }
+        if (m_metrics) [[likely]]
+            m_metrics->get().increase_uint_counter("l1_cache_miss_count", 1);
         return nullptr;
     }
 
-    shared_buffer<char> read(const uint128_t pointer, const size_t size) {
+    shared_buffer<char> read(const uint128_t& pointer, const size_t size) {
 
         if (const auto c = m_cache_l2.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
+                if (m_metrics) [[likely]]
+                    m_metrics->get().increase_uint_counter("l2_cache_hit_count",
+                                                           1);
                 return c;
             }
         }
+        if (m_metrics) [[likely]]
+            m_metrics->get().increase_uint_counter("l2_cache_miss_count", 1);
 
         shared_buffer<char> buffer(size);
         const fragment frag{pointer, size};
@@ -199,14 +218,6 @@ public:
         return m_config.l1_sample_size;
     }
 
-    [[nodiscard]] inline auto l1_hit_miss() const noexcept {
-        return m_cache_l1.get_hit_miss();
-    }
-
-    [[nodiscard]] inline auto l2_hit_miss() const noexcept {
-        return m_cache_l2.get_hit_miss();
-    }
-
     [[nodiscard]] inline std::size_t
     get_storage_service_connection_count() const noexcept {
         return m_config.storage_service_connection_count;
@@ -215,6 +226,7 @@ public:
 private:
     boost::asio::io_context& m_io_service;
 
+    opt_ref<metrics_handler> m_metrics;
     services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
 

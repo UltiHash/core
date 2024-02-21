@@ -24,19 +24,17 @@ public:
 
     void create_uint_counter(const std::string& name);
     void increase_uint_counter(const std::string& name, std::uint64_t value);
-    void increment_counter(const uh::cluster::message_type msg_type);
+    void increment_counter(uh::cluster::message_type msg_type);
 
 private:
     std::unordered_set<uh::cluster::message_type> m_served_request_types;
     std::unordered_map<
         std::string, std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>>
         m_uint_counters;
-    std::unordered_map<
-        std::string, std::shared_ptr<opentelemetry::metrics::Histogram<double>>>
-        m_double_counters;
     std::mutex m_mutex;
 
-    void initialize_metrics_exporter(const std::string& telemetry_endpoint);
+    static void
+    initialize_metrics_exporter(const std::string& telemetry_endpoint);
 };
 
 } // namespace uh::cluster

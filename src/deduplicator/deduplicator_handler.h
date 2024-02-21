@@ -29,10 +29,6 @@ public:
         }
         m_metrics_handler.create_uint_counter("dedupe_set_fragment_count");
         m_metrics_handler.create_uint_counter("dedupe_set_fragment_size");
-        m_metrics_handler.create_uint_counter("l1_cache_hit_count");
-        m_metrics_handler.create_uint_counter("l1_cache_miss_count");
-        m_metrics_handler.create_uint_counter("l2_cache_hit_count");
-        m_metrics_handler.create_uint_counter("l2_cache_miss_count");
     }
 
     void init() override {
@@ -114,14 +110,6 @@ private:
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
-
-        const auto [l1_hit, l1_miss] = m_storage.l1_hit_miss();
-        const auto [l2_hit, l2_miss] = m_storage.l2_hit_miss();
-
-        m_metrics_handler.increase_uint_counter("l1_cache_hit_count", l1_hit);
-        m_metrics_handler.increase_uint_counter("l1_cache_miss_count", l1_miss);
-        m_metrics_handler.increase_uint_counter("l2_cache_hit_count", l2_hit);
-        m_metrics_handler.increase_uint_counter("l2_cache_miss_count", l2_miss);
 
         co_await m.send_dedupe_response(SUCCESS, responses[0]);
     }
