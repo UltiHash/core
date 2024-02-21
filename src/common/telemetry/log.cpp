@@ -1,5 +1,24 @@
 #include "log.h"
 
+#include <boost/core/null_deleter.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
+
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/sinks.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+
+#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_options.h>
+#include <opentelemetry/logs/provider.h>
+#include <opentelemetry/sdk/logs/logger_provider.h>
+#include <opentelemetry/sdk/logs/logger_provider_factory.h>
+#include <opentelemetry/sdk/logs/processor.h>
+#include <opentelemetry/sdk/logs/simple_log_record_processor_factory.h>
+
 namespace logging = boost::log;
 namespace attrs = boost::log::attributes;
 namespace expr = boost::log::expressions;
@@ -153,11 +172,10 @@ boost::shared_ptr<sinks::sink> make_otel_sink(const sink_config& cfg) {
 
     opentelemetry::logs::Provider::SetLoggerProvider(provider);
 
-    auto backend = boost::make_shared<
-        opentelemetry::instrumentation::boost_log::OpenTelemetrySinkBackend>();
-    auto otel_sink = boost::make_shared<boost::log::sinks::synchronous_sink<
-        opentelemetry::instrumentation::boost_log::OpenTelemetrySinkBackend>>(
-        backend);
+    auto backend = boost::make_shared<otel_log_sink>();
+    auto otel_sink =
+        boost::make_shared<boost::log::sinks::synchronous_sink<otel_log_sink>>(
+            backend);
     return otel_sink;
 }
 

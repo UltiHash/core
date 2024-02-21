@@ -1,82 +1,75 @@
-/*
- * Copyright The OpenTelemetry Authors
- * SPDX-License-Identifier: Apache-2.0
- */
-
-// Notice: this file has been copied from the master branch of the
-// opentelemetry-cpp repo as the support for the boost logging sink has not made
-// it to a stable release. The corresponding PR has been merged early February
-// 20214: https://github.com/open-telemetry/opentelemetry-cpp-contrib/pull/359
-
 #include "otel_log_sink.h"
 
+#include <opentelemetry/common/attribute_value.h>
+#include <opentelemetry/logs/log_record.h>
 #include <opentelemetry/logs/provider.h>
-#include <opentelemetry/trace/semantic_conventions.h>
 
 #include <boost/log/attributes/value_extraction.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
-namespace opentelemetry {
-namespace instrumentation {
-namespace boost_log {
+#include <boost/version.hpp>
 
-static bool
-ToTimestampDefault(const boost::log::record_view& record,
-                   std::chrono::system_clock::time_point& value) noexcept {
-    using namespace std::chrono;
-    static constexpr boost::posix_time::ptime kEpochTime(
-        boost::gregorian::date(1970, 1, 1));
-    static constexpr boost::posix_time::ptime kInvalid{};
+namespace uh::log {
 
-    const auto& timestamp =
-        boost::log::extract_or_default<boost::posix_time::ptime>(
-            record["TimeStamp"], kInvalid);
-    value = system_clock::time_point(
-        nanoseconds((timestamp - kEpochTime).total_nanoseconds()));
-    return timestamp != kInvalid;
-}
+constexpr boost::posix_time::ptime epoch_time(boost::gregorian::date(1970, 1,
+                                                                     1));
+constexpr boost::posix_time::ptime invalid_time{};
+constexpr auto logger_name = "Boost logger";
+constexpr auto library_name = "Boost.Log";
 
-OpenTelemetrySinkBackend::OpenTelemetrySinkBackend(
-    const ValueMappers& mappers) noexcept {
-    mappers_.ToTimeStamp =
-        mappers.ToTimeStamp ? mappers.ToTimeStamp : ToTimestampDefault;
-
-    using namespace opentelemetry::trace::SemanticConventions;
-    using opentelemetry::logs::LogRecord;
-    using timestamp_t = std::chrono::system_clock::time_point;
-
-    set_timestamp_if_valid_ = {
-        [](LogRecord*, const timestamp_t&) {},
-        [](LogRecord* log_record, const timestamp_t& timestamp) {
-            log_record->SetTimestamp(timestamp);
-        }};
-}
-
-void OpenTelemetrySinkBackend::consume(const boost::log::record_view& record) {
-    static constexpr auto kLoggerName = "Boost logger";
-    static constexpr auto kLibraryName = "Boost.Log";
-
+void otel_log_sink::consume(const boost::log::record_view& record) {
     auto provider = opentelemetry::logs::Provider::GetLoggerProvider();
     auto logger =
-        provider->GetLogger(kLoggerName, kLibraryName, libraryVersion());
+        provider->GetLogger(logger_name, library_name, boost_version());
     auto log_record = logger->CreateLogRecord();
 
     if (log_record) {
         log_record->SetBody(boost::log::extract_or_default<std::string>(
             record["Message"], std::string{}));
-        auto severity =
+        const auto severity =
             boost::log::extract_or_default<boost::log::trivial::severity_level>(
                 record["Severity"], boost::log::trivial::severity_level::debug);
-        log_record->SetSeverity(levelToSeverity(severity));
+        log_record->SetSeverity(convert_severity(severity));
 
-        std::chrono::system_clock::time_point timestamp;
-        set_timestamp_if_valid_[mappers_.ToTimeStamp(record, timestamp)](
-            log_record.get(), timestamp);
+        const auto timestamp =
+            boost::log::extract_or_default<boost::posix_time::ptime>(
+                record["TimeStamp"], invalid_time);
+
+        const auto value =
+            std::chrono::system_clock::time_point(std::chrono::nanoseconds(
+                (timestamp - epoch_time).total_nanoseconds()));
+        log_record->SetTimestamp(value);
 
         logger->EmitLogRecord(std::move(log_record));
     }
 }
 
-} // namespace boost_log
-} // namespace instrumentation
-} // namespace opentelemetry
+const std::string otel_log_sink::boost_version() {
+    static const std::string library_version =
+        std::to_string(BOOST_VERSION / 100000) + "." +
+        std::to_string(BOOST_VERSION / 100 % 1000) + "." +
+        std::to_string(BOOST_VERSION % 100);
+    return library_version;
+}
+
+opentelemetry::logs::Severity otel_log_sink::convert_severity(
+    boost::log::trivial::severity_level level) noexcept {
+    switch (level) {
+    case boost::log::trivial::severity_level::fatal:
+        return opentelemetry::logs::Severity::kFatal;
+    case boost::log::trivial::severity_level::error:
+        return opentelemetry::logs::Severity::kError;
+    case boost::log::trivial::severity_level::warning:
+        return opentelemetry::logs::Severity::kWarn;
+    case boost::log::trivial::severity_level::info:
+        return opentelemetry::logs::Severity::kInfo;
+    case boost::log::trivial::severity_level::debug:
+        return opentelemetry::logs::Severity::kDebug;
+    case boost::log::trivial::severity_level::trace:
+        return opentelemetry::logs::Severity::kTrace;
+    default:
+        return opentelemetry::logs::Severity::kInvalid;
+    }
+}
+
+} // namespace uh::log
