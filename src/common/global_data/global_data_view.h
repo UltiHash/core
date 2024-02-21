@@ -16,8 +16,7 @@ class global_data_view {
 public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
-                              services<STORAGE_SERVICE>& storage_services,
-                              opt_ref<metrics_handler> metrics = std::nullopt)
+                              services<STORAGE_SERVICE>& storage_services)
         : m_io_service(ioc),
           m_storage_services(storage_services),
           m_config(config),
@@ -104,17 +103,8 @@ public:
 
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
+
             const auto frag = addr.get_fragment(i);
-
-            if (const auto c = m_cache_l2.get(frag.pointer, nullptr);
-                c.data() != nullptr) {
-                if (c.size() >= frag.size) [[likely]] {
-                    std::memcpy(buffer + offset, c.data(), frag.size);
-                    offset += frag.size;
-                    continue;
-                }
-            }
-
             auto n = m_storage_services.get(frag.pointer);
             auto& node_address = node_address_map[n];
             if (node_address.empty()) {
@@ -205,8 +195,16 @@ public:
         return m_io_service;
     }
 
-    [[nodiscard]] inline std::size_t cached_sample_size() const noexcept {
+    [[nodiscard]] inline std::size_t l1_cache_sample_size() const noexcept {
         return m_config.l1_sample_size;
+    }
+
+    [[nodiscard]] inline auto l1_hit_miss() const noexcept {
+        return m_cache_l1.get_hit_miss();
+    }
+
+    [[nodiscard]] inline auto l2_hit_miss() const noexcept {
+        return m_cache_l2.get_hit_miss();
     }
 
     [[nodiscard]] inline std::size_t

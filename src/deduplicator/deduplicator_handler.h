@@ -22,12 +22,17 @@ public:
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
           m_dedupe_workers(std::move(dedupe_workers)) {
-        if (m_dedupe_conf.min_fragment_size > m_storage.cached_sample_size()) {
+        if (m_dedupe_conf.min_fragment_size >
+            m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument("L1 cache sample size should not be "
                                         "smaller than the min fragment size!");
         }
         m_metrics_handler.create_uint_counter("dedupe_set_fragment_count");
         m_metrics_handler.create_uint_counter("dedupe_set_fragment_size");
+        m_metrics_handler.create_uint_counter("l1_cache_hit_count");
+        m_metrics_handler.create_uint_counter("l1_cache_miss_count");
+        m_metrics_handler.create_uint_counter("l2_cache_hit_count");
+        m_metrics_handler.create_uint_counter("l2_cache_miss_count");
     }
 
     void init() override {
@@ -109,6 +114,15 @@ private:
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
+
+        const auto [l1_hit, l1_miss] = m_storage.l1_hit_miss();
+        const auto [l2_hit, l2_miss] = m_storage.l2_hit_miss();
+
+        m_metrics_handler.increase_uint_counter("l1_cache_hit_count", l1_hit);
+        m_metrics_handler.increase_uint_counter("l1_cache_miss_count", l1_miss);
+        m_metrics_handler.increase_uint_counter("l2_cache_hit_count", l2_hit);
+        m_metrics_handler.increase_uint_counter("l2_cache_miss_count", l2_miss);
+
         co_await m.send_dedupe_response(SUCCESS, responses[0]);
     }
 
@@ -126,7 +140,7 @@ private:
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-                if (common_prefix == m_storage.cached_sample_size() and l1) {
+                if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
                     frag_data = m_storage.read(frag.pointer, frag.size);
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),

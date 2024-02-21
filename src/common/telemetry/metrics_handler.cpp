@@ -76,4 +76,5 @@ void metrics_handler::increase_uint_counter(const std::string& name,
     std::lock_guard<std::mutex> lock(m_mutex);
     m_uint_counters[name]->Add(value);
 }
+
 } // namespace uh::cluster

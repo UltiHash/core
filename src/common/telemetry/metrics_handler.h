@@ -31,6 +31,9 @@ private:
     std::unordered_map<
         std::string, std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>>
         m_uint_counters;
+    std::unordered_map<
+        std::string, std::shared_ptr<opentelemetry::metrics::Histogram<double>>>
+        m_double_counters;
     std::mutex m_mutex;
 
     void initialize_metrics_exporter(const std::string& telemetry_endpoint);
