@@ -8,7 +8,7 @@
 
 #include "common/network/client.h"
 #include "common/registry/config_registry.h"
-#include "common/utils/log.h"
+#include "common/telemetry/log.h"
 #include "etcd/Watcher.hpp"
 
 namespace uh::cluster {
