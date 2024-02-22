@@ -4,7 +4,7 @@
 #include "common/license/license.h"
 #include "common/utils/cluster_config.h"
 #include "directory_handler.h"
-#include <common/utils/log.h>
+#include <common/telemetry/log.h>
 #include <functional>
 
 namespace uh::cluster {

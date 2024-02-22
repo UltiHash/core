@@ -4,8 +4,8 @@
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
 #include "common/registry/service_registry.h"
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
-#include "common/utils/log.h"
 #include "deduplicator_handler.h"
 #include <functional>
 #include <iostream>

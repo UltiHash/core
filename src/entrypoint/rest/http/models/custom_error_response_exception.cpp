@@ -1,6 +1,6 @@
 #include "custom_error_response_exception.h"
 
-#include "common/utils/log.h"
+#include "common/telemetry/log.h"
 #include "iostream"
 #include <utility>
 
@@ -23,6 +23,8 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"BadPartNumber", "part number is invalid"},
     {"TooManyElements", "too many elements in the request"},
     {"StorageLimitExceeded", "insufficient storage"},
+    {"CommandNotFound", "no such command"},
+    {"NoMultiPartUploads", "no multipart uploads"},
 };
 
 static const std::pair<std::string, std::string> error_out_of_range = {

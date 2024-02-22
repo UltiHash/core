@@ -1,6 +1,6 @@
 
-#ifndef UH_CLUSTER_INIT_MULTIPART_UPLOAD_H
-#define UH_CLUSTER_INIT_MULTIPART_UPLOAD_H
+#ifndef UH_CLUSTER_INIT_MULTIPART_H
+#define UH_CLUSTER_INIT_MULTIPART_H
 
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/http_request.h"
@@ -10,9 +10,9 @@
 
 namespace uh::cluster {
 
-class init_multipart_upload {
+class init_multipart {
 public:
-    explicit init_multipart_upload(entrypoint_state& entry_state)
+    explicit init_multipart(entrypoint_state& entry_state)
         : m_state(entry_state) {}
 
     static bool can_handle(const http_request& req) {
@@ -66,7 +66,7 @@ public:
 
 private:
     static http_response get_response(const http_request& req,
-                                      const std::string& upload_id) {
+                                      const std::string& upload_id) noexcept {
         http_response res;
 
         res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -90,4 +90,4 @@ private:
 
 } // namespace uh::cluster
 
-#endif // UH_CLUSTER_INIT_MULTIPART_UPLOAD_H
+#endif // UH_CLUSTER_INIT_MULTIPART_H
