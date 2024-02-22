@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
             ->transform([](const std::string& role_str) {
                 return std::to_string(get_service_role(role_str));
             });
+        /*
         app.add_option(
                "--license,-L",
                [&cfg](CLI::results_t res) {
@@ -71,6 +72,7 @@ int main(int argc, char** argv) {
                "UltiHash license string")
             ->envname(ENV_CFG_LICENSE)
             ->required();
+            */
         app.add_option("registry,--registry,-r", cfg.etcd_url,
                        "URL to etcd endpoint")
             ->default_val("http://127.0.0.1:2379");
@@ -96,6 +98,8 @@ int main(int argc, char** argv) {
             "Print the VCS commit id this executable was compiled from");
 
         CLI11_PARSE(app, argc, argv);
+
+        initialize_metrics_exporter(cfg.telemetry_url);
 
         uh::log::config lc{
             .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,

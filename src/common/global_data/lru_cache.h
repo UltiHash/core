@@ -11,13 +11,13 @@ namespace uh::cluster {
 
 template <typename K, typename V> class lru_cache {
 
-    struct Node {
+    struct node {
         K key;
         V value;
     };
 
-    std::unordered_map<K, typename std::list<Node>::iterator> m_map;
-    std::list<Node> m_lruList;
+    std::unordered_map<K, typename std::list<node>::iterator> m_map;
+    std::list<node> m_lruList;
     size_t m_capacity;
     std::mutex m;
 

@@ -33,12 +33,10 @@ public:
               m_config.worker_thread_count)),
           m_storage(m_config_registry.get_global_data_view_config(), m_ioc,
                     m_storage_services),
-          m_metrics_handler(sc.telemetry_url),
           m_server(m_config_registry.get_server_config(),
                    m_config_registry.get_service_name(),
                    std::make_unique<directory_handler>(m_config, m_storage,
-                                                       m_directory_workers,
-                                                       m_metrics_handler),
+                                                       m_directory_workers),
                    m_ioc) {}
 
     void run() {
@@ -64,7 +62,6 @@ private:
     directory_config m_config;
     std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
     global_data_view m_storage;
-    metrics_handler m_metrics_handler;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };

@@ -15,10 +15,8 @@ class deduplicator_handler : public protocol_handler {
 public:
     deduplicator_handler(
         deduplicator_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> dedupe_workers,
-        metrics_handler& metrics_handler)
+        std::shared_ptr<boost::asio::thread_pool> dedupe_workers)
         : m_dedupe_conf(std::move(config)),
-          m_metrics_handler(metrics_handler),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
           m_dedupe_workers(std::move(dedupe_workers)) {
@@ -27,8 +25,6 @@ public:
             throw std::invalid_argument("L1 cache sample size should not be "
                                         "smaller than the min fragment size!");
         }
-        m_metrics_handler.create_uint_counter("dedupe_set_fragment_count");
-        m_metrics_handler.create_uint_counter("dedupe_set_fragment_size");
     }
 
     void init() override {
@@ -37,7 +33,7 @@ public:
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s), m_metrics_handler);
+        messenger m(std::move(s));
 
         for (;;) {
             std::optional<error> err;
@@ -162,10 +158,11 @@ private:
             m_fragment_set.insert(
                 {addr.pointers[0], addr.pointers[1]},
                 integration_data.substr(0, addr.sizes.front()), f.hint);
-            m_metrics_handler.increase_uint_counter("dedupe_set_fragment_count",
-                                                    1);
-            m_metrics_handler.increase_uint_counter("dedupe_set_fragment_size",
-                                                    addr.sizes.front());
+
+            metric<metric_type::dedupe_set_frag_count>::increase(1);
+            metric<metric_type::dedupe_set_frag_size>::increase(
+                addr.sizes.front());
+
             result.addr.append_address(addr);
             result.effective_size += frag_size;
             integration_data = integration_data.substr(frag_size);
@@ -193,7 +190,6 @@ private:
     }
 
     deduplicator_config m_dedupe_conf;
-    metrics_handler& m_metrics_handler;
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;

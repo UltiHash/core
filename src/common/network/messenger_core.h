@@ -1,7 +1,7 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
-#include "common/telemetry/metrics_handler.h"
+#include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 #include "common/utils/log.h"
@@ -34,10 +34,8 @@ public:
         clear_buffers();
     }
 
-    messenger_core(boost::asio::ip::tcp::socket&& socket,
-                   opt_ref<metrics_handler> metrics_handler = std::nullopt)
-        : m_socket(std::move(socket)),
-          m_metrics_handler(metrics_handler) {
+    explicit messenger_core(boost::asio::ip::tcp::socket&& socket)
+        : m_socket(std::move(socket)) {
         clear_buffers();
     }
 
@@ -115,12 +113,11 @@ public:
             m_socket, buffers,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
+        measure_message_type(h.type);
+
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
             throw error_exception(e);
-        } else {
-            if (m_metrics_handler.has_value())
-                m_metrics_handler->get().increment_counter(h.type);
         }
 
         co_return h;
@@ -161,8 +158,9 @@ public:
     }
 
     coro<void> send_buffers(const message_type type) {
-        if (m_metrics_handler.has_value() && type == SUCCESS)
-            m_metrics_handler->get().increment_counter(uh::cluster::SUCCESS);
+
+        measure_message_type(type);
+
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
 
@@ -177,8 +175,8 @@ public:
         const auto ec = e.code();
         register_write_buffer(ec);
         register_write_buffer(e.message());
-        if (m_metrics_handler.has_value())
-            m_metrics_handler->get().increment_counter(uh::cluster::FAILURE);
+        metric<failure>::increase(1);
+
         co_await send_buffers(FAILURE);
     }
 
@@ -192,8 +190,9 @@ public:
     }
 
     coro<void> send(const message_type type, std::span<const char> data) {
-        if (type == SUCCESS && m_metrics_handler.has_value())
-            m_metrics_handler->get().increment_counter(uh::cluster::SUCCESS);
+
+        measure_message_type(type);
+
         const auto size = static_cast<size_type>(data.size());
 
         std::vector<boost::asio::const_buffer> buffers{
@@ -229,7 +228,6 @@ public:
 
 private:
     boost::asio::ip::tcp::socket m_socket;
-    opt_ref<metrics_handler> m_metrics_handler;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;

@@ -1,7 +1,7 @@
 #ifndef CORE_DATA_STORE_SERVICE_HANDLER_H
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
-#include "common/telemetry/metrics_handler.h"
+#include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
 #include "data_store.h"
@@ -11,14 +11,12 @@ namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    storage_handler(storage_config config, size_t index,
-                    metrics_handler& metrics_handler)
-        : m_data_store(std::move(config), index),
-          m_metrics_handler(metrics_handler) {}
+    storage_handler(storage_config config, size_t index)
+        : m_data_store(std::move(config), index) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s), m_metrics_handler);
+        messenger m(std::move(s));
 
         for (;;) {
             std::optional<error> err;
@@ -115,7 +113,6 @@ private:
     }
 
     uh::cluster::data_store m_data_store;
-    metrics_handler& m_metrics_handler;
 };
 
 } // end namespace uh::cluster
