@@ -65,9 +65,6 @@ public:
                 if (!received_request.keep_alive()) {
                     break;
                 }
-
-                s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                s.close();
             }
         } catch (const command_unknown_exception& e) {
             LOG_ERROR() << e.what();
@@ -107,6 +104,9 @@ public:
             s.close();
             throw;
         }
+
+        s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+        s.close();
     }
 
     coro<http_response> handle_request(http_request& req) {
