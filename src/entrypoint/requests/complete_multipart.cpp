@@ -28,19 +28,18 @@ void complete_multipart::validate(const http_request& req) const {
 
     try {
         if (!parsed_xml.parse(req.get_body()))
-            throw std::runtime_error("");
+            throw std::runtime_error("unable to parse the xml");
 
         object_nodes_set =
             parsed_xml.get_nodes_from_path("/CompleteMultipartUpload/Part");
         if (object_nodes_set.empty())
-            throw std::runtime_error("");
+            throw std::runtime_error("no part found");
     } catch (const std::exception& e) {
         throw rest::http::model::custom_error_response_exception(
             http::status::bad_request,
             rest::http::model::error::type::malformed_xml);
     }
 
-    uint16_t part_counter = 1;
     const auto up_info =
         m_state.server_state.m_uploads.get_upload_info(upload_id);
     if (up_info == nullptr) {
@@ -49,7 +48,7 @@ void complete_multipart::validate(const http_request& req) const {
             rest::http::model::error::type::no_such_upload);
     }
 
-    for (const auto& objectNode : object_nodes_set) {
+    for (uint16_t part_counter = 1; const auto& objectNode : object_nodes_set) {
         auto part_num =
             std::stoul(objectNode.node().child("PartNumber").child_value());
         auto etag = objectNode.node().child("ETag").child_value();

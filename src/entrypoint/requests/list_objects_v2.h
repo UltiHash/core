@@ -126,7 +126,7 @@ public:
         bool fetch_owner_set = false;
         if (const auto fetch_owner = get_if_exists("fetch-owner");
             fetch_owner.has_value()) {
-            if (is_true(*fetch_owner))
+            if (to_bool(*fetch_owner))
                 fetch_owner_set = true;
         }
 

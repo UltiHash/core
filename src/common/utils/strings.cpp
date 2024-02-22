@@ -3,6 +3,7 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
+#include <sstream>
 
 using namespace boost;
 
@@ -62,13 +63,13 @@ find_lexically_closest(const std::vector<std::string>& strings,
     return nextDifferentItr;
 }
 
-bool is_true(const std::string& str_to_eval) {
-    if (str_to_eval == "true" || str_to_eval == "TRUE" ||
-        str_to_eval == "True") {
-        return true;
-    } else {
-        return false;
-    }
+bool to_bool(std::string str_to_eval) {
+    std::transform(str_to_eval.begin(), str_to_eval.end(), str_to_eval.begin(),
+                   ::tolower);
+    std::istringstream is(str_to_eval);
+    bool b;
+    is >> std::boolalpha >> b;
+    return b;
 }
 
 } // namespace uh::cluster

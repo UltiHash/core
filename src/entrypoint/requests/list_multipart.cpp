@@ -4,15 +4,6 @@
 
 namespace uh::cluster {
 
-list_multipart::list_multipart(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
-
-bool list_multipart::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() && uri.query_string_exists("uploads");
-}
-
 namespace {
 
 struct upload_and_key {
@@ -22,17 +13,17 @@ struct upload_and_key {
 
 http_response
 get_response(const std::string& bucket_name,
-             const std::vector<upload_and_key>& ongoing) noexcept {
+             const std::map<std::string, std::string>& ongoing) noexcept {
 
     std::string upload_xml_string;
 
     for (const auto& val : ongoing) {
         upload_xml_string += "<Upload>\n"
                              "<Key>" +
-                             val.object_name +
+                             val.second +
                              "</Key>\n"
                              "<UploadId>" +
-                             val.upload_id +
+                             val.first +
                              "</UploadId>\n"
                              "</Upload>\n";
     }
@@ -47,25 +38,29 @@ get_response(const std::string& bucket_name,
 }
 } // namespace
 
+list_multipart::list_multipart(const entrypoint_state& entry_state)
+    : m_state(entry_state) {}
+
+bool list_multipart::can_handle(const http_request& req) {
+    const auto& uri = req.get_uri();
+    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
+           uri.get_object_key().empty() && uri.query_string_exists("uploads");
+}
+
 coro<http_response> list_multipart::handle(const http_request& req) const {
     const std::string& bucket_name = req.get_uri().get_bucket_id();
-    std::vector<upload_and_key> ongoing;
 
+    std::map<std::string, std::string> ongoing{};
     auto func = [](const entrypoint_state& state,
                    const std::string& bucket_name,
-                   std::vector<upload_and_key>& ongoing) {
-        auto multipart_map =
+                   std::map<std::string, std::string>& ongoing) {
+        ongoing =
             state.server_state.m_uploads.list_multipart_uploads(bucket_name);
 
-        if (multipart_map.empty()) {
+        if (ongoing.empty()) {
             throw rest::http::model::custom_error_response_exception(
                 boost::beast::http::status::not_found,
                 rest::http::model::error::no_mp_uploads);
-        } else {
-            for (auto& pair : multipart_map) {
-                ongoing.emplace_back(std::move(pair.first),
-                                     std::move(pair.second));
-            }
         }
     };
 
