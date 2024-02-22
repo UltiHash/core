@@ -15,8 +15,8 @@ bool list_buckets::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-http_response list_buckets::get_response(
-    const std::vector<std::string>& buckets_found) noexcept {
+static http_response
+get_response(const std::vector<std::string>& buckets_found) noexcept {
     http_response res;
 
     std::string buckets_xml;
@@ -45,8 +45,8 @@ coro<http_response> list_buckets::handle(const http_request& req) const {
         const auto h = co_await m.get().recv_header();
         auto list_buckets_res =
             co_await m.get().recv_directory_list_entities_message(h);
-        for (const auto& bucket : list_buckets_res.entities) {
-            buckets_found.push_back(bucket);
+        for (auto& bucket : list_buckets_res.entities) {
+            buckets_found.emplace_back(std::move(bucket));
         }
     };
 

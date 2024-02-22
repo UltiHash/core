@@ -2,11 +2,11 @@
 #ifndef UH_CLUSTER_LIST_OBJECTSV2_H
 #define UH_CLUSTER_LIST_OBJECTSV2_H
 
+#include "common/utils/strings.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/utils/string/string_utils.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
@@ -18,14 +18,12 @@ public:
         : m_state(state) {}
 
     static bool can_handle(const http_request& req) {
-        if (req.get_method() == method::get) {
-            if (const auto& uri = req.get_uri();
-                uri.query_string_exists("list-type") &&
-                uri.get_query_string_value("list-type") == "2") {
-                return true;
-            }
-        }
-        return false;
+        const auto& uri = req.get_uri();
+
+        return req.get_method() == method::get &&
+               !uri.get_bucket_id().empty() && uri.get_object_key().empty() &&
+               uri.query_string_exists("list-type") &&
+               uri.get_query_string_value("list-type") == "2";
     }
 
     coro<http_response> handle(const http_request& req) {
@@ -33,10 +31,6 @@ public:
             const auto& req_uri = req.get_uri();
             directory_message dir_req;
             dir_req.bucket_id = req_uri.get_bucket_id();
-
-            if (dir_req.bucket_id.empty()) {
-                throw error_exception(error::invalid_bucket_name);
-            }
 
             if (req_uri.query_string_exists("prefix")) {
                 if (const auto& prefix =
@@ -112,7 +106,7 @@ public:
             if (req_uri.query_string_exists(key)) {
                 if (auto& val = req_uri.get_query_string_value(key);
                     !val.empty())
-                    return std::make_optional<std::string>(std::move(val));
+                    return std::make_optional<std::string>(val);
             }
             return std::nullopt;
         };
@@ -132,7 +126,7 @@ public:
         bool fetch_owner_set = false;
         if (const auto fetch_owner = get_if_exists("fetch-owner");
             fetch_owner.has_value()) {
-            if (rest::utils::string_utils::is_bool(*fetch_owner))
+            if (to_bool(*fetch_owner))
                 fetch_owner_set = true;
         }
 
@@ -154,18 +148,14 @@ public:
                 }
                 if (delimiter_index != std::string::npos) {
                     auto delimeter_prefix = c.substr(0, delimiter_index + 1);
-                    common_prefixes.emplace(
-                        (encoding_type ? rest::utils::string_utils::URL_encode(
-                                             delimeter_prefix)
-                                       : delimeter_prefix));
+                    common_prefixes.emplace((encoding_type
+                                                 ? url_encode(delimeter_prefix)
+                                                 : delimeter_prefix));
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
                         "<Key>" +
-                        (encoding_type
-                             ? rest::utils::string_utils::URL_encode(c)
-                             : c) +
-                        "</Key>\n" +
+                        (encoding_type ? url_encode(c) : c) + "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
                         "</Contents>\n";
@@ -189,9 +179,7 @@ public:
         if (delimiter) {
             delimiter_xml_string =
                 "<Delimiter>" +
-                (encoding_type
-                     ? rest::utils::string_utils::URL_encode(*delimiter)
-                     : *delimiter) +
+                (encoding_type ? url_encode(*delimiter) : *delimiter) +
                 "</Delimiter>\n";
         }
 
@@ -231,9 +219,7 @@ public:
         std::string prefix_xml_string;
         if (prefix) {
             prefix_xml_string =
-                "<Prefix>" +
-                (encoding_type ? rest::utils::string_utils::URL_encode(*prefix)
-                               : *prefix) +
+                "<Prefix>" + (encoding_type ? url_encode(*prefix) : *prefix) +
                 "</Prefix>\n";
         }
 

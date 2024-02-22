@@ -11,6 +11,9 @@ std::string md5::toHex(unsigned char value) {
 }
 
 std::string md5::calculateMD5(const std::string& input) {
+    if (input.empty())
+        return "d41d8cd98f00b204e9800998ecf8427e";
+
     EVP_MD_CTX* pEvpContext;
     pEvpContext = EVP_MD_CTX_create();
     EVP_MD_CTX_init(pEvpContext);

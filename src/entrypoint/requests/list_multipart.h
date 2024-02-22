@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_HTTP_LIST_BUCKETS_H
-#define ENTRYPOINT_HTTP_LIST_BUCKETS_H
+#ifndef ENTRYPOINT_HTTP_LIST_MULTIPART_H
+#define ENTRYPOINT_HTTP_LIST_MULTIPART_H
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
@@ -7,9 +7,9 @@
 
 namespace uh::cluster {
 
-class list_buckets {
+class list_multipart {
 public:
-    explicit list_buckets(const entrypoint_state& entry_state);
+    explicit list_multipart(const entrypoint_state& entry_state);
 
     static bool can_handle(const http_request& req);
 
