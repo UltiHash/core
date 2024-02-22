@@ -1,8 +1,8 @@
 #ifndef CORE_SERVER_H
 #define CORE_SERVER_H
 
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
-#include "common/utils/log.h"
 #include "common/utils/protocol_handler.h"
 #include "messenger.h"
 #include <algorithm>

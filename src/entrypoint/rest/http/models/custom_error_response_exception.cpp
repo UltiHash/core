@@ -1,6 +1,6 @@
 #include "custom_error_response_exception.h"
 
-#include "common/utils/log.h"
+#include "common/telemetry/log.h"
 #include "iostream"
 #include <utility>
 

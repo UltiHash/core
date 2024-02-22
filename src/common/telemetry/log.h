@@ -4,8 +4,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wrestrict"
 
-#include <boost/log/sources/severity_logger.hpp>
-#include <boost/log/trivial.hpp>
+#include "common/telemetry/otel_log_sink.h"
 
 #include <filesystem>
 #include <list>
@@ -33,7 +32,7 @@ namespace uh::log {
 
 // ---------------------------------------------------------------------
 
-enum class sink_type { file, clog, cerr, cout };
+enum class sink_type { file, clog, cerr, cout, otel };
 
 // ---------------------------------------------------------------------
 
@@ -52,6 +51,7 @@ std::string to_string(boost::log::trivial::severity_level level);
 struct sink_config {
     sink_type type;
     std::optional<std::filesystem::path> filename;
+    std::string otel_endpoint;
 
     boost::log::trivial::severity_level level = boost::log::trivial::info;
 
