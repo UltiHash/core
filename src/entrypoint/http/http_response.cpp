@@ -26,6 +26,7 @@ void http_response::set_space_savings(double space_savings) {
 
 const http::response<http::string_body>&
 http_response::get_prepared_response() {
+    m_res.set(http::field::server, "UltiHash");
     m_res.prepare_payload();
     return m_res;
 }

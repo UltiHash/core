@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/types/common_types.h"
-#include "entrypoint/rest/utils/hashing/hash.h"
+#include "entrypoint/utils/md5.h"
 #include <chrono>
 #include <cstdint>
 #include <map>
