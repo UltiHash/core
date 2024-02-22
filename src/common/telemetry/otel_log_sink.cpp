@@ -9,6 +9,34 @@
 
 #include <boost/version.hpp>
 
+const std::string boost_version() {
+    static const std::string library_version =
+        std::to_string(BOOST_VERSION / 100000) + "." +
+        std::to_string(BOOST_VERSION / 100 % 1000) + "." +
+        std::to_string(BOOST_VERSION % 100);
+    return library_version;
+}
+
+opentelemetry::logs::Severity
+convert_severity(boost::log::trivial::severity_level level) noexcept {
+    switch (level) {
+    case boost::log::trivial::severity_level::fatal:
+        return opentelemetry::logs::Severity::kFatal;
+    case boost::log::trivial::severity_level::error:
+        return opentelemetry::logs::Severity::kError;
+    case boost::log::trivial::severity_level::warning:
+        return opentelemetry::logs::Severity::kWarn;
+    case boost::log::trivial::severity_level::info:
+        return opentelemetry::logs::Severity::kInfo;
+    case boost::log::trivial::severity_level::debug:
+        return opentelemetry::logs::Severity::kDebug;
+    case boost::log::trivial::severity_level::trace:
+        return opentelemetry::logs::Severity::kTrace;
+    default:
+        return opentelemetry::logs::Severity::kInvalid;
+    }
+}
+
 namespace uh::log {
 
 constexpr boost::posix_time::ptime epoch_time(boost::gregorian::date(1970, 1,
@@ -41,34 +69,9 @@ void otel_log_sink::consume(const boost::log::record_view& record) {
         log_record->SetTimestamp(value);
 
         logger->EmitLogRecord(std::move(log_record));
-    }
-}
-
-const std::string otel_log_sink::boost_version() {
-    static const std::string library_version =
-        std::to_string(BOOST_VERSION / 100000) + "." +
-        std::to_string(BOOST_VERSION / 100 % 1000) + "." +
-        std::to_string(BOOST_VERSION % 100);
-    return library_version;
-}
-
-opentelemetry::logs::Severity otel_log_sink::convert_severity(
-    boost::log::trivial::severity_level level) noexcept {
-    switch (level) {
-    case boost::log::trivial::severity_level::fatal:
-        return opentelemetry::logs::Severity::kFatal;
-    case boost::log::trivial::severity_level::error:
-        return opentelemetry::logs::Severity::kError;
-    case boost::log::trivial::severity_level::warning:
-        return opentelemetry::logs::Severity::kWarn;
-    case boost::log::trivial::severity_level::info:
-        return opentelemetry::logs::Severity::kInfo;
-    case boost::log::trivial::severity_level::debug:
-        return opentelemetry::logs::Severity::kDebug;
-    case boost::log::trivial::severity_level::trace:
-        return opentelemetry::logs::Severity::kTrace;
-    default:
-        return opentelemetry::logs::Severity::kInvalid;
+    } else {
+        std::cerr << "Failed emit log record to OpenTelemetry endpoint."
+                  << std::endl;
     }
 }
 

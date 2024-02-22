@@ -27,8 +27,6 @@ namespace otel_otlp = opentelemetry::exporter::otlp;
 namespace otel_logs_sdk = opentelemetry::sdk::logs;
 namespace otel_logs = opentelemetry::logs;
 
-using namespace boost::log;
-
 namespace uh::log {
 
 namespace {
@@ -67,22 +65,42 @@ boost::shared_ptr<std::ostream> open_stream(const sink_config& cfg) {
 
 // ---------------------------------------------------------------------
 
-boost::shared_ptr<sinks::sink> make_sink(const sink_config& cfg) {
-    auto sink = boost::make_shared<
-        sinks::synchronous_sink<sinks::text_ostream_backend>>();
+void initialize_otel_log_exporter(const sink_config& cfg) {
+    opentelemetry::exporter::otlp::OtlpGrpcLogRecordExporterOptions log_opts;
+    log_opts.endpoint = cfg.otel_endpoint;
+    auto exporter =
+        otel_otlp::OtlpGrpcLogRecordExporterFactory::Create(log_opts);
+    auto processor = otel_logs_sdk::SimpleLogRecordProcessorFactory::Create(
+        std::move(exporter));
+    std::shared_ptr<otel_logs::LoggerProvider> provider(
+        otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor)));
 
-    sink->locked_backend()->add_stream(open_stream(cfg));
-    sink->set_filter(logging::trivial::severity >= cfg.level);
+    opentelemetry::logs::Provider::SetLoggerProvider(provider);
+}
 
-    sink->set_formatter(expr::stream
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                               "TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
-                        << "\t" << logging::trivial::severity << "\t"
-                        << expr::smessage);
+boost::shared_ptr<logging::sinks::sink> make_sink(const sink_config& cfg) {
+    if (cfg.type == sink_type::otel && !cfg.otel_endpoint.empty()) {
+        initialize_otel_log_exporter(cfg);
+        return boost::make_shared<
+            logging::sinks::synchronous_sink<otel_log_sink>>(
+            boost::make_shared<otel_log_sink>());
+    } else {
+        auto sink = boost::make_shared<logging::sinks::synchronous_sink<
+            logging::sinks::text_ostream_backend>>();
 
-    sink->locked_backend()->auto_flush();
+        sink->locked_backend()->add_stream(open_stream(cfg));
+        sink->set_filter(logging::trivial::severity >= cfg.level);
 
-    return sink;
+        sink->set_formatter(expr::stream
+                            << expr::format_date_time<boost::posix_time::ptime>(
+                                   "TimeStamp", "%Y-%m-%d %H:%M:%S.%f")
+                            << "\t" << logging::trivial::severity << "\t"
+                            << expr::smessage);
+
+        sink->locked_backend()->auto_flush();
+
+        return sink;
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -117,12 +135,12 @@ std::string to_string(sink_type type) {
 
 // ---------------------------------------------------------------------
 
-trivial::severity_level severity_from_string(const std::string& s) {
-    RETURN_IF_MATCH(s, "DEBUG", trivial::debug);
-    RETURN_IF_MATCH(s, "INFO", trivial::info);
-    RETURN_IF_MATCH(s, "WARN", trivial::warning);
-    RETURN_IF_MATCH(s, "ERROR", trivial::error);
-    RETURN_IF_MATCH(s, "FATAL", trivial::fatal);
+logging::trivial::severity_level severity_from_string(const std::string& s) {
+    RETURN_IF_MATCH(s, "DEBUG", logging::trivial::debug);
+    RETURN_IF_MATCH(s, "INFO", logging::trivial::info);
+    RETURN_IF_MATCH(s, "WARN", logging::trivial::warning);
+    RETURN_IF_MATCH(s, "ERROR", logging::trivial::error);
+    RETURN_IF_MATCH(s, "FATAL", logging::trivial::fatal);
 
     throw std::runtime_error("unsupported log level type: " + s);
 }
@@ -131,17 +149,17 @@ trivial::severity_level severity_from_string(const std::string& s) {
 
 std::string to_string(boost::log::trivial::severity_level level) {
     switch (level) {
-    case trivial::debug:
+    case logging::trivial::debug:
         return "DEBUG";
-    case trivial::info:
+    case logging::trivial::info:
         return "INFO";
-    case trivial::warning:
+    case logging::trivial::warning:
         return "WARN";
-    case trivial::error:
+    case logging::trivial::error:
         return "ERROR";
-    case trivial::fatal:
+    case logging::trivial::fatal:
         return "FATAL";
-    case trivial::trace:
+    case logging::trivial::trace:
         return "TRIVIAL";
     }
 
@@ -160,34 +178,11 @@ std::ostream& operator<<(std::ostream& out, const sink_config& c) {
 
 // ---------------------------------------------------------------------
 
-boost::shared_ptr<sinks::sink> make_otel_sink(const sink_config& cfg) {
-    opentelemetry::exporter::otlp::OtlpGrpcLogRecordExporterOptions log_opts;
-    log_opts.endpoint = cfg.otel_endpoint;
-    auto exporter =
-        otel_otlp::OtlpGrpcLogRecordExporterFactory::Create(log_opts);
-    auto processor = otel_logs_sdk::SimpleLogRecordProcessorFactory::Create(
-        std::move(exporter));
-    std::shared_ptr<otel_logs::LoggerProvider> provider(
-        otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor)));
-
-    opentelemetry::logs::Provider::SetLoggerProvider(provider);
-
-    auto backend = boost::make_shared<otel_log_sink>();
-    auto otel_sink =
-        boost::make_shared<boost::log::sinks::synchronous_sink<otel_log_sink>>(
-            backend);
-    return otel_sink;
-}
-
 void init(const config& cfg) {
     logging::add_common_attributes();
 
     for (const auto& sink : cfg.sinks) {
-        if (sink.type == sink_type::otel && !sink.otel_endpoint.empty()) {
-            boost::log::core::get()->add_sink(make_otel_sink(sink));
-        } else {
-            logging::core::get()->add_sink(make_sink(sink));
-        }
+        logging::core::get()->add_sink(make_sink(sink));
     }
 }
 
