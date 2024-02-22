@@ -1,9 +1,9 @@
 #ifndef UH_CLUSTER_CONFIG_REGISTRY_H
 #define UH_CLUSTER_CONFIG_REGISTRY_H
 
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
-#include "common/utils/log.h"
 #include "common/utils/time_utils.h"
 #include "etcd/SyncClient.hpp"
 #include "namespace.h"

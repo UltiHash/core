@@ -1,7 +1,7 @@
 #include "common/license/license.h"
+#include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
-#include "common/utils/log.h"
 #include "common/utils/signal_handler.h"
 #include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
@@ -45,6 +45,26 @@ void print_vcsid() {
               << " " << __TIME__ << ")\n"
               << PROJECT_REPOSITORY << " (" << PROJECT_VCSID << ")\n";
     exit(0);
+}
+
+log::config
+make_log_config(const service_config& cfg,
+                const boost::log::trivial::severity_level& log_level) {
+    log::config lc;
+
+    if (cfg.telemetry_url.empty()) {
+        lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
+                                         .level = log_level},
+                        log::sink_config{.type = log::sink_type::file,
+                                         .filename = "log.log",
+                                         .level = log_level}}};
+    } else {
+        lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
+                                         .level = log_level},
+                        log::sink_config{.type = log::sink_type::otel,
+                                         .otel_endpoint = cfg.telemetry_url}}};
+    }
+    return lc;
 }
 
 int main(int argc, char** argv) {
@@ -97,14 +117,7 @@ int main(int argc, char** argv) {
 
         CLI11_PARSE(app, argc, argv);
 
-        uh::log::config lc{
-            .sinks = {uh::log::sink_config{.type = uh::log::sink_type::cout,
-                                           .level = log_level},
-                      uh::log::sink_config{.type = uh::log::sink_type::file,
-                                           .filename = "log.log",
-                                           .level = log_level}}};
-
-        log::init(lc);
+        log::init(make_log_config(cfg, log_level));
 
         LOG_INFO() << "license loaded for " << cfg.license.customer
                    << " -- storage size: " << cfg.license.max_data_store_size

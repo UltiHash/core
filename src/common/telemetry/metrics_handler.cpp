@@ -1,6 +1,6 @@
 #include "metrics_handler.h"
 
-#include "common/utils/log.h"
+#include "common/telemetry/log.h"
 #include "opentelemetry/exporters/ostream/metric_exporter_factory.h"
 
 namespace metric_sdk = opentelemetry::sdk::metrics;
