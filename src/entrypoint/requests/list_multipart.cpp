@@ -4,14 +4,7 @@
 
 namespace uh::cluster {
 
-namespace {
-
-struct upload_and_key {
-    std::string upload_id;
-    std::string object_name;
-};
-
-http_response
+static http_response
 get_response(const std::string& bucket_name,
              const std::map<std::string, std::string>& ongoing) noexcept {
 
@@ -36,7 +29,6 @@ get_response(const std::string& bucket_name,
 
     return res;
 }
-} // namespace
 
 list_multipart::list_multipart(const entrypoint_state& entry_state)
     : m_state(entry_state) {}
