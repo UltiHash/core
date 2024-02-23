@@ -26,56 +26,44 @@ enum metric_type {
     l2_cache_miss,
     dedupe_set_frag_count,
     dedupe_set_frag_size,
-
     storage_read_fragment_req,
     storage_read_address_req,
     storage_write_req,
     storage_sync_req,
     storage_remove_fragment_req,
     storage_used_req,
-
     deduplicator_req,
-
     directory_bucket_list_req,
     directory_bucket_put_req,
     directory_bucket_delete_req,
     directory_bucket_exists_req,
-
     directory_object_list_req,
     directory_object_put_req,
     directory_object_get_req,
     directory_object_delete_req,
-
     success,
     failure
 };
 
+using otel_counter_type =
+    std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>;
+
+otel_counter_type create_counter(metric_type type);
+void measure_message_type(message_type type);
+void initialize_metrics_exporter(const std::string& endpoint);
+
 template <metric_type type> class metric {
-    using counter_type =
-        std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>;
 
-    static counter_type create_counter() {
-        auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
-        const auto name = std::string(magic_enum::enum_name(type));
-        auto counter = provider->GetMeter(name)->CreateUInt64Counter(name);
-        counter->Add(0);
-        return counter;
-    }
-
-    inline static counter_type& get_counter() {
-        static counter_type counter = create_counter();
+    inline static otel_counter_type& get_counter() {
+        static otel_counter_type counter = create_counter(type);
         return counter;
     }
 
 public:
     metric() = delete;
 
-    static void increase(uint64_t val) { // get_counter()->Add(val);
-    }
+    static void increase(uint64_t val) { get_counter()->Add(val); }
 };
-
-void measure_message_type(message_type type);
-void initialize_metrics_exporter(const std::string& endpoint);
 
 } // namespace uh::cluster
 

@@ -17,6 +17,11 @@ constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
     .export_timeout_millis = std::chrono::milliseconds(500)};
 
 void initialize_metrics_exporter(const std::string& endpoint) {
+
+    if (endpoint.empty()) {
+        return;
+    }
+
     LOG_INFO() << "Getting telemetry endpoint";
 
     std::unique_ptr<metric_sdk::MetricReader> reader;
@@ -62,6 +67,14 @@ void measure_message_type(message_type type) {
             metric<cmt>::increase(1);
         },
         mt);
+}
+
+otel_counter_type create_counter(metric_type type) {
+    const auto name = std::string(magic_enum::enum_name(type));
+    auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
+    auto counter = provider->GetMeter(name)->CreateUInt64Counter(name);
+    counter->Add(0);
+    return counter;
 }
 
 } // namespace uh::cluster
