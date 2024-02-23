@@ -46,8 +46,8 @@ enum metric_type {
     directory_object_get_req,
     directory_object_delete_req,
 
-    success = 15,
-    failure = 16
+    success,
+    failure
 };
 
 template <metric_type type> class metric {
@@ -70,7 +70,8 @@ template <metric_type type> class metric {
 public:
     metric() = delete;
 
-    static void increase(uint64_t val) { get_counter()->Add(val); }
+    static void increase(uint64_t val) { // get_counter()->Add(val);
+    }
 };
 
 void measure_message_type(message_type type);
