@@ -4,6 +4,6 @@
     echo "UH_TEST_BASE environment variable is not set"
 }
 
-. $UH_TEST_BASE/config
+. $UH_TEST_BASE/activate
 
 docker compose --project-directory $UH_TEST_BASE up --detach

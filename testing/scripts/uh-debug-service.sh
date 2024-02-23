@@ -40,7 +40,7 @@ done
     exit 1
 }
 
-. $UH_TEST_BASE/config
+. $UH_TEST_BASE/activate
 
 nohup docker compose --project-directory $UH_TEST_BASE exec --user root --interactive --tty $service gdbserver :$UH_DEBUG_CONTAINER_PORT --attach 1 &> gdbserver-$service.log &
 echo "$!" > gdbserver-$service.pid

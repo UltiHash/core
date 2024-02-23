@@ -23,3 +23,5 @@ export UH_DEBUG_PORT_ENTRYPOINT=13294
 
 export UH_LICENSE=$(cat "$UH_CORE_ROOT/data/licenses/UltiHash-Test-1GB.lic")
 export PATH=$PATH:$UH_TEST_BASE/scripts
+
+export PS1='\e[32m\t (\e[0m\e[1;34mUltiHash Cluster Test\e[32m) -- \e[1;33m$(git branch --show-current || echo "no branch")\e[32m --\e[0m\n\u@\h:\W> '

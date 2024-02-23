@@ -4,7 +4,7 @@
     echo "UH_TEST_BASE environment variable is not set"
 }
 
-. $UH_TEST_BASE/config
+. $UH_TEST_BASE/activate
 
 if ! docker pull $UH_IMAGE_BUILD_BASE; then
     echo "pulling build-base image failed" 1>&2

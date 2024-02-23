@@ -3,14 +3,10 @@
 UH_TEST_BASE=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export UH_TEST_BASE
 
-export PATH=$UH_TEST_BASE/scripts
+. $UH_TEST_BASE/activate
 
 venv_dir="$(pwd)/.venv"
 requirements_file="$(pwd)/python-requirements.txt"
-AWS_ACCESS_KEY_ID="aws_access_key_id"
-AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
-SAMPLE_CEPH_S3TESTS_CONF="$(pwd)/ceph-s3tests.conf.in"
-CEPH_CONF="$(pwd)/ceph_s3_test.conf"
 
 cluster_url=""
 run_ultihash=1
@@ -58,11 +54,6 @@ while [ -n "$1" ]; do
     shift
 done
 
-if [ "$(basename $(pwd))" != "testing" ]; then
-    echo "Script is not executed from the testing directory, exiting..."
-    exit 1
-fi
-
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     echo "Creating virtual environment ..."
 
@@ -89,12 +80,12 @@ TERM=vt100 pstree -H $BASHPID
 . "$venv_dir/bin/activate"
 
 if [ -z "$cluster_url" ]; then
-    uh-build-container-sh
+    uh-build-container.sh
 
     ./test_services.sh
     uh-container-start.sh
-    #trap "uh-container-stop.sh" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
 
+    trap "uh-container-stop.sh" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
 

@@ -42,7 +42,7 @@ done
     echo "UH_TEST_BASE environment variable is not set"
 }
 
-. $UH_TEST_BASE/config
+. $UH_TEST_BASE/activate
 
 echo "*** running UltiHash test suite ..."
 

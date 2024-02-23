@@ -42,7 +42,7 @@ done
     echo "UH_TEST_BASE environment variable is not set"
 }
 
-. $UH_TEST_BASE/config
+. $UH_TEST_BASE/activate
 
 cluster_host=$(echo "$cluster_url" | sed -e 's/http:\/\///' -e 's/:[0-9]\+$//')
 cluster_port=$(echo "$cluster_url" | grep -oE '[0-9]+$')
