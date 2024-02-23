@@ -24,6 +24,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        ports:
+          - "$UH_DEBUG_PORT_DEDUPE:$UH_DEBUG_CONTAINER_PORT"
         cap_add:
           - SYS_PTRACE
 
@@ -42,6 +44,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        ports:
+          - "$UH_DEBUG_PORT_STORAGE:$UH_DEBUG_CONTAINER_PORT"
         cap_add:
           - SYS_PTRACE
 
@@ -60,6 +64,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        ports:
+          - "$UH_DEBUG_PORT_DIRECTORY:$UH_DEBUG_CONTAINER_PORT"
         cap_add:
           - SYS_PTRACE
 
@@ -86,6 +92,7 @@ services:
                 condition: service_healthy
         ports:
             - "8080:8080"
+            - "$UH_DEBUG_PORT_ENTRYPOINT:$UH_DEBUG_CONTAINER_PORT"
         cap_add:
           - SYS_PTRACE
 

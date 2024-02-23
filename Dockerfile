@@ -18,13 +18,19 @@ RUN etcd & \
 
 FROM ubuntu:22.04 as deploy
 
+ARG DebugTools=False
+
 LABEL org.opencontainers.image.description="This container image contains a nightly snapshot of the UltiHash object storage cluster."
 
 # Install curl to test if dependencies are already available (temporary workaround)
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-    && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1 lsof
+   && apt-get upgrade --yes \
+   && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1 lsof \
+   && if [ "$DebugTools" = "True" ]; then \
+        apt-get update \
+        && apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
+    fi
 
 COPY --from=build /core/build/uh-cluster /usr/local/bin
 
