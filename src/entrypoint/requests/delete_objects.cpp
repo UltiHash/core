@@ -14,24 +14,19 @@ bool delete_objects::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.query_string_exists("delete");
 }
 
-pugi::xpath_node_set delete_objects::validate(const http_request& req) {
+auto delete_objects::validate(const http_request& req) {
     pugi::xpath_node_set object_nodes_set;
 
-    rest::utils::parser::xml_parser parsed_xml;
-    try {
-        if (!parsed_xml.parse(req.get_body()))
-            throw std::runtime_error("");
+    boost_xml_parser xml_parser;
+    bool parsed = xml_parser.parse(req.get_body());
+    auto object_references = xml_parser.get_nodes("Delete.Object");
 
-        object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
-        if (object_nodes_set.empty())
-            throw std::runtime_error("");
-    } catch (const std::exception& e) {
+    if (!parsed || object_references.empty())
         throw rest::http::model::custom_error_response_exception(
             boost::beast::http::status::bad_request,
             rest::http::model::error::type::malformed_xml);
-    }
 
-    return object_nodes_set;
+    return object_references;
 }
 
 namespace {
@@ -73,17 +68,23 @@ http_response get_response(const std::vector<std::string>& success,
 
 coro<http_response> delete_objects::handle(http_request& req) const {
     co_await req.read_body();
-    auto object_nodes_set = validate(req);
+    auto object_references = validate(req);
 
     auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& objectNode : object_nodes_set) {
-        auto key = objectNode.node().child("Key").child_value();
+    for (const auto& object : object_references) {
+        auto key = object.get().get_optional<std::string>("Key");
+        if (!key) {
+            throw rest::http::model::custom_error_response_exception(
+                boost::beast::http::status::bad_request,
+                rest::http::model::error::type::malformed_xml);
+        }
 
         try {
 
-            auto func2 = [](const char* key, const std::string& bucket_id,
+            auto func2 = [](const std::string& key,
+                            const std::string& bucket_id,
                             std::vector<std::string>& success,
                             client::acquired_messenger m) -> coro<void> {
                 directory_message dir_req;
@@ -102,13 +103,13 @@ coro<http_response> delete_objects::handle(http_request& req) const {
                 io_thread_acquire_messenger_and_post_in_io_threads(
                     m_state.workers, m_state.ioc,
                     m_state.directory_services.get(),
-                    std::bind_front(func2, key, std::cref(bucket_id),
+                    std::bind_front(func2, *key, std::cref(bucket_id),
                                     std::ref(success)));
 
         } catch (const error_exception& e) {
             LOG_ERROR() << "Failed to delete the bucket " << bucket_id
                         << " to the directory: " << e;
-            failure.emplace_back(e.error().code(), key);
+            failure.emplace_back(e.error().code(), *key);
         }
     }
 

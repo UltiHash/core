@@ -33,19 +33,16 @@ void complete_multipart::validate(const http_request& req) const {
 
     boost_xml_parser xml_parser;
     bool parsed = xml_parser.parse(req.get_body());
-    auto part_nodes_references =
-        xml_parser.get_nodes("CompleteMultipartUpload.Part");
+    auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
-    if (!parsed || part_nodes_references.empty())
+    if (!parsed || part_nodes.empty())
         throw rest::http::model::custom_error_response_exception(
             http::status::bad_request,
             rest::http::model::error::type::malformed_xml);
 
-    for (uint16_t part_counter = 1;
-         const auto& node_reference : part_nodes_references) {
-        auto part_num =
-            node_reference.get().get_optional<std::size_t>("PartNumber");
-        auto etag = node_reference.get().get_optional<std::string>("ETag");
+    for (uint16_t part_counter = 1; const auto& part : part_nodes) {
+        auto part_num = part.get().get_optional<std::size_t>("PartNumber");
+        auto etag = part.get().get_optional<std::string>("ETag");
 
         if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
             throw rest::http::model::custom_error_response_exception(
