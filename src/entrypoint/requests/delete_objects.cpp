@@ -16,7 +16,7 @@ bool delete_objects::can_handle(const http_request& req) {
 }
 
 auto delete_objects::validate(const http_request& req) {
-    boost_xml_parser xml_parser;
+    xml_parser xml_parser;
     bool parsed = xml_parser.parse(req.get_body());
     auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
