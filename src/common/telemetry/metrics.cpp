@@ -54,7 +54,7 @@ constexpr metric_type convert_message_type(message_type mtype) {
     return *mt;
 }
 
-constexpr void measure_message_type(message_type type) {
+void measure_message_type(message_type type) {
     const auto mt = convert_message_type(type);
     magic_enum::enum_switch(
         [](auto mt) {

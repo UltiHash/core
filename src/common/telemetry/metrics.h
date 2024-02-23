@@ -45,7 +45,7 @@ enum metric_type {
     failure
 };
 
-constexpr void measure_message_type(message_type type);
+void measure_message_type(message_type type);
 void initialize_metrics_exporter(const std::string& endpoint);
 
 template <metric_type type> class metric {
