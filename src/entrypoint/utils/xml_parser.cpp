@@ -5,7 +5,8 @@ bool boost_xml_parser::parse(const std::string& body) {
 
     bool flag;
     try {
-        pt::read_xml(body, m_tree);
+        std::istringstream string_stream(body);
+        pt::read_xml(string_stream, m_tree);
         flag = true;
     } catch (const std::exception& e) {
         flag = false;
