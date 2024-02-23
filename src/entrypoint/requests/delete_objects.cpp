@@ -19,14 +19,14 @@ auto delete_objects::validate(const http_request& req) {
 
     boost_xml_parser xml_parser;
     bool parsed = xml_parser.parse(req.get_body());
-    auto object_references = xml_parser.get_nodes("Delete.Object");
+    auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
-    if (!parsed || object_references.empty())
+    if (!parsed || object_nodes.empty())
         throw rest::http::model::custom_error_response_exception(
             boost::beast::http::status::bad_request,
             rest::http::model::error::type::malformed_xml);
 
-    return object_references;
+    return object_nodes;
 }
 
 namespace {
@@ -68,12 +68,12 @@ http_response get_response(const std::vector<std::string>& success,
 
 coro<http_response> delete_objects::handle(http_request& req) const {
     co_await req.read_body();
-    auto object_references = validate(req);
+    auto object_nodes = validate(req);
 
     auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& object : object_references) {
+    for (const auto& object : object_nodes) {
         auto key = object.get().get_optional<std::string>("Key");
         if (!key) {
             throw rest::http::model::custom_error_response_exception(
