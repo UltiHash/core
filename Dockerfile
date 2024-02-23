@@ -1,12 +1,14 @@
 FROM ghcr.io/ultihash/build-base:latest as build
 
+ARG BuildType=Release
+
 COPY . /core
 WORKDIR /core
 
 # Configure and compile
 RUN mkdir build \
-    && cmake -B build -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build -j $(nproc) --config Release
+    && cmake -B build -DCMAKE_BUILD_TYPE=${BuildType} \
+    && cmake --build build -j $(nproc) --config ${BuildType}
 
 # Execute tests
 WORKDIR /core/build
