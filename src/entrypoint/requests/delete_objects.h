@@ -19,7 +19,7 @@ public:
 private:
     const entrypoint_state& m_state;
 
-    static pugi::xpath_node_set validate(const http_request& req);
+    static auto validate(const http_request& req);
 };
 
 } // namespace uh::cluster
