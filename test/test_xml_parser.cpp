@@ -11,28 +11,28 @@ using namespace uh::cluster;
 
 namespace {
 
-const std::string TEST_STRING_1 = "test_string_1";
+const std::string TEST_KEY_1 = "test_string_1";
 const std::string TEST_VERSION_1 = "3";
 
-const std::string TEST_STRING_2 = "test_string_2";
-const std::string TEST_VERSION_2_ERROR = "3.5";
+const std::string TEST_KEY_2 = "test_string_2";
+const std::string ERRONEOUS_TEST_KEY_2 = "3.5";
 
 const std::string PARSABLE_XML_STRING = "<Delete>\n"
                                         "   <Object>\n"
                                         "       <Key>" +
-                                        TEST_STRING_1 +
-                                        "</Key>\n"
+                                        TEST_KEY_1 +
+                                        "       </Key>\n"
                                         "       <VersionId>" +
                                         TEST_VERSION_1 +
-                                        "</VersionId>\n"
+                                        "       </VersionId>\n"
                                         "   </Object>\n"
                                         "   <Object>\n"
                                         "       <Key>" +
-                                        TEST_STRING_2 +
+                                        TEST_KEY_2 +
                                         "</Key>\n"
                                         "       <VersionId>" +
-                                        TEST_VERSION_2_ERROR +
-                                        "</VersionId>\n"
+                                        ERRONEOUS_TEST_KEY_2 +
+                                        "       </VersionId>\n"
                                         "   </Object>\n"
                                         "   <Quiet>boolean</Quiet>\n"
                                         "</Delete>";
@@ -72,10 +72,10 @@ BOOST_AUTO_TEST_CASE(test_parsing) {
         BOOST_CHECK(object_nodes.size() == 2);
 
         auto key_1 = object_nodes[0].get().get<std::string>("Key");
-        BOOST_CHECK(key_1 == TEST_STRING_1);
+        BOOST_CHECK(key_1 == TEST_KEY_1);
 
         auto key_2 = object_nodes[1].get().get<std::string>("Key");
-        BOOST_CHECK(key_2 == TEST_STRING_2);
+        BOOST_CHECK(key_2 == TEST_KEY_2);
 
         auto version_1 = object_nodes[0].get().get<std::size_t>("VersionId");
         BOOST_CHECK(version_1 == std::stoul(TEST_VERSION_1));
