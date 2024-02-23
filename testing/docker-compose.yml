@@ -24,6 +24,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        cap_add:
+          - SYS_PTRACE
 
     storage:
         image: uh-cluster:testing
@@ -40,6 +42,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        cap_add:
+          - SYS_PTRACE
 
     directory:
         image: uh-cluster:testing
@@ -56,6 +60,8 @@ services:
         depends_on:
             etcd:
                 condition: service_healthy
+        cap_add:
+          - SYS_PTRACE
 
     entrypoint:
         image: uh-cluster:testing
@@ -64,6 +70,11 @@ services:
         environment:
             - UH_LICENSE=${UH_LICENSE}
         entrypoint: [ "uh-cluster", "--registry", "etcd:2379", "entrypoint" ]
+        healthcheck:
+            test: [ "CMD", "lsof", "-i", "TCP:8080" ]
+            timeout: 1s
+            interval: 5s
+            retries: 5
         depends_on:
             etcd:
                 condition: service_healthy
@@ -75,3 +86,6 @@ services:
                 condition: service_healthy
         ports:
             - "8080:8080"
+        cap_add:
+          - SYS_PTRACE
+
