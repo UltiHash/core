@@ -59,6 +59,9 @@ BOOST_AUTO_TEST_CASE(test_parsing) {
     {
         bool parsed = xml_parser.parse(UNPARSABLE_XML_STRING);
         BOOST_CHECK(parsed == false);
+
+        auto nodes = xml_parser.get_nodes("Delete.Object");
+        BOOST_CHECK(nodes.empty() == true);
     }
 
     {
