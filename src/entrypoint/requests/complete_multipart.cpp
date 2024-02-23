@@ -1,7 +1,7 @@
 #include "complete_multipart.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/utils/parser/xml_parser.h"
+#include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
 

@@ -1,6 +1,7 @@
 #include "delete_objects.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
 

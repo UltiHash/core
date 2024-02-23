@@ -3,7 +3,6 @@
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/rest/utils/parser/xml_parser.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
