@@ -1,0 +1,25 @@
+export UH_TEST_BASE=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+export UH_CORE_ROOT=$UH_TEST_BASE/..
+
+export UH_AWS_ACCESS_KEY_ID="aws_access_key_id"
+export UH_AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
+
+export UH_TEST_SUITE_ULTIHASH="$UH_TEST_BASE/tests"
+export UH_TEST_SUITE_CEPH="$UH_TEST_BASE/s3-tests"
+
+export UH_SAMPLE_CEPH_S3TESTS_CONF="$UH_TEST_BASE/ceph-s3tests.conf.in"
+export UH_CEPH_CONF="$UH_TEST_BASE/ceph_s3_test.conf"
+
+export UH_IMAGE_BUILD_BASE="ghcr.io/ultihash/build-base:latest"
+export UH_IMAGE_DOCKER_FILE=$UH_CORE_ROOT/Dockerfile
+export UH_IMAGE_TEST_TAG="uh-cluster:testing"
+
+export UH_DEBUG_CONTAINER_PORT=3291
+
+export UH_DEBUG_PORT_DEDUPE=13291
+export UH_DEBUG_PORT_STORAGE=13292
+export UH_DEBUG_PORT_DIRECTORY=13293
+export UH_DEBUG_PORT_ENTRYPOINT=13294
+
+export UH_LICENSE=$(cat "$UH_CORE_ROOT/data/licenses/UltiHash-Test-1GB.lic")
+export PATH=$PATH:$UH_TEST_BASE/scripts

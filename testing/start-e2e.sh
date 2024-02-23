@@ -1,5 +1,10 @@
 #!/bin/bash
 
+UH_TEST_BASE=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+export UH_TEST_BASE
+
+export PATH=$UH_TEST_BASE/scripts
+
 venv_dir="$(pwd)/.venv"
 requirements_file="$(pwd)/python-requirements.txt"
 AWS_ACCESS_KEY_ID="aws_access_key_id"
@@ -84,26 +89,12 @@ TERM=vt100 pstree -H $BASHPID
 . "$venv_dir/bin/activate"
 
 if [ -z "$cluster_url" ]; then
-    if ! docker pull ghcr.io/ultihash/build-base:latest; then
-        echo "pulling build-base image failed" 1>&2
-        exit 1
-    fi
+    uh-build-container-sh
 
-    if docker image inspect uh-cluster:testing &> /dev/null; then
-        docker image rm --force uh-cluster:testing
-    fi
-    
-    if ! docker build --no-cache --file ../Dockerfile --tag uh-cluster:testing ..; then
-        echo "docker build failed" 1>&2
-        exit 1
-    fi
-    trap "docker compose rm --volumes --stop --force" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
-
-    # check services startup with invalid licenses
     ./test_services.sh
+    uh-container-start.sh
+    #trap "uh-container-stop.sh" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
 
-    export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
-    docker compose up --detach
     cluster_url="http://localhost:8080"
 fi
 
@@ -130,26 +121,14 @@ export PYTHONDONTWRITEBYTECODE=1
 success=1
 
 if [ "$run_ultihash" -eq "1" ]; then
-    echo "*** running UltiHash test suite ..."
-    pytest "tests" --cluster-url="$cluster_url" \
-        --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
+    uh-run-tests-ulti.sh --cluster-url="$cluster_url" $@
     if [ "$?" != "0" ]; then
         success=0
     fi
 fi
 
 if [ "$run_ceph" -eq "1" ]; then
-    cluster_host=$(echo "$cluster_url" | sed -e 's/http:\/\///' -e 's/:[0-9]\+$//')
-    cluster_port=$(echo "$cluster_url" | grep -oE '[0-9]+$')
-
-    echo "*** running Ceph test suite ..."
-    sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
-        -e "s/%TESTING_S3_PORT%/$cluster_port/" \
-        -e "s/%TESTING_AWS_KEY_ID%/$AWS_ACCESS_KEY_ID/" \
-        -e "s/%TESTING_AWS_SECRET_ACCESS_KEY%/$AWS_SECRET_ACCESS_KEY/" \
-        < $SAMPLE_CEPH_S3TESTS_CONF > $CEPH_CONF
-
-    S3TEST_CONF=$CEPH_CONF tox -c "s3-tests/tox.ini" --workdir "s3-tests" -- -m 'uhclustertest'
+    uh-run-tests-ceph.sh --cluster-url="$cluster_url" $@
     if [ "$?" != "0" ]; then
         success=0
     fi
