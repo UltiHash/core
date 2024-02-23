@@ -1,6 +1,6 @@
 #include "list_multipart.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/custom_error_response_exception.h"
 
 namespace uh::cluster {
 

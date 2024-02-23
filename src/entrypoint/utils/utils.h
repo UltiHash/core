@@ -3,7 +3,7 @@
 
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
-#include "entrypoint/rest/utils/state/server_state.h"
+#include "server_state.h"
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 

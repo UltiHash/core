@@ -3,7 +3,7 @@
 
 #include "common/registry/services.h"
 #include "common/utils/protocol_handler.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/custom_error_response_exception.h"
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>

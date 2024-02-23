@@ -1,5 +1,5 @@
 #include "uri.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "custom_error_response_exception.h"
 #include <regex>
 
 namespace uh::cluster {
