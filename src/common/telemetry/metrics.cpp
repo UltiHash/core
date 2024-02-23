@@ -22,10 +22,7 @@ void initialize_metrics_exporter(const std::string& endpoint) {
         return;
     }
 
-    LOG_INFO() << "Getting telemetry endpoint";
-
     std::unique_ptr<metric_sdk::MetricReader> reader;
-
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
         exporter_options;
     exporter_options.endpoint = endpoint;
@@ -43,8 +40,6 @@ void initialize_metrics_exporter(const std::string& endpoint) {
         metrics_provider_shared(std::move(metrics_provider_unique));
 
     metrics_api::Provider::SetMeterProvider(metrics_provider_shared);
-
-    LOG_INFO() << "Initialized telemetry endpoint";
 }
 
 constexpr metric_type convert_message_type(message_type mtype) {
@@ -59,7 +54,7 @@ constexpr metric_type convert_message_type(message_type mtype) {
     return *mt;
 }
 
-void measure_message_type(message_type type) {
+constexpr void measure_message_type(message_type type) {
     const auto mt = convert_message_type(type);
     magic_enum::enum_switch(
         [](auto mt) {
@@ -67,14 +62,6 @@ void measure_message_type(message_type type) {
             metric<cmt>::increase(1);
         },
         mt);
-}
-
-otel_counter_type create_counter(metric_type type) {
-    const auto name = std::string(magic_enum::enum_name(type));
-    auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
-    auto counter = provider->GetMeter(name)->CreateUInt64Counter(name);
-    counter->Add(0);
-    return counter;
 }
 
 } // namespace uh::cluster

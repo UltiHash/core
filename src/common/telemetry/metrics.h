@@ -45,17 +45,23 @@ enum metric_type {
     failure
 };
 
-using otel_counter_type =
-    std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>;
-
-otel_counter_type create_counter(metric_type type);
-void measure_message_type(message_type type);
+constexpr void measure_message_type(message_type type);
 void initialize_metrics_exporter(const std::string& endpoint);
 
 template <metric_type type> class metric {
+    using otel_counter_type =
+        std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>;
+
+    static otel_counter_type create_counter() {
+        const auto name = std::string(magic_enum::enum_name(type));
+        auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
+        auto counter = provider->GetMeter(name)->CreateUInt64Counter(name);
+        counter->Add(0);
+        return counter;
+    }
 
     inline static otel_counter_type& get_counter() {
-        static otel_counter_type counter = create_counter(type);
+        static otel_counter_type counter = create_counter();
         return counter;
     }
 
