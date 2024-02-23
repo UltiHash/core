@@ -51,7 +51,7 @@ const std::string UNPARSABLE_XML_STRING = R"(<Delete>
 BOOST_AUTO_TEST_CASE(test_parsing) {
 
     {
-        boost_xml_parser xml_parser;
+        xml_parser xml_parser;
 
         bool parsed = xml_parser.parse(UNPARSABLE_XML_STRING);
         BOOST_CHECK(parsed == false);
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(test_parsing) {
         BOOST_CHECK(nodes.empty() == true);
     }
 
-    boost_xml_parser xml_parser;
+    xml_parser xml_parser;
 
     {
         bool parsed = xml_parser.parse(PARSABLE_XML_STRING);

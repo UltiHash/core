@@ -8,9 +8,9 @@
 namespace uh::cluster {
 namespace pt = boost::property_tree;
 
-class boost_xml_parser {
+class xml_parser {
 public:
-    boost_xml_parser() = default;
+    xml_parser() = default;
 
     bool parse(const std::string& body);
 

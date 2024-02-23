@@ -1,7 +1,7 @@
 #include "xml_parser.h"
 
 namespace uh::cluster {
-bool boost_xml_parser::parse(const std::string& body) {
+bool xml_parser::parse(const std::string& body) {
 
     bool flag;
     try {
@@ -16,7 +16,7 @@ bool boost_xml_parser::parse(const std::string& body) {
 }
 
 std::vector<std::reference_wrapper<const pt::ptree>>
-boost_xml_parser::get_nodes(pt::ptree::path_type&& path) {
+xml_parser::get_nodes(pt::ptree::path_type&& path) {
     if (m_tree.empty())
         return {};
 

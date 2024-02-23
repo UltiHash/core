@@ -31,7 +31,7 @@ void complete_multipart::validate(const http_request& req) const {
             rest::http::model::error::type::no_such_upload);
     }
 
-    boost_xml_parser xml_parser;
+    xml_parser xml_parser;
     bool parsed = xml_parser.parse(req.get_body());
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
