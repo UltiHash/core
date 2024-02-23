@@ -3,7 +3,7 @@
 #include <pugixml.hpp>
 #include <span>
 
-namespace uh::cluster::rest::utils::parser {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
@@ -25,4 +25,4 @@ private:
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::cluster::rest::utils::parser
+} // namespace uh::cluster

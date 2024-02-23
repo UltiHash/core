@@ -201,15 +201,15 @@ coro<http_response> list_objects::handle(const http_request& req) const {
         LOG_ERROR() << e.what();
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::bucket_not_found);
+                http_error::bucket_not_found);
         case error::invalid_bucket_name:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::bad_request,
-                rest::http::model::error::invalid_bucket_name);
+                http_error::invalid_bucket_name);
         default:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::internal_server_error);
         }
     }

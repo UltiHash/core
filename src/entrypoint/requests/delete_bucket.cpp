@@ -37,15 +37,15 @@ coro<http_response> delete_bucket::handle(const http_request& req) const {
         LOG_ERROR() << "Failed to delete bucket: " << e;
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::bucket_not_found);
+                http_error::bucket_not_found);
         case error::bucket_not_empty:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::conflict,
-                rest::http::model::error::bucket_not_empty);
+                http_error::bucket_not_empty);
         default:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::internal_server_error);
         }
     }

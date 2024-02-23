@@ -1,6 +1,6 @@
 #include "xml_parser.h"
 
-namespace uh::cluster::rest::utils::parser {
+namespace uh::cluster {
 
 bool xml_parser::parse(const std::string& xml_string) {
     auto result = m_doc.load_string(xml_string.c_str());
@@ -20,4 +20,4 @@ xml_parser::get_nodes_from_path(const char* childName) const {
     return m_doc.select_nodes(childName);
 }
 
-} // namespace uh::cluster::rest::utils::parser
+} // namespace uh::cluster

@@ -33,7 +33,7 @@ coro<http_response> create_bucket::handle(const http_request& req) const {
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::not_found);
     }
 }

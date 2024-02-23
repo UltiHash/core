@@ -4,17 +4,17 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
-namespace uh::cluster::rest::http::model {
+namespace uh::cluster {
 
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 namespace net = boost::asio;
 using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
     net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
-class error {
+class http_error {
 public:
     enum type {
-        success = 0,
+        Success = 0,
         unknown,
         bucket_not_found,
         object_not_found,
@@ -34,7 +34,7 @@ public:
         no_mp_uploads
     };
 
-    explicit error(type t = unknown);
+    explicit http_error(type t = unknown);
 
     const std::pair<std::string, std::string>& message() const;
     uint32_t code() const;
@@ -50,7 +50,7 @@ class custom_error_response_exception : public std::exception {
 public:
     custom_error_response_exception() = default;
     explicit custom_error_response_exception(
-        http::status, error::type = error::type::unknown);
+        http::status, http_error::type = http_error::type::unknown);
     [[nodiscard]] const http::response<http::string_body>&
     get_response_specific_object();
 
@@ -58,7 +58,7 @@ public:
 
 private:
     http::response<http::string_body> m_res{http::status::bad_request, 11};
-    error m_error;
+    http_error m_error;
 };
 
-} // namespace uh::cluster::rest::http::model
+} // namespace uh::cluster

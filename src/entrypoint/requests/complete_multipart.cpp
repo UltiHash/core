@@ -18,12 +18,12 @@ bool complete_multipart::can_handle(const http_request& req) {
 void complete_multipart::validate(const http_request& req) const {
     const auto& upload_id = req.get_uri().get_query_parameters().at("uploadId");
     if (upload_id.empty()) {
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_upload_id);
+            http_error::type::bad_upload_id);
     }
 
-    rest::utils::parser::xml_parser parsed_xml;
+    xml_parser parsed_xml;
     pugi::xpath_node_set object_nodes_set;
 
     try {
@@ -35,17 +35,14 @@ void complete_multipart::validate(const http_request& req) const {
         if (object_nodes_set.empty())
             throw std::runtime_error("no part found");
     } catch (const std::exception& e) {
-        throw rest::http::model::custom_error_response_exception(
-            http::status::bad_request,
-            rest::http::model::error::type::malformed_xml);
+        throw custom_error_response_exception(http::status::bad_request,
+                                              http_error::type::malformed_xml);
     }
 
-    const auto up_info =
-        m_state.server_state.m_uploads.get_upload_info(upload_id);
+    const auto up_info = m_state.state.m_uploads.get_upload_info(upload_id);
     if (up_info == nullptr) {
-        throw rest::http::model::custom_error_response_exception(
-            http::status::not_found,
-            rest::http::model::error::type::no_such_upload);
+        throw custom_error_response_exception(http::status::not_found,
+                                              http_error::type::no_such_upload);
     }
 
     for (uint16_t part_counter = 1; const auto& objectNode : object_nodes_set) {
@@ -54,22 +51,19 @@ void complete_multipart::validate(const http_request& req) const {
         auto etag = objectNode.node().child("ETag").child_value();
 
         if (part_num != part_counter) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::invalid_part_oder);
+            throw custom_error_response_exception(
+                http::status::bad_request, http_error::type::invalid_part_oder);
         }
 
         if (up_info->part_sizes.at(part_num) < MAXIMUM_CHUNK_SIZE and
             part_num != up_info->part_sizes.size() - 1) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::entity_too_small);
+            throw custom_error_response_exception(
+                http::status::bad_request, http_error::type::entity_too_small);
         }
 
         if (up_info->etags.at(part_num) != etag) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::invalid_part);
+            throw custom_error_response_exception(
+                http::status::bad_request, http_error::type::invalid_part);
         }
 
         part_counter++;
@@ -86,8 +80,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     const auto& bucket_name = req.get_uri().get_bucket_id();
     const auto& object_name = req_uri.get_object_key();
 
-    const auto& up_info =
-        m_state.server_state.m_uploads.get_upload_info(upload_id);
+    const auto& up_info = m_state.state.m_uploads.get_upload_info(upload_id);
 
     const directory_message dir_req{
         .bucket_id = bucket_name,
@@ -133,8 +126,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     res.set_space_savings(space_saving);
     res.set_bandwidth(bandwidth);
 
-    m_state.server_state.m_uploads.remove_upload(upload_id, bucket_name,
-                                                 object_name);
+    m_state.state.m_uploads.remove_upload(upload_id, bucket_name, object_name);
 
     co_return std::move(res);
 }

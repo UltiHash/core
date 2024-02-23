@@ -4,7 +4,7 @@
 #include "iostream"
 #include <utility>
 
-namespace uh::cluster::rest::http::model {
+namespace uh::cluster {
 
 static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"success", "success"},
@@ -30,10 +30,10 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
 static const std::pair<std::string, std::string> error_out_of_range = {
     "OutOfRange", "error out of range"};
 
-error::error(type t)
+http_error::http_error(type t)
     : m_type(t) {}
 
-const std::pair<std::string, std::string>& error::message() const {
+const std::pair<std::string, std::string>& http_error::message() const {
 
     auto ec = code();
     if (error_messages.size() <= ec) {
@@ -43,10 +43,10 @@ const std::pair<std::string, std::string>& error::message() const {
     return error_messages[ec];
 }
 
-uint32_t error::code() const { return static_cast<uint32_t>(m_type); }
+uint32_t http_error::code() const { return static_cast<uint32_t>(m_type); }
 
 const std::pair<std::string, std::string>&
-error::get_code_message(uint32_t ec) {
+http_error::get_code_message(uint32_t ec) {
     if (error_messages.size() <= ec) {
         return error_out_of_range;
     }
@@ -54,14 +54,14 @@ error::get_code_message(uint32_t ec) {
     return error_messages[ec];
 }
 
-error::type error::operator*() const { return m_type; }
+http_error::type http_error::operator*() const { return m_type; }
 
 const char* custom_error_response_exception::what() const noexcept {
     return m_error.message().second.c_str();
 }
 
 custom_error_response_exception::custom_error_response_exception(
-    http::status status, error::type err)
+    http::status status, http_error::type err)
     : m_res(status, 11),
       m_error(err) {
     m_res.set(http::field::server, "UltiHash");
@@ -86,4 +86,4 @@ custom_error_response_exception::get_response_specific_object() {
     return m_res;
 }
 
-} // namespace uh::cluster::rest::http::model
+} // namespace uh::cluster

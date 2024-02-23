@@ -17,18 +17,18 @@ bool delete_objects::can_handle(const http_request& req) {
 pugi::xpath_node_set delete_objects::validate(const http_request& req) {
     pugi::xpath_node_set object_nodes_set;
 
-    rest::utils::parser::xml_parser parsed_xml;
+    xml_parser parsed_xml;
     try {
         if (!parsed_xml.parse(req.get_body()))
-            throw std::runtime_error("");
+            throw std::runtime_error("Invalid request");
 
         object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
         if (object_nodes_set.empty())
-            throw std::runtime_error("");
+            throw std::runtime_error("Invalid request");
     } catch (const std::exception& e) {
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::bad_request,
-            rest::http::model::error::type::malformed_xml);
+            http_error::type::malformed_xml);
     }
 
     return object_nodes_set;
@@ -53,7 +53,7 @@ http_response get_response(const std::vector<std::string>& success,
                       "</Deleted>\n";
     }
     for (const auto& val : failure) {
-        auto error = rest::http::model::error::get_code_message(val.code);
+        auto error = http_error::get_code_message(val.code);
         xml_string += "<Error>\n"
                       "<Key>" +
                       error.first +

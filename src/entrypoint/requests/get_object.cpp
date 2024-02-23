@@ -61,11 +61,11 @@ coro<http_response> get_object::handle(const http_request& req) const {
         LOG_ERROR() << e.what();
         switch (*e.error()) {
         case error::object_not_found:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::object_not_found);
+                http_error::object_not_found);
         default:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::internal_server_error);
         }
     }

@@ -20,16 +20,16 @@ static void validate(const http_request& req) {
 
     auto upload_id = req_uri.get_query_parameters().at("uploadId");
     if (upload_id.empty()) {
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_upload_id);
+            http_error::type::bad_upload_id);
     }
 
     auto part_num = std::stoi(req_uri.get_query_parameters().at("partNumber"));
     if (part_num < 1 || part_num > 10000) {
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_part_number);
+            http_error::type::bad_part_number);
     }
 }
 
@@ -43,7 +43,7 @@ coro<http_response> multipart::handle(http_request& req) const {
         const auto dir_resp =
             co_await integration::integrate_data(data, m_state);
 
-        m_state.server_state.m_uploads.append_upload_part_info(
+        m_state.state.m_uploads.append_upload_part_info(
             req.get_uri().get_query_parameters().at("uploadId"),
             std::stoi(req.get_uri().get_query_parameters().at("partNumber")),
             dir_resp, req.get_body());

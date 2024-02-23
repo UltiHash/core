@@ -46,13 +46,12 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
     auto func = [](const entrypoint_state& state,
                    const std::string& bucket_name,
                    std::map<std::string, std::string>& ongoing) {
-        ongoing =
-            state.server_state.m_uploads.list_multipart_uploads(bucket_name);
+        ongoing = state.state.m_uploads.list_multipart_uploads(bucket_name);
 
         if (ongoing.empty()) {
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::no_mp_uploads);
+                http_error::no_mp_uploads);
         }
     };
 

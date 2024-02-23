@@ -50,11 +50,11 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
 
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::bucket_not_found);
+                http_error::bucket_not_found);
         default:
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 boost::beast::http::status::internal_server_error);
         }
     }

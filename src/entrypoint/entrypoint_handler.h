@@ -68,16 +68,14 @@ public:
             }
         } catch (const command_unknown_exception& e) {
             LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
+            uh::cluster::custom_error_response_exception err(
                 boost::beast::http::status::not_found,
-                rest::http::model::error::command_not_found);
+                http_error::command_not_found);
             boost::beast::http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
-        } catch (
-            uh::cluster::rest::http::model::custom_error_response_exception&
-                res_exc) {
+        } catch (uh::cluster::custom_error_response_exception& res_exc) {
             LOG_ERROR() << res_exc.what();
             boost::beast::http::write(s,
                                       res_exc.get_response_specific_object());
@@ -87,8 +85,8 @@ public:
         } catch (const boost::system::system_error& se) {
             if (se.code() != boost::beast::http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
-                uh::cluster::rest::http::model::custom_error_response_exception
-                    err(boost::beast::http::status::bad_request);
+                uh::cluster::custom_error_response_exception err(
+                    boost::beast::http::status::bad_request);
                 boost::beast::http::write(s,
                                           err.get_response_specific_object());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
@@ -97,7 +95,7 @@ public:
             }
         } catch (const std::exception& e) {
             LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
+            uh::cluster::custom_error_response_exception err(
                 boost::beast::http::status::internal_server_error);
             boost::beast::http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);

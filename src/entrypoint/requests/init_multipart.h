@@ -44,20 +44,20 @@ public:
         catch (const error_exception& e) {
             switch (*e.error()) {
             case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
+                throw custom_error_response_exception(
                     boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
+                    http_error::bucket_not_found);
             default:
-                throw rest::http::model::custom_error_response_exception(
+                throw custom_error_response_exception(
                     boost::beast::http::status::internal_server_error);
             }
         }
 
         const auto upload_id = generate_unique_id();
-        if (!m_state.server_state.m_uploads.insert_upload(
+        if (!m_state.state.m_uploads.insert_upload(
                 upload_id, req.get_uri().get_bucket_id(),
                 req.get_uri().get_object_key())) {
-            throw rest::http::model::custom_error_response_exception(
+            throw custom_error_response_exception(
                 http::status::internal_server_error);
         }
 

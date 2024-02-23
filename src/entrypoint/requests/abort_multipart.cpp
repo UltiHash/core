@@ -19,9 +19,9 @@ static void validate(const http_request& req) {
     const auto& uri = req.get_uri();
 
     if (uri.get_query_parameters().at("uploadId").empty()) {
-        throw rest::http::model::custom_error_response_exception(
+        throw custom_error_response_exception(
             boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_upload_id);
+            http_error::type::bad_upload_id);
     }
 }
 
@@ -34,13 +34,12 @@ coro<http_response> abort_multipart::handle(const http_request& req) const {
     const auto& bucket_name = uri.get_bucket_id();
     const auto& object_name = uri.get_object_key();
 
-    if (!m_state.server_state.m_uploads.contains_upload(upload_id)) {
-        throw rest::http::model::custom_error_response_exception(
-            http::status::not_found,
-            rest::http::model::error::type::no_such_upload);
+    if (!m_state.state.m_uploads.contains_upload(upload_id)) {
+        throw custom_error_response_exception(http::status::not_found,
+                                              http_error::type::no_such_upload);
     } else {
-        m_state.server_state.m_uploads.remove_upload(upload_id, bucket_name,
-                                                     object_name);
+        m_state.state.m_uploads.remove_upload(upload_id, bucket_name,
+                                              object_name);
     }
 
     co_return http_response();
