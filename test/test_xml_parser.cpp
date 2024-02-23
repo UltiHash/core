@@ -21,18 +21,18 @@ const std::string PARSABLE_XML_STRING = "<Delete>\n"
                                         "   <Object>\n"
                                         "       <Key>" +
                                         KEY_1 +
-                                        "       </Key>\n"
+                                        "</Key>\n"
                                         "       <VersionId>" +
                                         VERSION_1 +
-                                        "       </VersionId>\n"
+                                        "</VersionId>\n"
                                         "   </Object>\n"
                                         "   <Object>\n"
                                         "       <Key>" +
                                         KEY_2 +
-                                        "       </Key>\n"
+                                        "</Key>\n"
                                         "       <VersionId>" +
                                         ERRONEOUS_VERSION_2 +
-                                        "       </VersionId>\n"
+                                        "</VersionId>\n"
                                         "   </Object>\n"
                                         "   <Quiet>boolean</Quiet>\n"
                                         "</Delete>";
