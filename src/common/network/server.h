@@ -29,13 +29,11 @@ namespace uh::cluster {
 class server {
 
 public:
-    server(server_config config, std::string server_name,
-           std::unique_ptr<protocol_handler> handler,
+    server(server_config config, std::unique_ptr<protocol_handler> handler,
            boost::asio::io_context& ioc)
         : m_config(std::move(config)),
           m_ioc(ioc),
-          m_handler(std::move(handler)),
-          m_server_name(std::move(server_name)) {
+          m_handler(std::move(handler)) {
         m_is_running = true;
 
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
@@ -49,9 +47,7 @@ public:
                                       try {
                                           std::rethrow_exception(e);
                                       } catch (boost::system::system_error& e) {
-                                          LOG_INFO()
-                                              << "stopped server "
-                                              << m_server_name << std::endl;
+                                          LOG_INFO() << "stopped server ";
                                       } catch (std::exception& e) {
                                           LOG_ERROR() << "accept: " << e.what();
                                       }
@@ -61,8 +57,8 @@ public:
     void run() {
         m_handler->init();
 
-        LOG_INFO() << "starting server " << m_server_name << ", listening at "
-                   << m_config.bind_address << ":" << m_config.port;
+        LOG_INFO() << "starting server, listening at " << m_config.bind_address
+                   << ":" << m_config.port;
         std::exception_ptr excp_ptr;
 
         for (size_t i = 0; i < m_config.threads - 1; i++)
@@ -91,7 +87,7 @@ public:
     }
 
     void stop() {
-        LOG_INFO() << "stopping server " << m_server_name;
+        LOG_INFO() << "stopping server ";
         m_is_running = false;
         m_ioc.stop();
     }
@@ -145,8 +141,7 @@ private:
     }
 
     coro<void> do_session(boost::asio::ip::tcp::socket stream) {
-        LOG_INFO() << m_server_name
-                   << " connection from: " << stream.remote_endpoint();
+        LOG_INFO() << "connection from: " << stream.remote_endpoint();
         co_await m_handler->handle(std::move(stream));
         co_return;
     }
@@ -162,7 +157,6 @@ private:
         m_acceptors;
     std::unique_ptr<protocol_handler> m_handler;
     std::atomic<bool> m_is_running;
-    const std::string m_server_name;
 };
 
 //------------------------------------------------------------------------------
