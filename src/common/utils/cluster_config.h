@@ -21,12 +21,6 @@ struct server_config {
     std::string bind_address;
 };
 
-struct entrypoint_config {
-    std::size_t dedupe_node_connection_count{};
-    std::size_t directory_connection_count{};
-    std::size_t worker_thread_count{};
-};
-
 } // end namespace uh::cluster
 
 #endif // CORE_CLUSTER_CONFIG_H

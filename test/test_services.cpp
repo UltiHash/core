@@ -26,7 +26,6 @@ template <role r, role service_role = r> struct base_fixture {
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
     std::size_t service_id;
-    config_registry reg;
     uh::cluster::services<r> services;
 
     constexpr uh::cluster::services<r> make_services() {
@@ -43,7 +42,6 @@ template <role r, role service_role = r> struct base_fixture {
         : etcd_client(REGISTRY_ENDPOINT),
           service_id(
               get_service_id(etcd_client, get_service_string(r), tmp.path())),
-          reg(service_role, etcd_client, tmp.path(), service_id),
           services(make_services()) {}
 };
 

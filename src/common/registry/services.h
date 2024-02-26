@@ -1,15 +1,17 @@
 #ifndef UH_CLUSTER_SERVICES_H
 #define UH_CLUSTER_SERVICES_H
 
+#include <etcd/SyncClient.hpp>
+#include <etcd/Watcher.hpp>
 #include <ranges>
 #include <set>
 #include <shared_mutex>
 #include <utility>
 
 #include "common/network/client.h"
-#include "common/registry/config_registry.h"
 #include "common/telemetry/log.h"
-#include "etcd/Watcher.hpp"
+#include "common/utils/time_utils.h"
+#include "namespace.h"
 
 namespace uh::cluster {
 

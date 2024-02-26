@@ -74,18 +74,8 @@ enum config_parameter {
 
 constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 8>
     string_by_config_parameter = {{
-        {uh::cluster::CFG_SERVER_THREADS, "server_threads"},
-        {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
-        {uh::cluster::CFG_SERVER_PORT, "server_port"},
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-
-        {uh::cluster::CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
-         "dedup_service_connection_count"},
-        {uh::cluster::CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
-         "dir_service_connection_count"},
-        {uh::cluster::CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
-         "worker_thread_count"},
     }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
