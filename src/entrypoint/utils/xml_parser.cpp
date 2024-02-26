@@ -20,8 +20,8 @@ xml_parser::get_nodes(pt::ptree::path_type&& path) {
     if (m_tree.empty())
         return {};
 
-    std::vector<std::reference_wrapper<const pt::ptree>> paths;
-    enumerate(m_tree, path, std::back_inserter(paths));
-    return paths;
+    std::vector<std::reference_wrapper<const pt::ptree>> nodes_container;
+    enumerate(m_tree, path, nodes_container);
+    return nodes_container;
 }
 } // namespace uh::cluster

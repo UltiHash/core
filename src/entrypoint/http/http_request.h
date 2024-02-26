@@ -34,7 +34,6 @@ private:
     boost::beast::flat_buffer& m_buffer;
 
     uri m_uri;
-    std::string m_etag{};
     std::string m_body{};
 };
 

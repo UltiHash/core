@@ -51,12 +51,10 @@ public:
 
 private:
     entrypoint_state get_entrypoint_state() {
-        return {
-            .ioc = m_ioc,
-            .workers = m_workers,
-            .dedupe_services = m_dedupe_services,
-            .directory_services = m_directory_services,
-        };
+        return {.ioc = m_ioc,
+                .workers = m_workers,
+                .dedupe_services = m_dedupe_services,
+                .directory_services = m_directory_services};
     }
 
     etcd::SyncClient m_etcd_client;

@@ -53,6 +53,16 @@ BOOST_AUTO_TEST_CASE(test_parsing) {
     {
         xml_parser xml_parser;
 
+        bool parsed = xml_parser.parse("");
+        BOOST_CHECK(parsed == true);
+
+        auto nodes = xml_parser.get_nodes("");
+        BOOST_CHECK(nodes.empty() == true);
+    }
+
+    {
+        xml_parser xml_parser;
+
         bool parsed = xml_parser.parse(UNPARSABLE_XML_STRING);
         BOOST_CHECK(parsed == false);
 
