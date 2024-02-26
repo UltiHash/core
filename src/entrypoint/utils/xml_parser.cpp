@@ -21,7 +21,7 @@ xml_parser::get_nodes(pt::ptree::path_type&& path) {
         return {};
 
     std::vector<std::reference_wrapper<const pt::ptree>> paths;
-    enumerate(m_tree, path, std::back_inserter(paths));
+    enumerate(m_tree, path, paths);
     return paths;
 }
 } // namespace uh::cluster

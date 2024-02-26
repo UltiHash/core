@@ -20,27 +20,26 @@ public:
 private:
     pt::ptree m_tree;
 
-    template <typename Tree, typename Out>
-    Out enumerate(const Tree& pt, Tree::path_type path, Out out) {
+    template <typename Tree, typename Container>
+    void enumerate(const Tree& pt, Tree::path_type& path,
+                   Container&& container) {
         if (path.empty())
-            return out;
+            return;
 
         if (path.single()) {
-            auto name = path.reduce();
-            for (auto& child : pt) {
+            const auto& name = path.reduce();
+            for (const auto& child : pt) {
                 if (child.first == name)
-                    *out++ = child.second;
+                    container.emplace_back(child.second);
             }
         } else {
-            auto head = path.reduce();
-            for (auto& child : pt) {
+            const auto& head = path.reduce();
+            for (const auto& child : pt) {
                 if (head == "*" || child.first == head) {
-                    out = enumerate(child.second, path, out);
+                    enumerate(child.second, path, container);
                 }
             }
         }
-
-        return out;
     };
 };
 } // namespace uh::cluster
