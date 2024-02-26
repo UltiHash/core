@@ -117,6 +117,8 @@ int main(int argc, char** argv) {
 
         CLI11_PARSE(app, argc, argv);
 
+        initialize_metrics_exporter(cfg.telemetry_url);
+
         log::init(make_log_config(cfg, log_level));
 
         LOG_INFO() << "license loaded for " << cfg.license.customer

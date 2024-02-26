@@ -11,19 +11,21 @@ namespace uh::cluster {
 
 template <typename K, typename V> class lru_cache {
 
-    struct Node {
+    struct node {
         K key;
         V value;
     };
 
-    std::unordered_map<K, typename std::list<Node>::iterator> m_map;
-    std::list<Node> m_lruList;
+    std::unordered_map<K, typename std::list<node>::iterator> m_map;
+    std::list<node> m_lruList;
     size_t m_capacity;
     std::mutex m;
 
 public:
     explicit lru_cache(size_t capacity)
         : m_capacity{capacity} {}
+
+    void put(const K& key, const V& value) { put(key, V(value)); }
 
     void put(const K& key, V&& value) {
         std::lock_guard<std::mutex> lock(m);
@@ -56,13 +58,6 @@ public:
             return f->second->value;
         }
         return default_value;
-    }
-
-    void print() {
-        for (const auto n : m_lruList) {
-            std::cout << "key " << n.key << std::endl;
-        }
-        std::cout << std::endl;
     }
 };
 } // end namespace uh::cluster
