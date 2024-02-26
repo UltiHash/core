@@ -11,19 +11,32 @@ namespace uh::cluster {
 
 template <typename K, typename V> class lru_cache {
 
-    struct Node {
+    struct node {
         K key;
         V value;
     };
 
-    std::unordered_map<K, typename std::list<Node>::iterator> m_map;
-    std::list<Node> m_lruList;
+    std::unordered_map<K, typename std::list<node>::iterator> m_map;
+    std::list<node> m_lruList;
     size_t m_capacity;
     std::mutex m_mutex;
 
 public:
     explicit lru_cache(size_t capacity)
         : m_capacity{capacity} {}
+
+    /**
+     * @brief Inserts a key-value pair into the cache.
+     *
+     * If the key already exists in the cache, updates its corresponding value.
+     * If the key does not exist:
+     *  - If the cache is full, removes the least recently used item.
+     *  - Inserts the new key-value pair into the cache.
+     *
+     * @param key The key to insert or update.
+     * @param value The lvalue reference to a key object.
+     */
+    void put(const K& key, const V& value) { put(key, V(value)); }
 
     /**
      * @brief Inserts a key-value pair into the cache.
