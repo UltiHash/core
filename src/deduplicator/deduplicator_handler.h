@@ -6,6 +6,7 @@
 #include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
+#include "config.h"
 #include "dedupe_set.h"
 
 namespace uh::cluster {

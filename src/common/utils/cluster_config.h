@@ -33,14 +33,6 @@ struct directory_store_config {
     bucket_config bucket_conf;
 };
 
-struct deduplicator_config {
-    std::filesystem::path working_dir;
-    std::size_t min_fragment_size{};
-    std::size_t max_fragment_size{};
-    std::size_t dedupe_worker_minimum_data_size{};
-    std::size_t worker_thread_count{};
-};
-
 struct entrypoint_config {
     std::size_t dedupe_node_connection_count{};
     std::size_t directory_connection_count{};
