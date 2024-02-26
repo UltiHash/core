@@ -86,8 +86,7 @@ private:
 template <role r> class services {
 public:
     services(boost::asio::io_context& ioc, config_registry& config_registry,
-             const int connection_count, etcd::SyncClient& etcd_client,
-             std::size_t timeout_s = 10)
+             const int connection_count, etcd::SyncClient& etcd_client)
         : m_ioc(ioc),
           m_connection_count(connection_count),
           m_etcd_client(etcd_client),
@@ -99,8 +98,7 @@ public:
               },
               true),
           m_robin_index(m_clients.end()),
-          m_services_index(config_registry),
-          m_timeout_s(timeout_s) {
+          m_services_index(config_registry) {
         auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
         auto resp = wait_for_success(
@@ -305,7 +303,7 @@ private:
         m_robin_index;
     services_index<r> m_services_index;
 
-    std::size_t m_timeout_s;
+    static constexpr std::size_t m_timeout_s = 10;
 };
 
 } // end namespace uh::cluster
