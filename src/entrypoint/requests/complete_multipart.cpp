@@ -119,6 +119,9 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     const double dur_s = static_cast<double>(dur_ms) / 1000.0;
     const auto bandwidth = size_mb / dur_s;
 
+    metric<total_effective_size_mb, double>::increase(effective_size);
+    metric<total_size_mb, double>::increase(size_mb);
+
     LOG_DEBUG() << "upload size: " << req.get_body_size();
     LOG_DEBUG() << "original size " << size_mb << " MB";
     LOG_DEBUG() << "effective size " << effective_size << " MB";
