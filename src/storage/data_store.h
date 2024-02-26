@@ -1,7 +1,6 @@
 #ifndef CORE_DATA_STORE_H
 #define CORE_DATA_STORE_H
 
-#include "common/utils/cluster_config.h"
 #include "common/utils/free_spot_manager.h"
 #include <cstring>
 #include <fcntl.h>
@@ -15,10 +14,17 @@
 
 namespace uh::cluster {
 
+struct data_store_config {
+    std::filesystem::path working_dir;
+    std::size_t min_file_size;
+    std::size_t max_file_size;
+    uint128_t max_data_store_size;
+};
+
 class data_store {
 
 public:
-    explicit data_store(storage_config conf, std::size_t id,
+    explicit data_store(const data_store_config& conf, std::size_t id,
                         bool adaptive = true);
 
     address write(std::span<char> data);
@@ -62,7 +68,7 @@ private:
     int m_last_fd{};
     std::size_t m_last_file_data_end{};
     int m_data_id;
-    const storage_config m_conf;
+    data_store_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map<uint128_t, int> m_open_files;
     std::unordered_map<int, std::size_t> m_modified_files;
