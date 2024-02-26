@@ -3,6 +3,7 @@
 
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
+#include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/telemetry/log.h"
 #include "common/utils/cluster_config.h"
@@ -16,12 +17,14 @@ class deduplicator {
 public:
     explicit deduplicator(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
-          m_config_registry(DEDUPLICATOR_SERVICE, m_etcd_client,
-                            sc.working_dir),
+          m_service_id(get_service_id(m_etcd_client,
+                                      get_service_string(DEDUPLICATOR_SERVICE),
+                                      sc.working_dir)),
+          m_config_registry(DEDUPLICATOR_SERVICE, m_etcd_client, sc.working_dir,
+                            m_service_id),
           m_ioc(boost::asio::io_context(
               m_config_registry.get_server_config().threads)),
-          m_service_registry(DEDUPLICATOR_SERVICE,
-                             m_config_registry.get_service_id(), m_etcd_client),
+          m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd_client),
           m_storage_services(m_ioc, m_config_registry,
                              m_config_registry.get_global_data_view_config()
                                  .storage_service_connection_count,
@@ -55,6 +58,7 @@ public:
 
 private:
     etcd::SyncClient m_etcd_client;
+    std::size_t m_service_id;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
 

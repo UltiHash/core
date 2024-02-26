@@ -2,6 +2,7 @@
 #define CORE_DIRECTORY_NODE_H
 
 #include "common/license/license.h"
+#include "common/registry/service_id.h"
 #include "common/utils/cluster_config.h"
 #include "directory_handler.h"
 #include <common/telemetry/log.h>
@@ -18,11 +19,14 @@ class directory {
 public:
     explicit directory(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
-          m_config_registry(DIRECTORY_SERVICE, m_etcd_client, sc.working_dir),
+          m_service_id(get_service_id(m_etcd_client,
+                                      get_service_string(DIRECTORY_SERVICE),
+                                      sc.working_dir)),
+          m_config_registry(DIRECTORY_SERVICE, m_etcd_client, sc.working_dir,
+                            m_service_id),
           m_ioc(boost::asio::io_context(
               m_config_registry.get_server_config().threads)),
-          m_service_registry(DIRECTORY_SERVICE,
-                             m_config_registry.get_service_id(), m_etcd_client),
+          m_service_registry(DIRECTORY_SERVICE, m_service_id, m_etcd_client),
           m_storage_services(m_ioc, m_config_registry,
                              m_config_registry.get_global_data_view_config()
                                  .storage_service_connection_count,
@@ -52,6 +56,7 @@ public:
 
 private:
     etcd::SyncClient m_etcd_client;
+    std::size_t m_service_id;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
     service_registry m_service_registry;

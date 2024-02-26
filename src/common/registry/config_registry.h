@@ -16,18 +16,14 @@ class config_registry {
 
 public:
     config_registry(uh::cluster::role role, etcd::SyncClient& etcd_client,
-                    const std::filesystem::path& working_dir)
+                    const std::filesystem::path& working_dir,
+                    std::size_t service_id)
         : m_etcd_client(etcd_client),
           m_service_role(role),
           m_working_dir(working_dir / get_service_string(m_service_role)),
-          m_service_id(generate_service_id()),
           m_service_name(get_service_string(m_service_role) + "/" +
-                         std::to_string(m_service_id)) {
+                         std::to_string(service_id)) {
         init_default_config_values();
-    }
-
-    [[nodiscard]] std::size_t get_service_id() const noexcept {
-        return m_service_id;
     }
 
     server_config get_server_config() {
@@ -152,7 +148,6 @@ private:
     etcd::SyncClient& m_etcd_client;
     const uh::cluster::role m_service_role;
     const std::filesystem::path m_working_dir;
-    const std::size_t m_service_id;
     const std::string m_service_name;
 
     class registry_lock {
@@ -168,76 +163,6 @@ private:
         etcd::SyncClient& m_client;
         etcd::Response m_response;
     };
-
-    std::pair<bool, std::size_t> read_id_from_disk() {
-        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
-
-        if (std::filesystem::exists(id_file_path)) {
-            std::ifstream id_file(id_file_path, std::ios::binary);
-            if (id_file.is_open()) {
-                std::size_t persisted_id;
-                id_file.read(reinterpret_cast<char*>(&persisted_id),
-                             sizeof(std::size_t));
-                id_file.close();
-                return {true, persisted_id};
-            } else {
-                throw std::system_error(
-                    EIO, std::generic_category(),
-                    "reading back persisted service id from file " +
-                        id_file_path.string() + " failed.");
-            }
-        }
-        return std::pair(false, 0);
-    }
-
-    void write_id_to_disk(std::size_t id) {
-        std::filesystem::path id_file_path(m_working_dir / m_identity_file);
-
-        if (!std::filesystem::exists(id_file_path.parent_path()))
-            std::filesystem::create_directories(id_file_path.parent_path());
-
-        if (std::filesystem::exists(id_file_path))
-            throw std::system_error(
-                EIO, std::generic_category(),
-                "the file " + id_file_path.string() +
-                    " already exists, which it should not.");
-
-        std::ofstream id_file(id_file_path, std::ios::binary);
-        if (id_file.is_open()) {
-            id_file.write(reinterpret_cast<const char*>(&id), sizeof(id));
-        } else {
-            throw std::system_error(EIO, std::generic_category(),
-                                    "could not open file " +
-                                        id_file_path.string() +
-                                        " for storing persisted service id.");
-        }
-    }
-
-    std::size_t generate_service_id() {
-        auto [success, persisted_id] = read_id_from_disk();
-        if (success) {
-            return persisted_id;
-        }
-
-        std::string current_id_key =
-            etcd_current_id_prefix_key + get_service_string(m_service_role);
-        const auto lock =
-            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
-                             [this]() { return registry_lock(m_etcd_client); });
-
-        if (!key_exists(current_id_key)) {
-            set(current_id_key, std::to_string(0));
-            write_id_to_disk(0);
-            return 0;
-        }
-
-        std::size_t current_id = std::stoull(get(current_id_key));
-        current_id++;
-        set(current_id_key, std::to_string(current_id));
-
-        write_id_to_disk(current_id);
-        return current_id;
-    }
 
     void init_default_config_values() {
         // these are only default settings
