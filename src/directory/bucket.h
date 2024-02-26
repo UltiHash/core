@@ -50,7 +50,6 @@ public:
     }
 
     void insert_object(const std::string& key, std::span<char> data) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
         const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_START);
@@ -59,14 +58,12 @@ public:
         // transaction
         m_data_store.apply_write();
         m_object_ptrs[key] = index;
-        lock.unlock();
 
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_END);
     }
 
     unique_buffer<char> get_obj(const std::string& key) {
-        std::shared_lock lock(m_mutex);
 
         const auto it = m_object_ptrs.find(key);
         if (it == m_object_ptrs.end()) [[unlikely]] {
@@ -79,8 +76,6 @@ public:
     }
 
     void delete_object(const std::string& key) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-
         if (const auto it = m_object_ptrs.find(key); it != m_object_ptrs.end())
             [[unlikely]] {
             m_transaction_log.append(key, it->second,
@@ -91,12 +86,9 @@ public:
             m_transaction_log.append(key, it->second,
                                      transaction_log::operation::REMOVE_END);
         }
-
-        lock.unlock();
     }
 
     void update_object(const std::string& key, std::span<char> data) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
         const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index,
                                  transaction_log::operation::UPDATE_START);
@@ -107,7 +99,6 @@ public:
         const auto old_index = m_object_ptrs.at(key);
         m_data_store.remove(old_index);
         m_object_ptrs[key] = index;
-        lock.unlock();
 
         m_transaction_log.append(key, index,
                                  transaction_log::operation::UPDATE_END);
@@ -128,7 +119,6 @@ private:
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::map<std::string, uint64_t> m_object_ptrs;
-    std::shared_mutex m_mutex;
 };
 
 } // namespace uh::cluster
