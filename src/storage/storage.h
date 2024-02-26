@@ -8,6 +8,7 @@
 
 #include "common/network/server.h"
 #include "common/registry/config_registry.h"
+#include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/utils/cluster_config.h"
 #include "data_store.h"
@@ -19,14 +20,16 @@ class storage {
 public:
     explicit storage(const service_config& sc)
         : m_etcd_client(sc.etcd_url),
-          m_config_registry(STORAGE_SERVICE, m_etcd_client, sc.working_dir),
+          m_service_id(get_service_id(m_etcd_client,
+                                      get_service_string(STORAGE_SERVICE),
+                                      sc.working_dir)),
+          m_config_registry(STORAGE_SERVICE, m_etcd_client, sc.working_dir,
+                            m_service_id),
           m_ioc(m_config_registry.get_server_config().threads),
-          m_service_registry(STORAGE_SERVICE,
-                             m_config_registry.get_service_id(), m_etcd_client),
+          m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd_client),
           m_server(m_config_registry.get_server_config(),
                    std::make_unique<storage_handler>(
-                       m_config_registry.get_storage_config(),
-                       m_config_registry.get_service_id()),
+                       m_config_registry.get_storage_config(), m_service_id),
                    m_ioc) {}
 
     void run() {
@@ -43,6 +46,7 @@ public:
 
 private:
     etcd::SyncClient m_etcd_client;
+    std::size_t m_service_id;
     config_registry m_config_registry;
     boost::asio::io_context m_ioc;
     service_registry m_service_registry;

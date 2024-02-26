@@ -6,6 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
 #include "common/test/checks.h"
@@ -23,12 +24,15 @@ template <role r, role service_role = r> struct base_fixture {
     temp_directory tmp;
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
+    std::size_t service_id;
     config_registry reg;
     uh::cluster::services<r> services;
 
     base_fixture()
         : etcd_client(REGISTRY_ENDPOINT),
-          reg(service_role, etcd_client, tmp.path()),
+          service_id(
+              get_service_id(etcd_client, get_service_string(r), tmp.path())),
+          reg(service_role, etcd_client, tmp.path(), service_id),
           services(ioc, reg, 2, etcd_client) {}
 };
 
