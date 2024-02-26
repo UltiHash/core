@@ -33,35 +33,6 @@ public:
                 .bind_address = get_config_value_string(CFG_SERVER_BIND_ADDR)};
     }
 
-    directory_config get_directory_config() {
-        if (m_service_role != uh::cluster::DIRECTORY_SERVICE)
-            throw std::invalid_argument(
-                "Only service instances of the type '" +
-                get_service_string(uh::cluster::DIRECTORY_SERVICE) +
-                "' may access the " +
-                get_service_string(uh::cluster::DIRECTORY_SERVICE) +
-                " configuration!");
-        return {
-            .directory_store_conf =
-                {
-                    .working_dir = m_working_dir,
-                    .bucket_conf =
-                        {
-                            .min_file_size =
-                                get_config_value_ull(CFG_DIR_MIN_FILE_SIZE),
-                            .max_file_size =
-                                get_config_value_ull(CFG_DIR_MAX_FILE_SIZE),
-                            .max_storage_size =
-                                get_config_value_ull(CFG_DIR_MAX_STORAGE_SIZE),
-                            .max_chunk_size =
-                                get_config_value_ull(CFG_DIR_MAX_CHUNK_SIZE),
-                        },
-                },
-            .worker_thread_count =
-                get_config_value_ull(CFG_DIR_WORKER_THREAD_COUNT),
-        };
-    }
-
     entrypoint_config get_entrypoint_config() {
         if (m_service_role != uh::cluster::ENTRYPOINT_SERVICE)
             throw std::invalid_argument(
@@ -113,29 +84,6 @@ private:
                              [this]() { return registry_lock(m_etcd_client); });
 
         if (!key_exists(etcd_initialized_key)) {
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_SERVER_PORT, 9400);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_SERVER_BIND_ADDR,
-                                   "0.0.0.0");
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_SERVER_THREADS, 4);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_DIR_MIN_FILE_SIZE,
-                                   2ul * 1024ul * 1024ul * 1024ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_DIR_MAX_FILE_SIZE,
-                                   64ul * 1024ul * 1024ul * 1024ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_DIR_MAX_STORAGE_SIZE,
-                                   256ul * 1024ul * 1024ul * 1024ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_DIR_MAX_CHUNK_SIZE,
-                                   std::numeric_limits<uint32_t>::max());
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_DIR_WORKER_THREAD_COUNT,
-                                   8ul);
-
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 8080);
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE,
