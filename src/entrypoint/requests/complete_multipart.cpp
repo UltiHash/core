@@ -1,7 +1,7 @@
 #include "complete_multipart.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/rest/http/models/custom_error_response_exception.h"
-#include "entrypoint/rest/utils/parser/xml_parser.h"
+#include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
 
@@ -23,23 +23,6 @@ void complete_multipart::validate(const http_request& req) const {
             rest::http::model::error::type::bad_upload_id);
     }
 
-    rest::utils::parser::xml_parser parsed_xml;
-    pugi::xpath_node_set object_nodes_set;
-
-    try {
-        if (!parsed_xml.parse(req.get_body()))
-            throw std::runtime_error("unable to parse the xml");
-
-        object_nodes_set =
-            parsed_xml.get_nodes_from_path("/CompleteMultipartUpload/Part");
-        if (object_nodes_set.empty())
-            throw std::runtime_error("no part found");
-    } catch (const std::exception& e) {
-        throw rest::http::model::custom_error_response_exception(
-            http::status::bad_request,
-            rest::http::model::error::type::malformed_xml);
-    }
-
     const auto up_info =
         m_state.server_state.m_uploads.get_upload_info(upload_id);
     if (up_info == nullptr) {
@@ -48,25 +31,38 @@ void complete_multipart::validate(const http_request& req) const {
             rest::http::model::error::type::no_such_upload);
     }
 
-    for (uint16_t part_counter = 1; const auto& objectNode : object_nodes_set) {
-        auto part_num =
-            std::stoul(objectNode.node().child("PartNumber").child_value());
-        auto etag = objectNode.node().child("ETag").child_value();
+    xml_parser xml_parser;
+    bool parsed = xml_parser.parse(req.get_body());
+    auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
-        if (part_num != part_counter) {
+    if (!parsed || part_nodes.empty())
+        throw rest::http::model::custom_error_response_exception(
+            http::status::bad_request,
+            rest::http::model::error::type::malformed_xml);
+
+    for (uint16_t part_counter = 1; const auto& part : part_nodes) {
+        auto part_num = part.get().get_optional<std::size_t>("PartNumber");
+        auto etag = part.get().get_optional<std::string>("ETag");
+
+        if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
+            throw rest::http::model::custom_error_response_exception(
+                http::status::bad_request,
+                rest::http::model::error::type::malformed_xml);
+
+        if (*part_num != part_counter) {
             throw rest::http::model::custom_error_response_exception(
                 http::status::bad_request,
                 rest::http::model::error::type::invalid_part_oder);
         }
 
-        if (up_info->part_sizes.at(part_num) < MAXIMUM_CHUNK_SIZE and
+        if (up_info->part_sizes.at(*part_num) < MAXIMUM_CHUNK_SIZE and
             part_num != up_info->part_sizes.size() - 1) {
             throw rest::http::model::custom_error_response_exception(
                 http::status::bad_request,
                 rest::http::model::error::type::entity_too_small);
         }
 
-        if (up_info->etags.at(part_num) != etag) {
+        if (up_info->etags.at(*part_num) != etag) {
             throw rest::http::model::custom_error_response_exception(
                 http::status::bad_request,
                 rest::http::model::error::type::invalid_part);
