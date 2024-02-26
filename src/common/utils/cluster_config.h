@@ -21,28 +21,10 @@ struct server_config {
     std::string bind_address;
 };
 
-struct bucket_config {
-    size_t min_file_size;
-    size_t max_file_size;
-    size_t max_storage_size;
-    size_t max_chunk_size;
-};
-
-struct directory_store_config {
-    std::filesystem::path working_dir;
-    bucket_config bucket_conf;
-};
-
 struct entrypoint_config {
     std::size_t dedupe_node_connection_count{};
     std::size_t directory_connection_count{};
     std::size_t worker_thread_count{};
-};
-
-struct directory_config {
-    directory_store_config directory_store_conf;
-    std::size_t worker_thread_count{};
-    uint128_t max_data_store_size = 4 * TERA_BYTE;
 };
 
 } // end namespace uh::cluster
