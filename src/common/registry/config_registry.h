@@ -33,27 +33,6 @@ public:
                 .bind_address = get_config_value_string(CFG_SERVER_BIND_ADDR)};
     }
 
-    deduplicator_config get_deduplicator_config() {
-        if (m_service_role != uh::cluster::DEDUPLICATOR_SERVICE)
-            throw std::invalid_argument(
-                "Only service instances of the type '" +
-                get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) +
-                "' may access the " +
-                get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) +
-                " configuration!");
-        return {
-            .working_dir = m_working_dir,
-            .min_fragment_size =
-                get_config_value_ull(CFG_DEDUP_MIN_FRAGMENT_SIZE),
-            .max_fragment_size =
-                get_config_value_ull(CFG_DEDUP_MAX_FRAGMENT_SIZE),
-            .dedupe_worker_minimum_data_size =
-                get_config_value_ull(CFG_DEDUP_WORKER_MIN_DATA_SIZE),
-            .worker_thread_count =
-                get_config_value_ull(CFG_DEDUP_WORKER_THREAD_COUNT),
-        };
-    }
-
     directory_config get_directory_config() {
         if (m_service_role != uh::cluster::DIRECTORY_SERVICE)
             throw std::invalid_argument(
@@ -134,26 +113,6 @@ private:
                              [this]() { return registry_lock(m_etcd_client); });
 
         if (!key_exists(etcd_initialized_key)) {
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_SERVER_PORT, 9300);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_SERVER_BIND_ADDR,
-                                   "0.0.0.0");
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_SERVER_THREADS, 4);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE,
-                                   32ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE,
-                                   8ul * 1024ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_DEDUP_WORKER_MIN_DATA_SIZE,
-                                   128ul * 1024ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT,
-                                   32ul);
-
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 9400);
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE,

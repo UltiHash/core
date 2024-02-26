@@ -72,18 +72,13 @@ enum config_parameter {
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 17>
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 13>
     string_by_config_parameter = {{
         {uh::cluster::CFG_SERVER_THREADS, "server_threads"},
         {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
         {uh::cluster::CFG_SERVER_PORT, "server_port"},
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-
-        {uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE, "min_fragment_size"},
-        {uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE, "max_fragment_size"},
-        {uh::cluster::CFG_DEDUP_WORKER_MIN_DATA_SIZE, "worker_min_data_size"},
-        {uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT, "worker_thread_count"},
 
         {uh::cluster::CFG_DIR_MIN_FILE_SIZE, "min_file_size"},
         {uh::cluster::CFG_DIR_MAX_FILE_SIZE, "max_file_size"},
