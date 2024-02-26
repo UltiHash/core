@@ -15,10 +15,8 @@ class deduplicator_handler : public protocol_handler {
 public:
     deduplicator_handler(
         deduplicator_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> dedupe_workers,
-        metrics_handler& metrics_handler)
+        std::shared_ptr<boost::asio::thread_pool> dedupe_workers)
         : m_dedupe_conf(std::move(config)),
-          m_metrics_handler(metrics_handler),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
           m_dedupe_workers(std::move(dedupe_workers)) {
@@ -27,8 +25,6 @@ public:
             throw std::invalid_argument("L1 cache sample size should not be "
                                         "smaller than the min fragment size!");
         }
-        m_metrics_handler.create_uint_counter("dedupe_set_fragment_count");
-        m_metrics_handler.create_uint_counter("dedupe_set_fragment_size");
     }
 
     void init() override {
@@ -37,7 +33,7 @@ public:
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        messenger m(std::move(s), m_metrics_handler);
+        messenger m(std::move(s));
 
         for (;;) {
             std::optional<error> err;
@@ -110,6 +106,7 @@ private:
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
+
         co_await m.send_dedupe_response(SUCCESS, responses[0]);
     }
 
@@ -118,17 +115,17 @@ private:
         auto integration_data = data;
 
         auto check_dedupe = [&](const dedupe_set::fragment_element& frag) {
-            auto frag_data = m_storage.read_l1_cache(frag.pointer, frag.size);
+            auto frag_data = m_storage.cached_sample(frag.pointer, frag.size);
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
-                frag_data = dedupe_set::load_fragment(frag, m_storage);
+                frag_data = m_storage.read(frag.pointer, frag.size);
             }
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                 if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data = dedupe_set::load_fragment(frag, m_storage);
+                    frag_data = m_storage.read(frag.pointer, frag.size);
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),
                         frag_data.get_str_view().substr(common_prefix));
@@ -161,10 +158,11 @@ private:
             m_fragment_set.insert(
                 {addr.pointers[0], addr.pointers[1]},
                 integration_data.substr(0, addr.sizes.front()), f.hint);
-            m_metrics_handler.increase_uint_counter("dedupe_set_fragment_count",
-                                                    1);
-            m_metrics_handler.increase_uint_counter("dedupe_set_fragment_size",
-                                                    addr.sizes.front());
+
+            metric<metric_type::dedupe_set_frag_count>::increase(1);
+            metric<metric_type::dedupe_set_frag_size>::increase(
+                addr.sizes.front());
+
             result.addr.append_address(addr);
             result.effective_size += frag_size;
             integration_data = integration_data.substr(frag_size);
@@ -192,7 +190,6 @@ private:
     }
 
     deduplicator_config m_dedupe_conf;
-    metrics_handler& m_metrics_handler;
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;

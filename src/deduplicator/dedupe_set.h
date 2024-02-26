@@ -72,12 +72,12 @@ public:
                 if (f.m_data.has_value()) {
                     str = *f.m_data;
                 } else if (data =
-                               m_storage.get().read_l1_cache(f.pointer, f.size);
+                               m_storage.get().cached_sample(f.pointer, f.size);
                            data.data() != nullptr) {
                     l1 = true;
                     str = data.get_str_view();
                 } else {
-                    data = load_fragment(f, m_storage);
+                    data = m_storage.get().read(f.pointer, f.size);
                     str = data.get_str_view();
                 }
             };
@@ -106,12 +106,12 @@ public:
 
             if (b1 and !m_data.has_value() and
                 size > m_storage.get().l1_cache_sample_size()) {
-                d1 = load_fragment(*this, m_storage);
+                d1 = m_storage.get().read(pointer, size);
                 s1 = d1.get_str_view();
             }
             if (b2 and !f.m_data.has_value() and
                 f.size > m_storage.get().l1_cache_sample_size()) {
-                d2 = load_fragment(f, m_storage);
+                d2 = m_storage.get().read(f.pointer, f.size);
                 s2 = d2.get_str_view();
             }
 
@@ -125,18 +125,6 @@ public:
             high;
         const std::set<fragment_element>::const_iterator hint;
     };
-
-    [[nodiscard]] static inline shared_buffer<char>
-    load_fragment(const fragment_element& f, global_data_view& storage) {
-        if (const auto c = storage.read_l2_cache(f.pointer, f.size);
-            c.data() != nullptr) {
-            return c;
-        }
-
-        shared_buffer<char> buf(f.size);
-        storage.read(buf.data(), f.pointer, f.size);
-        return buf;
-    }
 
     dedupe_set(const std::filesystem::path& set_log_path,
                global_data_view& storage)
