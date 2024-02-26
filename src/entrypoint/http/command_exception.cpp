@@ -1,10 +1,10 @@
-#include "custom_error_response_exception.h"
+#include "command_exception.h"
 
 #include "common/telemetry/log.h"
 #include "iostream"
 #include <utility>
 
-namespace uh::cluster::rest::http::model {
+namespace uh::cluster {
 
 static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"success", "success"},
@@ -23,17 +23,17 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"BadPartNumber", "part number is invalid"},
     {"TooManyElements", "too many elements in the request"},
     {"StorageLimitExceeded", "insufficient storage"},
-    {"CommandNotFound", "no such command"},
+    {"CommandNotFound", "no such command found"},
     {"NoMultiPartUploads", "no multipart uploads"},
 };
 
 static const std::pair<std::string, std::string> error_out_of_range = {
     "OutOfRange", "error out of range"};
 
-error::error(type t)
+command_error::command_error(type t)
     : m_type(t) {}
 
-const std::pair<std::string, std::string>& error::message() const {
+const std::pair<std::string, std::string>& command_error::message() const {
 
     auto ec = code();
     if (error_messages.size() <= ec) {
@@ -43,10 +43,10 @@ const std::pair<std::string, std::string>& error::message() const {
     return error_messages[ec];
 }
 
-uint32_t error::code() const { return static_cast<uint32_t>(m_type); }
+uint32_t command_error::code() const { return static_cast<uint32_t>(m_type); }
 
 const std::pair<std::string, std::string>&
-error::get_code_message(uint32_t ec) {
+command_error::get_code_message(uint32_t ec) {
     if (error_messages.size() <= ec) {
         return error_out_of_range;
     }
@@ -54,14 +54,14 @@ error::get_code_message(uint32_t ec) {
     return error_messages[ec];
 }
 
-error::type error::operator*() const { return m_type; }
+command_error::type command_error::operator*() const { return m_type; }
 
-const char* custom_error_response_exception::what() const noexcept {
+const char* command_exception::what() const noexcept {
     return m_error.message().second.c_str();
 }
 
-custom_error_response_exception::custom_error_response_exception(
-    http::status status, error::type err)
+command_exception::command_exception(http::status status,
+                                     command_error::type err)
     : m_res(status, 11),
       m_error(err) {
     m_res.set(http::field::server, "UltiHash");
@@ -69,7 +69,7 @@ custom_error_response_exception::custom_error_response_exception(
 }
 
 [[nodiscard]] const http::response<http::string_body>&
-custom_error_response_exception::get_response_specific_object() {
+command_exception::get_response_specific_object() {
     m_res.body() = "<Error>\n"
                    "<Code>" +
                    m_error.message().first +
@@ -86,4 +86,4 @@ custom_error_response_exception::get_response_specific_object() {
     return m_res;
 }
 
-} // namespace uh::cluster::rest::http::model
+} // namespace uh::cluster

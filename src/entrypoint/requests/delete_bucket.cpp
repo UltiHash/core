@@ -1,6 +1,6 @@
 #include "delete_bucket.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
 
@@ -37,16 +37,13 @@ coro<http_response> delete_bucket::handle(const http_request& req) const {
         LOG_ERROR() << "Failed to delete bucket: " << e;
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::not_found,
-                rest::http::model::error::bucket_not_found);
+            throw command_exception(http::status::not_found,
+                                    command_error::bucket_not_found);
         case error::bucket_not_empty:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::conflict,
-                rest::http::model::error::bucket_not_empty);
+            throw command_exception(http::status::conflict,
+                                    command_error::bucket_not_empty);
         default:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::internal_server_error);
+            throw command_exception(http::status::internal_server_error);
         }
     }
 }

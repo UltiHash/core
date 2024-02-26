@@ -1,6 +1,6 @@
 #include "list_multipart.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
 
@@ -50,9 +50,8 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
             state.server_state.m_uploads.list_multipart_uploads(bucket_name);
 
         if (ongoing.empty()) {
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::not_found,
-                rest::http::model::error::no_mp_uploads);
+            throw command_exception(http::status::not_found,
+                                    command_error::no_mp_uploads);
         }
     };
 

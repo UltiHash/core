@@ -1,6 +1,6 @@
 #include "delete_objects.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 #include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
@@ -21,9 +21,8 @@ auto delete_objects::validate(const http_request& req) {
     auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
     if (!parsed || object_nodes.empty())
-        throw rest::http::model::custom_error_response_exception(
-            boost::beast::http::status::bad_request,
-            rest::http::model::error::type::malformed_xml);
+        throw command_exception(http::status::bad_request,
+                                command_error::type::malformed_xml);
 
     return object_nodes;
 }
@@ -47,7 +46,7 @@ http_response get_response(const std::vector<std::string>& success,
                       "</Deleted>\n";
     }
     for (const auto& val : failure) {
-        auto error = rest::http::model::error::get_code_message(val.code);
+        auto error = command_error::get_code_message(val.code);
         xml_string += "<Error>\n"
                       "<Key>" +
                       error.first +
@@ -75,9 +74,8 @@ coro<http_response> delete_objects::handle(http_request& req) const {
     for (const auto& object : object_nodes) {
         auto key = object.get().get_optional<std::string>("Key");
         if (!key) {
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::bad_request,
-                rest::http::model::error::type::malformed_xml);
+            throw command_exception(http::status::bad_request,
+                                    command_error::type::malformed_xml);
         }
 
         try {

@@ -1,7 +1,7 @@
-#include "server_state.h"
+#include "state.h"
 #include <algorithm>
 
-namespace uh::cluster::rest::utils {
+namespace uh::cluster {
 
 std::map<std::string, std::string>
 upload_state::list_multipart_uploads(const std::string& bucket) const {
@@ -113,4 +113,4 @@ void upload_state::append_upload_part_info(const std::string& upload_id,
     }
 }
 
-} // namespace uh::cluster::rest::utils
+} // namespace uh::cluster

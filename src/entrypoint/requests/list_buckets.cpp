@@ -1,6 +1,6 @@
 #include "list_buckets.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
 

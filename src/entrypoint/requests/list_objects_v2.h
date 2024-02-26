@@ -4,9 +4,9 @@
 
 #include "common/utils/strings.h"
 #include "common/utils/worker_utils.h"
+#include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
@@ -82,16 +82,13 @@ public:
             LOG_ERROR() << e.what();
             switch (*e.error()) {
             case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
+                throw command_exception(http::status::not_found,
+                                        command_error::bucket_not_found);
             case error::invalid_bucket_name:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::bad_request,
-                    rest::http::model::error::invalid_bucket_name);
+                throw command_exception(http::status::bad_request,
+                                        command_error::invalid_bucket_name);
             default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
+                throw command_exception(http::status::internal_server_error);
             }
         }
     }

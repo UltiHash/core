@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace uh::cluster::rest::utils {
+namespace uh::cluster {
 struct upload_info {
     size_t effective_size{0};
     size_t data_size{0};
@@ -58,8 +58,8 @@ private:
     list_state m_list_state;
 };
 
-struct server_state {
+struct state {
     struct upload_state m_uploads;
 };
 
-} // namespace uh::cluster::rest::utils
+} // namespace uh::cluster

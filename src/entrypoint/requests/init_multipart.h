@@ -3,9 +3,9 @@
 #define UH_CLUSTER_INIT_MULTIPART_H
 
 #include "common/utils/worker_utils.h"
+#include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include "entrypoint/utils/utils.h"
 
 namespace uh::cluster {
@@ -44,12 +44,10 @@ public:
         catch (const error_exception& e) {
             switch (*e.error()) {
             case error::bucket_not_found:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::not_found,
-                    rest::http::model::error::bucket_not_found);
+                throw command_exception(boost::beast::http::status::not_found,
+                                        command_error::bucket_not_found);
             default:
-                throw rest::http::model::custom_error_response_exception(
-                    boost::beast::http::status::internal_server_error);
+                throw command_exception(http::status::internal_server_error);
             }
         }
 
@@ -57,8 +55,7 @@ public:
         if (!m_state.server_state.m_uploads.insert_upload(
                 upload_id, req.get_uri().get_bucket_id(),
                 req.get_uri().get_object_key())) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::internal_server_error);
+            throw command_exception(http::status::internal_server_error);
         }
 
         co_return get_response(req, upload_id);

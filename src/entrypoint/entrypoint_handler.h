@@ -3,13 +3,13 @@
 
 #include "common/registry/services.h"
 #include "common/utils/protocol_handler.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 
 // REQUESTS
+#include "http/command_exception.h"
 #include "requests/abort_multipart.h"
 #include "requests/complete_multipart.h"
 #include "requests/create_bucket.h"
@@ -66,40 +66,25 @@ public:
                     break;
                 }
             }
-        } catch (const command_unknown_exception& e) {
-            LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
-                boost::beast::http::status::not_found,
-                rest::http::model::error::command_not_found);
-            boost::beast::http::write(s, err.get_response_specific_object());
-            s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            s.close();
-            throw;
-        } catch (
-            uh::cluster::rest::http::model::custom_error_response_exception&
-                res_exc) {
+        } catch (command_exception& res_exc) {
             LOG_ERROR() << res_exc.what();
-            boost::beast::http::write(s,
-                                      res_exc.get_response_specific_object());
+            http::write(s, res_exc.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
         } catch (const boost::system::system_error& se) {
-            if (se.code() != boost::beast::http::error::end_of_stream) {
+            if (se.code() != http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
-                uh::cluster::rest::http::model::custom_error_response_exception
-                    err(boost::beast::http::status::bad_request);
-                boost::beast::http::write(s,
-                                          err.get_response_specific_object());
+                command_exception err(http::status::bad_request);
+                http::write(s, err.get_response_specific_object());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
             }
         } catch (const std::exception& e) {
             LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
-                boost::beast::http::status::internal_server_error);
-            boost::beast::http::write(s, err.get_response_specific_object());
+            command_exception err(http::status::internal_server_error);
+            http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
@@ -133,7 +118,8 @@ public:
     }
 
     coro<http_response> dispatch_front(const http_request& req) {
-        throw command_unknown_exception();
+        throw command_exception(boost::beast::http::status::not_found,
+                                command_error::command_not_found);
     }
 
 private:

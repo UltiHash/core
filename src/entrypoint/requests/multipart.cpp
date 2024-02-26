@@ -1,6 +1,6 @@
 #include "multipart.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
 
@@ -20,16 +20,14 @@ static void validate(const http_request& req) {
 
     auto upload_id = req_uri.get_query_parameters().at("uploadId");
     if (upload_id.empty()) {
-        throw rest::http::model::custom_error_response_exception(
-            boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_upload_id);
+        throw command_exception(boost::beast::http::status::bad_request,
+                                command_error::type::bad_upload_id);
     }
 
     auto part_num = std::stoi(req_uri.get_query_parameters().at("partNumber"));
     if (part_num < 1 || part_num > 10000) {
-        throw rest::http::model::custom_error_response_exception(
-            boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_part_number);
+        throw command_exception(boost::beast::http::status::bad_request,
+                                command_error::type::bad_part_number);
     }
 }
 

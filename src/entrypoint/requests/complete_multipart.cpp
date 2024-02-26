@@ -1,6 +1,6 @@
 #include "complete_multipart.h"
 #include "common/utils/worker_utils.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
+#include "entrypoint/http/command_exception.h"
 #include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
@@ -18,17 +18,15 @@ bool complete_multipart::can_handle(const http_request& req) {
 void complete_multipart::validate(const http_request& req) const {
     const auto& upload_id = req.get_uri().get_query_parameters().at("uploadId");
     if (upload_id.empty()) {
-        throw rest::http::model::custom_error_response_exception(
-            boost::beast::http::status::bad_request,
-            rest::http::model::error::type::bad_upload_id);
+        throw command_exception(http::status::bad_request,
+                                command_error::type::bad_upload_id);
     }
 
     const auto up_info =
         m_state.server_state.m_uploads.get_upload_info(upload_id);
     if (up_info == nullptr) {
-        throw rest::http::model::custom_error_response_exception(
-            http::status::not_found,
-            rest::http::model::error::type::no_such_upload);
+        throw command_exception(http::status::not_found,
+                                command_error::type::no_such_upload);
     }
 
     xml_parser xml_parser;
@@ -36,36 +34,31 @@ void complete_multipart::validate(const http_request& req) const {
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
     if (!parsed || part_nodes.empty())
-        throw rest::http::model::custom_error_response_exception(
-            http::status::bad_request,
-            rest::http::model::error::type::malformed_xml);
+        throw command_exception(http::status::bad_request,
+                                command_error::type::malformed_xml);
 
     for (uint16_t part_counter = 1; const auto& part : part_nodes) {
         auto part_num = part.get().get_optional<std::size_t>("PartNumber");
         auto etag = part.get().get_optional<std::string>("ETag");
 
         if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::malformed_xml);
+            throw command_exception(http::status::bad_request,
+                                    command_error::type::malformed_xml);
 
         if (*part_num != part_counter) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::invalid_part_oder);
+            throw command_exception(http::status::bad_request,
+                                    command_error::type::invalid_part_oder);
         }
 
         if (up_info->part_sizes.at(*part_num) < MAXIMUM_CHUNK_SIZE and
             part_num != up_info->part_sizes.size() - 1) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::entity_too_small);
+            throw command_exception(http::status::bad_request,
+                                    command_error::type::entity_too_small);
         }
 
         if (up_info->etags.at(*part_num) != etag) {
-            throw rest::http::model::custom_error_response_exception(
-                http::status::bad_request,
-                rest::http::model::error::type::invalid_part);
+            throw command_exception(http::status::bad_request,
+                                    command_error::type::invalid_part);
         }
 
         part_counter++;

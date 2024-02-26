@@ -72,17 +72,14 @@ coro<http_response> put_object::handle(http_request& req) const {
                     << "`: " << e;
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::not_found,
-                rest::http::model::error::bucket_not_found);
+            throw command_exception(boost::beast::http::status::not_found,
+                                    command_error::bucket_not_found);
         case error::storage_limit_exceeded:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::insufficient_storage,
-                rest::http::model::error::insufficient_storage);
+            throw command_exception(http::status::insufficient_storage,
+                                    command_error::insufficient_storage);
 
         default:
-            throw rest::http::model::custom_error_response_exception(
-                boost::beast::http::status::internal_server_error);
+            throw command_exception(http::status::internal_server_error);
         }
     }
 }

@@ -66,10 +66,6 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     co_return resp;
 }
 
-const char* command_unknown_exception::what() const noexcept {
-    return "command not found";
-}
-
 std::string generate_unique_id() {
     boost::uuids::random_generator gen;
     boost::uuids::uuid uuid = gen();
