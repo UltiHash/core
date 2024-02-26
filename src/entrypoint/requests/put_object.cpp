@@ -53,6 +53,9 @@ coro<http_response> put_object::handle(http_request& req) const {
         const std::chrono::duration<double> duration = stop - start;
         const auto bandwidth = size_mb / duration.count();
 
+        metric<total_effective_size_mb, double>::increase(effective_size);
+        metric<total_size_mb, double>::increase(size_mb);
+
         LOG_INFO() << "original size " << size_mb << " MB\n"
                    << "effective size " << effective_size << " MB\n"
                    << "space saving " << space_saving << '\n'
