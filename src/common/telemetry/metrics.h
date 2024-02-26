@@ -56,8 +56,8 @@ template <metric_type type, typename value_type = uint64_t> class metric {
 
     using otel_counter_type = std::conditional_t<
         std::is_signed_v<value_type>,
-        std::unique_ptr<opentelemetry::metrics::Counter<value_type>>,
-        std::unique_ptr<opentelemetry::metrics::UpDownCounter<value_type>>>;
+        std::unique_ptr<opentelemetry::metrics::UpDownCounter<value_type>>,
+        std::unique_ptr<opentelemetry::metrics::Counter<value_type>>>;
 
     static otel_counter_type create_counter() {
         const auto name = std::string(magic_enum::enum_name(type));
