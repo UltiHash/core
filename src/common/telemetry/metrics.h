@@ -26,6 +26,8 @@ enum metric_type {
     l2_cache_miss,
     dedupe_set_frag_count,
     dedupe_set_frag_size,
+    total_ingested_size_mb,
+    total_egressed_size_mb,
     total_effective_size_mb,
     total_size_mb,
     storage_read_fragment_req,
@@ -51,16 +53,23 @@ void measure_message_type(message_type type);
 void initialize_metrics_exporter(const std::string& endpoint);
 
 template <metric_type type, typename value_type = uint64_t> class metric {
-    using otel_counter_type =
-        std::unique_ptr<opentelemetry::metrics::Counter<value_type>>;
+
+    using otel_counter_type = std::conditional_t<
+        std::is_same_v<value_type, uint64_t>,
+        std::unique_ptr<opentelemetry::metrics::Counter<value_type>>,
+        std::unique_ptr<opentelemetry::metrics::UpDownCounter<value_type>>>;
 
     static otel_counter_type create_counter() {
         const auto name = std::string(magic_enum::enum_name(type));
-        auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
+        auto meter =
+            opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+                name);
         if constexpr (std::is_same_v<value_type, uint64_t>) {
-            return provider->GetMeter(name)->CreateUInt64Counter(name);
+            return meter->CreateUInt64Counter(name);
+        } else if constexpr (std::is_same_v<value_type, int64_t>) {
+            return meter->CreateInt64UpDownCounter(name);
         } else if constexpr (std::is_same_v<value_type, double>) {
-            return provider->GetMeter(name)->CreateDoubleCounter(name);
+            return meter->CreateDoubleUpDownCounter(name);
         }
     }
 
