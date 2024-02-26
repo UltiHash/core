@@ -54,23 +54,6 @@ public:
         };
     }
 
-    storage_config get_storage_config() {
-        if (m_service_role != uh::cluster::STORAGE_SERVICE)
-            throw std::invalid_argument(
-                "Only service instances of the type '" +
-                get_service_string(uh::cluster::STORAGE_SERVICE) +
-                "' may access the " +
-                get_service_string(uh::cluster::STORAGE_SERVICE) +
-                " configuration!");
-        return {
-            .working_dir = m_working_dir,
-            .min_file_size = get_config_value_ull(CFG_STORAGE_MIN_FILE_SIZE),
-            .max_file_size = get_config_value_ull(CFG_STORAGE_MAX_FILE_SIZE),
-            .max_data_store_size =
-                get_config_value_ull(CFG_STORAGE_MAX_DATA_STORE_SIZE),
-        };
-    }
-
     deduplicator_config get_deduplicator_config() {
         if (m_service_role != uh::cluster::DEDUPLICATOR_SERVICE)
             throw std::invalid_argument(
@@ -172,23 +155,6 @@ private:
                              [this]() { return registry_lock(m_etcd_client); });
 
         if (!key_exists(etcd_initialized_key)) {
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_SERVER_PORT, 9200);
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_SERVER_BIND_ADDR,
-                                   "0.0.0.0");
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_SERVER_THREADS, 16);
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_STORAGE_MIN_FILE_SIZE,
-                                   1ul * 1024ul * 1024ul * 1024ul);
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_STORAGE_MAX_FILE_SIZE,
-                                   4ul * 1024ul * 1024ul * 1024ul);
-            set_class_config_value(uh::cluster::STORAGE_SERVICE,
-                                   uh::cluster::CFG_STORAGE_MAX_DATA_STORE_SIZE,
-                                   64ul * 1024ul * 1024ul * 1024ul);
-
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 9300);
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,

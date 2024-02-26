@@ -49,13 +49,6 @@ struct deduplicator_config {
     std::size_t worker_thread_count{};
 };
 
-struct storage_config {
-    std::filesystem::path working_dir;
-    std::size_t min_file_size;
-    std::size_t max_file_size;
-    uint128_t max_data_store_size;
-};
-
 struct entrypoint_config {
     std::size_t dedupe_node_connection_count{};
     std::size_t directory_connection_count{};
