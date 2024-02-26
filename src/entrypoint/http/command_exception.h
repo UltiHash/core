@@ -8,8 +8,6 @@ namespace uh::cluster {
 
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 namespace net = boost::asio;
-using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
-    net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
 class command_error {
 public:

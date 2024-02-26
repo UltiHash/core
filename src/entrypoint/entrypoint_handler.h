@@ -118,7 +118,7 @@ public:
     }
 
     coro<http_response> dispatch_front(const http_request& req) {
-        throw command_exception(boost::beast::http::status::not_found,
+        throw command_exception(http::status::not_found,
                                 command_error::command_not_found);
     }
 
