@@ -20,11 +20,11 @@ public:
 private:
     pt::ptree m_tree;
 
-    template <typename Tree, typename Container>
-    void enumerate(const Tree& pt, Tree::path_type& path,
+    template <typename Container>
+    void enumerate(const pt::ptree& pt, pt::ptree::path_type path,
                    Container&& container) {
         if (path.empty())
-            return;
+            throw std::runtime_error("empty path given");
 
         if (path.single()) {
             const auto& name = path.reduce();
