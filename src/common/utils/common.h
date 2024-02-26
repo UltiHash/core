@@ -54,12 +54,6 @@ enum config_parameter {
     CFG_ENDPOINT_HOST,
     CFG_ENDPOINT_PORT,
 
-    CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT,
-    CFG_GDV_READ_CACHE_CAPACITY_L1,
-    CFG_GDV_READ_CACHE_CAPACITY_L2,
-    CFG_GDV_L1_SAMPLE_SIZE,
-    CFG_GDV_MAX_DATA_STORE_SIZE,
-
     CFG_DEDUP_MIN_FRAGMENT_SIZE,
     CFG_DEDUP_MAX_FRAGMENT_SIZE,
 
@@ -78,22 +72,13 @@ enum config_parameter {
     CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 22>
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 17>
     string_by_config_parameter = {{
         {uh::cluster::CFG_SERVER_THREADS, "server_threads"},
         {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
         {uh::cluster::CFG_SERVER_PORT, "server_port"},
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-
-        {uh::cluster::CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT,
-         "gdv_storage_service_connection_count"},
-        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L1,
-         "gdv_read_cache_capacity_l1"},
-        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L2,
-         "gdv_read_cache_capacity_l2"},
-        {uh::cluster::CFG_GDV_L1_SAMPLE_SIZE, "gdv_l1_sample_size"},
-        {uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE, "gdv_max_data_store_size"},
 
         {uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE, "min_fragment_size"},
         {uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE, "max_fragment_size"},

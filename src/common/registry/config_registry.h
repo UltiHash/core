@@ -33,27 +33,6 @@ public:
                 .bind_address = get_config_value_string(CFG_SERVER_BIND_ADDR)};
     }
 
-    global_data_view_config get_global_data_view_config() {
-        if (m_service_role != uh::cluster::DEDUPLICATOR_SERVICE and
-            m_service_role != uh::cluster::DIRECTORY_SERVICE)
-            throw std::invalid_argument(
-                "Only service instances of the type '" +
-                get_service_string(uh::cluster::DEDUPLICATOR_SERVICE) +
-                "' or '" + get_service_string(uh::cluster::DIRECTORY_SERVICE) +
-                "' may access the global data view configuration!");
-        return {
-            .storage_service_connection_count =
-                get_config_value_ull(CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT),
-            .read_cache_capacity_l1 =
-                get_config_value_ull(CFG_GDV_READ_CACHE_CAPACITY_L1),
-            .read_cache_capacity_l2 =
-                get_config_value_ull(CFG_GDV_READ_CACHE_CAPACITY_L2),
-            .l1_sample_size = get_config_value_ull(CFG_GDV_L1_SAMPLE_SIZE),
-            .max_data_store_size =
-                get_config_value_ull(CFG_GDV_MAX_DATA_STORE_SIZE),
-        };
-    }
-
     deduplicator_config get_deduplicator_config() {
         if (m_service_role != uh::cluster::DEDUPLICATOR_SERVICE)
             throw std::invalid_argument(
@@ -174,20 +153,6 @@ private:
             set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
                                    uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT,
                                    32ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L1,
-                                   8000000ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L2,
-                                   4000ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_GDV_L1_SAMPLE_SIZE, 128ul);
-            set_class_config_value(
-                uh::cluster::DEDUPLICATOR_SERVICE,
-                uh::cluster::CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT, 16ul);
-            set_class_config_value(uh::cluster::DEDUPLICATOR_SERVICE,
-                                   uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE,
-                                   64ul * 1024ul * 1024ul * 1024ul);
 
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 9400);
@@ -211,20 +176,6 @@ private:
             set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
                                    uh::cluster::CFG_DIR_WORKER_THREAD_COUNT,
                                    8ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L1,
-                                   8000000ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L2,
-                                   4000ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_GDV_L1_SAMPLE_SIZE, 128ul);
-            set_class_config_value(
-                uh::cluster::DIRECTORY_SERVICE,
-                uh::cluster::CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT, 16ul);
-            set_class_config_value(uh::cluster::DIRECTORY_SERVICE,
-                                   uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE,
-                                   64ul * 1024ul * 1024ul * 1024ul);
 
             set_class_config_value(uh::cluster::ENTRYPOINT_SERVICE,
                                    uh::cluster::CFG_SERVER_PORT, 8080);

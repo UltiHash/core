@@ -33,14 +33,6 @@ struct directory_store_config {
     bucket_config bucket_conf;
 };
 
-struct global_data_view_config {
-    std::size_t storage_service_connection_count{};
-    std::size_t read_cache_capacity_l1{};
-    std::size_t read_cache_capacity_l2{};
-    std::size_t l1_sample_size{};
-    uint128_t max_data_store_size;
-};
-
 struct deduplicator_config {
     std::filesystem::path working_dir;
     std::size_t min_fragment_size{};

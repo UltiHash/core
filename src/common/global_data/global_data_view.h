@@ -11,6 +11,14 @@
 
 namespace uh::cluster {
 
+struct global_data_view_config {
+    std::size_t storage_service_connection_count = 16;
+    std::size_t read_cache_capacity_l1 = 8000000ul;
+    std::size_t read_cache_capacity_l2 = 4000ul;
+    std::size_t l1_sample_size = 128ul;
+    uint128_t max_data_store_size = 64 * GIGA_BYTE;
+};
+
 class global_data_view {
 
 public:
