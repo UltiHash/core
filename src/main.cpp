@@ -26,9 +26,9 @@ void execute_role(cluster::role role, const service_config& cfg) {
         case STORAGE_SERVICE:
             return start_service(storage(cfg, {}));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(cfg));
+            return start_service(deduplicator(cfg, {}));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg));
+            return start_service(directory(cfg, {}));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(cfg));
         }
