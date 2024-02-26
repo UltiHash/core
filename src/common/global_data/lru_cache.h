@@ -34,7 +34,7 @@ public:
      *  - Inserts the new key-value pair into the cache.
      *
      * @param key The key to insert or update.
-     * @param value The value associated with the key.
+     * @param value The rvalue reference to a key object.
      */
     void put(const K& key, V&& value) {
         std::lock_guard<std::mutex> lock(m_mutex);
