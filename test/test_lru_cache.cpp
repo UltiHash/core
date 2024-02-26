@@ -16,7 +16,7 @@ namespace uh::cluster {
 
 void concurrent_insertions(lru_cache<int, int>& cache, int start, int end) {
     for (int i = start; i <= end; ++i) {
-        cache.put(i, i * 10);
+        cache.put(i, i);
     }
 }
 
@@ -24,7 +24,7 @@ void concurrent_retrievals(lru_cache<int, int>& cache, int start, int end,
                            std::atomic<int>& failure_count) {
     for (int i = start; i <= end; ++i) {
         auto value = cache.get(i);
-        if (value.has_value() && value.value() != i * 10) {
+        if (value.has_value() && value.value() != i) {
             ++failure_count;
         }
     }
