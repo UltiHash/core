@@ -28,8 +28,8 @@ std::string read_file(const std::filesystem::path& path) {
         throw std::runtime_error("cannot find " + path.string());
     }
 
-    return std::string(std::istreambuf_iterator<char>(in),
-                       std::istreambuf_iterator<char>());
+    return {std::istreambuf_iterator<char>(in),
+            std::istreambuf_iterator<char>()};
 }
 
 license read_license(const std::filesystem::path& path) {
