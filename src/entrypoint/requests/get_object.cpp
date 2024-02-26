@@ -15,9 +15,8 @@ bool get_object::can_handle(const http_request& req) {
 }
 
 coro<http_response> get_object::handle(const http_request& req) const {
-
+    metric<entrypoint_get_object>::increase(1);
     try {
-
         std::chrono::time_point<std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now();
         std::string buffer;

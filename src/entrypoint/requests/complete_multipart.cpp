@@ -77,6 +77,7 @@ void complete_multipart::validate(const http_request& req) const {
 }
 
 coro<http_response> complete_multipart::handle(http_request& req) const {
+    metric<entrypoint_complete_multipart>::increase(1);
 
     co_await req.read_body();
     validate(req);
