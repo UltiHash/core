@@ -1,5 +1,6 @@
 #ifndef CORE_COMMON_H
 #define CORE_COMMON_H
+
 #include "common/types/common_types.h"
 #include <map>
 #include <string>
@@ -42,35 +43,8 @@ enum message_type : uint8_t {
     DIRECTORY_OBJECT_DELETE_REQ = 14,
 
     SUCCESS = 15,
-    FAILURE = 16,
-    LAST = 17 // needed as a terminator to enable iterating over enum options
+    FAILURE = 16
 };
-
-constexpr const std::array<std::pair<uh::cluster::message_type, const char*>,
-                           17>
-    string_by_message_type = {{
-        {STORAGE_READ_FRAGMENT_REQ, "storage_read_fragment_request"},
-        {STORAGE_READ_ADDRESS_REQ, "storage_read_address_request"},
-        {STORAGE_WRITE_REQ, "storage_write_request"},
-        {STORAGE_SYNC_REQ, "storage_sync_request"},
-        {STORAGE_REMOVE_FRAGMENT_REQ, "storage_remove_fragment_request"},
-        {STORAGE_USED_REQ, "storage_used_request"},
-
-        {DEDUPLICATOR_REQ, "deduplicator_request"},
-
-        {DIRECTORY_BUCKET_LIST_REQ, "directory_bucket_list_request"},
-        {DIRECTORY_BUCKET_PUT_REQ, "directory_bucket_put_request"},
-        {DIRECTORY_BUCKET_DELETE_REQ, "directory_bucket_delete_request"},
-        {DIRECTORY_BUCKET_EXISTS_REQ, "directory_bucket_exists_request"},
-
-        {DIRECTORY_OBJECT_LIST_REQ, "directory_object_list_request"},
-        {DIRECTORY_OBJECT_PUT_REQ, "directory_object_put_request"},
-        {DIRECTORY_OBJECT_GET_REQ, "directory_object_get_request"},
-        {DIRECTORY_OBJECT_DELETE_REQ, "directory_object_delete_request"},
-
-        {SUCCESS, "generic_success"},
-        {FAILURE, "generic_failure"},
-    }};
 
 enum config_parameter {
     CFG_SERVER_THREADS,
@@ -167,16 +141,6 @@ get_config_string(const uh::cluster::config_parameter& cfg_param) {
     }
 
     throw std::invalid_argument("invalid configuration parameter");
-}
-
-constexpr const char*
-get_message_string(const uh::cluster::message_type& type) {
-    for (const auto& entry : string_by_message_type) {
-        if (entry.first == type)
-            return entry.second;
-    }
-
-    throw std::invalid_argument("invalid message type");
 }
 
 } // end namespace uh::cluster

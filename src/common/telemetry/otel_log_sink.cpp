@@ -9,7 +9,7 @@
 
 #include <boost/version.hpp>
 
-const std::string boost_version() {
+std::string boost_version() {
     static const std::string library_version =
         std::to_string(BOOST_VERSION / 100000) + "." +
         std::to_string(BOOST_VERSION / 100 % 1000) + "." +

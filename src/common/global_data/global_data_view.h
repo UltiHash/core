@@ -47,56 +47,55 @@ public:
         return addr;
     }
 
-    shared_buffer<char> read_l1_cache(const uint128_t pointer,
+    shared_buffer<char> cached_sample(const uint128_t pointer,
                                       const size_t size) {
         if (const auto c = m_cache_l1.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
+                metric<metric_type::l1_cache_hit>::increase(1);
                 return c;
             }
         }
+        metric<metric_type::l1_cache_miss>::increase(1);
         return nullptr;
     }
 
-    shared_buffer<char> read_l2_cache(const uint128_t pointer,
-                                      const size_t size) {
+    shared_buffer<char> read(const uint128_t& pointer, const size_t size) {
+
         if (const auto c = m_cache_l2.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
+                metric<metric_type::l2_cache_hit>::increase(1);
                 return c;
             }
         }
-        return nullptr;
-    }
+        metric<metric_type::l2_cache_miss>::increase(1);
 
-    size_t read(char* buffer, const uint128_t pointer, const size_t size) {
+        shared_buffer<char> buffer(size);
         const fragment frag{pointer, size};
-        size_t read_size = 0;
         boost::asio::co_spawn(
             m_io_service,
-            [&frag, &buffer,
-             &read_size](client::acquired_messenger m) -> coro<void> {
+            [&frag, &buffer](client::acquired_messenger m) -> coro<void> {
                 co_await m.get().send_fragment(STORAGE_READ_FRAGMENT_REQ, frag);
                 const auto h = co_await m.get().recv_header();
-                read_size = h.size;
-                m.get().register_read_buffer(buffer, read_size);
+                if (h.size != frag.size) [[unlikely]] {
+                    throw std::runtime_error("Incomplete fragment");
+                }
+                m.get().register_read_buffer(buffer.data(), frag.size);
                 co_await m.get().recv_buffers(h);
             }(m_storage_services.get(pointer)->acquire_messenger()),
             boost::asio::use_future)
             .get();
 
         // l1 cache
-        shared_buffer<char> l1_buf(
-            std::min(read_size, m_config.l1_sample_size));
-        std::memcpy(l1_buf.data(), buffer, l1_buf.size());
-        m_cache_l2.put(pointer, std::move(l1_buf));
+        shared_buffer<char> l1_buf(std::min(size, m_config.l1_sample_size));
+        std::memcpy(l1_buf.data(), buffer.data(), l1_buf.size());
+        m_cache_l1.put(pointer, std::move(l1_buf));
 
         // l2 cache
-        shared_buffer<char> l2_buf(read_size);
-        std::memcpy(l2_buf.data(), buffer, read_size);
-        m_cache_l2.put(pointer, std::move(l2_buf));
+        m_cache_l2.put(pointer, buffer);
 
-        return read_size;
+        return buffer;
     }
 
     std::size_t read_address(char* buffer, const address& addr) {
@@ -108,6 +107,7 @@ public:
 
         size_t offset = 0;
         for (size_t i = 0; i < addr.size(); ++i) {
+
             const auto frag = addr.get_fragment(i);
             auto n = m_storage_services.get(frag.pointer);
             auto& node_address = node_address_map[n];
