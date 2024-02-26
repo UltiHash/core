@@ -30,7 +30,7 @@ void execute_role(cluster::role role, const service_config& cfg) {
         case DIRECTORY_SERVICE:
             return start_service(directory(cfg, update_config(directory_config{}, cfg.license)));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(cfg));
+            return start_service(entrypoint(cfg, {}));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();

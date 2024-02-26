@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "common/network/server.h"
-#include "common/registry/config_registry.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/utils/cluster_config.h"
