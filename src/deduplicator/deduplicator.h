@@ -32,7 +32,6 @@ public:
           m_storage(m_config_registry.get_global_data_view_config(), m_ioc,
                     m_storage_services),
           m_server(m_config_registry.get_server_config(),
-                   m_config_registry.get_service_name(),
                    std::make_unique<deduplicator_handler>(m_config, m_storage,
                                                           m_dedupe_workers),
                    m_ioc) {}

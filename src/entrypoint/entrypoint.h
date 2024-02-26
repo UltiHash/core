@@ -33,7 +33,6 @@ public:
           m_workers(m_config.worker_thread_count),
           m_collection(get_reference_collection()),
           m_server(m_config_registry.get_server_config(),
-                   m_config_registry.get_service_name(),
                    make_entrypoint_handler(m_collection), m_ioc) {}
 
     void run() {
