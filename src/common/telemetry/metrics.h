@@ -26,6 +26,10 @@ enum metric_type {
     l2_cache_miss,
     dedupe_set_frag_count,
     dedupe_set_frag_size,
+    total_ingested_size_mb,
+    total_egressed_size_mb,
+    total_effective_size_mb,
+    total_size_mb,
     storage_read_fragment_req,
     storage_read_address_req,
     storage_write_req,
@@ -63,16 +67,27 @@ enum metric_type {
 void measure_message_type(message_type type);
 void initialize_metrics_exporter(const std::string& endpoint);
 
-template <metric_type type> class metric {
-    using otel_counter_type =
-        std::unique_ptr<opentelemetry::metrics::Counter<uint64_t>>;
+template <metric_type type, typename value_type = uint64_t> class metric {
+
+    using otel_counter_type = std::conditional_t<
+        std::is_signed_v<value_type>,
+        std::unique_ptr<opentelemetry::metrics::UpDownCounter<value_type>>,
+        std::unique_ptr<opentelemetry::metrics::Counter<value_type>>>;
 
     static otel_counter_type create_counter() {
         const auto name = std::string(magic_enum::enum_name(type));
-        auto provider = opentelemetry::metrics::Provider::GetMeterProvider();
-        auto counter = provider->GetMeter(name)->CreateUInt64Counter(name);
-        counter->Add(0);
-        return counter;
+        const auto service_name =
+            std::string(magic_enum::enum_name(service_role));
+        auto meter =
+            opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
+                service_name);
+        if constexpr (std::is_same_v<value_type, uint64_t>) {
+            return meter->CreateUInt64Counter(name);
+        } else if constexpr (std::is_same_v<value_type, int64_t>) {
+            return meter->CreateInt64UpDownCounter(name);
+        } else if constexpr (std::is_same_v<value_type, double>) {
+            return meter->CreateDoubleUpDownCounter(name);
+        }
     }
 
     inline static otel_counter_type& get_counter() {
@@ -83,7 +98,7 @@ template <metric_type type> class metric {
 public:
     metric() = delete;
 
-    static void increase(uint64_t val) { get_counter()->Add(val); }
+    static void increase(value_type val) { get_counter()->Add(val); }
 };
 
 } // namespace uh::cluster

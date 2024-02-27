@@ -17,7 +17,8 @@ public:
 
 private:
     entrypoint_state& m_state;
-    static constexpr size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
+    static constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
+    static constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 
     void validate(const http_request& req) const;
 };
