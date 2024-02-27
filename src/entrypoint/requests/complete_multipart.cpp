@@ -5,8 +5,8 @@
 
 namespace uh::cluster {
 
-complete_multipart::complete_multipart(entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+complete_multipart::complete_multipart(reference_collection& collection)
+    : m_collection(collection) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -23,7 +23,7 @@ void complete_multipart::validate(const http_request& req) const {
     }
 
     const auto up_info =
-        m_state.server_state.m_uploads.get_upload_info(upload_id);
+        m_collection.server_state.m_uploads.get_upload_info(upload_id);
     if (up_info == nullptr) {
         throw command_exception(http::status::not_found,
                                 command_error::type::no_such_upload);
@@ -76,7 +76,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     const auto& object_name = req_uri.get_object_key();
 
     const auto& up_info =
-        m_state.server_state.m_uploads.get_upload_info(upload_id);
+        m_collection.server_state.m_uploads.get_upload_info(upload_id);
 
     const directory_message dir_req{
         .bucket_id = bucket_name,
@@ -92,8 +92,8 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     };
 
     co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-        m_state.directory_services.get_clients(), m_state.ioc, m_state.workers,
-        std::bind_front(func_dir, std::cref(dir_req)));
+        m_collection.directory_services.get_clients(), m_collection.ioc,
+        m_collection.workers, std::bind_front(func_dir, std::cref(dir_req)));
 
     const auto size_mb = static_cast<double>(up_info->data_size) /
                          static_cast<double>(1024ul * 1024ul);
@@ -122,8 +122,8 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     res.set_space_savings(space_saving);
     res.set_bandwidth(bandwidth);
 
-    m_state.server_state.m_uploads.remove_upload(upload_id, bucket_name,
-                                                 object_name);
+    m_collection.server_state.m_uploads.remove_upload(upload_id, bucket_name,
+                                                      object_name);
 
     co_return std::move(res);
 }

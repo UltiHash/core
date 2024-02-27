@@ -5,8 +5,8 @@
 
 namespace uh::cluster {
 
-list_objects::list_objects(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+list_objects::list_objects(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool list_objects::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -193,7 +193,8 @@ coro<http_response> list_objects::handle(const http_request& req) const {
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
-                m_state.workers, m_state.ioc, m_state.directory_services.get(),
+                m_collection.workers, m_collection.ioc,
+                m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(dir_req), std::ref(contents)));
 
         co_return get_response(contents, req);

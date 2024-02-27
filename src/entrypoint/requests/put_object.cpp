@@ -2,8 +2,8 @@
 
 namespace uh::cluster {
 
-put_object::put_object(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+put_object::put_object(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool put_object::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -25,7 +25,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         dedupe_response resp{.effective_size = 0};
         if (body_size > 0) [[likely]] {
             std::list<std::string_view> data{req.get_body()};
-            resp = co_await integration::integrate_data(data, m_state);
+            resp = co_await integration::integrate_data(data, m_collection);
         }
 
         const directory_message dir_req{
@@ -42,8 +42,8 @@ coro<http_response> put_object::handle(http_request& req) const {
             co_await m.get().recv_header();
         };
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_state.directory_services.get_clients(), m_state.ioc,
-            m_state.workers, std::bind_front(func, std::cref(dir_req)));
+            m_collection.directory_services.get_clients(), m_collection.ioc,
+            m_collection.workers, std::bind_front(func, std::cref(dir_req)));
 
         auto effective_size = static_cast<double>(resp.effective_size) /
                               static_cast<double>(1024ul * 1024ul);

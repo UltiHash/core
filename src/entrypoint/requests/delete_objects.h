@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class delete_objects {
 public:
-    explicit delete_objects(const entrypoint_state& entry_state);
+    explicit delete_objects(const reference_collection&);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(http_request& req) const;
 
 private:
-    const entrypoint_state& m_state;
+    const reference_collection& m_collection;
 
     static auto validate(const http_request& req);
 };

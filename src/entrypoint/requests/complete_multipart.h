@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class complete_multipart {
 public:
-    explicit complete_multipart(entrypoint_state& entry_state);
+    explicit complete_multipart(reference_collection&);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(http_request& req) const;
 
 private:
-    entrypoint_state& m_state;
+    reference_collection& m_collection;
     static constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
     static constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 

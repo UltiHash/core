@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-get_bucket::get_bucket(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+get_bucket::get_bucket(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool get_bucket::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -14,8 +14,7 @@ bool get_bucket::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-http_response
-get_bucket::get_response(const std::string& bucket_name) noexcept {
+static http_response get_response(const std::string& bucket_name) noexcept {
     http_response res;
 
     std::string bucket_xml = "<Bucket>" + bucket_name + "</Bucket>\n";
@@ -40,7 +39,8 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
-                m_state.workers, m_state.ioc, m_state.directory_services.get(),
+                m_collection.workers, m_collection.ioc,
+                m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(bucket_name)));
 
         co_return get_response(bucket_name);

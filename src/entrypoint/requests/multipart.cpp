@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-multipart::multipart(entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+multipart::multipart(reference_collection& collection)
+    : m_collection(collection) {}
 
 bool multipart::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -39,9 +39,9 @@ coro<http_response> multipart::handle(http_request& req) const {
     if (req.get_body_size() > 0) [[likely]] {
         std::list<std::string_view> data{req.get_body()};
         const auto dir_resp =
-            co_await integration::integrate_data(data, m_state);
+            co_await integration::integrate_data(data, m_collection);
 
-        m_state.server_state.m_uploads.append_upload_part_info(
+        m_collection.server_state.m_uploads.append_upload_part_info(
             req.get_uri().get_query_parameters().at("uploadId"),
             std::stoi(req.get_uri().get_query_parameters().at("partNumber")),
             dir_resp, req.get_body());

@@ -12,8 +12,8 @@ namespace uh::cluster {
 
 class init_multipart {
 public:
-    explicit init_multipart(entrypoint_state& entry_state)
-        : m_state(entry_state) {}
+    explicit init_multipart(reference_collection& collection)
+        : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
         const auto& uri = req.get_uri();
@@ -28,8 +28,8 @@ public:
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_state.workers, m_state.ioc,
-                    m_state.directory_services.get(),
+                    m_collection.workers, m_collection.ioc,
+                    m_collection.directory_services.get(),
                     [&req](client::acquired_messenger m) -> coro<void> {
                         directory_message dir_req{
                             .bucket_id = req.get_uri().get_bucket_id()};
@@ -52,7 +52,7 @@ public:
         }
 
         const auto upload_id = generate_unique_id();
-        if (!m_state.server_state.m_uploads.insert_upload(
+        if (!m_collection.server_state.m_uploads.insert_upload(
                 upload_id, req.get_uri().get_bucket_id(),
                 req.get_uri().get_object_key())) {
             throw command_exception(http::status::internal_server_error);
@@ -82,7 +82,7 @@ private:
         return res;
     }
 
-    entrypoint_state& m_state;
+    reference_collection& m_collection;
 };
 
 } // namespace uh::cluster

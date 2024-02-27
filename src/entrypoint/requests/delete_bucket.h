@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class delete_bucket {
 public:
-    explicit delete_bucket(const entrypoint_state& entry_state);
+    explicit delete_bucket(const reference_collection&);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
 private:
-    const entrypoint_state& m_state;
+    const reference_collection& m_collection;
 };
 
 } // namespace uh::cluster

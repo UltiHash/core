@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-list_buckets::list_buckets(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+list_buckets::list_buckets(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool list_buckets::can_handle(const http_request& req) {
 
@@ -51,7 +51,8 @@ coro<http_response> list_buckets::handle(const http_request& req) const {
     };
 
     co_await worker_utils::io_thread_acquire_messenger_and_post_in_io_threads(
-        m_state.workers, m_state.ioc, m_state.directory_services.get(),
+        m_collection.workers, m_collection.ioc,
+        m_collection.directory_services.get(),
         std::bind_front(func, std::ref(buckets_found)));
 
     co_return get_response(buckets_found);

@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-delete_object::delete_object(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+delete_object::delete_object(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool delete_object::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -30,7 +30,8 @@ coro<http_response> delete_object::handle(const http_request& req) const {
 
         co_await worker_utils::
             io_thread_acquire_messenger_and_post_in_io_threads(
-                m_state.workers, m_state.ioc, m_state.directory_services.get(),
+                m_collection.workers, m_collection.ioc,
+                m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(req)));
 
         co_return http_response();

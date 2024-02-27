@@ -30,8 +30,8 @@ get_response(const std::string& bucket_name,
     return res;
 }
 
-list_multipart::list_multipart(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+list_multipart::list_multipart(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool list_multipart::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -43,11 +43,11 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
     const std::string& bucket_name = req.get_uri().get_bucket_id();
 
     std::map<std::string, std::string> ongoing{};
-    auto func = [](const entrypoint_state& state,
+    auto func = [](const reference_collection& collection,
                    const std::string& bucket_name,
                    std::map<std::string, std::string>& ongoing) {
-        ongoing =
-            state.server_state.m_uploads.list_multipart_uploads(bucket_name);
+        ongoing = collection.server_state.m_uploads.list_multipart_uploads(
+            bucket_name);
 
         if (ongoing.empty()) {
             throw command_exception(http::status::not_found,
@@ -56,8 +56,8 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
     };
 
     co_await worker_utils::post_in_workers(
-        m_state.workers, m_state.ioc,
-        std::bind_front(func, std::ref(m_state), std::cref(bucket_name),
+        m_collection.workers, m_collection.ioc,
+        std::bind_front(func, std::ref(m_collection), std::cref(bucket_name),
                         std::ref(ongoing)));
 
     co_return get_response(bucket_name, ongoing);

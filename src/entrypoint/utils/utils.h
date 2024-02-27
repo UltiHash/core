@@ -9,18 +9,18 @@
 
 namespace uh::cluster {
 
-struct entrypoint_state {
+struct reference_collection {
     boost::asio::io_context& ioc;
     boost::asio::thread_pool& workers;
     const services<DEDUPLICATOR_SERVICE>& dedupe_services;
     const services<DIRECTORY_SERVICE>& directory_services;
-    state server_state;
+    state& server_state;
 };
 
 struct integration {
     static coro<dedupe_response>
-    integrate_data(const std::list<std::string_view>& data_pieces,
-                   const entrypoint_state& state);
+    integrate_data(const std::list<std::string_view>&,
+                   const reference_collection&);
 };
 
 std::string generate_unique_id();

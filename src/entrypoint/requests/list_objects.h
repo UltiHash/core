@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class list_objects {
 public:
-    explicit list_objects(const entrypoint_state& entry_state);
+    explicit list_objects(const reference_collection&);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
 private:
-    const entrypoint_state& m_state;
+    const reference_collection& m_collection;
 };
 
 } // namespace uh::cluster

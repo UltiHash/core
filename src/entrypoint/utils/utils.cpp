@@ -5,7 +5,7 @@ namespace uh::cluster {
 
 coro<dedupe_response>
 integration::integrate_data(const std::list<std::string_view>& data_pieces,
-                            const entrypoint_state& state) {
+                            const reference_collection& collection) {
 
     size_t total_size = 0;
     std::map<size_t, std::string_view> offset_pieces;
@@ -14,7 +14,7 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
         total_size += dp.size();
     }
 
-    auto dedupe_services = state.dedupe_services.get_clients();
+    auto dedupe_services = collection.dedupe_services.get_clients();
     auto dedupe_services_size = dedupe_services.size();
     const auto part_size = static_cast<size_t>(
         std::ceil(static_cast<double>(total_size) /
@@ -53,7 +53,7 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     };
 
     co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-        dedupe_services, state.ioc, state.workers,
+        dedupe_services, collection.ioc, collection.workers,
         std::bind_front(func, part_size, std::cref(offset_pieces),
                         std::ref(responses)));
 

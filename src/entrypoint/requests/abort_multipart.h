@@ -9,14 +9,14 @@ namespace uh::cluster {
 
 class abort_multipart {
 public:
-    explicit abort_multipart(entrypoint_state& entry_state);
+    explicit abort_multipart(reference_collection&);
 
     static bool can_handle(const http_request& req);
 
     coro<http_response> handle(const http_request& req) const;
 
 private:
-    entrypoint_state& m_state;
+    reference_collection& m_collection;
 };
 
 } // namespace uh::cluster

@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-delete_bucket::delete_bucket(const entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+delete_bucket::delete_bucket(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -29,8 +29,9 @@ coro<http_response> delete_bucket::handle(const http_request& req) const {
             co_await m.get().recv_header();
         };
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_state.directory_services.get_clients(), m_state.ioc,
-            m_state.workers, std::bind_front(func, std::cref(bucket_name)));
+            m_collection.directory_services.get_clients(), m_collection.ioc,
+            m_collection.workers,
+            std::bind_front(func, std::cref(bucket_name)));
 
         co_return http_response();
     } catch (const error_exception& e) {

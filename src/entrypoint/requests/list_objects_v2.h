@@ -14,8 +14,8 @@ namespace uh::cluster {
 class list_objects_v2 {
 
 public:
-    explicit list_objects_v2(entrypoint_state& state)
-        : m_state(state) {}
+    explicit list_objects_v2(const reference_collection& collection)
+        : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
         const auto& uri = req.get_uri();
@@ -72,8 +72,8 @@ public:
 
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_state.workers, m_state.ioc,
-                    m_state.directory_services.get(),
+                    m_collection.workers, m_collection.ioc,
+                    m_collection.directory_services.get(),
                     std::bind_front(func, std::cref(dir_req),
                                     std::ref(content)));
             co_return get_response(content, req);
@@ -234,7 +234,7 @@ public:
     }
 
 private:
-    entrypoint_state& m_state;
+    const reference_collection& m_collection;
 };
 
 } // namespace uh::cluster

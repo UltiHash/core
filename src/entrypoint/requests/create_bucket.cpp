@@ -4,8 +4,8 @@
 
 namespace uh::cluster {
 
-create_bucket::create_bucket(const uh::cluster::entrypoint_state& entry_state)
-    : m_state(entry_state) {}
+create_bucket::create_bucket(const reference_collection& collection)
+    : m_collection(collection) {}
 
 bool create_bucket::can_handle(const http_request& req) {
     const auto& uri = req.get_uri();
@@ -26,8 +26,8 @@ coro<http_response> create_bucket::handle(const http_request& req) const {
             co_await m.get().recv_header();
         };
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_state.directory_services.get_clients(), m_state.ioc,
-            m_state.workers, std::bind_front(func, std::cref(bucket_id)));
+            m_collection.directory_services.get_clients(), m_collection.ioc,
+            m_collection.workers, std::bind_front(func, std::cref(bucket_id)));
 
         co_return http_response();
     } catch (const error_exception& e) {

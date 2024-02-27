@@ -31,9 +31,9 @@ namespace uh::cluster {
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(entrypoint_state& state,
+    explicit entrypoint_handler(reference_collection& collection,
                                 RequestTypes&&... request_types)
-        : m_state(state),
+        : m_collection(collection),
           m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
@@ -123,25 +123,27 @@ public:
     }
 
 private:
-    entrypoint_state& m_state;
+    reference_collection& m_collection;
     std::tuple<RequestTypes...> m_req_types;
 };
 
 template <typename... RequestTypes>
-auto define_entrypoint_handler(entrypoint_state& state,
+auto define_entrypoint_handler(reference_collection& collection,
                                RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        state, std::forward<RequestTypes>(request_types)...);
+        collection, std::forward<RequestTypes>(request_types)...);
 }
 
-auto make_entrypoint_handler(entrypoint_state& state) {
+auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
-        state, create_bucket(state), get_bucket(state), list_buckets(state),
-        delete_bucket(state), put_object(state), get_object(state),
-        list_objects(state), list_objects_v2(state), delete_object(state),
-        delete_objects(state), init_multipart(state), multipart(state),
-        complete_multipart(state), abort_multipart(state),
-        list_multipart(state));
+        collection, create_bucket(collection), get_bucket(collection),
+        list_buckets(collection), delete_bucket(collection),
+        put_object(collection), get_object(collection),
+        list_objects(collection), list_objects_v2(collection),
+        delete_object(collection), delete_objects(collection),
+        init_multipart(collection), multipart(collection),
+        complete_multipart(collection), abort_multipart(collection),
+        list_multipart(collection));
 }
 
 } // end namespace uh::cluster
