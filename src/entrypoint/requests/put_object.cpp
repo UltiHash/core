@@ -45,13 +45,16 @@ coro<http_response> put_object::handle(http_request& req) const {
             m_collection.directory_services.get_clients(), m_collection.ioc,
             m_collection.workers, std::bind_front(func, std::cref(dir_req)));
 
-        auto effective_size = static_cast<double>(resp.effective_size) /
-                              static_cast<double>(1024ul * 1024ul);
+        auto effective_size =
+            static_cast<double>(resp.effective_size) / MEGA_BYTE;
         auto space_saving = 1.0 - static_cast<double>(resp.effective_size) /
                                       static_cast<double>(body_size);
         const auto stop = std::chrono::steady_clock::now();
         const std::chrono::duration<double> duration = stop - start;
         const auto bandwidth = size_mb / duration.count();
+
+        metric<total_effective_size_mb, double>::increase(effective_size);
+        metric<total_ingested_size_mb, double>::increase(size_mb);
 
         LOG_INFO() << "original size " << size_mb << " MB\n"
                    << "effective size " << effective_size << " MB\n"
