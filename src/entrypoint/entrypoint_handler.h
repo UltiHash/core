@@ -57,6 +57,7 @@ public:
 
                 http_request req(received_request, s, buffer);
                 auto resp = co_await handle_request(req);
+                metric<success>::increase(1);
                 co_await boost::beast::http::async_write(
                     s, resp.get_prepared_response(),
                     boost::asio::use_awaitable);

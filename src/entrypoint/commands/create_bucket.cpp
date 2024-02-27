@@ -14,7 +14,7 @@ bool create_bucket::can_handle(const http_request& req) {
 }
 
 coro<http_response> create_bucket::handle(const http_request& req) const {
-
+    metric<entrypoint_create_bucket>::increase(1);
     auto bucket_id = req.get_uri().get_bucket_id();
     try {
         auto func = [&bucket_id](const auto& bucket,

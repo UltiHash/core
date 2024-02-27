@@ -32,6 +32,7 @@ static void validate(const http_request& req) {
 }
 
 coro<http_response> multipart::handle(http_request& req) const {
+    metric<entrypoint_multipart>::increase(1);
 
     validate(req);
     co_await req.read_body();

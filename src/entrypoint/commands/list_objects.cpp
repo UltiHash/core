@@ -150,7 +150,7 @@ static http_response get_response(const std::vector<std::string>& contents,
 }
 
 coro<http_response> list_objects::handle(const http_request& req) const {
-
+    metric<entrypoint_list_objects>::increase(1);
     try {
         const auto& req_uri = req.get_uri();
 

@@ -1,6 +1,7 @@
 #include "command_exception.h"
 
 #include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
 #include "iostream"
 #include <utility>
 
@@ -64,6 +65,7 @@ command_exception::command_exception(http::status status,
                                      command_error::type err)
     : m_res(status, 11),
       m_error(err) {
+    metric<failure>::increase(1);
     m_res.set(http::field::server, "UltiHash");
     m_res.set(http::field::content_type, "application/xml");
 }
