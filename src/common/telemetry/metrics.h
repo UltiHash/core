@@ -56,8 +56,6 @@ enum metric_type {
     entrypoint_list_objects_v2,
     entrypoint_multipart,
     entrypoint_put_object,
-    entrypoint_response_success,
-    entrypoint_response_failure,
     success,
     failure
 };
