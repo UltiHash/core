@@ -1,18 +1,36 @@
 name: Container Image CI
 
 on:
-  schedule:
+  schedule:               # Trigger the image build nightly
     - cron: '0 0 * * *'
+  push:                   # Trigger the image build on pushing a tag
+    tags:
+     - '*'
   workflow_dispatch:
+
+env:
+  REPOSITORY: "${{ github.event_name == 'schedule' && 'ghcr.io/ultihash/cluster' || 'registry.ultihash.io/stable/core' }}"
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
+
+    - name: Set Date
+      id: set_date
+      run: echo "::set-output name=date::$(printf '%(%Y%m%d)T' -1)"
+
     - uses: actions/checkout@v4
       with:
         token: ${{ secrets.PAT }}
         submodules: recursive
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
 
     - uses: docker/login-action@v2
       with:
@@ -20,8 +38,20 @@ jobs:
         username: plauth
         password: ${{ secrets.PAT }}
 
-    - name: Build the Docker image
-      run: docker build --file Dockerfile --tag ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1) .
+    - uses: docker/login-action@v2
+      if: github.event_name != 'schedule'
+      with:
+        registry: registry.ultihash.io
+        username: github
+        password: ${{ secrets.REGISTRY_USER }}
 
-    - name: Push the Docker image
-      run: docker push ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1)
+    - name: Build and push the Docker image
+      uses: docker/build-push-action@v5
+      env:
+        IMAGE_TAG: "${{ github.event_name == 'schedule' && steps.set_date.outputs.date || github.ref_name }}"
+      with:
+        context: .
+        file: Dockerfile
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ env.REPOSITORY }}:${{ env.IMAGE_TAG }}
+        push: true
