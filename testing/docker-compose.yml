@@ -15,7 +15,7 @@ services:
         restart: always
         environment:
             - UH_LICENSE=${UH_LICENSE}
-        entrypoint: [ "uh-cluster", "deduplicator", "etcd:2379" ]
+        entrypoint: [ "uh-cluster", "--registry", "etcd:2379", "deduplicator" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9300" ]
             timeout: 1s
@@ -31,7 +31,7 @@ services:
         restart: always
         environment:
             - UH_LICENSE=${UH_LICENSE}
-        entrypoint: [ "uh-cluster", "storage", "etcd:2379" ]
+        entrypoint: [ "uh-cluster", "--registry", "etcd:2379", "storage" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9200" ]
             timeout: 1s
@@ -47,7 +47,7 @@ services:
         restart: always
         environment:
             - UH_LICENSE=${UH_LICENSE}
-        entrypoint: [ "uh-cluster", "directory", "etcd:2379" ]
+        entrypoint: [ "uh-cluster", "--registry", "etcd:2379", "directory" ]
         healthcheck:
             test: [ "CMD", "lsof", "-i", "TCP:9400" ]
             timeout: 1s
@@ -63,7 +63,7 @@ services:
         restart: always
         environment:
             - UH_LICENSE=${UH_LICENSE}
-        entrypoint: [ "uh-cluster", "entrypoint", "etcd:2379" ]
+        entrypoint: [ "uh-cluster", "--registry", "etcd:2379", "entrypoint" ]
         depends_on:
             etcd:
                 condition: service_healthy

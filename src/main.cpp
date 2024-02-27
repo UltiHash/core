@@ -11,7 +11,7 @@
 using namespace uh;
 using namespace uh::cluster;
 
-void execute_role(cluster::role role, const service_config& cfg) {
+void execute_role(const config& c) {
 
     signal_handler sh;
 
@@ -21,15 +21,15 @@ void execute_role(cluster::role role, const service_config& cfg) {
     };
 
     try {
-        switch (role) {
+        switch (c.role) {
         case STORAGE_SERVICE:
-            return start_service(storage(cfg, {}));
+            return start_service(storage(c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(cfg, {}));
+            return start_service(deduplicator(c.service, c.deduplicator));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg, update_config(directory_config{}, cfg.license)));
+            return start_service(directory(c.service, c.directory));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(cfg, {}));
+            return start_service(entrypoint(c.service, c.entrypoint));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
@@ -40,13 +40,17 @@ void execute_role(cluster::role role, const service_config& cfg) {
 int main(int argc, char** argv) {
     try {
         auto config = read_config(argc, argv);
-        log::init(config.log);
+        if (!config) {
+            throw std::runtime_error("cannot parse command line");
+        }
 
-        LOG_INFO() << "license loaded for " << config.service.license.customer
+        log::init(config->log);
+
+        LOG_INFO() << "license loaded for " << config->service.license.customer
                    << " -- storage size: "
-                   << config.service.license.max_data_store_size << " bytes";
+                   << config->service.license.max_data_store_size << " bytes";
 
-        execute_role(config.role, config.service);
+        execute_role(*config);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }
