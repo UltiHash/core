@@ -39,15 +39,14 @@ constexpr const char* HASH_STRING_7 = "57edf4a22be3c955ac49da2e2107b67a";
 BOOST_AUTO_TEST_CASE(test_md5) {
 
     md5 md5;
-    {
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_1) == HASH_STRING_1);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_2) == HASH_STRING_2);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_3) == HASH_STRING_3);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_4) == HASH_STRING_4);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_5) == HASH_STRING_5);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_6) == HASH_STRING_6);
-        BOOST_CHECK(md5.calculate_md5(TEST_STRING_7) == HASH_STRING_7);
-    }
+
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_1) == HASH_STRING_1);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_2) == HASH_STRING_2);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_3) == HASH_STRING_3);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_4) == HASH_STRING_4);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_5) == HASH_STRING_5);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_6) == HASH_STRING_6);
+    BOOST_CHECK(md5.calculate_md5(TEST_STRING_7) == HASH_STRING_7);
 }
 
 } // namespace
