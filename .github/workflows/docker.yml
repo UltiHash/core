@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  REPOSITORY: "${{ github.event_name == 'schedule' && 'ghcr.io/ultihash/cluster' || 'registry.ultihash.io/ultihash/cluster' }}"
+  REPOSITORY: "${{ github.event_name == 'schedule' && 'ghcr.io/ultihash/cluster' || 'registry.ultihash.io/stable/core' }}"
 
 jobs:
   build:
