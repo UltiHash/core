@@ -1,7 +1,7 @@
 #include "complete_multipart.h"
 #include "common/utils/worker_utils.h"
+#include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
-#include "entrypoint/utils/xml_parser.h"
 
 namespace uh::cluster {
 
@@ -119,7 +119,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
 
     http_response res;
-    res.set_etag(md5::calculateMD5(req.get_body()));
+    res.set_etag(md5().calculate_md5(req.get_body()));
     res.set_original_size(up_info->data_size);
     res.set_effective_size(up_info->effective_size);
     res.set_space_savings(space_saving);

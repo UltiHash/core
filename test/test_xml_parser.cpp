@@ -4,7 +4,7 @@
 #define BOOST_TEST_MODULE "xml parser tests"
 #endif
 
-#include "entrypoint/utils/xml_parser.h"
+#include "common/utils/xml_parser.h"
 #include <boost/test/unit_test.hpp>
 
 using namespace uh::cluster;

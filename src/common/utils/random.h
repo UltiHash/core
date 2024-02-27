@@ -28,6 +28,8 @@ private:
     std::uniform_int_distribution<value_type> m_pick;
 };
 
+std::string generate_unique_id();
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::cluster
