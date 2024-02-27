@@ -4,7 +4,6 @@
 #include "common/network/client.h"
 #include "common/registry/services.h"
 #include "common/types/shared_buffer.h"
-#include "common/utils/cluster_config.h"
 #include "common/utils/worker_utils.h"
 #include "lru_cache.h"
 #include <map>

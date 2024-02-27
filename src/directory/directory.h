@@ -3,7 +3,6 @@
 
 #include "common/license/license.h"
 #include "common/registry/service_id.h"
-#include "common/utils/cluster_config.h"
 #include "directory_handler.h"
 #include <common/telemetry/log.h>
 #include <functional>

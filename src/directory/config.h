@@ -2,9 +2,9 @@
 #define CORE_DIRECTORY_CONFIG_H
 
 #include "common/global_data/global_data_view.h"
+#include "common/network/server.h"
 #include "common/types/big_int.h"
 #include "common/types/common_types.h"
-#include "common/utils/cluster_config.h"
 #include <filesystem>
 
 namespace uh::cluster {

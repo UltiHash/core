@@ -2,7 +2,6 @@
 #define CORE_SERVER_H
 
 #include "common/telemetry/log.h"
-#include "common/utils/cluster_config.h"
 #include "common/utils/protocol_handler.h"
 #include "messenger.h"
 #include <algorithm>
@@ -20,11 +19,13 @@
 #include <utility>
 #include <vector>
 
-//------------------------------------------------------------------------------
-
 namespace uh::cluster {
 
-//------------------------------------------------------------------------------
+struct server_config {
+    std::size_t threads;
+    uint16_t port;
+    std::string bind_address;
+};
 
 class server {
 
