@@ -73,9 +73,8 @@ int main(int argc, char** argv) {
         argv = app.ensure_utf8(argv);
 
         service_config cfg;
-        cluster::role role;
         boost::log::trivial::severity_level log_level;
-        app.add_option("role", role,
+        app.add_option("role", service_role,
                        "service role, i.e. storage, deduplicator, directory, "
                        "or entrypoint")
             ->required()
@@ -125,7 +124,7 @@ int main(int argc, char** argv) {
                    << " -- storage size: " << cfg.license.max_data_store_size
                    << " bytes";
 
-        execute_role(role, cfg);
+        execute_role(service_role, cfg);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }

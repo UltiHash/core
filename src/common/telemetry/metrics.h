@@ -61,9 +61,11 @@ template <metric_type type, typename value_type = uint64_t> class metric {
 
     static otel_counter_type create_counter() {
         const auto name = std::string(magic_enum::enum_name(type));
+        const auto service_name =
+            std::string(magic_enum::enum_name(service_role));
         auto meter =
             opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
-                name);
+                service_name);
         if constexpr (std::is_same_v<value_type, uint64_t>) {
             return meter->CreateUInt64Counter(name);
         } else if constexpr (std::is_same_v<value_type, int64_t>) {
