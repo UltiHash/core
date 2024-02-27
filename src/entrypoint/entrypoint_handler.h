@@ -3,37 +3,36 @@
 
 #include "common/registry/services.h"
 #include "common/utils/protocol_handler.h"
-#include "entrypoint/rest/http/models/custom_error_response_exception.h"
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 
-// REQUESTS
-#include "requests/abort_multipart.h"
-#include "requests/complete_multipart.h"
-#include "requests/create_bucket.h"
-#include "requests/delete_bucket.h"
-#include "requests/delete_object.h"
-#include "requests/delete_objects.h"
-#include "requests/get_bucket.h"
-#include "requests/get_object.h"
-#include "requests/init_multipart.h"
-#include "requests/list_buckets.h"
-#include "requests/list_multipart.h"
-#include "requests/list_objects.h"
-#include "requests/list_objects_v2.h"
-#include "requests/multipart.h"
-#include "requests/put_object.h"
+#include "commands/abort_multipart.h"
+#include "commands/complete_multipart.h"
+#include "commands/create_bucket.h"
+#include "commands/delete_bucket.h"
+#include "commands/delete_object.h"
+#include "commands/delete_objects.h"
+#include "commands/get_bucket.h"
+#include "commands/get_object.h"
+#include "commands/init_multipart.h"
+#include "commands/list_buckets.h"
+#include "commands/list_multipart.h"
+#include "commands/list_objects.h"
+#include "commands/list_objects_v2.h"
+#include "commands/multipart.h"
+#include "commands/put_object.h"
+#include "http/command_exception.h"
 
 namespace uh::cluster {
 
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(entrypoint_state& state,
+    explicit entrypoint_handler(reference_collection& collection,
                                 RequestTypes&&... request_types)
-        : m_state(state),
+        : m_collection(collection),
           m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
@@ -67,40 +66,25 @@ public:
                     break;
                 }
             }
-        } catch (const command_unknown_exception& e) {
-            LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
-                boost::beast::http::status::not_found,
-                rest::http::model::error::command_not_found);
-            boost::beast::http::write(s, err.get_response_specific_object());
-            s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            s.close();
-            throw;
-        } catch (
-            uh::cluster::rest::http::model::custom_error_response_exception&
-                res_exc) {
+        } catch (command_exception& res_exc) {
             LOG_ERROR() << res_exc.what();
-            boost::beast::http::write(s,
-                                      res_exc.get_response_specific_object());
+            http::write(s, res_exc.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
         } catch (const boost::system::system_error& se) {
-            if (se.code() != boost::beast::http::error::end_of_stream) {
+            if (se.code() != http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
-                uh::cluster::rest::http::model::custom_error_response_exception
-                    err(boost::beast::http::status::bad_request);
-                boost::beast::http::write(s,
-                                          err.get_response_specific_object());
+                command_exception err(http::status::bad_request);
+                http::write(s, err.get_response_specific_object());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
             }
         } catch (const std::exception& e) {
             LOG_ERROR() << e.what();
-            uh::cluster::rest::http::model::custom_error_response_exception err(
-                boost::beast::http::status::internal_server_error);
-            boost::beast::http::write(s, err.get_response_specific_object());
+            command_exception err(http::status::internal_server_error);
+            http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
@@ -134,29 +118,32 @@ public:
     }
 
     coro<http_response> dispatch_front(const http_request& req) {
-        throw command_unknown_exception();
+        throw command_exception(http::status::not_found,
+                                command_error::command_not_found);
     }
 
 private:
-    entrypoint_state& m_state;
+    reference_collection& m_collection;
     std::tuple<RequestTypes...> m_req_types;
 };
 
 template <typename... RequestTypes>
-auto define_entrypoint_handler(entrypoint_state& state,
+auto define_entrypoint_handler(reference_collection& collection,
                                RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        state, std::forward<RequestTypes>(request_types)...);
+        collection, std::forward<RequestTypes>(request_types)...);
 }
 
-auto make_entrypoint_handler(entrypoint_state& state) {
+auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
-        state, create_bucket(state), get_bucket(state), list_buckets(state),
-        delete_bucket(state), put_object(state), get_object(state),
-        list_objects(state), list_objects_v2(state), delete_object(state),
-        delete_objects(state), init_multipart(state), multipart(state),
-        complete_multipart(state), abort_multipart(state),
-        list_multipart(state));
+        collection, create_bucket(collection), get_bucket(collection),
+        list_buckets(collection), delete_bucket(collection),
+        put_object(collection), get_object(collection),
+        list_objects(collection), list_objects_v2(collection),
+        delete_object(collection), delete_objects(collection),
+        init_multipart(collection), multipart(collection),
+        complete_multipart(collection), abort_multipart(collection),
+        list_multipart(collection));
 }
 
 } // end namespace uh::cluster
