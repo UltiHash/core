@@ -3,11 +3,11 @@
 This document defines the metric parameters implemented by UltiHash
 cluster.
 
-## Internal Message-Level Metrics
+## Service-specific request metrics
 
-Each servce measures the count of different internal message types it sends or receives. These are as follows:
+Each service measures the number of requests it receives and handles. These are as follows:
 
-### Storage Service Messages:
+### Storage service requests (internal, custom protocol):
 - `storage_read_fragment_req`: number of requests received for reading a fragment
 - `storage_read_address_req`: number of requests received for reading an address
 - `storage_write_req`: number of requests received for writing data
@@ -15,11 +15,11 @@ Each servce measures the count of different internal message types it sends or r
 - `storage_remove_fragment_req`: number of requests received to remove a fragment from storage
 - `storage_used_req`: number of requests received to get the used space
 
-### Deduplicator Service Messages:
+### Deduplicator service requests (internal, custom protocol):
 
 - `deduplicator_req`: number of requests received to deduplicate uploaded data
 
-### Directory Service Messages:
+### Directory service requests (internal, custom protocol):
 
 - `directory_bucket_list_req`: number of requests received to list buckets
 - `directory_bucket_put_req`: number of requests received to insert a bucket
@@ -30,7 +30,7 @@ Each servce measures the count of different internal message types it sends or r
 - `directory_object_get_req`: number of requests received to retrieve an object
 - `directory_object_delete_req`: number of requests received to delete an object 
 
-### Entrypoint S3 Requests:
+### Entrypoint service requests (external, S3 protocol):
 
 - `entrypoint_abort_multipart`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received 
 - `entrypoint_complete_multipart`: number of [`CompleteMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html) requests received
@@ -48,12 +48,12 @@ Each servce measures the count of different internal message types it sends or r
 - `entrypoint_multipart`: number of [`UploadPart`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html) requests received
 - `entrypoint_put_object`: number of [`PutObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) requests received
 
-### Common Messages - Responses
+### Common response messages
 
 - `success`: Operation successful
 - `failure`: Operation failed
 
-## Usage Metrics
+## Utilization Metrics
 
 - `l1_cache_hit`: Hit count of the L1 cache in the `global_data_view`
 - `l1_cache_miss`: Miss count of the L1 cache in the `global_data_view`
