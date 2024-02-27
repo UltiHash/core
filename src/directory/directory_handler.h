@@ -166,7 +166,8 @@ private:
     coro<void> handle_put_obj(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
 
-        check_size_limit(request.addr->data_size());
+        const auto size = request.addr->data_size();
+        check_size_limit(size);
 
         auto func = [](directory_store& directory,
                        const directory_message& request) {
@@ -182,7 +183,8 @@ private:
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
-        co_return;
+        metric<total_size_mb, double>::increase(static_cast<double>(size) /
+                                                MEGA_BYTE);
     }
 
     coro<void> handle_get_obj(messenger& m, const messenger::header& h) {
@@ -253,7 +255,10 @@ private:
                     directory.get(request.bucket_id, *request.object_key);
                 zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
                     .or_throw();
-                lower_size_limit(addr.data_size());
+                const auto size = addr.data_size();
+                lower_size_limit(size);
+                metric<total_size_mb, double>::increase(
+                    -static_cast<double>(size) / MEGA_BYTE);
 
                 directory.remove_object(request.bucket_id, *request.object_key);
             } catch (const std::exception&) {
