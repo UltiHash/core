@@ -1,6 +1,7 @@
 #include "custom_error_response_exception.h"
 
 #include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
 #include "iostream"
 #include <utility>
 
@@ -64,6 +65,7 @@ custom_error_response_exception::custom_error_response_exception(
     http::status status, error::type err)
     : m_res(status, 11),
       m_error(err) {
+    metric<failure>::increase(1);
     m_res.set(http::field::server, "UltiHash");
     m_res.set(boost::beast::http::field::content_type, "application/xml");
 }

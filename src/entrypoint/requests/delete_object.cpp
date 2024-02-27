@@ -16,6 +16,7 @@ bool delete_object::can_handle(const http_request& req) {
 }
 
 coro<http_response> delete_object::handle(const http_request& req) const {
+    metric<entrypoint_delete_object>::increase(1);
     try {
         auto func = [](const http_request& req,
                        client::acquired_messenger m) -> coro<void> {

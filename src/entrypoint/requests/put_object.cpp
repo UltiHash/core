@@ -12,10 +12,9 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<http_response> put_object::handle(http_request& req) const {
-
+    metric<entrypoint_put_object>::increase(1);
     try {
         co_await req.read_body();
-        std::chrono::time_point<std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now();
 
         auto body_size = req.get_body_size();
