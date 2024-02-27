@@ -8,23 +8,22 @@
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 
-// REQUESTS
+#include "commands/abort_multipart.h"
+#include "commands/complete_multipart.h"
+#include "commands/create_bucket.h"
+#include "commands/delete_bucket.h"
+#include "commands/delete_object.h"
+#include "commands/delete_objects.h"
+#include "commands/get_bucket.h"
+#include "commands/get_object.h"
+#include "commands/init_multipart.h"
+#include "commands/list_buckets.h"
+#include "commands/list_multipart.h"
+#include "commands/list_objects.h"
+#include "commands/list_objects_v2.h"
+#include "commands/multipart.h"
+#include "commands/put_object.h"
 #include "http/command_exception.h"
-#include "requests/abort_multipart.h"
-#include "requests/complete_multipart.h"
-#include "requests/create_bucket.h"
-#include "requests/delete_bucket.h"
-#include "requests/delete_object.h"
-#include "requests/delete_objects.h"
-#include "requests/get_bucket.h"
-#include "requests/get_object.h"
-#include "requests/init_multipart.h"
-#include "requests/list_buckets.h"
-#include "requests/list_multipart.h"
-#include "requests/list_objects.h"
-#include "requests/list_objects_v2.h"
-#include "requests/multipart.h"
-#include "requests/put_object.h"
 
 namespace uh::cluster {
 

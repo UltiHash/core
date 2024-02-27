@@ -65,7 +65,7 @@ command_exception::command_exception(http::status status,
     : m_res(status, 11),
       m_error(err) {
     m_res.set(http::field::server, "UltiHash");
-    m_res.set(boost::beast::http::field::content_type, "application/xml");
+    m_res.set(http::field::content_type, "application/xml");
 }
 
 [[nodiscard]] const http::response<http::string_body>&

@@ -7,7 +7,6 @@
 namespace uh::cluster {
 
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
-namespace net = boost::asio;
 
 class command_error {
 public:
