@@ -17,6 +17,7 @@ public:
 
 private:
     reference_collection& m_collection;
+    md5 m_md5;
     static constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
     static constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 

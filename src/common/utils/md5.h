@@ -8,7 +8,7 @@ class md5 {
 public:
     md5();
     ~md5();
-    std::string calculate_md5(const std::string& input);
+    std::string calculate_md5(const std::string& input) const;
 
 private:
     EVP_MD_CTX* m_ctx;

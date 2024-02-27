@@ -49,7 +49,7 @@ coro<http_response> multipart::handle(http_request& req) const {
     }
 
     http_response res;
-    res.set_etag(md5().calculate_md5(req.get_body()));
+    res.set_etag(m_md5.calculate_md5(req.get_body()));
 
     co_return res;
 }

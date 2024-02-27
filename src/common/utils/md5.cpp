@@ -33,7 +33,7 @@ md5::~md5() {
         EVP_MD_CTX_destroy(m_ctx);
 }
 
-std::string md5::calculate_md5(const std::string& input) {
+std::string md5::calculate_md5(const std::string& input) const {
     if (input.empty())
         return EMPTY_MD5_HASH;
 
