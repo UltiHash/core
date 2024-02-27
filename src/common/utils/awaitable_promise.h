@@ -21,7 +21,7 @@ public:
     inline void set(T&& data) {
         m_data.emplace(std::move(data));
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        m_waiter.expires_after(std::chrono::seconds(0));
+        m_waiter.cancel();
     }
 
     inline void set_exception(std::exception_ptr ptr) {

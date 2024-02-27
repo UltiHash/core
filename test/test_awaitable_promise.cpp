@@ -16,9 +16,9 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
     boost::asio::io_context ioc;
 
     boost::asio::co_spawn(ioc, [&ioc] () -> coro <void> {
-        awaitable_promise <int> pr (ioc);
-        ioc.post([&pr] () {pr.set(1);});
-        BOOST_TEST((co_await pr.get()) == 1);
+        auto pr = std::make_shared<awaitable_promise<int>>(ioc);
+        ioc.post([pr] () {pr->set(1);});
+        BOOST_TEST((co_await pr->get()) == 1);
         },
         [] (const std::exception_ptr& e){if (e) std::rethrow_exception(e);});
 
@@ -30,15 +30,15 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
     boost::asio::io_context ioc;
 
     boost::asio::co_spawn(ioc, [&ioc] () -> coro <void> {
-                              awaitable_promise <int> pr (ioc);
-                              ioc.post([&pr] () {try {
+                              auto pr = std::make_shared<awaitable_promise<int>>(ioc);
+                              ioc.post([pr] () {try {
                                   throw std::exception {};
                               }
                               catch (const std::exception& e) {
-                                  pr.set_exception(std::current_exception());
+                                  pr->set_exception(std::current_exception());
                               }
                               });
-                              BOOST_CHECK_THROW ((co_await pr.get()), std::exception);
+                              BOOST_CHECK_THROW ((co_await pr->get()), std::exception);
                           },
                           [] (const std::exception_ptr& e){if (e) std::rethrow_exception(e);});
 
@@ -59,9 +59,9 @@ BOOST_AUTO_TEST_CASE(stress_test) {
 
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(ioc, [&ioc, i, &failures] () -> coro <void> {
-                                  awaitable_promise <int> pr (ioc);
-                                  ioc.post([&pr, i] () {pr.set(int (i));});
-                                  if ((co_await pr.get()) != i) {
+                                  auto pr = std::make_shared<awaitable_promise<int>>(ioc);
+                                  ioc.post([pr, i] () {pr->set(int (i));});
+                                  if ((co_await pr->get()) != i) {
                                       failures ++;
                                   }
                               },
@@ -80,4 +80,44 @@ BOOST_AUTO_TEST_CASE(stress_test) {
 
 }
 
+/*
+BOOST_AUTO_TEST_CASE(stress_test_2) {
+
+    boost::asio::io_context ioc;
+
+    int thread_count = 1000;
+    int task_count = 1000000;
+
+    boost::asio::thread_pool workers (thread_count);
+    std::vector <std::thread> io_threads;
+    io_threads.reserve(thread_count);
+
+
+    std::atomic<int> failures = 0;
+
+    for (int i = 0; i < task_count; i++) {
+        boost::asio::co_spawn(ioc, [&ioc, i, &failures, &workers] () -> coro <void> {
+                                  auto pr = std::make_shared<awaitable_promise<int>>(ioc);
+                                  boost::asio::post(workers, [pr, i] () {pr->set(int (i));});
+                                  if ((co_await pr->get()) != i) {
+                                      failures ++;
+                                  }
+                              },
+                              [] (const std::exception_ptr& e){if (e) std::rethrow_exception(e);});
+    }
+
+    for (int i = 0; i < thread_count; i++) {
+        io_threads.emplace_back([&ioc] () {ioc.run();});
+    }
+
+    for (auto& t: io_threads) {
+        t.join();
+    }
+
+    workers.join();
+
+    BOOST_TEST(failures == 0);
+
+}
+*/
 } // namespace uh::cluster
