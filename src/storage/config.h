@@ -1,8 +1,8 @@
 #ifndef CORE_STORAGE_CONFIG_H
 #define CORE_STORAGE_CONFIG_H
 
+#include "common/network/server.h"
 #include "common/types/big_int.h"
-#include "common/utils/cluster_config.h"
 #include "data_store.h"
 #include <filesystem>
 

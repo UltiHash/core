@@ -1,6 +1,5 @@
 #include "common/license/license.h"
 #include "common/telemetry/log.h"
-#include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
 #include "common/utils/signal_handler.h"
 #include "config/config.h"

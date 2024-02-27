@@ -8,7 +8,6 @@
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
-#include "common/utils/cluster_config.h"
 #include "config.h"
 #include "entrypoint_handler.h"
 

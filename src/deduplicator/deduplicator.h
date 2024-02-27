@@ -6,7 +6,6 @@
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/telemetry/log.h"
-#include "common/utils/cluster_config.h"
 #include "config.h"
 #include "deduplicator_handler.h"
 #include <functional>

@@ -2,7 +2,7 @@
 #define CORE_DEDUPLICATOR_CONFIG_H
 
 #include "common/global_data/global_data_view.h"
-#include "common/utils/cluster_config.h"
+#include "common/network/server.h"
 
 #include <filesystem>
 
