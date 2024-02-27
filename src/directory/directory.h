@@ -9,11 +9,6 @@
 
 namespace uh::cluster {
 
-directory_config update_config(directory_config conf, const license& license) {
-    conf.max_data_store_size = license.max_data_store_size;
-    return conf;
-}
-
 class directory {
 public:
     explicit directory(const service_config& sc, const directory_config& config)
