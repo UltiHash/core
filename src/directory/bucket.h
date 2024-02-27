@@ -88,28 +88,6 @@ public:
         }
     }
 
-    void update_object(const std::string& key, std::span<char> data) {
-        const auto index = m_data_store.post_write(data);
-        m_transaction_log.append(key, index,
-                                 transaction_log::operation::UPDATE_START);
-
-        // TODO: handle rollback in case something goes up in smoke during the
-        // transaction
-        m_data_store.apply_write();
-        const auto old_index = m_object_ptrs.at(key);
-        m_data_store.remove(old_index);
-        m_object_ptrs[key] = index;
-
-        m_transaction_log.append(key, index,
-                                 transaction_log::operation::UPDATE_END);
-    }
-
-    bool contains_object(const std::string& key) const {
-        return m_object_ptrs.contains(key);
-    }
-
-    bool is_empty() const { return m_object_ptrs.empty(); }
-
     size_t get_used_space() const { return m_data_store.get_used_space(); }
 
     void destroy_bucket() { std::filesystem::remove_all(m_bucket_path); }
