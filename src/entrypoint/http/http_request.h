@@ -1,7 +1,7 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "entrypoint/utils/md5.h"
+#include "common/utils/md5.h"
 #include "uri.h"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
@@ -34,7 +34,6 @@ private:
     boost::beast::flat_buffer& m_buffer;
 
     uri m_uri;
-    std::string m_etag{};
     std::string m_body{};
 };
 

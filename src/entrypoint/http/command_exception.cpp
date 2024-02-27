@@ -1,0 +1,91 @@
+#include "command_exception.h"
+
+#include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
+#include "iostream"
+#include <utility>
+
+namespace uh::cluster {
+
+static const std::vector<std::pair<std::string, std::string>> error_messages = {
+    {"success", "success"},
+    {"unknown", "unknown"},
+    {"NoSuchBucket", "bucket not found"},
+    {"NoSuchKey", "object not found"},
+    {"BucketNotEmpty", "bucket is not empty"},
+    {"fail", "fail"},
+    {"NoSuchUpload", "upload id not found"},
+    {"MalformedXML", "xml is invalid"},
+    {"InvalidPart", "part not found"},
+    {"InvalidPartOrder", "part oder is not ascending"},
+    {"EntityTooSmall", "entity is too small"},
+    {"InvalidBucketName", "bucket name has invalid characters"},
+    {"BadUploadId", "upload id is invalid"},
+    {"BadPartNumber", "part number is invalid"},
+    {"TooManyElements", "too many elements in the request"},
+    {"StorageLimitExceeded", "insufficient storage"},
+    {"CommandNotFound", "no such command found"},
+    {"NoMultiPartUploads", "no multipart uploads"},
+};
+
+static const std::pair<std::string, std::string> error_out_of_range = {
+    "OutOfRange", "error out of range"};
+
+command_error::command_error(type t)
+    : m_type(t) {}
+
+const std::pair<std::string, std::string>& command_error::message() const {
+
+    auto ec = code();
+    if (error_messages.size() <= ec) {
+        return error_out_of_range;
+    }
+
+    return error_messages[ec];
+}
+
+uint32_t command_error::code() const { return static_cast<uint32_t>(m_type); }
+
+const std::pair<std::string, std::string>&
+command_error::get_code_message(uint32_t ec) {
+    if (error_messages.size() <= ec) {
+        return error_out_of_range;
+    }
+
+    return error_messages[ec];
+}
+
+command_error::type command_error::operator*() const { return m_type; }
+
+const char* command_exception::what() const noexcept {
+    return m_error.message().second.c_str();
+}
+
+command_exception::command_exception(http::status status,
+                                     command_error::type err)
+    : m_res(status, 11),
+      m_error(err) {
+    metric<failure>::increase(1);
+    m_res.set(http::field::server, "UltiHash");
+    m_res.set(http::field::content_type, "application/xml");
+}
+
+[[nodiscard]] const http::response<http::string_body>&
+command_exception::get_response_specific_object() {
+    m_res.body() = "<Error>\n"
+                   "<Code>" +
+                   m_error.message().first +
+                   "</Code>\n"
+                   "<Message>" +
+                   m_error.message().second +
+                   "</Message>\n"
+                   "</Error>";
+
+    m_res.prepare_payload();
+
+    LOG_DEBUG() << m_res.base();
+
+    return m_res;
+}
+
+} // namespace uh::cluster

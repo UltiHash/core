@@ -31,10 +31,10 @@ public:
                                m_config.directory_connection_count,
                                m_etcd_client),
           m_workers(m_config.worker_thread_count),
-          m_state(get_entrypoint_state()),
+          m_collection(get_reference_collection()),
           m_server(m_config_registry.get_server_config(),
                    m_config_registry.get_service_name(),
-                   make_entrypoint_handler(m_state), m_ioc) {}
+                   make_entrypoint_handler(m_collection), m_ioc) {}
 
     void run() {
         m_registration =
@@ -50,13 +50,12 @@ public:
     }
 
 private:
-    entrypoint_state get_entrypoint_state() {
-        return {
-            .ioc = m_ioc,
-            .workers = m_workers,
-            .dedupe_services = m_dedupe_services,
-            .directory_services = m_directory_services,
-        };
+    reference_collection get_reference_collection() {
+        return {.ioc = m_ioc,
+                .workers = m_workers,
+                .dedupe_services = m_dedupe_services,
+                .directory_services = m_directory_services,
+                .server_state = m_state};
     }
 
     etcd::SyncClient m_etcd_client;
@@ -69,9 +68,10 @@ private:
 
     services<DEDUPLICATOR_SERVICE> m_dedupe_services;
     services<DIRECTORY_SERVICE> m_directory_services;
+    state m_state;
 
     boost::asio::thread_pool m_workers;
-    entrypoint_state m_state;
+    reference_collection m_collection;
     server m_server;
 
     std::unique_ptr<service_registry::registration> m_registration;
