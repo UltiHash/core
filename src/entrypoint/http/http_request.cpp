@@ -38,8 +38,6 @@ coro<void> http_request::read_body() {
             if (size_transferred + m_buffer.size() != content_length) {
                 throw std::runtime_error("error reading the http body");
             }
-
-            m_etag = md5::calculateMD5(m_body);
         }
     } else {
         throw std::runtime_error(

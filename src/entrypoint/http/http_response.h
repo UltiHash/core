@@ -2,7 +2,6 @@
 #define ENTRYPOINT_HTTP_HTTP_RESPONSE_H
 
 #include "boost/beast.hpp"
-#include "entrypoint/utils/md5.h"
 
 namespace uh::cluster {
 
