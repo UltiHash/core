@@ -2,9 +2,7 @@
 #define CORE_ENTRY_NODE_H
 
 #include <functional>
-#include <iostream>
 
-#include "common/network/client.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"

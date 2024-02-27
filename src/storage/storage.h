@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <functional>
-#include <iostream>
 #include <utility>
 
 #include "common/network/server.h"

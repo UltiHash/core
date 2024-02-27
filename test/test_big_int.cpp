@@ -6,7 +6,6 @@
 
 #include <boost/test/unit_test.hpp>
 #include <common/types/big_int.h>
-#include <iostream>
 
 // ------------- Tests Suites Follow --------------
 
