@@ -113,12 +113,13 @@ public:
             m_socket, buffers,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        measure_message_type(h.type);
-
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
             throw error_exception(e);
         }
+
+        if (h.type != SUCCESS)
+            measure_message_type(h.type);
 
         co_return h;
     }
@@ -159,7 +160,8 @@ public:
 
     coro<void> send_buffers(const message_type type) {
 
-        measure_message_type(type);
+        if (type == SUCCESS)
+            metric<success>::increase(1);
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
@@ -191,7 +193,8 @@ public:
 
     coro<void> send(const message_type type, std::span<const char> data) {
 
-        measure_message_type(type);
+        if (type == SUCCESS)
+            metric<success>::increase(1);
 
         const auto size = static_cast<size_type>(data.size());
 
