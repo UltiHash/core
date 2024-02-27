@@ -45,6 +45,7 @@ struct upload_state {
 
 private:
     mutable std::mutex mutex{};
+    md5 m_md5;
 
     std::unordered_map<std::string, std::shared_ptr<upload_info>>
         m_upload_infos;
