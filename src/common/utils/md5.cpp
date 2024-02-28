@@ -1,8 +1,10 @@
 #include "md5.h"
+#include <openssl/err.h>
+#include <stdexcept>
 
 namespace uh::cluster {
 
-std::string md5::toHex(unsigned char value) {
+static std::string to_hex(unsigned char value) {
     static const char hexChars[] = "0123456789abcdef";
     std::string result;
     result.push_back(hexChars[value >> 4]);
@@ -10,35 +12,54 @@ std::string md5::toHex(unsigned char value) {
     return result;
 }
 
-std::string md5::calculateMD5(const std::string& input) {
-    if (input.empty())
-        return "d41d8cd98f00b204e9800998ecf8427e";
+static void throw_from_error(const std::string& prefix) {
+    char buffer[256];
+    ERR_error_string_n(ERR_get_error(), buffer, sizeof(buffer));
 
-    EVP_MD_CTX* pEvpContext;
-    pEvpContext = EVP_MD_CTX_create();
-    EVP_MD_CTX_init(pEvpContext);
-    EVP_DigestInit_ex(pEvpContext, EVP_md5(), nullptr);
+    throw std::runtime_error(prefix + ": " + std::string(buffer));
+}
+
+md5::md5()
+    : m_ctx(nullptr) {
+    m_ctx = EVP_MD_CTX_create();
+
+    if (!m_ctx) {
+        throw_from_error("cannot create MD context");
+    }
+}
+
+md5::~md5() {
+    if (m_ctx)
+        EVP_MD_CTX_destroy(m_ctx);
+}
+
+std::string md5::calculate_md5(const std::string& input) const {
+    if (input.empty()) [[unlikely]]
+        return EMPTY_MD5_HASH;
 
     unsigned char unMdValue[EVP_MAX_MD_SIZE];
     unsigned int uiMdLength;
 
-    // Calculate MD5 for given string
-    EVP_DigestUpdate(pEvpContext, input.c_str(), input.length());
-
-    // Save MD5 into temp variable
-    EVP_DigestFinal_ex(pEvpContext, unMdValue, &uiMdLength);
-
-    // Copy the digest from the temp variable into the return value
-    std::string md5hex;
-    md5hex.reserve(uiMdLength * 2 + 1);
-
-    for (unsigned int i = 0; i < uiMdLength; i++) {
-        md5hex += toHex(unMdValue[i]);
+    if (!EVP_DigestInit_ex(m_ctx, EVP_md5(), nullptr)) {
+        throw_from_error("error on digest initialization");
     }
 
-    EVP_MD_CTX_destroy(pEvpContext);
+    if (!EVP_DigestUpdate(m_ctx, input.c_str(), input.length())) {
+        throw_from_error("error on digest update");
+    }
 
-    return md5hex;
+    if (!EVP_DigestFinal_ex(m_ctx, unMdValue, &uiMdLength)) {
+        throw_from_error("error on digest finalization");
+    }
+
+    std::string hex_md5;
+    hex_md5.reserve(uiMdLength * 2 + 1);
+
+    for (unsigned int i = 0; i < uiMdLength; i++) {
+        hex_md5 += to_hex(unMdValue[i]);
+    }
+
+    return hex_md5;
 }
 
 } // namespace uh::cluster
