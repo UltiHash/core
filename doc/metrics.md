@@ -1,11 +1,15 @@
 # Overview
 
-This document defines the metric parameters implemented by UltiHash
-cluster.
+This document defines the metric parameters implemented by UltiHash cluster. 
+
+There are two types of metrics currently supported: counters and gauges.
+- depending on the data type they are initialized with, counters can be monotonic, 
+and can only be modified explicitly based on deltas that are added/subtracted
+- gauges read absolute values from callbacks, and thus are updated implicitly
 
 ## Service-specific request metrics
 
-Each service measures the number of requests it receives and handles. These are as follows:
+Each service measures the number of requests it receives and handles using monotonic counters. These are as follows:
 
 ### Storage service requests (internal, custom protocol):
 - `storage_read_fragment_req`: number of requests received for reading a fragment
@@ -32,21 +36,21 @@ Each service measures the number of requests it receives and handles. These are 
 
 ### Entrypoint service requests (external, S3 protocol):
 
-- `entrypoint_abort_multipart`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received 
-- `entrypoint_complete_multipart`: number of [`CompleteMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html) requests received
-- `entrypoint_create_bucket`: number of [`CreateBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_CreateBucket.html) requests received
-- `entrypoint_delete_bucket`: number of [`DeleteBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_DeleteBucket.html) requests received
-- `entrypoint_delete_object`: number of [`DeleteObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html) requests received
-- `entrypoint_delete_objects`: number of [`DeleteObjects`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html) requests received
-- `entrypoint_get_bucket`: number of [`GetBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_GetBucket.html) requests received
-- `entrypoint_get_object`: number of [`GetObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html) requests received
-- `entrypoint_init_multipart`: number of [`CreateMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html) requests received
-- `entrypoint_list_buckets`: number of [`ListBuckets`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html) requests received
-- `entrypoint_list_multipart`: number of [`ListMultipartUploads`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListMultipartUploads.html) requests received
-- `entrypoint_list_objects`: number of [`ListObjects`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html) requests received
-- `entrypoint_list_objects_v2`: number of [`ListObjectsV2`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html) requests received
-- `entrypoint_multipart`: number of [`UploadPart`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html) requests received
-- `entrypoint_put_object`: number of [`PutObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) requests received
+- `entrypoint_abort_multipart_req`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received 
+- `entrypoint_complete_multipart_req`: number of [`CompleteMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html) requests received
+- `entrypoint_create_bucket_req`: number of [`CreateBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_CreateBucket.html) requests received
+- `entrypoint_delete_bucket_req`: number of [`DeleteBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_DeleteBucket.html) requests received
+- `entrypoint_delete_object_req`: number of [`DeleteObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html) requests received
+- `entrypoint_delete_objects_req`: number of [`DeleteObjects`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html) requests received
+- `entrypoint_get_bucket_req`: number of [`GetBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_GetBucket.html) requests received
+- `entrypoint_get_object_req`: number of [`GetObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html) requests received
+- `entrypoint_init_multipart_req`: number of [`CreateMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html) requests received
+- `entrypoint_list_buckets_req`: number of [`ListBuckets`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html) requests received
+- `entrypoint_list_multipart_req`: number of [`ListMultipartUploads`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListMultipartUploads.html) requests received
+- `entrypoint_list_objects_req`: number of [`ListObjects`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html) requests received
+- `entrypoint_list_objects_v2_req`: number of [`ListObjectsV2`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html) requests received
+- `entrypoint_multipart_req`: number of [`UploadPart`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html) requests received
+- `entrypoint_put_object_req`: number of [`PutObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) requests received
 
 ### Common response messages
 
@@ -55,13 +59,18 @@ Each service measures the number of requests it receives and handles. These are 
 
 ## Utilization Metrics
 
-- `l1_cache_hit`: Hit count of the L1 cache in the `global_data_view`
-- `l1_cache_miss`: Miss count of the L1 cache in the `global_data_view`
-- `l2_cache_hit`: Hit count of the L2 cache in the `global_data_view`
-- `l2_cache_miss`: Miss count of the L2 cache in the `global_data_view`
-- `dedupe_set_frag_count`: The count of fragments pointed in the deduplicator set
-- `dedupe_set_frag_size`: The aggregated size of fragments pointed in the deduplicator set
-- `total_ingested_size_mb`: The total ingested data
-- `total_egressed_size_mb`: The total egressed data
-- `total_effective_size_mb`: The total effective size
-- `total_size_mb`: The total data size (considering insertions and deletions)
+### Counters ###
+- `gdv_l1_cache_hit_counter`: Hit count of the L1 cache in the `global_data_view`
+- `gdv_l1_cache_miss_counter`: Miss count of the L1 cache in the `global_data_view`
+- `gdv_l2_cache_hit_counter`: Hit count of the L2 cache in the `global_data_view`
+- `gdv_l2_cache_miss_counter`: Miss count of the L2 cache in the `global_data_view`
+- `deduplicator_set_fragment_counter`: The number of fragments pointed in the deduplicator set maintained by the `deduplicator service`
+- `deduplicator_set_fragment_size_counter`: The aggregated size of fragments pointed in the deduplicator set maintained by the `deduplicator service`
+- `entrypoint_ingested_data_counter`: The total data volume ingested by a `entrypoint service`
+- `entrypoint_egressed_data_counter`: The total data volume egressed by a `entrypoint service`
+- 
+### Gauges ###
+- `directory_deduplicated_data_volume_gauge`: The deduplicated data volume in the storage cluster, maintained by the `directory service`
+- `directory_original_data_volume_gauge`: The original/raw data volume in the storage cluster, maintained by the `directory service`
+- `storage_available_space_gauge`: Storage space available to a `storage service` instance
+- `storage_used_space_gauge`: Storage space used by a `storage service` instance
