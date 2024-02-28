@@ -3,7 +3,7 @@
 
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/utils/utils.h"
+#include "entrypoint/utils.h"
 
 namespace uh::cluster {
 
@@ -17,6 +17,7 @@ public:
 
 private:
     reference_collection& m_collection;
+    md5 m_md5;
 };
 
 } // namespace uh::cluster

@@ -17,7 +17,7 @@ bool xml_parser::parse(const std::string& body) {
 
 std::vector<std::reference_wrapper<const pt::ptree>>
 xml_parser::get_nodes(pt::ptree::path_type&& path) {
-    if (m_tree.empty())
+    if (m_tree.empty()) [[unlikely]]
         return {};
 
     std::vector<std::reference_wrapper<const pt::ptree>> paths;
