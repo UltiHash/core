@@ -52,12 +52,14 @@ public:
 
 template <> class awaitable_promise<void> {
 
+    boost::asio::strand <boost::asio::io_context::executor_type> m_strand;
     boost::asio::steady_timer m_waiter;
     std::optional<std::exception_ptr> m_exception;
 
 public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
-        : m_waiter(ioc,
+        : m_strand (ioc.get_executor()),
+        m_waiter(ioc,
                    boost::asio::steady_timer::clock_type::duration::max()) {}
 
     inline void set() { m_waiter.expires_after(std::chrono::seconds(0)); }
@@ -74,7 +76,7 @@ public:
     }
 
     coro<void> get() {
-        co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+        boost::asio::post (m_strand, [this] () {m_waiter.expires_after(std::chrono::seconds(0));});
 
         if (m_exception) {
             std::rethrow_exception(*m_exception);
