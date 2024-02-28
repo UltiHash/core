@@ -57,10 +57,10 @@ public:
 
                 http_request req(received_request, s, buffer);
                 auto resp = co_await handle_request(req);
-                metric<success>::increase(1);
                 co_await boost::beast::http::async_write(
                     s, resp.get_prepared_response(),
                     boost::asio::use_awaitable);
+                metric<success>::increase(1);
 
                 if (!received_request.keep_alive()) {
                     break;
@@ -71,6 +71,7 @@ public:
             http::write(s, res_exc.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
+            metric<failure>::increase(1);
             throw;
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
@@ -79,6 +80,7 @@ public:
                 http::write(s, err.get_response_specific_object());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
+                metric<failure>::increase(1);
                 throw;
             }
         } catch (const std::exception& e) {
@@ -87,6 +89,7 @@ public:
             http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
+            metric<failure>::increase(1);
             throw;
         }
 
