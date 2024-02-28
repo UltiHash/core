@@ -47,32 +47,11 @@ enum message_type : uint8_t {
 };
 
 enum config_parameter {
-    CFG_SERVER_THREADS,
-    CFG_SERVER_BIND_ADDR,
-    CFG_SERVER_PORT,
-
     CFG_ENDPOINT_HOST,
     CFG_ENDPOINT_PORT,
-
-    CFG_DEDUP_MIN_FRAGMENT_SIZE,
-    CFG_DEDUP_MAX_FRAGMENT_SIZE,
-
-    CFG_DEDUP_WORKER_MIN_DATA_SIZE,
-    CFG_DEDUP_WORKER_THREAD_COUNT,
-
-    CFG_DIR_WORKER_THREAD_COUNT,
-
-    CFG_DIR_MIN_FILE_SIZE,
-    CFG_DIR_MAX_FILE_SIZE,
-    CFG_DIR_MAX_STORAGE_SIZE,
-    CFG_DIR_MAX_CHUNK_SIZE,
-
-    CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
-    CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
-    CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 8>
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 2>
     string_by_config_parameter = {{
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
