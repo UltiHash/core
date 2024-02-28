@@ -80,8 +80,54 @@ BOOST_AUTO_TEST_CASE(stress_test) {
 
 }
 
-/*
-BOOST_AUTO_TEST_CASE(stress_test_2) {
+BOOST_AUTO_TEST_CASE(stress_test_two_thread_groups) {
+
+    boost::asio::io_context ioc_io;
+    boost::asio::io_context ioc_worker;
+
+    int thread_count = 1000;
+    int task_count = 1000000;
+
+    std::vector <std::thread> io_threads;
+    io_threads.reserve(thread_count);
+
+    std::vector <std::thread> workers;
+    workers.reserve(thread_count);
+
+    std::atomic<int> failures = 0;
+
+    for (int i = 0; i < task_count; i++) {
+        boost::asio::co_spawn(ioc_io, [&ioc_worker, i, &failures] () -> coro <void> {
+                                  auto pr = std::make_shared<awaitable_promise<int>>(ioc_worker);
+                                  ioc_worker.post ([pr, i] () {pr->set(int (i));});
+                                  if ((co_await pr->get()) != i) {
+                                      failures ++;
+                                  }
+                              },
+                              [] (const std::exception_ptr& e){if (e) std::rethrow_exception(e);});
+    }
+
+    for (int i = 0; i < thread_count; i++) {
+        io_threads.emplace_back([&ioc_io] () {ioc_io.run();});
+    }
+
+    for (int i = 0; i < thread_count; i++) {
+        workers.emplace_back([&ioc_worker] () {ioc_worker.run();});
+    }
+
+    for (auto& t: io_threads) {
+        t.join();
+    }
+
+    for (auto& t: workers) {
+        t.join();
+    }
+    BOOST_TEST(failures == 0);
+
+}
+
+
+BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
 
     boost::asio::io_context ioc;
 
@@ -92,9 +138,7 @@ BOOST_AUTO_TEST_CASE(stress_test_2) {
     std::vector <std::thread> io_threads;
     io_threads.reserve(thread_count);
 
-
     std::atomic<int> failures = 0;
-
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(ioc, [&ioc, i, &failures, &workers] () -> coro <void> {
                                   auto pr = std::make_shared<awaitable_promise<int>>(ioc);
@@ -119,5 +163,5 @@ BOOST_AUTO_TEST_CASE(stress_test_2) {
     BOOST_TEST(failures == 0);
 
 }
-*/
+
 } // namespace uh::cluster
