@@ -160,8 +160,8 @@ private:
                 {addr.pointers[0], addr.pointers[1]},
                 integration_data.substr(0, addr.sizes.front()), f.hint);
 
-            metric<metric_type::dedupe_set_frag_count>::increase(1);
-            metric<metric_type::dedupe_set_frag_size, byte>::increase(
+            metric<metric_type::deduplicator_set_frag_count>::increase(1);
+            metric<metric_type::deduplicator_set_frag_size, byte>::increase(
                 addr.sizes.front());
 
             result.addr.append_address(addr);

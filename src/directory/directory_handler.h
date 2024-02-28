@@ -25,9 +25,16 @@ public:
           m_directory(m_config.directory_store_conf),
           m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
-          m_stored_size(get_stored_size()) {}
+          m_stored_size(restore_stored_size()) {
+        metric<directory_original_data_volume, byte, int64_t>::
+            register_gauge_callback(
+                std::bind(&directory_handler::get_stored_size_64, this));
+        metric<directory_deduplicated_data_volume, byte, int64_t>::
+            register_gauge_callback(
+                std::bind(&directory_handler::get_effective_size_64, this));
+    }
 
-    ~directory_handler() override { write_stored_size(); }
+    ~directory_handler() override { persist_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
@@ -80,6 +87,11 @@ public:
     }
 
 private:
+    uint64_t get_stored_size_64() { return m_stored_size.get_low(); }
+    uint64_t get_effective_size_64() {
+        return m_storage.get_used_space().get_low();
+    }
+
     coro<void> handle_bucket_exists(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
 
@@ -89,7 +101,7 @@ private:
         co_return;
     }
 
-    void write_stored_size() const {
+    void persist_stored_size() const {
         try {
             std::ofstream out(
                 (m_config.directory_store_conf.working_dir / "cache").string());
@@ -106,7 +118,7 @@ private:
      * potentially very expensive. As a result this function is private and
      * only called during construction.
      */
-    uint128_t get_stored_size() {
+    uint128_t restore_stored_size() {
         try {
             std::ifstream in(m_config.directory_store_conf.working_dir /
                              "cache");
@@ -133,7 +145,7 @@ private:
         return rv;
     }
 
-    void lower_size_limit(const uint128_t& decrement) {
+    void decrement_stored_size(const uint128_t& decrement) {
         std::unique_lock<std::mutex> lk(m_mutex_size);
 
         m_stored_size = m_stored_size - decrement;
@@ -183,8 +195,6 @@ private:
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
-        metric<total_size, mebibyte, double>::increase(
-            static_cast<double>(size) / MEBI_BYTE);
     }
 
     coro<void> handle_get_obj(messenger& m, const messenger::header& h) {
@@ -256,10 +266,7 @@ private:
                 zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
                     .or_throw();
                 const auto size = addr.data_size();
-                lower_size_limit(size);
-                metric<total_size, mebibyte, double>::increase(
-                    -static_cast<double>(size) / MEBI_BYTE);
-
+                decrement_stored_size(size);
                 directory.remove_object(request.bucket_id, *request.object_key);
             } catch (const std::exception&) {
             }

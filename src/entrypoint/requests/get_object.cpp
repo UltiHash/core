@@ -47,7 +47,7 @@ coro<http_response> get_object::handle(const http_request& req) const {
         const auto size = static_cast<double>(buffer.size()) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();
 
-        metric<total_egressed_size, mebibyte, double>::increase(size);
+        metric<entrypoint_egressed_data, mebibyte, double>::increase(size);
 
         LOG_DEBUG() << "retrieval duration " << duration.count() << " s";
         LOG_DEBUG() << "retrieval bandwidth " << bandwidth << " MB/s";

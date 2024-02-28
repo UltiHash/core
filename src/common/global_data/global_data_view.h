@@ -52,11 +52,11 @@ public:
         if (const auto c = m_cache_l1.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
-                metric<metric_type::l1_cache_hit>::increase(1);
+                metric<metric_type::gdv_l1_cache_hit>::increase(1);
                 return c;
             }
         }
-        metric<metric_type::l1_cache_miss>::increase(1);
+        metric<metric_type::gdv_l1_cache_miss>::increase(1);
         return nullptr;
     }
 
@@ -65,11 +65,11 @@ public:
         if (const auto c = m_cache_l2.get(pointer, nullptr);
             c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
-                metric<metric_type::l2_cache_hit>::increase(1);
+                metric<metric_type::gdv_l2_cache_hit>::increase(1);
                 return c;
             }
         }
-        metric<metric_type::l2_cache_miss>::increase(1);
+        metric<metric_type::gdv_l2_cache_miss>::increase(1);
 
         shared_buffer<char> buffer(size);
         const fragment frag{pointer, size};
