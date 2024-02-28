@@ -1,10 +1,10 @@
 #include "otel_log_sink.h"
 
-#include <opentelemetry/common/attribute_value.h>
 #include <opentelemetry/logs/log_record.h>
 #include <opentelemetry/logs/provider.h>
 
 #include <boost/log/attributes/value_extraction.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
 #include <boost/version.hpp>

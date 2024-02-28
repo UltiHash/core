@@ -65,7 +65,7 @@ struct entrypoint_config {
 struct directory_config {
     directory_store_config directory_store_conf;
     std::size_t worker_thread_count{};
-    uint128_t max_data_store_size = 4 * TERA_BYTE;
+    uint128_t max_data_store_size = 4 * TEBI_BYTE;
 };
 
 } // end namespace uh::cluster

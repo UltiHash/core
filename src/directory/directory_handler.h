@@ -183,8 +183,8 @@ private:
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
-        metric<total_size_mb, double>::increase(static_cast<double>(size) /
-                                                MEGA_BYTE);
+        metric<total_size, mebibyte, double>::increase(
+            static_cast<double>(size) / MEBI_BYTE);
     }
 
     coro<void> handle_get_obj(messenger& m, const messenger::header& h) {
@@ -257,8 +257,8 @@ private:
                     .or_throw();
                 const auto size = addr.data_size();
                 lower_size_limit(size);
-                metric<total_size_mb, double>::increase(
-                    -static_cast<double>(size) / MEGA_BYTE);
+                metric<total_size, mebibyte, double>::increase(
+                    -static_cast<double>(size) / MEBI_BYTE);
 
                 directory.remove_object(request.bucket_id, *request.object_key);
             } catch (const std::exception&) {

@@ -154,13 +154,14 @@ private:
 
             const auto frag_size = std::min(integration_data.size(),
                                             m_dedupe_conf.max_fragment_size);
-            const auto addr = store_data(integration_data.substr(0, frag_size));
+            const auto addr =
+                m_storage.write(integration_data.substr(0, frag_size));
             m_fragment_set.insert(
                 {addr.pointers[0], addr.pointers[1]},
                 integration_data.substr(0, addr.sizes.front()), f.hint);
 
             metric<metric_type::dedupe_set_frag_count>::increase(1);
-            metric<metric_type::dedupe_set_frag_size>::increase(
+            metric<metric_type::dedupe_set_frag_size, byte>::increase(
                 addr.sizes.front());
 
             result.addr.append_address(addr);
@@ -183,10 +184,6 @@ private:
                 str2.cbegin(),
                 std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
         }
-    }
-
-    address store_data(const std::string_view& frag) {
-        return m_storage.write(frag);
     }
 
     deduplicator_config m_dedupe_conf;

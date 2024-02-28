@@ -6,6 +6,7 @@
 
 #include "common/telemetry/otel_log_sink.h"
 
+#include <boost/log/trivial.hpp>
 #include <filesystem>
 #include <list>
 #include <optional>

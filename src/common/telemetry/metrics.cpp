@@ -2,8 +2,10 @@
 
 #include "common/utils/common.h"
 #include "log.h"
+#include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
 #include <algorithm>
+#include <config.h>
 
 namespace metric_sdk = opentelemetry::sdk::metrics;
 namespace common = opentelemetry::common;
@@ -31,7 +33,14 @@ void initialize_metrics_exporter(const std::string& endpoint) {
     reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
         std::move(exporter), otlp_options);
 
-    auto context = metric_sdk::MeterContextFactory::Create();
+    auto views = metric_sdk::ViewRegistryFactory::Create();
+    auto resource = opentelemetry::sdk::resource::Resource::Create(
+        {{"service.name", PROJECT_NAME},
+         {"service.version", PROJECT_VERSION},
+         {"service.role", std::string(magic_enum::enum_name(service_role))}});
+
+    auto context =
+        metric_sdk::MeterContextFactory::Create(std::move(views), resource);
     context->AddMetricReader(std::move(reader));
 
     auto metrics_provider_unique =

@@ -12,7 +12,7 @@ struct license {
     std::string customer;
 
     /// maximum allowed data referenced by the directory
-    std::size_t max_data_store_size = 1 * TERA_BYTE;
+    std::size_t max_data_store_size = 1 * TEBI_BYTE;
 };
 
 /**

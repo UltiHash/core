@@ -1,4 +1,8 @@
 #include "log.h"
+#include "common/types/magic_enum.hpp"
+#include "common/utils/common.h"
+
+#include <config.h>
 
 #include <boost/core/null_deleter.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -72,8 +76,14 @@ void initialize_otel_log_exporter(const sink_config& cfg) {
         otel_otlp::OtlpGrpcLogRecordExporterFactory::Create(log_opts);
     auto processor = otel_logs_sdk::SimpleLogRecordProcessorFactory::Create(
         std::move(exporter));
+    auto resource = opentelemetry::sdk::resource::Resource::Create(
+        {{"service.name", PROJECT_NAME},
+         {"service.version", PROJECT_VERSION},
+         {"service.role",
+          std::string(magic_enum::enum_name(uh::cluster::service_role))}});
     std::shared_ptr<otel_logs::LoggerProvider> provider(
-        otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor)));
+        otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor),
+                                                     resource));
 
     opentelemetry::logs::Provider::SetLoggerProvider(provider);
 }

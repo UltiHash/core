@@ -79,7 +79,7 @@ license parse_license(std::string_view data) {
 
     return license{.customer = std::string(fields[0]),
                    .max_data_store_size =
-                       std::stoull(std::string(fields[1])) * GIGA_BYTE};
+                       std::stoull(std::string(fields[1])) * GIBI_BYTE};
 }
 
 license check_license(std::string_view license_code) {
