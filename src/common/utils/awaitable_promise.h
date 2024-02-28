@@ -35,7 +35,7 @@ public:
 
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        m_waiter.expires_after(std::chrono::seconds(0));
+        boost::asio::post (m_strand, [this] () {m_waiter.expires_after(std::chrono::seconds(0));});
     }
 
     coro<T> get() {
@@ -59,10 +59,11 @@ template <> class awaitable_promise<void> {
 public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_strand (ioc.get_executor()),
-        m_waiter(ioc,
-                   boost::asio::steady_timer::clock_type::duration::max()) {}
+        m_waiter(ioc, boost::asio::steady_timer::clock_type::duration::max()) {}
 
-    inline void set() { m_waiter.expires_after(std::chrono::seconds(0)); }
+    inline void set() {
+        boost::asio::post (m_strand, [this] () {m_waiter.expires_after(std::chrono::seconds(0));});
+    }
 
     inline void set_exception(std::exception_ptr ptr) {
         if (m_exception) {
@@ -72,11 +73,11 @@ public:
 
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        m_waiter.expires_after(std::chrono::seconds(0));
+        boost::asio::post (m_strand, [this] () {m_waiter.expires_after(std::chrono::seconds(0));});
     }
 
     coro<void> get() {
-        boost::asio::post (m_strand, [this] () {m_waiter.expires_after(std::chrono::seconds(0));});
+        co_await m_waiter.async_wait(as_tuple(boost::asio::use_awaitable));
 
         if (m_exception) {
             std::rethrow_exception(*m_exception);
