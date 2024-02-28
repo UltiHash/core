@@ -20,6 +20,8 @@ void execute_role(const config& c) {
         service.run();
     };
 
+    service_role = c.role;
+
     try {
         switch (c.role) {
         case STORAGE_SERVICE:
