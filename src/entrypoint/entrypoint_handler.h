@@ -71,7 +71,6 @@ public:
             http::write(s, res_exc.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
-            metric<failure>::increase(1);
             throw;
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
@@ -80,7 +79,6 @@ public:
                 http::write(s, err.get_response_specific_object());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
-                metric<failure>::increase(1);
                 throw;
             }
         } catch (const std::exception& e) {
@@ -89,7 +87,6 @@ public:
             http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
-            metric<failure>::increase(1);
             throw;
         }
 
