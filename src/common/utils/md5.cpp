@@ -34,7 +34,7 @@ md5::~md5() {
 }
 
 std::string md5::calculate_md5(const std::string& input) const {
-    if (input.empty())
+    if (input.empty()) [[unlikely]]
         return EMPTY_MD5_HASH;
 
     unsigned char unMdValue[EVP_MAX_MD_SIZE];
