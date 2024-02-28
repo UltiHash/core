@@ -13,6 +13,8 @@ export UH_CEPH_CONF="$UH_TEST_BASE/ceph_s3_test.conf"
 export UH_IMAGE_BUILD_BASE="ghcr.io/ultihash/build-base:latest"
 export UH_IMAGE_DOCKER_FILE=$UH_CORE_ROOT/Dockerfile
 export UH_IMAGE_TEST_TAG="uh-cluster:testing"
+export UH_IMAGE_RUNNER_TAG="uh-test-runner:latest"
+export UH_RUNNER_DOCKER_FILE=$UH_TEST_BASE/TestRunner.dockerfile
 
 export UH_DEBUG_CONTAINER_PORT=3291
 
