@@ -5,6 +5,7 @@
 
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_switch.hpp>
+#include <magic_enum/magic_enum_utility.hpp>
 
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
@@ -25,7 +26,7 @@ namespace uh::cluster {
 
 enum metric_type {
     gdv_l1_cache_hit_counter,
-    gdv_counter_l1_cache_counter,
+    gdv_l1_cache_miss_counter,
     gdv_l2_cache_hit_counter,
     gdv_l2_cache_miss_counter,
     deduplicator_set_fragment_counter,

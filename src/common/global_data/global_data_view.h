@@ -56,7 +56,7 @@ public:
                 return c;
             }
         }
-        metric<metric_type::gdv_counter_l1_cache_counter>::increase(1);
+        metric<metric_type::gdv_l1_cache_miss_counter>::increase(1);
         return nullptr;
     }
 
