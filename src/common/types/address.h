@@ -2,8 +2,8 @@
 #define UH_CLUSTER_ADDRESS_H
 
 #include "big_int.h"
-#include "third-party/zpp_bits/zpp_bits.h"
 #include <cstdint>
+#include <zpp_bits.h>
 
 namespace uh::cluster {
 

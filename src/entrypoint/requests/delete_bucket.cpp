@@ -16,7 +16,7 @@ bool delete_bucket::can_handle(const http_request& req) {
 }
 
 coro<http_response> delete_bucket::handle(const http_request& req) const {
-    metric<entrypoint_delete_bucket>::increase(1);
+    metric<entrypoint_delete_bucket_req>::increase(1);
     try {
         std::string bucket_name = req.get_uri().get_bucket_id();
 

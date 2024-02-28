@@ -73,7 +73,7 @@ void complete_multipart::validate(const http_request& req) const {
 }
 
 coro<http_response> complete_multipart::handle(http_request& req) const {
-    metric<entrypoint_complete_multipart>::increase(1);
+    metric<entrypoint_complete_multipart_req>::increase(1);
 
     co_await req.read_body();
     validate(req);
@@ -115,7 +115,8 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     const double dur_s = static_cast<double>(dur_ms) / 1000.0;
     const auto bandwidth = size_mb / dur_s;
 
-    metric<entrypoint_ingested_data, mebibyte, double>::increase(size_mb);
+    metric<entrypoint_ingested_data_counter, byte>::increase(
+        up_info->data_size);
 
     LOG_DEBUG() << "upload size: " << req.get_body_size();
     LOG_DEBUG() << "original size " << size_mb << " MB";

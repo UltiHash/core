@@ -66,7 +66,7 @@ http_response get_response(const std::vector<std::string>& success,
 } // namespace
 
 coro<http_response> delete_objects::handle(http_request& req) const {
-    metric<entrypoint_delete_objects>::increase(1);
+    metric<entrypoint_delete_objects_req>::increase(1);
     co_await req.read_body();
     auto object_nodes = validate(req);
 

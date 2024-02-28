@@ -26,10 +26,10 @@ public:
           m_storage(storage),
           m_directory_workers(std::move(directory_workers)),
           m_stored_size(restore_stored_size()) {
-        metric<directory_original_data_volume, byte, int64_t>::
+        metric<directory_original_data_volume_gauge, byte, int64_t>::
             register_gauge_callback(
                 std::bind(&directory_handler::get_stored_size_64, this));
-        metric<directory_deduplicated_data_volume, byte, int64_t>::
+        metric<directory_deduplicated_data_volume_gauge, byte, int64_t>::
             register_gauge_callback(
                 std::bind(&directory_handler::get_effective_size_64, this));
     }

@@ -58,9 +58,10 @@ data_store::data_store(storage_config conf, std::size_t id, bool adaptive)
         }
     }
 
-    metric<storage_available_space, byte, int64_t>::register_gauge_callback(
-        std::bind(&data_store::get_available_space_64, this));
-    metric<storage_used_space, byte, int64_t>::register_gauge_callback(
+    metric<storage_available_space_gauge, byte, int64_t>::
+        register_gauge_callback(
+            std::bind(&data_store::get_available_space_64, this));
+    metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
         std::bind(&data_store::get_used_space_64, this));
     m_used = fetch_used_space();
 }

@@ -15,7 +15,7 @@ bool get_object::can_handle(const http_request& req) {
 }
 
 coro<http_response> get_object::handle(const http_request& req) const {
-    metric<entrypoint_get_object>::increase(1);
+    metric<entrypoint_get_object_req>::increase(1);
     try {
         std::chrono::time_point<std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now();
@@ -47,7 +47,7 @@ coro<http_response> get_object::handle(const http_request& req) const {
         const auto size = static_cast<double>(buffer.size()) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();
 
-        metric<entrypoint_egressed_data, mebibyte, double>::increase(size);
+        metric<entrypoint_egressed_data_counter, byte>::increase(buffer.size());
 
         LOG_DEBUG() << "retrieval duration " << duration.count() << " s";
         LOG_DEBUG() << "retrieval bandwidth " << bandwidth << " MB/s";

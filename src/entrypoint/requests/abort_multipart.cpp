@@ -26,7 +26,7 @@ static void validate(const http_request& req) {
 }
 
 coro<http_response> abort_multipart::handle(const http_request& req) const {
-    metric<entrypoint_abort_multipart>::increase(1);
+    metric<entrypoint_abort_multipart_req>::increase(1);
     validate(req);
 
     const auto& uri = req.get_uri();

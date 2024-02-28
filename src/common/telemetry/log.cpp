@@ -1,5 +1,4 @@
 #include "log.h"
-#include "common/types/magic_enum.hpp"
 #include "common/utils/common.h"
 
 #include <config.h>
@@ -14,6 +13,8 @@
 #include <boost/log/sinks.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
+
+#include <magic_enum/magic_enum.hpp>
 
 #include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_options.h>

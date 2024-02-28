@@ -12,7 +12,7 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<http_response> put_object::handle(http_request& req) const {
-    metric<entrypoint_put_object>::increase(1);
+    metric<entrypoint_put_object_req>::increase(1);
     try {
         co_await req.read_body();
         const auto start = std::chrono::steady_clock::now();
@@ -52,7 +52,8 @@ coro<http_response> put_object::handle(http_request& req) const {
         const std::chrono::duration<double> duration = stop - start;
         const auto bandwidth = size_mb / duration.count();
 
-        metric<entrypoint_ingested_data, mebibyte, double>::increase(size_mb);
+        metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
+            size_mb);
 
         LOG_INFO() << "original size " << size_mb << " MB\n"
                    << "effective size " << effective_size << " MB\n"

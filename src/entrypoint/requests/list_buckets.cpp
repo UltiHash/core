@@ -37,7 +37,7 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 }
 
 coro<http_response> list_buckets::handle(const http_request& req) const {
-    metric<entrypoint_list_buckets>::increase(1);
+    metric<entrypoint_list_buckets_req>::increase(1);
     std::vector<std::string> buckets_found;
 
     auto func = [](std::vector<std::string>& buckets_found,

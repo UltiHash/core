@@ -26,7 +26,7 @@ get_bucket::get_response(const std::string& bucket_name) noexcept {
 }
 
 coro<http_response> get_bucket::handle(const http_request& req) const {
-    metric<entrypoint_get_bucket>::increase(1);
+    metric<entrypoint_get_bucket_req>::increase(1);
     auto bucket_name = req.get_uri().get_bucket_id();
 
     try {

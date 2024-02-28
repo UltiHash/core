@@ -24,7 +24,7 @@ public:
     }
 
     [[nodiscard]] coro<http_response> handle(const http_request& req) {
-        metric<entrypoint_init_multipart>::increase(1);
+        metric<entrypoint_init_multipart_req>::increase(1);
         try {
             co_await worker_utils::
                 io_thread_acquire_messenger_and_post_in_io_threads(

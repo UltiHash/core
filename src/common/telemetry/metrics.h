@@ -1,18 +1,21 @@
 #ifndef UH_CLUSTER_METRICS_H
 #define UH_CLUSTER_METRICS_H
 
-#include "common/types/magic_enum.hpp"
-#include "common/types/magic_enum_switch.hpp"
 #include "common/utils/common.h"
-#include "opentelemetry/nostd/shared_ptr.h"
-#include "third-party/opentelemetry-cpp/api/include/opentelemetry/metrics/meter.h"
-#include "third-party/opentelemetry-cpp/api/include/opentelemetry/metrics/provider.h"
-#include "third-party/opentelemetry-cpp/exporters/otlp/include/opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
-#include "third-party/opentelemetry-cpp/exporters/otlp/include/opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
-#include "third-party/opentelemetry-cpp/sdk/include/opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h"
-#include "third-party/opentelemetry-cpp/sdk/include/opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_options.h"
-#include "third-party/opentelemetry-cpp/sdk/include/opentelemetry/sdk/metrics/meter_context_factory.h"
-#include "third-party/opentelemetry-cpp/sdk/include/opentelemetry/sdk/metrics/meter_provider_factory.h"
+
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_switch.hpp>
+
+#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
+#include <opentelemetry/metrics/meter.h>
+#include <opentelemetry/metrics/provider.h>
+#include <opentelemetry/nostd/shared_ptr.h>
+#include <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h>
+#include <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_options.h>
+#include <opentelemetry/sdk/metrics/meter_context_factory.h>
+#include <opentelemetry/sdk/metrics/meter_provider_factory.h>
+
 #include <condition_variable>
 #include <string>
 #include <unordered_map>
@@ -21,18 +24,18 @@
 namespace uh::cluster {
 
 enum metric_type {
-    gdv_l1_cache_hit,
-    gdv_l1_cache_miss,
-    gdv_l2_cache_hit,
-    gdv_l2_cache_miss,
-    deduplicator_set_frag_count,
-    deduplicator_set_frag_size,
-    entrypoint_ingested_data,
-    entrypoint_egressed_data,
-    directory_deduplicated_data_volume,
-    directory_original_data_volume,
-    storage_available_space,
-    storage_used_space,
+    gdv_l1_cache_hit_counter,
+    gdv_counter_l1_cache_counter,
+    gdv_l2_cache_hit_counter,
+    gdv_l2_cache_miss_counter,
+    deduplicator_set_fragment_counter,
+    deduplicator_set_fragment_size_counter,
+    entrypoint_ingested_data_counter,
+    entrypoint_egressed_data_counter,
+    directory_deduplicated_data_volume_gauge,
+    directory_original_data_volume_gauge,
+    storage_available_space_gauge,
+    storage_used_space_gauge,
     storage_read_fragment_req,
     storage_read_address_req,
     storage_write_req,
@@ -49,21 +52,21 @@ enum metric_type {
     directory_object_put_req,
     directory_object_get_req,
     directory_object_delete_req,
-    entrypoint_abort_multipart,
-    entrypoint_complete_multipart,
-    entrypoint_create_bucket,
-    entrypoint_delete_bucket,
-    entrypoint_delete_object,
-    entrypoint_delete_objects,
-    entrypoint_get_bucket,
-    entrypoint_get_object,
-    entrypoint_init_multipart,
-    entrypoint_list_buckets,
-    entrypoint_list_multipart,
-    entrypoint_list_objects,
-    entrypoint_list_objects_v2,
-    entrypoint_multipart,
-    entrypoint_put_object,
+    entrypoint_abort_multipart_req,
+    entrypoint_complete_multipart_req,
+    entrypoint_create_bucket_req,
+    entrypoint_delete_bucket_req,
+    entrypoint_delete_object_req,
+    entrypoint_delete_objects_req,
+    entrypoint_get_bucket_req,
+    entrypoint_get_object_req,
+    entrypoint_init_multipart_req,
+    entrypoint_list_buckets_req,
+    entrypoint_list_multipart_req,
+    entrypoint_list_objects_req,
+    entrypoint_list_objects_v2_req,
+    entrypoint_multipart_req,
+    entrypoint_put_object_req,
     success,
     failure
 };
