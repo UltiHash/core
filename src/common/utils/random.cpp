@@ -1,4 +1,6 @@
 #include "common/utils/random.h"
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 namespace uh::cluster {
 
@@ -16,6 +18,11 @@ std::string random_string(std::size_t length, const std::string& chars) {
     }
 
     return s;
+}
+
+std::string generate_unique_id() {
+    boost::uuids::random_generator gen;
+    return boost::uuids::to_string(gen());
 }
 
 // ---------------------------------------------------------------------
