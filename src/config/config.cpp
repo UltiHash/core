@@ -265,7 +265,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     try {
         app.parse(argc, argv);
-    } catch (const CLI::ParseError& e) {
+    } catch (const CLI::Success& e) {
         app.exit(e);
         return {};
     }

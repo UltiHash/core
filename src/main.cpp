@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     try {
         auto config = read_config(argc, argv);
         if (!config) {
-            throw std::runtime_error("cannot parse command line");
+            return 0;
         }
 
         log::init(config->log);
