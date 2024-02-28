@@ -2,11 +2,12 @@
 #ifndef UH_CLUSTER_INIT_MULTIPART_H
 #define UH_CLUSTER_INIT_MULTIPART_H
 
+#include "common/utils/random.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
-#include "entrypoint/utils/utils.h"
+#include "entrypoint/utils.h"
 
 namespace uh::cluster {
 

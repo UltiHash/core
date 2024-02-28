@@ -66,11 +66,4 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     co_return resp;
 }
 
-std::string generate_unique_id() {
-    boost::uuids::random_generator gen;
-    boost::uuids::uuid uuid = gen();
-
-    return boost::uuids::to_string(uuid);
-}
-
 } // namespace uh::cluster

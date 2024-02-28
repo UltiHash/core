@@ -23,8 +23,6 @@ struct integration {
                    const reference_collection&);
 };
 
-std::string generate_unique_id();
-
 } // namespace uh::cluster
 
 #endif
