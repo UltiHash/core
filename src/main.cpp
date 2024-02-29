@@ -47,9 +47,9 @@ int main(int argc, char** argv) {
         log::init(config->log);
         initialize_metrics_exporter(config->role, config->telemetry);
 
-        LOG_INFO() << "license loaded for " << config->service.license.customer
+        LOG_INFO() << "license loaded for " << config->license.customer
                    << " -- storage size: "
-                   << config->service.license.max_data_store_size << " bytes";
+                   << config->license.max_data_store_size << " bytes";
 
         execute_role(*config);
     } catch (const std::exception& e) {

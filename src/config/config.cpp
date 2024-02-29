@@ -42,6 +42,10 @@ make_log_config(const telemetry_config& cfg,
 }
 
 void register_telemetry(CLI::App& app, telemetry_config& cfg) {
+    // Note: CLI11 does not allow reading environment variables for options
+    // that were added to a group
+    // (https://github.com/CLIUtils/CLI11/issues/1013).
+
     app.add_option("--telemetry-endpoint,-e", cfg.endpoint,
                    "URL to opentelemetry endpoint")
         ->envname(ENV_CFG_OTEL_ENDPOINT);
@@ -52,21 +56,20 @@ void register_telemetry(CLI::App& app, telemetry_config& cfg) {
         ->envname(ENV_CFG_OTEL_EXPORT_INTERVAL);
 }
 
-void register_service(CLI::App& app, service_config& cfg) {
-    auto group = app.add_option_group("service", "service configuration");
-
-    // Note: CLI11 does not allow reading environment variables for options
-    // that were added to a group
-    // (https://github.com/CLIUtils/CLI11/issues/1013).
+void register_license(CLI::App& app, license& cfg) {
     app.add_option(
            "--license,-L",
            [&cfg](CLI::results_t res) {
-               cfg.license = check_license(res[0]);
+               cfg = check_license(res[0]);
                return true;
            },
            "UltiHash license string")
         ->envname(ENV_CFG_LICENSE)
         ->required();
+}
+
+void register_service(CLI::App& app, service_config& cfg) {
+    auto group = app.add_option_group("service", "service configuration");
 
     group->add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
         ->default_val(cfg.etcd_url);
@@ -257,6 +260,7 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_dir = sub_directory(app, rv.directory);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
 
+    register_license(app, rv.license);
     register_service(app, rv.service);
     register_telemetry(app, rv.telemetry);
 
@@ -295,7 +299,7 @@ std::optional<config> read_config(int argc, char** argv) {
     }
 
     rv.log = make_log_config(rv.telemetry, log_level, rv.role);
-    rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
+    rv.directory.max_data_store_size = rv.license.max_data_store_size;
 
     return rv;
 }

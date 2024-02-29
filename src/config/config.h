@@ -17,7 +17,6 @@ namespace uh::cluster {
 struct service_config {
     std::string etcd_url = "http://127.0.0.1:2379";
     std::filesystem::path working_dir = "/var/lib/uh";
-    uh::cluster::license license;
 };
 
 struct config {
@@ -25,6 +24,7 @@ struct config {
     service_config service;
     uh::log::config log;
     telemetry_config telemetry;
+    uh::cluster::license license;
 
     entrypoint_config entrypoint;
     storage_config storage;
