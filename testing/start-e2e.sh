@@ -41,9 +41,9 @@ while [ -n "$1" ]; do
                         *) cluster_url="http://$cluster_url";;
                     esac
                     ;;
-        -U|--no-ulti) run_ultihash=0
+        -U|--run-ulti) run_ceph=0
                       ;;
-        -C|--no-ceph) run_ceph=0
+        -C|--run-ceph) run_ultihash=0
                       ;;
         *)  echo "Unknown parameter '$1'."
             print_help
