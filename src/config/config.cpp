@@ -66,9 +66,8 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->default_val(cfg.working_dir)
         ->check(CLI::ExistingDirectory);
 
-    group
-        ->add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
-                     "URL to opentelemetry endpoint")
+    app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
+                   "URL to opentelemetry endpoint")
         ->envname(ENV_CFG_OTEL_ENDPOINT);
 }
 
