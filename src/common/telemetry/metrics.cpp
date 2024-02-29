@@ -54,27 +54,26 @@ void initialize_counters() {
     });
 }
 
-void initialize_metrics_exporter(role service_role, const std::string& endpoint,
-                                 unsigned interval) {
+void initialize_metrics_exporter(role service_role,
+                                 const telemetry_config& config) {
 
-    if (endpoint.empty()) {
+    if (config.endpoint.empty()) {
         return;
     }
 
     uh::cluster::service_role = service_role;
 
-    std::unique_ptr<metric_sdk::MetricReader> reader;
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
         exporter_options;
-    exporter_options.endpoint = endpoint;
+    exporter_options.endpoint = config.endpoint;
     auto exporter =
         otlp_exporter::OtlpGrpcMetricExporterFactory::Create(exporter_options);
 
     metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
-        .export_interval_millis = std::chrono::milliseconds(interval),
+        .export_interval_millis = std::chrono::milliseconds(config.interval),
         .export_timeout_millis = std::chrono::milliseconds(500)};
 
-    reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
+    auto reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
         std::move(exporter), otlp_options);
 
     auto views = metric_sdk::ViewRegistryFactory::Create();

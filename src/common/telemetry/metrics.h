@@ -2,6 +2,7 @@
 #define UH_CLUSTER_METRICS_H
 
 #include "common/utils/common.h"
+#include "config.h"
 
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_switch.hpp>
@@ -95,8 +96,8 @@ constexpr std::string get_unit_string(metric_unit unit) {
 inline role service_role;
 
 void measure_message_type(message_type type);
-void initialize_metrics_exporter(role service_role, const std::string& endpoint,
-                                 unsigned interval);
+void initialize_metrics_exporter(role service_role,
+                                 const telemetry_config& config);
 
 template <metric_type type, metric_unit unit = count,
           typename value_type = uint64_t>

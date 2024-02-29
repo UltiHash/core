@@ -17,15 +17,14 @@ namespace uh::cluster {
 struct service_config {
     std::string etcd_url = "http://127.0.0.1:2379";
     std::filesystem::path working_dir = "/var/lib/uh";
-    std::string telemetry_url;
     uh::cluster::license license;
-    unsigned telemetry_interval = 1000;
 };
 
 struct config {
     cluster::role role;
     service_config service;
     uh::log::config log;
+    telemetry_config telemetry;
 
     entrypoint_config entrypoint;
     storage_config storage;

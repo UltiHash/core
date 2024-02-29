@@ -45,8 +45,7 @@ int main(int argc, char** argv) {
         }
 
         log::init(config->log);
-        initialize_metrics_exporter(config->role, config->service.telemetry_url,
-                                    config->service.telemetry_interval);
+        initialize_metrics_exporter(config->role, config->telemetry);
 
         LOG_INFO() << "license loaded for " << config->service.license.customer
                    << " -- storage size: "
