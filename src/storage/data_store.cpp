@@ -334,8 +334,7 @@ uint64_t data_store::get_used_space_64() const noexcept {
 uint128_t data_store::get_available_space() const noexcept {
     auto space = std::filesystem::space(m_conf.working_dir);
     return std::min(uint128_t(space.available),
-                    m_conf.max_data_store_size - m_used)
-        .get_low();
+                    m_conf.max_data_store_size - m_used);
 }
 
 uint64_t data_store::get_available_space_64() const noexcept {

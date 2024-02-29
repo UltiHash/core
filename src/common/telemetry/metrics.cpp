@@ -42,11 +42,11 @@ void initialize_counters() {
             auto metric_suffix = type_str.substr(type_str.rfind("_") + 1);
 
             std::basic_string<char> role_prefix = get_role_prefix(service_role);
-            if ((metric_suffix == COUNTER_SUFFIX ||
-                 metric_suffix == REQ_SUFFIX) &&
-                (metric_prefix == role_prefix ||
-                 (metric_prefix == GDV_PREFIX &&
-                  (role_prefix == get_role_prefix(DEDUPLICATOR_SERVICE) ||
+            if ((metric_suffix == COUNTER_SUFFIX or
+                 metric_suffix == REQ_SUFFIX) and
+                (metric_prefix == role_prefix or
+                 (metric_prefix == GDV_PREFIX and
+                  (role_prefix == get_role_prefix(DEDUPLICATOR_SERVICE) or
                    role_prefix == get_role_prefix(DIRECTORY_SERVICE))))) {
                 metric<type>::increase(0);
             }
