@@ -18,8 +18,8 @@ print_help()
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -u URL, --url URL    run tests against an existing cluster"
-    echo " -U, --no-ulti        do not run UltiHash test suite"
-    echo " -C, --no-ceph        do not run Ceph test suite"
+    echo " -U, --run-ulti       run UltiHash test suite"
+    echo " -C, --run-ceph       run Ceph test suite"
 }
 
 set -o errexit
