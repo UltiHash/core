@@ -1,4 +1,5 @@
 #include "data_store.h"
+#include "common/telemetry/metrics.h"
 #include <mutex>
 
 namespace uh::cluster {
@@ -58,6 +59,11 @@ data_store::data_store(const data_store_config& conf, std::size_t id,
         }
     }
 
+    metric<storage_available_space_gauge, byte, int64_t>::
+        register_gauge_callback(
+            std::bind(&data_store::get_available_space_64, this));
+    metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
+        std::bind(&data_store::get_used_space_64, this));
     m_used = fetch_used_space();
 }
 
@@ -322,8 +328,18 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
 
 uint128_t data_store::get_used_space() const noexcept { return m_used; }
 
-uint128_t data_store::get_free_space() const noexcept {
-    return m_conf.max_data_store_size - m_used;
+uint64_t data_store::get_used_space_64() const noexcept {
+    return get_used_space().get_low();
+}
+
+uint128_t data_store::get_available_space() const noexcept {
+    auto space = std::filesystem::space(m_conf.working_dir);
+    return std::min(uint128_t(space.available),
+                    m_conf.max_data_store_size - m_used);
+}
+
+uint64_t data_store::get_available_space_64() const noexcept {
+    return get_available_space().get_low();
 }
 
 } // end namespace uh::cluster

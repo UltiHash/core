@@ -40,7 +40,7 @@ bool list_multipart::can_handle(const http_request& req) {
 }
 
 coro<http_response> list_multipart::handle(const http_request& req) const {
-    metric<entrypoint_list_multipart>::increase(1);
+    metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.get_uri().get_bucket_id();
 
     std::map<std::string, std::string> ongoing{};

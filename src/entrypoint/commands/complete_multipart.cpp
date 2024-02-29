@@ -66,7 +66,7 @@ void complete_multipart::validate(const http_request& req) const {
 }
 
 coro<http_response> complete_multipart::handle(http_request& req) const {
-    metric<entrypoint_complete_multipart>::increase(1);
+    metric<entrypoint_complete_multipart_req>::increase(1);
 
     co_await req.read_body();
     validate(req);
@@ -96,9 +96,9 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
         m_collection.directory_services.get_clients(), m_collection.ioc,
         m_collection.workers, std::bind_front(func_dir, std::cref(dir_req)));
 
-    const auto size_mb = static_cast<double>(up_info->data_size) / MEGA_BYTE;
+    const auto size_mb = static_cast<double>(up_info->data_size) / MEBI_BYTE;
     auto effective_size =
-        static_cast<double>(up_info->effective_size) / MEGA_BYTE;
+        static_cast<double>(up_info->effective_size) / MEBI_BYTE;
     auto space_saving = 1.0 - effective_size / size_mb;
     const auto stop = std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::steady_clock::now().time_since_epoch())
@@ -108,8 +108,8 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     const double dur_s = static_cast<double>(dur_ms) / 1000.0;
     const auto bandwidth = size_mb / dur_s;
 
-    metric<total_effective_size_mb, double>::increase(effective_size);
-    metric<total_ingested_size_mb, double>::increase(size_mb);
+    metric<entrypoint_ingested_data_counter, byte>::increase(
+        up_info->data_size);
 
     LOG_DEBUG() << "upload size: " << req.get_body_size();
     LOG_DEBUG() << "original size " << size_mb << " MB";

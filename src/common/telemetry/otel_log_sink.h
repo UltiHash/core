@@ -2,7 +2,6 @@
 #define UH_LOGGING_OTEL_LOG_SINK_H
 
 #include <boost/log/sinks/basic_sink_backend.hpp>
-#include <boost/log/trivial.hpp>
 
 #include <string>
 
