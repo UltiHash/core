@@ -132,7 +132,6 @@ class metric {
 
     static otel_gauge_type create_gauge() {
         const auto name = std::string(magic_enum::enum_name(type));
-        const auto unit_string = get_unit_string(unit);
         const auto service_name =
             std::string(magic_enum::enum_name(service_role));
         auto meter =
