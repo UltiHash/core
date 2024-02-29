@@ -2,6 +2,7 @@
 #define CONFIG_CONFIG_H
 
 #include "common/license/license.h"
+#include "common/registry/service_registry.h"
 #include "common/telemetry/log.h"
 #include "common/types/big_int.h"
 #include "common/utils/common.h"
@@ -13,11 +14,6 @@
 #include <optional>
 
 namespace uh::cluster {
-
-struct service_config {
-    std::string etcd_url = "http://127.0.0.1:2379";
-    std::filesystem::path working_dir = "/var/lib/uh";
-};
 
 struct config {
     cluster::role role;

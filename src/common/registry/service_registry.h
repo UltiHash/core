@@ -9,6 +9,11 @@
 
 namespace uh::cluster {
 
+struct service_config {
+    std::string etcd_url = "http://127.0.0.1:2379";
+    std::filesystem::path working_dir = "/var/lib/uh";
+};
+
 class service_registry {
 
 public:
