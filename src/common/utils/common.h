@@ -47,79 +47,14 @@ enum message_type : uint8_t {
 };
 
 enum config_parameter {
-    CFG_SERVER_THREADS,
-    CFG_SERVER_BIND_ADDR,
-    CFG_SERVER_PORT,
-
     CFG_ENDPOINT_HOST,
     CFG_ENDPOINT_PORT,
-
-    CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT,
-    CFG_GDV_READ_CACHE_CAPACITY_L1,
-    CFG_GDV_READ_CACHE_CAPACITY_L2,
-    CFG_GDV_L1_SAMPLE_SIZE,
-    CFG_GDV_MAX_DATA_STORE_SIZE,
-
-    CFG_STORAGE_MIN_FILE_SIZE,
-    CFG_STORAGE_MAX_FILE_SIZE,
-    CFG_STORAGE_MAX_DATA_STORE_SIZE,
-
-    CFG_DEDUP_MIN_FRAGMENT_SIZE,
-    CFG_DEDUP_MAX_FRAGMENT_SIZE,
-
-    CFG_DEDUP_WORKER_MIN_DATA_SIZE,
-    CFG_DEDUP_WORKER_THREAD_COUNT,
-
-    CFG_DIR_WORKER_THREAD_COUNT,
-
-    CFG_DIR_MIN_FILE_SIZE,
-    CFG_DIR_MAX_FILE_SIZE,
-    CFG_DIR_MAX_STORAGE_SIZE,
-    CFG_DIR_MAX_CHUNK_SIZE,
-
-    CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
-    CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
-    CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 25>
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 2>
     string_by_config_parameter = {{
-        {uh::cluster::CFG_SERVER_THREADS, "server_threads"},
-        {uh::cluster::CFG_SERVER_BIND_ADDR, "server_bind_address"},
-        {uh::cluster::CFG_SERVER_PORT, "server_port"},
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-
-        {uh::cluster::CFG_GDV_STORAGE_SERVICE_CONNECTION_COUNT,
-         "gdv_storage_service_connection_count"},
-        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L1,
-         "gdv_read_cache_capacity_l1"},
-        {uh::cluster::CFG_GDV_READ_CACHE_CAPACITY_L2,
-         "gdv_read_cache_capacity_l2"},
-        {uh::cluster::CFG_GDV_L1_SAMPLE_SIZE, "gdv_l1_sample_size"},
-        {uh::cluster::CFG_GDV_MAX_DATA_STORE_SIZE, "gdv_max_data_store_size"},
-
-        {uh::cluster::CFG_STORAGE_MIN_FILE_SIZE, "min_file_size"},
-        {uh::cluster::CFG_STORAGE_MAX_FILE_SIZE, "max_file_size"},
-        {uh::cluster::CFG_STORAGE_MAX_DATA_STORE_SIZE, "max_data_store_size"},
-
-        {uh::cluster::CFG_DEDUP_MIN_FRAGMENT_SIZE, "min_fragment_size"},
-        {uh::cluster::CFG_DEDUP_MAX_FRAGMENT_SIZE, "max_fragment_size"},
-        {uh::cluster::CFG_DEDUP_WORKER_MIN_DATA_SIZE, "worker_min_data_size"},
-        {uh::cluster::CFG_DEDUP_WORKER_THREAD_COUNT, "worker_thread_count"},
-
-        {uh::cluster::CFG_DIR_MIN_FILE_SIZE, "min_file_size"},
-        {uh::cluster::CFG_DIR_MAX_FILE_SIZE, "max_file_size"},
-        {uh::cluster::CFG_DIR_MAX_STORAGE_SIZE, "max_storage_size"},
-        {uh::cluster::CFG_DIR_MAX_CHUNK_SIZE, "max_chunk_size"},
-        {uh::cluster::CFG_DIR_WORKER_THREAD_COUNT, "worker_thread_count"},
-
-        {uh::cluster::CFG_ENTRYPOINT_DEDUP_SERVICE_CONNECTION_COUNT,
-         "dedup_service_connection_count"},
-        {uh::cluster::CFG_ENTRYPOINT_DIR_SERVICE_CONNECTION_COUNT,
-         "dir_service_connection_count"},
-        {uh::cluster::CFG_ENTRYPOINT_WORKER_THREAD_COUNT,
-         "worker_thread_count"},
     }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
@@ -129,8 +64,6 @@ static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
-
-inline role service_role;
 
 uh::cluster::role get_service_role(const std::string& service_role_str);
 const std::string& get_service_string(const uh::cluster::role& service_role);

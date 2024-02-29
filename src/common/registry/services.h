@@ -1,15 +1,17 @@
 #ifndef UH_CLUSTER_SERVICES_H
 #define UH_CLUSTER_SERVICES_H
 
+#include <etcd/SyncClient.hpp>
+#include <etcd/Watcher.hpp>
 #include <ranges>
 #include <set>
 #include <shared_mutex>
 #include <utility>
 
 #include "common/network/client.h"
-#include "common/registry/config_registry.h"
 #include "common/telemetry/log.h"
-#include "etcd/Watcher.hpp"
+#include "common/utils/time_utils.h"
+#include "namespace.h"
 
 namespace uh::cluster {
 
@@ -32,16 +34,14 @@ static etcd_action get_etcd_action_enum(const std::string& action_str) {
 
 template <role r> class services_index {
 public:
-    explicit services_index(config_registry&) {}
     void add(const std::size_t&, std::shared_ptr<client>) {}
     void erase(const std::size_t&) {}
 };
 
 template <> class services_index<STORAGE_SERVICE> {
 public:
-    explicit services_index(config_registry& config_reg)
-        : m_max_data_store_size(
-              config_reg.get_global_data_view_config().max_data_store_size) {}
+    explicit services_index(const uint128_t& max_data_store_size)
+        : m_max_data_store_size(max_data_store_size) {}
 
     void add(const std::size_t& id, std::shared_ptr<client> cl) {
         m_offsets.emplace(m_max_data_store_size * id, std::move(cl));
@@ -85,9 +85,9 @@ private:
 
 template <role r> class services {
 public:
-    services(boost::asio::io_context& ioc, config_registry& config_registry,
-             const int connection_count, etcd::SyncClient& etcd_client,
-             std::size_t timeout_s = 10)
+    template <typename... index_args>
+    services(boost::asio::io_context& ioc, const int connection_count,
+             etcd::SyncClient& etcd_client, index_args... ia)
         : m_ioc(ioc),
           m_connection_count(connection_count),
           m_etcd_client(etcd_client),
@@ -99,8 +99,7 @@ public:
               },
               true),
           m_robin_index(m_clients.end()),
-          m_services_index(config_registry),
-          m_timeout_s(timeout_s) {
+          m_services_index(ia...) {
         auto path = etcd_services_announced_key_prefix + get_service_string(r);
 
         auto resp = wait_for_success(
@@ -305,7 +304,7 @@ private:
         m_robin_index;
     services_index<r> m_services_index;
 
-    std::size_t m_timeout_s;
+    static constexpr std::size_t m_timeout_s = 10;
 };
 
 } // end namespace uh::cluster

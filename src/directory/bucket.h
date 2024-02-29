@@ -3,6 +3,7 @@
 
 #include "chaining_data_store.h"
 #include "common/utils/error.h"
+#include "config.h"
 #include "transaction_log.h"
 #include <memory>
 #include <mutex>

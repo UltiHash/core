@@ -92,8 +92,11 @@ constexpr std::string get_unit_string(metric_unit unit) {
     return "";
 }
 
+inline role service_role;
+
 void measure_message_type(message_type type);
-void initialize_metrics_exporter(const std::string& endpoint);
+void initialize_metrics_exporter(role service_role,
+                                 const std::string& endpoint);
 
 template <metric_type type, metric_unit unit = count,
           typename value_type = uint64_t>
