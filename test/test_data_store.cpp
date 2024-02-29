@@ -16,7 +16,7 @@ namespace uh::cluster {
 // ---------------------------------------------------------------------
 
 struct config_fixture {
-    static uh::cluster::storage_config make_data_store_config() {
+    static data_store_config make_data_store_config() {
         return {
             .working_dir = "root/dn",
             .min_file_size = 1024ul,

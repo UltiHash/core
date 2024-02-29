@@ -16,11 +16,14 @@ constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
     .export_interval_millis = std::chrono::milliseconds(1000),
     .export_timeout_millis = std::chrono::milliseconds(500)};
 
-void initialize_metrics_exporter(const std::string& endpoint) {
+void initialize_metrics_exporter(role service_role,
+                                 const std::string& endpoint) {
 
     if (endpoint.empty()) {
         return;
     }
+
+    uh::cluster::service_role = service_role;
 
     std::unique_ptr<metric_sdk::MetricReader> reader;
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions

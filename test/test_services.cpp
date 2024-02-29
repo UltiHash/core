@@ -6,6 +6,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "common/global_data/global_data_view.h"
+#include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
 #include "common/test/checks.h"
@@ -23,13 +25,24 @@ template <role r, role service_role = r> struct base_fixture {
     temp_directory tmp;
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
-    config_registry reg;
+    std::size_t service_id;
     uh::cluster::services<r> services;
+
+    constexpr uh::cluster::services<r> make_services() {
+        if constexpr (r == STORAGE_SERVICE) {
+            return uh::cluster::services<r>(
+                ioc, 2, etcd_client,
+                global_data_view_config().max_data_store_size);
+        } else {
+            return uh::cluster::services<r>(ioc, 2, etcd_client);
+        }
+    }
 
     base_fixture()
         : etcd_client(REGISTRY_ENDPOINT),
-          reg(service_role, etcd_client, tmp.path()),
-          services(ioc, reg, 2, etcd_client) {}
+          service_id(
+              get_service_id(etcd_client, get_service_string(r), tmp.path())),
+          services(make_services()) {}
 };
 
 using fixture = base_fixture<DEDUPLICATOR_SERVICE>;
@@ -133,8 +146,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
      * - each nodes storage offset is determined by product of the node's id
      *   and max_data_store_size
      */
-    auto node_addr_range =
-        reg.get_global_data_view_config().max_data_store_size;
+    auto node_addr_range = global_data_view_config().max_data_store_size;
 
     BOOST_CHECK(services.get_clients().empty());
     BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);

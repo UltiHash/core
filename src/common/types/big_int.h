@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <iosfwd>
 #include <numeric>
 #include <string>
 
@@ -128,6 +129,11 @@ constexpr big_int operator-(uint64_t a, const big_int& b) {
 }
 
 typedef big_int uint128_t;
+
+inline std::ostream& operator<<(std::ostream& out, const big_int& bi) {
+    out << bi.to_string();
+    return out;
+}
 
 } // end namespace uh::cluster
 

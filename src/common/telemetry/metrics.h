@@ -64,8 +64,11 @@ enum metric_type {
     failure
 };
 
+inline role service_role;
+
 void measure_message_type(message_type type);
-void initialize_metrics_exporter(const std::string& endpoint);
+void initialize_metrics_exporter(role service_role,
+                                 const std::string& endpoint);
 
 template <metric_type type, typename value_type = uint64_t> class metric {
 

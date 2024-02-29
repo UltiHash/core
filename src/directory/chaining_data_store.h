@@ -1,7 +1,6 @@
 #ifndef CORE_CHAINING_DATA_STORE_H
 #define CORE_CHAINING_DATA_STORE_H
 
-#include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
 #include "common/utils/free_spot_manager.h"
 #include <cstring>

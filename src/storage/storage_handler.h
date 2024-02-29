@@ -4,6 +4,7 @@
 #include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
+#include "config.h"
 #include "data_store.h"
 #include <utility>
 
@@ -11,7 +12,7 @@ namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    storage_handler(storage_config config, size_t index)
+    storage_handler(data_store_config config, size_t index)
         : m_data_store(std::move(config), index) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {

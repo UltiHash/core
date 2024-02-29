@@ -1,20 +1,17 @@
 #include "common/license/license.h"
 #include "common/telemetry/log.h"
-#include "common/utils/cluster_config.h"
 #include "common/utils/common.h"
 #include "common/utils/signal_handler.h"
+#include "config/config.h"
 #include "deduplicator/deduplicator.h"
 #include "directory/directory.h"
 #include "entrypoint/entrypoint.h"
 #include "storage/storage.h"
-#include <CLI/CLI.hpp>
-#include <config.h>
-#include <system_error>
 
 using namespace uh;
 using namespace uh::cluster;
 
-void execute_role(cluster::role role, const service_config& cfg) {
+void execute_role(const config& c) {
 
     signal_handler sh;
 
@@ -24,15 +21,15 @@ void execute_role(cluster::role role, const service_config& cfg) {
     };
 
     try {
-        switch (role) {
+        switch (c.role) {
         case STORAGE_SERVICE:
-            return start_service(storage(cfg));
+            return start_service(storage(c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(cfg));
+            return start_service(deduplicator(c.service, c.deduplicator));
         case DIRECTORY_SERVICE:
-            return start_service(directory(cfg));
+            return start_service(directory(c.service, c.directory));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(cfg));
+            return start_service(entrypoint(c.service, c.entrypoint));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
@@ -40,91 +37,22 @@ void execute_role(cluster::role role, const service_config& cfg) {
     }
 }
 
-void print_vcsid() {
-    std::cout << PROJECT_NAME << " " << PROJECT_VERSION << " (" << __DATE__
-              << " " << __TIME__ << ")\n"
-              << PROJECT_REPOSITORY << " (" << PROJECT_VCSID << ")\n";
-    exit(0);
-}
-
-log::config
-make_log_config(const service_config& cfg,
-                const boost::log::trivial::severity_level& log_level) {
-    log::config lc;
-
-    if (cfg.telemetry_url.empty()) {
-        lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
-                                         .level = log_level},
-                        log::sink_config{.type = log::sink_type::file,
-                                         .filename = "log.log",
-                                         .level = log_level}}};
-    } else {
-        lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
-                                         .level = log_level},
-                        log::sink_config{.type = log::sink_type::otel,
-                                         .otel_endpoint = cfg.telemetry_url}}};
-    }
-    return lc;
-}
-
 int main(int argc, char** argv) {
     try {
-        CLI::App app{"UltiHash Object Storage Cluster"};
-        argv = app.ensure_utf8(argv);
+        auto config = read_config(argc, argv);
+        if (!config) {
+            return 0;
+        }
 
-        service_config cfg;
-        boost::log::trivial::severity_level log_level;
-        app.add_option("role", service_role,
-                       "service role, i.e. storage, deduplicator, directory, "
-                       "or entrypoint")
-            ->required()
-            ->transform([](const std::string& role_str) {
-                return std::to_string(get_service_role(role_str));
-            });
-        app.add_option(
-               "--license,-L",
-               [&cfg](CLI::results_t res) {
-                   cfg.license = check_license(res[0]);
-                   return true;
-               },
-               "UltiHash license string")
-            ->envname(ENV_CFG_LICENSE)
-            ->required();
-        app.add_option("registry,--registry,-r", cfg.etcd_url,
-                       "URL to etcd endpoint")
-            ->default_val("http://127.0.0.1:2379");
-        app.add_option("working_dir,--workdir,-w", cfg.working_dir,
-                       "path to working directory ")
-            ->default_val("/var/lib/uh")
-            ->check(CLI::ExistingDirectory);
-        app.add_option(
-               "--log-level,-l", log_level,
-               "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
-            ->transform([](const std::string& severity_str) {
-                return std::to_string(
-                    uh::log::severity_from_string(severity_str));
-            })
-            ->default_val(uh::log::to_string(boost::log::trivial::info))
-            ->envname(ENV_CFG_LOG_LEVEL);
-        app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
-                       "URL to opentelemetry endpoint")
-            ->envname(ENV_CFG_OTEL_ENDPOINT);
+        log::init(config->log);
+        initialize_metrics_exporter(config->role,
+                                    config->service.telemetry_url);
 
-        app.add_flag_callback(
-            "--vcsid", print_vcsid,
-            "Print the VCS commit id this executable was compiled from");
+        LOG_INFO() << "license loaded for " << config->service.license.customer
+                   << " -- storage size: "
+                   << config->service.license.max_data_store_size << " bytes";
 
-        CLI11_PARSE(app, argc, argv);
-
-        initialize_metrics_exporter(cfg.telemetry_url);
-
-        log::init(make_log_config(cfg, log_level));
-
-        LOG_INFO() << "license loaded for " << cfg.license.customer
-                   << " -- storage size: " << cfg.license.max_data_store_size
-                   << " bytes";
-
-        execute_role(service_role, cfg);
+        execute_role(*config);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
     }
