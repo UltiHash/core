@@ -27,7 +27,7 @@ public:
     }
 
     coro<http_response> handle(const http_request& req) {
-        metric<entrypoint_list_objects_v2>::increase(1);
+        metric<entrypoint_list_objects_v2_req>::increase(1);
         try {
             const auto& req_uri = req.get_uri();
             directory_message dir_req;

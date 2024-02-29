@@ -18,20 +18,25 @@ void print_vcsid() {
 
 log::config
 make_log_config(const service_config& cfg,
-                const boost::log::trivial::severity_level& log_level) {
+                const boost::log::trivial::severity_level& log_level,
+                const uh::cluster::role service_role) {
     log::config lc;
 
     if (cfg.telemetry_url.empty()) {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
-                                         .level = log_level},
+                                         .level = log_level,
+                                         .service_role = service_role},
                         log::sink_config{.type = log::sink_type::file,
                                          .filename = "log.log",
-                                         .level = log_level}}};
+                                         .level = log_level,
+                                         .service_role = service_role}}};
     } else {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
-                                         .level = log_level},
+                                         .level = log_level,
+                                         .service_role = service_role},
                         log::sink_config{.type = log::sink_type::otel,
-                                         .otel_endpoint = cfg.telemetry_url}}};
+                                         .otel_endpoint = cfg.telemetry_url,
+                                         .service_role = service_role}}};
     }
     return lc;
 }
@@ -61,10 +66,14 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->default_val(cfg.working_dir)
         ->check(CLI::ExistingDirectory);
 
-    group
-        ->add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
-                     "URL to opentelemetry endpoint")
+    app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
+                   "URL to opentelemetry endpoint")
         ->envname(ENV_CFG_OTEL_ENDPOINT);
+
+    app.add_option("--telemetry-interval", cfg.telemetry_interval,
+                   "interval of telemetry exports in milliseconds")
+        ->default_val(cfg.telemetry_interval)
+        ->envname(ENV_CFG_OTEL_EXPORT_INTERVAL);
 }
 
 void register_server(CLI::App& app, server_config& cfg) {
@@ -282,7 +291,7 @@ std::optional<config> read_config(int argc, char** argv) {
         throw std::runtime_error("unsupported sub command given");
     }
 
-    rv.log = make_log_config(rv.service, log_level);
+    rv.log = make_log_config(rv.service, log_level, rv.role);
     rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
 
     return rv;

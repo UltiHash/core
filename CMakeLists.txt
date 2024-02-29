@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
-project(uh-cluster VERSION 0.1.0)
+project(uh-cluster VERSION 0.2.0)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -39,7 +39,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
+set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 add_compile_options(-Wall -Werror)
