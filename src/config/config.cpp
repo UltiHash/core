@@ -69,6 +69,11 @@ void register_service(CLI::App& app, service_config& cfg) {
     app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
                    "URL to opentelemetry endpoint")
         ->envname(ENV_CFG_OTEL_ENDPOINT);
+
+    app.add_option("--telemetry-interval", cfg.telemetry_interval,
+                   "interval of telemetry exports in milliseconds")
+        ->default_val(cfg.telemetry_interval)
+        ->envname(ENV_CFG_OTEL_EXPORT_INTERVAL);
 }
 
 void register_server(CLI::App& app, server_config& cfg) {
