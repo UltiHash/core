@@ -12,12 +12,8 @@ namespace otlp_exporter = opentelemetry::exporter::otlp;
 
 namespace uh::cluster {
 
-constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
-    .export_interval_millis = std::chrono::milliseconds(1000),
-    .export_timeout_millis = std::chrono::milliseconds(500)};
-
-void initialize_metrics_exporter(role service_role,
-                                 const std::string& endpoint) {
+void initialize_metrics_exporter(role service_role, const std::string& endpoint,
+                                 unsigned interval) {
 
     if (endpoint.empty()) {
         return;
@@ -31,6 +27,11 @@ void initialize_metrics_exporter(role service_role,
     exporter_options.endpoint = endpoint;
     auto exporter =
         otlp_exporter::OtlpGrpcMetricExporterFactory::Create(exporter_options);
+
+    metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
+        .export_interval_millis = std::chrono::milliseconds(interval),
+        .export_timeout_millis = std::chrono::milliseconds(500)};
+
     reader = metric_sdk::PeriodicExportingMetricReaderFactory::Create(
         std::move(exporter), otlp_options);
 
