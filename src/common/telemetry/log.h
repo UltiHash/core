@@ -5,6 +5,7 @@
 #pragma GCC diagnostic ignored "-Wrestrict"
 
 #include "common/telemetry/otel_log_sink.h"
+#include "common/utils/common.h"
 
 #include <boost/log/trivial.hpp>
 #include <filesystem>
@@ -55,6 +56,7 @@ struct sink_config {
     std::string otel_endpoint;
 
     boost::log::trivial::severity_level level = boost::log::trivial::info;
+    uh::cluster::role service_role;
 
     bool operator==(const sink_config&) const = default;
 };

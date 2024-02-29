@@ -81,7 +81,7 @@ void initialize_otel_log_exporter(const sink_config& cfg) {
         {{"service.name", PROJECT_NAME},
          {"service.version", PROJECT_VERSION},
          {"service.role",
-          std::string(magic_enum::enum_name(uh::cluster::service_role))}});
+          std::string(magic_enum::enum_name(cfg.service_role))}});
     std::shared_ptr<otel_logs::LoggerProvider> provider(
         otel_logs_sdk::LoggerProviderFactory::Create(std::move(processor),
                                                      resource));

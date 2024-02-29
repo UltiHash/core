@@ -54,14 +54,13 @@ void initialize_counters() {
     });
 }
 
-void initialize_metrics_exporter(role service_role,
-                                 const std::string& endpoint) {
+void initialize_metrics_exporter(role svc_role, const std::string& endpoint) {
 
     if (endpoint.empty()) {
         return;
     }
 
-    uh::cluster::service_role = service_role;
+    uh::cluster::service_role = svc_role;
 
     std::unique_ptr<metric_sdk::MetricReader> reader;
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
