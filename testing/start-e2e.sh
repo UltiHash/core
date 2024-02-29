@@ -83,8 +83,6 @@ TERM=vt100 pstree -H $BASHPID
 
 . "$venv_dir/bin/activate"
 
-export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
-
 if [ -z "$cluster_url" ]; then
     if ! docker pull ghcr.io/ultihash/build-base:latest; then
         echo "pulling build-base image failed" 1>&2
@@ -99,8 +97,13 @@ if [ -z "$cluster_url" ]; then
         echo "docker build failed" 1>&2
         exit 1
     fi
-    docker compose up --detach
     trap "docker compose rm --volumes --stop --force" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
+
+    # check services startup with invalid licenses
+    ./test_services.sh
+
+    export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
+    docker compose up --detach
     cluster_url="http://localhost:8080"
 fi
 
