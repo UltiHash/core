@@ -13,3 +13,6 @@
 [submodule "lib/third-party/opentelemetry-cpp"]
 	path = lib/third-party/opentelemetry-cpp
 	url = https://github.com/open-telemetry/opentelemetry-cpp
+[submodule "lib/third-party/magic_enum"]
+	path = lib/third-party/magic_enum
+	url = https://github.com/Neargye/magic_enum.git

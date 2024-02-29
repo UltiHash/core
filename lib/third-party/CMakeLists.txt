@@ -13,6 +13,9 @@ option(WITH_EXAMPLES "Whether to include examples in build" OFF)
 
 add_subdirectory(opentelemetry-cpp)
 
+add_library(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/magic_enum/magic_enum_all.hpp)
+target_include_directories(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/)
+
 add_library(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits)
 

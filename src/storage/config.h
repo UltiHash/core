@@ -17,9 +17,9 @@ struct storage_config {
 
     data_store_config data_store = {
         .working_dir = "/var/lib/uh/storage",
-        .min_file_size = 1 * GIGA_BYTE,
-        .max_file_size = 4 * GIGA_BYTE,
-        .max_data_store_size = 64 * GIGA_BYTE,
+        .min_file_size = 1 * GIBI_BYTE,
+        .max_file_size = 4 * GIBI_BYTE,
+        .max_data_store_size = 64 * GIBI_BYTE,
     };
 };
 

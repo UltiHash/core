@@ -41,22 +41,22 @@ BOOST_AUTO_TEST_CASE(sample_licenses) {
     {
         auto lic = read_license(LIC_1GB);
         BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 1 * GIGA_BYTE);
+        BOOST_CHECK(lic.max_data_store_size == 1 * GIBI_BYTE);
     }
     {
         auto lic = read_license(LIC_4TB);
         BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 4 * TERA_BYTE);
+        BOOST_CHECK(lic.max_data_store_size == 4 * TEBI_BYTE);
     }
     {
         auto lic = read_license(LIC_128TB);
         BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 128 * TERA_BYTE);
+        BOOST_CHECK(lic.max_data_store_size == 128 * TEBI_BYTE);
     }
     {
         auto lic = read_license(LIC_1PB);
         BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 1 * PETA_BYTE);
+        BOOST_CHECK(lic.max_data_store_size == 1 * PEBI_BYTE);
     }
 }
 
