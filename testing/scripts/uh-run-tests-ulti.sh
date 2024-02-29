@@ -46,5 +46,9 @@ done
 
 echo "*** running UltiHash test suite ..."
 
-pytest "tests" --cluster-url="$cluster_url" \
-    --aws-access-key-id="$UH_AWS_ACCESS_KEY_ID" --aws-secret-access-key="$UH_AWS_SECRET_ACCESS_KEY" $@
+docker run --network="host" --interactive --tty \
+    --volume $UH_TEST_SUITE_ULTIHASH:/tests:rw \
+    $UH_IMAGE_RUNNER_TAG \
+    pytest "/tests" --cluster-url="$cluster_url" \
+        --aws-access-key-id="$UH_AWS_ACCESS_KEY_ID" \
+        --aws-secret-access-key="$UH_AWS_SECRET_ACCESS_KEY" $@

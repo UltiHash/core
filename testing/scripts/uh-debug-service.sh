@@ -2,14 +2,14 @@
 
 print_help()
 {
-    echo "uh-run-tests-ceph.sh [options] <service>"
+    echo "uh-debug-service.sh [options] <service>"
     echo
     echo "Open a remote debugger for a given service"
     echo
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -g, --gdb            attach a gdb on this terminal"
-    echo " service              entrypoint, directory, deduplicator or storage"
+    echo " service              entrypoint, directory, dedupe or storage"
 }
 
 run_gdb="0"

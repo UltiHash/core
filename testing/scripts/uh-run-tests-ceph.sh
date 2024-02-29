@@ -54,4 +54,9 @@ sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
     -e "s/%TESTING_AWS_SECRET_ACCESS_KEY%/$UH_AWS_SECRET_ACCESS_KEY/" \
     < $UH_SAMPLE_CEPH_S3TESTS_CONF > $UH_CEPH_CONF
 
-S3TEST_CONF=$UH_CEPH_CONF tox -c "$UH_TEST_SUITE_CEPH/tox.ini" --workdir "$UH_TEST_SUITE_CEPH" -- -m 'uhclustertest' --exitfirst
+docker run --network="host" --interactive --tty \
+    --env S3TEST_CONF=/s3test.conf \
+    --volume $UH_CEPH_CONF:/s3test.conf \
+    --volume $UH_TEST_SUITE_CEPH:/tests:rw \
+    $UH_IMAGE_RUNNER_TAG \
+    pytest /tests -m uhclustertest $@

@@ -5,9 +5,6 @@ export UH_TEST_BASE
 
 . $UH_TEST_BASE/activate
 
-venv_dir="$(pwd)/.venv"
-requirements_file="$(pwd)/python-requirements.txt"
-
 cluster_url=""
 run_ultihash=1
 run_ceph=1
@@ -54,30 +51,11 @@ while [ -n "$1" ]; do
     shift
 done
 
-if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
-    echo "Creating virtual environment ..."
-
-    python3 -m venv "$venv_dir"
-
-    . "$venv_dir/bin/activate"
-
-    pip --require-virtualenv install --requirement "$requirements_file" || {
-        deactivate
-        rm -rf "$venv_dir"
-        exit 1
-    }
-
-    deactivate
-    touch "$venv_dir"
-fi
-
 echo "*** running start-e2e.sh on $(hostname --all-fqdns)"
 echo "*** uname: $(uname -a)"
 echo "*** id: $(id -a)"
 echo "*** pwd: $PWD, pid: $BASHPID"
 TERM=vt100 pstree -H $BASHPID
-
-. "$venv_dir/bin/activate"
 
 if [ -z "$cluster_url" ]; then
     uh-build-container.sh
@@ -88,6 +66,8 @@ if [ -z "$cluster_url" ]; then
     trap "uh-container-stop.sh" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
     cluster_url="http://localhost:8080"
 fi
+
+uh-build-testrunner.sh
 
 set +o errexit
 
@@ -112,14 +92,14 @@ export PYTHONDONTWRITEBYTECODE=1
 success=1
 
 if [ "$run_ultihash" -eq "1" ]; then
-    uh-run-tests-ulti.sh --cluster-url="$cluster_url" $@
+    uh-run-tests-ulti.sh --url "$cluster_url" $@
     if [ "$?" != "0" ]; then
         success=0
     fi
 fi
 
 if [ "$run_ceph" -eq "1" ]; then
-    uh-run-tests-ceph.sh --cluster-url="$cluster_url" $@
+    uh-run-tests-ceph.sh --url "$cluster_url" $@
     if [ "$?" != "0" ]; then
         success=0
     fi
