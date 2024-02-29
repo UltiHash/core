@@ -87,8 +87,6 @@ if [ "$timeout" -eq "0" ]; then
     exit 1
 fi
 
-export PYTHONDONTWRITEBYTECODE=1
-
 success=1
 
 if [ "$run_ultihash" -eq "1" ]; then
