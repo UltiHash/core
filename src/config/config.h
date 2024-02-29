@@ -2,16 +2,15 @@
 #define CONFIG_CONFIG_H
 
 #include "common/license/license.h"
+#include "common/telemetry/log.h"
 #include "common/types/big_int.h"
 #include "common/utils/common.h"
-#include "common/telemetry/log.h"
 #include "deduplicator/config.h"
 #include "directory/config.h"
 #include "entrypoint/config.h"
 #include "storage/config.h"
 #include <filesystem>
 #include <optional>
-
 
 namespace uh::cluster {
 
@@ -20,6 +19,7 @@ struct service_config {
     std::filesystem::path working_dir = "/var/lib/uh";
     std::string telemetry_url;
     uh::cluster::license license;
+    unsigned telemetry_interval = 1000;
 };
 
 struct config {
