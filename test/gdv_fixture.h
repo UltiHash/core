@@ -15,12 +15,10 @@ public:
                              m_gdv_config.storage_service_connection_count,
                              m_etcd_client, m_gdv_config.max_data_store_size) {}
 
-    inline static size_t num_storage_instances = 3;
-
     void setup() {
         std::exception_ptr excp_ptr;
 
-        for (size_t i = 0; i < num_storage_instances; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
             m_temp_dirs.emplace_back();
             service_config service_cfg;
             service_cfg.working_dir = m_temp_dirs.at(i).path();
@@ -94,6 +92,8 @@ private:
     std::vector<std::thread> m_threads;
 
     std::shared_ptr<global_data_view> m_gdv;
+
+    static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 };
 
 } // namespace uh::cluster
