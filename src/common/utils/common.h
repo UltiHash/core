@@ -57,13 +57,6 @@ constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 2>
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
     }};
 
-static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
-static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
-static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
-static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
-static constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
-static constexpr const char* ENV_CFG_REGISTRY_URL = "UH_REGISTRY";
-
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
