@@ -12,5 +12,7 @@ components and describes their purpose.
     be one of the following severity levels: DEBUG, INFO, WARN, ERROR, or FATAL.
 - `UH_LICENSE` - (required) must be filled with a valid UH license (use sample
     licenses under `ROOT/data/licenses` for testing)
-- `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified endpoint using OTLP via gRPC (format: "hostname:port")
+- `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified
+    endpoint using OTLP via gRPC (format: "hostname:port")
+- `UH_OTEL_INTERVAL` - reporting interval of telemetry data in milliseconds
 
