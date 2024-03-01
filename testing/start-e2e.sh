@@ -51,6 +51,8 @@ while [ -n "$1" ]; do
     shift
 done
 
+success=1
+
 echo "*** running start-e2e.sh on $(hostname --all-fqdns)"
 echo "*** uname: $(uname -a)"
 echo "*** id: $(id -a)"
@@ -60,7 +62,11 @@ TERM=vt100 pstree -H $BASHPID
 if [ -z "$cluster_url" ]; then
     uh-build-container.sh
 
-    ./test_services.sh
+    uh-run-tests-service.sh
+    if [ "$?" != "0" ]; then
+        success=0
+    fi
+
     uh-container-start.sh
 
     trap "uh-container-stop.sh" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
@@ -86,8 +92,6 @@ if [ "$timeout" -eq "0" ]; then
     echo "connection to cluster URL failed"
     exit 1
 fi
-
-success=1
 
 if [ "$run_ultihash" -eq "1" ]; then
     uh-run-tests-ulti.sh --url "$cluster_url" $@
