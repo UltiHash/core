@@ -15,23 +15,6 @@
 
 namespace uh::cluster {
 
-enum class etcd_action : uint8_t {
-    create = 0,
-    erase,
-};
-
-static etcd_action get_etcd_action_enum(const std::string& action_str) {
-    static const std::map<std::string, etcd_action> etcd_action = {
-        {"create", etcd_action::create},
-        {"delete", etcd_action::erase},
-    };
-
-    if (etcd_action.contains(action_str))
-        return etcd_action.at(action_str);
-    else
-        throw std::invalid_argument("invalid etcd action");
-}
-
 template <role r> class services_index {
 public:
     void add(const std::size_t&, std::shared_ptr<client>) {}
@@ -192,18 +175,15 @@ private:
                     << ", value: " << response.value().as_string();
 
         try {
-            const auto& etcd_path = response.value().key();
-            const auto etcd_action = get_etcd_action_enum(response.action());
-
-            switch (etcd_action) {
-            case etcd_action::create:
-                add(etcd_path);
-                break;
-
-            case etcd_action::erase:
-                remove(etcd_path);
-                break;
+            if (response.action() == "create") {
+                return add(response.value().key());
             }
+
+            if (response.action() == "delete") {
+                remove(response.value().key());
+            }
+
+            throw std::runtime_error("unknown etcd action");
         } catch (const std::exception& e) {
             LOG_WARN() << "error while handling service state change: "
                        << e.what();
