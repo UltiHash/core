@@ -12,12 +12,14 @@ namespace uh::cluster {
 struct service_config {
     std::string etcd_url = "http://127.0.0.1:2379";
     std::filesystem::path working_dir = "/var/lib/uh";
+    std::string register_addr;
 };
 
 class service_registry {
 
 public:
     service_registry(uh::cluster::role role, std::size_t index,
+                     const std::string& register_addr,
                      etcd::SyncClient& etcd_client);
 
     [[nodiscard]] const std::string& get_service_name() const;
@@ -43,6 +45,7 @@ private:
 
     const std::string m_service_name;
     etcd::SyncClient& m_etcd_client;
+    const std::string m_register_addr;
 };
 
 } // namespace uh::cluster

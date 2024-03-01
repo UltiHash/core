@@ -20,14 +20,16 @@ public:
                                       get_service_string(ENTRYPOINT_SERVICE),
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
-          m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+          m_service_registry(ENTRYPOINT_SERVICE, m_service_id, sc.register_addr,
+                             m_etcd_client),
           m_dedupe_services(m_ioc, config.dedupe_node_connection_count,
                             m_etcd_client),
           m_directory_services(m_ioc, config.directory_connection_count,
                                m_etcd_client),
           m_workers(config.worker_thread_count),
           m_collection(get_reference_collection()),
-          m_server(config.server, make_entrypoint_handler(m_collection), m_ioc) {}
+          m_server(config.server, make_entrypoint_handler(m_collection),
+                   m_ioc) {}
 
     void run() {
         m_registration =

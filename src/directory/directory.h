@@ -17,7 +17,8 @@ public:
                                       get_service_string(DIRECTORY_SERVICE),
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
-          m_service_registry(DIRECTORY_SERVICE, m_service_id, m_etcd_client),
+          m_service_registry(DIRECTORY_SERVICE, m_service_id, sc.register_addr,
+                             m_etcd_client),
           m_storage_services(
               m_ioc, config.global_data_view.storage_service_connection_count,
               m_etcd_client, config.global_data_view.max_data_store_size),

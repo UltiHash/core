@@ -21,7 +21,8 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
     const auto port_address = 9200;
 
     auto etcd_client = etcd::SyncClient(REGISTRY_ENDPOINT);
-    service_registry registering_registry(STORAGE_SERVICE, index, etcd_client);
+    service_registry registering_registry(STORAGE_SERVICE, index, "127.0.0.1",
+                                          etcd_client);
 
     const auto service_prefix_path = etcd_services_attributes_key_prefix +
                                      get_service_string(STORAGE_SERVICE) + '/' +
@@ -75,7 +76,7 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         BOOST_CHECK(std::stoi(announced_etcd_path.filename()) == index);
         BOOST_CHECK(announced_etcd_path.parent_path().filename() ==
                     get_service_string(STORAGE_SERVICE));
-        BOOST_CHECK(host == boost::asio::ip::host_name());
+        BOOST_CHECK(host == "127.0.0.1");
         BOOST_CHECK(std::stoul(port) == port_address);
     }
 

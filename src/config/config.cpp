@@ -69,11 +69,15 @@ void register_license(CLI::App& app, license& cfg) {
 }
 
 void register_service(CLI::App& app, service_config& cfg) {
-    auto group = app.add_option_group("service", "service configuration");
-
     app.add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
         ->default_val(cfg.etcd_url)
         ->envname(ENV_CFG_REGISTRY_URL);
+
+    app.add_option(
+           "--register-addr", cfg.register_addr,
+           "Address which is used to register this service with registry")
+        ->default_val(boost::asio::ip::host_name())
+        ->envname(ENV_CFG_ENDPOINT_HOST);
 
     app.add_option("--workdir,-w", cfg.working_dir,
                    "path to working directory ")

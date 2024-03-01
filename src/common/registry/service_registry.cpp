@@ -9,39 +9,12 @@ using namespace boost::asio;
 
 namespace uh::cluster {
 
-namespace {
-
-bool is_valid_ip(const std::string& ip) {
-    try {
-        ip::address address = ip::address::from_string(ip);
-        return address.is_v4() || address.is_v6();
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
-std::string get_host() {
-    const char* var_value = std::getenv(ENV_CFG_ENDPOINT_HOST);
-    if (var_value == nullptr) {
-        return ip::host_name();
-    } else {
-        if (is_valid_ip(var_value))
-            return {var_value};
-        else
-            throw std::invalid_argument(
-                "the environmental variable " +
-                std::string(ENV_CFG_ENDPOINT_HOST) +
-                " does not contain a valid IPv4 or IPv6 address: '" +
-                std::string(var_value) + "'");
-    }
-}
-
-} // namespace
-
 service_registry::service_registry(uh::cluster::role role, std::size_t index,
+                                   const std::string& register_addr,
                                    etcd::SyncClient& etcd_client)
     : m_service_name(get_service_string(role) + "/" + std::to_string(index)),
-      m_etcd_client(etcd_client) {}
+      m_etcd_client(etcd_client),
+      m_register_addr(register_addr) {}
 
 [[nodiscard]] const std::string& service_registry::get_service_name() const {
     return m_service_name;
@@ -73,9 +46,8 @@ service_registry::register_service(const server_config& config) {
         etcd_services_attributes_key_prefix + m_service_name + "/";
 
     const std::map<std::string, std::string> kv_pairs = {
-        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_HOST),
-         get_host()},
-        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),
+        {key_base + get_config_string(CFG_ENDPOINT_HOST), m_register_addr},
+        {key_base + get_config_string(CFG_ENDPOINT_PORT),
          std::to_string(config.port)},
         {announced_key_base, {}},
     };
