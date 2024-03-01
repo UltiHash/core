@@ -16,7 +16,7 @@ for service in "${services[@]}"; do
     if docker compose logs "$service" | grep -q -e "error in license" -e "license is required"; then
         echo -n "passed "
     else
-        echo -n "failed"
+        echo "failed"
         exit 1
     fi
   done
