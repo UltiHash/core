@@ -15,4 +15,5 @@ components and describes their purpose.
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified
     endpoint using OTLP via gRPC (format: "hostname:port")
 - `UH_OTEL_INTERVAL` - reporting interval of telemetry data in milliseconds
+- `UH_REGISTRY` - URL of registry endpoint
 

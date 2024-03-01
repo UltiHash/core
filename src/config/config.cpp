@@ -71,12 +71,12 @@ void register_license(CLI::App& app, license& cfg) {
 void register_service(CLI::App& app, service_config& cfg) {
     auto group = app.add_option_group("service", "service configuration");
 
-    group->add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
-        ->default_val(cfg.etcd_url);
+    app.add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
+        ->default_val(cfg.etcd_url)
+        ->envname(ENV_CFG_REGISTRY_URL);
 
-    group
-        ->add_option("--workdir,-w", cfg.working_dir,
-                     "path to working directory ")
+    app.add_option("--workdir,-w", cfg.working_dir,
+                   "path to working directory ")
         ->default_val(cfg.working_dir)
         ->check(CLI::ExistingDirectory);
 }
