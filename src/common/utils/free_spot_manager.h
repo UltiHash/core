@@ -17,7 +17,7 @@ public:
 
 
     /**
-     * Will take a not about the given free spot, without actually applying it
+     * Will take a note about the given free spot, without actually applying it
      * Free spot size will not be affected yet.
      * @param pointer
      * @param size
@@ -38,7 +38,7 @@ public:
     void push_free_spot(uint128_t pointer, std::size_t size);
 
     /**
-     * Takes a not of removing the most recent inserted free spot
+     * Takes a note of removing the most recent inserted free spot
      * Free spot size will not be affected yet.
      *
      * @return a fragment containing the popped spot
