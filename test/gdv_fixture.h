@@ -39,6 +39,15 @@ public:
                     excp_ptr = std::current_exception();
                 }
             });
+
+            if (excp_ptr) {
+                try {
+                    std::rethrow_exception(excp_ptr);
+                } catch (std::exception& e) {
+                    teardown();
+                    throw e;
+                }
+            }
         }
 
         m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc,
@@ -70,10 +79,6 @@ public:
         for (auto& thread : m_threads) {
             thread.join();
         }
-
-        m_threads.clear();
-        m_storage_instances.clear();
-        m_temp_dirs.clear();
 
         m_ioc.stop();
         m_ioc.restart();
