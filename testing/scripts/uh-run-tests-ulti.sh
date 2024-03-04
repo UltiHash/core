@@ -47,6 +47,7 @@ done
 echo "*** running UltiHash test suite ..."
 
 docker run --network="host" --interactive --tty \
+    --env LOCAL_UID=$(id -u $USER) --env LOCAL_GID=$(id -g $USER) \
     --volume $UH_TEST_SUITE_ULTIHASH:/tests:rw \
     $UH_IMAGE_RUNNER_TAG \
     pytest "/tests" --cluster-url="$cluster_url" \

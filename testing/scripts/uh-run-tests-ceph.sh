@@ -56,6 +56,7 @@ sed -e "s/%TESTING_S3_HOST%/$cluster_host/" \
 
 docker run --network="host" --interactive --tty \
     --env S3TEST_CONF=/s3test.conf \
+    --env LOCAL_UID=$(id -u $USER) --env LOCAL_GID=$(id -g $USER) \
     --volume $UH_CEPH_CONF:/s3test.conf \
     --volume $UH_TEST_SUITE_CEPH:/tests:rw \
     $UH_IMAGE_RUNNER_TAG \
