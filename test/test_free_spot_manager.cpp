@@ -30,7 +30,7 @@ struct fixture {
         }
     }
 
-    const auto& get_log_file () const {
+    [[nodiscard]] const auto& get_log_file () const {
         return m_log_file;
     }
 
@@ -54,7 +54,7 @@ BOOST_FIXTURE_TEST_CASE(push_free_spot_test, fixture) {
         fsm.push_free_spot(m_offsets[i], m_sizes[i]);
         expected_total_free_size += m_sizes[i];
     }
-    BOOST_TEST(fsm.total_free_spots() == big_int{0, expected_total_free_size})
+    BOOST_TEST((fsm.total_free_spots() == big_int{0, expected_total_free_size}));
 }
 
 BOOST_FIXTURE_TEST_CASE(note_free_spot_test, fixture) {
@@ -62,13 +62,12 @@ BOOST_FIXTURE_TEST_CASE(note_free_spot_test, fixture) {
     free_spot_manager fsm (get_log_file ());
     std::size_t expected_total_free_size = 0;
 
-    int failure = 0;
     for (size_t i = 0; i < m_offsets.size(); ++i) {
         fsm.note_free_spot(m_offsets[i], m_sizes[i]);
         expected_total_free_size += m_sizes[i];
     }
 
-    BOOST_TEST(fsm.total_free_spots() == big_int())
+    BOOST_TEST((fsm.total_free_spots() == big_int{}));
 
     fsm.push_noted_free_spots();
 
