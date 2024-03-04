@@ -45,7 +45,9 @@ private:
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE(push_free_spot_test, fixture) {
+BOOST_FIXTURE_TEST_SUITE(freespot_fixture_test, fixture)
+
+BOOST_AUTO_TEST_CASE(push_free_spot_test) {
 
     free_spot_manager fsm (get_log_file ());
     std::size_t expected_total_free_size = 0;
@@ -57,7 +59,7 @@ BOOST_FIXTURE_TEST_CASE(push_free_spot_test, fixture) {
     BOOST_TEST((fsm.total_free_spots() == big_int{0, expected_total_free_size}));
 }
 
-BOOST_FIXTURE_TEST_CASE(note_free_spot_test, fixture) {
+BOOST_AUTO_TEST_CASE(note_free_spot_test) {
 
     free_spot_manager fsm (get_log_file ());
     std::size_t expected_total_free_size = 0;
@@ -74,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(note_free_spot_test, fixture) {
     BOOST_TEST((fsm.total_free_spots() == big_int{0, expected_total_free_size}));
 }
 
-BOOST_FIXTURE_TEST_CASE(pop_free_spot_test, fixture) {
+BOOST_AUTO_TEST_CASE(pop_free_spot_test) {
 
     free_spot_manager fsm (get_log_file ());
     std::size_t expected_total_free_size = 0;
@@ -113,6 +115,8 @@ BOOST_FIXTURE_TEST_CASE(persistent_free_spot_test, fixture) {
         BOOST_TEST((fsm.total_free_spots() == big_int{0, expected_total_free_size}));
     }
 }
+
+BOOST_AUTO_TEST_SUITE_END()
 
 // ---------------------------------------------------------------------
 
