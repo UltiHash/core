@@ -4,6 +4,7 @@
 - Fix access violations in entrypoint and deduplicator
 - Fix memory leak in license validation
 - Fix double-free in MD5 checksum computation
+- Fix use-after-free in directory bucket deletion
 
 ## [0.2.0] - 2024-02-29
 - Implement etcd-based service coordination
