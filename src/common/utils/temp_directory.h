@@ -12,7 +12,7 @@ public:
     temp_directory();
     ~temp_directory();
 
-    const std::filesystem::path& path() const;
+    [[nodiscard]] const std::filesystem::path& path() const;
 
 private:
     std::filesystem::path m_path;
