@@ -57,7 +57,6 @@ echo "*** running start-e2e.sh on $(hostname --all-fqdns)"
 echo "*** uname: $(uname -a)"
 echo "*** id: $(id -a)"
 echo "*** pwd: $PWD, pid: $BASHPID"
-TERM=vt100 pstree -H $BASHPID
 
 if [ -z "$cluster_url" ]; then
     uh-build-container.sh
