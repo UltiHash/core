@@ -24,18 +24,45 @@ struct data_store_config {
 class data_store {
 
 public:
-    explicit data_store(const data_store_config& conf, std::size_t id,
-                        bool adaptive = true);
+    data_store(data_store_config conf, std::size_t id, bool adaptive = true);
 
+    /**
+     * @brief Writes the data into the data node and returns the addresses of
+     * the data written. Here we give out only one address which underneath is
+     * simply a collection of pointers and sizes.
+     * @param data : span of characters
+     * @return address of data written
+     */
     address write(std::span<char> data);
 
+    /**
+     *
+     * @param buffer
+     * @param pointer
+     * @param size
+     * @return
+     */
     std::size_t read(char* buffer, uint128_t pointer, size_t size);
 
+    /**
+     *
+     * @param pointer
+     * @param size
+     */
     void remove(uint128_t pointer, size_t size);
 
     void sync();
 
+    /**
+     * @brief Gives out the current used space of the data node.
+     * @return uint128_t : the used space in the data node
+     */
     [[nodiscard]] uint128_t get_used_space() const noexcept;
+
+    /**
+     * @brief Gives out the current available space in the data node.
+     * @return uint128_t : the available space in the data node
+     */
     [[nodiscard]] uint128_t get_available_space() const noexcept;
 
     ~data_store();
