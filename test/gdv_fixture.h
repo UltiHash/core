@@ -2,7 +2,7 @@
 #define UH_CLUSTER_GDV_FIXTURE_H
 
 #include <common/global_data/global_data_view.h>
-#include <common/utils/temp_dir.h>
+#include <common/utils/temp_directory.h>
 #include <config/config.h>
 #include <storage/storage.h>
 

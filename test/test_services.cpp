@@ -13,7 +13,7 @@
 #include "common/test/checks.h"
 #include "common/test/server.h"
 #include "common/utils/common.h"
-#include "common/utils/temp_dir.h"
+#include "common/utils/temp_directory.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
 
