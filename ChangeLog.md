@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 - Fix access violations in entrypoint and deduplicator
+- Fix memory leak in license validation
 
 ## [0.2.0] - 2024-02-29
 - Implement etcd-based service coordination
