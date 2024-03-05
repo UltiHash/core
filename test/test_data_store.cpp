@@ -32,8 +32,6 @@ private:
     static temp_directory m_dir;
 };
 
-temp_directory data_store_fixture::m_dir = {};
-
 struct test_data {
     test_data() {
         fill_random(data1, sizeof(data1));
@@ -71,7 +69,7 @@ struct test_data {
     char zero[8 * 1024];
 };
 
-BOOST_TEST_GLOBAL_FIXTURE(data_store_fixture);
+BOOST_AUTO_TEST_SUITE(data_store_test_suite)
 
 test_data test;
 
@@ -249,12 +247,12 @@ BOOST_AUTO_TEST_CASE(test_read_after_removal) {
     BOOST_CHECK(std::memcmp(test.buf, test.data8, ts) == 0);
 
     BOOST_CHECK(ds->get_used_space() == expected_size);
-
-    ds->sync();
 }
 
 BOOST_AUTO_TEST_CASE(test_persistence) {
+    ds->sync();
     ds.reset();
+
     ds = data_store_fixture::get_data_store();
     BOOST_TEST(ds->get_used_space().get_data()[1] == expected_size);
 
@@ -311,5 +309,7 @@ BOOST_AUTO_TEST_CASE(test_persistence) {
     BOOST_TEST(ts == sizeof(test.data11));
     BOOST_CHECK(std::memcmp(test.buf, test.data11, ts) == 0);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
 
 } // end namespace uh::cluster
