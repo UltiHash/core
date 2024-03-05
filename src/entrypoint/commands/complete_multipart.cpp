@@ -125,8 +125,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     res.set_space_savings(space_saving);
     res.set_bandwidth(bandwidth);
 
-    m_collection.server_state.m_uploads.remove_upload(upload_id, bucket_name,
-                                                      object_name);
+    m_collection.server_state.m_uploads.remove_upload(upload_id);
 
     co_return std::move(res);
 }
