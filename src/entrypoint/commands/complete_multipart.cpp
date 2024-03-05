@@ -118,12 +118,26 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     LOG_DEBUG() << "integration duration " << dur_s << " s";
     LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
 
+    auto etag = calculate_md5(req.get_body());
     http_response res;
-    res.set_etag(calculate_md5(req.get_body()));
+    res.set_etag(etag);
     res.set_original_size(up_info->data_size);
     res.set_effective_size(up_info->effective_size);
     res.set_space_savings(space_saving);
     res.set_bandwidth(bandwidth);
+
+    res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                 "<CompleteMultipartUploadResult>\n"
+                 "<Bucket>" +
+                 up_info->bucket +
+                 "</Bucket>\n"
+                 "<Key>" +
+                 up_info->key +
+                 "</Key>\n"
+                 "<ETag>" +
+                 etag +
+                 "</ETag>\n"
+                 "</CompleteMultipartUploadResult>\n");
 
     m_collection.server_state.m_uploads.remove_upload(upload_id);
 
