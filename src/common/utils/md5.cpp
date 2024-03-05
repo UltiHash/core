@@ -1,10 +1,14 @@
 #include "md5.h"
+#include <memory>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <stdexcept>
 
 namespace uh::cluster {
 
-static std::string to_hex(unsigned char value) {
+namespace {
+
+std::string to_hex(unsigned char value) {
     static const char hexChars[] = "0123456789abcdef";
     std::string result;
     result.push_back(hexChars[value >> 4]);
@@ -12,43 +16,36 @@ static std::string to_hex(unsigned char value) {
     return result;
 }
 
-static void throw_from_error(const std::string& prefix) {
+void throw_from_error(const std::string& prefix) {
     char buffer[256];
     ERR_error_string_n(ERR_get_error(), buffer, sizeof(buffer));
 
     throw std::runtime_error(prefix + ": " + std::string(buffer));
 }
 
-md5::md5()
-    : m_ctx(nullptr) {
-    m_ctx = EVP_MD_CTX_create();
+constexpr const char* EMPTY_MD5_HASH = "d41d8cd98f00b204e9800998ecf8427e";
 
-    if (!m_ctx) {
-        throw_from_error("cannot create MD context");
-    }
-}
+} // namespace
 
-md5::~md5() {
-    if (m_ctx)
-        EVP_MD_CTX_destroy(m_ctx);
-}
-
-std::string md5::calculate_md5(const std::string& input) const {
+std::string calculate_md5(const std::string& input) {
     if (input.empty()) [[unlikely]]
         return EMPTY_MD5_HASH;
+
+    auto ctx = std::unique_ptr<EVP_MD_CTX, void (*)(EVP_MD_CTX*)>(
+        EVP_MD_CTX_create(), EVP_MD_CTX_free);
 
     unsigned char unMdValue[EVP_MAX_MD_SIZE];
     unsigned int uiMdLength;
 
-    if (!EVP_DigestInit_ex(m_ctx, EVP_md5(), nullptr)) {
+    if (!EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr)) {
         throw_from_error("error on digest initialization");
     }
 
-    if (!EVP_DigestUpdate(m_ctx, input.c_str(), input.length())) {
+    if (!EVP_DigestUpdate(ctx.get(), input.c_str(), input.length())) {
         throw_from_error("error on digest update");
     }
 
-    if (!EVP_DigestFinal_ex(m_ctx, unMdValue, &uiMdLength)) {
+    if (!EVP_DigestFinal_ex(ctx.get(), unMdValue, &uiMdLength)) {
         throw_from_error("error on digest finalization");
     }
 
