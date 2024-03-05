@@ -1,7 +1,7 @@
-#pragma once
+#ifndef ENTRYPOINT_STATE_H
+#define ENTRYPOINT_STATE_H
 
 #include "common/types/common_types.h"
-#include "common/utils/md5.h"
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -45,7 +45,6 @@ struct upload_state {
 
 private:
     mutable std::mutex mutex{};
-    md5 m_md5;
 
     std::unordered_map<std::string, std::shared_ptr<upload_info>>
         m_upload_infos;
@@ -64,3 +63,5 @@ struct state {
 };
 
 } // namespace uh::cluster
+
+#endif

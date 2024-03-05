@@ -17,7 +17,6 @@ public:
 
 private:
     reference_collection& m_collection;
-    md5 m_md5;
 };
 
 } // namespace uh::cluster

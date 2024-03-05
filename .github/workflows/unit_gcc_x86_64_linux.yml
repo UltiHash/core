@@ -2,9 +2,10 @@ name: Unit Tests (Linux, GCC, x86_64)
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "bugfix-0.2.0" ]
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - "*"
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:

@@ -1,4 +1,5 @@
 #include "state.h"
+#include "common/utils/md5.h"
 #include <algorithm>
 
 namespace uh::cluster {
@@ -94,7 +95,7 @@ void upload_state::append_upload_part_info(const std::string& upload_id,
     std::lock_guard<std::mutex> lock(mutex);
     auto& total_resp = m_upload_infos[upload_id];
     if (!data.empty()) {
-        total_resp->etags.emplace(part_id, m_md5.calculate_md5(data));
+        total_resp->etags.emplace(part_id, calculate_md5(data));
     } else { // default etag
         total_resp->etags.emplace(
             part_id,
