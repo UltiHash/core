@@ -2,7 +2,7 @@ name: Integration Test (C++ Apps)
 
 on:
   push:
-    branches: [ "master", "bugfix-0.2.0" ]
+    branches: [ "master" ]
   pull_request:
     branches:
     - "*"
