@@ -30,16 +30,13 @@ coro<http_response> abort_multipart::handle(const http_request& req) const {
 
     const auto& uri = req.get_uri();
     const auto& upload_id = uri.get_query_parameters().at("uploadId");
-    const auto& bucket_name = uri.get_bucket_id();
-    const auto& object_name = uri.get_object_key();
 
     if (!m_collection.server_state.m_uploads.contains_upload(upload_id)) {
         throw command_exception(http::status::not_found,
                                 command_error::type::no_such_upload);
-    } else {
-        m_collection.server_state.m_uploads.remove_upload(
-            upload_id, bucket_name, object_name);
     }
+
+    m_collection.server_state.m_uploads.remove_upload(upload_id);
 
     co_return http_response();
 }
