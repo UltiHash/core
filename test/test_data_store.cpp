@@ -5,7 +5,7 @@
 #endif
 
 #include "common/utils/common.h"
-#include "common/utils/temp_dir.h"
+#include "common/utils/temp_directory.h"
 #include "storage/data_store.h"
 #include <boost/test/unit_test.hpp>
 
@@ -15,7 +15,6 @@ namespace uh::cluster {
 
 struct data_store_fixture {
     static data_store_config make_data_store_config() {
-        std::cout << m_dir.path().string() << std::endl;
         return {
             .working_dir = m_dir.path().string(),
             .min_file_size = 1024ul,
@@ -31,6 +30,7 @@ struct data_store_fixture {
 private:
     static temp_directory m_dir;
 };
+temp_directory data_store_fixture::m_dir = {};
 
 struct test_data {
     test_data() {

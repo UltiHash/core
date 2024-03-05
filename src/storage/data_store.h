@@ -27,41 +27,58 @@ public:
     data_store(data_store_config conf, std::size_t id, bool adaptive = true);
 
     /**
-     * @brief Writes the data into the data node and returns the addresses of
-     * the data written. Here we give out only one address which underneath is
-     * simply a collection of pointers and sizes.
-     * @param data : span of characters
-     * @return address of data written
+     * @brief Writes the data into the data store and returns the address of
+     * the data written. Data might be split up and stored at the free spots of
+     * the data store. This is why we return an address struct which is simply a
+     * collection of pointers and sizes.
+     * @param data: span of characters
+     * @return address: collection of pointers and sizes
+     *
+     * @throws std::bad_alloc: if allocated size exceeds on write.
+     * @throws std::runtime_error: file seek error
+     * @throws std::exception: from private functions
      */
     address write(std::span<char> data);
 
     /**
+     * @brief Read bytes of data starting from the pointer until the size and
+     * store it in the buffer given.
+     * @param buffer: buffer where the read data is to be written
+     * @param pointer: pointer to the data which is to be read
+     * @param size: number of bytes to read
+     * @return std::size_t: number of read bytes
      *
-     * @param buffer
-     * @param pointer
-     * @param size
-     * @return
+     * @throws std::out_of_range invalid pointer and size given
+     * @throws std::runtime_error: file seek error
      */
     std::size_t read(char* buffer, uint128_t pointer, size_t size);
 
     /**
+     * @brief Removes the data from data store by setting all the bytes to 0.
+     * Subsequently it adds this information to the free spot manager.
+     * @param pointer: pointer to the data which is to be removed
+     * @param size: number of bytes to remove
      *
-     * @param pointer
-     * @param size
+     * @throws std::runtime_error: file seek error
+     * @throws std::out_of_range invalid pointer and size given
      */
     void remove(uint128_t pointer, size_t size);
 
+    /**
+     * @brief Flushes modified files to disk.
+     */
     void sync();
 
     /**
-     * @brief Gives out the current used space of the data node.
-     * @return uint128_t : the used space in the data node
+     * @brief Gives out the current used space of the data store.
+     * @return uint128_t: the used space in the data store
      */
     [[nodiscard]] uint128_t get_used_space() const noexcept;
 
     /**
-     * @brief Gives out the current available space in the data node.
-     * @return uint128_t : the available space in the data node
+     * @brief Gives out the current available space in the data store. Available
+     * = allocated - used
+     * @return uint128_t: the available space in the data store
      */
     [[nodiscard]] uint128_t get_available_space() const noexcept;
 
