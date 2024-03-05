@@ -8,7 +8,10 @@
 namespace uh::cluster {
 
 std::map<std::string, std::string>
-upload_state::list_multipart_uploads(const std::string& bucket) const {
+upload_state::list_multipart_uploads(const std::string& bucket) {
+
+    clear_infos();
+
     LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
 
     std::lock_guard<std::mutex> lock(mutex);
@@ -25,6 +28,8 @@ upload_state::list_multipart_uploads(const std::string& bucket) const {
 
 std::string upload_state::insert_upload(std::string bucket,
                                         std::string object_key) {
+    clear_infos();
+
     auto info = std::make_shared<upload_info>();
     info->key = object_key;
     info->bucket = bucket;
@@ -36,7 +41,7 @@ std::string upload_state::insert_upload(std::string bucket,
 
         do {
             id = generate_unique_id();
-        } while (!m_infos.contains(id));
+        } while (m_infos.contains(id));
 
         m_infos.emplace(id, info);
     }
@@ -48,15 +53,21 @@ std::string upload_state::insert_upload(std::string bucket,
 }
 
 void upload_state::remove_upload(const std::string& id) {
-
     LOG_DEBUG() << "remove upload, id: " << id;
 
+    clear_infos();
+
     std::lock_guard<std::mutex> lock(mutex);
-    m_infos.erase(id);
+    auto it = m_infos.find(id);
+    if (it != m_infos.end() && !it->second->erased) {
+        m_deletions.push(info_deletion(it, DEFAULT_TIMEOUT));
+        it->second->erased = true;
+    }
 }
 
 std::shared_ptr<upload_info>
-upload_state::get_upload_info(const std::string& id) const {
+upload_state::get_upload_info(const std::string& id) {
+    clear_infos();
 
     LOG_DEBUG() << "get upload info, id: " << id;
 
@@ -70,7 +81,9 @@ upload_state::get_upload_info(const std::string& id) const {
     }
 }
 
-bool upload_state::contains_upload(const std::string& id) const {
+bool upload_state::contains_upload(const std::string& id) {
+    clear_infos();
+
     std::lock_guard<std::mutex> lock(mutex);
     return m_infos.contains(id);
 }
@@ -78,6 +91,8 @@ bool upload_state::contains_upload(const std::string& id) const {
 void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
                                            const dedupe_response& resp,
                                            const std::string& data) {
+
+    clear_infos();
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -105,6 +120,16 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 time.time_since_epoch())
                 .count();
+    }
+}
+
+void upload_state::clear_infos() {
+    auto now = clock::now();
+
+    std::lock_guard<std::mutex> lock(mutex);
+    while (!m_deletions.empty() && now > m_deletions.top().when) {
+        m_infos.erase(m_deletions.top().where);
+        m_deletions.pop();
     }
 }
 

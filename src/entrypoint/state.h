@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <queue>
 #include <unordered_map>
 #include <vector>
 
@@ -21,6 +22,7 @@ struct upload_info {
 
     std::string key;
     std::string bucket;
+    bool erased = false;
 
     [[nodiscard]] address generate_total_address() const {
         address addr;
@@ -32,9 +34,15 @@ struct upload_info {
 };
 
 struct upload_state {
+    using clock = std::chrono::system_clock;
+    using duration = std::chrono::seconds;
+    using time_point = std::chrono::time_point<clock>;
+
+    static constexpr auto DEFAULT_TIMEOUT = duration(300);
+
     std::string insert_upload(std::string bucket, std::string object_key);
-    bool contains_upload(const std::string& id) const;
-    std::shared_ptr<upload_info> get_upload_info(const std::string& id) const;
+    bool contains_upload(const std::string& id);
+    std::shared_ptr<upload_info> get_upload_info(const std::string& id);
     void append_upload_part_info(const std::string& id, uint16_t part_id,
                                  const dedupe_response& resp,
                                  const std::string& data);
@@ -42,11 +50,33 @@ struct upload_state {
     void remove_upload(const std::string& id);
 
     std::map<std::string, std::string>
-    list_multipart_uploads(const std::string&) const;
+    list_multipart_uploads(const std::string&);
 
 private:
+    void clear_infos();
+
     mutable std::mutex mutex;
     std::unordered_map<std::string, std::shared_ptr<upload_info>> m_infos;
+
+    struct info_deletion {
+    public:
+        info_deletion(
+            std::unordered_map<std::string,
+                               std::shared_ptr<upload_info>>::iterator where,
+            duration timeout)
+            : where(where),
+              when(clock::now() + timeout) {}
+
+        bool operator>(const info_deletion& other) const {
+            return when > other.when;
+        }
+
+        std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
+            where;
+        time_point when;
+    };
+    std::priority_queue<info_deletion, std::vector<info_deletion>,
+        std::greater<info_deletion>> m_deletions;
 };
 
 struct state {
