@@ -35,8 +35,7 @@ public:
      * @return address: collection of pointers and sizes
      *
      * @throws std::bad_alloc: if allocated size exceeds on write.
-     * @throws std::runtime_error: file seek error
-     * @throws std::exception: from private functions
+     * @throws std::exception: corrupted storage
      */
     address write(std::span<char> data);
 
@@ -49,7 +48,7 @@ public:
      * @return std::size_t: number of read bytes
      *
      * @throws std::out_of_range invalid pointer and size given
-     * @throws std::runtime_error: file seek error
+     * @throws std::exception: corrupted storage
      */
     std::size_t read(char* buffer, uint128_t pointer, size_t size);
 
@@ -59,8 +58,8 @@ public:
      * @param pointer: pointer to the data which is to be removed
      * @param size: number of bytes to remove
      *
-     * @throws std::runtime_error: file seek error
      * @throws std::out_of_range invalid pointer and size given
+     * @throws std::exception: corrupted storage
      */
     void remove(uint128_t pointer, size_t size);
 
