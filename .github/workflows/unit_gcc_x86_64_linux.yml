@@ -2,7 +2,7 @@ name: Unit Tests (Linux, GCC, x86_64)
 
 on:
   push:
-    branches: [ "master", "bugfix-0.2.0" ]
+    branches: [ "master" ]
   pull_request:
     branches:
       - "*"
@@ -39,7 +39,7 @@ jobs:
           etcdctl del "" --from-key=true
           ctest -C ${{ matrix.build }} --output-on-failure
           etcdctl del "" --from-key=true
-          
+
 
       - name: Packaging (.deb)
         working-directory: ${{github.workspace}}/build
