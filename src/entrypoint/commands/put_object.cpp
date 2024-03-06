@@ -34,6 +34,11 @@ coro<http_response> put_object::handle(http_request& req) const {
             .addr = std::make_unique<address>(std::move(resp.addr)),
         };
 
+        auto directories = m_collection.directory_services.get_clients();
+        if (directories.empty()) {
+            throw std::runtime_error("no directory services available");
+        }
+
         auto func = [](const directory_message& dir_req,
                        client::acquired_messenger m, long id) -> coro<void> {
             co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
@@ -41,8 +46,8 @@ coro<http_response> put_object::handle(http_request& req) const {
             co_await m.get().recv_header();
         };
         co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_collection.directory_services.get_clients(), m_collection.ioc,
-            m_collection.workers, std::bind_front(func, std::cref(dir_req)));
+            directories, m_collection.ioc, m_collection.workers,
+            std::bind_front(func, std::cref(dir_req)));
 
         auto effective_size =
             static_cast<double>(resp.effective_size) / MEBI_BYTE;

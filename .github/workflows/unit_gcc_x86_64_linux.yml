@@ -4,7 +4,8 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - "*"
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
@@ -38,7 +39,7 @@ jobs:
           etcdctl del "" --from-key=true
           ctest -C ${{ matrix.build }} --output-on-failure
           etcdctl del "" --from-key=true
-          
+
 
       - name: Packaging (.deb)
         working-directory: ${{github.workspace}}/build
