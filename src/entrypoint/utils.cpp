@@ -15,6 +15,10 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     }
 
     auto dedupe_services = collection.dedupe_services.get_clients();
+    if (dedupe_services.empty()) {
+        throw std::runtime_error("no deduplicator services available");
+    }
+
     auto dedupe_services_size = dedupe_services.size();
     const auto part_size = static_cast<size_t>(
         std::ceil(static_cast<double>(total_size) /
