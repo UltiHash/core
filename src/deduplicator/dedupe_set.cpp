@@ -29,7 +29,8 @@ void dedupe_set::insert(
     const uint128_t& pointer, const std::string_view& data,
     const std::set<fragment_element>::const_iterator& hint) {
     fragment_element f{data, pointer, m_storage};
-    m_set_log.append({set_operation::INSERT, f.pointer, f.size, f.prefix});
+    m_set_log.append(
+        {set_operation::INSERT, f.get_pointer(), f.get_size(), f.get_prefix()});
     std::lock_guard<std::shared_mutex> lock(m);
     m_set.emplace_hint(hint, std::move(f));
 }

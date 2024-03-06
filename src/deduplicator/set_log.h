@@ -37,9 +37,10 @@ public:
 
 private:
     static int get_log_file(const std::filesystem::path& path);
-    static void serialize(const auto& f, char* buf);
+    static void serialize(const entry& entry, char* buf);
+    static void serialize(const fragment_element& frag, char* buf);
     [[nodiscard]] std::pair<set_operation, set_log::entry> deserialize() const;
-    void recreate(std::set<fragment_element>& set);
+    void recreate(std::set<fragment_element>& fragment_set);
 };
 
 } // end namespace uh::cluster
