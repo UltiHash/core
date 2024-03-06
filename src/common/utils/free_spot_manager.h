@@ -15,18 +15,49 @@ class free_spot_manager {
 public:
     explicit free_spot_manager(std::filesystem::path hole_log);
 
+
+    /**
+     * Will take a note about the given free spot, without actually applying it
+     * Free spot size will not be affected yet.
+     * @param pointer
+     * @param size
+     */
     void note_free_spot(uint128_t pointer, std::size_t size);
 
+    /**
+     * Applies the pending/noted free spots.
+     * Free spot size will be updated accordingly
+     */
     void push_noted_free_spots();
 
+    /**
+     * Inserts a new free spot and updates the free spot size
+     * @param pointer
+     * @param size
+     */
     void push_free_spot(uint128_t pointer, std::size_t size);
 
+    /**
+     * Takes a note of removing the most recent inserted free spot
+     * Free spot size will not be affected yet.
+     *
+     * @return a fragment containing the popped spot
+     */
     std::optional<fragment> pop_free_spot();
 
+    /**
+     * Applies the pending/noted removed free spots and updates the free spot size
+     */
     void apply_popped_items();
 
+    /**
+     * @return total free spot size
+     */
     [[nodiscard]] uint128_t total_free_spots() const noexcept;
 
+    /**
+     * Makes sure that the changes to the free spot log are persisted on disk
+     */
     void sync();
 
     ~free_spot_manager();

@@ -18,8 +18,8 @@ print_help()
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -u URL, --url URL    run tests against an existing cluster"
-    echo " -U, --no-ulti        do not run UltiHash test suite"
-    echo " -C, --no-ceph        do not run Ceph test suite"
+    echo " -U, --run-ulti       run UltiHash test suite"
+    echo " -C, --run-ceph       run Ceph test suite"
 }
 
 set -o errexit
@@ -41,9 +41,9 @@ while [ -n "$1" ]; do
                         *) cluster_url="http://$cluster_url";;
                     esac
                     ;;
-        -U|--no-ulti) run_ultihash=0
+        -U|--run-ulti) run_ceph=0
                       ;;
-        -C|--no-ceph) run_ceph=0
+        -C|--run-ceph) run_ultihash=0
                       ;;
         *)  echo "Unknown parameter '$1'."
             print_help
@@ -83,8 +83,6 @@ TERM=vt100 pstree -H $BASHPID
 
 . "$venv_dir/bin/activate"
 
-export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
-
 if [ -z "$cluster_url" ]; then
     if ! docker pull ghcr.io/ultihash/build-base:latest; then
         echo "pulling build-base image failed" 1>&2
@@ -99,8 +97,13 @@ if [ -z "$cluster_url" ]; then
         echo "docker build failed" 1>&2
         exit 1
     fi
-    docker compose up --detach
     trap "docker compose rm --volumes --stop --force" SIGHUP SIGINT SIGQUIT SIGABRT EXIT
+
+    # check services startup with invalid licenses
+    ./test_services.sh
+
+    export UH_LICENSE="$(cat $PWD/../data/licenses/UltiHash-Test-1GB.lic)"
+    docker compose up --detach
     cluster_url="http://localhost:8080"
 fi
 
