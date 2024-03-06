@@ -6,6 +6,7 @@
 - Fix double-free in MD5 checksum computation
 - Fix use-after-free in directory bucket deletion
 - Finalized multipart upload and pending deletion of multipart uploads
+- Propagate errors about missing downstream services in entrypoint
 
 ## [0.2.0] - 2024-02-29
 - Implement etcd-based service coordination
