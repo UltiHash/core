@@ -23,11 +23,8 @@ public:
 
     dedupe_set(const std::filesystem::path& set_log_path,
                global_data_view& storage);
-
     void load();
-
     response find(std::string_view data);
-
     void insert(const uint128_t& pointer, const std::string_view& data,
                 const std::set<fragment_element>::const_iterator& hint);
 
