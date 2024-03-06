@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.1] - 2024-03-06
 - Fix access violations in entrypoint and deduplicator
 - Fix memory leak in license validation
 - Fix double-free in MD5 checksum computation
