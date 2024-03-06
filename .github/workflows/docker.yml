@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: docker-image-builder
     steps:
 
     - name: Set Date
