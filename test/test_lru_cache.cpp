@@ -44,8 +44,7 @@ BOOST_AUTO_TEST_CASE(lru_evict_outdated_entries) {
     cache.put(5, 5);
 
     // retrieval of initial item fails
-    BOOST_CHECK(cache.get(0) == std::nullopt);
-    BOOST_CHECK_EQUAL(cache.get(0, -1), -1);
+    BOOST_CHECK(!cache.get(0).has_value());
 }
 
 BOOST_AUTO_TEST_CASE(lru_track_accessed_entries) {
@@ -105,8 +104,7 @@ BOOST_AUTO_TEST_CASE(lru_empty_cache) {
     lru_cache<int, int> cache(5);
 
     // retrieval from empty cache fails
-    BOOST_CHECK(cache.get(0) == std::nullopt);
-    BOOST_CHECK_EQUAL(cache.get(0, -1), -1);
+    BOOST_CHECK(!cache.get(0).has_value());
 }
 
 BOOST_AUTO_TEST_CASE(lru_single_element) {
