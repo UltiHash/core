@@ -27,7 +27,6 @@ public:
 private:
     http::response<http::string_body> m_res{
         http::response<http::string_body>{http::status::ok, 11}};
-    std::optional<std::string> m_etag;
 };
 
 } // namespace uh::cluster

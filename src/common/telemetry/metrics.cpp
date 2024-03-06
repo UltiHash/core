@@ -19,9 +19,9 @@ constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
     .export_interval_millis = std::chrono::milliseconds(1000),
     .export_timeout_millis = std::chrono::milliseconds(500)};
 
-constexpr std::string GDV_PREFIX = "gdv";
-constexpr std::string COUNTER_SUFFIX = "counter";
-constexpr std::string REQ_SUFFIX = "req";
+std::string GDV_PREFIX = "gdv";
+std::string COUNTER_SUFFIX = "counter";
+std::string REQ_SUFFIX = "req";
 
 std::basic_string<char> get_role_prefix(role svc_role) {
     auto role_str = std::string(magic_enum::enum_name(svc_role));
