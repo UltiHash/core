@@ -114,7 +114,7 @@ private:
         dedupe_response result{.addr = address{}};
         auto integration_data = data;
 
-        auto check_dedupe = [&](const dedupe_set::fragment_element& frag) {
+        auto check_dedupe = [&](const fragment_element& frag) {
             auto frag_data = m_storage.cached_sample(frag.pointer, frag.size);
             bool l1 = true;
             if (frag_data.data() == nullptr) {
