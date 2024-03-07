@@ -39,7 +39,6 @@ private:
     static void serialize(const log_entry& entry, char* buf);
     [[nodiscard]] std::pair<set_operation, fragment_set_log::log_entry>
     deserialize() const;
-    void recreate(std::set<fragment_set_element>& fragment_set);
 };
 
 } // end namespace uh::cluster

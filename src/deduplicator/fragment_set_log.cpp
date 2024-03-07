@@ -43,7 +43,7 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
         offset += sizeof(log_entry);
     }
 
-    recreate(set);
+    lseek(m_log_file, 0, SEEK_END);
 }
 
 fragment_set_log::~fragment_set_log() {
@@ -89,44 +89,5 @@ fragment_set_log::deserialize() const {
     std::memcpy(f.prefix.ref_data(), buf + offset, sizeof f.prefix);
 
     return {static_cast<set_operation>(buf[0]), f};
-}
-
-void fragment_set_log::recreate(std::set<fragment_set_element>& fragment_set) {
-    const auto new_file_path =
-        m_log_path.parent_path() / "_set_logger_tmp_file_new";
-    const auto old_file_tmp_path =
-        m_log_path.parent_path() / "_set_logger_tmp_file_original";
-    try {
-
-        const auto tmp_file = get_log_file(new_file_path);
-        for (const auto& frag : fragment_set) {
-            log_entry entry = {.op = INSERT,
-                               .pointer = frag.get_pointer(),
-                               .size = frag.get_size(),
-                               .prefix = frag.get_prefix()};
-
-            char buf[sizeof(entry)];
-            serialize(entry, buf);
-
-            if (sizeof buf != ::write(tmp_file, buf, sizeof buf)) [[unlikely]] {
-                throw std::runtime_error("Could not write into the log file");
-            }
-        }
-        close(tmp_file);
-        close(m_log_file);
-
-        std::filesystem::rename(m_log_path, old_file_tmp_path);
-        std::filesystem::rename(new_file_path, m_log_path);
-        m_log_file = get_log_file(m_log_path);
-    } catch (std::exception& e) {
-        if (!std::filesystem::exists(m_log_path) and
-            std::filesystem::exists(old_file_tmp_path)) {
-            std::filesystem::rename(old_file_tmp_path, m_log_path);
-            m_log_file = get_log_file(m_log_path);
-        }
-    }
-
-    ::lseek(m_log_file, 0, SEEK_END);
-    std::filesystem::remove(old_file_tmp_path);
 }
 } // namespace uh::cluster
