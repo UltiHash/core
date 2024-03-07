@@ -65,9 +65,11 @@ struct data_store_fixture {
                 .max_data_store_size = MAX_DATA_STORE_SIZE_BYTES};
     }
 
-    void setup() {
-        ds = std::make_unique<data_store>(make_data_store_config(), 0);
+    auto make_data_store() const {
+        return std::make_unique<data_store>(make_data_store_config(), 0);
     }
+
+    void setup() { ds = make_data_store(); }
 
     inline address write(auto& data) const { return ds->write(data); }
 
@@ -77,7 +79,7 @@ struct data_store_fixture {
         return files * sizeof(size_t);
     }
 
-    inline std::vector<address> write_all_data() {
+    inline std::vector<address> write_all() {
         std::vector<address> addresses;
 
         for (auto& data : test_data.data) {
@@ -110,9 +112,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 }
 
 BOOST_AUTO_TEST_CASE(test_write) {
-    for (auto& data : test_data.data) {
-        write(data);
-    }
+    write_all();
     BOOST_TEST(ds->get_used_space() == test_data.used_size());
     BOOST_CHECK_THROW(ds->write(test_data.throwing_data), std::bad_alloc);
 }
@@ -145,8 +145,8 @@ BOOST_AUTO_TEST_CASE(test_read) {
 BOOST_AUTO_TEST_CASE(test_remove) {
     char buf[MAX_DATA_STORE_SIZE_BYTES];
 
-    auto addresses = write_all_data();
-    size_t expected_size = 0;
+    auto addresses = write_all();
+    size_t removed_size = 0;
     size_t iteration = 0;
 
     for (auto& address : addresses) {
@@ -155,22 +155,57 @@ BOOST_AUTO_TEST_CASE(test_remove) {
                        address.get_fragment(i).size);
         }
 
-        size_t total_read = 0;
+        size_t t_read = 0;
         for (size_t i = 0; i < address.size(); ++i) {
             const auto p = address.get_fragment(i);
-            auto read_size = ds->read(buf + total_read, p.pointer, p.size);
-            total_read += read_size;
+            auto read_size = ds->read(buf + t_read, p.pointer, p.size);
+            t_read += read_size;
         }
 
-        BOOST_TEST(total_read == test_data.data[iteration].size());
-        BOOST_CHECK(std::memcmp(buf, test_data.zero, total_read) == 0);
+        BOOST_TEST(t_read == test_data.data[iteration].size());
+        BOOST_CHECK(std::memcmp(buf, test_data.zero, t_read) == 0);
 
-        expected_size += total_read;
+        removed_size += t_read;
         BOOST_CHECK(ds->get_used_space() ==
-                    test_data.used_size() - expected_size);
+                    test_data.used_size() - removed_size);
 
         iteration++;
     }
+}
+
+BOOST_AUTO_TEST_CASE(test_sync) {
+    auto address = write_all()[0];
+    ds->sync();
+    ds.reset();
+
+    ds = make_data_store();
+
+    BOOST_TEST(ds->get_used_space() == test_data.used_size());
+    BOOST_TEST(ds->get_available_space() ==
+               MAX_DATA_STORE_SIZE_BYTES - test_data.used_size());
+
+    BOOST_CHECK_THROW(ds->write(test_data.throwing_data), std::bad_alloc);
+
+    char buf[MAX_DATA_STORE_SIZE_BYTES];
+
+    for (size_t i = 0; i < address.size(); i++) {
+        ds->remove(address.get_fragment(i).pointer,
+                   address.get_fragment(i).size);
+    }
+
+    size_t t_read = 0;
+    for (size_t i = 0; i < address.size(); ++i) {
+        const auto p = address.get_fragment(i);
+        auto read_size = ds->read(buf + t_read, p.pointer, p.size);
+        t_read += read_size;
+    }
+
+    BOOST_TEST(t_read == test_data.data[0].size());
+    BOOST_CHECK(std::memcmp(buf, test_data.zero, t_read) == 0);
+
+    BOOST_CHECK(ds->get_used_space() == test_data.used_size() - t_read);
+    BOOST_CHECK(ds->get_available_space() ==
+                MAX_DATA_STORE_SIZE_BYTES - test_data.used_size() + t_read);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

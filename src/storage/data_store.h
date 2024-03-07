@@ -65,6 +65,7 @@ public:
 
     /**
      * @brief Flushes modified files to disk.
+     * @throws std::exception corrupted storage
      */
     void sync();
 
