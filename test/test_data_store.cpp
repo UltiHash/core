@@ -121,7 +121,8 @@ BOOST_AUTO_TEST_CASE(test_read) {
     char buf[MAX_DATA_STORE_SIZE_BYTES];
 
     // read on empty data store
-    // BOOST_CHECK_THROW(ds->read(buf, MAX_FILE_SIZE_BYTES, 1), std::exception);
+    //     BOOST_CHECK_THROW(ds->read(buf, MAX_FILE_SIZE_BYTES, 1),
+    //     std::exception);
     // // doesn't raise exception
 
     for (auto& data : test_data.data) {
@@ -174,7 +175,8 @@ BOOST_AUTO_TEST_CASE(test_remove) {
 }
 
 BOOST_AUTO_TEST_CASE(test_sync) {
-    auto address = write_all()[0];
+    const std::size_t RND_ELEM = rand() % (test_data.data.size());
+    auto address = write_all()[RND_ELEM];
     ds->sync();
     ds.reset();
 
@@ -187,20 +189,28 @@ BOOST_AUTO_TEST_CASE(test_sync) {
     BOOST_CHECK_THROW(ds->write(test_data.throwing_data), std::bad_alloc);
 
     char buf[MAX_DATA_STORE_SIZE_BYTES];
+    auto read = [&]() {
+        size_t t_read = 0;
+
+        for (size_t i = 0; i < address.size(); ++i) {
+            const auto p = address.get_fragment(i);
+            auto read_size = ds->read(buf + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        return t_read;
+    };
+
+    auto t_read = read();
+    BOOST_CHECK(std::memcmp(buf, test_data.data[RND_ELEM].data(), t_read) == 0);
 
     for (size_t i = 0; i < address.size(); i++) {
         ds->remove(address.get_fragment(i).pointer,
                    address.get_fragment(i).size);
     }
 
-    size_t t_read = 0;
-    for (size_t i = 0; i < address.size(); ++i) {
-        const auto p = address.get_fragment(i);
-        auto read_size = ds->read(buf + t_read, p.pointer, p.size);
-        t_read += read_size;
-    }
-
-    BOOST_TEST(t_read == test_data.data[0].size());
+    t_read = read();
+    BOOST_TEST(t_read == test_data.data[RND_ELEM].size());
     BOOST_CHECK(std::memcmp(buf, test_data.zero, t_read) == 0);
 
     BOOST_CHECK(ds->get_used_space() == test_data.used_size() - t_read);

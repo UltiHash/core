@@ -28,14 +28,17 @@ public:
 
     /**
      * @brief Writes the data into the data store and returns the address of
-     * the data written. Data might be split up and stored at the free spots of
-     * the data store. This is why we return an address struct which is simply a
+     * the data written. Data might be split up and stored at different
+     * locations. This is why we return an address struct which is simply a
      * collection of pointers and sizes.
      * @param data: span of characters
      * @return address: collection of pointers and sizes
      *
      * @throws std::bad_alloc: if allocated size exceeds on write.
      * @throws std::exception: corrupted storage
+     *
+     * @affects get_used_space()
+     * @affects get_available_space()
      */
     address write(std::span<char> data);
 
