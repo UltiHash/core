@@ -20,7 +20,7 @@ enum class etcd_action : uint8_t {
     erase,
 };
 
-static etcd_action get_etcd_action_enum(const std::string& action_str) {
+inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
     static const std::map<std::string, etcd_action> etcd_action = {
         {"create", etcd_action::create},
         {"delete", etcd_action::erase},

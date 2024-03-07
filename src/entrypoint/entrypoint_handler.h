@@ -52,10 +52,13 @@ public:
 
                 co_await boost::beast::http::async_read_header(
                     s, buffer, received_request, boost::asio::use_awaitable);
-                LOG_DEBUG()
-                    << "received request: " << received_request.get().base();
 
                 http_request req(received_request, s, buffer);
+
+                LOG_DEBUG()
+                    << "received request: " << received_request.get().base()
+                    << ", bucket id: " << req.get_uri().get_bucket_id()
+                    << ", key: " << req.get_uri().get_object_key();
                 auto resp = co_await handle_request(req);
                 co_await boost::beast::http::async_write(
                     s, resp.get_prepared_response(),
