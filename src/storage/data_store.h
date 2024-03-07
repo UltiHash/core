@@ -124,6 +124,7 @@ private:
     std::unordered_map<int, std::size_t> m_modified_files;
     uint128_t m_last_file_offset;
     std::size_t m_last_file_size;
+    uint128_t m_global_offset;
     uint128_t m_used;
     std::shared_mutex m;
 };

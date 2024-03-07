@@ -14,6 +14,7 @@
 
 #define MAX_DATA_STORE_SIZE_BYTES (16 * 1024ul)
 #define MAX_FILE_SIZE_BYTES (8 * 1024ul)
+#define DATA_STORE_ID 1
 
 namespace uh::cluster {
 
@@ -66,7 +67,8 @@ struct data_store_fixture {
     }
 
     auto make_data_store() const {
-        return std::make_unique<data_store>(make_data_store_config(), 0);
+        return std::make_unique<data_store>(make_data_store_config(),
+                                            DATA_STORE_ID);
     }
 
     void setup() { ds = make_data_store(); }
@@ -120,10 +122,12 @@ BOOST_AUTO_TEST_CASE(test_write) {
 BOOST_AUTO_TEST_CASE(test_read) {
     char buf[MAX_DATA_STORE_SIZE_BYTES];
 
-    // read on empty data store
-    //     BOOST_CHECK_THROW(ds->read(buf, MAX_FILE_SIZE_BYTES, 1),
-    //     std::exception);
-    // // doesn't raise exception
+    BOOST_CHECK_THROW(
+        ds->read(buf, (DATA_STORE_ID + 1) * MAX_DATA_STORE_SIZE_BYTES, 1),
+        std::out_of_range);
+    BOOST_CHECK_THROW(
+        ds->read(buf, DATA_STORE_ID * MAX_DATA_STORE_SIZE_BYTES - 1, 1),
+        std::out_of_range);
 
     for (auto& data : test_data.data) {
         auto address = write(data);
@@ -138,12 +142,17 @@ BOOST_AUTO_TEST_CASE(test_read) {
         BOOST_TEST(t_read == data.size());
         BOOST_CHECK(std::memcmp(buf, data.data(), t_read) == 0);
     }
-
-    // BOOST_CHECK_THROW(ds->read(buf, MAX_DATA_STORE_SIZE_BYTES, 1),
-    // std::exception); //fails why? how to test out of range
 }
 
 BOOST_AUTO_TEST_CASE(test_remove) {
+
+    BOOST_CHECK_THROW(
+        ds->remove((DATA_STORE_ID + 1) * MAX_DATA_STORE_SIZE_BYTES, 1),
+        std::out_of_range);
+    BOOST_CHECK_THROW(
+        ds->remove(DATA_STORE_ID * MAX_DATA_STORE_SIZE_BYTES - 1, 1),
+        std::out_of_range);
+
     char buf[MAX_DATA_STORE_SIZE_BYTES];
 
     auto addresses = write_all();
