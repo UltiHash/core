@@ -18,7 +18,47 @@
 namespace uh::cluster {
 
 struct data_store_fixture {
-    data_store_config make_data_store_config() {
+
+    struct test_data {
+        test_data() { fill_data(); }
+
+        void fill_data() {
+            std::memset(zero, 0, sizeof(zero));
+
+            std::random_device rd;
+            std::mt19937 generator(rd());
+            std::uniform_int_distribution<> distribution(
+                1, MAX_DATA_STORE_SIZE_BYTES + 1);
+
+            size_t t_size = 0;
+            while (t_size < MAX_DATA_STORE_SIZE_BYTES) {
+                size_t length = distribution(generator);
+                std::string random_data = random_string(length);
+
+                if (t_size + random_data.size() <= MAX_DATA_STORE_SIZE_BYTES) {
+                    data.push_back(random_data);
+                    t_size += random_data.size();
+                } else {
+                    throwing_data = random_data;
+                    t_data_size = t_size;
+                    break;
+                }
+            }
+        }
+
+        std::size_t used_size() const {
+            std::size_t files_created =
+                (t_data_size + MAX_FILE_SIZE_BYTES - 1) / MAX_FILE_SIZE_BYTES;
+            return t_data_size + files_created * sizeof(size_t);
+        }
+
+        std::vector<std::string> data;
+        std::size_t t_data_size;
+        std::string throwing_data;
+        char zero[MAX_DATA_STORE_SIZE_BYTES];
+    };
+
+    data_store_config make_data_store_config() const {
         return {.working_dir = m_dir.path().string(),
                 .min_file_size = 1024ul,
                 .max_file_size = MAX_FILE_SIZE_BYTES,
@@ -26,69 +66,112 @@ struct data_store_fixture {
     }
 
     void setup() {
-        ds_ptr = std::make_unique<data_store>(make_data_store_config(), 0);
-        for (auto& data : test_data.m_data) {
-            ds_ptr->write(data);
-        }
+        ds = std::make_unique<data_store>(make_data_store_config(), 0);
     }
 
-    struct test_data {
-        test_data() { fill_random_data(); }
+    inline address write(auto& data) const { return ds->write(data); }
 
-        void fill_random_data() {
-            std::random_device rd;
-            std::mt19937 generator(rd());
-            std::uniform_int_distribution<std::mt19937::result_type>
-                distribution(1, MAX_DATA_STORE_SIZE_BYTES);
+    static inline size_t expected_file_size(size_t t_written) {
+        auto files =
+            (t_written + MAX_FILE_SIZE_BYTES - 1) / MAX_FILE_SIZE_BYTES;
+        return files * sizeof(size_t);
+    }
 
-            size_t total_size = 0;
+    inline std::vector<address> write_all_data() {
+        std::vector<address> addresses;
 
-            while (total_size < MAX_DATA_STORE_SIZE_BYTES) {
-                size_t length = distribution(generator);
-                std::string random_data = random_string(length);
-
-                if (total_size + random_data.size() <=
-                    MAX_DATA_STORE_SIZE_BYTES) {
-                    m_data.push_back(random_data);
-                    total_size += random_data.size();
-                } else {
-                    exceeded_data = random_data;
-                    std::size_t files_created =
-                        (total_size + MAX_FILE_SIZE_BYTES - 1) /
-                        MAX_FILE_SIZE_BYTES;
-                    actual_size = total_size + files_created * sizeof(size_t);
-                    break;
-                }
-            }
+        for (auto& data : test_data.data) {
+            addresses.emplace_back(ds->write(data));
         }
 
-        std::vector<std::string> m_data;
-        std::string exceeded_data;
-        std::size_t actual_size;
-    };
+        return addresses;
+    }
 
     temp_directory m_dir;
     test_data test_data;
-    std::unique_ptr<data_store> ds_ptr;
+    std::unique_ptr<data_store> ds;
 };
 
 BOOST_FIXTURE_TEST_SUITE(data_store_test_suite, data_store_fixture)
 
 BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
-    BOOST_TEST(ds_ptr->get_used_space() == test_data.actual_size);
-    BOOST_TEST(ds_ptr->get_available_space() ==
-               MAX_DATA_STORE_SIZE_BYTES - test_data.actual_size);
+    size_t t_written = 0;
+
+    for (auto& data : test_data.data) {
+        write(data);
+        t_written += data.size();
+
+        auto used_size = t_written + expected_file_size(t_written);
+
+        BOOST_TEST(ds->get_used_space() == used_size);
+        BOOST_TEST(ds->get_available_space() ==
+                   MAX_DATA_STORE_SIZE_BYTES - used_size);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_write) {
-    BOOST_CHECK_THROW(ds_ptr->write(test_data.exceeded_data), std::bad_alloc);
+    for (auto& data : test_data.data) {
+        write(data);
+    }
+    BOOST_TEST(ds->get_used_space() == test_data.used_size());
+    BOOST_CHECK_THROW(ds->write(test_data.throwing_data), std::bad_alloc);
 }
 
-BOOST_AUTO_TEST_CASE(test_read) {}
+BOOST_AUTO_TEST_CASE(test_read) {
+    char buf[MAX_DATA_STORE_SIZE_BYTES];
 
-BOOST_AUTO_TEST_CASE(test_remove) {}
+    // read on empty data store
+    // BOOST_CHECK_THROW(ds->read(buf, MAX_FILE_SIZE_BYTES, 1), std::exception);
+    // // doesn't raise exception
 
-BOOST_AUTO_TEST_CASE(test_sync) {}
+    for (auto& data : test_data.data) {
+        auto address = write(data);
+
+        size_t t_read = 0;
+        for (size_t i = 0; i < address.size(); i++) {
+            const auto p = address.get_fragment(i);
+            auto read_size = ds->read(buf + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_TEST(t_read == data.size());
+        BOOST_CHECK(std::memcmp(buf, data.data(), t_read) == 0);
+    }
+
+    // BOOST_CHECK_THROW(ds->read(buf, MAX_DATA_STORE_SIZE_BYTES, 1),
+    // std::exception); //fails why? how to test out of range
+}
+
+BOOST_AUTO_TEST_CASE(test_remove) {
+    char buf[MAX_DATA_STORE_SIZE_BYTES];
+
+    auto addresses = write_all_data();
+    size_t expected_size = 0;
+    size_t iteration = 0;
+
+    for (auto& address : addresses) {
+        for (size_t i = 0; i < address.size(); i++) {
+            ds->remove(address.get_fragment(i).pointer,
+                       address.get_fragment(i).size);
+        }
+
+        size_t total_read = 0;
+        for (size_t i = 0; i < address.size(); ++i) {
+            const auto p = address.get_fragment(i);
+            auto read_size = ds->read(buf + total_read, p.pointer, p.size);
+            total_read += read_size;
+        }
+
+        BOOST_TEST(total_read == test_data.data[iteration].size());
+        BOOST_CHECK(std::memcmp(buf, test_data.zero, total_read) == 0);
+
+        expected_size += total_read;
+        BOOST_CHECK(ds->get_used_space() ==
+                    test_data.used_size() - expected_size);
+
+        iteration++;
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 
