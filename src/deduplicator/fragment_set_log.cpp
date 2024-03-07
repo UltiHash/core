@@ -1,7 +1,7 @@
-#include "set_log.h"
+#include "fragment_set_log.h"
 
 namespace uh::cluster {
-set_log::set_log(std::filesystem::path log_path)
+fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     : m_log_path(std::move(log_path)),
       m_log_file(get_log_file(m_log_path)) {
     if (m_log_file <= 0) {
@@ -11,9 +11,9 @@ set_log::set_log(std::filesystem::path log_path)
     lseek(m_log_file, 0, SEEK_END);
 }
 
-void set_log::append(const entry& e) const {
+void fragment_set_log::append(const log_entry& e) const {
 
-    char buf[sizeof(entry)];
+    char buf[sizeof(log_entry)];
     serialize(e, buf);
 
     if (sizeof buf != ::write(m_log_file, buf, sizeof buf)) [[unlikely]] {
@@ -21,8 +21,8 @@ void set_log::append(const entry& e) const {
     }
 }
 
-void set_log::replay(std::set<fragment_element>& set, global_data_view& storage,
-                     std::shared_mutex& m) {
+void fragment_set_log::replay(std::set<fragment_set_element>& set,
+                              global_data_view& storage, std::shared_mutex& m) {
 
     const auto file_size = std::filesystem::file_size(m_log_path);
     size_t offset = 0;
@@ -37,25 +37,21 @@ void set_log::replay(std::set<fragment_element>& set, global_data_view& storage,
             set.emplace(op_fe.second.pointer, op_fe.second.size,
                         op_fe.second.prefix, storage);
             break;
-        case set_operation::REMOVE:
-            // set.erase({op_fe.second.pointer, op_fe.second.size,
-            // op_fe.second.prefix, storage});
-            break;
         default:
             throw std::invalid_argument("Invalid set log entry!");
         }
-        offset += sizeof(entry);
+        offset += sizeof(log_entry);
     }
 
     recreate(set);
 }
 
-set_log::~set_log() {
+fragment_set_log::~fragment_set_log() {
     fsync(m_log_file);
     close(m_log_file);
 }
 
-int set_log::get_log_file(const std::filesystem::path& path) {
+int fragment_set_log::get_log_file(const std::filesystem::path& path) {
     std::filesystem::create_directories(path.parent_path());
     if (std::filesystem::exists(path)) {
         return ::open(path.c_str(), O_RDWR | O_APPEND);
@@ -65,16 +61,9 @@ int set_log::get_log_file(const std::filesystem::path& path) {
     }
 }
 
-void set_log::serialize(const fragment_element& frag, char* buf) {
-    serialize({.pointer = frag.get_pointer(),
-               .size = frag.get_size(),
-               .prefix = frag.get_prefix()},
-              buf);
-}
-
-void set_log::serialize(const entry& entry, char* buf) {
-    buf[0] = set_operation::INSERT;
-    size_t offset = sizeof set_operation::INSERT;
+void fragment_set_log::serialize(const log_entry& entry, char* buf) {
+    buf[0] = entry.op;
+    size_t offset = sizeof entry.op;
     std::memcpy(buf + offset, entry.pointer.get_data(), sizeof entry.pointer);
     offset += sizeof entry.pointer;
     std::memcpy(buf + offset, &entry.size, sizeof entry.size);
@@ -82,16 +71,16 @@ void set_log::serialize(const entry& entry, char* buf) {
     std::memcpy(buf + offset, entry.prefix.get_data(), sizeof entry.prefix);
 }
 
-[[nodiscard]] std::pair<set_operation, set_log::entry>
-set_log::deserialize() const {
-    char buf[sizeof(entry)];
+[[nodiscard]] std::pair<set_operation, fragment_set_log::log_entry>
+fragment_set_log::deserialize() const {
+    char buf[sizeof(log_entry)];
     if (const auto rc = ::read(m_log_file, buf, sizeof buf); rc != sizeof buf)
         [[unlikely]] {
         perror("Read error");
         throw std::runtime_error(
             "Could not read the set element from the set log file");
     }
-    entry f;
+    log_entry f;
     size_t offset = sizeof set_operation::INSERT;
     std::memcpy(f.pointer.ref_data(), buf + offset, sizeof f.pointer);
     offset += sizeof f.pointer;
@@ -102,7 +91,7 @@ set_log::deserialize() const {
     return {static_cast<set_operation>(buf[0]), f};
 }
 
-void set_log::recreate(std::set<fragment_element>& fragment_set) {
+void fragment_set_log::recreate(std::set<fragment_set_element>& fragment_set) {
     const auto new_file_path =
         m_log_path.parent_path() / "_set_logger_tmp_file_new";
     const auto old_file_tmp_path =
@@ -111,9 +100,13 @@ void set_log::recreate(std::set<fragment_element>& fragment_set) {
 
         const auto tmp_file = get_log_file(new_file_path);
         for (const auto& frag : fragment_set) {
+            log_entry entry = {.op = INSERT,
+                               .pointer = frag.get_pointer(),
+                               .size = frag.get_size(),
+                               .prefix = frag.get_prefix()};
 
             char buf[sizeof(entry)];
-            serialize(frag, buf);
+            serialize(entry, buf);
 
             if (sizeof buf != ::write(tmp_file, buf, sizeof buf)) [[unlikely]] {
                 throw std::runtime_error("Could not write into the log file");

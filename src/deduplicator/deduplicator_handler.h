@@ -6,7 +6,7 @@
 #include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
 #include "config.h"
-#include "dedupe_set.h"
+#include "fragment_set.h"
 
 namespace uh::cluster {
 
@@ -114,7 +114,7 @@ private:
         dedupe_response result{.addr = address{}};
         auto integration_data = data;
 
-        auto check_dedupe = [&](const fragment_element& frag) {
+        auto check_dedupe = [&](const fragment_set_element& frag) {
             auto frag_data =
                 m_storage.cached_sample(frag.get_pointer(), frag.get_size());
             bool l1 = true;
@@ -189,7 +189,7 @@ private:
     }
 
     deduplicator_config m_dedupe_conf;
-    dedupe_set m_fragment_set;
+    fragment_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
 };
