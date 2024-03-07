@@ -22,6 +22,14 @@ template <typename K, typename V> class lru_cache {
     std::mutex m_mutex;
 
 public:
+    /**
+     * @brief Constructs a lru_cache with the specified capacity.
+     *
+     * This cache class implements a last-recently used cache eviction
+     * strategy.
+     *
+     * @param capacity The capacity the cache is constructed with.
+     */
     explicit lru_cache(size_t capacity)
         : m_capacity{capacity} {}
 
@@ -71,7 +79,7 @@ public:
      * position.
      *
      * @param key The key to search for in the cache.
-     * @return An optional  value associated with the key if found;
+     * @return An optional value associated with the key if found;
      * otherwise, std::nullopt.
      */
     std::optional<const V> get(const K& key) noexcept {

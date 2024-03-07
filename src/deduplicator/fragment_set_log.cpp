@@ -11,16 +11,17 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     lseek(m_log_file, 0, SEEK_END);
 }
 
-void fragment_set_log::append(const log_entry& e) {
+void fragment_set_log::append(const log_entry& entry) {
 
     char buf[sizeof(log_entry)];
-    serialize(e, buf);
+    serialize_entry(entry, buf);
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (sizeof buf != ::write(m_log_file, buf, sizeof buf)) [[unlikely]] {
         throw std::runtime_error("Could not write into the set log file");
     }
+    fsync(m_log_file);
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
@@ -32,11 +33,10 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
         throw std::runtime_error("Could not seek the set log file");
     }
     while (offset < file_size) {
-        auto op_fe = deserialize();
-        switch (op_fe.first) {
+        auto element = read_entry();
+        switch (element.op) {
         case set_operation::INSERT:
-            set.emplace(op_fe.second.pointer, op_fe.second.size,
-                        op_fe.second.prefix, storage);
+            set.emplace(element.pointer, element.size, element.prefix, storage);
             break;
         default:
             throw std::invalid_argument("invalid entry in fragment set log");
@@ -62,7 +62,7 @@ int fragment_set_log::get_log_file(const std::filesystem::path& path) {
     }
 }
 
-void fragment_set_log::serialize(const log_entry& entry, char* buf) {
+void fragment_set_log::serialize_entry(const log_entry& entry, char* buf) {
     buf[0] = entry.op;
     size_t offset = sizeof entry.op;
     std::memcpy(buf + offset, entry.pointer.get_data(), sizeof entry.pointer);
@@ -72,23 +72,30 @@ void fragment_set_log::serialize(const log_entry& entry, char* buf) {
     std::memcpy(buf + offset, entry.prefix.get_data(), sizeof entry.prefix);
 }
 
-[[nodiscard]] std::pair<set_operation, fragment_set_log::log_entry>
-fragment_set_log::deserialize() const {
+fragment_set_log::log_entry
+fragment_set_log::deserialize_entry(const char* buf) {
+    log_entry entry;
+    entry.op = static_cast<set_operation>(buf[0]);
+    size_t offset = sizeof entry.op;
+    memcpy(entry.pointer.ref_data(), buf + offset, sizeof entry.pointer);
+    offset += sizeof entry.pointer;
+    memcpy(&entry.size, buf + offset, sizeof entry.size);
+    offset += sizeof entry.size;
+    memcpy(entry.prefix.ref_data(), buf + offset, sizeof entry.prefix);
+
+    return entry;
+}
+
+[[nodiscard]] fragment_set_log::log_entry fragment_set_log::read_entry() {
     char buf[sizeof(log_entry)];
     if (const auto rc = ::read(m_log_file, buf, sizeof buf); rc != sizeof buf)
         [[unlikely]] {
         perror("Read error");
-        throw std::runtime_error(
-            "Could not read the set element from the set log file");
+        throw std::runtime_error("could not read the fragment set element from "
+                                 "the fragment set log file");
     }
-    log_entry f;
-    size_t offset = sizeof set_operation::INSERT;
-    std::memcpy(f.pointer.ref_data(), buf + offset, sizeof f.pointer);
-    offset += sizeof f.pointer;
-    std::memcpy(&f.size, buf + offset, sizeof f.size);
-    offset += sizeof f.size;
-    std::memcpy(f.prefix.ref_data(), buf + offset, sizeof f.prefix);
 
-    return {static_cast<set_operation>(buf[0]), f};
+    return deserialize_entry(buf);
 }
+
 } // namespace uh::cluster
