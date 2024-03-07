@@ -213,6 +213,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
     };
 
     auto t_read = read();
+    BOOST_CHECK(t_read == test_data.data[RND_ELEM].size());
     BOOST_CHECK(std::memcmp(buf, test_data.data[RND_ELEM].data(), t_read) == 0);
 
     for (size_t i = 0; i < address.size(); i++) {
