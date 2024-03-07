@@ -51,12 +51,15 @@ bool verify(std::span<const char> data, const std::vector<char>& signature) {
     auto ctx = make_md_ctx();
 
     auto key = load_key(UH_LICENSE_PUBLIC_KEY, UH_LICENSE_PUBLIC_KEY_len);
-    auto key_ctx = EVP_PKEY_CTX_new_from_pkey(nullptr, key.get(), nullptr);
+    auto key_ctx = std::unique_ptr<EVP_PKEY_CTX, void (*)(EVP_PKEY_CTX*)>(
+        EVP_PKEY_CTX_new_from_pkey(nullptr, key.get(), nullptr),
+        EVP_PKEY_CTX_free);
+
     if (key_ctx == nullptr) {
         throw_from_error("EVP_PKEY_CTX_new");
     }
 
-    EVP_MD_CTX_set_pkey_ctx(ctx.get(), key_ctx);
+    EVP_MD_CTX_set_pkey_ctx(ctx.get(), key_ctx.get());
 
     if (!EVP_DigestVerifyInit_ex(ctx.get(), NULL, nullptr, nullptr, nullptr,
                                  key.get(), NULL)) {
