@@ -172,6 +172,8 @@ BOOST_AUTO_TEST_CASE(test_remove) {
 
         iteration++;
     }
+
+    // FOUND ISSUE : files not removed if everything is deleted and is 0
 }
 
 BOOST_AUTO_TEST_CASE(test_sync) {
