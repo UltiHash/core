@@ -24,18 +24,65 @@ struct data_store_config {
 class data_store {
 
 public:
-    explicit data_store(const data_store_config& conf, std::size_t id,
-                        bool adaptive = true);
+    data_store(data_store_config conf, std::size_t id, bool adaptive = true);
 
+    /**
+     * @brief Writes the data into the data store and returns the address of
+     * the data written. Data might be split up and stored at different
+     * locations. This is why we return an address struct which is simply a
+     * collection of pointers and sizes.
+     * @param data: span of characters
+     * @return address: collection of pointers and sizes
+     *
+     * @throws std::bad_alloc: if allocated size exceeds on write.
+     * @throws std::exception: corrupted storage
+     *
+     * @affects get_used_space()
+     * @affects get_available_space()
+     */
     address write(std::span<char> data);
 
+    /**
+     * @brief Read bytes of data starting from the pointer until the size and
+     * store it in the buffer given.
+     * @param buffer: buffer where the read data is to be written
+     * @param pointer: pointer to the data which is to be read
+     * @param size: number of bytes to read
+     * @return std::size_t: number of read bytes
+     *
+     * @throws std::out_of_range invalid pointer and size given
+     * @throws std::exception: corrupted storage
+     */
     std::size_t read(char* buffer, uint128_t pointer, size_t size);
 
+    /**
+     * @brief Removes the data from data store by setting all the bytes to 0.
+     * Subsequently it adds this information to the free spot manager.
+     * @param pointer: pointer to the data which is to be removed
+     * @param size: number of bytes to remove
+     *
+     * @throws std::out_of_range invalid pointer and size given
+     * @throws std::exception: corrupted storage
+     */
     void remove(uint128_t pointer, size_t size);
 
+    /**
+     * @brief Flushes modified files to disk.
+     * @throws std::exception corrupted storage
+     */
     void sync();
 
+    /**
+     * @brief Gives out the current used space of the data store.
+     * @return uint128_t: the used space in the data store
+     */
     [[nodiscard]] uint128_t get_used_space() const noexcept;
+
+    /**
+     * @brief Gives out the current available space in the data store. Available
+     * = allocated - used
+     * @return uint128_t: the available space in the data store
+     */
     [[nodiscard]] uint128_t get_available_space() const noexcept;
 
     ~data_store();
@@ -77,6 +124,7 @@ private:
     std::unordered_map<int, std::size_t> m_modified_files;
     uint128_t m_last_file_offset;
     std::size_t m_last_file_size;
+    uint128_t m_global_offset;
     uint128_t m_used;
     std::shared_mutex m;
 };
