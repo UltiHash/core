@@ -11,10 +11,12 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     lseek(m_log_file, 0, SEEK_END);
 }
 
-void fragment_set_log::append(const log_entry& e) const {
+void fragment_set_log::append(const log_entry& e) {
 
     char buf[sizeof(log_entry)];
     serialize(e, buf);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     if (sizeof buf != ::write(m_log_file, buf, sizeof buf)) [[unlikely]] {
         throw std::runtime_error("Could not write into the set log file");
@@ -22,8 +24,8 @@ void fragment_set_log::append(const log_entry& e) const {
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
-                              global_data_view& storage, std::shared_mutex& m) {
-
+                              global_data_view& storage) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     const auto file_size = std::filesystem::file_size(m_log_path);
     size_t offset = 0;
     if (0 != lseek(m_log_file, 0, SEEK_SET)) [[unlikely]] {
@@ -31,14 +33,13 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
     }
     while (offset < file_size) {
         auto op_fe = deserialize();
-        std::lock_guard<std::shared_mutex> l(m);
         switch (op_fe.first) {
         case set_operation::INSERT:
             set.emplace(op_fe.second.pointer, op_fe.second.size,
                         op_fe.second.prefix, storage);
             break;
         default:
-            throw std::invalid_argument("Invalid set log entry!");
+            throw std::invalid_argument("invalid entry in fragment set log");
         }
         offset += sizeof(log_entry);
     }

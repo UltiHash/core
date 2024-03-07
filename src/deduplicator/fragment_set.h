@@ -24,7 +24,6 @@ public:
 
     fragment_set(const std::filesystem::path& set_log_path,
                  global_data_view& storage);
-    void load();
     response find(std::string_view data);
     void insert(const uint128_t& pointer, const std::string_view& data,
                 const std::set<fragment_set_element>::const_iterator& hint);
@@ -32,7 +31,7 @@ public:
 private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
-    std::shared_mutex m;
+    std::shared_mutex m_mutex;
     fragment_set_log m_set_log;
 };
 

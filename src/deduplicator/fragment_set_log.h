@@ -1,12 +1,14 @@
 #ifndef UH_CLUSTER_FRAGMENT_SET_LOG_H
 #define UH_CLUSTER_FRAGMENT_SET_LOG_H
 
+#include "common/global_data/global_data_view.h"
 #include "common/types/common_types.h"
 #include "fragment_set_element.h"
-#include <common/global_data/global_data_view.h>
+
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <mutex>
 
 namespace uh::cluster {
 
@@ -30,11 +32,12 @@ public:
     explicit fragment_set_log(std::filesystem::path log_path);
     ~fragment_set_log();
 
-    void append(const log_entry& e) const;
-    void replay(std::set<fragment_set_element>& set, global_data_view& storage,
-                std::shared_mutex& m);
+    void append(const log_entry& e);
+    void replay(std::set<fragment_set_element>& set, global_data_view& storage);
 
 private:
+    std::mutex m_mutex;
+
     static int get_log_file(const std::filesystem::path& path);
     static void serialize(const log_entry& entry, char* buf);
     [[nodiscard]] std::pair<set_operation, fragment_set_log::log_entry>

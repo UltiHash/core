@@ -27,10 +27,6 @@ public:
         }
     }
 
-    void init() override {
-        boost::asio::post(*m_dedupe_workers, [&]() { m_fragment_set.load(); });
-    }
-
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
         messenger m(std::move(s));
