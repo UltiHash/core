@@ -58,8 +58,18 @@ public:
         return objects;
     }
 
-    void insert_object(const std::string& key, std::span<char> data,
-                       std::size_t data_size) {
+    void insert_object(const std::string& key, address addr) {
+        object_meta obj;
+        obj.addr = std::move(addr);
+        obj.size = obj.addr.data_size();
+        obj.last_modified = get_current_ISO8601_datetime();
+
+        if (const auto it = m_object_meta.find(key); it == m_object_meta.end())
+            [[likely]] {
+            obj.created_date = get_current_ISO8601_datetime();
+        }
+
+        // serialize it and store it here
         const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_START);
@@ -116,11 +126,18 @@ public:
     void destroy_bucket() { std::filesystem::remove_all(m_bucket_path); }
 
 private:
+    struct object_meta {
+        address addr;
+        std::string created_date;
+        std::string last_modified;
+        std::size_t size{};
+    };
+
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
-    std::map<std::string, uint64_t> m_object_ptrs;
     std::map<std::string, object_meta> m_object_meta;
+    std::map<std::string, uint64_t> m_object_ptr;
 };
 
 } // namespace uh::cluster

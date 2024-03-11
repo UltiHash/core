@@ -17,13 +17,6 @@ static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
 static constexpr std::size_t TEBI_BYTE = 1024 * GIBI_BYTE;
 static constexpr std::size_t PEBI_BYTE = 1024 * TEBI_BYTE;
 
-struct object_meta {
-    std::string name;
-    std::string created_date;
-    std::string last_modified;
-    std::size_t size;
-};
-
 struct dedupe_response {
     std::size_t effective_size{};
     address addr;
@@ -80,6 +73,12 @@ struct directory_list_buckets_message {
 };
 
 struct directory_list_objects_message {
+    struct object_meta {
+        std::string name;
+        std::string created_date;
+        std::string last_modified;
+        std::size_t size;
+    };
     std::vector<object_meta> objects;
 };
 

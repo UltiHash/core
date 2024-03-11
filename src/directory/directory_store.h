@@ -34,13 +34,13 @@ public:
     }
 
     void insert(const std::string& bucket, const std::string& key,
-                std::size_t size, const std::span<char>& data) {
+                address addr) {
 
         std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
-            b->second->insert_object(key, data, size);
+            b->second->insert_object(key, std::move(addr));
         } else {
             throw error_exception(error::bucket_not_found);
         }

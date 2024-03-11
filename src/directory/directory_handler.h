@@ -181,18 +181,14 @@ private:
         const auto size = request.addr->data_size();
         check_size_limit(size);
 
-        auto func = [](directory_store& directory,
-                       const directory_message& request) {
-            std::vector<char> address_data;
-            zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr)
-                .or_throw();
+        auto func = [](directory_store& directory, directory_message& request) {
             directory.insert(request.bucket_id, *request.object_key,
-                             request.addr->data_size(), address_data);
+                             std::move(*request.addr));
         };
 
         co_await worker_utils::post_in_workers(
             *m_directory_workers, m_storage.get_executor(),
-            std::bind_front(func, std::ref(m_directory), std::cref(request)));
+            std::bind_front(func, std::ref(m_directory), std::ref(request)));
 
         co_await m.send(SUCCESS, {});
     }
@@ -209,7 +205,8 @@ private:
             address addr;
             const auto buf =
                 directory.get(request.bucket_id, *request.object_key);
-            zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
+            zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
+                .or_throw(); // serialize/ deserialize it inside the bucket.h
             std::size_t buffer_size = 0;
             for (auto frag_size : addr.sizes) {
                 buffer_size += frag_size;
