@@ -56,12 +56,22 @@ public:
         co_return std::move(req);
     }
 
-    coro<directory_lst_entities_message>
-    recv_directory_list_entities_message(const header& message_header) {
+    coro<directory_list_buckets_message>
+    recv_directory_list_buckets_message(const header& message_header) {
         unique_buffer<char> data(message_header.size);
         register_read_buffer(data);
         co_await recv_buffers(message_header);
-        directory_lst_entities_message req;
+        directory_list_buckets_message req;
+        zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
+        co_return std::move(req);
+    }
+
+    coro<directory_list_objects_message>
+    recv_directory_list_objects_message(const header& message_header) {
+        unique_buffer<char> data(message_header.size);
+        register_read_buffer(data);
+        co_await recv_buffers(message_header);
+        directory_list_objects_message req;
         zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
         co_return std::move(req);
     }
@@ -99,9 +109,18 @@ public:
         co_await send_buffers(type);
     }
 
-    coro<void> send_directory_list_entities_message(
+    coro<void> send_directory_list_buckets_message(
         const message_type type,
-        const directory_lst_entities_message& dir_req) {
+        const directory_list_buckets_message& dir_req) {
+        std::vector<char> data;
+        zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
+        register_write_buffer(data);
+        co_await send_buffers(type);
+    }
+
+    coro<void> send_directory_list_objects_message(
+        const message_type type,
+        const directory_list_objects_message& dir_req) {
         std::vector<char> data;
         zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
         register_write_buffer(data);

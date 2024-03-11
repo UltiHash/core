@@ -50,24 +50,23 @@ public:
                 }
             }
 
-            std::vector<std::string> content;
+            std::vector<object_meta> objects;
 
             auto func = [](const directory_message& dir_req,
-                           std::vector<std::string>& content,
+                           std::vector<object_meta>& objects,
                            client::acquired_messenger m) -> coro<void> {
                 co_await m.get().send_directory_message(
                     DIRECTORY_OBJECT_LIST_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 unique_buffer<char> buffer(h_dir.size);
-                directory_lst_entities_message list_objects_res;
+                directory_list_objects_message list_objects_res;
 
                 list_objects_res =
-                    co_await m.get().recv_directory_list_entities_message(
-                        h_dir);
+                    co_await m.get().recv_directory_list_objects_message(h_dir);
 
-                for (const auto& entity : list_objects_res.entities) {
-                    content.emplace_back(entity);
+                for (auto& obj : list_objects_res.objects) {
+                    objects.emplace_back(std::move(obj));
                 }
             };
 
@@ -76,8 +75,8 @@ public:
                     m_collection.workers, m_collection.ioc,
                     m_collection.directory_services.get(),
                     std::bind_front(func, std::cref(dir_req),
-                                    std::ref(content)));
-            co_return get_response(content, req);
+                                    std::ref(objects)));
+            co_return get_response(objects, req);
 
         } catch (const error_exception& e) {
             LOG_ERROR() << e.what();
@@ -94,10 +93,15 @@ public:
         }
     }
 
-    static http_response get_response(const std::vector<std::string>& content,
+    static http_response get_response(const std::vector<object_meta>& objects,
                                       const http_request& req) {
 
         const auto& req_uri = req.get_uri();
+
+        std::vector<std::string> object_names;
+        for (const auto& obj : objects) {
+            object_names.emplace_back(obj.name);
+        }
 
         const auto get_if_exists =
             [&req_uri](auto&& key) -> std::optional<std::string> {
@@ -132,36 +136,43 @@ public:
         std::string content_xml_string;
 
         size_t counter = 0;
-        if (!content.empty() && max_keys != 0) {
+        if (!object_names.empty() && max_keys != 0) {
 
-            for (const auto& c : content) {
+            for (std::size_t tally = 0; const auto& o : object_names) {
                 size_t delimiter_index = std::string::npos;
 
                 if (delimiter) {
                     if (prefix) {
-                        delimiter_index = c.find(*delimiter, prefix->size());
+                        delimiter_index = o.find(*delimiter, prefix->size());
                     } else {
-                        delimiter_index = c.find(*delimiter);
+                        delimiter_index = o.find(*delimiter);
                     }
                 }
                 if (delimiter_index != std::string::npos) {
-                    auto delimeter_prefix = c.substr(0, delimiter_index + 1);
+                    auto delimiter_prefix = o.substr(0, delimiter_index + 1);
                     common_prefixes.emplace((encoding_type
-                                                 ? url_encode(delimeter_prefix)
-                                                 : delimeter_prefix));
+                                                 ? url_encode(delimiter_prefix)
+                                                 : delimiter_prefix));
                 } else {
                     content_xml_string +=
                         "<Contents>\n"
+                        "<LastModified>" +
+                        objects[tally].last_modified +
+                        "</LastModified>\n"
                         "<Key>" +
-                        (encoding_type ? url_encode(c) : c) + "</Key>\n" +
+                        (encoding_type ? url_encode(o) : o) + "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
+                        "<Size>" + std::to_string(objects[tally].size) +
+                        "</Size>\n"
                         "</Contents>\n";
                     counter++;
                 }
 
                 if (counter + common_prefixes.size() == max_keys)
                     break;
+
+                tally++;
             }
         }
 
@@ -189,7 +200,7 @@ public:
         std::string name_xml_string;
 
         std::string truncated = "false";
-        if (content.size() > max_keys && max_keys != 0)
+        if (object_names.size() > max_keys && max_keys != 0)
             truncated = "true";
 
         std::string max_keys_xml_string =

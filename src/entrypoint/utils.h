@@ -4,8 +4,6 @@
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
 #include "entrypoint/state.h"
-#include <boost/uuid/random_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
 
 namespace uh::cluster {
 

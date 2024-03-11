@@ -130,9 +130,9 @@ private:
 
         uint128_t rv;
         for (const auto& bucket : m_directory.list_buckets()) {
-            for (const auto& key : m_directory.list_keys(bucket)) {
+            for (const auto& obj : m_directory.list_objects(bucket)) {
                 address addr;
-                const auto& data = m_directory.get(bucket, key);
+                const auto& data = m_directory.get(bucket, obj.name);
                 try {
                     zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(addr)
                         .or_throw();
@@ -187,7 +187,7 @@ private:
             zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr)
                 .or_throw();
             directory.insert(request.bucket_id, *request.object_key,
-                             address_data);
+                             request.addr->data_size(), address_data);
         };
 
         co_await worker_utils::post_in_workers(
@@ -280,10 +280,10 @@ private:
     }
 
     coro<void> handle_list_buckets(messenger& m, const messenger::header& h) {
-        directory_lst_entities_message response;
+        directory_list_buckets_message response;
 
         auto func = [](directory_store& directory,
-                       directory_lst_entities_message& response) {
+                       directory_list_buckets_message& response) {
             response.entities = directory.list_buckets();
         };
 
@@ -291,14 +291,14 @@ private:
             *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
-        co_await m.send_directory_list_entities_message(SUCCESS, response);
+        co_await m.send_directory_list_buckets_message(SUCCESS, response);
     }
 
     coro<void> handle_list_objects(messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message(h);
-        directory_lst_entities_message response;
+        directory_list_objects_message response;
         auto func = [](directory_store& directory,
-                       directory_lst_entities_message& response,
+                       directory_list_objects_message& response,
                        directory_message& request) {
             std::string lower_bound, prefix;
             if (request.object_key_lower_bound) {
@@ -307,8 +307,8 @@ private:
             if (request.object_key_prefix) {
                 prefix = *request.object_key_prefix;
             }
-            response.entities =
-                directory.list_keys(request.bucket_id, lower_bound, prefix);
+            response.objects =
+                directory.list_objects(request.bucket_id, lower_bound, prefix);
         };
 
         co_await worker_utils::post_in_workers(
@@ -316,7 +316,7 @@ private:
             std::bind_front(func, std::ref(m_directory), std::ref(response),
                             std::ref(request)));
 
-        co_await m.send_directory_list_entities_message(SUCCESS, response);
+        co_await m.send_directory_list_objects_message(SUCCESS, response);
     }
 
     const directory_config m_config;

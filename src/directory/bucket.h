@@ -3,6 +3,7 @@
 
 #include "chaining_data_store.h"
 #include "common/utils/error.h"
+#include "common/utils/time_utils.h"
 #include "config.h"
 #include "transaction_log.h"
 #include <memory>
@@ -28,8 +29,8 @@ public:
           m_transaction_log(m_bucket_path / "transaction_log"),
           m_object_ptrs(m_transaction_log.replay()) {}
 
-    std::vector<std::string> list_keys(const std::string& lower_bound,
-                                       const std::string& prefix) {
+    std::vector<object_meta> list_objects(const std::string& lower_bound,
+                                          const std::string& prefix) {
         std::vector<std::string> keys;
         keys.reserve(m_object_ptrs.size());
         for (const auto& obj : m_object_ptrs) {
@@ -47,10 +48,18 @@ public:
                          return prefix.empty() || key.find(prefix) == 0;
                      });
 
-        return filtered_keys;
+        std::vector<object_meta> objects;
+        for (auto& key : filtered_keys) {
+            auto object_meta = m_object_meta[key];
+            object_meta.name = key;
+            objects.emplace_back(std::move(object_meta));
+        }
+
+        return objects;
     }
 
-    void insert_object(const std::string& key, std::span<char> data) {
+    void insert_object(const std::string& key, std::span<char> data,
+                       std::size_t data_size) {
         const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_START);
@@ -59,6 +68,16 @@ public:
         // transaction
         m_data_store.apply_write();
         m_object_ptrs[key] = index;
+        if (const auto it = m_object_meta.find(key); it != m_object_meta.end())
+            [[unlikely]] {
+            it->second.last_modified = get_current_ISO8601_datetime();
+            it->second.size = data_size;
+        } else {
+            m_object_meta[key] = {
+                .created_date = get_current_ISO8601_datetime(),
+                .last_modified = get_current_ISO8601_datetime(),
+                .size = data_size};
+        }
 
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_END);
@@ -84,6 +103,8 @@ public:
 
             auto index = it->second;
             m_object_ptrs.erase(it);
+            m_object_meta.erase(key); // Perhaps this can be merged together
+                                      // with the object_ptrs?
             m_data_store.remove(index);
             m_transaction_log.append(key, index,
                                      transaction_log::operation::REMOVE_END);
@@ -99,6 +120,7 @@ private:
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::map<std::string, uint64_t> m_object_ptrs;
+    std::map<std::string, object_meta> m_object_meta;
 };
 
 } // namespace uh::cluster
