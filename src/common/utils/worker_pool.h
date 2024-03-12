@@ -92,11 +92,12 @@ public:
         std::vector <R> results (inputs.size());
 
         std::atomic<std::size_t> resp = 0;
+        std::atomic_bool exception_flag = false;
         auto pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
         size_t i = 0;
         for (const auto& in: inputs) {
-            auto f = [&results, &in, &resp, size = inputs.size(), i](auto& f, auto promise) {
+            auto f = [&exception_flag, &results, &in, &resp, size = inputs.size(), i](auto& f, auto promise) {
                 try {
                     results[i] = f(in);
                     std::size_t count = resp++;
@@ -104,7 +105,10 @@ public:
                         promise->set();
                     }
                 } catch (const std::exception&) {
-                    promise->set_exception(std::current_exception());
+                    bool no_exception = false;
+                    if (exception_flag.compare_exchange_strong(no_exception, true)) {
+                        promise->set_exception(std::current_exception());
+                    }
                 }
             };
 
