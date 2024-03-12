@@ -28,6 +28,8 @@ public:
 
     coro<void> read_body();
 
+    const boost::asio::ip::tcp::socket& socket() const { return m_stream; }
+
 private:
     const http::request_parser<http::empty_body>& m_req;
     boost::asio::ip::tcp::socket& m_stream;

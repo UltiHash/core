@@ -45,8 +45,9 @@ coro<http_response> put_object::handle(http_request& req) const {
                                                     dir_req);
             co_await m.get().recv_header();
         };
-        co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            directories, m_collection.ioc, m_collection.workers,
+
+        co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
+            directories,
             std::bind_front(func, std::cref(dir_req)));
 
         auto effective_size =

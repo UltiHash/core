@@ -4,7 +4,7 @@
 #include "common/network/client.h"
 #include "common/registry/services.h"
 #include "common/types/shared_buffer.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "lru_cache.h"
 #include <map>
 
@@ -23,8 +23,10 @@ class global_data_view {
 public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
+                              worker_pool& workers,
                               services<STORAGE_SERVICE>& storage_services)
         : m_io_service(ioc),
+          m_workers (workers),
           m_storage_services(storage_services),
           m_config(config),
           m_cache_l1(m_config.read_cache_capacity_l1),
@@ -126,8 +128,8 @@ public:
             offset += frag.size;
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads(
-            nodes, m_io_service,
+        m_workers.broadcast_from_worker_in_io_threads(
+            nodes,
             [&buffer, &nodes, &node_address_map, &node_data_offsets_map](
                 client::acquired_messenger m, long id) -> coro<void> {
                 const auto node = nodes.at(id);
@@ -172,8 +174,8 @@ public:
             node_address.push_fragment(frag);
         }
 
-        worker_utils::broadcast_from_worker_in_io_threads(
-            nodes, m_io_service,
+        m_workers.broadcast_from_worker_in_io_threads(
+            nodes,
             [](client::acquired_messenger m, long id) -> coro<void> {
                 co_await m.get().send(STORAGE_SYNC_REQ, {});
                 co_await m.get().recv_header();
@@ -186,8 +188,8 @@ public:
 
         std::vector<uint128_t> used_spaces(nodes.size());
 
-        worker_utils::broadcast_from_worker_in_io_threads(
-            nodes, m_io_service,
+        m_workers.broadcast_from_worker_in_io_threads(
+            nodes,
             [&used_spaces](client::acquired_messenger m,
                            long id) -> coro<void> {
                 co_await m.get().send(STORAGE_USED_REQ, {});
@@ -217,7 +219,7 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-
+    worker_pool& m_workers;
     services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
 

@@ -4,7 +4,7 @@
 #include "common/telemetry/log.h"
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "directory_store.h"
 
 #include <fstream>
@@ -20,11 +20,11 @@ public:
 
     directory_handler(
         directory_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> directory_workers)
+        worker_pool& directory_workers)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf),
           m_storage(storage),
-          m_directory_workers(std::move(directory_workers)),
+          m_directory_workers(directory_workers),
           m_stored_size(restore_stored_size()) {
         metric<directory_original_data_volume_gauge, byte, int64_t>::
             register_gauge_callback(
@@ -37,6 +37,8 @@ public:
     ~directory_handler() override { persist_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+        std::stringstream remote;
+        remote << s.remote_endpoint();
 
         messenger m(std::move(s));
 
@@ -46,6 +48,10 @@ public:
             try {
 
                 const auto message_header = co_await m.recv_header();
+
+                LOG_DEBUG() << remote.str() << " received "
+                            << magic_enum::enum_name(message_header.type);
+
                 switch (message_header.type) {
                 case DIRECTORY_OBJECT_PUT_REQ:
                     co_await handle_put_obj(m, message_header);
@@ -81,6 +87,8 @@ public:
             }
 
             if (err) {
+                LOG_WARN() << remote.str()
+                           << " error handling request: " << err->message();
                 co_await m.send_error(*err);
             }
         }
@@ -183,8 +191,6 @@ private:
                              std::move(*request.addr));
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
             std::bind_front(func, std::ref(m_directory), std::ref(request)));
 
         co_await m.send(SUCCESS, {});
@@ -209,8 +215,7 @@ private:
             storage.read_address(buffer.data(), addr);
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(m_storage),
                             std::cref(request), std::ref((buffer))));
 
@@ -225,8 +230,7 @@ private:
             directory.add_bucket(request.bucket_id);
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
@@ -239,8 +243,7 @@ private:
             directory.remove_bucket(request.bucket_id);
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
@@ -260,8 +263,7 @@ private:
             }
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::cref(request)));
 
         co_await m.send(SUCCESS, {});
@@ -275,8 +277,7 @@ private:
             response.entities = directory.list_buckets();
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
         co_await m.send_directory_list_buckets_message(SUCCESS, response);
@@ -299,8 +300,7 @@ private:
                 directory.list_objects(request.bucket_id, lower_bound, prefix);
         };
 
-        co_await worker_utils::post_in_workers(
-            *m_directory_workers, m_storage.get_executor(),
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(response),
                             std::ref(request)));
 
@@ -310,7 +310,7 @@ private:
     const directory_config m_config;
     directory_store m_directory;
     global_data_view& m_storage;
-    std::shared_ptr<boost::asio::thread_pool> m_directory_workers;
+    worker_pool& m_directory_workers;
     std::mutex m_mutex_size;
     uint128_t m_stored_size;
 };

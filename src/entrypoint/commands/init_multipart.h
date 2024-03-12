@@ -2,7 +2,7 @@
 #ifndef UH_CLUSTER_INIT_MULTIPART_H
 #define UH_CLUSTER_INIT_MULTIPART_H
 
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
@@ -26,9 +26,8 @@ public:
     [[nodiscard]] coro<http_response> handle(const http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_collection.workers, m_collection.ioc,
+            co_await m_collection.workers.
+                    io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
                     [&req](client::acquired_messenger m) -> coro<void> {
                         directory_message dir_req{
