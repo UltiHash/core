@@ -27,9 +27,8 @@ public:
           m_storage_services(
               m_ioc, config.global_data_view.storage_service_connection_count,
               m_etcd_client, config.global_data_view.max_data_store_size),
-          m_dedupe_workers(std::make_shared<boost::asio::thread_pool>(
-              config.worker_thread_count)),
-          m_storage(config.global_data_view, m_ioc, m_storage_services),
+          m_dedupe_workers(m_ioc, config.worker_thread_count),
+          m_storage(config.global_data_view, m_ioc, m_dedupe_workers, m_storage_services),
           m_server(config.server,
                    std::make_unique<deduplicator_handler>(config, m_storage,
                                                           m_dedupe_workers),
@@ -43,8 +42,6 @@ public:
 
     void stop() {
         m_server.stop();
-        m_dedupe_workers->join();
-        m_dedupe_workers->stop();
     }
 
     ~deduplicator() {
@@ -61,7 +58,7 @@ private:
 
     services<STORAGE_SERVICE> m_storage_services;
 
-    std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
+    worker_pool m_dedupe_workers;
 
     global_data_view m_storage;
     server m_server;
