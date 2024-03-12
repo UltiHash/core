@@ -2,6 +2,7 @@
 #define ENTRYPOINT_HANDLER_H
 
 #include "common/registry/services.h"
+#include "common/utils/class_name.h"
 #include "common/utils/protocol_handler.h"
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/empty_body.hpp>
@@ -115,6 +116,8 @@ public:
     coro<http_response> dispatch_front(http_request& req, command&& head,
                                        commands&&... tail) {
         if (head.can_handle(req)) {
+            LOG_DEBUG() << req.socket().remote_endpoint()
+                        << " handling request " << class_name<command>();
             return head.handle(req);
         }
         return dispatch_front(req, std::forward<commands>(tail)...);

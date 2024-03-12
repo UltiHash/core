@@ -37,6 +37,8 @@ public:
     ~directory_handler() override { persist_stored_size(); }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+        std::stringstream remote;
+        remote << s.remote_endpoint();
 
         messenger m(std::move(s));
 
@@ -46,6 +48,10 @@ public:
             try {
 
                 const auto message_header = co_await m.recv_header();
+
+                LOG_DEBUG() << remote.str() << " received "
+                            << magic_enum::enum_name(message_header.type);
+
                 switch (message_header.type) {
                 case DIRECTORY_OBJECT_PUT_REQ:
                     co_await handle_put_obj(m, message_header);
@@ -81,6 +87,8 @@ public:
             }
 
             if (err) {
+                LOG_WARN() << remote.str()
+                           << " error handling request: " << err->message();
                 co_await m.send_error(*err);
             }
         }

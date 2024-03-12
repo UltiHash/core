@@ -28,6 +28,8 @@ public:
     }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+        std::stringstream remote;
+        remote << s.remote_endpoint();
 
         messenger m(std::move(s));
 
@@ -36,6 +38,10 @@ public:
 
             try {
                 const auto message_header = co_await m.recv_header();
+
+                LOG_DEBUG() << remote.str() << " received "
+                            << magic_enum::enum_name(message_header.type);
+
                 switch (message_header.type) {
                 case DEDUPLICATOR_REQ:
 
@@ -50,6 +56,8 @@ public:
                 err = error(error::unknown, e.what());
             }
             if (err) {
+                LOG_WARN() << remote.str()
+                           << " error handling request: " << err->message();
                 co_await m.send_error(*err);
             }
         }
