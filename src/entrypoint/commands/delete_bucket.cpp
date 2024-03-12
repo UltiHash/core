@@ -1,5 +1,5 @@
 #include "delete_bucket.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -28,9 +28,8 @@ coro<http_response> delete_bucket::handle(const http_request& req) const {
                                                     dir_req);
             co_await m.get().recv_header();
         };
-        co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-            m_collection.directory_services.get_clients(), m_collection.ioc,
-            m_collection.workers,
+        co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
+            m_collection.directory_services.get_clients(),
             std::bind_front(func, std::cref(bucket_name)));
 
         co_return http_response();

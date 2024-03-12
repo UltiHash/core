@@ -25,7 +25,7 @@ public:
                             m_etcd_client),
           m_directory_services(m_ioc, config.directory_connection_count,
                                m_etcd_client),
-          m_workers(config.worker_thread_count),
+          m_workers(m_ioc, config.worker_thread_count),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection), m_ioc) {}
 
@@ -38,8 +38,6 @@ public:
     void stop() {
         LOG_INFO() << "stopping " << m_service_registry.get_service_name();
         m_server.stop();
-        m_workers.join();
-        m_workers.stop();
     }
 
 private:
@@ -63,7 +61,7 @@ private:
     services<DIRECTORY_SERVICE> m_directory_services;
     state m_state;
 
-    boost::asio::thread_pool m_workers;
+    worker_pool m_workers;
     reference_collection m_collection;
     server m_server;
 
