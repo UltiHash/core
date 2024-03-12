@@ -68,6 +68,7 @@ enum metric_type {
     entrypoint_list_objects_v2_req,
     entrypoint_multipart_req,
     entrypoint_put_object_req,
+    active_connections,
     success,
     failure
 };
@@ -169,10 +170,17 @@ public:
     metric() = delete;
 
     static void increase(value_type val) { get_counter()->Add(val); }
+    static void decrease(value_type val) { get_counter()->Add(-val); }
     static void register_gauge_callback(std::function<value_type()> fun) {
         m_gauge_cb = fun;
         get_gauge()->AddCallback(gauge_callback_wrapper, nullptr);
     }
+};
+
+template <metric_type type> struct counter_guard {
+    counter_guard() { metric<type, count, int64_t>::increase(1); }
+
+    ~counter_guard() { metric<type, count, int64_t>::decrease(1); }
 };
 
 } // namespace uh::cluster
