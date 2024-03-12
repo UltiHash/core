@@ -25,8 +25,8 @@ public:
     inline void set(T&& data) {
         m_data.emplace(std::move(data));
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        boost::asio::post(m_strand, [m_waiter = m_waiter]() {
-            m_waiter->expires_after(std::chrono::seconds(0));
+        boost::asio::post(m_strand, [waiter = m_waiter]() {
+            waiter->expires_after(std::chrono::seconds(0));
         });
     }
 
@@ -38,8 +38,8 @@ public:
 
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        boost::asio::post(m_strand, [m_waiter = m_waiter]() {
-            m_waiter->expires_after(std::chrono::seconds(0));
+        boost::asio::post(m_strand, [waiter = m_waiter]() {
+            waiter->expires_after(std::chrono::seconds(0));
         });
     }
 
@@ -69,8 +69,8 @@ public:
 
     inline void set() {
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        boost::asio::post(m_strand, [m_waiter = m_waiter]() {
-            m_waiter->expires_after(std::chrono::seconds(0));
+        boost::asio::post(m_strand, [waiter = m_waiter]() {
+            waiter->expires_after(std::chrono::seconds(0));
         });
     }
 
@@ -82,8 +82,8 @@ public:
 
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
-        boost::asio::post(m_strand, [m_waiter = m_waiter]() {
-            m_waiter->expires_after(std::chrono::seconds(0));
+        boost::asio::post(m_strand, [waiter = m_waiter]() {
+            waiter->expires_after(std::chrono::seconds(0));
         });
     }
 

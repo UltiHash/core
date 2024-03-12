@@ -1,23 +1,24 @@
 <!--- Provide a general summary of your changes in the Title above -->
 ## Solving issue:
-<!--- If it fixes an open issue, please link to the issue here. -->
+<!--- Please link the issue here. -->
 
 ## Description
-<!--- Describe your approach on solution in detail, use tl;dr and bulleted points -->
+<!--- Describe your solution in detail. Use tl;dr and bulleted points. -->
 
 ### Screenshots or updated diagram (if appropriate):
-<!--- instead of 1000 words, diagram shows the best. -->
+<!--- Diagram gives the best picture instead of words. -->
 
 ## How has this been tested?
 <!--- Please describe in detail how you tested your changes. -->
 <!--- Include details of your testing environment, tests ran to see how -->
 <!--- your change affects other areas of the code, etc. -->
 
-## Types of changes
-<!--- What types of changes does your code introduce? Put an `x` in all the boxes that apply: -->
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected or change in the architecture)
+## Type of change
+<!--- What type of change does your code introduce? -->
+- [ ] Fix (non-breaking change that fixes an issue)
+- [ ] Feature (non-breaking change that adds a functionality)
+- [ ] Breaking change (change that causes existing functionality to not work as expected)
+- [ ] Repository management (changes that are not related to the code)
 
 ## Checklist:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->
