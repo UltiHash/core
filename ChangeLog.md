@@ -4,6 +4,7 @@
 - Fixed potential log corruption issue in deduplicator
 - Increase maximum storage service size
 - Logging of service requests
+- Add counter counting active connections
 
 ## [0.2.1] - 2024-03-06
 - Fix access violations in entrypoint and deduplicator
