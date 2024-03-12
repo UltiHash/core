@@ -48,10 +48,13 @@ jobs:
     - name: Build and push the Docker image
       uses: docker/build-push-action@v5
       env:
-        IMAGE_TAG: "${{ github.event_name == 'schedule' && steps.set_date.outputs.date || github.ref_name }}"
+        IMAGE_TAG: "${{ github.event_name == 'schedule' && steps.set_date.outputs.date || github.ref_name }}-debug"
       with:
         context: .
         file: Dockerfile
         platforms: linux/amd64,linux/arm64
         tags: ${{ env.REPOSITORY }}:${{ env.IMAGE_TAG }}
         push: true
+        build-args: |
+          BuildType=RelWithDebInfo
+          DebugTools=True
