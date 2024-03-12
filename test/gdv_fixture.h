@@ -3,7 +3,7 @@
 
 #include <common/global_data/global_data_view.h>
 #include <common/utils/temp_directory.h>
-#include <config/config.h>
+#include <config/configuration.h>
 #include <storage/storage.h>
 
 namespace uh::cluster {

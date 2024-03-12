@@ -31,7 +31,7 @@ public:
     }
 
     inline void set_exception(std::exception_ptr ptr) {
-        if (m_data || m_exception) {
+        if (m_data) {
             throw std::future_error(
                 std::future_errc::promise_already_satisfied);
         }
@@ -75,10 +75,6 @@ public:
     }
 
     inline void set_exception(std::exception_ptr ptr) {
-        if (m_exception) {
-            throw std::future_error(
-                std::future_errc::promise_already_satisfied);
-        }
 
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
