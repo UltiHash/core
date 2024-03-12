@@ -1,5 +1,5 @@
 #include "delete_object.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -29,9 +29,8 @@ coro<http_response> delete_object::handle(const http_request& req) const {
             co_await m.get().recv_header();
         };
 
-        co_await worker_utils::
-            io_thread_acquire_messenger_and_post_in_io_threads(
-                m_collection.workers, m_collection.ioc,
+        co_await m_collection.workers.
+                io_thread_acquire_messenger_and_post_in_io_threads(
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(req)));
 

@@ -1,5 +1,5 @@
 #include "delete_objects.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -97,9 +97,8 @@ coro<http_response> delete_objects::handle(http_request& req) const {
                 success.emplace_back(key);
             };
 
-            co_await worker_utils::
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_collection.workers, m_collection.ioc,
+            co_await m_collection.workers.
+                    io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
                     std::bind_front(func2, *key, std::cref(bucket_id),
                                     std::ref(success)));

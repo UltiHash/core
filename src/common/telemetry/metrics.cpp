@@ -15,10 +15,6 @@ namespace otlp_exporter = opentelemetry::exporter::otlp;
 
 namespace uh::cluster {
 
-constexpr metric_sdk::PeriodicExportingMetricReaderOptions otlp_options{
-    .export_interval_millis = std::chrono::milliseconds(1000),
-    .export_timeout_millis = std::chrono::milliseconds(500)};
-
 std::string GDV_PREFIX = "gdv";
 std::string COUNTER_SUFFIX = "counter";
 std::string REQ_SUFFIX = "req";
@@ -54,14 +50,14 @@ void initialize_counters() {
     });
 }
 
-void initialize_metrics_exporter(role service_role, const std::string& endpoint,
+void initialize_metrics_exporter(role role, const std::string& endpoint,
                                  unsigned interval) {
 
     if (endpoint.empty()) {
         return;
     }
 
-    uh::cluster::service_role = service_role;
+    uh::cluster::service_role = role;
 
     std::unique_ptr<metric_sdk::MetricReader> reader;
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
@@ -104,7 +100,7 @@ constexpr metric_type convert_message_type(message_type mtype) {
     auto mt = magic_enum::enum_cast<metric_type>(str);
     if (!mt) [[unlikely]] {
         throw std::runtime_error(
-            "Could not convert message type to metric type: " + str);
+            "Could not convert message type to metric type: " + std::to_string(mtype) + ":" + str);
     }
     return *mt;
 }
