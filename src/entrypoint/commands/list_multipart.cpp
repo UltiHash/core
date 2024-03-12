@@ -1,5 +1,5 @@
 #include "list_multipart.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -56,8 +56,7 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
         }
     };
 
-    co_await worker_utils::post_in_workers(
-        m_collection.workers, m_collection.ioc,
+    co_await m_collection.workers.post_in_workers(
         std::bind_front(func, std::ref(m_collection), std::cref(bucket_name),
                         std::ref(ongoing)));
 

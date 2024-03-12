@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 
 namespace uh::cluster {
 
@@ -56,8 +56,8 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
         responses[i] = co_await m.get().recv_dedupe_response(h_dedup);
     };
 
-    co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-        dedupe_services, collection.ioc, collection.workers,
+    co_await collection.workers.broadcast_from_io_thread_in_io_threads(
+        dedupe_services,
         std::bind_front(func, part_size, std::cref(offset_pieces),
                         std::ref(responses)));
 
