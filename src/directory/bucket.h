@@ -82,9 +82,10 @@ public:
             m_transaction_log.append(key, it->second,
                                      transaction_log::operation::REMOVE_START);
 
-            m_object_ptrs.erase(key);
-            m_data_store.remove(it->second);
-            m_transaction_log.append(key, it->second,
+            auto index = it->second;
+            m_object_ptrs.erase(it);
+            m_data_store.remove(index);
+            m_transaction_log.append(key, index,
                                      transaction_log::operation::REMOVE_END);
         }
     }

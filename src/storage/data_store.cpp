@@ -4,11 +4,12 @@
 
 namespace uh::cluster {
 
-data_store::data_store(const data_store_config& conf, std::size_t id,
-                       bool adaptive)
+data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     : m_data_id(id),
       m_conf(std::move(conf)),
       m_free_spot_manager(m_conf.working_dir / "log") {
+
+    m_global_offset = uint128_t(m_conf.max_data_store_size) * id;
 
     if (!std::filesystem::exists(m_conf.working_dir)) {
         std::filesystem::create_directories(m_conf.working_dir);
@@ -44,7 +45,7 @@ data_store::data_store(const data_store_config& conf, std::size_t id,
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(uint128_t(m_conf.max_data_store_size) * id,
+        int fd = add_new_file(m_global_offset,
                               static_cast<long>(m_conf.min_file_size));
         file_sizes.emplace(fd, m_conf.min_file_size);
     } else {
@@ -106,6 +107,11 @@ address data_store::write(std::span<char> data) {
 }
 
 std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
+    if (pointer < m_global_offset ||
+        pointer > m_global_offset + m_conf.max_data_store_size - 1) {
+        throw std::out_of_range("pointer is out of range");
+    }
+
     std::shared_lock<std::shared_mutex> lock(m);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
@@ -126,6 +132,11 @@ std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
 }
 
 void data_store::remove(uint128_t pointer, size_t size) {
+    if (pointer < m_global_offset ||
+        pointer > m_global_offset + m_conf.max_data_store_size - 1) {
+        throw std::out_of_range("pointer is out of range");
+    }
+
     std::lock_guard<std::shared_mutex> lock(m);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);

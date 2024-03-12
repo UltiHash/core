@@ -20,7 +20,7 @@ enum class etcd_action : uint8_t {
     erase,
 };
 
-static etcd_action get_etcd_action_enum(const std::string& action_str) {
+inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
     static const std::map<std::string, etcd_action> etcd_action = {
         {"create", etcd_action::create},
         {"delete", etcd_action::erase},
@@ -86,7 +86,7 @@ private:
 template <role r> class services {
 public:
     template <typename... index_args>
-    services(boost::asio::io_context& ioc, const int connection_count,
+    services(boost::asio::io_context& ioc, const std::size_t connection_count,
              etcd::SyncClient& etcd_client, index_args... ia)
         : m_ioc(ioc),
           m_connection_count(connection_count),
@@ -292,7 +292,7 @@ private:
     }
 
     boost::asio::io_context& m_ioc;
-    const int m_connection_count;
+    const std::size_t m_connection_count;
     etcd::SyncClient& m_etcd_client;
     etcd::Watcher m_watcher;
 

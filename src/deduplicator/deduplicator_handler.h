@@ -77,26 +77,26 @@ private:
         std::vector<dedupe_response> responses(pieces);
 
         std::atomic<std::size_t> resp = 0;
-        boost::asio::steady_timer waiter(
+        auto waiter = std::make_shared<boost::asio::steady_timer>(
             m_storage.get_executor(),
             boost::asio::steady_timer::clock_type::duration::max());
 
         for (std::size_t i = 0; i < pieces; ++i) {
             boost::asio::post(*m_dedupe_workers, [&responses, i, &data,
                                                   piece_size, &resp, pieces,
-                                                  &waiter, this]() {
+                                                  waiter = waiter, this]() {
                 const auto data_piece = data.get_str_view().substr(
                     i * piece_size,
                     std::min(piece_size, data.size() - i * piece_size));
                 responses[i] = deduplicate(data_piece);
                 std::size_t count = resp++;
                 if (count == pieces - 1)
-                    waiter.expires_at(
+                    waiter->expires_at(
                         boost::asio::steady_timer::time_point::min());
             });
         }
 
-        co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+        co_await waiter->async_wait(as_tuple(boost::asio::use_awaitable));
 
         for (std::size_t i = 1; i < pieces; i++) {
             responses[0].addr.append_address(responses[i].addr);

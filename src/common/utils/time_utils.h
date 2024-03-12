@@ -10,7 +10,6 @@ namespace uh::cluster {
 auto wait_for_success(auto timeout, auto retry_interval, auto&& op) {
     // unit of timeout and retry_interval = second
 
-    std::chrono::time_point<std::chrono::steady_clock> timer;
     const auto start = std::chrono::steady_clock::now();
 
     std::exception_ptr eptr;

@@ -2,7 +2,6 @@
 #ifndef UH_CLUSTER_INIT_MULTIPART_H
 #define UH_CLUSTER_INIT_MULTIPART_H
 
-#include "common/utils/random.h"
 #include "common/utils/worker_utils.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
@@ -52,12 +51,9 @@ public:
             }
         }
 
-        const auto upload_id = generate_unique_id();
-        if (!m_collection.server_state.m_uploads.insert_upload(
-                upload_id, req.get_uri().get_bucket_id(),
-                req.get_uri().get_object_key())) {
-            throw command_exception(http::status::internal_server_error);
-        }
+        const auto upload_id =
+            m_collection.server_state.m_uploads.insert_upload(
+                req.get_uri().get_bucket_id(), req.get_uri().get_object_key());
 
         co_return get_response(req, upload_id);
     }
