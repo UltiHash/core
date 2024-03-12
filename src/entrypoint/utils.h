@@ -3,6 +3,7 @@
 
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
+#include "common/utils/worker_pool.h"
 #include "entrypoint/state.h"
 
 namespace uh::cluster {

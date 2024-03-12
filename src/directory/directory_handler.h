@@ -18,9 +18,8 @@ public:
     // number of files to upload between two warnings
     static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
 
-    directory_handler(
-        directory_config config, global_data_view& storage,
-        worker_pool& directory_workers)
+    directory_handler(directory_config config, global_data_view& storage,
+                      worker_pool& directory_workers)
         : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf),
           m_storage(storage),
@@ -191,6 +190,7 @@ private:
                              std::move(*request.addr));
         };
 
+        co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(request)));
 
         co_await m.send(SUCCESS, {});
