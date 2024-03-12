@@ -131,12 +131,9 @@ private:
         uint128_t rv;
         for (const auto& bucket : m_directory.list_buckets()) {
             for (const auto& obj : m_directory.list_objects(bucket)) {
-                address addr;
-                const auto& data = m_directory.get(bucket, obj.name);
+                const auto address = m_directory.get(bucket, obj.name);
                 try {
-                    zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(addr)
-                        .or_throw();
-                    rv += addr.data_size();
+                    rv += address.data_size();
                 } catch (const std::exception& e) {
                 }
             }
@@ -202,11 +199,8 @@ private:
         auto func = [](directory_store& directory, global_data_view& storage,
                        const directory_message& request,
                        unique_buffer<char>& buffer) {
-            address addr;
-            const auto buf =
-                directory.get(request.bucket_id, *request.object_key);
-            zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
-                .or_throw(); // serialize/ deserialize it inside the bucket.h
+            auto addr = directory.get(request.bucket_id, *request.object_key);
+
             std::size_t buffer_size = 0;
             for (auto frag_size : addr.sizes) {
                 buffer_size += frag_size;
@@ -257,11 +251,8 @@ private:
         auto func = [this](directory_store& directory,
                            const directory_message& request) {
             try {
-                address addr;
-                auto buf =
+                const auto addr =
                     directory.get(request.bucket_id, *request.object_key);
-                zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr)
-                    .or_throw();
                 const auto size = addr.data_size();
                 decrement_stored_size(size);
                 directory.remove_object(request.bucket_id, *request.object_key);

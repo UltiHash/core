@@ -29,30 +29,24 @@ public:
           m_transaction_log(m_bucket_path / "transaction_log"),
           m_object_ptrs(m_transaction_log.replay()) {}
 
-    std::vector<object_meta> list_objects(const std::string& lower_bound,
-                                          const std::string& prefix) {
-        std::vector<std::string> keys;
-        keys.reserve(m_object_ptrs.size());
-        for (const auto& obj : m_object_ptrs) {
-            keys.emplace_back(obj.first);
-        }
+    std::vector<object> list_objects(const std::string& lower_bound,
+                                     const std::string& prefix) {
+        std::vector<object> objects;
 
-        std::vector<std::string> filtered_keys;
-        auto lower_bound_it =
-            lower_bound.empty()
-                ? keys.begin()
-                : std::upper_bound(keys.begin(), keys.end(), lower_bound);
-        std::copy_if(lower_bound_it, keys.end(),
-                     std::back_inserter(filtered_keys),
-                     [prefix](const std::string& key) {
-                         return prefix.empty() || key.find(prefix) == 0;
-                     });
-
-        std::vector<object_meta> objects;
-        for (auto& key : filtered_keys) {
-            auto object_meta = m_object_meta[key];
-            object_meta.name = key;
-            objects.emplace_back(std::move(object_meta));
+        for (auto start = lower_bound.empty()
+                              ? m_object_ptrs.begin()
+                              : m_object_ptrs.upper_bound(lower_bound);
+             start != m_object_ptrs.end(); ++start) {
+            if (prefix.empty() || start->first.find(prefix) == 0) {
+                const auto bytes = m_data_store.read(start->second);
+                object_meta obj;
+                zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
+                    .or_throw();
+                objects.push_back(
+                    {.name = start->first,
+                     .last_modified = std::move(obj.last_modified),
+                     .size = obj.addr.data_size()});
+            }
         }
 
         return objects;
@@ -61,39 +55,31 @@ public:
     void insert_object(const std::string& key, address addr) {
         object_meta obj;
         obj.addr = std::move(addr);
-        obj.size = obj.addr.data_size();
         obj.last_modified = get_current_ISO8601_datetime();
 
-        if (const auto it = m_object_meta.find(key); it == m_object_meta.end())
-            [[likely]] {
-            obj.created_date = get_current_ISO8601_datetime();
-        }
+        std::vector<char> bytes;
+        zpp::bits::out{bytes, zpp::bits::size4b{}}(obj).or_throw();
+        const auto index = m_data_store.post_write(bytes);
 
-        // serialize it and store it here
-        const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_START);
-
         // TODO: handle rollback in case something goes up in smoke during the
         // transaction
         m_data_store.apply_write();
-        m_object_ptrs[key] = index;
-        if (const auto it = m_object_meta.find(key); it != m_object_meta.end())
-            [[unlikely]] {
-            it->second.last_modified = get_current_ISO8601_datetime();
-            it->second.size = data_size;
+
+        const auto it = m_object_ptrs.find(key);
+        if (it != m_object_ptrs.end()) {
+            [[unlikely]] m_data_store.remove(it->second);
+            it->second = index;
         } else {
-            m_object_meta[key] = {
-                .created_date = get_current_ISO8601_datetime(),
-                .last_modified = get_current_ISO8601_datetime(),
-                .size = data_size};
+            [[likely]] m_object_ptrs.insert({key, index});
         }
 
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_END);
     }
 
-    unique_buffer<char> get_obj(const std::string& key) {
+    address get_obj(const std::string& key) {
 
         const auto it = m_object_ptrs.find(key);
         if (it == m_object_ptrs.end()) [[unlikely]] {
@@ -102,7 +88,11 @@ public:
                                               "' failed: no such object."});
         }
 
-        return m_data_store.read(it->second);
+        const auto bytes = m_data_store.read(it->second);
+        object_meta obj;
+        zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj).or_throw();
+
+        return obj.addr;
     }
 
     void delete_object(const std::string& key) {
@@ -113,8 +103,6 @@ public:
 
             auto index = it->second;
             m_object_ptrs.erase(it);
-            m_object_meta.erase(key); // Perhaps this can be merged together
-                                      // with the object_ptrs?
             m_data_store.remove(index);
             m_transaction_log.append(key, index,
                                      transaction_log::operation::REMOVE_END);
@@ -128,16 +116,13 @@ public:
 private:
     struct object_meta {
         address addr;
-        std::string created_date;
         std::string last_modified;
-        std::size_t size{};
     };
 
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
-    std::map<std::string, object_meta> m_object_meta;
-    std::map<std::string, uint64_t> m_object_ptr;
+    std::map<std::string, uint64_t> m_object_ptrs;
 };
 
 } // namespace uh::cluster

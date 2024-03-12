@@ -54,7 +54,7 @@ public:
         }
     }
 
-    unique_buffer<char> get(const std::string& bucket, const std::string& key) {
+    address get(const std::string& bucket, const std::string& key) {
         std::shared_lock lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
@@ -117,9 +117,9 @@ public:
         m_buckets.erase(b);
     }
 
-    std::vector<object_meta> list_objects(const std::string& bucket,
-                                          const std::string& lower_bound = "",
-                                          const std::string& prefix = "") {
+    std::vector<object> list_objects(const std::string& bucket,
+                                     const std::string& lower_bound = "",
+                                     const std::string& prefix = "") {
         std::shared_lock lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())

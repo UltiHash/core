@@ -50,24 +50,19 @@ public:
                 }
             }
 
-            std::vector<object_meta> objects;
+            directory_list_objects_message list_objs_res;
 
             auto func = [](const directory_message& dir_req,
-                           std::vector<object_meta>& objects,
+                           directory_list_objects_message& list_objs_res,
                            client::acquired_messenger m) -> coro<void> {
                 co_await m.get().send_directory_message(
                     DIRECTORY_OBJECT_LIST_REQ, dir_req);
                 const auto h_dir = co_await m.get().recv_header();
 
                 unique_buffer<char> buffer(h_dir.size);
-                directory_list_objects_message list_objects_res;
 
-                list_objects_res =
+                list_objs_res =
                     co_await m.get().recv_directory_list_objects_message(h_dir);
-
-                for (auto& obj : list_objects_res.objects) {
-                    objects.emplace_back(std::move(obj));
-                }
             };
 
             co_await worker_utils::
@@ -75,8 +70,8 @@ public:
                     m_collection.workers, m_collection.ioc,
                     m_collection.directory_services.get(),
                     std::bind_front(func, std::cref(dir_req),
-                                    std::ref(objects)));
-            co_return get_response(objects, req);
+                                    std::ref(list_objs_res)));
+            co_return get_response(list_objs_res.objects, req);
 
         } catch (const error_exception& e) {
             LOG_ERROR() << e.what();
@@ -93,15 +88,10 @@ public:
         }
     }
 
-    static http_response get_response(const std::vector<object_meta>& objects,
+    static http_response get_response(const std::vector<object>& objects,
                                       const http_request& req) {
 
         const auto& req_uri = req.get_uri();
-
-        std::vector<std::string> object_names;
-        for (const auto& obj : objects) {
-            object_names.emplace_back(obj.name);
-        }
 
         const auto get_if_exists =
             [&req_uri](auto&& key) -> std::optional<std::string> {
@@ -136,20 +126,22 @@ public:
         std::string content_xml_string;
 
         size_t counter = 0;
-        if (!object_names.empty() && max_keys != 0) {
+        if (!objects.empty() && max_keys != 0) {
 
-            for (std::size_t tally = 0; const auto& o : object_names) {
+            for (std::size_t tally = 0; const auto& obj : objects) {
                 size_t delimiter_index = std::string::npos;
 
                 if (delimiter) {
                     if (prefix) {
-                        delimiter_index = o.find(*delimiter, prefix->size());
+                        delimiter_index =
+                            obj.name.find(*delimiter, prefix->size());
                     } else {
-                        delimiter_index = o.find(*delimiter);
+                        delimiter_index = obj.name.find(*delimiter);
                     }
                 }
                 if (delimiter_index != std::string::npos) {
-                    auto delimiter_prefix = o.substr(0, delimiter_index + 1);
+                    auto delimiter_prefix =
+                        obj.name.substr(0, delimiter_index + 1);
                     common_prefixes.emplace((encoding_type
                                                  ? url_encode(delimiter_prefix)
                                                  : delimiter_prefix));
@@ -160,7 +152,8 @@ public:
                         objects[tally].last_modified +
                         "</LastModified>\n"
                         "<Key>" +
-                        (encoding_type ? url_encode(o) : o) + "</Key>\n" +
+                        (encoding_type ? url_encode(obj.name) : obj.name) +
+                        "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
                         "<Size>" + std::to_string(objects[tally].size) +
@@ -200,7 +193,7 @@ public:
         std::string name_xml_string;
 
         std::string truncated = "false";
-        if (object_names.size() > max_keys && max_keys != 0)
+        if (objects.size() > max_keys && max_keys != 0)
             truncated = "true";
 
         std::string max_keys_xml_string =
