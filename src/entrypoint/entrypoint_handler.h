@@ -43,29 +43,13 @@ public:
 
             for (;;) {
 
-                boost::beast::flat_buffer buffer;
+                auto req = co_await read_request(s);
+                LOG_DEBUG() << s.remote_endpoint() << " read request: " << *req;
 
-                boost::beast::http::request_parser<
-                    boost::beast::http::empty_body>
-                    received_request;
-                received_request.body_limit(
-                    (std::numeric_limits<std::uint64_t>::max)());
-
-                co_await boost::beast::http::async_read_header(
-                    s, buffer, received_request, boost::asio::use_awaitable);
-
-                http_request req(received_request, s, buffer);
-
-                LOG_DEBUG()
-                    << "received request: " << received_request.get().base()
-                    << ", bucket id: " << req.get_uri().get_bucket_id()
-                    << ", key: " << req.get_uri().get_object_key();
-
-                co_await handle_request(req);
-
+                co_await handle_request(*req);
                 metric<success>::increase(1);
 
-                if (!received_request.keep_alive()) {
+                if (!req->keep_alive()) {
                     break;
                 }
             }
