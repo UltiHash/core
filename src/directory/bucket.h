@@ -73,11 +73,11 @@ public:
         m_data_store.apply_write();
 
         const auto it = m_object_ptrs.find(key);
-        if (it != m_object_ptrs.end()) {
-            [[unlikely]] m_data_store.remove(it->second);
+        if (it != m_object_ptrs.end()) [[unlikely]] {
+            m_data_store.remove(it->second);
             it->second = index;
-        } else {
-            [[likely]] m_object_ptrs.insert({key, index});
+        } else [[likely]] {
+            m_object_ptrs.insert({key, index});
         }
 
         m_transaction_log.append(key, index,
