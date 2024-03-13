@@ -34,7 +34,7 @@ jobs:
 
     - name: Login to registry.ultihash.io container registry
       uses: docker/login-action@v2
-      if: github.event_name == 'tag'
+      if: github.event_name == 'push'
       with:
         registry: registry.ultihash.io
         username: github
@@ -43,7 +43,7 @@ jobs:
     - name: Docker metadata (Release)
       id: meta-release
       uses: docker/metadata-action@v5
-      if: github.event_name == 'tag'
+      if: github.event_name == 'push'
       with:
         # list of Docker images to use as base name for tags
         images: |
@@ -54,7 +54,7 @@ jobs:
 
     - name: Build and push the Docker image (Release)
       uses: docker/build-push-action@v5
-      if: github.event_name == 'tag'
+      if: github.event_name == 'push'
       with:
         context: .
         file: Dockerfile
