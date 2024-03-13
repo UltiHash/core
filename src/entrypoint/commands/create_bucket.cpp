@@ -13,7 +13,7 @@ bool create_bucket::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-coro<http_response> create_bucket::handle(const http_request& req) const {
+coro<void> create_bucket::handle(http_request& req) const {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.get_uri().get_bucket_id();
     try {
@@ -29,7 +29,8 @@ coro<http_response> create_bucket::handle(const http_request& req) const {
             m_collection.directory_services.get_clients(),
             std::bind_front(func, std::cref(bucket_id)));
 
-        co_return http_response();
+        http_response res;
+        co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;

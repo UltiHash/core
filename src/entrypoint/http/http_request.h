@@ -18,17 +18,19 @@ public:
                  boost::asio::ip::tcp::socket& stream,
                  boost::beast::flat_buffer& buffer);
 
-    const uri& get_uri() const;
+    [[nodiscard]] const uri& get_uri() const;
 
-    const std::string& get_body() const;
+    [[nodiscard]] const std::string& get_body() const;
 
-    std::size_t get_body_size() const;
+    [[nodiscard]] std::size_t get_body_size() const;
 
-    method get_method() const;
+    [[nodiscard]] method get_method() const;
 
     coro<void> read_body();
 
-    const boost::asio::ip::tcp::socket& socket() const { return m_stream; }
+    coro<void> respond (const http::response<http::string_body>& resp);
+
+    [[nodiscard]] boost::asio::ip::tcp::socket& socket() const { return m_stream; }
 
 private:
     const http::request_parser<http::empty_body>& m_req;

@@ -14,49 +14,60 @@ bool get_object::can_handle(const http_request& req) {
            !uri.query_string_exists("attributes");
 }
 
-coro<http_response> get_object::handle(const http_request& req) const {
+coro<void> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
     try {
         std::chrono::time_point<std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now();
-        std::string buffer;
 
-        auto func = [](std::string& buffer, const http_request& req,
-                       client::acquired_messenger m) -> coro<void> {
+        auto func = [this](const http_request& req) {
+
+            auto m = m_collection.directory_services.get()->acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_uri().get_bucket_id();
             dir_req.object_key =
                 std::make_unique<std::string>(req.get_uri().get_object_key());
 
-            co_await m.get().send_directory_message(DIRECTORY_OBJECT_GET_REQ,
-                                                    dir_req);
-            const auto h_dir = co_await m.get().recv_header();
+            m_collection.workers.get_coro_future(m.get().send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req)).get();
 
-            buffer.resize(h_dir.size);
-            m.get().register_read_buffer(buffer);
-            co_await m.get().recv_buffers(h_dir);
+            bool has_next = true;
+            size_t total_size = 0;
+            std::optional <std::pair <std::future <size_t>, std::string>> send_to_client;
+            while (has_next) {
+                auto h = m_collection.workers.get_coro_future(m.get().recv_header()).get();
+                auto [b_next, buf] = m_collection.workers.get_coro_future(m.get().recv_directory_get_object_chunk(h)).get();
+                total_size += buf.size();
+
+                if (send_to_client)
+                    send_to_client->first.get();
+                send_to_client.emplace(boost::asio::async_write(req.socket(), http::make_chunk(boost::asio::buffer(buf.data(), buf.size())), boost::asio::use_future), std::move (buf));
+                has_next = b_next;
+            }
+            send_to_client->first.get();
+            return total_size;
         };
 
-        co_await m_collection.workers.
-                io_thread_acquire_messenger_and_post_in_io_threads(
-                m_collection.directory_services.get(),
-                std::bind_front(func, std::ref(buffer), std::cref(req)));
+
+        http::response<http::empty_body> res {http::status::ok, 11};
+        res.chunked(true);
+        http::response_serializer<http::empty_body> sr (res);
+        co_await http::async_write_header(req.socket(), sr, boost::asio::as_tuple(boost::asio::use_awaitable));
+
+        const auto total_size = co_await m_collection.workers.post_in_workers(std::bind_front(func, std::cref(req)));
+
+        co_await boost::asio::async_write(req.socket(), http::make_chunk_last(), boost::asio::as_tuple(boost::asio::use_awaitable));
 
         const auto stop = std::chrono::steady_clock::now();
         const std::chrono::duration<double> duration = stop - start;
-        const auto size = static_cast<double>(buffer.size()) / MEBI_BYTE;
+        const auto size = static_cast<double>(total_size) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();
 
-        metric<entrypoint_egressed_data_counter, byte>::increase(buffer.size());
+        metric<entrypoint_egressed_data_counter, byte>::increase(total_size);
 
-        LOG_DEBUG() << "retrieval duration " << duration.count() << " s";
-        LOG_DEBUG() << "retrieval bandwidth " << bandwidth << " MB/s";
+        LOG_INFO() << "retrieval duration " << duration.count() << " s";
+        LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
-        http_response res;
-        res.set_body(std::move(buffer));
-        res.set_bandwidth(bandwidth);
 
-        co_return res;
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();

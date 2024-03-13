@@ -26,7 +26,7 @@ public:
                uri.get_query_string_value("list-type") == "2";
     }
 
-    coro<http_response> handle(const http_request& req) {
+    coro<void> handle(http_request& req) {
         metric<entrypoint_list_objects_v2_req>::increase(1);
         try {
             const auto& req_uri = req.get_uri();
@@ -76,7 +76,8 @@ public:
                     m_collection.directory_services.get(),
                     std::bind_front(func, std::cref(dir_req),
                                     std::ref(content)));
-            co_return get_response(content, req);
+            auto res = get_response(content, req);
+            co_await req.respond(res.get_prepared_response());
 
         } catch (const error_exception& e) {
             LOG_ERROR() << e.what();

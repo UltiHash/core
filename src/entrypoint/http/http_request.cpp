@@ -48,4 +48,10 @@ coro<void> http_request::read_body() {
     co_return;
 }
 
+coro<void> http_request::respond(const http::response<http::string_body> &resp) {
+    co_await boost::beast::http::async_write(
+            m_stream, resp,
+            boost::asio::use_awaitable);
+}
+
 } // namespace uh::cluster

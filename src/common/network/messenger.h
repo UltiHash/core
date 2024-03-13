@@ -56,6 +56,16 @@ public:
         co_return std::move(req);
     }
 
+    coro<std::pair <bool, std::string>> recv_directory_get_object_chunk (const header& message_header) {
+
+        bool has_next;
+        std::string buffer (message_header.size - sizeof (bool), '\0');
+        register_read_buffer(has_next);
+        register_read_buffer(buffer);
+        co_await recv_buffers(message_header);
+        co_return std::make_pair (has_next, std::move (buffer));
+    }
+
     coro<directory_lst_entities_message>
     recv_directory_list_entities_message(const header& message_header) {
         unique_buffer<char> data(message_header.size);
@@ -83,12 +93,11 @@ public:
         co_await send_buffers(type);
     }
 
-    coro<void> send_dedupe_response(const message_type type,
-                                    const dedupe_response& dedupe_resp) {
+    coro<void> send_dedupe_response(const dedupe_response& dedupe_resp) {
         register_write_buffer(dedupe_resp.effective_size);
         register_write_buffer(dedupe_resp.addr.pointers);
         register_write_buffer(dedupe_resp.addr.sizes);
-        co_await send_buffers(type);
+        co_await send_buffers(SUCCESS);
     }
 
     coro<void> send_directory_message(const message_type type,
@@ -99,13 +108,18 @@ public:
         co_await send_buffers(type);
     }
 
+    coro<void> send_directory_get_object_chunk (bool has_next, unique_buffer <char> buffer) {
+        register_write_buffer(has_next);
+        register_write_buffer(buffer);
+        co_await send_buffers(SUCCESS);
+    }
+
     coro<void> send_directory_list_entities_message(
-        const message_type type,
         const directory_lst_entities_message& dir_req) {
         std::vector<char> data;
         zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
         register_write_buffer(data);
-        co_await send_buffers(type);
+        co_await send_buffers(SUCCESS);
     }
 };
 

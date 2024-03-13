@@ -208,29 +208,46 @@ private:
 
         directory_message request = co_await m.recv_directory_message(h);
 
-        unique_buffer<char> buffer;
 
-        auto func = [](directory_store& directory, global_data_view& storage,
-                       const directory_message& request,
-                       unique_buffer<char>& buffer) {
+        auto func = [download_chunk_size = m_config.download_chunk_size, &m](directory_store& directory, global_data_view& storage,
+                       const directory_message& request) {
             address addr;
             const auto buf =
                 directory.get(request.bucket_id, *request.object_key);
             zpp::bits::in{buf.get_span(), zpp::bits::size4b{}}(addr).or_throw();
-            std::size_t buffer_size = 0;
-            for (auto frag_size : addr.sizes) {
-                buffer_size += frag_size;
+
+            size_t addr_index = 0;
+
+            std::optional <std::future <void>> send_to_ep;
+            while (addr_index < addr.size()) {
+                std::size_t buffer_size = 0;
+                address partial_addr;
+                while (addr_index < addr.size() and buffer_size < download_chunk_size) {
+                    const auto frag = addr.get_fragment(addr_index);
+                    partial_addr.push_fragment(frag);
+                    buffer_size += frag.size;
+                    addr_index ++;
+                }
+                unique_buffer<char> buffer (buffer_size);
+
+                storage.read_address(buffer.data(), partial_addr);
+
+                bool has_next = addr_index != addr.size();
+
+                if (send_to_ep)
+                    send_to_ep->get();
+
+                send_to_ep.emplace(boost::asio::co_spawn(storage.get_executor(), m.send_directory_get_object_chunk(has_next, std::move (buffer)), boost::asio::use_future));
+
             }
-            buffer = unique_buffer<char>(buffer_size);
-            storage.read_address(buffer.data(), addr);
+            if (send_to_ep)
+                send_to_ep->get();
         };
 
         co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(m_storage),
-                            std::cref(request), std::ref((buffer))));
+                            std::cref(request)));
 
-        m.register_write_buffer(buffer);
-        co_await m.send_buffers(SUCCESS);
     }
 
     coro<void> handle_put_bucket(messenger& m, const messenger::header& h) {
@@ -293,7 +310,7 @@ private:
         co_await m_directory_workers.post_in_workers(
             std::bind_front(func, std::ref(m_directory), std::ref(response)));
 
-        co_await m.send_directory_list_entities_message(SUCCESS, response);
+        co_await m.send_directory_list_entities_message(response);
     }
 
     coro<void> handle_list_objects(messenger& m, const messenger::header& h) {
@@ -317,7 +334,7 @@ private:
             std::bind_front(func, std::ref(m_directory), std::ref(response),
                             std::ref(request)));
 
-        co_await m.send_directory_list_entities_message(SUCCESS, response);
+        co_await m.send_directory_list_entities_message(response);
     }
 
     const directory_config m_config;

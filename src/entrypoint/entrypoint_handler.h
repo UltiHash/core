@@ -60,10 +60,9 @@ public:
                     << "received request: " << received_request.get().base()
                     << ", bucket id: " << req.get_uri().get_bucket_id()
                     << ", key: " << req.get_uri().get_object_key();
-                auto resp = co_await handle_request(req);
-                co_await boost::beast::http::async_write(
-                    s, resp.get_prepared_response(),
-                    boost::asio::use_awaitable);
+
+                co_await handle_request(req);
+
                 metric<success>::increase(1);
 
                 if (!received_request.keep_alive()) {
@@ -98,7 +97,7 @@ public:
         s.close();
     }
 
-    coro<http_response> handle_request(http_request& req) {
+    coro<void> handle_request(http_request& req) {
         return dispatch_unpack_tuple(
             req, m_req_types,
             std::make_index_sequence<
@@ -106,14 +105,14 @@ public:
     }
 
     template <std::size_t... Is>
-    coro<http_response> dispatch_unpack_tuple(http_request& req,
+    coro<void> dispatch_unpack_tuple(http_request& req,
                                               auto&& req_types,
                                               std::index_sequence<Is...>) {
         return dispatch_front(req, std::get<Is>(req_types)...);
     }
 
     template <typename command, typename... commands>
-    coro<http_response> dispatch_front(http_request& req, command&& head,
+    coro<void> dispatch_front(http_request& req, command&& head,
                                        commands&&... tail) {
         if (head.can_handle(req)) {
             LOG_DEBUG() << req.socket().remote_endpoint()
@@ -123,7 +122,7 @@ public:
         return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
-    coro<http_response> dispatch_front(const http_request& req) {
+    coro<void> dispatch_front(const http_request& req) {
         throw command_exception(http::status::not_found,
                                 command_error::command_not_found);
     }
