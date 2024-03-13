@@ -92,7 +92,9 @@ public:
             Func func, const std::vector <In>& inputs) {
         std::vector <R> results (inputs.size());
 
-        std::vector <std::shared_ptr <awaitable_promise <void>>> promises (inputs.size(), std::make_shared<awaitable_promise<void>> (m_ioc));
+        std::vector <std::shared_ptr <awaitable_promise <void>>> promises (inputs.size());
+        for (auto& pr: promises)
+            pr = std::make_shared <awaitable_promise<void>>(m_ioc);
 
         size_t i = 0;
         for (const auto& in: inputs) {
