@@ -85,18 +85,6 @@ public:
         }
     }
 
-    void remove(const std::string& bucket, const std::string& key) {
-
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
-            [[likely]] {
-            b->second->delete_object(key);
-        } else {
-            throw error_exception(error::bucket_not_found);
-        }
-    }
-
     void remove_bucket(const std::string& name) {
 
         std::unique_lock<std::shared_mutex> lock(m_mutex);
