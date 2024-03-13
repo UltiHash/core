@@ -145,7 +145,7 @@ public:
 
     index_type write(std::span<char> data) {
 
-        std::lock_guard<std::shared_mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m);
         const auto index = post_write(data);
         apply_write();
         return index;
@@ -218,7 +218,7 @@ public:
     }
 
     unique_buffer<char> read(index_type index) {
-        std::shared_lock<std::shared_mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m);
         const auto [fd, seek] = get_file_offset_pair(index);
         if (::lseek(fd, seek, SEEK_SET) != seek) [[unlikely]] {
             throw std::runtime_error("Could not seek to the read position.");
@@ -269,7 +269,7 @@ public:
     }
 
     void remove(index_type index) {
-        std::lock_guard<std::shared_mutex> lock(m);
+        std::lock_guard<std::mutex> lock(m);
 
         auto [fd, seek] = get_file_offset_pair(index);
 
@@ -539,7 +539,7 @@ private:
     uint64_t m_last_file_offset{};
     std::size_t m_last_file_size;
     uint64_t m_used;
-    std::shared_mutex m;
+    std::mutex m;
 };
 
 } // end namespace uh::cluster
