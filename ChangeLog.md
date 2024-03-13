@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2024-03-13
 - Fixed potential log corruption issue in deduplicator
 - Increase maximum storage service size
 - Logging of service requests
