@@ -12,6 +12,11 @@
 
 namespace uh::cluster {
 
+struct object_meta {
+    address addr;
+    std::string last_modified;
+};
+
 class bucket {
 
 public:
@@ -114,11 +119,6 @@ public:
     void destroy_bucket() { std::filesystem::remove_all(m_bucket_path); }
 
 private:
-    struct object_meta {
-        address addr;
-        std::string last_modified;
-    };
-
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
