@@ -107,19 +107,22 @@ private:
         auto integration_data = data;
 
         auto check_dedupe = [&](const fragment_set_element& frag) {
+            // Here, cached_sample can only contain fragments that are 128 bytes
+            // or smaller
             auto frag_data =
                 m_storage.cached_sample(frag.get_pointer(), frag.get_size());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
-                frag_data = m_storage.read(frag.get_pointer(), frag.get_size());
+                frag_data = m_storage.read_fragment(frag.get_pointer(),
+                                                    frag.get_size());
             }
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                 if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data =
-                        m_storage.read(frag.get_pointer(), frag.get_size());
+                    frag_data = m_storage.read_fragment(frag.get_pointer(),
+                                                        frag.get_size());
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),
                         frag_data.get_str_view().substr(common_prefix));

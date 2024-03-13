@@ -49,7 +49,7 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
         l1 = true;
         str = data.get_str_view();
     } else {
-        data = m_storage.get().read(f.pointer, f.size);
+        data = m_storage.get().read_fragment(f.pointer, f.size);
         str = data.get_str_view();
     }
 }
@@ -85,12 +85,12 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
 
     if (b1 and !m_data.has_value() and
         size > m_storage.get().l1_cache_sample_size()) {
-        d1 = m_storage.get().read(pointer, size);
+        d1 = m_storage.get().read_fragment(pointer, size);
         s1 = d1.get_str_view();
     }
     if (b2 and !f.m_data.has_value() and
         f.size > m_storage.get().l1_cache_sample_size()) {
-        d2 = m_storage.get().read(f.pointer, f.size);
+        d2 = m_storage.get().read_fragment(f.pointer, f.size);
         s2 = d2.get_str_view();
     }
 

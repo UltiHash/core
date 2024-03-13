@@ -47,8 +47,8 @@ shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer,
     return nullptr;
 }
 
-shared_buffer<char> global_data_view::read(const uint128_t& pointer,
-                                           const size_t size) {
+shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
+                                                    const size_t size) {
 
     if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
         if (c->size() >= size) [[likely]] {
