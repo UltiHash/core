@@ -47,13 +47,17 @@ coro<http_response> put_object::handle(http_request& req) const {
         };
 
         co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
-            directories,
-            std::bind_front(func, std::cref(dir_req)));
+            directories, std::bind_front(func, std::cref(dir_req)));
 
-        auto effective_size =
-            static_cast<double>(resp.effective_size) / MEBI_BYTE;
-        auto space_saving = 1.0 - static_cast<double>(resp.effective_size) /
-                                      static_cast<double>(body_size);
+        double effective_size = 0;
+        double space_saving = 0;
+        if (body_size) {
+            effective_size =
+                static_cast<double>(resp.effective_size) / MEBI_BYTE;
+            space_saving = 1.0 - static_cast<double>(resp.effective_size) /
+                                     static_cast<double>(body_size);
+        }
+
         const auto stop = std::chrono::steady_clock::now();
         const std::chrono::duration<double> duration = stop - start;
         const auto bandwidth = size_mb / duration.count();
