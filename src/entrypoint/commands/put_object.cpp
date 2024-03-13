@@ -65,10 +65,10 @@ coro<http_response> put_object::handle(http_request& req) const {
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             size_mb);
 
-        LOG_INFO() << "original size " << size_mb << " MB\n"
-                   << "effective size " << effective_size << " MB\n"
-                   << "space saving " << space_saving << '\n'
-                   << "integration duration " << duration.count() << " s\n"
+        LOG_INFO() << "original size " << size_mb << " MB, "
+                   << "effective size " << effective_size << " MB, "
+                   << "space saving " << space_saving << ", "
+                   << "integration duration " << duration.count() << " s, "
                    << "integration bandwidth " << bandwidth << " MB/s";
 
         http_response res;
