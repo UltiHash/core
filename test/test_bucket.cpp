@@ -64,7 +64,7 @@ static bool compare_address(const auto& addr1, const auto& addr2) {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE(bucket_prefilled_test, config_fixture) {
+BOOST_FIXTURE_TEST_CASE(test_transaction_replay, config_fixture) {
     bt.reset();
     bt = std::make_unique<bucket>(dir.path(), BUCKET_NAME, get_bucket_config());
 
