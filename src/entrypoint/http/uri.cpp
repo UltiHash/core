@@ -1,8 +1,68 @@
 #include "uri.h"
 #include "command_exception.h"
-#include <regex>
+#include <cctype>
 
 namespace uh::cluster {
+
+namespace {
+
+// check for bucket naming rules according to
+// https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+bool valid_bucket_name(const std::string& name) {
+
+    // Bucket names must be between 3 (min) and 63 (max) characters long.
+    if (name.size() < 3 || name.size() > 63) {
+        return false;
+    }
+
+    // Bucket names must begin and end with a letter or number.
+    if (!(std::islower(name[0]) || std::isdigit(name[0]))) {
+        return false;
+    }
+
+    // Bucket names can consist only of lowercase letters, numbers, dots (.),
+    // and hyphens (-).
+    char last = name[0];
+    for (auto i = 1u; i < name.size(); ++i) {
+        if (!(std::islower(name[i]) || std::isdigit(name[i]) ||
+              name[i] == '.' || name[i] == '-')) {
+            return false;
+        }
+
+        // Bucket names must not contain two adjacent periods.
+        if (name[i] == '.' && last == '.') {
+            return false;
+        }
+
+        last = name[i];
+    }
+
+    // Bucket names must not be formatted as an IP address (for example,
+    // 192.168.5.4).
+    boost::system::error_code ec;
+    boost::asio::ip::address::from_string(name, ec);
+    if (!ec) {
+        return false;
+    }
+
+    // Bucket names must not start with the prefix xn--.
+    // Bucket names must not start with the prefix sthree- and the prefix
+    // sthree-configurator.
+    if (name.starts_with("xn--") || name.starts_with("sthree-") ||
+        name.starts_with("sthree-configurator-")) {
+        return false;
+    }
+
+    // Bucket names must not end with the suffix -s3alias.
+    // Bucket names must not end with the suffix --ol-s3.
+    if (name.ends_with("-s3alias") || name.ends_with("--ol-s3")) {
+        return false;
+    }
+
+    return true;
+}
+
+} // namespace
 
 uri::uri(const http::request_parser<http::empty_body>& req) {
     if (req.get().base().version() != 11) {
@@ -78,9 +138,7 @@ void uri::extract_bucket_and_object() {
                                     command_error::invalid_bucket_name);
         }
 
-        std::regex bucket_pattern(
-            R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
-        if (!std::regex_match(m_bucket_id, bucket_pattern)) {
+        if (!valid_bucket_name(m_bucket_id)) {
             throw command_exception(http::status::bad_request,
                                     command_error::invalid_bucket_name);
         }
