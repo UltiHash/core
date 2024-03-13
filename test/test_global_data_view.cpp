@@ -11,11 +11,13 @@
 
 namespace uh::cluster {
 
+/*
 static void fill_random(char* buf, size_t size) {
     for (size_t i = 0; i < size; ++i) {
         buf[i] = rand() & 0xff;
     }
 }
+*/
 
 BOOST_FIXTURE_TEST_CASE(fixture_test1, global_data_view_fixture) {
     /*
