@@ -126,7 +126,7 @@ private:
     std::size_t m_last_file_size;
     uint128_t m_global_offset;
     uint128_t m_used;
-    std::shared_mutex m;
+    std::mutex m_mutex;
 };
 
 } // end namespace uh::cluster
