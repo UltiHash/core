@@ -15,7 +15,7 @@ struct global_data_view_config {
     std::size_t read_cache_capacity_l1 = 8000000ul;
     std::size_t read_cache_capacity_l2 = 4000ul;
     std::size_t l1_sample_size = 128ul;
-    uint128_t max_data_store_size = 64 * GIBI_BYTE;
+    uint128_t max_data_store_size = DATASTORE_MAX_SIZE;
 };
 
 class global_data_view {
@@ -26,7 +26,7 @@ public:
                               worker_pool& workers,
                               services<STORAGE_SERVICE>& storage_services)
         : m_io_service(ioc),
-          m_workers (workers),
+          m_workers(workers),
           m_storage_services(storage_services),
           m_config(config),
           m_cache_l1(m_config.read_cache_capacity_l1),
@@ -175,8 +175,7 @@ public:
         }
 
         m_workers.broadcast_from_worker_in_io_threads(
-            nodes,
-            [](client::acquired_messenger m, long id) -> coro<void> {
+            nodes, [](client::acquired_messenger m, long id) -> coro<void> {
                 co_await m.get().send(STORAGE_SYNC_REQ, {});
                 co_await m.get().recv_header();
             });
