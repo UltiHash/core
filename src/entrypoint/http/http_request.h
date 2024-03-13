@@ -14,10 +14,6 @@ template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class http_request {
 public:
-    http_request(const http::request_parser<http::empty_body>& req,
-                 boost::asio::ip::tcp::socket& stream,
-                 boost::beast::flat_buffer& buffer);
-
     const uri& get_uri() const;
 
     const std::string& get_body() const;
@@ -30,14 +26,27 @@ public:
 
     const boost::asio::ip::tcp::socket& socket() const { return m_stream; }
 
+    bool keep_alive() const { return m_req.keep_alive(); }
+
 private:
-    const http::request_parser<http::empty_body>& m_req;
+    friend coro<std::unique_ptr<http_request>>
+    read_request(boost::asio::ip::tcp::socket&);
+    friend std::ostream& operator<<(std::ostream& out, const http_request& req);
+
+    http_request(boost::asio::ip::tcp::socket& stream);
+
     boost::asio::ip::tcp::socket& m_stream;
-    boost::beast::flat_buffer& m_buffer;
+    http::request_parser<http::empty_body> m_req;
+    boost::beast::flat_buffer m_buffer;
 
     uri m_uri;
     std::string m_body{};
 };
+
+std::ostream& operator<<(std::ostream& out, const http_request& req);
+
+coro<std::unique_ptr<http_request>>
+read_request(boost::asio::ip::tcp::socket& s);
 
 } // namespace uh::cluster
 
