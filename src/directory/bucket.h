@@ -38,10 +38,11 @@ public:
                                      const std::string& prefix) {
         std::vector<object> objects;
 
-        std::map<std::string, uint64_t>::const_iterator start;
+        auto start = m_object_ptrs.cbegin();
         if (lower_bound.empty() && !prefix.empty()) {
             start = m_object_ptrs.lower_bound(prefix);
-        } else {
+        } else if ((!lower_bound.empty() && !prefix.empty()) ||
+                   (!lower_bound.empty() && prefix.empty())) {
             start = m_object_ptrs.upper_bound(lower_bound);
         }
 
