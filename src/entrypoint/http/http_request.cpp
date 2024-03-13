@@ -2,13 +2,15 @@
 
 namespace uh::cluster {
 
-http_request::http_request(const http::request_parser<http::empty_body>& req,
-                           boost::asio::ip::tcp::socket& stream,
-                           boost::beast::flat_buffer& buffer)
-    : m_req(req),
-      m_stream(stream),
-      m_buffer(buffer),
-      m_uri(req) {}
+using namespace boost;
+
+http_request::http_request(asio::ip::tcp::socket& stream)
+    : m_stream(stream),
+      m_req(),
+      m_buffer(),
+      m_uri(m_req) {
+    m_req.body_limit(std::numeric_limits<std::uint64_t>::max());
+}
 
 const uri& http_request::get_uri() const { return m_uri; }
 
@@ -46,6 +48,30 @@ coro<void> http_request::read_body() {
     }
 
     co_return;
+}
+
+std::ostream& operator<<(std::ostream& out, const http_request& req) {
+    out << req.m_req.get().base().method_string() << " "
+        << req.m_req.get().base().target() << " ";
+
+    std::string delim;
+    for (const auto& field : req.m_req.get().base()) {
+        out << delim << field.name() << ": " << field.value();
+        delim = ", ";
+    }
+
+    return out;
+}
+
+coro<std::unique_ptr<http_request>> read_request(asio::ip::tcp::socket& s) {
+    auto rv = std::unique_ptr<http_request>(new http_request(s));
+
+    co_await beast::http::async_read_header(s, rv->m_buffer, rv->m_req,
+                                            asio::use_awaitable);
+
+    rv->m_uri = uri(rv->m_req);
+
+    co_return rv;
 }
 
 } // namespace uh::cluster
