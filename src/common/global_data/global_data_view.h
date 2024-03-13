@@ -22,11 +22,20 @@ class global_data_view {
 
 public:
     /**
+     * @brief Constructs a global_data view.
      *
-     * @param config
-     * @param ioc
-     * @param workers
-     * @param storage_services
+     * The global_data_view introduces the abstraction of a flat address space
+     * that fragments can be written to and read from, hiding the interaction
+     * with individual storage service instances.
+     *
+     * @param config A constant reference to an instance of
+     * global_data_view_config, providing all tunable configuration parameters.
+     * @param ioc A reference to an instance of boost::asio::io_context used for
+     * spawning co-routines.
+     * @param workers A reference to a worker_pool, which must be constructed
+     * from the same boost::asio::io_context instance #ioc is referencing.
+     * @param storage_services A reference to an instance of
+     * services<STORAGE_SERVICE> used for service discovery.
      */
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
@@ -34,55 +43,108 @@ public:
                               services<STORAGE_SERVICE>& storage_services);
 
     /**
+     * @brief Sends write request to a storage service instance, does not
+     * guarantee persistence.
      *
-     * @param data
-     * @return
+     * Sends write request to a storage service instance. Upon successful
+     * completion of the request, the fragment (#data) and its resulting address
+     * are stored in the L1 cache. CAUTION: writes are only guaranteed to be
+     * persistent after sync has been called.
+     *
+     * @param data A constant reference to a std::string_view holding the data
+     * to be written.
+     * @return An #address the data has been written to.
      */
     address write(const std::string_view& data);
 
     /**
+     * @brief Retrieves fragment from L1 read cache if present.
      *
-     * @param pointer
-     * @param size
-     * @return
+     * The L1 read cache only contains up to the first 128 byte of a fragment,
+     * but holds a much larger number of entries and can thus be used for
+     * efficient prefix comparison, to avoid a large number of read requests to
+     * the storage services.
+     *
+     * @param pointer A constant uint128_t specifying the location of the
+     * fragment.
+     * @param size A constant size_t specifying the size of the fragment.
+     * @return If the fragment exists in the cache, its content is returned.
+     * Otherwise, nullptr is returned.
      */
     shared_buffer<char> cached_sample(const uint128_t pointer,
                                       const size_t size);
 
     /**
+     * @brief Retrieves fragment from storage services.
      *
-     * @param pointer
-     * @param size
-     * @return
+     * The L2 read cache is consulted to see if it contains the requested
+     * fragment. Otherwise, a read request is issued to the storage service
+     * instance serving the address range the provided #pointer is in.
+     * TODO: the behaviour for requesting non-existent data is not clear yet and
+     * needs to be tested Upon successful completion of the read request, the
+     * returned fragment and its address are (re)-inserted into both the L1 and
+     * L2 read caches.
+     *
+     * The L1 read cache only contains up to the first 128 byte of a fragment,
+     * but holds a much larger number of entries and can thus be used for
+     * efficient prefix comparison, whereas the L2 read cache contains the
+     * entire content of a fragment at the price of a smaller cache capacity.
+     * Together, both caches are drastically reducing the number of read
+     * requests that need to be issued to the storage service instances.
+     *
+     * @param pointer A constant reference to a uint128_t, specifying the
+     * location of the fragment.
+     * @param size A constant size_t specifying the size of the fragment.
+     * @return If the fragment exists on one of the storage service instances,
+     * its content is returned. Otherwise, TODO: write test
      */
     shared_buffer<char> read(const uint128_t& pointer, const size_t size);
 
     /**
+     * @brief Retrieves the contents of an entire address from storage services.
      *
-     * @param buffer
-     * @param addr
-     * @return
+     * Retrieves content of an entire address by scattering read requests for
+     * each fragment to storage service instances for improved read performance.
+     * This method entirely bypasses the read caches.
+     *
+     * @param[out] buffer A char buffer that the retrieved data is written to.
+     * @param[in] addr An constant reference to the address instance data should
+     * be read from.
+     * @return The number of bytes read.
      */
     std::size_t read_address(char* buffer, const address& addr);
 
     /**
+     * @brief Must be called on all addresses returned #write to ensure their
+     * persistence.
      *
-     * @param pointer
-     * @param size
-     * @return
-     */
-    coro<void> remove(const uint128_t pointer, const size_t size);
-
-    /**
+     * Data written using the #write method is only guaranteed to be persistent
+     * after calling this method on the resulting address.
      *
-     * @param addr
+     * @param addr The address of all data to be synced to persistent storage.
      */
     void sync(const address& addr);
 
+    /**
+     * @brief Computes used space across all available storage service
+     * instances.
+     * @return The used space across all available storage service instances.
+     */
     [[nodiscard]] uint128_t get_used_space();
 
+    /**
+     * @brief Returns the configured sample/prefix size used by the L1 read
+     * cache.
+     * @return The configured sample/prefix size used by the L1 read cache.
+     */
     [[nodiscard]] std::size_t l1_cache_sample_size() const noexcept;
 
+    /**
+     * @brief Returns the configured number of connections maintained to each
+     * storage service instance.
+     * @return The configured number of connections maintained to each storage
+     * service instance.
+     */
     [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 

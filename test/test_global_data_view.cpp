@@ -55,4 +55,7 @@ BOOST_FIXTURE_TEST_CASE(fixture_test3, global_data_view_fixture) {
     gdv->read_address(result_buffer.data(), addr);
     BOOST_CHECK(input_buffer.get_str_view() == result_buffer.get_str_view());
 }
+
+// TODO: try to read data not stored on any storage_service
+
 } // namespace uh::cluster

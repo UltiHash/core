@@ -126,14 +126,6 @@ std::size_t global_data_view::read_address(char* buffer, const address& addr) {
     return offset;
 }
 
-coro<void> global_data_view::remove(const uint128_t pointer,
-                                    const size_t size) {
-    auto m = m_storage_services.get(pointer)->acquire_messenger();
-    co_await m.get().send_fragment(STORAGE_REMOVE_FRAGMENT_REQ,
-                                   {pointer, size});
-    co_await m.get().recv_header();
-}
-
 void global_data_view::sync(const address& addr) {
 
     if (addr.empty()) [[unlikely]] {
