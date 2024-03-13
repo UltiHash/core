@@ -38,20 +38,23 @@ public:
                                      const std::string& prefix) {
         std::vector<object> objects;
 
-        for (auto start = lower_bound.empty()
-                              ? m_object_ptrs.begin()
-                              : m_object_ptrs.upper_bound(lower_bound);
-             start != m_object_ptrs.end(); ++start) {
-            if (prefix.empty() || start->first.find(prefix) == 0) {
-                const auto bytes = m_data_store.read(start->second);
-                object_meta obj;
-                zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
-                    .or_throw();
-                objects.push_back(
-                    {.name = start->first,
-                     .last_modified = std::move(obj.last_modified),
-                     .size = obj.addr.data_size()});
-            }
+        std::map<std::string, uint64_t>::const_iterator start;
+        if (lower_bound.empty() && !prefix.empty()) {
+            start = m_object_ptrs.lower_bound(prefix);
+        } else {
+            start = m_object_ptrs.upper_bound(lower_bound);
+        }
+
+        while (start != m_object_ptrs.end() &&
+               start->first.starts_with(prefix)) {
+            const auto bytes = m_data_store.read(start->second);
+            object_meta obj;
+            zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
+                .or_throw();
+            objects.push_back({.name = start->first,
+                               .last_modified = std::move(obj.last_modified),
+                               .size = obj.addr.data_size()});
+            start++;
         }
 
         return objects;
@@ -72,12 +75,12 @@ public:
         // transaction
         m_data_store.apply_write();
 
-        const auto it = m_object_ptrs.find(key);
-        if (it != m_object_ptrs.end()) [[unlikely]] {
+        if (const auto it = m_object_ptrs.find(key); it != m_object_ptrs.end())
+            [[unlikely]] {
             m_data_store.remove(it->second);
             it->second = index;
         } else [[likely]] {
-            m_object_ptrs.insert({key, index});
+            m_object_ptrs.emplace_hint(it, key, index);
         }
 
         m_transaction_log.append(key, index,
