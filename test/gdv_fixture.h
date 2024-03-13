@@ -16,6 +16,8 @@ public:
                              m_gdv_config.storage_service_connection_count,
                              m_etcd_client, m_gdv_config.max_data_store_size) {}
 
+    ~global_data_view_fixture() { teardown(); }
+
     void setup() {
         std::exception_ptr excp_ptr;
 
@@ -51,8 +53,8 @@ public:
             }
         }
 
-        m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc, m_workers,
-                                                   m_storage_services);
+        m_gdv = std::make_shared<global_data_view>(
+            m_gdv_config, m_ioc, m_workers, m_storage_services);
 
         m_threads.emplace_back([&] {
             try {
@@ -81,8 +83,12 @@ public:
             thread.join();
         }
 
-        m_ioc.stop();
-        m_ioc.restart();
+        m_threads.clear();
+        m_storage_instances.clear();
+        m_temp_dirs.clear();
+
+        // m_ioc.stop();
+        // m_ioc.restart();
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
