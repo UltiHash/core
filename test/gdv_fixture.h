@@ -3,17 +3,20 @@
 
 #include <common/global_data/global_data_view.h>
 #include <common/utils/temp_directory.h>
-#include <config/config.h>
+#include <config/configuration.h>
 #include <storage/storage.h>
 
 namespace uh::cluster {
 class global_data_view_fixture {
 public:
     global_data_view_fixture()
-        : m_etcd_client("http://127.0.0.1:2379"),
+        : m_workers(m_ioc, 4),
+          m_etcd_client("http://127.0.0.1:2379"),
           m_storage_services(m_ioc,
                              m_gdv_config.storage_service_connection_count,
                              m_etcd_client, m_gdv_config.max_data_store_size) {}
+
+    ~global_data_view_fixture() { teardown(); }
 
     void setup() {
         std::exception_ptr excp_ptr;
@@ -50,8 +53,8 @@ public:
             }
         }
 
-        m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc,
-                                                   m_storage_services);
+        m_gdv = std::make_shared<global_data_view>(
+            m_gdv_config, m_ioc, m_workers, m_storage_services);
 
         m_threads.emplace_back([&] {
             try {
@@ -80,8 +83,12 @@ public:
             thread.join();
         }
 
-        m_ioc.stop();
-        m_ioc.restart();
+        m_threads.clear();
+        m_storage_instances.clear();
+        m_temp_dirs.clear();
+
+        // m_ioc.stop();
+        // m_ioc.restart();
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
@@ -89,6 +96,8 @@ public:
 private:
     global_data_view_config m_gdv_config;
     boost::asio::io_context m_ioc;
+    worker_pool m_workers;
+
     etcd::SyncClient m_etcd_client;
     services<STORAGE_SERVICE> m_storage_services;
 

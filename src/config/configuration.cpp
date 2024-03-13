@@ -1,7 +1,5 @@
 #include "config.h"
-
-#include <config.h>
-
+#include "configuration.h"
 #include <CLI/CLI.hpp>
 #include <system_error>
 

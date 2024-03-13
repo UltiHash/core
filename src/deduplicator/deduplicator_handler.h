@@ -13,13 +13,12 @@ namespace uh::cluster {
 class deduplicator_handler : public protocol_handler {
 
 public:
-    deduplicator_handler(
-        deduplicator_config config, global_data_view& storage,
-        std::shared_ptr<boost::asio::thread_pool> dedupe_workers)
+    deduplicator_handler(deduplicator_config config, global_data_view& storage,
+                         worker_pool& dedupe_workers)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
-          m_dedupe_workers(std::move(dedupe_workers)) {
+          m_dedupe_workers(dedupe_workers) {
         if (m_dedupe_conf.min_fragment_size >
             m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument("L1 cache sample size should not be "
@@ -28,6 +27,8 @@ public:
     }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+        std::stringstream remote;
+        remote << s.remote_endpoint();
 
         messenger m(std::move(s));
 
@@ -36,6 +37,10 @@ public:
 
             try {
                 const auto message_header = co_await m.recv_header();
+
+                LOG_DEBUG() << remote.str() << " received "
+                            << magic_enum::enum_name(message_header.type);
+
                 switch (message_header.type) {
                 case DEDUPLICATOR_REQ:
 
@@ -50,6 +55,8 @@ public:
                 err = error(error::unknown, e.what());
             }
             if (err) {
+                LOG_WARN() << remote.str()
+                           << " error handling request: " << err->message();
                 co_await m.send_error(*err);
             }
         }
@@ -66,39 +73,28 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
-        const std::size_t pieces =
+        const std::size_t pieces_count =
             std::min(m_storage.get_storage_service_connection_count(),
                      static_cast<std::size_t>(std::ceil(
                          static_cast<double>(data.size()) /
                          static_cast<double>(
                              m_dedupe_conf.dedupe_worker_minimum_data_size))));
-        size_t piece_size =
-            std::ceil(static_cast<double>(data.size()) / pieces);
-        std::vector<dedupe_response> responses(pieces);
-
-        std::atomic<std::size_t> resp = 0;
-        auto waiter = std::make_shared<boost::asio::steady_timer>(
-            m_storage.get_executor(),
-            boost::asio::steady_timer::clock_type::duration::max());
-
-        for (std::size_t i = 0; i < pieces; ++i) {
-            boost::asio::post(*m_dedupe_workers, [&responses, i, &data,
-                                                  piece_size, &resp, pieces,
-                                                  waiter = waiter, this]() {
-                const auto data_piece = data.get_str_view().substr(
-                    i * piece_size,
-                    std::min(piece_size, data.size() - i * piece_size));
-                responses[i] = deduplicate(data_piece);
-                std::size_t count = resp++;
-                if (count == pieces - 1)
-                    waiter->expires_at(
-                        boost::asio::steady_timer::time_point::min());
-            });
+        size_t piece_size = std::ceil(static_cast<double>(data.size()) /
+                                      static_cast<double>(pieces_count));
+        std::vector<std::string_view> pieces;
+        pieces.reserve(pieces_count);
+        for (std::size_t i = 0; i < pieces_count; ++i) {
+            pieces.emplace_back(data.get_str_view().substr(
+                i * piece_size,
+                std::min(piece_size, data.size() - i * piece_size)));
         }
 
-        co_await waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        auto responses =
+            co_await m_dedupe_workers.broadcast_from_io_thread_in_workers(
+                [this](const auto& piece) { return deduplicate(piece); },
+                pieces);
 
-        for (std::size_t i = 1; i < pieces; i++) {
+        for (std::size_t i = 1; i < pieces_count; i++) {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
@@ -187,7 +183,7 @@ private:
     deduplicator_config m_dedupe_conf;
     fragment_set m_fragment_set;
     global_data_view& m_storage;
-    std::shared_ptr<boost::asio::thread_pool> m_dedupe_workers;
+    worker_pool& m_dedupe_workers;
 };
 
 } // end namespace uh::cluster

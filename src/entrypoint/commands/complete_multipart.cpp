@@ -1,5 +1,5 @@
 #include "complete_multipart.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -97,9 +97,8 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
         co_await m.get().recv_header();
     };
 
-    co_await worker_utils::broadcast_from_io_thread_in_io_threads(
-        directories, m_collection.ioc, m_collection.workers,
-        std::bind_front(func_dir, std::cref(dir_req)));
+    co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
+        directories, std::bind_front(func_dir, std::cref(dir_req)));
 
     const auto size_mb = static_cast<double>(up_info->data_size) / MEBI_BYTE;
     auto effective_size =

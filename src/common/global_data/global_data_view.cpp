@@ -3,8 +3,10 @@
 namespace uh::cluster {
 global_data_view::global_data_view(const global_data_view_config& config,
                                    boost::asio::io_context& ioc,
+                                   worker_pool& workers,
                                    services<STORAGE_SERVICE>& storage_services)
     : m_io_service(ioc),
+      m_workers(workers),
       m_storage_services(storage_services),
       m_config(config),
       m_cache_l1(m_config.read_cache_capacity_l1),
@@ -104,8 +106,8 @@ std::size_t global_data_view::read_address(char* buffer, const address& addr) {
         offset += frag.size;
     }
 
-    worker_utils::broadcast_from_worker_in_io_threads(
-        nodes, m_io_service,
+    m_workers.broadcast_from_worker_in_io_threads(
+        nodes,
         [&buffer, &nodes, &node_address_map, &node_data_offsets_map](
             client::acquired_messenger m, long id) -> coro<void> {
             const auto node = nodes.at(id);
@@ -151,9 +153,8 @@ void global_data_view::sync(const address& addr) {
         node_address.push_fragment(frag);
     }
 
-    worker_utils::broadcast_from_worker_in_io_threads(
-        nodes, m_io_service,
-        [](client::acquired_messenger m, long id) -> coro<void> {
+    m_workers.broadcast_from_worker_in_io_threads(
+        nodes, [](client::acquired_messenger m, long id) -> coro<void> {
             co_await m.get().send(STORAGE_SYNC_REQ, {});
             co_await m.get().recv_header();
         });
@@ -164,8 +165,8 @@ void global_data_view::sync(const address& addr) {
 
     std::vector<uint128_t> used_spaces(nodes.size());
 
-    worker_utils::broadcast_from_worker_in_io_threads(
-        nodes, m_io_service,
+    m_workers.broadcast_from_worker_in_io_threads(
+        nodes,
         [&used_spaces](client::acquired_messenger m, long id) -> coro<void> {
             co_await m.get().send(STORAGE_USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();

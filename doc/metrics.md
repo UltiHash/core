@@ -1,9 +1,9 @@
 # Overview
 
-This document defines the metric parameters implemented by UltiHash cluster. 
+This document defines the metric parameters implemented by UltiHash cluster.
 
 There are two types of metrics currently supported: counters and gauges.
-- depending on the data type they are initialized with, counters can be monotonic, 
+- depending on the data type they are initialized with, counters can be monotonic,
 and can only be modified explicitly based on deltas that are added/subtracted
 - gauges read absolute values from callbacks, and thus are updated implicitly
 
@@ -32,11 +32,11 @@ Each service measures the number of requests it receives and handles using monot
 - `directory_object_list_req`: number of requests received to list objects in a bucket
 - `directory_object_put_req`: number of requests received to create an object
 - `directory_object_get_req`: number of requests received to retrieve an object
-- `directory_object_delete_req`: number of requests received to delete an object 
+- `directory_object_delete_req`: number of requests received to delete an object
 
 ### Entrypoint service requests (external, S3 protocol):
 
-- `entrypoint_abort_multipart_req`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received 
+- `entrypoint_abort_multipart_req`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received
 - `entrypoint_complete_multipart_req`: number of [`CompleteMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html) requests received
 - `entrypoint_create_bucket_req`: number of [`CreateBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_CreateBucket.html) requests received
 - `entrypoint_delete_bucket_req`: number of [`DeleteBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_DeleteBucket.html) requests received
@@ -68,7 +68,8 @@ Each service measures the number of requests it receives and handles using monot
 - `deduplicator_set_fragment_size_counter`: The aggregated size of fragments pointed in the deduplicator set maintained by the `deduplicator service`
 - `entrypoint_ingested_data_counter`: The total data volume ingested by a `entrypoint service`
 - `entrypoint_egressed_data_counter`: The total data volume egressed by a `entrypoint service`
-- 
+- `active_connections`: Number of currently handled connections
+
 ### Gauges ###
 - `directory_deduplicated_data_volume_gauge`: The deduplicated data volume in the storage cluster, maintained by the `directory service`
 - `directory_original_data_volume_gauge`: The original/raw data volume in the storage cluster, maintained by the `directory service`

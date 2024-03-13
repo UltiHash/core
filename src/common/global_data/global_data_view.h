@@ -4,7 +4,7 @@
 #include "common/network/client.h"
 #include "common/registry/services.h"
 #include "common/types/shared_buffer.h"
-#include "common/utils/worker_utils.h"
+#include "common/utils/worker_pool.h"
 #include "lru_cache.h"
 #include <map>
 
@@ -15,7 +15,7 @@ struct global_data_view_config {
     std::size_t read_cache_capacity_l1 = 8000000ul;
     std::size_t read_cache_capacity_l2 = 4000ul;
     std::size_t l1_sample_size = 128ul;
-    uint128_t max_data_store_size = 64 * GIBI_BYTE;
+    uint128_t max_data_store_size = DATASTORE_MAX_SIZE;
 };
 
 class global_data_view {
@@ -23,6 +23,7 @@ class global_data_view {
 public:
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
+                              worker_pool& workers,
                               services<STORAGE_SERVICE>& storage_services);
 
     address write(const std::string_view& data);
@@ -49,7 +50,7 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-
+    worker_pool& m_workers;
     services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
 
