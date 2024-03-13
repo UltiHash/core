@@ -179,10 +179,6 @@ void global_data_view::sync(const address& addr) {
     return used;
 }
 
-[[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
-    return m_io_service;
-}
-
 [[nodiscard]] std::size_t
 global_data_view::l1_cache_sample_size() const noexcept {
     return m_config.l1_sample_size;

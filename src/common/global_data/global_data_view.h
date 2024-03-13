@@ -21,27 +21,65 @@ struct global_data_view_config {
 class global_data_view {
 
 public:
+    /**
+     *
+     * @param config
+     * @param ioc
+     * @param workers
+     * @param storage_services
+     */
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
                               worker_pool& workers,
                               services<STORAGE_SERVICE>& storage_services);
 
+    /**
+     *
+     * @param data
+     * @return
+     */
     address write(const std::string_view& data);
 
+    /**
+     *
+     * @param pointer
+     * @param size
+     * @return
+     */
     shared_buffer<char> cached_sample(const uint128_t pointer,
                                       const size_t size);
 
+    /**
+     *
+     * @param pointer
+     * @param size
+     * @return
+     */
     shared_buffer<char> read(const uint128_t& pointer, const size_t size);
 
+    /**
+     *
+     * @param buffer
+     * @param addr
+     * @return
+     */
     std::size_t read_address(char* buffer, const address& addr);
 
+    /**
+     *
+     * @param pointer
+     * @param size
+     * @return
+     */
     coro<void> remove(const uint128_t pointer, const size_t size);
 
+    /**
+     *
+     * @param addr
+     */
     void sync(const address& addr);
 
     [[nodiscard]] uint128_t get_used_space();
-
-    [[nodiscard]] boost::asio::io_context& get_executor() const;
 
     [[nodiscard]] std::size_t l1_cache_sample_size() const noexcept;
 
