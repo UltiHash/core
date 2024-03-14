@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.1] - 2024-03-14
+## [0.3.2] - 2024-03-14
 - Fixed cache usage
 - Object Metadata in bucket list response
 - More unit tests and fixes
