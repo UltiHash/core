@@ -19,7 +19,9 @@ static void fill_random(char* buf, size_t size) {
 
 BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
-    BOOST_CHECK_THROW(gdv->read_fragment(23, 42), std::runtime_error);
+    BOOST_CHECK_THROW(
+        gdv->read_fragment(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
+        std::runtime_error);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
@@ -80,7 +82,8 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(invalid_cached_sample, global_data_view_fixture) {
     auto gdv = get_global_data_view();
-    auto sample = gdv->cached_sample(23, 42);
+    auto sample =
+        gdv->cached_sample(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE);
     BOOST_CHECK(sample.data() == nullptr);
 }
 
