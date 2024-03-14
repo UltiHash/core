@@ -70,7 +70,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
 
 address data_store::write(std::span<char> data) {
 
-    std::lock_guard<std::shared_mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_used + data.size() > m_conf.max_data_store_size) [[unlikely]] {
         throw std::bad_alloc();
@@ -112,7 +112,7 @@ std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::shared_lock<std::shared_mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
     if (::lseek(fd, seek, SEEK_SET) != seek) [[unlikely]] {
@@ -137,7 +137,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::lock_guard<std::shared_mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
 
@@ -161,7 +161,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
 }
 
 void data_store::sync() {
-    std::lock_guard<std::shared_mutex> lock(m);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     for (const auto& modification : m_modified_files) {
 

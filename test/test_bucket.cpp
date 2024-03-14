@@ -4,8 +4,10 @@
 #define BOOST_TEST_MODULE "bucket tests"
 #endif
 
+#include "common/utils/temp_directory.h"
+#include "directory/bucket.h"
+#include "storage/data_store.h"
 #include <boost/test/unit_test.hpp>
-#include <directory/bucket.h>
 
 // ------------- Tests Suites Follow --------------
 
@@ -13,43 +15,10 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
+#define BUCKET_NAME "bucket1"
+#define KEY_NAME "key1"
+
 struct config_fixture {
-    static std::filesystem::path get_root_path() { return "_tmp_test/dr/"; }
-
-    static void cleanup() { std::filesystem::remove_all("_tmp_test"); }
-
-    static void setup_prefilled() {
-        std::filesystem::create_directories(get_root_path() / "bucket1");
-        chaining_data_store_config ds_conf = {
-            .directory = get_root_path() / "bucket1",
-            .free_spot_log = get_root_path() / "bucket1/free_spot_log",
-            .min_file_size = 1024ul,
-            .max_file_size = 8ul * 1024ul,
-            .max_storage_size = 16 * 1024ul,
-            .max_chunk_size = 16 * 1024u,
-        };
-        chaining_data_store ds(ds_conf);
-        char data1[] = "Would be a shame if we lost this data!";
-        auto addr1 = ds.write(data1);
-
-        uh::cluster::transaction_log tl(get_root_path() /
-                                        "bucket1/transaction_log");
-        tl.append("key1", addr1, transaction_log::INSERT_START);
-        tl.append("key1", addr1, transaction_log::INSERT_END);
-    }
-
-    static void setup_empty() {
-        std::filesystem::create_directories(get_root_path() / "bucket1");
-        chaining_data_store_config ds_conf = {
-            .directory = get_root_path() / "bucket1",
-            .free_spot_log = get_root_path() / "bucket1/free_spot_log",
-            .min_file_size = 1024ul,
-            .max_file_size = 8ul * 1024ul,
-            .max_storage_size = 16 * 1024ul,
-            .max_chunk_size = 16 * 1024u,
-        };
-    }
-
     static uh::cluster::bucket_config get_bucket_config() {
         return {
             .min_file_size = 1024ul,
@@ -58,21 +27,49 @@ struct config_fixture {
             .max_chunk_size = 16 * 1024ul,
         };
     }
+
+    data_store_config make_data_store_config() const {
+        return {.working_dir = dir.path().string(),
+                .min_file_size = 1024ul,
+                .max_file_size = 8 * 1024ul,
+                .max_data_store_size = 32 * 1024ul};
+    }
+
+    void setup() {
+        ds = std::make_unique<data_store>(make_data_store_config(), 0);
+        bt = std::make_unique<bucket>(dir.path(), BUCKET_NAME,
+                                      get_bucket_config());
+
+        char data1[] = "Would be a shame if we lost this data!";
+        original_addr = ds->write(data1);
+
+        bt->insert_object(KEY_NAME, original_addr);
+    }
+
+    std::unique_ptr<data_store> ds;
+    std::unique_ptr<bucket> bt;
+    address original_addr;
+    temp_directory dir;
 };
+
+static bool compare_address(const auto& addr1, const auto& addr2) {
+    for (size_t iteration = 0; iteration < addr1.pointers.size(); iteration++) {
+        if (addr1.pointers.at(iteration) != addr2.pointers.at(iteration) ||
+            addr1.sizes.at(iteration / 2) != addr2.sizes.at(iteration / 2)) {
+            return false;
+        }
+    }
+    return true;
+}
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE(bucket_prefilled_test, config_fixture) {
-    cleanup();
-    setup_prefilled();
+BOOST_FIXTURE_TEST_CASE(test_transaction_replay, config_fixture) {
+    bt.reset();
+    bt = std::make_unique<bucket>(dir.path(), BUCKET_NAME, get_bucket_config());
 
-    uh::cluster::bucket b(get_root_path(), "bucket1", get_bucket_config());
-    auto restored_value = b.get_obj("key1");
-    char original_value[] = "Would be a shame if we lost this data!";
-    BOOST_CHECK(std::memcmp(original_value, restored_value.data(),
-                            restored_value.size()) == 0);
-
-    cleanup();
+    auto address_recv = bt->get_obj("key1");
+    BOOST_CHECK(compare_address(original_addr, address_recv));
 }
 
 // ---------------------------------------------------------------------

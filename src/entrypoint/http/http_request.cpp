@@ -50,12 +50,11 @@ coro<void> http_request::read_body() {
     co_return;
 }
 
-coro<void> http_request::respond(const http::response<http::string_body> &resp) {
-    co_await boost::beast::http::async_write(
-            m_stream, resp,
-            boost::asio::use_awaitable);
+coro<void>
+http_request::respond(const http::response<http::string_body>& resp) {
+    co_await boost::beast::http::async_write(m_stream, resp,
+                                             boost::asio::use_awaitable);
 }
-
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {
     out << req.m_req.get().base().method_string() << " "

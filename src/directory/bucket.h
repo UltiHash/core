@@ -3,6 +3,7 @@
 
 #include "chaining_data_store.h"
 #include "common/utils/error.h"
+#include "common/utils/time_utils.h"
 #include "config.h"
 #include "transaction_log.h"
 #include <memory>
@@ -10,6 +11,11 @@
 #include <shared_mutex>
 
 namespace uh::cluster {
+
+struct object_meta {
+    address addr;
+    std::string last_modified;
+};
 
 class bucket {
 
@@ -28,43 +34,60 @@ public:
           m_transaction_log(m_bucket_path / "transaction_log"),
           m_object_ptrs(m_transaction_log.replay()) {}
 
-    std::vector<std::string> list_keys(const std::string& lower_bound,
-                                       const std::string& prefix) {
-        std::vector<std::string> keys;
-        keys.reserve(m_object_ptrs.size());
-        for (const auto& obj : m_object_ptrs) {
-            keys.emplace_back(obj.first);
+    std::vector<object> list_objects(const std::string& lower_bound,
+                                     const std::string& prefix) {
+        std::vector<object> objects;
+
+        auto start = m_object_ptrs.cbegin();
+        if (!prefix.empty()) {
+            start = m_object_ptrs.lower_bound(prefix);
+        } else if (!lower_bound.empty() && lower_bound > prefix) {
+            start = m_object_ptrs.upper_bound(lower_bound);
         }
 
-        std::vector<std::string> filtered_keys;
-        auto lower_bound_it =
-            lower_bound.empty()
-                ? keys.begin()
-                : std::upper_bound(keys.begin(), keys.end(), lower_bound);
-        std::copy_if(lower_bound_it, keys.end(),
-                     std::back_inserter(filtered_keys),
-                     [prefix](const std::string& key) {
-                         return prefix.empty() || key.find(prefix) == 0;
-                     });
+        while (start != m_object_ptrs.end() &&
+               start->first.starts_with(prefix)) {
+            const auto bytes = m_data_store.read(start->second);
+            object_meta obj;
+            zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
+                .or_throw();
+            objects.push_back({.name = start->first,
+                               .last_modified = std::move(obj.last_modified),
+                               .size = obj.addr.data_size()});
+            start++;
+        }
 
-        return filtered_keys;
+        return objects;
     }
 
-    void insert_object(const std::string& key, std::span<char> data) {
-        const auto index = m_data_store.post_write(data);
+    void insert_object(const std::string& key, address addr) {
+        object_meta obj;
+        obj.addr = std::move(addr);
+        obj.last_modified = get_current_ISO8601_datetime();
+
+        std::vector<char> bytes;
+        zpp::bits::out{bytes, zpp::bits::size4b{}}(obj).or_throw();
+        const auto index = m_data_store.post_write(bytes);
+
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_START);
-
         // TODO: handle rollback in case something goes up in smoke during the
         // transaction
         m_data_store.apply_write();
-        m_object_ptrs[key] = index;
+
+        if (const auto it = m_object_ptrs.find(key); it != m_object_ptrs.end())
+            [[unlikely]] {
+            m_data_store.remove(it->second);
+            it->second = index;
+        } else [[likely]] {
+            m_object_ptrs.emplace_hint(it, key, index);
+        }
 
         m_transaction_log.append(key, index,
                                  transaction_log::operation::INSERT_END);
     }
 
-    unique_buffer<char> get_obj(const std::string& key) {
+    address get_obj(const std::string& key) {
 
         const auto it = m_object_ptrs.find(key);
         if (it == m_object_ptrs.end()) [[unlikely]] {
@@ -73,7 +96,11 @@ public:
                                               "' failed: no such object."});
         }
 
-        return m_data_store.read(it->second);
+        const auto bytes = m_data_store.read(it->second);
+        object_meta obj;
+        zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj).or_throw();
+
+        return obj.addr;
     }
 
     void delete_object(const std::string& key) {

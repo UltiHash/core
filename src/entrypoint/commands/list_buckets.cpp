@@ -45,19 +45,19 @@ coro<void> list_buckets::handle(http_request& req) const {
         co_await m.get().send(DIRECTORY_BUCKET_LIST_REQ, {});
         const auto h = co_await m.get().recv_header();
         auto list_buckets_res =
-            co_await m.get().recv_directory_list_entities_message(h);
+            co_await m.get().recv_directory_list_buckets_message(h);
         for (auto& bucket : list_buckets_res.entities) {
             buckets_found.emplace_back(std::move(bucket));
         }
     };
 
-    co_await m_collection.workers.io_thread_acquire_messenger_and_post_in_io_threads(
-        m_collection.directory_services.get(),
-        std::bind_front(func, std::ref(buckets_found)));
+    co_await m_collection.workers
+        .io_thread_acquire_messenger_and_post_in_io_threads(
+            m_collection.directory_services.get(),
+            std::bind_front(func, std::ref(buckets_found)));
 
     auto res = get_response(buckets_found);
     co_await req.respond(res.get_prepared_response());
-
 }
 
 } // namespace uh::cluster

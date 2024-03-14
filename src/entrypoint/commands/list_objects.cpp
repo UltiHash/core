@@ -16,7 +16,7 @@ bool list_objects::can_handle(const http_request& req) {
            !uri.query_string_exists("list-type");
 }
 
-static http_response get_response(const std::vector<std::string>& contents,
+static http_response get_response(const std::vector<object>& objects,
                                   const http_request& req) {
 
     const auto& req_uri = req.get_uri();
@@ -47,44 +47,43 @@ static http_response get_response(const std::vector<std::string>& contents,
     std::size_t till_marker_count = 0;
     size_t counter = 0;
 
-    if (!contents.empty() && max_keys != 0) {
+    if (!objects.empty() && max_keys != 0) {
 
-        auto content_itr = contents.begin();
-        if (marker) {
-            auto index_itr = find_lexically_closest(contents, *marker);
-
-            if (index_itr != contents.end()) {
-                content_itr = index_itr++;
-            }
-        }
-
-        till_marker_count = content_itr - contents.begin();
-
-        for (const auto& c : contents) {
+        for (std::size_t tally = 0; const auto& obj : objects) {
             size_t delimiter_index = std::string::npos;
 
             if (delimiter) {
                 if (prefix) {
-                    delimiter_index = c.find(*delimiter, prefix->size());
+                    delimiter_index = obj.name.find(*delimiter, prefix->size());
                 } else {
-                    delimiter_index = c.find(*delimiter);
+                    delimiter_index = obj.name.find(*delimiter);
                 }
             }
             if (delimiter && delimiter_index != std::string::npos) {
-                auto delimiter_prefix = c.substr(0, delimiter_index + 1);
+                auto delimiter_prefix = obj.name.substr(0, delimiter_index + 1);
                 common_prefixes.emplace((encoding_type
                                              ? url_encode(delimiter_prefix)
                                              : delimiter_prefix));
             } else {
-                contents_xml += "<Contents>\n"
-                                "<Key>" +
-                                (encoding_type ? url_encode(c) : c) +
-                                "</Key>\n" + "</Contents>\n";
+                contents_xml +=
+                    "<Contents>\n"
+                    "<LastModified>" +
+                    objects[tally].last_modified +
+                    "</LastModified>\n"
+                    "<Key>" +
+                    (encoding_type ? url_encode(obj.name) : obj.name) +
+                    "</Key>\n"
+                    "<Size>" +
+                    std::to_string(objects[tally].size) +
+                    "</Size>\n"
+                    "</Contents>\n";
                 counter++;
             }
 
             if (counter + common_prefixes.size() == max_keys)
                 break;
+
+            tally++;
         }
     }
 
@@ -129,11 +128,11 @@ static http_response get_response(const std::vector<std::string>& contents,
 
     std::string is_truncated = "false";
     std::string next_marker_xml;
-    if ((contents.size() - till_marker_count > max_keys) && max_keys != 0) {
+    if ((objects.size() - till_marker_count > max_keys) && max_keys != 0) {
         is_truncated = "true";
         if (delimiter)
             next_marker_xml = "<NextMarker>" +
-                              contents[till_marker_count + max_keys] +
+                              objects[till_marker_count + max_keys].name +
                               "</NextMarker>";
     }
 
@@ -172,31 +171,27 @@ coro<void> list_objects::handle(http_request& req) const {
             }
         }
 
-        std::vector<std::string> contents;
+        directory_list_objects_message list_objs_res;
         auto func = [](const directory_message& dir_req,
-                       std::vector<std::string>& contents,
+                       directory_list_objects_message& list_objs_res,
                        client::acquired_messenger m) -> coro<void> {
             co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
                                                     dir_req);
             const auto h_dir = co_await m.get().recv_header();
 
             unique_buffer<char> buffer(h_dir.size);
-            directory_lst_entities_message list_objects_res;
 
-            list_objects_res =
-                co_await m.get().recv_directory_list_entities_message(h_dir);
-
-            for (const auto& content : list_objects_res.entities) {
-                contents.emplace_back(content);
-            }
+            list_objs_res =
+                co_await m.get().recv_directory_list_objects_message(h_dir);
         };
 
-        co_await m_collection.workers.
-                io_thread_acquire_messenger_and_post_in_io_threads(
+        co_await m_collection.workers
+            .io_thread_acquire_messenger_and_post_in_io_threads(
                 m_collection.directory_services.get(),
-                std::bind_front(func, std::cref(dir_req), std::ref(contents)));
+                std::bind_front(func, std::cref(dir_req),
+                                std::ref(list_objs_res)));
 
-        auto res = get_response(contents, req);
+        auto res = get_response(list_objs_res.objects, req);
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {

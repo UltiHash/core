@@ -53,6 +53,11 @@ while [ -n "$1" ]; do
     shift
 done
 
+if [ "$run_ultihash" -eq 0 ] && [ "$run_ceph" -eq 0 ]; then
+    run_ultihash=1
+    run_ceph=1
+fi
+
 if [ "$(basename $(pwd))" != "testing" ]; then
     echo "Script is not executed from the testing directory, exiting..."
     exit 1
