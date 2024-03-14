@@ -60,10 +60,8 @@ public:
                                       const size_t size) {
         if (const auto c = m_cache_l1.get(pointer, nullptr);
             c.data() != nullptr) {
-            if (c.size() >= size) [[likely]] {
-                metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
-                return c;
-            }
+            metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
+            return c;
         }
         metric<metric_type::gdv_l1_cache_miss_counter>::increase(1);
         return nullptr;
