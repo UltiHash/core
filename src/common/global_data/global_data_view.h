@@ -134,6 +134,13 @@ public:
     [[nodiscard]] uint128_t get_used_space();
 
     /**
+     * @brief Provides access to the I/O context used by the global_data_view
+     * @return A reference to the boost::asio::io_context used by the
+     * global_data_view
+     */
+    [[nodiscard]] boost::asio::io_context& get_executor() const;
+
+    /**
      * @brief Returns the configured sample size used by the L1 read
      * cache.
      * @return The configured sample size used by the L1 read cache.
