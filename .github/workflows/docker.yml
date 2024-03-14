@@ -44,6 +44,7 @@ jobs:
           registry.ultihash.io/stable/core
           ghcr.io/ultihash/cluster
         tags: |
+          type=raw,value=latest
           type=semver,pattern={{version}}
 
     - name: Build and push the Docker image
@@ -86,6 +87,7 @@ jobs:
           images: |
             ghcr.io/ultihash/cluster
           tags: |
+            type=raw,value=latest
             type=semver,suffix=-debug,pattern={{version}}
 
       - name: Build and push the Docker image
