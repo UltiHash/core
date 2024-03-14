@@ -124,7 +124,7 @@ public:
         if (eptr) {
             std::rethrow_exception(eptr);
         }
-        
+
         co_return results;
     }
 

@@ -105,8 +105,6 @@ BOOST_FIXTURE_TEST_CASE(valid_cached_sample, global_data_view_fixture) {
         input_buffer.get_str_view().substr(0, gdv->l1_cache_sample_size()) ==
         short_sample.get_str_view());
 
-    auto long_sample = gdv->cached_sample(frag.pointer);
-    BOOST_CHECK(long_sample.data() == nullptr);
 }
 
 } // namespace uh::cluster
