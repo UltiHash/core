@@ -11,7 +11,7 @@ bool put_object::can_handle(const http_request& req) {
            !uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-coro<http_response> put_object::handle(http_request& req) const {
+coro<void> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     try {
         co_await req.read_body();
@@ -77,7 +77,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         res.set_space_savings(space_saving);
         res.set_bandwidth(bandwidth);
 
-        co_return res;
+        co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << req.get_uri().get_bucket_id()

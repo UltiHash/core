@@ -64,7 +64,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<http_response> delete_objects::handle(http_request& req) const {
+coro<void> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
     co_await req.read_body();
     auto object_nodes = validate(req);
@@ -110,7 +110,9 @@ coro<http_response> delete_objects::handle(http_request& req) const {
         }
     }
 
-    co_return get_response(success, failure);
+    auto res =  get_response(success, failure);
+    co_await req.respond(res.get_prepared_response());
+
 }
 
 } // namespace uh::cluster

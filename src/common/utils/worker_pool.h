@@ -57,9 +57,9 @@ public:
         co_await pr->get();
     }
 
-    template <typename Func>
-    void detach_post_in_workers(Func func) {
-        boost::asio::post(m_threads, func);
+    template <typename R>
+    std::future <R> get_coro_future(coro<R>&& func) {
+        return boost::asio::co_spawn(m_ioc, std::forward<coro<R>>(func), boost::asio::use_future);
     }
 
     template <typename Func>

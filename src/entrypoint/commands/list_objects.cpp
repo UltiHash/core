@@ -149,7 +149,7 @@ static http_response get_response(const std::vector<std::string>& contents,
     return res;
 }
 
-coro<http_response> list_objects::handle(const http_request& req) const {
+coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
         const auto& req_uri = req.get_uri();
@@ -196,7 +196,9 @@ coro<http_response> list_objects::handle(const http_request& req) const {
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(dir_req), std::ref(contents)));
 
-        co_return get_response(contents, req);
+        auto res = get_response(contents, req);
+        co_await req.respond(res.get_prepared_response());
+
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
         switch (*e.error()) {

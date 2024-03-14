@@ -24,7 +24,7 @@ static http_response get_response(const std::string& bucket_name) noexcept {
     return res;
 }
 
-coro<http_response> get_bucket::handle(const http_request& req) const {
+coro<void> get_bucket::handle(http_request& req) const {
     metric<entrypoint_get_bucket_req>::increase(1);
     auto bucket_name = req.get_uri().get_bucket_id();
 
@@ -43,7 +43,8 @@ coro<http_response> get_bucket::handle(const http_request& req) const {
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(bucket_name)));
 
-        co_return get_response(bucket_name);
+        auto res = get_response(bucket_name);
+        co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << bucket_name << "`: " << e;
