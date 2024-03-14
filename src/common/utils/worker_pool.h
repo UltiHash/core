@@ -111,8 +111,19 @@ public:
             i++;
         }
 
-        for (auto& pr: promises)
-            co_await pr->get();
+        std::exception_ptr eptr;
+        for (auto& pr: promises) {
+            try {
+                co_await pr->get();
+            }
+            catch (std::exception&) {
+                eptr = std::current_exception();
+            }
+        }
+
+        if (eptr) {
+            std::rethrow_exception(eptr);
+        }
 
         co_return results;
     }
