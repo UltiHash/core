@@ -56,8 +56,7 @@ public:
         return addr;
     }
 
-    shared_buffer<char> cached_sample(const uint128_t pointer,
-                                      const size_t size) {
+    shared_buffer<char> cached_sample(const uint128_t pointer) {
         if (const auto c = m_cache_l1.get(pointer, nullptr);
             c.data() != nullptr) {
             metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);

@@ -72,7 +72,7 @@ public:
                 if (f.m_data.has_value()) {
                     str = *f.m_data;
                 } else if (data =
-                               m_storage.get().cached_sample(f.pointer, f.size);
+                               m_storage.get().cached_sample(f.pointer);
                            data.data() != nullptr) {
                     l1 = true;
                     str = data.get_str_view();
