@@ -29,7 +29,7 @@ void fragment_set::insert(
     const std::set<fragment_set_element>::const_iterator& hint) {
     fragment_set_element f{data, pointer, m_storage};
     m_set_log.append(
-        {set_operation::INSERT, f.get_pointer(), f.get_size(), f.get_prefix()});
+        {set_operation::INSERT, f.pointer(), f.size(), f.prefix()});
     std::lock_guard<std::shared_mutex> lock(m_mutex);
     m_set.emplace_hint(hint, std::move(f));
 }

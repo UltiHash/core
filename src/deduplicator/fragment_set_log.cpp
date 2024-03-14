@@ -24,7 +24,6 @@ void fragment_set_log::append(const log_entry& entry) {
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
                               global_data_view& storage) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     const auto file_size = std::filesystem::file_size(m_log_path);
     size_t offset = 0;
     if (0 != lseek(m_log_file, 0, SEEK_SET)) [[unlikely]] {

@@ -7,9 +7,9 @@ namespace uh::cluster {
 
 class fragment_set_element {
     std::reference_wrapper<global_data_view> m_storage;
-    uint128_t pointer{};
-    uint16_t size{};
-    uint128_t prefix{0};
+    uint128_t m_pointer{};
+    uint16_t m_size{};
+    uint128_t m_prefix{0};
     std::optional<std::string_view> m_data{};
 
 public:
@@ -25,9 +25,9 @@ public:
                     std::string_view& str, bool& l1) const;
     bool operator<(const fragment_set_element& f) const;
 
-    [[nodiscard]] const uint128_t& get_pointer() const;
-    [[nodiscard]] uint16_t get_size() const;
-    [[nodiscard]] const uint128_t& get_prefix() const;
+    [[nodiscard]] const uint128_t& pointer() const;
+    [[nodiscard]] uint16_t size() const;
+    [[nodiscard]] const uint128_t& prefix() const;
 };
 } // namespace uh::cluster
 
