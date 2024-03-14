@@ -15,7 +15,7 @@ bool delete_object::can_handle(const http_request& req) {
            !uri.query_string_exists("uploadId");
 }
 
-coro<http_response> delete_object::handle(const http_request& req) const {
+coro<void> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         auto func = [](const http_request& req,
@@ -34,7 +34,8 @@ coro<http_response> delete_object::handle(const http_request& req) const {
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(req)));
 
-        co_return http_response();
+        http_response res;
+        co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         switch (*e.error()) {
         case error::object_not_found:

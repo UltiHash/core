@@ -11,7 +11,7 @@ bool put_object::can_handle(const http_request& req) {
            !uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-coro<http_response> put_object::handle(http_request& req) const {
+coro<void> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     try {
         co_await req.read_body();
@@ -47,13 +47,17 @@ coro<http_response> put_object::handle(http_request& req) const {
         };
 
         co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
-            directories,
-            std::bind_front(func, std::cref(dir_req)));
+            directories, std::bind_front(func, std::cref(dir_req)));
 
-        auto effective_size =
-            static_cast<double>(resp.effective_size) / MEBI_BYTE;
-        auto space_saving = 1.0 - static_cast<double>(resp.effective_size) /
-                                      static_cast<double>(body_size);
+        double effective_size = 0;
+        double space_saving = 0;
+        if (body_size) {
+            effective_size =
+                static_cast<double>(resp.effective_size) / MEBI_BYTE;
+            space_saving = 1.0 - static_cast<double>(resp.effective_size) /
+                                     static_cast<double>(body_size);
+        }
+
         const auto stop = std::chrono::steady_clock::now();
         const std::chrono::duration<double> duration = stop - start;
         const auto bandwidth = size_mb / duration.count();
@@ -61,10 +65,10 @@ coro<http_response> put_object::handle(http_request& req) const {
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             size_mb);
 
-        LOG_INFO() << "original size " << size_mb << " MB\n"
-                   << "effective size " << effective_size << " MB\n"
-                   << "space saving " << space_saving << '\n'
-                   << "integration duration " << duration.count() << " s\n"
+        LOG_INFO() << "original size " << size_mb << " MB, "
+                   << "effective size " << effective_size << " MB, "
+                   << "space saving " << space_saving << ", "
+                   << "integration duration " << duration.count() << " s, "
                    << "integration bandwidth " << bandwidth << " MB/s";
 
         http_response res;
@@ -73,7 +77,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         res.set_space_savings(space_saving);
         res.set_bandwidth(bandwidth);
 
-        co_return res;
+        co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << req.get_uri().get_bucket_id()

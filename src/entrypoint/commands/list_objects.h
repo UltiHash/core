@@ -13,7 +13,7 @@ public:
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(const http_request& req) const;
+    coro<void> handle (http_request& req) const;
 
 private:
     const reference_collection& m_collection;

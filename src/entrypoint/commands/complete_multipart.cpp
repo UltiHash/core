@@ -65,7 +65,7 @@ void complete_multipart::validate(const http_request& req) const {
     }
 }
 
-coro<http_response> complete_multipart::handle(http_request& req) const {
+coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     co_await req.read_body();
@@ -145,7 +145,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
 
     m_collection.server_state.m_uploads.remove_upload(upload_id);
 
-    co_return std::move(res);
+    co_await req.respond(res.get_prepared_response());
 }
 
 } // namespace uh::cluster

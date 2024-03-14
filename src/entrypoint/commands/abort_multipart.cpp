@@ -24,7 +24,7 @@ static void validate(const http_request& req) {
     }
 }
 
-coro<http_response> abort_multipart::handle(const http_request& req) const {
+coro<void> abort_multipart::handle(http_request& req) const {
     metric<entrypoint_abort_multipart_req>::increase(1);
     validate(req);
 
@@ -38,7 +38,8 @@ coro<http_response> abort_multipart::handle(const http_request& req) const {
 
     m_collection.server_state.m_uploads.remove_upload(upload_id);
 
-    co_return http_response();
+    http_response resp;
+    co_await req.respond(resp.get_prepared_response());
 }
 
 } // namespace uh::cluster

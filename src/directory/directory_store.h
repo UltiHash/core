@@ -34,13 +34,13 @@ public:
     }
 
     void insert(const std::string& bucket, const std::string& key,
-                const std::span<char>& data) {
+                address addr) {
 
         std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
-            b->second->insert_object(key, data);
+            b->second->insert_object(key, std::move(addr));
         } else {
             throw error_exception(error::bucket_not_found);
         }
@@ -54,7 +54,7 @@ public:
         }
     }
 
-    unique_buffer<char> get(const std::string& bucket, const std::string& key) {
+    address get(const std::string& bucket, const std::string& key) {
         std::shared_lock lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
@@ -85,18 +85,6 @@ public:
         }
     }
 
-    void remove(const std::string& bucket, const std::string& key) {
-
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
-            [[likely]] {
-            b->second->delete_object(key);
-        } else {
-            throw error_exception(error::bucket_not_found);
-        }
-    }
-
     void remove_bucket(const std::string& name) {
 
         std::unique_lock<std::shared_mutex> lock(m_mutex);
@@ -109,22 +97,22 @@ public:
 
         auto& bucket = *b->second;
 
-        for (const auto& key : bucket.list_keys("", "")) {
-            bucket.delete_object(key);
+        for (const auto& object : bucket.list_objects("", "")) {
+            bucket.delete_object(object.name);
         }
 
         bucket.destroy_bucket();
         m_buckets.erase(b);
     }
 
-    std::vector<std::string> list_keys(const std::string& bucket,
-                                       const std::string& lower_bound = "",
-                                       const std::string& prefix = "") {
+    std::vector<object> list_objects(const std::string& bucket,
+                                     const std::string& lower_bound = "",
+                                     const std::string& prefix = "") {
         std::shared_lock lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
-            return b->second->list_keys(lower_bound, prefix);
+            return b->second->list_objects(lower_bound, prefix);
         } else {
             throw error_exception(error::bucket_not_found);
         }
