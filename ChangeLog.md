@@ -1,6 +1,11 @@
 # Changelog
 
 ## [0.3.1] - 2024-03-14
+- Fixed cache usage
+- Object Metadata in bucket list response
+- More unit tests and fixes
+
+## [0.3.1] - 2024-03-14
 - Implemented pagination for better download behaviour
 - Fixed potential locking issue in the worker pool
 - Reduced log messages to single line entries
