@@ -66,13 +66,11 @@ public:
             const auto key_size = std::get<std::string>(e.key).size();
             switch (e.op) {
             case operation::INSERT_:
-                log_map.emplace(std::move(std::get<std::string>(e.key)),
-                                e.object_id);
+                log_map[std::get<std::string>(e.key)] = e.object_id;
                 break;
             case operation::INSERT_END:
                 dangling_inserts.erase(std::get<std::string>(e.key));
-                log_map.emplace(std::move(std::get<std::string>(e.key)),
-                                e.object_id);
+                log_map[std::get<std::string>(e.key)] = e.object_id;
                 break;
             case operation::UPDATE_END:
                 dangling_updates.erase(std::get<std::string>(e.key));

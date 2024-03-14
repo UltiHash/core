@@ -7,6 +7,8 @@
 
 namespace uh::cluster {
 
+std::string get_current_ISO8601_datetime();
+
 auto wait_for_success(auto timeout, auto retry_interval, auto&& op) {
     // unit of timeout and retry_interval = second
 

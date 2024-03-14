@@ -68,8 +68,18 @@ struct directory_message {
     };
 };
 
-struct directory_lst_entities_message {
+struct directory_list_buckets_message {
     std::vector<std::string> entities;
+};
+
+struct object {
+    std::string name;
+    std::string last_modified;
+    std::size_t size{};
+};
+
+struct directory_list_objects_message {
+    std::vector<object> objects;
 };
 
 template <typename T> using opt_ref = std::optional<std::reference_wrapper<T>>;
