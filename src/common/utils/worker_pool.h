@@ -7,6 +7,7 @@
 #include "common/network/messenger_core.h"
 #include <boost/asio/steady_timer.hpp>
 #include <exception>
+#include <memory>
 
 namespace uh::cluster {
 
@@ -91,32 +92,27 @@ public:
             Func func, const std::vector <In>& inputs) {
         std::vector <R> results (inputs.size());
 
-        std::atomic<std::size_t> resp = 0;
-        std::atomic_bool exception_flag = false;
-        auto pr = std::make_shared<awaitable_promise<void>>(m_ioc);
+        std::vector <std::shared_ptr <awaitable_promise <void>>> promises (inputs.size());
+        for (auto& pr: promises)
+            pr = std::make_shared <awaitable_promise<void>>(m_ioc);
 
         size_t i = 0;
         for (const auto& in: inputs) {
-            auto f = [&exception_flag, &results, &in, &resp, size = inputs.size(), i](auto& f, auto promise) {
+            auto f = [&results, &in, size = inputs.size(), &promises, &func, i]() {
                 try {
-                    results[i] = f(in);
-                    std::size_t count = resp++;
-                    if (count == size - 1) {
-                        promise->set();
-                    }
+                    results[i] = func(in);
+                    promises[i]->set();
                 } catch (const std::exception&) {
-                    bool no_exception = false;
-                    if (exception_flag.compare_exchange_strong(no_exception, true)) {
-                        promise->set_exception(std::current_exception());
-                    }
+                    promises[i]->set_exception(std::current_exception());
                 }
             };
 
-            boost::asio::post(m_threads, std::bind(f, std::ref(func), pr));
+            boost::asio::post(m_threads, f);
             i++;
         }
 
-        co_await pr->get();
+        for (auto& pr: promises)
+            co_await pr->get();
 
         co_return results;
     }
