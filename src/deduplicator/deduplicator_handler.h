@@ -106,7 +106,7 @@ private:
         auto integration_data = data;
 
         auto check_dedupe = [&](const dedupe_set::fragment_element& frag) {
-            auto frag_data = m_storage.cached_sample(frag.pointer, frag.size);
+            auto frag_data = m_storage.cached_sample(frag.pointer);
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
