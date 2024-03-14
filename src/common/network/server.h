@@ -56,8 +56,6 @@ public:
     }
 
     void run() {
-        m_handler->init();
-
         LOG_INFO() << "starting server, listening at " << m_config.bind_address
                    << ":" << m_config.port;
         std::exception_ptr excp_ptr;

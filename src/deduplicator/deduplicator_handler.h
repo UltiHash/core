@@ -6,16 +6,15 @@
 #include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
 #include "config.h"
-#include "dedupe_set.h"
+#include "fragment_set.h"
 
 namespace uh::cluster {
 
 class deduplicator_handler : public protocol_handler {
 
 public:
-    deduplicator_handler(
-        deduplicator_config config, global_data_view& storage,
-        worker_pool& dedupe_workers)
+    deduplicator_handler(deduplicator_config config, global_data_view& storage,
+                         worker_pool& dedupe_workers)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
@@ -80,18 +79,20 @@ private:
                          static_cast<double>(data.size()) /
                          static_cast<double>(
                              m_dedupe_conf.dedupe_worker_minimum_data_size))));
-        size_t piece_size =
-            std::ceil(static_cast<double>(data.size()) / static_cast<double>(pieces_count));
-        std::vector <std::string_view> pieces;
+        size_t piece_size = std::ceil(static_cast<double>(data.size()) /
+                                      static_cast<double>(pieces_count));
+        std::vector<std::string_view> pieces;
         pieces.reserve(pieces_count);
         for (std::size_t i = 0; i < pieces_count; ++i) {
             pieces.emplace_back(data.get_str_view().substr(
-                    i * piece_size,
-                    std::min(piece_size, data.size() - i * piece_size)));
+                i * piece_size,
+                std::min(piece_size, data.size() - i * piece_size)));
         }
 
-        auto responses = co_await m_dedupe_workers.broadcast_from_io_thread_in_workers ([this] (const auto& piece) {
-            return deduplicate (piece);}, pieces);
+        auto responses =
+            co_await m_dedupe_workers.broadcast_from_io_thread_in_workers(
+                [this](const auto& piece) { return deduplicate(piece); },
+                pieces);
 
         for (std::size_t i = 1; i < pieces_count; i++) {
             responses[0].addr.append_address(responses[i].addr);
@@ -105,24 +106,29 @@ private:
         dedupe_response result{.addr = address{}};
         auto integration_data = data;
 
-        auto check_dedupe = [&](const dedupe_set::fragment_element& frag) {
-            auto frag_data = m_storage.cached_sample(frag.pointer, frag.size);
+        auto check_dedupe = [&](const fragment_set_element& frag) {
+            // Here, cached_sample can only contain fragments that are 128 bytes
+            // or smaller
+            auto frag_data =
+                m_storage.cached_sample(frag.pointer(), frag.size());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
-                frag_data = m_storage.read(frag.pointer, frag.size);
+                frag_data =
+                    m_storage.read_fragment(frag.pointer(), frag.size());
             }
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                 if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data = m_storage.read(frag.pointer, frag.size);
+                    frag_data =
+                        m_storage.read_fragment(frag.pointer(), frag.size());
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),
                         frag_data.get_str_view().substr(common_prefix));
                 }
                 result.addr.push_fragment(
-                    fragment{frag.pointer, common_prefix});
+                    fragment{frag.pointer(), common_prefix});
                 integration_data = integration_data.substr(common_prefix);
                 return true;
             }
@@ -178,7 +184,7 @@ private:
     }
 
     deduplicator_config m_dedupe_conf;
-    dedupe_set m_fragment_set;
+    fragment_set m_fragment_set;
     global_data_view& m_storage;
     worker_pool& m_dedupe_workers;
 };
