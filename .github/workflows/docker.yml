@@ -30,7 +30,6 @@ jobs:
 
     - name: Login to registry.ultihash.io container registry
       uses: docker/login-action@v2
-      if: github.event_name == 'push'
       with:
         registry: registry.ultihash.io
         username: github
