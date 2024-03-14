@@ -98,7 +98,7 @@ private:
             responses[0].effective_size += responses[i].effective_size;
         }
 
-        co_await m.send_dedupe_response(SUCCESS, responses[0]);
+        co_await m.send_dedupe_response(responses[0]);
     }
 
     dedupe_response deduplicate(std::string_view data) {

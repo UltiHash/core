@@ -148,7 +148,7 @@ static http_response get_response(const std::vector<object>& objects,
     return res;
 }
 
-coro<http_response> list_objects::handle(const http_request& req) const {
+coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
         const auto& req_uri = req.get_uri();
@@ -185,13 +185,15 @@ coro<http_response> list_objects::handle(const http_request& req) const {
                 co_await m.get().recv_directory_list_objects_message(h_dir);
         };
 
-        co_await m_collection.workers.
-                io_thread_acquire_messenger_and_post_in_io_threads(
+        co_await m_collection.workers
+            .io_thread_acquire_messenger_and_post_in_io_threads(
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(dir_req),
                                 std::ref(list_objs_res)));
 
-        co_return get_response(list_objs_res.objects, req);
+        auto res = get_response(list_objs_res.objects, req);
+        co_await req.respond(res.get_prepared_response());
+
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
         switch (*e.error()) {

@@ -39,10 +39,9 @@ public:
         std::vector<object> objects;
 
         auto start = m_object_ptrs.cbegin();
-        if (lower_bound.empty() && !prefix.empty()) {
+        if (!prefix.empty()) {
             start = m_object_ptrs.lower_bound(prefix);
-        } else if ((!lower_bound.empty() && !prefix.empty()) ||
-                   (!lower_bound.empty() && prefix.empty())) {
+        } else if (!lower_bound.empty() && lower_bound > prefix) {
             start = m_object_ptrs.upper_bound(lower_bound);
         }
 

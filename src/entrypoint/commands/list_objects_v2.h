@@ -26,7 +26,7 @@ public:
                uri.get_query_string_value("list-type") == "2";
     }
 
-    coro<http_response> handle(const http_request& req) {
+    coro<void> handle(http_request& req) {
         metric<entrypoint_list_objects_v2_req>::increase(1);
         try {
             const auto& req_uri = req.get_uri();
@@ -65,12 +65,14 @@ public:
                     co_await m.get().recv_directory_list_objects_message(h_dir);
             };
 
-            co_await m_collection.workers.
-                    io_thread_acquire_messenger_and_post_in_io_threads(
+            co_await m_collection.workers
+                .io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
                     std::bind_front(func, std::cref(dir_req),
                                     std::ref(list_objs_res)));
-            co_return get_response(list_objs_res.objects, req);
+
+            auto res = get_response(list_objs_res.objects, req);
+            co_await req.respond(res.get_prepared_response());
 
         } catch (const error_exception& e) {
             LOG_ERROR() << e.what();

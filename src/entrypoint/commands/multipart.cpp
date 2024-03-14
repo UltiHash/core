@@ -31,7 +31,7 @@ static void validate(const http_request& req) {
     }
 }
 
-coro<http_response> multipart::handle(http_request& req) const {
+coro<void> multipart::handle(http_request& req) const {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);
@@ -51,7 +51,7 @@ coro<http_response> multipart::handle(http_request& req) const {
     http_response res;
     res.set_etag(calculate_md5(req.get_body()));
 
-    co_return res;
+    co_await req.respond(res.get_prepared_response());
 }
 
 } // namespace uh::cluster

@@ -39,7 +39,7 @@ bool list_multipart::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.query_string_exists("uploads");
 }
 
-coro<http_response> list_multipart::handle(const http_request& req) const {
+coro<void> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.get_uri().get_bucket_id();
 
@@ -60,7 +60,9 @@ coro<http_response> list_multipart::handle(const http_request& req) const {
         std::bind_front(func, std::ref(m_collection), std::cref(bucket_name),
                         std::ref(ongoing)));
 
-    co_return get_response(bucket_name, ongoing);
+    auto res = get_response(bucket_name, ongoing);
+    co_await req.respond(res.get_prepared_response());
+
 }
 
 } // namespace uh::cluster
