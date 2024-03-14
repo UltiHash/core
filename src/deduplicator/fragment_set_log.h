@@ -74,8 +74,6 @@ public:
     void replay(std::set<fragment_set_element>& set, global_data_view& storage);
 
 private:
-    std::mutex m_mutex;
-
     static int get_log_file(const std::filesystem::path& path);
     static void serialize_entry(const log_entry& entry, char* buf);
     static log_entry deserialize_entry(const char* buf);

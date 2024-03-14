@@ -16,8 +16,6 @@ void fragment_set_log::append(const log_entry& entry) {
     char buf[sizeof(log_entry)];
     serialize_entry(entry, buf);
 
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     if (sizeof buf != ::write(m_log_file, buf, sizeof buf)) [[unlikely]] {
         throw std::runtime_error("Could not write into the set log file");
     }
