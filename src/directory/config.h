@@ -29,6 +29,7 @@ struct directory_config {
     };
     directory_store_config directory_store_conf;
     std::size_t worker_thread_count = 8ul;
+    std::size_t download_chunk_size = 64ul * MEBI_BYTE;
     uint128_t max_data_store_size = 4 * TEBI_BYTE;
     global_data_view_config global_data_view;
 };

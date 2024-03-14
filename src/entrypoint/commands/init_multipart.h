@@ -23,7 +23,7 @@ public:
                uri.query_string_exists("uploads");
     }
 
-    [[nodiscard]] coro<http_response> handle(const http_request& req) {
+    [[nodiscard]] coro<void> handle(http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
             co_await m_collection.workers.
@@ -54,7 +54,9 @@ public:
             m_collection.server_state.m_uploads.insert_upload(
                 req.get_uri().get_bucket_id(), req.get_uri().get_object_key());
 
-        co_return get_response(req, upload_id);
+        auto res = get_response(req, upload_id);
+        co_await req.respond(res.get_prepared_response());
+
     }
 
 private:
