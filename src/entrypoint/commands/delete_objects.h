@@ -17,8 +17,6 @@ public:
 
 private:
     const reference_collection& m_collection;
-
-    static auto validate(const http_request& req);
 };
 
 } // namespace uh::cluster
