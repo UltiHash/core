@@ -5,7 +5,7 @@ import pytest
 import botocore
 import concurrent.futures
 import queue
-from s3_util import unused_bucket_name, unused_object_key
+from s3_util import unused_bucket_name, unused_object_key, has_bucket
 
 WORKER_THREADS = 10
 
@@ -21,6 +21,8 @@ def bucket(s3):
         s3.delete_objects(Bucket=name, Delete={'Objects': objects})
 
     s3.delete_bucket(Bucket=name)
+
+    assert has_bucket(s3, name)
 
 def multi_chunk_upload(s3, bucket, file):
     key = unused_object_key(s3, bucket)
