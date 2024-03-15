@@ -207,6 +207,15 @@ private:
 
             size_t addr_index = 0;
             std::optional<std::future<void>> send_to_ep;
+
+            if (addr.size() == 0) {
+                unique_buffer<char> buffer(0ul);
+                send_to_ep.emplace(boost::asio::co_spawn(
+                    storage.get_executor(),
+                    m.send_directory_get_object_chunk(false, std::move(buffer)),
+                    boost::asio::use_future));
+            }
+
             while (addr_index < addr.size()) {
                 std::size_t buffer_size = 0;
                 address partial_addr;
