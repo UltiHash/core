@@ -40,8 +40,8 @@ def verify(s3, bucket, key, file):
     if received_file == original_file:
         assert True
     else:
-        print("Original_file: ", original_file)
-        print("Received_file: ", received_file)
+        print("Original_file: ", original_file, " SIZE: ", len(original_file))
+        print("Received_file: ", received_file,  " SIZE: ", len(received_file))
         print("invalid contents retrieved")
         assert False
 
