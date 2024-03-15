@@ -2,12 +2,17 @@
 # This file contains concurrent read and write tests for testing the UH Cluster.
 #
 import pytest
-import botocore
+import boto3
+from boto3.s3.transfer import TransferConfig
 import concurrent.futures
 import queue
 from s3_util import unused_bucket_name, unused_object_key, has_bucket
 
 WORKER_THREADS = 10
+GB = 1024 ** 3
+MP_THRESHOLD = 1 * GB
+MP_CONCURRENCY = 5
+transfer_config = TransferConfig(multipart_threshold=MP_THRESHOLD, use_threads=True, max_concurrency=MP_CONCURRENCY)
 
 @pytest.fixture(scope="function")
 def bucket(s3):
@@ -30,7 +35,7 @@ def bucket(s3):
 
 def multi_chunk_upload(s3, bucket, file):
     key = unused_object_key(s3, bucket)
-    s3.upload_file(file, Bucket=bucket, Key=key)
+    s3.upload_file(file, Bucket=bucket, Key=key, Config=transfer_config)
     return key, file
 
 def get_object(s3, bucket, key):
@@ -78,8 +83,8 @@ class worker_manager:
             values.append(future.result())
 
         return values
-@pytest.mark.integration
-def test_basic_upload_download(s3, files, bucket):
+
+def test_basic_multiparts(s3, files, bucket):
     file = files[0]
 
     manager = worker_manager()
@@ -88,8 +93,7 @@ def test_basic_upload_download(s3, files, bucket):
     keys = manager.run_tasks()[0]
     verify(s3, bucket, keys[0], keys[1])
 
-@pytest.mark.integration
-def test_multithreaded_upload_singlethreaded_download(s3, files, bucket):
+def test_multithreaded_multiparts_singlethreaded_download(s3, files, bucket):
     manager = worker_manager(WORKER_THREADS)
     for file in files:
         manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
@@ -101,8 +105,7 @@ def test_multithreaded_upload_singlethreaded_download(s3, files, bucket):
 
     assert True
 
-@pytest.mark.integration
-def test_multithreaded_upload_multithreaded_download(s3, files, bucket):
+def test_multithreaded_multiparts_multithreaded_download(s3, files, bucket):
     manager = worker_manager(WORKER_THREADS)
     for file in files:
         manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
