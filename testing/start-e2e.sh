@@ -18,7 +18,6 @@ print_help()
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -u URL, --url URL    run tests against an existing cluster"
-    echo " -d DATA_CORPUS, --data-corpus DATA_CORPUS    run tests against the data corpus"
     echo " -U, --run-ulti       run UltiHash test suite"
     echo " -C, --run-ceph       run Ceph test suite"
 }
