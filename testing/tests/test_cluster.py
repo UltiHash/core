@@ -36,22 +36,14 @@ def read_file(path):
 
 def verify(s3, bucket, key, file):
     received_file = get_object(s3, bucket, key)
-    if received_file == read_file(file):
+    original_file = read_file(file)
+    if received_file == original_file:
         assert True
     else:
+        print("Original_file: ", original_file)
+        print("Received_file: ", received_file)
         print("invalid contents retrieved")
         assert False
-
-def worker_manager(workers, func, s3, files, bucket):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(func, s3, bucket, file) for file in files]
-
-        keys = []
-        for future in concurrent.futures.as_completed(futures):
-            key = future.result()
-            keys.append(key)
-
-    return keys
 
 class worker_manager:
     def __init__(self, workers=1):
