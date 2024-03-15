@@ -18,6 +18,9 @@ def test_create_bucket(s3):
     with pytest.raises(Exception):
         s3.create_bucket(Bucket=name)
 
+    # cleanup
+    s3.delte_bucket(Bucket=name)
+
 def test_put_object(s3):
     bucket = unused_bucket_name(s3)
     s3.create_bucket(Bucket=bucket)
@@ -26,6 +29,10 @@ def test_put_object(s3):
     s3.put_object(Bucket=bucket, Key=name)
 
     assert has_object(s3, bucket, name)
+
+    # cleanup
+    s3.delete_object(Bucket=bucket, Key=name)
+    s3.delte_bucket(Bucket=bucket)
 
 def test_delete_bucket(s3):
     name = unused_bucket_name(s3)
@@ -48,6 +55,9 @@ def test_delete_object(s3):
     s3.delete_object(Bucket=bucket, Key=name)
     assert not has_object(s3, bucket, name)
 
+    # cleanup
+    s3.delte_bucket(Bucket=bucket)
+
 def test_object_content(s3):
     bucket = unused_bucket_name(s3)
     s3.create_bucket(Bucket=bucket)
@@ -58,6 +68,10 @@ def test_object_content(s3):
 
     resp = s3.get_object(Bucket=bucket, Key=name)
     assert body.encode('ascii') == resp['Body'].read()
+
+    # cleanup
+    s3.delete_object(Bucket=bucket, Key=name)
+    s3.delte_bucket(Bucket=bucket)
 
 
 def test_create_illegal_bucket_name(s3):

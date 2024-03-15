@@ -8,6 +8,7 @@ SAMPLE_CEPH_S3TESTS_CONF="$(pwd)/ceph-s3tests.conf.in"
 CEPH_CONF="$(pwd)/ceph_s3_test.conf"
 
 cluster_url=""
+data_corpus=""
 run_ultihash=1
 run_ceph=1
 
@@ -18,6 +19,7 @@ print_help()
     echo "options are:"
     echo " -h, --help           print this text"
     echo " -u URL, --url URL    run tests against an existing cluster"
+    echo " -d DATA_CORPUS, --data-corpus DATA_CORPUS    run tests against the data corpus"
     echo " -U, --run-ulti       run UltiHash test suite"
     echo " -C, --run-ceph       run Ceph test suite"
 }
@@ -41,6 +43,9 @@ while [ -n "$1" ]; do
                         *) cluster_url="http://$cluster_url";;
                     esac
                     ;;
+        -d|--data-corpus)   shift
+                    data_corpus="$1"
+                    ;;
         -U|--run-ulti) run_ceph=0
                       ;;
         -C|--run-ceph) run_ultihash=0
@@ -52,6 +57,8 @@ while [ -n "$1" ]; do
 
     shift
 done
+
+echo "$data_corpus" #remove
 
 if [ "$(basename $(pwd))" != "testing" ]; then
     echo "Script is not executed from the testing directory, exiting..."
@@ -132,6 +139,7 @@ success=1
 if [ "$run_ultihash" -eq "1" ]; then
     echo "*** running UltiHash test suite ..."
     pytest "tests" --cluster-url="$cluster_url" \
+        --data-corpus="$data_corpus" \
         --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
     if [ "$?" != "0" ]; then
         success=0
