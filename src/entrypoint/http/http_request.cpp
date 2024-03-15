@@ -78,8 +78,6 @@ coro<std::unique_ptr<http_request>> read_request(asio::ip::tcp::socket& s) {
 
     rv->m_uri = uri(rv->m_req);
 
-    LOG_INFO() << *rv;
-
     co_return rv;
 }
 
