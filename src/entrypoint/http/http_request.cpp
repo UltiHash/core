@@ -1,4 +1,5 @@
 #include "http_request.h"
+#include "common/telemetry/log.h"
 
 namespace uh::cluster {
 
@@ -76,6 +77,8 @@ coro<std::unique_ptr<http_request>> read_request(asio::ip::tcp::socket& s) {
                                             asio::use_awaitable);
 
     rv->m_uri = uri(rv->m_req);
+
+    LOG_INFO() << *rv;
 
     co_return rv;
 }
