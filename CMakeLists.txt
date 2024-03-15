@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
-project(uh-cluster VERSION 0.3.2)
+project(uh-cluster VERSION 0.3.3)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
