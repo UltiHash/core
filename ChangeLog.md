@@ -1,6 +1,9 @@
 # Changelog
 
 ## [0.3.3] - 2024-03-15
+- Fixed delete objects raising segmentation fault in entrypoint
+
+## [0.3.3] - 2024-03-15
 - Fixed entity too small error in entrypoint
 
 ## [0.3.2] - 2024-03-14
