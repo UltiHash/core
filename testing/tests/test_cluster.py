@@ -2,7 +2,7 @@
 # This file contains concurrent read and write tests for testing the UH Cluster.
 #
 import pytest
-import boto3
+import botocore
 from boto3.s3.transfer import TransferConfig
 import concurrent.futures
 import queue
@@ -33,7 +33,7 @@ def bucket(s3):
     s3.delete_bucket(Bucket=name)
     assert not has_bucket(s3, name)
 
-def multi_chunk_upload(s3, bucket, file):
+def upload(s3, bucket, file):
     key = unused_object_key(s3, bucket)
     s3.upload_file(file, Bucket=bucket, Key=key, Config=transfer_config)
     return key, file
@@ -84,19 +84,19 @@ class worker_manager:
 
         return values
 
-def test_basic_multiparts(s3, files, bucket):
+def test_basic_upload(s3, files, bucket):
     file = files[0]
 
     manager = worker_manager()
-    manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
+    manager.post_task(lambda: upload(s3, bucket, file))
 
     keys = manager.run_tasks()[0]
     verify(s3, bucket, keys[0], keys[1])
 
-def test_multithreaded_multiparts_singlethreaded_download(s3, files, bucket):
+def test_multithreaded_uploads_singlethreaded_download(s3, files, bucket):
     manager = worker_manager(WORKER_THREADS)
     for file in files:
-        manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
+        manager.post_task(lambda: upload(s3, bucket, file))
 
     keys = manager.run_tasks()
 
@@ -105,10 +105,10 @@ def test_multithreaded_multiparts_singlethreaded_download(s3, files, bucket):
 
     assert True
 
-def test_multithreaded_multiparts_multithreaded_download(s3, files, bucket):
+def test_multithreaded_uploads_multithreaded_download(s3, files, bucket):
     manager = worker_manager(WORKER_THREADS)
     for file in files:
-        manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
+        manager.post_task(lambda: upload(s3, bucket, file))
 
     keys = manager.run_tasks()
 
