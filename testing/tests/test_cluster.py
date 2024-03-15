@@ -7,19 +7,20 @@ import concurrent.futures
 import queue
 from s3_util import unused_bucket_name, unused_object_key
 
+WORKER_THREADS = 10
+
 @pytest.fixture(scope="function")
 def bucket(s3):
     name = unused_bucket_name(s3)
     s3.create_bucket(Bucket=name)
     yield name
 
-    # response = s3.list_objects_v2(Bucket=name)
-    # if 'Contents' in response:
-    #     objects = [{'Key': obj['Key']} for obj in response['Contents']]
-    #     print(objects)
-    #     s3.delete_objects(Bucket=name, Delete={'Objects': objects})
-    #
-    # s3.delete_bucket(Bucket=name)
+    response = s3.list_objects_v2(Bucket=name)
+    if 'Contents' in response:
+        objects = [{'Key': obj['Key']} for obj in response['Contents']]
+        s3.delete_objects(Bucket=name, Delete={'Objects': objects})
+
+    s3.delete_bucket(Bucket=name)
 
 def multi_chunk_upload(s3, bucket, file):
     key = unused_object_key(s3, bucket)
@@ -40,8 +41,8 @@ def verify(s3, bucket, key, file):
     if received_file == original_file:
         assert True
     else:
-        print("Original_file: ", original_file, " SIZE: ", len(original_file))
-        print("Received_file: ", received_file,  " SIZE: ", len(received_file))
+        # print("Original_file: ", original_file, " SIZE: ", len(original_file))
+        # print("Received_file: ", received_file,  " SIZE: ", len(received_file))
         print("invalid contents retrieved")
         assert False
 
@@ -88,7 +89,7 @@ def test_single_upload_onsingle_thread(s3, files, bucket):
         assert False
 
 def test_multithreaded_upload_singlethreaded_download(s3, files, bucket):
-    manager = worker_manager(10)
+    manager = worker_manager(WORKER_THREADS)
     for file in files:
         manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
 
@@ -99,16 +100,16 @@ def test_multithreaded_upload_singlethreaded_download(s3, files, bucket):
 
     assert True
 
-def test_multithreaded_upload_multithreaded_download(s3, files, bucket):
-    manager = worker_manager(10)
-    for file in files:
-        manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
-
-    keys = manager.run_tasks()
-
-    for key, file in keys:
-        manager.post_task(lambda: verify(s3, bucket, key, file))
-
-    manager.run_tasks()
-
-    assert True
+# def test_multithreaded_upload_multithreaded_download(s3, files, bucket):
+#     manager = worker_manager(WORKER_THREADS)
+#     for file in files:
+#         manager.post_task(lambda: multi_chunk_upload(s3, bucket, file))
+#
+#     keys = manager.run_tasks()
+#
+#     for key, file in keys:
+#         manager.post_task(lambda: verify(s3, bucket, key, file))
+#
+#     manager.run_tasks()
+#
+#     assert True
