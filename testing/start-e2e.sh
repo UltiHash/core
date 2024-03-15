@@ -8,7 +8,6 @@ SAMPLE_CEPH_S3TESTS_CONF="$(pwd)/ceph-s3tests.conf.in"
 CEPH_CONF="$(pwd)/ceph_s3_test.conf"
 
 cluster_url=""
-data_corpus=""
 run_ultihash=1
 run_ceph=1
 
@@ -42,9 +41,6 @@ while [ -n "$1" ]; do
                         http://*);;
                         *) cluster_url="http://$cluster_url";;
                     esac
-                    ;;
-        -d|--data-corpus)   shift
-                    data_corpus="$1"
                     ;;
         -U|--run-ulti) run_ceph=0
                       ;;
@@ -142,7 +138,6 @@ success=1
 if [ "$run_ultihash" -eq "1" ]; then
     echo "*** running UltiHash test suite ..."
     pytest "tests" --cluster-url="$cluster_url" \
-        --data-corpus="$data_corpus" \
         --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
     if [ "$?" != "0" ]; then
         success=0
