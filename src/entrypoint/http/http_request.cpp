@@ -1,5 +1,4 @@
 #include "http_request.h"
-#include "common/telemetry/log.h"
 
 namespace uh::cluster {
 
