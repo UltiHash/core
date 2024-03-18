@@ -13,7 +13,7 @@ namespace uh::cluster {
 
 class free_spot_manager {
 public:
-    explicit free_spot_manager(std::filesystem::path hole_log);
+    explicit free_spot_manager(std::filesystem::path hole_log, size_t minimum_size);
 
 
     /**
@@ -78,6 +78,7 @@ private:
     long m_pop_count{};
     uint128_t m_popped_size{};
     long m_start_pos{};
+    const size_t m_minimum_size;
     constexpr static long ELEMENT_SIZE = 3 * sizeof(unsigned long);
     std::forward_list<std::pair<uint128_t, size_t>> m_noted_free_spots;
 };

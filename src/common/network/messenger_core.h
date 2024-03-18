@@ -206,7 +206,6 @@ public:
         co_await boost::asio::async_write(
             m_socket, buffers,
             boost::asio::as_tuple(boost::asio::use_awaitable));
-        co_return;
     }
 
     void clear_buffers() {
