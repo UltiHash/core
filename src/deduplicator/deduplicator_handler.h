@@ -109,8 +109,7 @@ private:
         auto check_dedupe = [&](const fragment_set_element& frag) {
             // Here, cached_sample can only contain fragments that are 128 bytes
             // or smaller
-            auto frag_data =
-                m_storage.cached_sample(frag.pointer(), frag.size());
+            auto frag_data = m_storage.cached_sample(frag.pointer());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;

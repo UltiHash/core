@@ -49,7 +49,7 @@ BOOST_FIXTURE_TEST_SUITE(freespot_fixture_test, fixture)
 
 BOOST_AUTO_TEST_CASE(push_free_spot_test) {
 
-    free_spot_manager fsm (get_log_file ());
+    free_spot_manager fsm (get_log_file (), 0);
     std::size_t expected_total_free_size = 0;
 
     for (size_t i = 0; i < m_offsets.size(); ++i) {
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(push_free_spot_test) {
 
 BOOST_AUTO_TEST_CASE(note_free_spot_test) {
 
-    free_spot_manager fsm (get_log_file ());
+    free_spot_manager fsm (get_log_file (), 0);
     std::size_t expected_total_free_size = 0;
 
     for (size_t i = 0; i < m_offsets.size(); ++i) {
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(note_free_spot_test) {
 
 BOOST_AUTO_TEST_CASE(pop_free_spot_test) {
 
-    free_spot_manager fsm (get_log_file ());
+    free_spot_manager fsm (get_log_file (), 0);
     std::size_t expected_total_free_size = 0;
 
     int failure = 0;
@@ -103,7 +103,7 @@ BOOST_FIXTURE_TEST_CASE(persistent_free_spot_test, fixture) {
     std::size_t expected_total_free_size = 0;
 
     {
-        free_spot_manager fsm (get_log_file ());
+        free_spot_manager fsm (get_log_file (), 0);
         for (size_t i = 0; i < m_offsets.size(); ++i) {
             fsm.push_free_spot(m_offsets[i], m_sizes[i]);
             expected_total_free_size += m_sizes[i];
@@ -111,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(persistent_free_spot_test, fixture) {
     }
 
     {
-        free_spot_manager fsm (get_log_file ());
+        free_spot_manager fsm (get_log_file (), 0);
         BOOST_TEST((fsm.total_free_spots() == big_int{0, expected_total_free_size}));
     }
 }

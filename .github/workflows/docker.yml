@@ -1,18 +1,14 @@
 name: Container Image CI
 
 on:
-  schedule:               # Trigger the image build nightly
-    - cron: '0 0 * * *'
-  push:                   # Trigger the image build on pushing a tag
+  push:
     tags:
      - '*'
-  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: docker-image-builder
+  release:
+    runs-on: heavyweight-generic-jobs
     steps:
-
     - uses: actions/checkout@v4
       with:
         token: ${{ secrets.PAT }}
@@ -34,27 +30,24 @@ jobs:
 
     - name: Login to registry.ultihash.io container registry
       uses: docker/login-action@v2
-      if: github.event_name == 'tag'
       with:
         registry: registry.ultihash.io
         username: github
         password: ${{ secrets.REGISTRY_USER }}
 
-    - name: Docker metadata (Release)
+    - name: Docker metadata
       id: meta-release
       uses: docker/metadata-action@v5
-      if: github.event_name == 'tag'
       with:
-        # list of Docker images to use as base name for tags
         images: |
           registry.ultihash.io/stable/core
           ghcr.io/ultihash/cluster
         tags: |
+          type=raw,value=latest
           type=semver,pattern={{version}}
 
-    - name: Build and push the Docker image (Release)
+    - name: Build and push the Docker image
       uses: docker/build-push-action@v5
-      if: github.event_name == 'tag'
       with:
         context: .
         file: Dockerfile
@@ -63,26 +56,48 @@ jobs:
         labels: ${{ steps.meta-release.outputs.labels }}
         push: true
 
-    - name: Docker metadata (Debug)
-      id: meta-debug
-      uses: docker/metadata-action@v5
-      with:
-        # list of Docker images to use as base name for tags
-        images: |
-          ghcr.io/ultihash/cluster
-        tags: |
-          type=semver,suffix=-debug,pattern={{version}}
-          type=schedule,pattern={{date 'YYYYMMDD'}} 
+  debug:
+    runs-on: heavyweight-generic-jobs
+    steps:
 
-    - name: Build and push the Docker image (Debug)
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: Dockerfile
-        platforms: linux/amd64
-        tags: ${{ steps.meta-debug.outputs.tags }}
-        labels: ${{ steps.meta-debug.outputs.labels }}
-        push: true
-        build-args: |
-          BuildType=RelWithDebInfo
-          DebugTools=True
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+
+      - name: Docker metadata
+        id: meta-debug
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/ultihash/cluster
+          tags: |
+            type=raw,value=latest
+            type=semver,suffix=-debug,pattern={{version}}
+
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-debug.outputs.tags }}
+          labels: ${{ steps.meta-debug.outputs.labels }}
+          push: true
+          build-args: |
+            BuildType=RelWithDebInfo
+            DebugTools=True

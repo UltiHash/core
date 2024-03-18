@@ -44,7 +44,7 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
                                       std::string_view& str, bool& l1) const {
     if (f.m_data.has_value()) {
         str = *f.m_data;
-    } else if (data = m_storage.get().cached_sample(f.m_pointer, f.m_size);
+    } else if (data = m_storage.get().cached_sample(f.m_pointer);
                data.data() != nullptr) {
         l1 = true;
         str = data.get_str_view();

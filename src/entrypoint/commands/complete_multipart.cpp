@@ -51,7 +51,7 @@ void complete_multipart::validate(const http_request& req) const {
         }
 
         if (up_info->part_sizes.at(*part_num) < MAXIMUM_CHUNK_SIZE and
-            part_num != up_info->part_sizes.size() - 1) {
+            part_num != up_info->part_sizes.size()) {
             throw command_exception(http::status::bad_request,
                                     command_error::type::entity_too_small);
         }

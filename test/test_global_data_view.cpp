@@ -83,7 +83,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 BOOST_FIXTURE_TEST_CASE(invalid_cached_sample, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     auto sample =
-        gdv->cached_sample(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE);
+        gdv->cached_sample(std::numeric_limits<uint64_t>::max());
     BOOST_CHECK(sample.data() == nullptr);
 }
 
@@ -99,14 +99,12 @@ BOOST_FIXTURE_TEST_CASE(valid_cached_sample, global_data_view_fixture) {
 
     auto frag = addr.first();
     auto short_sample =
-        gdv->cached_sample(frag.pointer, gdv->l1_cache_sample_size());
+        gdv->cached_sample(frag.pointer);
     BOOST_CHECK(short_sample.size() == gdv->l1_cache_sample_size());
     BOOST_CHECK(
         input_buffer.get_str_view().substr(0, gdv->l1_cache_sample_size()) ==
         short_sample.get_str_view());
 
-    auto long_sample = gdv->cached_sample(frag.pointer, frag.size);
-    BOOST_CHECK(long_sample.data() == nullptr);
 }
 
 } // namespace uh::cluster

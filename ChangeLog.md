@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+ - Fixed a bug in the free spot manager
+ - Fixed the shared lock concurrency issue in directory service
+- Fix hanging server when requesting empty files
+
+## [0.3.4] - 2024-03-15
+- Fixed delete objects raising segmentation fault in entrypoint
+
+## [0.3.3] - 2024-03-15
+- Fixed entity too small error in entrypoint
+
+## [0.3.2] - 2024-03-14
+- Fixed cache usage
+- Object Metadata in bucket list response
+- More unit tests and fixes
+
 ## [0.3.1] - 2024-03-14
 - Implemented pagination for better download behaviour
 - Fixed potential locking issue in the worker pool

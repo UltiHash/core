@@ -35,13 +35,10 @@ address global_data_view::write(const std::string_view& data) {
     return addr;
 }
 
-shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer,
-                                                    const size_t size) {
+shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer) {
     if (const auto c = m_cache_l1.get(pointer); c.has_value()) {
-        if (c->size() >= size) [[likely]] {
-            metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
-            return c.value();
-        }
+        metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
+        return c.value();
     }
     metric<metric_type::gdv_l1_cache_miss_counter>::increase(1);
     return nullptr;

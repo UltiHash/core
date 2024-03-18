@@ -71,8 +71,7 @@ public:
      * @return If the fragment exists in the cache, its content is returned.
      * Otherwise, nullptr is returned.
      */
-    shared_buffer<char> cached_sample(const uint128_t pointer,
-                                      const size_t size);
+    shared_buffer<char> cached_sample(const uint128_t pointer);
 
     /**
      * @brief Retrieves fragment from storage services.
