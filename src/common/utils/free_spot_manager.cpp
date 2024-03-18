@@ -2,10 +2,11 @@
 
 namespace uh::cluster {
 
-free_spot_manager::free_spot_manager(std::filesystem::path hole_log)
+free_spot_manager::free_spot_manager(std::filesystem::path hole_log, size_t minimum_size)
     : m_hole_log(std::move(hole_log)),
       m_file(open_file()),
-      m_total_free_size(get_total_free_size()) {
+      m_total_free_size(get_total_free_size()),
+      m_minimum_size (minimum_size) {
 
     shift_forward();
 
@@ -24,6 +25,10 @@ void free_spot_manager::push_noted_free_spots() {
 }
 
 void free_spot_manager::push_free_spot(uint128_t pointer, std::size_t size) {
+
+    if (size <= m_minimum_size) {
+        return;
+    }
 
     shift_forward();
 
@@ -118,7 +123,7 @@ uint128_t free_spot_manager::get_total_free_size() {
 }
 
 void free_spot_manager::shift_forward() {
-    if (m_end_pos == 0) {
+    if (m_end_pos == 0 or m_start_pos == 0) {
         return;
     }
     long offset = 0;
@@ -129,9 +134,9 @@ void free_spot_manager::shift_forward() {
                   reinterpret_cast<char*>(free_spot_data));
         offset += ELEMENT_SIZE;
     } while (free_spot_data[2] == 0 and offset < m_end_pos);
-    offset -= ELEMENT_SIZE;
 
-    if (offset > 0 and free_spot_data[2] != 0) {
+    if (offset > 0 and offset < m_end_pos) {
+        offset -= ELEMENT_SIZE;
         const auto buffer_size = m_end_pos - offset;
         const auto buffer = std::make_unique_for_overwrite<char[]>(buffer_size);
         std::memcpy(buffer.get(), &free_spot_data, ELEMENT_SIZE);
@@ -140,7 +145,7 @@ void free_spot_manager::shift_forward() {
         m_file.seekp(0, std::ios::beg);
         m_end_pos = buffer_size;
         m_file.write(buffer.get(), m_end_pos);
-    } else if (offset > 0 and free_spot_data[2] == 0) {
+    } else if (offset > 0 and offset == m_end_pos) {
         m_end_pos = 0;
     }
     std::filesystem::resize_file(m_hole_log, m_end_pos);

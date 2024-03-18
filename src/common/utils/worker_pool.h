@@ -116,7 +116,8 @@ public:
             try {
                 co_await pr->get();
             }
-            catch (std::exception&) {
+            catch (const std::exception& e) {
+                LOG_ERROR() << e.what();
                 eptr = std::current_exception();
             }
         }
