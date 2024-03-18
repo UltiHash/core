@@ -8,7 +8,7 @@ namespace uh::cluster {
 class fragment_set_element {
 public:
     /**
-     * Constructur used to re-construct fragment_set_elements during the replay
+     * Constructor used to re-construct fragment_set_elements during the replay
      * operation of the fragment_set_log
      * @param ptr Content of the pointer member
      * @param size_ Content of the size member

@@ -150,11 +150,12 @@ private:
 
             const auto frag_size = std::min(integration_data.size(),
                                             m_dedupe_conf.max_fragment_size);
+
             const auto addr =
                 m_storage.write(integration_data.substr(0, frag_size));
-            m_fragment_set.insert(addr.first().pointer,
-                                  integration_data.substr(0, addr.first().size),
-                                  f.hint);
+            m_fragment_set.insert(
+                {addr.pointers[0], addr.pointers[1]},
+                integration_data.substr(0, addr.sizes.front()), f.hint);
 
             metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
             metric<metric_type::deduplicator_set_fragment_size_counter,
