@@ -9,8 +9,8 @@ import queue
 from s3_util import unused_bucket_name, unused_object_key, has_bucket
 
 WORKER_THREADS = 10
-GB = 1024 ** 3
-MP_THRESHOLD = 1 * GB
+MB = 1024 ** 2
+MP_THRESHOLD = 5 * MB
 MP_CONCURRENCY = 5
 transfer_config = TransferConfig(multipart_threshold=MP_THRESHOLD, use_threads=True, max_concurrency=MP_CONCURRENCY)
 
