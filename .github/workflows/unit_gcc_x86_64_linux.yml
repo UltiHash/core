@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         build: [Release, Debug]
-    runs-on: uh-x86_64-ubuntu-22.04
+    runs-on: heavyweight-core-x86-64-jobs
 
     steps:
       - uses: actions/checkout@v4
