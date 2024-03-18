@@ -46,10 +46,9 @@ public:
         }
 
         for (; start != m_object_ptrs.end(); ++start) {
-            if (start->first.starts_with(lower_bound)) {
+            if (!lower_bound.empty() && start->first.starts_with(lower_bound)) {
                 continue;
-            }
-            if (start->first.starts_with(prefix)) {
+            } else if (start->first.starts_with(prefix)) {
                 const auto bytes = m_data_store.read(start->second);
                 object_meta obj;
                 zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)

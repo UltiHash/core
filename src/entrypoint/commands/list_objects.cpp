@@ -44,10 +44,19 @@ static http_response get_response(const std::vector<object>& objects,
     std::set<std::string> common_prefixes;
     std::string contents_xml;
 
-    std::size_t till_marker_count = 0;
     size_t counter = 0;
+    std::string common_prefixes_xml_string;
+    std::string is_truncated = "false";
+    std::string next_marker_xml;
 
-    if (!objects.empty() && max_keys != 0) {
+    bool common_prefix_last;
+    if (!objects.empty() && max_keys > 0) {
+
+        std::cout << "*******************" << std::endl;
+        for (const auto& obj : objects) {
+            std::cout << obj.name << std::endl;
+        }
+        std::cout << "*******************" << std::endl;
 
         for (std::size_t tally = 0; const auto& obj : objects) {
             size_t delimiter_index = std::string::npos;
@@ -59,11 +68,13 @@ static http_response get_response(const std::vector<object>& objects,
                     delimiter_index = obj.name.find(*delimiter);
                 }
             }
-            if (delimiter && delimiter_index != std::string::npos) {
+
+            if (delimiter_index != std::string::npos) {
                 auto delimiter_prefix = obj.name.substr(0, delimiter_index + 1);
                 common_prefixes.emplace((encoding_type
                                              ? url_encode(delimiter_prefix)
                                              : delimiter_prefix));
+                common_prefix_last = true;
             } else {
                 contents_xml +=
                     "<Contents>\n"
@@ -77,21 +88,32 @@ static http_response get_response(const std::vector<object>& objects,
                     std::to_string(objects[tally].size) +
                     "</Size>\n"
                     "</Contents>\n";
-                counter++;
+                common_prefix_last = false;
+                ++counter;
             }
 
-            if (counter + common_prefixes.size() == max_keys)
+            if (counter + common_prefixes.size() == max_keys) {
                 break;
+            }
 
             tally++;
         }
+
+        for (const auto& common_prefix : common_prefixes) {
+            common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
+                                          common_prefix +
+                                          "</Prefix>\n</CommonPrefixes>\n";
+        }
     }
 
-    std::string common_prefixes_xml_string;
-    for (const auto& common_prefix : common_prefixes) {
-        common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
-                                      common_prefix +
-                                      "</Prefix>\n</CommonPrefixes>\n";
+    is_truncated = "true";
+    if (delimiter) {
+        if (common_prefix_last)
+            next_marker_xml =
+                "<NextMarker>" + *(--common_prefixes.end()) + "</NextMarker>";
+        else
+            next_marker_xml =
+                "<NextMarker>" + objects[max_keys - 1].name + "</NextMarker>";
     }
 
     std::string delimiter_xml_string;
@@ -124,16 +146,6 @@ static http_response get_response(const std::vector<object>& objects,
     std::string marker_xml;
     if (marker) {
         marker_xml = "<Marker>" + *marker + "</Marker>\n";
-    }
-
-    std::string is_truncated = "false";
-    std::string next_marker_xml;
-    if ((objects.size() - till_marker_count > max_keys) && max_keys != 0) {
-        is_truncated = "true";
-        if (delimiter)
-            next_marker_xml = "<NextMarker>" +
-                              objects[till_marker_count + max_keys].name +
-                              "</NextMarker>";
     }
 
     http_response res;
