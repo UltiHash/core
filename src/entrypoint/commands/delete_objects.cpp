@@ -15,18 +15,6 @@ bool delete_objects::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.query_string_exists("delete");
 }
 
-auto delete_objects::validate(const http_request& req) {
-    xml_parser xml_parser;
-    bool parsed = xml_parser.parse(req.get_body());
-    auto object_nodes = xml_parser.get_nodes("Delete.Object");
-
-    if (!parsed || object_nodes.empty())
-        throw command_exception(http::status::bad_request,
-                                command_error::type::malformed_xml);
-
-    return object_nodes;
-}
-
 namespace {
 struct fail {
     uint32_t code;
@@ -67,7 +55,14 @@ http_response get_response(const std::vector<std::string>& success,
 coro<void> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
     co_await req.read_body();
-    auto object_nodes = validate(req);
+
+    xml_parser xml_parser;
+    bool parsed = xml_parser.parse(req.get_body());
+    auto object_nodes = xml_parser.get_nodes("Delete.Object");
+
+    if (!parsed || object_nodes.empty())
+        throw command_exception(http::status::bad_request,
+                                command_error::type::malformed_xml);
 
     auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;
@@ -97,8 +92,8 @@ coro<void> delete_objects::handle(http_request& req) const {
                 success.emplace_back(key);
             };
 
-            co_await m_collection.workers.
-                    io_thread_acquire_messenger_and_post_in_io_threads(
+            co_await m_collection.workers
+                .io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
                     std::bind_front(func2, *key, std::cref(bucket_id),
                                     std::ref(success)));
@@ -110,9 +105,8 @@ coro<void> delete_objects::handle(http_request& req) const {
         }
     }
 
-    auto res =  get_response(success, failure);
+    auto res = get_response(success, failure);
     co_await req.respond(res.get_prepared_response());
-
 }
 
 } // namespace uh::cluster
