@@ -46,7 +46,6 @@ static http_response get_response(const std::vector<object>& objects,
 
     size_t counter = 0;
     std::string common_prefixes_xml_string;
-    std::string is_truncated = "false";
     std::string next_marker_xml;
 
     bool common_prefix_last;
@@ -58,6 +57,7 @@ static http_response get_response(const std::vector<object>& objects,
         }
         std::cout << "*******************" << std::endl;
 
+        std::string is_truncated = "false";
         for (std::size_t tally = 0; const auto& obj : objects) {
             size_t delimiter_index = std::string::npos;
 
@@ -92,12 +92,25 @@ static http_response get_response(const std::vector<object>& objects,
                 ++counter;
             }
 
-            if (objects.size() - 1 != tally) {
-                if (auto upcoming = objects[tally + 1].name;
-                    counter + common_prefixes.size() == max_keys &&
-                    common_prefixes.contains(upcoming)) {
-                    continue;
+            if (counter + common_prefixes.size() == max_keys) {
+                if (objects.size() - 1 != tally) {
+                    if (auto upcoming = objects[tally + 1].name;
+                        common_prefixes.contains(upcoming)) {
+                        continue;
+                    }
                 }
+                is_truncated = "true";
+                if (delimiter) {
+                    if (common_prefix_last)
+                        next_marker_xml = "<NextMarker>" +
+                                          *(--common_prefixes.end()) +
+                                          "</NextMarker>";
+                    else
+                        next_marker_xml = "<NextMarker>" +
+                                          objects[max_keys - 1].name +
+                                          "</NextMarker>";
+                }
+                break;
             }
 
             tally++;
@@ -108,16 +121,6 @@ static http_response get_response(const std::vector<object>& objects,
                                           common_prefix +
                                           "</Prefix>\n</CommonPrefixes>\n";
         }
-    }
-
-    is_truncated = "true";
-    if (delimiter) {
-        if (common_prefix_last)
-            next_marker_xml =
-                "<NextMarker>" + *(--common_prefixes.end()) + "</NextMarker>";
-        else
-            next_marker_xml =
-                "<NextMarker>" + objects[max_keys - 1].name + "</NextMarker>";
     }
 
     std::string delimiter_xml_string;
