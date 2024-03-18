@@ -45,9 +45,8 @@ public:
      * is created. The fragment_set holds fragment_set_elements, which only
      * contain the address and the prefix and not the full body of a fragment to
      * enable space-efficient prefix-lookup.
-     * @param set_log_path A constant reference to a std::filesystem::path
-     * specifying the location of the log file.
-     * @param storage A reference to a global_data_view to be used for looking
+     * @param set_log_path A path specifying the location of the log file.
+     * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
      */
     fragment_set(const std::filesystem::path& set_log_path,
@@ -57,8 +56,7 @@ public:
      * @brief Searches the system for lexicographic neighbours of #data
      * The lexicographic neighbours of #data retrieved by this operation are
      * required to identify fragments with the longest common prefix..
-     * @param data A std::string_view containing the data to check for matching
-     * prefixes for
+     * @param data The full fragment content
      * @return A response structure containing the lexicographic neighbours of
      * #data as wall as an iterator used as a hint for the insert operation.
      */
@@ -69,8 +67,7 @@ public:
      * The fragment provided in #data is inserted into the fragment_set.
      * @param pointer A constant reference to a uint128_t with the address of
      * the full fragment
-     * @param data A constant reference to a string view containing the data of
-     * the full fragment
+     * @param data Full fragment content
      * @param hint A constant reference to the std::set::const_iterator yielded
      * by the #find method
      */
