@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: docker-image-builder
+    runs-on: heavyweight-generic-jobs
     steps:
     - uses: actions/checkout@v4
       with:
@@ -57,7 +57,7 @@ jobs:
         push: true
 
   debug:
-    runs-on: docker-image-builder
+    runs-on: heavyweight-generic-jobs
     steps:
 
       - uses: actions/checkout@v4
