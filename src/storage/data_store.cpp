@@ -7,7 +7,7 @@ namespace uh::cluster {
 data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     : m_data_id(id),
       m_conf(std::move(conf)),
-      m_free_spot_manager(m_conf.working_dir / "log") {
+      m_free_spot_manager(m_conf.working_dir / "log", 0) {
 
     m_global_offset = uint128_t(m_conf.max_data_store_size) * id;
 

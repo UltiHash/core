@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+ - Fixed a bug in the free spot manager
+ - Fixed the shared lock concurrency issue in directory service
+
 ## [0.3.4] - 2024-03-15
 - Fixed delete objects raising segmentation fault in entrypoint
 

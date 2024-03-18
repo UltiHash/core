@@ -17,7 +17,7 @@ class directory_store {
     std::unordered_map<std::string, std::unique_ptr<bucket>> m_buckets;
     directory_store_config m_conf;
     std::filesystem::path m_root_dir;
-    std::shared_mutex m_mutex;
+    std::mutex m_mutex;
 
 public:
     explicit directory_store(directory_store_config conf)
@@ -36,7 +36,7 @@ public:
     void insert(const std::string& bucket, const std::string& key,
                 address addr) {
 
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
@@ -47,7 +47,7 @@ public:
     }
 
     void bucket_exists(const std::string& bucket) {
-        std::shared_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         if (m_buckets.find(bucket) == m_buckets.end()) {
             throw error_exception(error::bucket_not_found);
@@ -55,7 +55,7 @@ public:
     }
 
     address get(const std::string& bucket, const std::string& key) {
-        std::shared_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
@@ -66,7 +66,7 @@ public:
     }
 
     void add_bucket(const std::string& bucket_id) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         m_buckets.emplace(bucket_id,
                           std::make_unique<bucket>(m_root_dir, bucket_id,
@@ -75,7 +75,7 @@ public:
 
     void remove_object(const std::string& bucket_id,
                        const std::string& object_key) {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket_id); b != m_buckets.cend())
             [[likely]] {
@@ -87,7 +87,7 @@ public:
 
     void remove_bucket(const std::string& name) {
 
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         auto b = m_buckets.find(name);
 
@@ -108,7 +108,7 @@ public:
     std::vector<object> list_objects(const std::string& bucket,
                                      const std::string& lower_bound = "",
                                      const std::string& prefix = "") {
-        std::shared_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend())
             [[likely]] {
@@ -119,7 +119,7 @@ public:
     }
 
     std::vector<std::string> list_buckets() {
-        std::shared_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         std::vector<std::string> buckets;
         buckets.reserve(m_buckets.size());
@@ -130,7 +130,7 @@ public:
     }
 
     size_t get_used_space() {
-        std::shared_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
         size_t used_space = 0;
         for (const auto& bucket : m_buckets) {

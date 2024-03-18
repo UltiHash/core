@@ -100,7 +100,7 @@ class chaining_data_store {
 public:
     explicit chaining_data_store(chaining_data_store_config conf)
         : m_conf(std::move(conf)),
-          m_free_spot_manager(m_conf.free_spot_log) {
+          m_free_spot_manager(m_conf.free_spot_log, header::root_size) {
 
         if (!std::filesystem::exists(m_conf.directory)) {
             std::filesystem::create_directories(m_conf.directory);
@@ -152,6 +152,7 @@ public:
     }
 
     index_type post_write(std::span<char> data) {
+
         if (m_used + data.size() > m_conf.max_storage_size) [[unlikely]] {
             throw std::bad_alloc();
         }
@@ -207,6 +208,7 @@ public:
     }
 
     void apply_write() {
+
         m_free_spot_manager.apply_popped_items();
         m_free_spot_manager.push_noted_free_spots();
         sync();
@@ -404,6 +406,9 @@ private:
                 required_size +=
                     header::large_size + account_total_size * sizeof(size);
                 account_total_size = 0;
+            }
+            else {
+                break;
             }
 
             free_spot = m_free_spot_manager.pop_free_spot();
