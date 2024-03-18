@@ -92,8 +92,12 @@ static http_response get_response(const std::vector<object>& objects,
                 ++counter;
             }
 
-            if (counter + common_prefixes.size() == max_keys) {
-                break;
+            if (objects.size() - 1 != tally) {
+                if (auto upcoming = objects[tally + 1].name;
+                    counter + common_prefixes.size() == max_keys &&
+                    common_prefixes.contains(upcoming)) {
+                    continue;
+                }
             }
 
             tally++;
