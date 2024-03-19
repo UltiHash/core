@@ -109,8 +109,7 @@ private:
         auto check_dedupe = [&](const fragment_set_element& frag) {
             // Here, cached_sample can only contain fragments that are 128 bytes
             // or smaller
-            auto frag_data =
-                m_storage.cached_sample(frag.pointer());
+            auto frag_data = m_storage.cached_sample(frag.pointer());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
@@ -151,6 +150,7 @@ private:
 
             const auto frag_size = std::min(integration_data.size(),
                                             m_dedupe_conf.max_fragment_size);
+
             const auto addr =
                 m_storage.write(integration_data.substr(0, frag_size));
             m_fragment_set.insert(
