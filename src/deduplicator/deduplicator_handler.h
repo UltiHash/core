@@ -73,6 +73,7 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
+        /*
         const std::size_t pieces_count =
             std::min(m_storage.get_storage_service_connection_count(),
                      static_cast<std::size_t>(std::ceil(
@@ -98,61 +99,73 @@ private:
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
+        */
 
-        co_await m.send_dedupe_response(responses[0]);
+        LOG_WARN() << "to deduplicate!";
+        auto response = co_await deduplicate(data.get_str_view());
+
+        // co_await m.send_dedupe_response(responses[0]);
+        co_await m.send_dedupe_response(response);
     }
 
-    dedupe_response deduplicate(std::string_view data) {
+    coro<dedupe_response> deduplicate(std::string_view data) {
         dedupe_response result{.addr = address{}};
         auto integration_data = data;
 
-        auto check_dedupe = [&](const fragment_set_element& frag) {
+        auto check_dedupe =
+            [&](const fragment_set_element* frag) -> coro<bool> {
+            LOG_WARN() << "check_dedupe";
             // Here, cached_sample can only contain fragments that are 128 bytes
             // or smaller
-            auto frag_data =
-                m_storage.cached_sample(frag.pointer());
+            shared_buffer<char> frag_data =
+                m_storage.cached_sample(frag->pointer());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
-                frag_data =
-                    m_storage.read_fragment(frag.pointer(), frag.size());
+                LOG_WARN() << "check_dedupe: co_await read_fragment I";
+                frag_data = co_await m_storage.read_fragment_coro(
+                    frag->pointer(), frag->size());
             }
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                 if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data =
-                        m_storage.read_fragment(frag.pointer(), frag.size());
+                    LOG_WARN() << "check_dedupe: co_await read_fragment II";
+                    frag_data = co_await m_storage.read_fragment_coro(
+                        frag->pointer(), frag->size());
                     common_prefix += largest_common_prefix(
                         integration_data.substr(common_prefix),
                         frag_data.get_str_view().substr(common_prefix));
                 }
                 result.addr.push_fragment(
-                    fragment{frag.pointer(), common_prefix});
+                    fragment{frag->pointer(), common_prefix});
                 integration_data = integration_data.substr(common_prefix);
-                return true;
+                co_return true;
             }
-            return false;
+            co_return false;
         };
 
+        LOG_WARN() << "before while";
         while (!integration_data.empty()) {
             const auto f = m_fragment_set.find(integration_data);
 
             if (f.low.has_value()) {
-                if (check_dedupe(f.low->get())) {
+                if (co_await check_dedupe(&f.low->get())) {
                     continue;
                 }
             }
             if (f.high.has_value()) {
-                if (check_dedupe(f.high->get())) {
+                if (co_await check_dedupe(&f.high->get())) {
                     continue;
                 }
             }
 
             const auto frag_size = std::min(integration_data.size(),
                                             m_dedupe_conf.max_fragment_size);
-            const auto addr =
-                m_storage.write(integration_data.substr(0, frag_size));
+
+            auto sub = integration_data.substr(0, frag_size);
+            LOG_WARN() << "deduplicate: write";
+            const auto addr = co_await m_storage.write_coro(sub);
             m_fragment_set.insert(
                 {addr.pointers[0], addr.pointers[1]},
                 integration_data.substr(0, addr.sizes.front()), f.hint);
@@ -166,8 +179,8 @@ private:
             integration_data = integration_data.substr(frag_size);
         }
 
-        m_storage.sync(result.addr);
-        return result;
+        // m_storage.sync(result.addr);
+        co_return result;
     }
 
     static size_t largest_common_prefix(const std::string_view& str1,

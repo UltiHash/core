@@ -56,6 +56,7 @@ public:
      * @return An #address the data has been written to.
      */
     address write(const std::string_view& data);
+    coro<address> write_coro(std::string_view data);
 
     /**
      * @brief Retrieves fragment from L1 read cache if present.
@@ -99,6 +100,8 @@ public:
      */
     shared_buffer<char> read_fragment(const uint128_t& pointer,
                                       const size_t size);
+    coro<shared_buffer<char>> read_fragment_coro(uint128_t pointer,
+                                                 const size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -124,6 +127,7 @@ public:
      * @param addr The address of all data to be synced to persistent storage.
      */
     void sync(const address& addr);
+    coro<void> sync_coro(const address& addr);
 
     /**
      * @brief Computes used space across all available storage service

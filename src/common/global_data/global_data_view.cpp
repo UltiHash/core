@@ -35,6 +35,29 @@ address global_data_view::write(const std::string_view& data) {
     return addr;
 }
 
+coro<address> global_data_view::write_coro(std::string_view data) {
+    LOG_WARN() << "write_coro: get";
+    auto m = co_await m_storage_services.get()->coro_acquire(m_io_service);
+    if (!m->m_messenger) {
+        LOG_WARN() << "*** messenger is nullptr in write_coro!";
+        m->get().reset_read_buffers();
+    }
+
+    address addr;
+    LOG_WARN() << "write_coro: send STORAGE_WRITE_REQ";
+    co_await m->get().send(STORAGE_WRITE_REQ, data);
+    LOG_WARN() << "write_coro: recv_header";
+    const auto message_header = co_await m->get().recv_header();
+    LOG_WARN() << "write_coro: recv_address";
+    addr = co_await m->get().recv_address(message_header);
+
+    shared_buffer<char> l1_buf(
+        std::min(addr.first().size, m_config.l1_sample_size));
+    std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
+    m_cache_l1.put(addr.first().pointer, std::move(l1_buf));
+    co_return addr;
+}
+
 shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer) {
     if (const auto c = m_cache_l1.get(pointer); c.has_value()) {
         metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
@@ -42,6 +65,51 @@ shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer) {
     }
     metric<metric_type::gdv_l1_cache_miss_counter>::increase(1);
     return nullptr;
+}
+
+coro<shared_buffer<char>>
+global_data_view::read_fragment_coro(uint128_t pointer, const size_t size) {
+
+    if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
+        if (c->size() >= size) [[likely]] {
+            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
+            shared_buffer<char> buffer = c.value();
+            co_return buffer;
+        }
+    }
+    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
+
+    LOG_WARN() << "read_fragment_coro: acquire";
+    auto m =
+        co_await m_storage_services.get(pointer)->coro_acquire(m_io_service);
+    if (!m->m_messenger) {
+        LOG_WARN() << "*** messenger is nullptr in read_coro!";
+        m->get().reset_read_buffers();
+    }
+
+    shared_buffer<char> buffer(size);
+    const fragment frag{pointer, size};
+
+    LOG_WARN() << "read_fragment_coro: send_fragment STORAGE_READ_FRAGMENT_REQ";
+    co_await m->get().send_fragment(STORAGE_READ_FRAGMENT_REQ, frag);
+    LOG_WARN() << "read_fragment_coro: recv_header";
+    const auto h = co_await m->get().recv_header();
+    if (h.size != frag.size) [[unlikely]] {
+        throw std::runtime_error("Incomplete fragment");
+    }
+    m->get().register_read_buffer(buffer.data(), frag.size);
+    LOG_WARN() << "read_fragment_coro: recv_buffers";
+    co_await m->get().recv_buffers(h);
+
+    // l1 cache
+    shared_buffer<char> l1_buf(std::min(size, m_config.l1_sample_size));
+    std::memcpy(l1_buf.data(), buffer.data(), l1_buf.size());
+    m_cache_l1.put(pointer, std::move(l1_buf));
+
+    // l2 cache
+    m_cache_l2.put(pointer, buffer);
+
+    co_return buffer;
 }
 
 shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
