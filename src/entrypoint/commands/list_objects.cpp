@@ -6,8 +6,8 @@
 namespace uh::cluster {
 
 struct collapsed_objects {
-    std::optional<std::string> prefix{};
-    std::optional<std::reference_wrapper<const object>> object{};
+    std::optional<std::string> _prefix{};
+    std::optional<std::reference_wrapper<const object>> _object{};
 };
 
 list_objects::list_objects(const reference_collection& collection)
@@ -46,12 +46,15 @@ static http_response get_response(const std::vector<object>& objects,
         max_keys = std::stoul(*max_keys_val);
     }
 
-    bool common_prefix_last;
-    std::vector<collapsed_objects> collapsed_objs;
+    std::string common_prefixes_xml_string;
+    std::string contents_xml;
+    std::string next_marker_xml;
+    std::string is_truncated = "false";
 
+    std::vector<collapsed_objects> collapsed_objs;
     if (!objects.empty() && max_keys > 0) {
 
-        for (std::string previous; const auto& object : objects) {
+        for (std::string previous_prefix; const auto& object : objects) {
             size_t delimiter_index = std::string::npos;
 
             if (delimiter) {
@@ -66,43 +69,38 @@ static http_response get_response(const std::vector<object>& objects,
             if (delimiter_index != std::string::npos) {
                 auto delimiter_prefix =
                     object.name.substr(0, delimiter_index + 1);
-                if (previous != delimiter_prefix) {
+                if (previous_prefix != delimiter_prefix) {
                     collapsed_objs.emplace_back(delimiter_prefix, std::nullopt);
-                    previous = delimiter_prefix;
+                    previous_prefix = delimiter_prefix;
                 }
             } else {
                 collapsed_objs.emplace_back(std::nullopt, std::cref(object));
             }
         }
 
-        std::string common_prefixes_xml_string;
-        std::string next_marker_xml;
-
-        std::string is_truncated = "false";
-        std::string contents_xml;
-
+        bool common_prefix_last;
         size_t contents_counter = 0;
         size_t common_prefixes_counter = 0;
 
         for (const auto& object : collapsed_objs) {
-            if (object.prefix) {
+            if (object._prefix) {
                 common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
-                                              *object.prefix +
+                                              *object._prefix +
                                               "</Prefix>\n</CommonPrefixes>\n";
                 common_prefix_last = true;
                 ++common_prefixes_counter;
-            } else if (object.object) {
+            } else if (object._object) {
                 contents_xml +=
                     "<Contents>\n"
                     "<LastModified>" +
-                    object.object->get().last_modified +
+                    object._object->get().last_modified +
                     "</LastModified>\n"
                     "<Key>" +
-                    (encoding_type ? url_encode(object.object->get().name)
-                                   : object.object->get().name) +
+                    (encoding_type ? url_encode(object._object->get().name)
+                                   : object._object->get().name) +
                     "</Key>\n"
                     "<Size>" +
-                    std::to_string(object.object->get().size) +
+                    std::to_string(object._object->get().size) +
                     "</Size>\n"
                     "</Contents>\n";
                 common_prefix_last = false;
@@ -115,7 +113,7 @@ static http_response get_response(const std::vector<object>& objects,
                 if (delimiter) {
                     if (common_prefix_last)
                         next_marker_xml =
-                            "<NextMarker>" + *object.prefix + "</NextMarker>";
+                            "<NextMarker>" + *object._prefix + "</NextMarker>";
                     else
                         next_marker_xml = "<NextMarker>" +
                                           objects[max_keys - 1].name +
