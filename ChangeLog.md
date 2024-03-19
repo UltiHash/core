@@ -1,8 +1,9 @@
 # Changelog
 
 ## [Unreleased]
- - Fixed a bug in the free spot manager
- - Fixed the shared lock concurrency issue in directory service
+- Fixed a potential out-of-bounds write/read issue in the L1 read cache
+- Fixed a bug in the free spot manager
+- Fixed the shared lock concurrency issue in directory service
 - Fix hanging server when requesting empty files
 
 ## [0.3.4] - 2024-03-15
