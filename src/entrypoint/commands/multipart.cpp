@@ -37,19 +37,21 @@ coro<void> multipart::handle(http_request& req) const {
     validate(req);
     co_await req.read_body();
 
+    std::string md5;
+
     if (req.get_body_size() > 0) [[likely]] {
         std::list<std::string_view> data{req.get_body()};
         const auto dir_resp =
             co_await integration::integrate_data(data, m_collection);
 
-        m_collection.server_state.m_uploads.append_upload_part_info(
+        md5 = m_collection.server_state.m_uploads.append_upload_part_info(
             req.get_uri().get_query_parameters().at("uploadId"),
             std::stoi(req.get_uri().get_query_parameters().at("partNumber")),
             dir_resp, req.get_body());
     }
 
     http_response res;
-    res.set_etag(calculate_md5(req.get_body()));
+    res.set_etag(md5);
 
     co_await req.respond(res.get_prepared_response());
 }

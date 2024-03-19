@@ -43,9 +43,9 @@ struct upload_state {
     std::string insert_upload(std::string bucket, std::string object_key);
     bool contains_upload(const std::string& id);
     std::shared_ptr<upload_info> get_upload_info(const std::string& id);
-    void append_upload_part_info(const std::string& id, uint16_t part_id,
-                                 const dedupe_response& resp,
-                                 const std::string& data);
+    std::string append_upload_part_info(const std::string& id, uint16_t part_id,
+                                        const dedupe_response& resp,
+                                        const std::string& data);
 
     void remove_upload(const std::string& id);
 
@@ -76,7 +76,8 @@ private:
         time_point when;
     };
     std::priority_queue<info_deletion, std::vector<info_deletion>,
-        std::greater<info_deletion>> m_deletions;
+                        std::greater<info_deletion>>
+        m_deletions;
 };
 
 struct state {

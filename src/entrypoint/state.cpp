@@ -88,9 +88,10 @@ bool upload_state::contains_upload(const std::string& id) {
     return m_infos.contains(id);
 }
 
-void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
-                                           const dedupe_response& resp,
-                                           const std::string& data) {
+std::string upload_state::append_upload_part_info(const std::string& id,
+                                                  uint16_t part,
+                                                  const dedupe_response& resp,
+                                                  const std::string& data) {
 
     clear_infos();
 
@@ -103,13 +104,8 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
     }
 
     auto& total_resp = info->second;
-    if (!data.empty()) {
-        total_resp->etags.emplace(part, calculate_md5(data));
-    } else { // default etag
-        total_resp->etags.emplace(
-            part,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-    }
+    auto md5 = calculate_md5(data);
+    total_resp->etags.emplace(part, md5);
     total_resp->effective_size += resp.effective_size;
     total_resp->data_size += data.size();
     total_resp->part_sizes.emplace(part, data.size());
@@ -121,6 +117,8 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
                 time.time_since_epoch())
                 .count();
     }
+
+    return md5;
 }
 
 void upload_state::clear_infos() {
