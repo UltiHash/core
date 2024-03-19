@@ -5,6 +5,11 @@
 
 namespace uh::cluster {
 
+struct collapsed_objects {
+    std::optional<std::string> prefix{};
+    std::optional<std::reference_wrapper<const object>> object{};
+};
+
 list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
@@ -41,70 +46,76 @@ static http_response get_response(const std::vector<object>& objects,
         max_keys = std::stoul(*max_keys_val);
     }
 
-    std::set<std::string> common_prefixes;
-    std::string contents_xml;
-
-    size_t counter = 0;
-    std::string common_prefixes_xml_string;
-    std::string next_marker_xml;
-
     bool common_prefix_last;
+    std::vector<collapsed_objects> collapsed_objs;
+
     if (!objects.empty() && max_keys > 0) {
 
-        std::cout << "*******************" << std::endl;
-        for (const auto& obj : objects) {
-            std::cout << obj.name << std::endl;
-        }
-        std::cout << "*******************" << std::endl;
-
-        std::string is_truncated = "false";
-        for (std::size_t tally = 0; const auto& obj : objects) {
+        for (std::string previous; const auto& object : objects) {
             size_t delimiter_index = std::string::npos;
 
             if (delimiter) {
                 if (prefix) {
-                    delimiter_index = obj.name.find(*delimiter, prefix->size());
+                    delimiter_index =
+                        object.name.find(*delimiter, prefix->size());
                 } else {
-                    delimiter_index = obj.name.find(*delimiter);
+                    delimiter_index = object.name.find(*delimiter);
                 }
             }
 
             if (delimiter_index != std::string::npos) {
-                auto delimiter_prefix = obj.name.substr(0, delimiter_index + 1);
-                common_prefixes.emplace((encoding_type
-                                             ? url_encode(delimiter_prefix)
-                                             : delimiter_prefix));
-                common_prefix_last = true;
+                auto delimiter_prefix =
+                    object.name.substr(0, delimiter_index + 1);
+                if (previous != delimiter_prefix) {
+                    collapsed_objs.emplace_back(delimiter_prefix, std::nullopt);
+                    previous = delimiter_prefix;
+                }
             } else {
+                collapsed_objs.emplace_back(std::nullopt, std::cref(object));
+            }
+        }
+
+        std::string common_prefixes_xml_string;
+        std::string next_marker_xml;
+
+        std::string is_truncated = "false";
+        std::string contents_xml;
+
+        size_t contents_counter = 0;
+        size_t common_prefixes_counter = 0;
+
+        for (const auto& object : collapsed_objs) {
+            if (object.prefix) {
+                common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
+                                              *object.prefix +
+                                              "</Prefix>\n</CommonPrefixes>\n";
+                common_prefix_last = true;
+                ++common_prefixes_counter;
+            } else if (object.object) {
                 contents_xml +=
                     "<Contents>\n"
                     "<LastModified>" +
-                    objects[tally].last_modified +
+                    object.object->get().last_modified +
                     "</LastModified>\n"
                     "<Key>" +
-                    (encoding_type ? url_encode(obj.name) : obj.name) +
+                    (encoding_type ? url_encode(object.object->get().name)
+                                   : object.object->get().name) +
                     "</Key>\n"
                     "<Size>" +
-                    std::to_string(objects[tally].size) +
+                    std::to_string(object.object->get().size) +
                     "</Size>\n"
                     "</Contents>\n";
                 common_prefix_last = false;
-                ++counter;
+                ++contents_counter;
             }
 
-            if (counter + common_prefixes.size() == max_keys) {
-                if (objects.size() - 1 != tally) {
-                    if (auto upcoming = objects[tally + 1].name;
-                        common_prefixes.contains(upcoming)) {
-                        continue;
-                    }
-                }
+            if (contents_counter + common_prefixes_counter == max_keys &&
+                collapsed_objs.size() > max_keys) {
                 is_truncated = "true";
                 if (delimiter) {
                     if (common_prefix_last)
-                        next_marker_xml = "<NextMarker>" +
-                                          *(--common_prefixes.end()) +
-                                          "</NextMarker>";
+                        next_marker_xml =
+                            "<NextMarker>" + *object.prefix + "</NextMarker>";
                     else
                         next_marker_xml = "<NextMarker>" +
                                           objects[max_keys - 1].name +
@@ -112,14 +123,6 @@ static http_response get_response(const std::vector<object>& objects,
                 }
                 break;
             }
-
-            tally++;
-        }
-
-        for (const auto& common_prefix : common_prefixes) {
-            common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
-                                          common_prefix +
-                                          "</Prefix>\n</CommonPrefixes>\n";
         }
     }
 
