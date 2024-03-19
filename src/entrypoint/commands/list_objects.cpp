@@ -78,7 +78,7 @@ static http_response get_response(const std::vector<object>& objects,
             }
         }
 
-        bool common_prefix_last;
+        bool common_prefix_last = false;
         size_t contents_counter = 0;
         size_t common_prefixes_counter = 0;
 
