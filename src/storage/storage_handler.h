@@ -6,14 +6,18 @@
 #include "common/utils/protocol_handler.h"
 #include "config.h"
 #include "data_store.h"
+#include <exception>
 #include <utility>
 
 namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    storage_handler(data_store_config config, size_t index)
-        : m_data_store(std::move(config), index) {}
+    storage_handler(data_store_config config, size_t index,
+                    boost::asio::io_context& ioc)
+        : m_data_store(std::move(config), index),
+          m_pool(4),
+          m_ioc(ioc) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         std::stringstream remote;
@@ -71,15 +75,35 @@ private:
         unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
-        const auto addr = m_data_store.write(data.get_span());
+
+        auto promise = std::make_shared<awaitable_promise<address>>(m_ioc);
+        boost::asio::post(m_pool, [&, this]() {
+            try {
+                promise->set(m_data_store.write(data.get_span()));
+            } catch (const std::exception& e) {
+                promise->set_exception(std::current_exception());
+            }
+        });
+
+        address addr = co_await promise->get();
         co_await m.send_address(SUCCESS, addr);
     }
 
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         unique_buffer<char> buffer(resp.size);
-        const auto size =
-            m_data_store.read(buffer.data(), resp.pointer, resp.size);
+
+        auto promise = std::make_shared<awaitable_promise<std::size_t>>(m_ioc);
+        boost::asio::post(m_pool, [&, this]() {
+            try {
+                promise->set(
+                    m_data_store.read(buffer.data(), resp.pointer, resp.size));
+            } catch (const std::exception& e) {
+                promise->set_exception(std::current_exception());
+            }
+        });
+
+        std::size_t size = co_await promise->get();
         co_await m.send(SUCCESS, {buffer.data(), size});
     }
 
@@ -90,16 +114,30 @@ private:
             std::accumulate(resp.sizes.cbegin(), resp.sizes.cend(), 0ul);
 
         unique_buffer<char> buffer(read_size);
-        size_t offset = 0;
-        for (size_t i = 0; i < resp.size(); i++) {
-            const auto frag = resp.get_fragment(i);
-            if (m_data_store.read(buffer.data() + offset, frag.pointer,
-                                  frag.size) != frag.size) [[unlikely]] {
-                throw std::runtime_error(
-                    "Could not read the data with the given size");
+
+        auto promise = std::make_shared<awaitable_promise<std::size_t>>(m_ioc);
+        boost::asio::post(m_pool, [&, this]() {
+            try {
+                size_t offset = 0;
+                for (size_t i = 0; i < resp.size(); i++) {
+                    const auto frag = resp.get_fragment(i);
+                    if (m_data_store.read(buffer.data() + offset, frag.pointer,
+                                          frag.size) != frag.size)
+                        [[unlikely]] {
+                        throw std::runtime_error(
+                            "Could not read the data with the given size");
+                    }
+                    offset += frag.size;
+                }
+
+                promise->set(std::move(offset));
+
+            } catch (const std::exception& e) {
+                promise->set_exception(std::current_exception());
             }
-            offset += frag.size;
-        }
+        });
+
+        std::size_t offset = co_await promise->get();
         co_await m.send(SUCCESS, {buffer.data(), offset});
     }
 
@@ -111,7 +149,18 @@ private:
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
-        m_data_store.sync();
+        auto promise = std::make_shared<awaitable_promise<void>>(m_ioc);
+        boost::asio::post(m_pool, [&, this]() {
+            try {
+                m_data_store.sync();
+                promise->set();
+
+            } catch (const std::exception& e) {
+                promise->set_exception(std::current_exception());
+            }
+        });
+
+        co_await promise->get();
         co_await m.send(SUCCESS, {});
     }
 
@@ -121,6 +170,8 @@ private:
     }
 
     uh::cluster::data_store m_data_store;
+    boost::asio::thread_pool m_pool;
+    boost::asio::io_context& m_ioc;
 };
 
 } // end namespace uh::cluster
