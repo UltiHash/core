@@ -1,5 +1,5 @@
-#include "config.h"
 #include "configuration.h"
+#include "config.h"
 #include <CLI/CLI.hpp>
 #include <system_error>
 
@@ -110,11 +110,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
-
-    group
-        ->add_option("--l1-sample-size", cfg.l1_sample_size,
-                     "size of samples in L1 cache")
-        ->default_val(cfg.l1_sample_size);
 
     group
         ->add_option("--max-store-size", cfg.max_data_store_size,

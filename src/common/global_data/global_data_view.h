@@ -14,7 +14,6 @@ struct global_data_view_config {
     std::size_t storage_service_connection_count = 16;
     std::size_t read_cache_capacity_l1 = 8000000ul;
     std::size_t read_cache_capacity_l2 = 4000ul;
-    std::size_t l1_sample_size = 128ul;
     uint128_t max_data_store_size = DATASTORE_MAX_SIZE;
 };
 
@@ -138,13 +137,6 @@ public:
      * global_data_view
      */
     [[nodiscard]] boost::asio::io_context& get_executor() const;
-
-    /**
-     * @brief Returns the configured sample size used by the L1 read
-     * cache.
-     * @return The configured sample size used by the L1 read cache.
-     */
-    [[nodiscard]] std::size_t l1_cache_sample_size() const noexcept;
 
     /**
      * @brief Returns the configured number of connections maintained to each
