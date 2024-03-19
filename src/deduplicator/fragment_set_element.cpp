@@ -71,9 +71,11 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
         std::string_view s1_l1 = s1;
         std::string_view s2_l1 = s2;
         if (!b1) {
-            s1_l1 = s1.substr(0, std::min(s1.size(), L1_SAMPLE_SIZE));
+            s1_l1 = s1.substr(
+                0, std::min(s1.size(), m_storage.get().l1_cache_sample_size()));
         } else if (!b2) {
-            s2_l1 = s2.substr(0, std::min(s2.size(), L1_SAMPLE_SIZE));
+            s2_l1 = s2.substr(
+                0, std::min(s2.size(), m_storage.get().l1_cache_sample_size()));
         }
         if (const auto comp = s1_l1.compare(s2_l1); comp != 0) {
             return comp < 0;
@@ -81,11 +83,13 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
         comp_len = std::min(s1_l1.size(), s2_l1.size());
     }
 
-    if (b1 and !m_data.has_value() and m_size > L1_SAMPLE_SIZE) {
+    if (b1 and !m_data.has_value() and
+        m_size > m_storage.get().l1_cache_sample_size()) {
         d1 = m_storage.get().read_fragment(m_pointer, m_size);
         s1 = d1.get_str_view();
     }
-    if (b2 and !f.m_data.has_value() and f.m_size > L1_SAMPLE_SIZE) {
+    if (b2 and !f.m_data.has_value() and
+        f.m_size > m_storage.get().l1_cache_sample_size()) {
         d2 = m_storage.get().read_fragment(f.m_pointer, f.m_size);
         s2 = d2.get_str_view();
     }

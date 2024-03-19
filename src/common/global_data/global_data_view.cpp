@@ -28,7 +28,8 @@ address global_data_view::write(const std::string_view& data) {
         boost::asio::use_future)
         .get();
 
-    shared_buffer<char> l1_buf(std::min(addr.first().size, L1_SAMPLE_SIZE));
+    shared_buffer<char> l1_buf(
+        std::min(addr.first().size, m_config.l1_sample_size));
     std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
     m_cache_l1.put(addr.first().pointer, std::move(l1_buf));
     return addr;
@@ -71,7 +72,7 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
         .get();
 
     // l1 cache
-    shared_buffer<char> l1_buf(std::min(size, L1_SAMPLE_SIZE));
+    shared_buffer<char> l1_buf(std::min(size, m_config.l1_sample_size));
     std::memcpy(l1_buf.data(), buffer.data(), l1_buf.size());
     m_cache_l1.put(pointer, std::move(l1_buf));
 
@@ -169,6 +170,11 @@ void global_data_view::sync(const address& addr) {
 
 [[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
     return m_io_service;
+}
+
+[[nodiscard]] std::size_t
+global_data_view::l1_cache_sample_size() const noexcept {
+    return m_config.l1_sample_size;
 }
 
 [[nodiscard]] std::size_t

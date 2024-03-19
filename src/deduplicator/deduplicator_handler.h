@@ -19,7 +19,8 @@ public:
           m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
           m_storage(storage),
           m_dedupe_workers(dedupe_workers) {
-        if (m_dedupe_conf.min_fragment_size > L1_SAMPLE_SIZE) {
+        if (m_dedupe_conf.min_fragment_size >
+            m_storage.l1_cache_sample_size()) {
             throw std::invalid_argument("L1 cache sample size should not be "
                                         "smaller than the min fragment size!");
         }
@@ -118,7 +119,7 @@ private:
             auto common_prefix = largest_common_prefix(
                 integration_data, frag_data.get_str_view());
             if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-                if (common_prefix == L1_SAMPLE_SIZE and l1) {
+                if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
                     frag_data =
                         m_storage.read_fragment(frag.pointer(), frag.size());
                     common_prefix += largest_common_prefix(
