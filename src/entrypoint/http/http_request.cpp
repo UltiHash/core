@@ -1,5 +1,4 @@
 #include "http_request.h"
-#include <iostream>
 
 namespace uh::cluster {
 
@@ -77,8 +76,6 @@ coro<std::unique_ptr<http_request>> read_request(asio::ip::tcp::socket& s) {
                                             asio::use_awaitable);
 
     rv->m_uri = uri(rv->m_req);
-
-    std::cout << *rv << std::endl;
 
     co_return rv;
 }
