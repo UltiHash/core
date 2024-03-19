@@ -84,9 +84,11 @@ static http_response get_response(const std::vector<object>& objects,
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
-                common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
-                                              *object._prefix +
-                                              "</Prefix>\n</CommonPrefixes>\n";
+                common_prefixes_xml_string +=
+                    "<CommonPrefixes>\n<Prefix>" +
+                    (encoding_type ? url_encode(*object._prefix)
+                                   : *object._prefix) +
+                    "</Prefix>\n</CommonPrefixes>\n";
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {
