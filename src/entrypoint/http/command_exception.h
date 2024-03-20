@@ -29,7 +29,8 @@ public:
         insufficient_storage,
         command_not_found,
         no_mp_uploads,
-        invalid_query_parameter
+        invalid_query_parameter,
+        bucket_already_exists
     };
 
     explicit command_error(type t = unknown);
