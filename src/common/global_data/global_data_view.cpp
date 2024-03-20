@@ -28,6 +28,10 @@ address global_data_view::write(const std::string_view& data) {
         boost::asio::use_future)
         .get();
 
+    if (addr.empty()) {
+        throw std::runtime_error("received empty response");
+    }
+
     shared_buffer<char> l1_buf(
         std::min(addr.first().size, m_config.l1_sample_size));
     std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
