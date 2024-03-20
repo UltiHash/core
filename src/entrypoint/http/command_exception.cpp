@@ -26,6 +26,7 @@ static const std::vector<std::pair<std::string, std::string>> error_messages = {
     {"StorageLimitExceeded", "insufficient storage"},
     {"CommandNotFound", "no such command found"},
     {"NoMultiPartUploads", "no multipart uploads"},
+    {"InvalidQueryParameters", "encountered unexpected query parameter"},
 };
 
 static const std::pair<std::string, std::string> error_out_of_range = {

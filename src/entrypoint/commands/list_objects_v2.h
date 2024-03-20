@@ -97,17 +97,30 @@ public:
         const auto get_if_exists =
             [&req_uri](auto&& key) -> std::optional<std::string> {
             if (req_uri.query_string_exists(key)) {
-                if (auto& val = req_uri.get_query_string_value(key);
-                    val.empty())
-                    return std::make_optional<std::string>(val);
+                return std::make_optional<std::string>(
+                    req_uri.get_query_string_value(key));
             }
             return std::nullopt;
         };
 
         const auto start_after = get_if_exists("start-after");
         const auto prefix = get_if_exists("prefix");
-        const auto delimiter = get_if_exists("delimiter");
+
+        std::optional<std::string> delimiter = std::nullopt;
+        if (req_uri.query_string_exists("delimiter")) {
+            if (auto value = req_uri.get_query_string_value("delimiter");
+                !value.empty())
+                delimiter = std::make_optional<std::string>(value);
+        }
+
         const auto encoding_type = get_if_exists("encoding-type");
+        if (encoding_type) {
+            if (*encoding_type != "url") {
+                throw command_exception(http::status::bad_request,
+                                        command_error::invalid_query_parameter);
+            }
+        }
+
         const auto continuation_token = get_if_exists("continuation-token");
 
         size_t max_keys = 1000;
@@ -181,9 +194,7 @@ public:
         std::string delimiter_xml_string;
         if (delimiter) {
             delimiter_xml_string =
-                "<Delimiter>" +
-                (encoding_type ? url_encode(*delimiter) : *delimiter) +
-                "</Delimiter>\n";
+                "<Delimiter>" + *delimiter + "</Delimiter>\n";
         }
 
         std::string key_count_xml;
@@ -221,9 +232,7 @@ public:
 
         std::string prefix_xml_string;
         if (prefix) {
-            prefix_xml_string =
-                "<Prefix>" + (encoding_type ? url_encode(*prefix) : *prefix) +
-                "</Prefix>\n";
+            prefix_xml_string = "<Prefix>" + *prefix + "</Prefix>\n";
         }
 
         http_response res;

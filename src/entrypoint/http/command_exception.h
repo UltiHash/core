@@ -28,7 +28,8 @@ public:
         too_many_elements,
         insufficient_storage,
         command_not_found,
-        no_mp_uploads
+        no_mp_uploads,
+        invalid_query_parameter
     };
 
     explicit command_error(type t = unknown);
