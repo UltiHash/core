@@ -1,0 +1,84 @@
+name: Run Integration Testing
+
+on:
+  pull_request:
+    branches:
+    - "*"
+
+jobs:
+  #build:
+  #  runs-on: heavyweight-generic-jobs
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #      with:
+  #        token: ${{ secrets.PAT }}
+  #        submodules: recursive
+  #
+  #    - name: Set up Docker Buildx
+  #      id: buildx
+  #      uses: docker/setup-buildx-action@v3
+  #
+  #    - name: Login to ghcr.io container registry
+  #      uses: docker/login-action@v2
+  #      with:
+  #        registry: ghcr.io
+  #        username: plauth
+  #        password: ${{ secrets.PAT }}
+  # 
+  #    - name: Build and push the Docker image
+  #      uses: docker/build-push-action@v5
+  #      with:
+  #        context: .
+  #        file: Dockerfile
+  #        platforms: linux/amd64
+  #        tags: ghcr.io/ultihash/cluster:${{ github.head_ref }}
+  #        push: true
+  #        build-args: |
+  #          BuildType=RelWithDebInfo
+  #          DebugTools=True
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Select the Kuberentes node for deployment 
+        run: echo "KUBERNETES_NODE=$(shuf -e -n 1 opm-k8s-worker-01 opm-k8s-worker-02)" >> $GITHUB_ENV
+        
+      - name: Generate Helm values
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          CORE_IMAGE_TAG: ghcr.io/ultihash/cluster:${{ github.head_ref }}
+        with:
+          input: testing/helm-values-template.yaml
+          output: helm-values.yaml
+
+      - name: Uninstall Helm release if exists
+        run: |
+          helm uninstall ${{ github.head_ref }} -n ${{ github.head_ref }} --wait
+          kubectl delete pvc -n ${{ github.head_ref }} --all --force
+        continue-on-error: true
+
+      - name: Install the Helm chart
+        run: |
+          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ github.head_ref }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ github.head_ref }} --values helm-values.yaml --wait
+
+      - name: Run integration tests
+        run: |
+          helm test ${{ github.head_ref }} -n ${{ github.head_ref }} --logs

@@ -16,4 +16,3 @@
 [submodule "testing"]
 	path = testing
 	url = https://github.com/UltiHash/core-tests.git
-	branch = main
