@@ -99,6 +99,7 @@ private:
             responses[0].effective_size += responses[i].effective_size;
         }
 
+        LOG_DEBUG() << "sending dedupe responses";
         co_await m.send_dedupe_response(responses[0]);
     }
 
@@ -109,8 +110,7 @@ private:
         auto check_dedupe = [&](const fragment_set_element& frag) {
             // Here, cached_sample can only contain fragments that are 128 bytes
             // or smaller
-            auto frag_data =
-                m_storage.cached_sample(frag.pointer());
+            auto frag_data = m_storage.cached_sample(frag.pointer());
             bool l1 = true;
             if (frag_data.data() == nullptr) {
                 l1 = false;
@@ -166,7 +166,9 @@ private:
             integration_data = integration_data.substr(frag_size);
         }
 
+        LOG_DEBUG() << "sending sync";
         m_storage.sync(result.addr);
+        LOG_DEBUG() << "sync finished";
         return result;
     }
 

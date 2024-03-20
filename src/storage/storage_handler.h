@@ -85,8 +85,10 @@ private:
             }
         });
 
+        LOG_DEBUG() << "handle_write: waiting for promise";
         address addr = co_await promise->get();
         co_await m.send_address(SUCCESS, addr);
+        LOG_DEBUG() << "handle_write: return";
     }
 
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
@@ -103,8 +105,10 @@ private:
             }
         });
 
+        LOG_DEBUG() << "handle_read_fragment: waiting for promise";
         std::size_t size = co_await promise->get();
         co_await m.send(SUCCESS, {buffer.data(), size});
+        LOG_DEBUG() << "handle_read_fragment: return";
     }
 
     coro<void> handle_read_address(messenger& m, const messenger::header& h) {
@@ -137,8 +141,10 @@ private:
             }
         });
 
+        LOG_DEBUG() << "handle_read_address: waiting for promise";
         std::size_t offset = co_await promise->get();
         co_await m.send(SUCCESS, {buffer.data(), offset});
+        LOG_DEBUG() << "handle_read_address: return";
     }
 
     coro<void> handle_remove_fragment(messenger& m,
@@ -160,8 +166,10 @@ private:
             }
         });
 
+        LOG_DEBUG() << "handle_sync: waiting for promise";
         co_await promise->get();
         co_await m.send(SUCCESS, {});
+        LOG_DEBUG() << "handle_sync: return";
     }
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
