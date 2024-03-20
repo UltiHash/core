@@ -70,7 +70,8 @@ public:
             }
         } catch (const std::invalid_argument& e) {
             LOG_ERROR() << e.what();
-            command_exception err(http::status::bad_request);
+            command_exception err(http::status::bad_request,
+                                  command_error::invalid_argument);
             http::write(s, err.get_response_specific_object());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
