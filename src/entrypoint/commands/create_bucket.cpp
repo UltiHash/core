@@ -37,7 +37,7 @@ coro<void> create_bucket::handle(http_request& req) const {
         switch (*e.error()) {
         case error::bucket_already_exists:
             throw command_exception(http::status::conflict,
-                                    command_error::command_not_found);
+                                    command_error::bucket_already_exists);
         case error::bucket_not_found:
             throw command_exception(http::status::not_found);
         default:
