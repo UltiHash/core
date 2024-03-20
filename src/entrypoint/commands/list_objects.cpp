@@ -162,7 +162,6 @@ static http_response get_response(const std::vector<object>& objects,
     std::string prefix_xml;
     if (prefix) {
         prefix_xml = "<Prefix>" + *prefix + "</Prefix>\n";
-        std::cout << prefix_xml << std::endl;
     }
 
     std::string marker_xml;
