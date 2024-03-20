@@ -68,6 +68,13 @@ public:
                 s.close();
                 throw;
             }
+        } catch (const std::invalid_argument& e) {
+            LOG_ERROR() << e.what();
+            command_exception err(http::status::bad_request);
+            http::write(s, err.get_response_specific_object());
+            s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+            s.close();
+            throw;
         } catch (const std::exception& e) {
             LOG_ERROR() << e.what();
             command_exception err(http::status::internal_server_error);
@@ -89,15 +96,14 @@ public:
     }
 
     template <std::size_t... Is>
-    coro<void> dispatch_unpack_tuple(http_request& req,
-                                              auto&& req_types,
-                                              std::index_sequence<Is...>) {
+    coro<void> dispatch_unpack_tuple(http_request& req, auto&& req_types,
+                                     std::index_sequence<Is...>) {
         return dispatch_front(req, std::get<Is>(req_types)...);
     }
 
     template <typename command, typename... commands>
     coro<void> dispatch_front(http_request& req, command&& head,
-                                       commands&&... tail) {
+                              commands&&... tail) {
         if (head.can_handle(req)) {
             LOG_DEBUG() << req.socket().remote_endpoint()
                         << " handling request " << class_name<command>();
