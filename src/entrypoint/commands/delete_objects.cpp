@@ -60,7 +60,8 @@ coro<void> delete_objects::handle(http_request& req) const {
     bool parsed = xml_parser.parse(req.get_body());
     auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
-    if (!parsed || object_nodes.empty())
+    if (!parsed || object_nodes.empty() ||
+        object_nodes.size() > MAXIMUM_DELETE_KEYS)
         throw command_exception(http::status::bad_request,
                                 command_error::type::malformed_xml);
 
