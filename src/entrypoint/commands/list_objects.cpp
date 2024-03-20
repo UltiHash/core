@@ -7,11 +7,6 @@ namespace uh::cluster {
 
 namespace http = boost::beast::http;
 
-struct collapsed_objects {
-    std::optional<std::string> _prefix{};
-    std::optional<std::reference_wrapper<const object>> _object{};
-};
-
 list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
@@ -55,9 +50,8 @@ static http_response get_response(const std::vector<object>& objects,
         }
     }
 
-    const auto max_keys_val = get_if_exists("max-keys");
-
     size_t max_keys = 1000;
+    const auto max_keys_val = get_if_exists("max-keys");
     if (max_keys_val) {
         max_keys = std::stoul(*max_keys_val);
     }
@@ -67,36 +61,13 @@ static http_response get_response(const std::vector<object>& objects,
     std::string next_marker_xml;
     std::string is_truncated = "false";
 
-    std::vector<collapsed_objects> collapsed_objs;
     if (!objects.empty() && max_keys > 0) {
-
-        for (std::string previous_prefix; const auto& object : objects) {
-            size_t delimiter_index = std::string::npos;
-
-            if (delimiter) {
-                if (prefix) {
-                    delimiter_index =
-                        object.name.find(*delimiter, prefix->size());
-                } else {
-                    delimiter_index = object.name.find(*delimiter);
-                }
-            }
-
-            if (delimiter_index != std::string::npos) {
-                auto delimiter_prefix =
-                    object.name.substr(0, delimiter_index + 1);
-                if (previous_prefix != delimiter_prefix) {
-                    collapsed_objs.emplace_back(delimiter_prefix, std::nullopt);
-                    previous_prefix = delimiter_prefix;
-                }
-            } else {
-                collapsed_objs.emplace_back(std::nullopt, std::cref(object));
-            }
-        }
 
         bool common_prefix_last = false;
         size_t contents_counter = 0;
         size_t common_prefixes_counter = 0;
+
+        auto collapsed_objs = retrieval::collapse(objects, delimiter, prefix);
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
