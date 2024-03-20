@@ -41,28 +41,6 @@ std::string url_encode(const std::string& str_to_encode) noexcept {
     return encoded_string;
 }
 
-std::vector<std::string>::const_iterator
-find_lexically_closest(const std::vector<std::string>& strings,
-                       const std::string& compareTo) {
-    if (strings.empty()) {
-        return strings.end();
-    }
-
-    if (compareTo.empty()) {
-        return strings.begin();
-    }
-
-    auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(),
-                                             compareTo, std::less<>());
-
-    if (nextDifferentItr != strings.end()) {
-        if (*nextDifferentItr == compareTo)
-            ++nextDifferentItr;
-    }
-
-    return nextDifferentItr;
-}
-
 bool to_bool(std::string str_to_eval) {
     std::transform(str_to_eval.begin(), str_to_eval.end(), str_to_eval.begin(),
                    [](unsigned char c) { return std::tolower(c); });
