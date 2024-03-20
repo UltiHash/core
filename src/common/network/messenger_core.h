@@ -9,7 +9,6 @@
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <list>
 
 namespace uh::cluster {
 
@@ -106,7 +105,7 @@ public:
 
     coro<header> recv_header() {
         header h;
-        std::list<boost::asio::mutable_buffer> buffers{
+        std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
 
         co_await boost::asio::async_read(
