@@ -98,7 +98,7 @@ public:
             [&req_uri](auto&& key) -> std::optional<std::string> {
             if (req_uri.query_string_exists(key)) {
                 if (auto& val = req_uri.get_query_string_value(key);
-                    !val.empty())
+                    val.empty())
                     return std::make_optional<std::string>(val);
             }
             return std::nullopt;
