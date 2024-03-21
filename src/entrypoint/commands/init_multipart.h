@@ -26,8 +26,8 @@ public:
     [[nodiscard]] coro<void> handle(http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
-            co_await m_collection.workers.
-                    io_thread_acquire_messenger_and_post_in_io_threads(
+            co_await m_collection.workers
+                .io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
                     [&req](client::acquired_messenger m) -> coro<void> {
                         directory_message dir_req{
@@ -56,7 +56,6 @@ public:
 
         auto res = get_response(req, upload_id);
         co_await req.respond(res.get_prepared_response());
-
     }
 
 private:

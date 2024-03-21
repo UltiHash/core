@@ -8,3 +8,4 @@ server-agency/src/config.hpp
 .vscode
 testing/.venv
 testing/ceph_s3_test.conf
+**/__pycache__/

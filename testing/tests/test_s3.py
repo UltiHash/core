@@ -8,8 +8,6 @@ import string
 import util
 from s3_util import has_bucket, has_object, unused_bucket_name, unused_object_key
 
-
-@pytest.mark.xfail
 def test_create_bucket(s3):
     name = unused_bucket_name(s3)
     response = s3.create_bucket(Bucket=name)
@@ -18,7 +16,6 @@ def test_create_bucket(s3):
     with pytest.raises(Exception):
         s3.create_bucket(Bucket=name)
 
-    # cleanup
     s3.delete_bucket(Bucket=name)
 
 def test_put_object(s3):
@@ -30,7 +27,6 @@ def test_put_object(s3):
 
     assert has_object(s3, bucket, name)
 
-    # cleanup
     s3.delete_object(Bucket=bucket, Key=name)
     s3.delete_bucket(Bucket=bucket)
 
@@ -55,7 +51,6 @@ def test_delete_object(s3):
     s3.delete_object(Bucket=bucket, Key=name)
     assert not has_object(s3, bucket, name)
 
-    # cleanup
     s3.delete_bucket(Bucket=bucket)
 
 def test_object_content(s3):
@@ -69,7 +64,6 @@ def test_object_content(s3):
     resp = s3.get_object(Bucket=bucket, Key=name)
     assert body.encode('ascii') == resp['Body'].read()
 
-    # cleanup
     s3.delete_object(Bucket=bucket, Key=name)
     s3.delete_bucket(Bucket=bucket)
 

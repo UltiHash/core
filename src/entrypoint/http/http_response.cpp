@@ -35,6 +35,8 @@ void http_response::set_bandwidth(double bandwidth) {
     m_res.set("uh-bandwidth-mbps", std::to_string(bandwidth));
 }
 
-void http_response::set_etag(std::string etag) { m_res.set("ETag", etag); }
+void http_response::set_etag(const std::string& etag) {
+    m_res.set("ETag", etag);
+}
 
 } // namespace uh::cluster
