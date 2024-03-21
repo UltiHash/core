@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
         BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
 
         ds->sync();
-
+        t_read = 0;
         for (size_t i = 0; i < address.size(); ++i) {
             const auto p = address.get_fragment(i);
             auto read_size = ds->read(buf + t_read, p.pointer, p.size);
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     BOOST_CHECK_THROW(ds->write(throwing_data), std::bad_alloc);
 
-
+        t_read = 0;
     for (size_t i = 0; i < address.size(); ++i) {
         const auto p = address.get_fragment(i);
         auto read_size = ds->read(buf + t_read, p.pointer, p.size);
