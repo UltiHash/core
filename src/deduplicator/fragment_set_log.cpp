@@ -1,35 +1,30 @@
 #include "fragment_set_log.h"
+#include <fstream>
 
 namespace uh::cluster {
 fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     : m_log_path(std::move(log_path)),
-      m_log_file(get_log_file(m_log_path)) {
-    if (m_log_file <= 0) {
-        perror(m_log_path.c_str());
+      m_log_file(m_log_path, std::fstream::binary | std::fstream::in |
+                                 std::fstream::out | std::fstream::app) {
+    if (!m_log_file.is_open()) {
         throw std::runtime_error("Could not open the transaction log file");
     }
-    lseek(m_log_file, 0, SEEK_END);
 }
 
 void fragment_set_log::append(const log_entry& entry) {
 
-    char buf[sizeof(log_entry)];
-    serialize_entry(entry, buf);
-
-    if (sizeof buf != ::write(m_log_file, buf, sizeof buf)) [[unlikely]] {
-        throw std::runtime_error("Could not write into the set log file");
-    }
-    fsync(m_log_file);
+    std::array<char, m_entry_size> buf{};
+    zpp::bits::out{buf, zpp::bits::size4b{}}(entry).or_throw();
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_log_file.write(buf.data(), m_entry_size);
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
                               global_data_view& storage) {
     const auto file_size = std::filesystem::file_size(m_log_path);
-    size_t offset = 0;
-    if (0 != lseek(m_log_file, 0, SEEK_SET)) [[unlikely]] {
-        throw std::runtime_error("Could not seek the set log file");
-    }
-    while (offset < file_size) {
+    m_log_file.seekg(std::istream::beg);
+    std::size_t pos = m_log_file.tellg();
+    while (pos < file_size) {
         auto element = read_entry();
         switch (element.op) {
         case set_operation::INSERT:
@@ -38,61 +33,26 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
         default:
             throw std::invalid_argument("invalid entry in fragment set log");
         }
-        offset += sizeof(log_entry);
+        pos = m_log_file.tellg();
     }
-
-    lseek(m_log_file, 0, SEEK_END);
 }
 
 fragment_set_log::~fragment_set_log() {
-    fsync(m_log_file);
-    close(m_log_file);
-}
-
-int fragment_set_log::get_log_file(const std::filesystem::path& path) {
-    std::filesystem::create_directories(path.parent_path());
-    if (std::filesystem::exists(path)) {
-        return ::open(path.c_str(), O_RDWR | O_APPEND);
-    } else {
-        return ::open(path.c_str(), O_RDWR | O_APPEND | O_CREAT,
-                      S_IWUSR | S_IRUSR);
-    }
-}
-
-void fragment_set_log::serialize_entry(const log_entry& entry, char* buf) {
-    buf[0] = entry.op;
-    size_t offset = sizeof entry.op;
-    std::memcpy(buf + offset, entry.pointer.get_data(), sizeof entry.pointer);
-    offset += sizeof entry.pointer;
-    std::memcpy(buf + offset, &entry.size, sizeof entry.size);
-    offset += sizeof entry.size;
-    std::memcpy(buf + offset, entry.prefix.get_data(), sizeof entry.prefix);
-}
-
-fragment_set_log::log_entry
-fragment_set_log::deserialize_entry(const char* buf) {
-    log_entry entry;
-    entry.op = static_cast<set_operation>(buf[0]);
-    size_t offset = sizeof entry.op;
-    memcpy(entry.pointer.ref_data(), buf + offset, sizeof entry.pointer);
-    offset += sizeof entry.pointer;
-    memcpy(&entry.size, buf + offset, sizeof entry.size);
-    offset += sizeof entry.size;
-    memcpy(entry.prefix.ref_data(), buf + offset, sizeof entry.prefix);
-
-    return entry;
+    m_log_file.flush();
+    m_log_file.close();
 }
 
 [[nodiscard]] fragment_set_log::log_entry fragment_set_log::read_entry() {
-    char buf[sizeof(log_entry)];
-    if (const auto rc = ::read(m_log_file, buf, sizeof buf); rc != sizeof buf)
-        [[unlikely]] {
-        perror("Read error");
-        throw std::runtime_error("could not read the fragment set element from "
-                                 "the fragment set log file");
-    }
+    std::array<char, m_entry_size> buf{};
+    m_log_file.read(buf.data(), m_entry_size);
+    log_entry entry;
+    zpp::bits::in{buf, zpp::bits::size4b{}}(entry).or_throw();
+    return entry;
+}
 
-    return deserialize_entry(buf);
+void fragment_set_log::flush() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_log_file.flush();
 }
 
 } // namespace uh::cluster
