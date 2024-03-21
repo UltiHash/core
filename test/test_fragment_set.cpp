@@ -197,6 +197,7 @@ BOOST_FIXTURE_TEST_CASE(insert_performance, global_data_view_fixture) {
     for (std::size_t i = 0; i < 10000000; i++) {
         log.append(entry);
     }
+    log.flush();
     const auto duration = std::chrono::steady_clock::now() - start;
     auto millis =
         std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();

@@ -88,6 +88,7 @@ public:
 
 private:
     [[nodiscard]] log_entry read_entry();
+    std::mutex m_mutex;
 };
 
 } // end namespace uh::cluster

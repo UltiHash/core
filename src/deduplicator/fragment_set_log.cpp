@@ -15,6 +15,7 @@ void fragment_set_log::append(const log_entry& entry) {
 
     std::array<char, m_entry_size> buf{};
     zpp::bits::out{buf, zpp::bits::size4b{}}(entry).or_throw();
+    std::lock_guard<std::mutex> guard(m_mutex);
     m_log_file.write(buf.data(), m_entry_size);
 }
 
@@ -49,6 +50,9 @@ fragment_set_log::~fragment_set_log() {
     return entry;
 }
 
-void fragment_set_log::flush() { m_log_file.flush(); }
+void fragment_set_log::flush() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_log_file.flush();
+}
 
 } // namespace uh::cluster
