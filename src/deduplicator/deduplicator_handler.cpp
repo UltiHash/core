@@ -7,17 +7,10 @@ namespace uh::cluster {
 
 namespace {
 
-size_t largest_common_prefix(const std::string_view& str1,
-                             const std::string_view& str2) noexcept {
-    if (str1.size() <= str2.size()) {
-        return std::distance(
-            str1.cbegin(),
-            std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
-    } else {
-        return std::distance(
-            str2.cbegin(),
-            std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
-    }
+template <typename container>
+size_t largest_common_prefix(const container& a, const container& b) noexcept {
+    auto mismatch = std::mismatch(a.begin(), a.end(), b.begin(), b.end());
+    return std::distance(a.begin(), mismatch.first);
 }
 
 size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
