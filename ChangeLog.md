@@ -1,8 +1,9 @@
 # Changelog
 
 ## [Unreleased]
- - Fixed a bug in the free spot manager
- - Fixed the shared lock concurrency issue in directory service
+- Fixed a bug in the free spot manager
+- Fixed the shared lock concurrency issue in directory service
+- Fix hanging server when requesting empty files
 
 ## [0.3.4] - 2024-03-15
 - Fixed delete objects raising segmentation fault in entrypoint

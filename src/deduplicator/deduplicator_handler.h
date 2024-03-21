@@ -150,6 +150,7 @@ private:
 
             const auto frag_size = std::min(integration_data.size(),
                                             m_dedupe_conf.max_fragment_size);
+
             const auto addr =
                 m_storage.write(integration_data.substr(0, frag_size));
             m_fragment_set.insert(
