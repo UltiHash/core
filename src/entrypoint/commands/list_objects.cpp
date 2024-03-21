@@ -5,10 +5,7 @@
 
 namespace uh::cluster {
 
-struct collapsed_objects {
-    std::optional<std::string> _prefix{};
-    std::optional<std::reference_wrapper<const object>> _object{};
-};
+namespace http = boost::beast::http;
 
 list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
@@ -29,19 +26,31 @@ static http_response get_response(const std::vector<object>& objects,
     const auto get_if_exists =
         [&req_uri](auto&& key) -> std::optional<std::string> {
         if (req_uri.query_string_exists(key)) {
-            if (auto& val = req_uri.get_query_string_value(key); !val.empty())
-                return std::make_optional<std::string>(val);
+            return req_uri.get_query_string_value(key);
         }
         return std::nullopt;
     };
 
     const auto marker = get_if_exists("marker");
     const auto prefix = get_if_exists("prefix");
-    const auto delimiter = get_if_exists("delimiter");
+
+    std::optional<std::string> delimiter = std::nullopt;
+    if (req_uri.query_string_exists("delimiter")) {
+        if (auto value = req_uri.get_query_string_value("delimiter");
+            !value.empty())
+            delimiter = value;
+    }
+
     const auto encoding_type = get_if_exists("encoding-type");
-    const auto max_keys_val = get_if_exists("max-keys");
+    if (encoding_type) {
+        if (*encoding_type != "url") {
+            throw command_exception(http::status::bad_request,
+                                    command_error::invalid_query_parameter);
+        }
+    }
 
     size_t max_keys = 1000;
+    const auto max_keys_val = get_if_exists("max-keys");
     if (max_keys_val) {
         max_keys = std::stoul(*max_keys_val);
     }
@@ -51,36 +60,13 @@ static http_response get_response(const std::vector<object>& objects,
     std::string next_marker_xml;
     std::string is_truncated = "false";
 
-    std::vector<collapsed_objects> collapsed_objs;
     if (!objects.empty() && max_keys > 0) {
-
-        for (std::string previous_prefix; const auto& object : objects) {
-            size_t delimiter_index = std::string::npos;
-
-            if (delimiter) {
-                if (prefix) {
-                    delimiter_index =
-                        object.name.find(*delimiter, prefix->size());
-                } else {
-                    delimiter_index = object.name.find(*delimiter);
-                }
-            }
-
-            if (delimiter_index != std::string::npos) {
-                auto delimiter_prefix =
-                    object.name.substr(0, delimiter_index + 1);
-                if (previous_prefix != delimiter_prefix) {
-                    collapsed_objs.emplace_back(delimiter_prefix, std::nullopt);
-                    previous_prefix = delimiter_prefix;
-                }
-            } else {
-                collapsed_objs.emplace_back(std::nullopt, std::cref(object));
-            }
-        }
 
         bool common_prefix_last = false;
         size_t contents_counter = 0;
         size_t common_prefixes_counter = 0;
+
+        auto collapsed_objs = retrieval::collapse(objects, delimiter, prefix);
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
@@ -128,10 +114,7 @@ static http_response get_response(const std::vector<object>& objects,
 
     std::string delimiter_xml_string;
     if (delimiter) {
-        delimiter_xml_string =
-            "<Delimiter>" +
-            (encoding_type ? url_encode(*delimiter) : *delimiter) +
-            "</Delimiter>\n";
+        delimiter_xml_string = "<Delimiter>" + *delimiter + "</Delimiter>\n";
     }
 
     std::string name_xml_string;
@@ -148,9 +131,7 @@ static http_response get_response(const std::vector<object>& objects,
 
     std::string prefix_xml;
     if (prefix) {
-        prefix_xml = "<Prefix>" +
-                     (encoding_type ? url_encode(*prefix) : *prefix) +
-                     "</Prefix>\n";
+        prefix_xml = "<Prefix>" + *prefix + "</Prefix>\n";
     }
 
     std::string marker_xml;

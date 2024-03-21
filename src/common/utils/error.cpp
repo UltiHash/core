@@ -8,8 +8,14 @@ namespace uh::cluster {
 namespace {
 
 static const std::vector<std::string> error_messages = {
-    "success", "unknown", "bucket does not exists", "object does not exists",
-    "bucket is not empty"};
+    "success",
+    "unknown",
+    "bucket does not exists",
+    "object does not exists",
+    "bucket is not empty",
+    "bucket name is invalid",
+    "storage limit is exceeded",
+    "bucket already exists"};
 
 static const std::string error_out_of_range = "error out of range";
 

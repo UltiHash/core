@@ -3,7 +3,6 @@
 
 #include "common/network/server.h"
 
-
 namespace uh::cluster {
 
 struct entrypoint_config {

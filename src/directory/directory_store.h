@@ -68,6 +68,10 @@ public:
     void add_bucket(const std::string& bucket_id) {
         std::lock_guard<std::mutex> lock(m_mutex);
 
+        if (m_buckets.contains(bucket_id)) {
+            throw error_exception(error::bucket_already_exists);
+        }
+
         m_buckets.emplace(bucket_id,
                           std::make_unique<bucket>(m_root_dir, bucket_id,
                                                    m_conf.bucket_conf));

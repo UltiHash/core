@@ -100,7 +100,8 @@ constexpr metric_type convert_message_type(message_type mtype) {
     auto mt = magic_enum::enum_cast<metric_type>(str);
     if (!mt) [[unlikely]] {
         throw std::runtime_error(
-            "Could not convert message type to metric type: " + std::to_string(mtype) + ":" + str);
+            "Could not convert message type to metric type: " +
+            std::to_string(mtype) + ":" + str);
     }
     return *mt;
 }

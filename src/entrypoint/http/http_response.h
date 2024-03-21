@@ -12,7 +12,7 @@ public:
 
     void set_body(std::string&& body) noexcept;
 
-    void set_etag(std::string etag);
+    void set_etag(const std::string& etag);
 
     void set_effective_size(std::size_t effective_size);
 
