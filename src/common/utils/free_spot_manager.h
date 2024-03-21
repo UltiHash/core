@@ -13,8 +13,8 @@ namespace uh::cluster {
 
 class free_spot_manager {
 public:
-    explicit free_spot_manager(std::filesystem::path hole_log, size_t minimum_size);
-
+    explicit free_spot_manager(std::filesystem::path hole_log,
+                               size_t minimum_size);
 
     /**
      * Will take a note about the given free spot, without actually applying it
@@ -46,7 +46,8 @@ public:
     std::optional<fragment> pop_free_spot();
 
     /**
-     * Applies the pending/noted removed free spots and updates the free spot size
+     * Applies the pending/noted removed free spots and updates the free spot
+     * size
      */
     void apply_popped_items();
 
