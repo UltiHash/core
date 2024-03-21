@@ -82,6 +82,11 @@ struct directory_list_objects_message {
     std::vector<object> objects;
 };
 
+struct storage_write_fragments_message {
+    std::vector<std::size_t> offsets;
+    std::vector<char> buffer;
+};
+
 template <typename T> using opt_ref = std::optional<std::reference_wrapper<T>>;
 
 } // end namespace uh::cluster

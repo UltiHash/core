@@ -34,14 +34,14 @@ public:
                 case STORAGE_WRITE_REQ:
                     co_await handle_write(m, message_header);
                     break;
+                case STORAGE_WRITE_FRAGMENTS_REQ:
+                    co_await handle_write_fragments(m, message_header);
+                    break;
                 case STORAGE_READ_FRAGMENT_REQ:
                     co_await handle_read_fragment(m, message_header);
                     break;
                 case STORAGE_READ_ADDRESS_REQ:
                     co_await handle_read_address(m, message_header);
-                    break;
-                case STORAGE_REMOVE_FRAGMENT_REQ:
-                    co_await handle_remove_fragment(m, message_header);
                     break;
                 case STORAGE_SYNC_REQ:
                     co_await handle_sync(m, message_header);
@@ -75,6 +75,12 @@ private:
         co_await m.send_address(SUCCESS, addr);
     }
 
+    coro<void> handle_write_fragments(messenger& m, const messenger::header& h) {
+        auto req = co_await m.recv_storage_write_fragment_message(h);
+        const auto addr = m_data_store.write(req.buffer);
+        co_await m.send_address(SUCCESS, addr);
+    }
+
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         unique_buffer<char> buffer(resp.size);
@@ -101,13 +107,6 @@ private:
             offset += frag.size;
         }
         co_await m.send(SUCCESS, {buffer.data(), offset});
-    }
-
-    coro<void> handle_remove_fragment(messenger& m,
-                                      const messenger::header& h) {
-        const auto resp = co_await m.recv_fragment(h);
-        m_data_store.remove(resp.pointer, resp.size);
-        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
