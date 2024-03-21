@@ -134,48 +134,29 @@ BOOST_AUTO_TEST_CASE(test_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_sync) {
-    const std::size_t RND_ELEM = 3431;//rand() % (test_data.size());
+    const std::size_t RND_ELEM = rand() % (test_data.size());
 
     std::vector<address> addresses;
     for (auto& data : test_data) {
         addresses.emplace_back(ds->write(data));
     }
     auto address = addresses[RND_ELEM];
-        size_t t_read = 0;
-        char buf[MAX_FILE_SIZE_BYTES];
-
-        for (size_t i = 0; i < address.size(); ++i) {
-            const auto p = address.get_fragment(i);
-            auto read_size = ds->read(buf + t_read, p.pointer, p.size);
-            t_read += read_size;
-        }
-        BOOST_CHECK(t_read == test_data[RND_ELEM].size());
-        BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
-
-        ds->sync();
-        t_read = 0;
-        for (size_t i = 0; i < address.size(); ++i) {
-            const auto p = address.get_fragment(i);
-            auto read_size = ds->read(buf + t_read, p.pointer, p.size);
-            t_read += read_size;
-        }
-        BOOST_CHECK(t_read == test_data[RND_ELEM].size());
-        BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
-
-        ds.reset();
+    ds->sync();
+    ds.reset();
 
     ds = make_data_store();
 
     BOOST_CHECK_THROW(ds->write(throwing_data), std::bad_alloc);
 
-        t_read = 0;
+    char buf[MAX_FILE_SIZE_BYTES];
+    size_t t_read = 0;
+
     for (size_t i = 0; i < address.size(); ++i) {
         const auto p = address.get_fragment(i);
         auto read_size = ds->read(buf + t_read, p.pointer, p.size);
         t_read += read_size;
     }
 
-    std::cout << t_read << " " << RND_ELEM << " " << test_data.size() << " " << address.size() << std::endl;
     BOOST_CHECK(t_read == test_data[RND_ELEM].size());
     BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
 

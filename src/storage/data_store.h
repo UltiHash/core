@@ -102,7 +102,7 @@ private:
 
     std::atomic<int> m_last_fd{};
     std::atomic<int> m_file_count{};
-    std::atomic<size_t> m_last_file_data_end;
+    std::atomic<size_t> m_last_file_data_end{};
     size_t m_data_id;
     data_store_config m_conf;
     std::vector<int> m_open_files;
