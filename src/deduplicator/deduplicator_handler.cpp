@@ -112,7 +112,6 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
 
 dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
     dedupe_response result{.addr = address{}};
-    auto integration_data = data;
 
     auto check_dedupe = [&](const fragment_set_element& frag) {
         // Here, cached_sample can only contain fragments that are 128 bytes
@@ -124,24 +123,24 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
             frag_data = m_storage.read_fragment(frag.pointer(), frag.size());
         }
         auto common_prefix =
-            largest_common_prefix(integration_data, frag_data.get_str_view());
+            largest_common_prefix(data, frag_data.get_str_view());
         if (common_prefix >= m_dedupe_conf.min_fragment_size) {
             if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
                 frag_data =
                     m_storage.read_fragment(frag.pointer(), frag.size());
                 common_prefix += largest_common_prefix(
-                    integration_data.substr(common_prefix),
+                    data.substr(common_prefix),
                     frag_data.get_str_view().substr(common_prefix));
             }
             result.addr.push_fragment(fragment{frag.pointer(), common_prefix});
-            integration_data = integration_data.substr(common_prefix);
+            data = data.substr(common_prefix);
             return true;
         }
         return false;
     };
 
-    while (!integration_data.empty()) {
-        const auto f = m_fragment_set.find(integration_data);
+    while (!data.empty()) {
+        const auto f = m_fragment_set.find(data);
 
         if (f.low.has_value()) {
             if (check_dedupe(f.low->get())) {
@@ -155,12 +154,10 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
         }
 
         const auto frag_size =
-            std::min(integration_data.size(), m_dedupe_conf.max_fragment_size);
-        const auto addr =
-            m_storage.write(integration_data.substr(0, frag_size));
+            std::min(data.size(), m_dedupe_conf.max_fragment_size);
+        const auto addr = m_storage.write(data.substr(0, frag_size));
         m_fragment_set.insert({addr.pointers[0], addr.pointers[1]},
-                              integration_data.substr(0, addr.sizes.front()),
-                              f.hint);
+                              data.substr(0, addr.sizes.front()), f.hint);
 
         metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
         metric<metric_type::deduplicator_set_fragment_size_counter,
@@ -168,7 +165,7 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
 
         result.addr.append_address(addr);
         result.effective_size += frag_size;
-        integration_data = integration_data.substr(frag_size);
+        data = data.substr(frag_size);
     }
 
     m_fragment_set.flush();
