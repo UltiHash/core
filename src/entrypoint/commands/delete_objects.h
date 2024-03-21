@@ -17,6 +17,7 @@ public:
 
 private:
     const reference_collection& m_collection;
+    static constexpr std::size_t MAXIMUM_DELETE_KEYS = 1000;
 };
 
 } // namespace uh::cluster
