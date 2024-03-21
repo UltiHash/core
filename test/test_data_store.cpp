@@ -13,7 +13,7 @@
 
 // ------------- Tests Suites Follow --------------
 
-#define MAX_DATA_STORE_SIZE_BYTES (16 * 1024ul * 1024ul)
+#define MAX_DATA_STORE_SIZE_BYTES (8 * 1024ul * 1024ul)
 #define MAX_FILE_SIZE_BYTES (8 * 1024ul)
 #define DATA_STORE_ID 1
 
