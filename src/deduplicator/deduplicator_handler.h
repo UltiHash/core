@@ -94,12 +94,13 @@ private:
                 [this](const auto& piece) { return deduplicate(piece); },
                 pieces);
 
-        m_fragment_set.flush();
-
         for (std::size_t i = 1; i < pieces_count; i++) {
             responses[0].addr.append_address(responses[i].addr);
             responses[0].effective_size += responses[i].effective_size;
         }
+
+        m_fragment_set.flush();
+        m_storage.sync(responses[0].addr);
 
         co_await m.send_dedupe_response(responses[0]);
     }
@@ -168,7 +169,6 @@ private:
             integration_data = integration_data.substr(frag_size);
         }
 
-        m_storage.sync(result.addr);
         return result;
     }
 
