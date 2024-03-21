@@ -65,6 +65,7 @@ enable_testing()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 
 add_subdirectory(experiments)
+add_subdirectory(tools)
 
 # Packaging
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/packaging/CMakeLists.txt)
