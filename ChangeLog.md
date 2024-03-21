@@ -4,6 +4,8 @@
 - Fixed a bug in the free spot manager
 - Fixed the shared lock concurrency issue in directory service
 - Fix hanging server when requesting empty files
+- Use buffered file I/O to improve performance of fragment-set log.
+- WARNING: New layout of fragment-set logfile breaks compatibility with old logfile format.
 
 ## [0.3.4] - 2024-03-15
 - Fixed delete objects raising segmentation fault in entrypoint
