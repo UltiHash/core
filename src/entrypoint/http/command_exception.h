@@ -30,7 +30,8 @@ public:
         command_not_found,
         no_mp_uploads,
         invalid_query_parameter,
-        bucket_already_exists
+        bucket_already_exists,
+        invalid_argument
     };
 
     explicit command_error(type t = unknown);
