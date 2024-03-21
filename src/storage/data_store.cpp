@@ -16,7 +16,8 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
         std::filesystem::create_directories(m_conf.working_dir);
     }
 
-    std::unordered_map<int, std::size_t> file_sizes;
+    std::pair <int, uint128_t> last_file;
+    last_file.second = 0;
     for (const auto& entry :
          std::filesystem::directory_iterator(m_conf.working_dir)) {
         if (!is_data_file(entry.path())) {
@@ -41,16 +42,18 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
                 std::error_code(errno, std::system_category()));
         }
 
+
         m_open_files.emplace_back(fd);
-        file_sizes.emplace(fd, std::filesystem::file_size(entry.path()));
+        if (id_offset.second >= last_file.second) {
+            last_file = {fd, id_offset.second};
+        }
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(m_global_offset,
+        add_new_file(m_global_offset,
                               static_cast<long>(m_conf.file_size));
-        file_sizes.emplace(fd, m_conf.file_size);
     } else {
-        m_last_fd = m_open_files.at(m_open_files.size() - 1);
+        m_last_fd = last_file.first;
         const auto ret = ::read(m_last_fd, &m_last_file_data_end,
                                 sizeof(m_last_file_data_end));
         if (ret != sizeof(m_last_file_data_end)) {
@@ -67,7 +70,6 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
         std::bind(&data_store::get_used_space, this));
     m_used = fetch_used_space();
-    std::cout << "creating " << m_open_files.size() << " " << m_used << " " << m_last_fd << " " << m_last_file_data_end << std::endl;
 }
 
 address data_store::write(std::span<char> data) {
@@ -139,8 +141,6 @@ data_store::~data_store() {
         fsync(open_file);
         close(open_file);
     }
-    std::cout << "destroying " << m_open_files.size() << " " << m_used << " " << m_last_fd << " " << m_last_file_data_end << std::endl;
-
 }
 
 std::pair<int, long> data_store::get_file_offset_pair(const uint128_t& pointer) const {
