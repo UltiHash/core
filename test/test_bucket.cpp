@@ -30,8 +30,7 @@ struct config_fixture {
 
     data_store_config make_data_store_config() const {
         return {.working_dir = dir.path().string(),
-                .min_file_size = 1024ul,
-                .max_file_size = 8 * 1024ul,
+                .file_size = 8 * 1024ul,
                 .max_data_store_size = 32 * 1024ul};
     }
 
