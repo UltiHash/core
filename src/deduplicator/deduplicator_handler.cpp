@@ -20,6 +20,27 @@ size_t largest_common_prefix(const std::string_view& str1,
     }
 }
 
+size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
+    if (!frag) {
+        return 0ull;
+    }
+
+    const fragment_set_element& f = *frag;
+
+    auto cached = storage.cached_sample(f.pointer());
+    std::size_t common = 0ull;
+    if (cached.data()) {
+        common = largest_common_prefix(data, cached.get_str_view());
+        if (common < storage.l1_cache_sample_size()) {
+            return common;
+        }
+    }
+
+    auto complete = storage.read_fragment(f.pointer(), f.size());
+    return largest_common_prefix(data.substr(common),
+                                 complete.get_str_view().substr(common));
+}
+
 } // namespace
 
 deduplicator_handler::deduplicator_handler(deduplicator_config config,
@@ -113,44 +134,22 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
 dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
     dedupe_response result{.addr = address{}};
 
-    auto check_dedupe = [&](const fragment_set_element& frag) {
-        // Here, cached_sample can only contain fragments that are 128 bytes
-        // or smaller
-        auto frag_data = m_storage.cached_sample(frag.pointer());
-        bool l1 = true;
-        if (frag_data.data() == nullptr) {
-            l1 = false;
-            frag_data = m_storage.read_fragment(frag.pointer(), frag.size());
-        }
-        auto common_prefix =
-            largest_common_prefix(data, frag_data.get_str_view());
-        if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-            if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                frag_data =
-                    m_storage.read_fragment(frag.pointer(), frag.size());
-                common_prefix += largest_common_prefix(
-                    data.substr(common_prefix),
-                    frag_data.get_str_view().substr(common_prefix));
-            }
-            result.addr.push_fragment(fragment{frag.pointer(), common_prefix});
-            data = data.substr(common_prefix);
-            return true;
-        }
-        return false;
-    };
-
     while (!data.empty()) {
         const auto f = m_fragment_set.find(data);
 
-        if (f.low.has_value()) {
-            if (check_dedupe(f.low->get())) {
-                continue;
-            }
-        }
-        if (f.high.has_value()) {
-            if (check_dedupe(f.high->get())) {
-                continue;
-            }
+        auto match_low = match_size(m_storage, data, f.low);
+        auto match_high = match_size(m_storage, data, f.high);
+
+        if (std::max(match_low, match_high) > m_dedupe_conf.min_fragment_size) {
+
+            const fragment_set_element& element =
+                match_low > match_high ? *f.low : *f.high;
+            std::size_t size = match_low > match_high ? match_low : match_high;
+
+            result.addr.push_fragment(fragment{element.pointer(), size});
+            data = data.substr(size);
+
+            continue;
         }
 
         const auto frag_size =
