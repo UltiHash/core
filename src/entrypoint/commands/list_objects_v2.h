@@ -97,17 +97,29 @@ public:
         const auto get_if_exists =
             [&req_uri](auto&& key) -> std::optional<std::string> {
             if (req_uri.query_string_exists(key)) {
-                if (auto& val = req_uri.get_query_string_value(key);
-                    !val.empty())
-                    return std::make_optional<std::string>(val);
+                return req_uri.get_query_string_value(key);
             }
             return std::nullopt;
         };
 
         const auto start_after = get_if_exists("start-after");
         const auto prefix = get_if_exists("prefix");
-        const auto delimiter = get_if_exists("delimiter");
+
+        std::optional<std::string> delimiter = std::nullopt;
+        if (req_uri.query_string_exists("delimiter")) {
+            if (auto value = req_uri.get_query_string_value("delimiter");
+                !value.empty())
+                delimiter = value;
+        }
+
         const auto encoding_type = get_if_exists("encoding-type");
+        if (encoding_type) {
+            if (*encoding_type != "url") {
+                throw command_exception(http::status::bad_request,
+                                        command_error::invalid_query_parameter);
+            }
+        }
+
         const auto continuation_token = get_if_exists("continuation-token");
 
         size_t max_keys = 1000;
@@ -123,79 +135,62 @@ public:
                 fetch_owner_set = true;
         }
 
-        std::set<std::string> common_prefixes;
+        std::string common_prefixes_xml_string;
         std::string content_xml_string;
+        std::string is_truncated = "false";
+        size_t contents_counter = 0;
+        size_t common_prefixes_counter = 0;
 
-        size_t counter = 0;
         if (!objects.empty() && max_keys != 0) {
 
-            for (std::size_t tally = 0; const auto& obj : objects) {
-                size_t delimiter_index = std::string::npos;
+            auto collapsed_objs =
+                retrieval::collapse(objects, delimiter, prefix);
 
-                if (delimiter) {
-                    if (prefix) {
-                        delimiter_index =
-                            obj.name.find(*delimiter, prefix->size());
-                    } else {
-                        delimiter_index = obj.name.find(*delimiter);
-                    }
-                }
-                if (delimiter_index != std::string::npos) {
-                    auto delimiter_prefix =
-                        obj.name.substr(0, delimiter_index + 1);
-                    common_prefixes.emplace((encoding_type
-                                                 ? url_encode(delimiter_prefix)
-                                                 : delimiter_prefix));
-                } else {
+            for (const auto& object : collapsed_objs) {
+                if (object._prefix) {
+                    common_prefixes_xml_string +=
+                        "<CommonPrefixes>\n<Prefix>" +
+                        (encoding_type ? url_encode(*object._prefix)
+                                       : *object._prefix) +
+                        "</Prefix>\n</CommonPrefixes>\n";
+                    ++common_prefixes_counter;
+                } else if (object._object) {
                     content_xml_string +=
                         "<Contents>\n"
                         "<LastModified>" +
-                        objects[tally].last_modified +
+                        object._object->get().last_modified +
                         "</LastModified>\n"
                         "<Key>" +
-                        (encoding_type ? url_encode(obj.name) : obj.name) +
+                        (encoding_type ? url_encode(object._object->get().name)
+                                       : object._object->get().name) +
                         "</Key>\n" +
                         (fetch_owner_set ? "<Owner>no-owner-support</Owner>"
                                          : "") +
-                        "<Size>" + std::to_string(objects[tally].size) +
-                        "</Size>\n"
-                        "</Contents>\n";
-                    counter++;
+                        "<Size>" + std::to_string(object._object->get().size) +
+                        +"</Size>\n"
+                         "</Contents>\n";
+                    ++contents_counter;
                 }
 
-                if (counter + common_prefixes.size() == max_keys)
+                if (contents_counter + common_prefixes_counter == max_keys &&
+                    collapsed_objs.size() > max_keys) {
+                    is_truncated = "true";
                     break;
-
-                tally++;
+                }
             }
-        }
-
-        // common prefixes string
-        std::string common_prefixes_xml_string;
-        for (const auto& common_prefix : common_prefixes) {
-            common_prefixes_xml_string += "<CommonPrefixes>\n<Prefix>" +
-                                          common_prefix +
-                                          "</Prefix>\n</CommonPrefixes>\n";
         }
 
         std::string delimiter_xml_string;
         if (delimiter) {
             delimiter_xml_string =
-                "<Delimiter>" +
-                (encoding_type ? url_encode(*delimiter) : *delimiter) +
-                "</Delimiter>\n";
+                "<Delimiter>" + *delimiter + "</Delimiter>\n";
         }
 
         std::string key_count_xml;
-        content_xml_string += "<KeyCount>" +
-                              std::to_string(counter + common_prefixes.size()) +
-                              "</KeyCount>\n";
-
-        std::string name_xml_string;
-
-        std::string truncated = "false";
-        if (objects.size() > max_keys && max_keys != 0)
-            truncated = "true";
+        content_xml_string +=
+            "<KeyCount>" +
+            std::to_string(contents_counter + common_prefixes_counter) +
+            "</KeyCount>\n";
 
         std::string max_keys_xml_string =
             "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
@@ -221,20 +216,18 @@ public:
 
         std::string prefix_xml_string;
         if (prefix) {
-            prefix_xml_string =
-                "<Prefix>" + (encoding_type ? url_encode(*prefix) : *prefix) +
-                "</Prefix>\n";
+            prefix_xml_string = "<Prefix>" + *prefix + "</Prefix>\n";
         }
 
         http_response res;
         res.set_body("<ListBucketResult>\n"
                      "<IsTruncated>" +
-                     truncated + "</IsTruncated>\n" + content_xml_string +
-                     name_xml_string + prefix_xml_string +
-                     delimiter_xml_string + max_keys_xml_string +
-                     common_prefixes_xml_string + encoding_type_xml_string +
-                     key_count_xml + continuation_token_xml_string +
-                     start_after_xml_string + "</ListBucketResult>");
+                     is_truncated + "</IsTruncated>\n" + content_xml_string +
+                     prefix_xml_string + delimiter_xml_string +
+                     max_keys_xml_string + common_prefixes_xml_string +
+                     encoding_type_xml_string + key_count_xml +
+                     continuation_token_xml_string + start_after_xml_string +
+                     "</ListBucketResult>");
 
         return res;
     }
