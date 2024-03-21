@@ -27,7 +27,8 @@ public:
                                m_etcd_client),
           m_workers(m_ioc, config.worker_thread_count),
           m_collection(get_reference_collection()),
-          m_server(config.server, make_entrypoint_handler(m_collection), m_ioc) {}
+          m_server(config.server, make_entrypoint_handler(m_collection),
+                   m_ioc) {}
 
     void run() {
         m_registration =

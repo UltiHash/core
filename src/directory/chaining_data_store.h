@@ -406,8 +406,7 @@ private:
                 required_size +=
                     header::large_size + account_total_size * sizeof(size);
                 account_total_size = 0;
-            }
-            else {
+            } else {
                 break;
             }
 

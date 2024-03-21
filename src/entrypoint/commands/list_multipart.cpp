@@ -62,7 +62,6 @@ coro<void> list_multipart::handle(http_request& req) const {
 
     auto res = get_response(bucket_name, ongoing);
     co_await req.respond(res.get_prepared_response());
-
 }
 
 } // namespace uh::cluster

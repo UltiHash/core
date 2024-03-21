@@ -76,7 +76,8 @@ private:
         time_point when;
     };
     std::priority_queue<info_deletion, std::vector<info_deletion>,
-        std::greater<info_deletion>> m_deletions;
+                        std::greater<info_deletion>>
+        m_deletions;
 };
 
 struct state {
