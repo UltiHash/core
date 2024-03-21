@@ -151,10 +151,6 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
         m_fragment_set.insert({addr.pointers[0], addr.pointers[1]},
                               data.substr(0, addr.sizes.front()), f.hint);
 
-        metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
-        metric<metric_type::deduplicator_set_fragment_size_counter,
-               byte>::increase(addr.sizes.front());
-
         result.addr.append_address(addr);
         result.effective_size += frag_size;
         data = data.substr(frag_size);
