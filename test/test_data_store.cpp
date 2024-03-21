@@ -13,7 +13,7 @@
 
 // ------------- Tests Suites Follow --------------
 
-#define MAX_DATA_STORE_SIZE_BYTES (1024ul * 1024ul)
+#define MAX_DATA_STORE_SIZE_BYTES (16 * 1024ul * 1024ul)
 #define MAX_FILE_SIZE_BYTES (8 * 1024ul)
 #define DATA_STORE_ID 1
 
@@ -21,50 +21,38 @@ namespace uh::cluster {
 
 struct data_store_fixture {
 
-    struct test_data {
-        test_data() { fill_data(); }
-
-        void fill_data() {
-            std::memset(zero, 0, sizeof(zero));
-
-            std::random_device rd;
-            std::mt19937 generator(rd());
-            generator.seed(3);
-            std::uniform_int_distribution<> distribution(
+    void fill_data() {
+        std::random_device rd;
+        std::mt19937 generator(rd());
+        generator.seed(3);
+        std::uniform_int_distribution<> distribution(
                 1, MAX_FILE_SIZE_BYTES / 4 + 1);
 
-            size_t t_size = 0;
-            while (t_size < MAX_DATA_STORE_SIZE_BYTES) {
-                size_t length = distribution(generator);
-                std::string random_data = random_string(length);
-
-                if (t_size + random_data.size() <= MAX_DATA_STORE_SIZE_BYTES) {
-                    data.push_back(random_data);
-                    t_size += random_data.size();
-                } else {
-                    throwing_data = random_data;
-                    break;
-                }
-            }
+        size_t length = distribution(generator);
+        size_t t_size = get_expected_used(length);
+        while (t_size < MAX_DATA_STORE_SIZE_BYTES) {
+            test_data.emplace_back(random_string(length));
+            t_size = get_expected_used(length);
         }
+        throwing_data = random_string(length);
+        m_expected_used = 0;
+    }
 
-        std::vector<std::string> data;
-        std::string throwing_data;
-        char zero[MAX_DATA_STORE_SIZE_BYTES];
-    };
-
-    data_store_config make_data_store_config() const {
+    [[nodiscard]] data_store_config make_data_store_config() const {
         return {.working_dir = m_dir.path().string(),
                 .file_size = MAX_FILE_SIZE_BYTES,
                 .max_data_store_size = MAX_DATA_STORE_SIZE_BYTES};
     }
 
-    auto make_data_store() const {
+    [[nodiscard]] auto make_data_store() const {
         return std::make_unique<data_store>(make_data_store_config(),
                                             DATA_STORE_ID);
     }
 
-    void setup() { ds = make_data_store(); }
+    void setup() {
+        ds = make_data_store();
+        fill_data();
+    }
 
     inline size_t get_expected_used(size_t t_written) {
         auto files =
@@ -82,18 +70,10 @@ struct data_store_fixture {
         return m_expected_used;
     }
 
-    inline std::vector<address> write_all() {
-        std::vector<address> addresses;
-
-        for (auto& data : test_data.data) {
-            addresses.emplace_back(ds->write(data));
-        }
-
-        return addresses;
-    }
-
     temp_directory m_dir;
-    test_data test_data;
+    std::vector<std::string> test_data;
+    std::string throwing_data;
+
     std::unique_ptr<data_store> ds;
     std::size_t m_expected_used{};
 };
@@ -104,7 +84,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 
     long failures = 0;
 
-    for (auto& data : test_data.data) {
+    for (auto& data : test_data) {
         ds->write(data);
 
         auto used_size = get_expected_used(data.size());
@@ -123,7 +103,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 
 
 BOOST_AUTO_TEST_CASE(test_read) {
-    char buf[MAX_DATA_STORE_SIZE_BYTES];
+    char buf[MAX_FILE_SIZE_BYTES];
 
     BOOST_CHECK_THROW(
         ds->read(buf, (DATA_STORE_ID + 1) * MAX_DATA_STORE_SIZE_BYTES, 1),
@@ -133,7 +113,7 @@ BOOST_AUTO_TEST_CASE(test_read) {
         std::out_of_range);
 
     long failures = 0;
-    for (auto& data : test_data.data) {
+    for (auto& data : test_data) {
         auto address = ds->write(data);
 
         size_t t_read = 0;
@@ -154,16 +134,21 @@ BOOST_AUTO_TEST_CASE(test_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_sync) {
-    const std::size_t RND_ELEM = rand() % (test_data.data.size());
-    auto address = write_all()[RND_ELEM];
+    const std::size_t RND_ELEM = rand() % (test_data.size());
+
+    std::vector<address> addresses;
+    for (auto& data : test_data) {
+        addresses.emplace_back(ds->write(data));
+    }
+    auto address = addresses[RND_ELEM];
     ds->sync();
     ds.reset();
 
     ds = make_data_store();
 
-    BOOST_CHECK_THROW(ds->write(test_data.throwing_data), std::bad_alloc);
+    BOOST_CHECK_THROW(ds->write(throwing_data), std::bad_alloc);
 
-    char buf[MAX_DATA_STORE_SIZE_BYTES];
+    char buf[MAX_FILE_SIZE_BYTES];
     auto read = [&]() {
         size_t t_read = 0;
 
@@ -177,14 +162,14 @@ BOOST_AUTO_TEST_CASE(test_sync) {
     };
 
     auto t_read = read();
-    BOOST_CHECK(t_read == test_data.data[RND_ELEM].size());
-    BOOST_CHECK(std::memcmp(buf, test_data.data[RND_ELEM].data(), t_read) == 0);
+    BOOST_CHECK(t_read == test_data[RND_ELEM].size());
+    BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
 
 }
 
 BOOST_AUTO_TEST_CASE(stress_test) {
-    size_t thread_count = 20;
-    int thread_io_count = 10;
+    size_t thread_count = 100;
+    int thread_io_count = test_data.size() / thread_count;
     std::vector <std::thread> threads;
     threads.reserve(thread_count);
     std::atomic<size_t> failures = 0;
@@ -193,20 +178,20 @@ BOOST_AUTO_TEST_CASE(stress_test) {
         threads.emplace_back([&, thread_id = i] () {
             try {
                 std::vector <address> addresses;
-                addresses.reserve(test_data.data.size());
-                auto limit = std::min ((thread_id+1)*thread_io_count, test_data.data.size());
+                addresses.reserve(test_data.size());
+                auto limit = std::min ((thread_id+1)*thread_io_count, test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
-                    addresses.emplace_back(ds->write(test_data.data[k]));
+                    addresses.emplace_back(ds->write(test_data[k]));
                 }
                 char buf [MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
                     auto f = addresses[j].get_fragment(0);
-                    ds->read(buf, f.pointer, f.size);
+                    auto read_size = ds->read(buf, f.pointer, f.size);
 
-                    if ((f.size != test_data.data[thread_id * thread_io_count + j].size())) {
+                    if ((read_size != test_data[thread_id * thread_io_count + j].size())) {
                         failures ++;
                     }
-                    if (std::memcmp(buf, test_data.data[thread_id * thread_io_count + j].data(), f.size) != 0) {
+                    if (std::memcmp(buf, test_data[thread_id * thread_io_count + j].data(), f.size) != 0) {
                         failures ++;
                     }
                 }

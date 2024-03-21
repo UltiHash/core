@@ -142,25 +142,6 @@ public:
         co_await send_buffers(SUCCESS);
     }
 
-    coro<void> send_storage_write_fragments_message(const storage_write_fragments_message& req) {
-        register_write_buffer(req.offsets);
-        co_await send_buffers(STORAGE_WRITE_FRAGMENTS_REQ);
-        register_write_buffer(req.buffer);
-        co_await send_buffers(STORAGE_WRITE_FRAGMENTS_REQ);
-    }
-
-    coro<storage_write_fragments_message> recv_storage_write_fragment_message(const header& h) {
-        storage_write_fragments_message req;
-        req.offsets.resize(h.size);
-        register_read_buffer(req.offsets);
-        co_await recv_buffers(h);
-        auto h2 = co_await recv_header();
-        req.buffer.resize(h.size);
-        register_read_buffer(req.buffer);
-        co_await recv_buffers(h2);
-        co_return req;
-    }
-
 };
 
 } // end namespace uh::cluster
