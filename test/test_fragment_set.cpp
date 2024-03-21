@@ -182,4 +182,26 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     BOOST_CHECK(frag_element_b < frag_element_c);
 }
 
+BOOST_FIXTURE_TEST_CASE(insert_performance, global_data_view_fixture) {
+    temp_directory tmp_dir;
+    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
+    auto log = fragment_set_log(frag_set_log_path);
+
+    fragment_set_log::log_entry entry = {
+        .op = INSERT,
+        .pointer = {0x6465647570, 0x6c69636174696f6e},
+        .size = 13,
+        .prefix = {0x707265666978}};
+
+    const auto start = std::chrono::steady_clock::now();
+    for (std::size_t i = 0; i < 10000000; i++) {
+        log.append(entry);
+    }
+    log.flush();
+    const auto duration = std::chrono::steady_clock::now() - start;
+    auto millis =
+        std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    LOG_INFO() << "Inserting 10,000,000 log entries took " << millis << "ms.";
+}
+
 } // namespace uh::cluster

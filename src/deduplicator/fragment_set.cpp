@@ -33,4 +33,6 @@ void fragment_set::insert(
     std::lock_guard<std::shared_mutex> lock(m_mutex);
     m_set.emplace_hint(hint, std::move(f));
 }
+
+void fragment_set::flush() { m_set_log.flush(); }
 } // namespace uh::cluster
