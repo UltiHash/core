@@ -45,16 +45,19 @@ public:
             start = m_object_ptrs.upper_bound(lower_bound);
         }
 
-        while (start != m_object_ptrs.end() &&
-               start->first.starts_with(prefix)) {
-            const auto bytes = m_data_store.read(start->second);
-            object_meta obj;
-            zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
-                .or_throw();
-            objects.push_back({.name = start->first,
-                               .last_modified = std::move(obj.last_modified),
-                               .size = obj.addr.data_size()});
-            start++;
+        for (; start != m_object_ptrs.end(); ++start) {
+            if (!lower_bound.empty() && start->first.starts_with(lower_bound)) {
+                continue;
+            } else if (start->first.starts_with(prefix)) {
+                const auto bytes = m_data_store.read(start->second);
+                object_meta obj;
+                zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
+                    .or_throw();
+                objects.push_back(
+                    {.name = start->first,
+                     .last_modified = std::move(obj.last_modified),
+                     .size = obj.addr.data_size()});
+            }
         }
 
         return objects;

@@ -24,14 +24,6 @@ std::vector<char> base64_decode(std::string_view b64);
 std::string url_encode(const std::string&) noexcept;
 
 /**
- * Find the closest matching string in a vector of strings given a comparison
- * string.
- */
-std::vector<std::string>::const_iterator
-find_lexically_closest(const std::vector<std::string>& strings,
-                       const std::string& compareTo);
-
-/**
  * Convert give string to bool.
  */
 bool to_bool(std::string str_to_eval);
