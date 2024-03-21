@@ -26,8 +26,7 @@ static http_response get_response(const std::vector<object>& objects,
     const auto get_if_exists =
         [&req_uri](auto&& key) -> std::optional<std::string> {
         if (req_uri.query_string_exists(key)) {
-            return std::make_optional<std::string>(
-                req_uri.get_query_string_value(key));
+            return req_uri.get_query_string_value(key);
         }
         return std::nullopt;
     };
@@ -39,7 +38,7 @@ static http_response get_response(const std::vector<object>& objects,
     if (req_uri.query_string_exists("delimiter")) {
         if (auto value = req_uri.get_query_string_value("delimiter");
             !value.empty())
-            delimiter = std::make_optional<std::string>(value);
+            delimiter = value;
     }
 
     const auto encoding_type = get_if_exists("encoding-type");
