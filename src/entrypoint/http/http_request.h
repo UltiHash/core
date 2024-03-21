@@ -14,7 +14,6 @@ template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class http_request {
 public:
-
     [[nodiscard]] const uri& get_uri() const;
 
     [[nodiscard]] const std::string& get_body() const;
@@ -25,9 +24,11 @@ public:
 
     coro<void> read_body();
 
-    coro<void> respond (const http::response<http::string_body>& resp);
+    coro<void> respond(const http::response<http::string_body>& resp);
 
-    [[nodiscard]] boost::asio::ip::tcp::socket& socket() const { return m_stream; }
+    [[nodiscard]] boost::asio::ip::tcp::socket& socket() const {
+        return m_stream;
+    }
 
     bool keep_alive() const { return m_req.keep_alive(); }
 

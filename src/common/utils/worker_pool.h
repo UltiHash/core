@@ -14,15 +14,16 @@ namespace uh::cluster {
 class worker_pool {
 
 public:
-
-    worker_pool (boost::asio::io_context& ioc, size_t worker_count): m_threads(worker_count), m_ioc (ioc) {}
+    worker_pool(boost::asio::io_context& ioc, size_t worker_count)
+        : m_threads(worker_count),
+          m_ioc(ioc) {}
 
     template <typename Func>
     requires(!std::is_void_v<std::invoke_result_t<Func>>)
-    coro<std::invoke_result_t<Func>>
-    post_in_workers(Func func) {
-        auto pr = std::make_shared<
-            awaitable_promise<std::invoke_result_t<Func>>>(m_ioc);
+    coro<std::invoke_result_t<Func>> post_in_workers(Func func) {
+        auto pr =
+            std::make_shared<awaitable_promise<std::invoke_result_t<Func>>>(
+                m_ioc);
 
         auto f = [](auto& f, auto promise) {
             try {
@@ -36,7 +37,6 @@ public:
 
         co_return co_await pr->get();
     }
-
 
     template <typename Func>
     requires(std::is_void_v<std::invoke_result_t<Func>>)
@@ -57,22 +57,23 @@ public:
         co_await pr->get();
     }
 
-    template <typename R>
-    std::future <R> get_coro_future(coro<R>&& func) {
-        return boost::asio::co_spawn(m_ioc, std::forward<coro<R>>(func), boost::asio::use_future);
+    template <typename R> std::future<R> get_coro_future(coro<R>&& func) {
+        return boost::asio::co_spawn(m_ioc, std::forward<coro<R>>(func),
+                                     boost::asio::use_future);
     }
 
     template <typename Func>
     requires requires(Func& func, client::acquired_messenger& m) {
         { func(std::move(m)) } -> std::same_as<coro<void>>;
     }
-    coro<void> io_thread_acquire_messenger_and_post_in_io_threads(std::shared_ptr<client> cl, Func func) {
+    coro<void> io_thread_acquire_messenger_and_post_in_io_threads(
+        std::shared_ptr<client> cl, Func func) {
 
-        auto m =  co_await post_in_workers([&]() { return cl->acquire_messenger(); });
+        auto m =
+            co_await post_in_workers([&]() { return cl->acquire_messenger(); });
 
         co_await func(std::move(m));
     }
-
 
     template <typename Func>
     requires requires(Func& func, client::acquired_messenger& m) {
@@ -87,18 +88,22 @@ public:
         co_await post_in_workers(f);
     }
 
-    template <typename Func, typename In, typename R = std::invoke_result_t <Func, In>>
-    coro<std::vector <R>> broadcast_from_io_thread_in_workers(
-            Func func, const std::vector <In>& inputs) {
-        std::vector <R> results (inputs.size());
+    template <typename Func, typename In,
+              typename R = std::invoke_result_t<Func, In>>
+    coro<std::vector<R>>
+    broadcast_from_io_thread_in_workers(Func func,
+                                        const std::vector<In>& inputs) {
+        std::vector<R> results(inputs.size());
 
-        std::vector <std::shared_ptr <awaitable_promise <void>>> promises (inputs.size());
-        for (auto& pr: promises)
-            pr = std::make_shared <awaitable_promise<void>>(m_ioc);
+        std::vector<std::shared_ptr<awaitable_promise<void>>> promises(
+            inputs.size());
+        for (auto& pr : promises)
+            pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
         size_t i = 0;
-        for (const auto& in: inputs) {
-            auto f = [&results, &in, size = inputs.size(), &promises, &func, i]() {
+        for (const auto& in : inputs) {
+            auto f = [&results, &in, size = inputs.size(), &promises, &func,
+                      i]() {
                 try {
                     results[i] = func(in);
                     promises[i]->set();
@@ -112,11 +117,10 @@ public:
         }
 
         std::exception_ptr eptr;
-        for (auto& pr: promises) {
+        for (auto& pr : promises) {
             try {
                 co_await pr->get();
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 LOG_ERROR() << e.what();
                 eptr = std::current_exception();
             }
@@ -134,7 +138,7 @@ public:
         { func(std::move(m), long{}) } -> std::same_as<coro<void>>;
     }
     void broadcast_from_worker_in_io_threads(
-            const std::vector<std::shared_ptr<client>>& nodes, Func func) {
+        const std::vector<std::shared_ptr<client>>& nodes, Func func) {
         std::vector<std::future<void>> futures;
         futures.reserve(nodes.size());
 
@@ -142,7 +146,7 @@ public:
         for (auto& n : nodes) {
             auto m = n->acquire_messenger();
             futures.emplace_back(boost::asio::co_spawn(
-                    m_ioc, func(std::move(m), i++), boost::asio::use_future));
+                m_ioc, func(std::move(m), i++), boost::asio::use_future));
         }
 
         for (auto& f : futures) {
@@ -154,12 +158,10 @@ public:
         m_threads.join();
         m_threads.stop();
     }
+
 private:
-
-
     boost::asio::thread_pool m_threads;
     boost::asio::io_context& m_ioc;
-
 };
 
 } // end namespace uh::cluster

@@ -18,7 +18,8 @@ public:
         object_not_found = 3,
         bucket_not_empty = 4,
         invalid_bucket_name = 5,
-        storage_limit_exceeded = 6
+        storage_limit_exceeded = 6,
+        bucket_already_exists = 7,
     };
 
     error(type t = unknown, const std::string& message = "");

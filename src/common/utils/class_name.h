@@ -8,12 +8,9 @@
 #include <cxxabi.h>
 #endif
 
-namespace uh::cluster
-{
+namespace uh::cluster {
 
-template <typename T>
-std::string class_name()
-{
+template <typename T> std::string class_name() {
 #ifdef __GNUG__
     int status;
     std::string name = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
