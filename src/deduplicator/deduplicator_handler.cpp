@@ -5,6 +5,23 @@
 
 namespace uh::cluster {
 
+namespace {
+
+size_t largest_common_prefix(const std::string_view& str1,
+                             const std::string_view& str2) noexcept {
+    if (str1.size() <= str2.size()) {
+        return std::distance(
+            str1.cbegin(),
+            std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
+    } else {
+        return std::distance(
+            str2.cbegin(),
+            std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
+    }
+}
+
+} // namespace
+
 deduplicator_handler::deduplicator_handler(deduplicator_config config,
                                            global_data_view& storage,
                                            worker_pool& dedupe_workers)
@@ -157,19 +174,6 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
     m_fragment_set.flush();
     m_storage.sync(result.addr);
     return result;
-}
-
-size_t deduplicator_handler::largest_common_prefix(
-    const std::string_view& str1, const std::string_view& str2) noexcept {
-    if (str1.size() <= str2.size()) {
-        return std::distance(
-            str1.cbegin(),
-            std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
-    } else {
-        return std::distance(
-            str2.cbegin(),
-            std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
-    }
 }
 
 } // end namespace uh::cluster

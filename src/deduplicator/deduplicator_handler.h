@@ -20,9 +20,6 @@ private:
 
     dedupe_response deduplicate(std::string_view data);
 
-    static size_t largest_common_prefix(const std::string_view& str1,
-                                        const std::string_view& str2) noexcept;
-
     deduplicator_config m_dedupe_conf;
     fragment_set m_fragment_set;
     global_data_view& m_storage;
