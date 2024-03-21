@@ -4,9 +4,6 @@
 [submodule "lib/third-party/etcd-cpp-apiv3"]
 	path = lib/third-party/etcd-cpp-apiv3
 	url = https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3.git
-[submodule "testing/s3-tests"]
-	path = testing/s3-tests
-	url = https://github.com/UltiHash/s3-tests.git
 [submodule "lib/third-party/CLI11"]
 	path = lib/third-party/CLI11
 	url = https://github.com/CLIUtils/CLI11.git
@@ -16,3 +13,7 @@
 [submodule "lib/third-party/magic_enum"]
 	path = lib/third-party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
+[submodule "testing"]
+	path = testing
+	url = https://github.com/UltiHash/core-tests.git
+	branch = main
