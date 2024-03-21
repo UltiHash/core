@@ -22,16 +22,20 @@ def bucket(s3):
 
     yield name
 
-    response = s3.list_objects_v2(Bucket=name)
-    if 'Contents' in response:
-        objects = [{'Key': obj['Key']} for obj in response['Contents']]
-        s3.delete_objects(Bucket=name, Delete={'Objects': objects})
+    delete_all_objects(s3, name)
 
     response = s3.list_objects_v2(Bucket=name)
     assert 'Contents' not in response, "Bucket is not empty"
 
     s3.delete_bucket(Bucket=name)
     assert not has_bucket(s3, name)
+
+def delete_all_objects(s3, bucket_name):
+    paginator = s3.get_paginator('list_objects_v2')
+    for page in paginator.paginate(Bucket=bucket_name):
+        if 'Contents' in page:
+            objects = [{'Key': obj['Key']} for obj in page['Contents']]
+            s3.delete_objects(Bucket=bucket_name, Delete={'Objects': objects})
 
 def upload(s3, bucket, file):
     key = unused_object_key(s3, bucket)
