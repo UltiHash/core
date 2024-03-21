@@ -1,6 +1,7 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
 #include <mutex>
+#include <iostream>
 
 namespace uh::cluster {
 
@@ -66,6 +67,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
         std::bind(&data_store::get_used_space, this));
     m_used = fetch_used_space();
+    std::cout << m_open_files.size() << " " << m_used << m_last_fd << " " << m_last_file_data_end << std::endl;
 }
 
 address data_store::write(std::span<char> data) {
