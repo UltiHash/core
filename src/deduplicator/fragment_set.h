@@ -74,6 +74,15 @@ public:
     void insert(const uint128_t& pointer, const std::string_view& data,
                 const std::set<fragment_set_element>::const_iterator& hint);
 
+    /**
+     * @brief synchronizes the fragment_set log file with the underlying storage
+     * device
+     *
+     * Calls std::fstream::flush() on log file to synchronize cached writes
+     * to persistent storage.
+     */
+    void flush();
+
 private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
