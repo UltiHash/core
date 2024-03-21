@@ -8,6 +8,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <mutex>
 
 namespace uh::cluster {
@@ -19,16 +20,20 @@ enum set_operation : char {
 class fragment_set_log {
 
     std::filesystem::path m_log_path;
-    int m_log_file;
+    std::fstream m_log_file;
+    static constexpr std::size_t m_entry_size =
+        sizeof(set_operation) + sizeof(uint16_t) + 2 * sizeof(uint128_t);
 
+public:
     struct log_entry {
         set_operation op{};
         uint128_t pointer;
         uint16_t size{};
         uint128_t prefix{0};
-    };
 
-public:
+        auto operator<=>(const log_entry&) const = default;
+        using serialize = zpp::bits::members<4>;
+    };
     /**
      * @brief Constructs a fragment_set_log from a specified path.
      *
@@ -73,10 +78,15 @@ public:
      */
     void replay(std::set<fragment_set_element>& set, global_data_view& storage);
 
+    /**
+     * @brief synchronizes the log file with the underlying storage device
+     *
+     * Calls std::fstream::flush() on log file to synchronize cached writes
+     * to persistent storage.
+     */
+    void flush();
+
 private:
-    static int get_log_file(const std::filesystem::path& path);
-    static void serialize_entry(const log_entry& entry, char* buf);
-    static log_entry deserialize_entry(const char* buf);
     [[nodiscard]] log_entry read_entry();
 };
 

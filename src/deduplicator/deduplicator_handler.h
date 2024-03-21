@@ -167,6 +167,7 @@ private:
         }
 
         m_storage.sync(result.addr);
+        m_fragment_set.flush();
         return result;
     }
 
