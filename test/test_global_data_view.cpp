@@ -96,6 +96,8 @@ BOOST_FIXTURE_TEST_CASE(valid_cached_sample, global_data_view_fixture) {
     BOOST_CHECK(addr.sizes.size() == 1);
     gdv->sync(addr);
 
+    gdv->add_l1(addr.first().pointer, input_buffer.get_str_view());
+
     auto frag = addr.first();
     auto short_sample = gdv->cached_sample(frag.pointer);
     BOOST_CHECK(short_sample.size() == gdv->l1_cache_sample_size());
