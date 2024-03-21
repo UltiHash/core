@@ -87,7 +87,7 @@ private:
     alloc_t allocate (size_t size);
 
     [[nodiscard]] std::pair<int, long>
-    get_file_offset_pair(uint128_t pointer) const;
+    get_file_offset_pair(const uint128_t& pointer) const;
 
     [[nodiscard]] size_t fetch_used_space() const noexcept;
 
@@ -105,7 +105,7 @@ private:
     std::atomic<size_t> m_last_file_data_end;
     size_t m_data_id;
     data_store_config m_conf;
-    std::map<uint128_t, int> m_open_files;
+    std::vector<int> m_open_files;
     uint128_t m_global_offset;
     std::atomic<size_t> m_used;
     std::mutex m_add_file_mutex;

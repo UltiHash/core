@@ -34,9 +34,6 @@ public:
                 case STORAGE_WRITE_REQ:
                     co_await handle_write(m, message_header);
                     break;
-                case STORAGE_WRITE_FRAGMENTS_REQ:
-                    co_await handle_write_fragments(m, message_header);
-                    break;
                 case STORAGE_READ_FRAGMENT_REQ:
                     co_await handle_read_fragment(m, message_header);
                     break;
@@ -72,12 +69,6 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write(data.get_span());
-        co_await m.send_address(SUCCESS, addr);
-    }
-
-    coro<void> handle_write_fragments(messenger& m, const messenger::header& h) {
-        auto req = co_await m.recv_storage_write_fragment_message(h);
-        const auto addr = m_data_store.write(req.buffer);
         co_await m.send_address(SUCCESS, addr);
     }
 

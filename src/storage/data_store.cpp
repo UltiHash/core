@@ -1,7 +1,6 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
 #include <mutex>
-#include <iostream>
 
 namespace uh::cluster {
 
@@ -9,6 +8,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     : m_data_id(id),
       m_conf(std::move(conf)) {
 
+    m_open_files.reserve(m_conf.max_data_store_size / m_conf.file_size + 1);
     m_global_offset = uint128_t(m_conf.max_data_store_size) * id;
 
     if (!std::filesystem::exists(m_conf.working_dir)) {
@@ -40,7 +40,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
                 std::error_code(errno, std::system_category()));
         }
 
-        m_open_files.emplace(id_offset.second, fd);
+        m_open_files.emplace_back(fd);
         file_sizes.emplace(fd, std::filesystem::file_size(entry.path()));
     }
 
@@ -49,7 +49,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
                               static_cast<long>(m_conf.file_size));
         file_sizes.emplace(fd, m_conf.file_size);
     } else {
-        m_last_fd = m_open_files.crbegin()->second;
+        m_last_fd = m_open_files.at(m_open_files.size() - 1);
         const auto ret = ::read(m_last_fd, &m_last_file_data_end,
                                 sizeof(m_last_file_data_end));
         if (ret != sizeof(m_last_file_data_end)) {
@@ -88,20 +88,20 @@ address data_store::write(std::span<char> data) {
 
 std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
     if (pointer < m_global_offset ||
-        pointer > m_global_offset + m_used.load()) {
+        pointer + size > m_global_offset + m_used.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
 
-    size_t tr = 0;
+    ssize_t tr = 0;
     do {
         const auto r = ::pread(fd, buffer + tr, size - tr, seek + tr);
-        if (r == 0) [[unlikely]] {
-            break;
+        if (r <= 0) [[unlikely]] {
+            throw std::runtime_error (std::string("error in reading: ") + std::string (strerror (errno)));
         }
         tr += r;
-    } while (tr < size);
+    } while (static_cast <size_t> (tr) < size);
 
     return tr;
 }
@@ -134,21 +134,17 @@ size_t data_store::fetch_used_space() const noexcept {
 data_store::~data_store() {
     sync();
     for (const auto& open_file : m_open_files) {
-        fsync(open_file.second);
-        close(open_file.second);
+        fsync(open_file);
+        close(open_file);
     }
 }
 
-std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
-    const auto pfd = m_open_files.upper_bound(pointer);
-    if (pfd == m_open_files.cbegin()) [[unlikely]] {
-        throw std::out_of_range(
-            "The given data offset could not be found in this data store");
-    }
-    const auto [file_offset, fd] = *std::prev(pfd);
-    const auto seek = (pointer - file_offset).get_low();
+std::pair<int, long> data_store::get_file_offset_pair(const uint128_t& pointer) const {
 
-    return {fd, seek};
+    const auto data_store_offset = (pointer - m_global_offset).get_low();
+    const auto fd_index = data_store_offset / m_conf.file_size;
+    const auto seek = data_store_offset - fd_index * m_conf.file_size;
+    return {m_open_files.at(fd_index), seek};
 }
 
 int data_store::add_new_file(const uint128_t& offset, long file_size) {
@@ -173,7 +169,7 @@ int data_store::add_new_file(const uint128_t& offset, long file_size) {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
     }
-    m_open_files.emplace(offset, fd);
+    m_open_files.emplace_back(fd);
     m_last_fd = fd;
     m_file_count ++;
     m_last_file_data_end = data_end;
@@ -209,41 +205,33 @@ size_t data_store::get_available_space() const noexcept {
 }
 
 data_store::alloc_t data_store::allocate(size_t size) {
-    auto allocate_in_last_file = [&] () {
-        auto seek = m_last_file_data_end.load();
-        auto fd = m_last_fd.load();
-        auto file_count = m_file_count.load();
-        auto new_end = seek + size;
 
-        while (!m_last_file_data_end.compare_exchange_weak(seek, new_end)) {
-            seek = m_last_file_data_end.load();
-            fd = m_last_fd.load();
-            file_count = m_file_count.load();
-            new_end = seek + size;
-        }
+    alloc_t alloc;
+    alloc.seek = m_last_file_data_end.load();
+    alloc.fd = m_last_fd.load();
+    auto file_count = m_file_count.load();
+    auto new_end = alloc.seek + size;
 
-        auto alloc_global_offset = m_global_offset + (file_count - 1) * m_conf.file_size + seek;
-        return alloc_t {.fd = fd, .seek = seek, .global_offset = alloc_global_offset};
-    };
+    while (!m_last_file_data_end.compare_exchange_weak(alloc.seek, new_end)) {
+        alloc.seek = m_last_file_data_end.load();
+        alloc.fd = m_last_fd.load();
+        file_count = m_file_count.load();
+        new_end = alloc.seek + size;
+    }
 
-    auto alloc = allocate_in_last_file ();
-
-    if (alloc.seek + size> m_conf.file_size) [[unlikely]] {
+    if (alloc.seek + size <= m_conf.file_size) [[likely]] {
+        alloc.global_offset = m_global_offset + (file_count - 1) * m_conf.file_size + alloc.seek;
+    }
+    else [[unlikely]] {
         {
             std::lock_guard<std::mutex> lock(m_add_file_mutex);
-
             if (m_last_file_data_end > m_conf.file_size) {
                 sync();
                 auto new_offset = m_global_offset + m_conf.file_size * m_open_files.size();
                 add_new_file(new_offset, m_conf.file_size);
             }
-            else {
-                std::cout << "satisfied" << std::endl;
-            }
         }
-
         alloc = allocate(size);
-
     }
 
     return alloc;
