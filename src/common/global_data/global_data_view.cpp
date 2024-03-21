@@ -28,10 +28,6 @@ address global_data_view::write(const std::string_view& data) {
         boost::asio::use_future)
         .get();
 
-    shared_buffer<char> l1_buf(
-        std::min(addr.first().size, m_config.l1_sample_size));
-    std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
-    m_cache_l1.put(addr.first().pointer, std::move(l1_buf));
     return addr;
 }
 
@@ -72,14 +68,18 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
         .get();
 
     // l1 cache
-    shared_buffer<char> l1_buf(std::min(size, m_config.l1_sample_size));
-    std::memcpy(l1_buf.data(), buffer.data(), l1_buf.size());
-    m_cache_l1.put(pointer, std::move(l1_buf));
+    add_l1(pointer, buffer.get_str_view());
 
     // l2 cache
     m_cache_l2.put(pointer, buffer);
 
     return buffer;
+}
+
+void global_data_view::add_l1(const uint128_t& pointer, std::string_view data) {
+    shared_buffer<char> l1_buf(std::min(data.size(), m_config.l1_sample_size));
+    std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
+    m_cache_l1.put(pointer, std::move(l1_buf));
 }
 
 std::size_t global_data_view::read_address(char* buffer, const address& addr) {

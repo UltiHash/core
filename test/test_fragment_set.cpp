@@ -113,14 +113,17 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
     auto addr_a = gdv->write(fragment_a.get_str_view());
+    gdv->add_l1(addr_a.first().pointer, fragment_a.get_str_view());
 
     shared_buffer<char> fragment_b(4 * KIBI_BYTE);
     memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
     auto addr_b = gdv->write(fragment_b.get_str_view());
+    gdv->add_l1(addr_b.first().pointer, fragment_b.get_str_view());
 
     shared_buffer<char> fragment_c(2 * KIBI_BYTE);
     memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
     auto addr_c = gdv->write(fragment_c.get_str_view());
+    gdv->add_l1(addr_c.first().pointer, fragment_c.get_str_view());
 
     {
         fragment_set frag_set(frag_set_log_path, *gdv);
