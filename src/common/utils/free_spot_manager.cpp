@@ -2,11 +2,12 @@
 
 namespace uh::cluster {
 
-free_spot_manager::free_spot_manager(std::filesystem::path hole_log, size_t minimum_size)
+free_spot_manager::free_spot_manager(std::filesystem::path hole_log,
+                                     size_t minimum_size)
     : m_hole_log(std::move(hole_log)),
       m_file(open_file()),
       m_total_free_size(get_total_free_size()),
-      m_minimum_size (minimum_size) {
+      m_minimum_size(minimum_size) {
 
     shift_forward();
 

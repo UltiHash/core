@@ -1,6 +1,6 @@
 #include "common/network/messenger.h"
+#include "common/telemetry/log.h"
 #include "common/types/common_types.h"
-#include "common/utils/log.h"
 #include <boost/asio/co_spawn.hpp>
 #include <filesystem>
 #include <fstream>

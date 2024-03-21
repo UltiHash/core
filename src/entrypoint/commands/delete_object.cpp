@@ -29,8 +29,8 @@ coro<void> delete_object::handle(http_request& req) const {
             co_await m.get().recv_header();
         };
 
-        co_await m_collection.workers.
-                io_thread_acquire_messenger_and_post_in_io_threads(
+        co_await m_collection.workers
+            .io_thread_acquire_messenger_and_post_in_io_threads(
                 m_collection.directory_services.get(),
                 std::bind_front(func, std::cref(req)));
 

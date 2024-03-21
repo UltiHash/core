@@ -21,8 +21,9 @@ public:
           m_storage_services(
               m_ioc, config.global_data_view.storage_service_connection_count,
               m_etcd_client, config.global_data_view.max_data_store_size),
-          m_directory_workers (m_ioc, config.worker_thread_count),
-          m_storage(config.global_data_view, m_ioc, m_directory_workers, m_storage_services),
+          m_directory_workers(m_ioc, config.worker_thread_count),
+          m_storage(config.global_data_view, m_ioc, m_directory_workers,
+                    m_storage_services),
           m_server(config.server,
                    std::make_unique<directory_handler>(config, m_storage,
                                                        m_directory_workers),
@@ -34,9 +35,7 @@ public:
         m_server.run();
     }
 
-    void stop() {
-        m_server.stop();
-    }
+    void stop() { m_server.stop(); }
 
 private:
     etcd::SyncClient m_etcd_client;
