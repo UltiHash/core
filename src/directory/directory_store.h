@@ -100,8 +100,11 @@ public:
         }
 
         auto& bucket = *b->second;
+        auto objects = bucket.list_objects("", "");
+        if (!objects.empty())
+            throw error_exception(error::bucket_not_empty);
 
-        for (const auto& object : bucket.list_objects("", "")) {
+        for (const auto& object : objects) {
             bucket.delete_object(object.name);
         }
 
