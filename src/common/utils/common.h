@@ -27,7 +27,6 @@ enum message_type : uint8_t {
     STORAGE_READ_ADDRESS_REQ = 1,
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
-    STORAGE_REMOVE_FRAGMENT_REQ = 4,
     STORAGE_USED_REQ = 5,
 
     DEDUPLICATOR_REQ = 6,

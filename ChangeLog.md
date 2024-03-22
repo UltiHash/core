@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- Refactored data store, mostly lockless writes and completely lockless reads
 - Fixed a bug in the free spot manager
 - Fixed the shared lock concurrency issue in directory service
 - Fix hanging server when requesting empty files
