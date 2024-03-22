@@ -12,6 +12,7 @@ public:
     struct unstored {
         std::string_view data;
         std::set<fragment_set_element>::const_iterator hint;
+        bool uploaded = false;
 
         address addr;
     };
@@ -44,19 +45,39 @@ public:
 
         compute_unstored_addresses(addr);
         m_storage.sync(addr);
-
-        m_unstored_size = 0ull;
     }
 
-    std::size_t effective_size() const { return m_effective_size; }
-
-    void flush_fragments(fragment_set& destination) {
+    void mark_as_uploaded() {
         for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
             if (!std::holds_alternative<unstored>(*it)) {
                 continue;
             }
 
             unstored& un = std::get<unstored>(*it);
+            un.uploaded = true;
+        }
+
+        m_unstored_size = 0ull;
+    }
+
+    std::size_t effective_size() const { return m_effective_size; }
+    std::size_t unstored_size() const { return m_unstored_size; }
+
+    void flush_fragments(fragment_set& destination) {
+        if (m_unstored_size == 0ull) {
+            return;
+        }
+
+        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+            if (!std::holds_alternative<unstored>(*it)) {
+                continue;
+            }
+
+            unstored& un = std::get<unstored>(*it);
+            if (un.uploaded) {
+                continue;
+            }
+
             destination.insert({un.addr.pointers[0], un.addr.pointers[1]},
                                un.data.substr(0, un.addr.sizes.front()),
                                un.hint);
@@ -97,6 +118,10 @@ private:
             }
 
             unstored& un = std::get<unstored>(*it);
+            if (un.uploaded) {
+                continue;
+            }
+
             std::size_t un_offs = 0ull;
 
             while (un_offs < un.data.size()) {
@@ -131,6 +156,10 @@ private:
             }
 
             unstored& un = std::get<unstored>(*it);
+            if (un.uploaded) {
+                continue;
+            }
+
             memcpy(&buffer[offs], un.data.data(), un.data.size());
             offs += un.data.size();
         }
@@ -288,10 +317,17 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
         fragments.push(
             fragmentation::unstored{data.substr(0, frag_size), f.hint});
         data = data.substr(frag_size);
+
+        if (fragments.unstored_size() >= m_flush_buffer_size) {
+            fragments.flush();
+            fragments.flush_fragments(m_fragment_set);
+            fragments.mark_as_uploaded();
+        }
     }
 
     fragments.flush();
     fragments.flush_fragments(m_fragment_set);
+    fragments.mark_as_uploaded();
 
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
