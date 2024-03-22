@@ -40,9 +40,6 @@ public:
                 case STORAGE_READ_ADDRESS_REQ:
                     co_await handle_read_address(m, message_header);
                     break;
-                case STORAGE_REMOVE_FRAGMENT_REQ:
-                    co_await handle_remove_fragment(m, message_header);
-                    break;
                 case STORAGE_SYNC_REQ:
                     co_await handle_sync(m, message_header);
                     break;
@@ -101,13 +98,6 @@ private:
             offset += frag.size;
         }
         co_await m.send(SUCCESS, {buffer.data(), offset});
-    }
-
-    coro<void> handle_remove_fragment(messenger& m,
-                                      const messenger::header& h) {
-        const auto resp = co_await m.recv_fragment(h);
-        m_data_store.remove(resp.pointer, resp.size);
-        co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {

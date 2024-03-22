@@ -151,13 +151,9 @@ CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
 
     register_server(*rv, cfg.server);
 
-    rv->add_option("--min-file-size", cfg.data_store.min_file_size,
+    rv->add_option("--file-size", cfg.data_store.file_size,
                    "minimum file size in data store")
-        ->default_val(cfg.data_store.min_file_size);
-
-    rv->add_option("--max-file-size", cfg.data_store.max_file_size,
-                   "maximum file size in data store")
-        ->default_val(cfg.data_store.max_file_size);
+        ->default_val(cfg.data_store.file_size);
 
     rv->add_option("--max-store-size", cfg.data_store.max_data_store_size,
                    "maximum size of data store")

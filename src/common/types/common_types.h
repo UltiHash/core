@@ -82,8 +82,6 @@ struct directory_list_objects_message {
     std::vector<object> objects;
 };
 
-template <typename T> using opt_ref = std::optional<std::reference_wrapper<T>>;
-
 } // end namespace uh::cluster
 
 #endif // CORE_COMMON_TYPES_H
