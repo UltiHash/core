@@ -63,14 +63,14 @@ public:
 
     /**
      * @brief Gives out the current used space of the data store.
-     * @return uint128_t: the used space in the data store
+     * @return size_t: the used space in the data store
      */
     [[nodiscard]] size_t get_used_space() const noexcept;
 
     /**
      * @brief Gives out the current available space in the data store. Available
      * = allocated - used
-     * @return uint128_t: the available space in the data store
+     * @return size_t: the available space in the data store
      */
     [[nodiscard]] size_t get_available_space() const noexcept;
 

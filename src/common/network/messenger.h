@@ -141,7 +141,6 @@ public:
         register_write_buffer(data);
         co_await send_buffers(SUCCESS);
     }
-
 };
 
 } // end namespace uh::cluster

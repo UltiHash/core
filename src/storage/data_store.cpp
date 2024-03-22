@@ -1,7 +1,6 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
 #include <mutex>
-#include <iostream>
 
 namespace uh::cluster {
 
@@ -54,7 +53,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
         add_new_file(m_global_offset,
                               static_cast<long>(m_conf.file_size));
     } else {
-        m_last_fd = m_open_files.at(m_open_files.size() - 1);
+        m_last_fd = m_open_files.back();
         const auto ret = ::pread(m_last_fd, &m_last_file_data_end,
                                 sizeof(m_last_file_data_end), 0);
         if (ret != sizeof(m_last_file_data_end)) {
