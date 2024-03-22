@@ -24,6 +24,7 @@ private:
     fragment_set m_fragment_set;
     global_data_view& m_storage;
     worker_pool& m_dedupe_workers;
+    std::size_t m_flush_buffer_size = 8 * MEBI_BYTE;
 };
 
 } // end namespace uh::cluster
