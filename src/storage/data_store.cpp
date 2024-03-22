@@ -15,7 +15,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
         std::filesystem::create_directories(m_conf.working_dir);
     }
 
-    std::map <uint128_t, int> open_files;
+    std::map<uint128_t, int> open_files;
     for (const auto& entry :
          std::filesystem::directory_iterator(m_conf.working_dir)) {
         if (!is_data_file(entry.path())) {
@@ -40,28 +40,23 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
                 std::error_code(errno, std::system_category()));
         }
 
-
         open_files.emplace(id_offset.second, fd);
-
     }
 
-    for(const auto& of: open_files) {
+    for (const auto& of : open_files) {
         m_open_files.emplace_back(of.second);
     }
 
     if (m_open_files.empty()) {
-        add_new_file(m_global_offset,
-                              static_cast<long>(m_conf.file_size));
+        add_new_file(m_global_offset, static_cast<long>(m_conf.file_size));
     } else {
-        m_last_fd = m_open_files.back();
-        const auto ret = ::pread(m_last_fd, &m_last_file_data_end,
-                                sizeof(m_last_file_data_end), 0);
+        const auto ret = ::pread(m_open_files.back(), &m_last_file_data_end,
+                                 sizeof(m_last_file_data_end), 0);
         if (ret != sizeof(m_last_file_data_end)) {
             throw std::system_error(
                 std::error_code(errno, std::system_category()),
                 "Could not read the data size");
         }
-        m_file_count = m_open_files.size();
     }
 
     metric<storage_available_space_gauge, byte, int64_t>::
@@ -74,17 +69,20 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
 
 address data_store::write(std::span<char> data) {
 
-    if (m_used + data.size() > m_conf.max_data_store_size or data.size() > m_conf.file_size) [[unlikely]] {
+    if (m_used + data.size() > m_conf.max_data_store_size or
+        data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
 
-    auto alloc = allocate(data.size());
-    for (size_t written = 0; written < data.size ();
+    auto alloc = allocate(static_cast<long>(data.size()));
+    for (long written = 0; written < static_cast<long>(data.size());
          written += ::pwrite(alloc.fd, data.data() + written,
-                         data.size() - written, alloc.seek + written));
+                             data.size() - written, alloc.seek + written))
+        ;
 
     address data_address;
-    data_address.push_fragment({.pointer = alloc.global_offset, .size = data.size()});
+    data_address.push_fragment(
+        {.pointer = alloc.global_offset, .size = data.size()});
     m_used += data.size();
 
     return data_address;
@@ -102,10 +100,11 @@ std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
     do {
         const auto r = ::pread(fd, buffer + tr, size - tr, seek + tr);
         if (r <= 0) [[unlikely]] {
-            throw std::runtime_error (std::string("error in reading: ") + std::string (strerror (errno)));
+            throw std::runtime_error(std::string("error in reading: ") +
+                                     std::string(strerror(errno)));
         }
         tr += r;
-    } while (static_cast <size_t> (tr) < size);
+    } while (static_cast<size_t>(tr) < size);
 
     return tr;
 }
@@ -114,19 +113,15 @@ void data_store::sync() {
 
     std::unique_lock<std::mutex> lock(m_sync_end_offset_mutex);
 
-    const auto data_end = m_last_file_data_end.load();
-    const auto fd = m_last_fd.load();
-
-    const auto ret = ::pwrite(fd, &data_end, sizeof(data_end), 0);
-    if (ret != sizeof(data_end)) [[unlikely]] {
-        throw std::system_error(
-            std::error_code(errno, std::system_category()),
-            "Could not write the data size");
+    const auto ret = ::pwrite(m_open_files.back(), &m_last_file_data_end,
+                              sizeof(m_last_file_data_end), 0);
+    if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
+        throw std::system_error(std::error_code(errno, std::system_category()),
+                                "Could not write the data size");
     }
 
     lock.unlock();
-    fsync(fd);
-
+    fsync(m_open_files.back());
 }
 
 size_t data_store::fetch_used_space() const noexcept {
@@ -143,7 +138,8 @@ data_store::~data_store() {
     }
 }
 
-std::pair<int, long> data_store::get_file_offset_pair(const uint128_t& pointer) const {
+std::pair<int, long>
+data_store::get_file_offset_pair(const uint128_t& pointer) const {
 
     const auto data_store_offset = (pointer - m_global_offset).get_low();
     const auto fd_index = data_store_offset / m_conf.file_size;
@@ -167,17 +163,16 @@ int data_store::add_new_file(const uint128_t& offset, long file_size) {
             std::error_code(errno, std::system_category()));
     }
 
-    std::size_t data_end = sizeof(data_end);
-    const auto ret = ::write(fd, &data_end, sizeof(data_end));
-    if (ret != sizeof(data_end)) [[unlikely]] {
+    m_last_file_data_end = sizeof(m_last_file_data_end);
+    const auto ret =
+        ::write(fd, &m_last_file_data_end, sizeof(m_last_file_data_end));
+    if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
     }
     m_open_files.emplace_back(fd);
-    m_last_fd = fd;
-    m_file_count ++;
-    m_last_file_data_end = data_end;
-    m_used = (m_open_files.size() - 1) * m_conf.file_size + sizeof (data_end);
+    m_used =
+        (m_open_files.size() - 1) * m_conf.file_size + m_last_file_data_end;
     return fd;
 }
 
@@ -198,45 +193,31 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
     return path.filename().string().starts_with("data_");
 }
 
-uint64_t data_store::get_used_space() const noexcept {
-    return m_used;
-}
+uint64_t data_store::get_used_space() const noexcept { return m_used; }
 
 size_t data_store::get_available_space() const noexcept {
     auto space = std::filesystem::space(m_conf.working_dir);
-    return std::min(space.available,
-                    m_conf.max_data_store_size - m_used);
+    return std::min(space.available, m_conf.max_data_store_size - m_used);
 }
 
-data_store::alloc_t data_store::allocate(size_t size) {
+data_store::alloc_t data_store::allocate(long size) {
+
+    std::lock_guard<std::mutex> lock(m_allocate_mutex);
+
+    if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
+        sync();
+        const auto new_offset =
+            m_global_offset + m_conf.file_size * m_open_files.size();
+        add_new_file(new_offset, m_conf.file_size);
+    }
 
     alloc_t alloc;
-    alloc.seek = m_last_file_data_end.load();
-    alloc.fd = m_last_fd.load();
-    auto file_count = m_file_count.load();
-    auto new_end = alloc.seek + size;
-
-    while (!m_last_file_data_end.compare_exchange_weak(alloc.seek, new_end)) {
-        alloc.seek = m_last_file_data_end.load();
-        alloc.fd = m_last_fd.load();
-        file_count = m_file_count.load();
-        new_end = alloc.seek + size;
-    }
-
-    if (alloc.seek + size <= m_conf.file_size) [[likely]] {
-        alloc.global_offset = m_global_offset + (file_count - 1) * m_conf.file_size + alloc.seek;
-    }
-    else [[unlikely]] {
-        {
-            std::lock_guard<std::mutex> lock(m_add_file_mutex);
-            if (m_last_file_data_end > m_conf.file_size) {
-                sync();
-                auto new_offset = m_global_offset + m_conf.file_size * m_open_files.size();
-                add_new_file(new_offset, m_conf.file_size);
-            }
-        }
-        alloc = allocate(size);
-    }
+    alloc.seek = m_last_file_data_end;
+    alloc.fd = m_open_files.back();
+    m_last_file_data_end = alloc.seek + size;
+    alloc.global_offset = m_global_offset +
+                          (m_open_files.size() - 1) * m_conf.file_size +
+                          alloc.seek;
 
     return alloc;
 }

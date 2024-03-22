@@ -2,6 +2,7 @@
 #define CORE_DATA_STORE_H
 
 #include "common/utils/free_spot_manager.h"
+#include <atomic>
 #include <cstring>
 #include <fcntl.h>
 #include <list>
@@ -11,13 +12,12 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
-#include <atomic>
 
 namespace uh::cluster {
 
 struct data_store_config {
     std::filesystem::path working_dir;
-    std::size_t file_size;
+    long file_size;
     size_t max_data_store_size;
 };
 
@@ -77,14 +77,13 @@ public:
     ~data_store();
 
 private:
-
     struct alloc_t {
         int fd;
-        size_t seek;
+        long seek;
         uint128_t global_offset;
     };
 
-    alloc_t allocate (size_t size);
+    alloc_t allocate(long size);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(const uint128_t& pointer) const;
@@ -100,17 +99,14 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
-    std::atomic<int> m_last_fd{};
-    std::atomic<int> m_file_count{};
-    std::atomic<size_t> m_last_file_data_end{};
+    long m_last_file_data_end{};
     size_t m_data_id;
     data_store_config m_conf;
     std::vector<int> m_open_files;
     uint128_t m_global_offset;
     std::atomic<size_t> m_used;
-    std::mutex m_add_file_mutex;
+    std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;
-
 };
 
 } // end namespace uh::cluster
