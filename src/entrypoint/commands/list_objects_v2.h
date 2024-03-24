@@ -41,12 +41,23 @@ public:
                         std::make_unique<std::string>(prefix);
                 }
             }
+
             if (req_uri.query_string_exists("start-after")) {
                 if (const auto& start_after =
                         req_uri.get_query_string_value("start-after");
                     !start_after.empty()) {
                     dir_req.object_key_lower_bound =
                         std::make_unique<std::string>(start_after);
+                }
+            }
+            if (req_uri.query_string_exists("continuation-token")) {
+                if (const auto& continuation_token =
+                        req_uri.get_query_string_value("continuation-token");
+                    !continuation_token.empty()) {
+                    if (!dir_req.object_key_lower_bound ||
+                        continuation_token > *dir_req.object_key_lower_bound)
+                        dir_req.object_key_lower_bound =
+                            std::make_unique<std::string>(continuation_token);
                 }
             }
 
@@ -138,10 +149,12 @@ public:
         std::string common_prefixes_xml_string;
         std::string content_xml_string;
         std::string is_truncated = "false";
+        std::string next_continuation_token_xml;
         size_t contents_counter = 0;
         size_t common_prefixes_counter = 0;
 
         if (!objects.empty() && max_keys != 0) {
+            bool common_prefix_last = false;
 
             auto collapsed_objs =
                 retrieval::collapse(objects, delimiter, prefix);
@@ -153,6 +166,7 @@ public:
                         (encoding_type ? url_encode(*object._prefix)
                                        : *object._prefix) +
                         "</Prefix>\n</CommonPrefixes>\n";
+                    common_prefix_last = true;
                     ++common_prefixes_counter;
                 } else if (object._object) {
                     content_xml_string +=
@@ -169,12 +183,22 @@ public:
                         "<Size>" + std::to_string(object._object->get().size) +
                         +"</Size>\n"
                          "</Contents>\n";
+                    common_prefix_last = false;
                     ++contents_counter;
                 }
 
                 if (contents_counter + common_prefixes_counter == max_keys &&
                     collapsed_objs.size() > max_keys) {
                     is_truncated = "true";
+                    if (common_prefix_last)
+                        next_continuation_token_xml =
+                            "<NextContinuationToken>" + *object._prefix +
+                            "</NextContinuationToken>";
+                    else
+                        next_continuation_token_xml =
+                            "<NextContinuationToken>" +
+                            objects[max_keys - 1].name +
+                            "</NextContinuationToken>";
                     break;
                 }
             }
@@ -201,11 +225,12 @@ public:
                 "<EncodingType>" + *encoding_type + "</EncodingType>\n";
         }
 
-        std::string continuation_token_xml_string;
+        std::string continuation_token_xml;
+        ;
         if (continuation_token) {
-            continuation_token_xml_string = "<ContinuationToken>" +
-                                            *continuation_token +
-                                            "</ContinuationToken>\n";
+            continuation_token_xml = "<ContinuationToken>" +
+                                     *continuation_token +
+                                     "</ContinuationToken>\n";
         }
 
         std::string start_after_xml_string;
@@ -226,8 +251,8 @@ public:
                      prefix_xml_string + delimiter_xml_string +
                      max_keys_xml_string + common_prefixes_xml_string +
                      encoding_type_xml_string + key_count_xml +
-                     continuation_token_xml_string + start_after_xml_string +
-                     "</ListBucketResult>");
+                     continuation_token_xml + start_after_xml_string +
+                     next_continuation_token_xml + "</ListBucketResult>");
 
         return res;
     }
