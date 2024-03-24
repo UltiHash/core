@@ -36,7 +36,7 @@ void http_response::set_bandwidth(double bandwidth) {
 }
 
 void http_response::set_etag(const std::string& etag) {
-    m_res.set("ETag", etag);
+    m_res.set(http::field::etag, etag);
 }
 
 } // namespace uh::cluster
