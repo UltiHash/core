@@ -44,7 +44,8 @@ deduplicator_handler::deduplicator_handler(deduplicator_config config,
     : m_dedupe_conf(std::move(config)),
       m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
       m_storage(storage),
-      m_dedupe_workers(dedupe_workers) {
+      m_dedupe_workers(dedupe_workers),
+      m_fragment_buffer_size(config.fragment_buffer_size) {
     if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
         throw std::invalid_argument("L1 cache sample size should not be "
                                     "smaller than the min fragment size!");
@@ -153,7 +154,7 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
             fragmentation::unstored{data.substr(0, frag_size), f.hint});
         data = data.substr(frag_size);
 
-        if (fragments.unstored_size() >= m_flush_buffer_size) {
+        if (fragments.unstored_size() >= m_fragment_buffer_size) {
             fragments.flush(m_storage, m_fragment_set);
         }
     }
