@@ -128,7 +128,7 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
 
 dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
 
-    fragmentation fragments(m_storage);
+    fragmentation fragments;
 
     while (!data.empty()) {
         const auto f = m_fragment_set.find(data);
@@ -154,15 +154,11 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
         data = data.substr(frag_size);
 
         if (fragments.unstored_size() >= m_flush_buffer_size) {
-            fragments.flush();
-            fragments.flush_fragments(m_fragment_set);
-            fragments.mark_as_uploaded();
+            fragments.flush(m_storage, m_fragment_set);
         }
     }
 
-    fragments.flush();
-    fragments.flush_fragments(m_fragment_set);
-    fragments.mark_as_uploaded();
+    fragments.flush(m_storage, m_fragment_set);
 
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
