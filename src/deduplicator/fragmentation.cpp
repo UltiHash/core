@@ -30,6 +30,10 @@ std::size_t fragmentation::effective_size() const { return m_effective_size; }
 std::size_t fragmentation::unstored_size() const { return m_unstored_size; }
 
 address fragmentation::make_address() const {
+    if (m_unstored_size != 0ull) {
+        throw std::runtime_error("fragmentation must be flushed first");
+    }
+
     address rv;
 
     for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
