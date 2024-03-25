@@ -1,5 +1,7 @@
 #include "fragmentation.h"
 
+#include <optional>
+
 namespace uh::cluster {
 
 fragmentation::fragmentation()
@@ -91,9 +93,10 @@ void fragmentation::mark_as_uploaded() {
 }
 
 void fragmentation::compute_unstored_addresses(const address& addr) {
-    fragment current = addr.get_fragment(0);
-    std::size_t current_ofs = current.size;
+    std::optional<fragment> current;
+    std::size_t current_ofs = 0ull;
     std::size_t current_idx = 0ull;
+
     for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
         if (!std::holds_alternative<unstored>(*it)) {
             continue;
@@ -108,7 +111,7 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
 
         while (un_offs < un.data.size()) {
 
-            if (current_ofs >= current.size) {
+            if (!current || current_ofs >= current->size) {
                 if (current_idx >= addr.size()) {
                     throw std::runtime_error("insufficient data");
                 }
@@ -118,10 +121,10 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
             }
 
             auto size =
-                std::min(current.size - current_ofs, un.data.size() - un_offs);
+                std::min(current->size - current_ofs, un.data.size() - un_offs);
 
             un.addr.push_fragment(
-                fragment{current.pointer + current_ofs, size});
+                fragment{current->pointer + current_ofs, size});
             un_offs += size;
             current_ofs += size;
         }
