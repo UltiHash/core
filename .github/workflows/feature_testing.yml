@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: heavyweight-generic-jobs
     steps:
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
@@ -32,7 +35,7 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64
-          tags: ghcr.io/ultihash/cluster:${{ github.head_ref }}
+          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           push: true
           build-args: |
             BuildType=RelWithDebInfo
@@ -42,6 +45,9 @@ jobs:
     runs-on: lightweight-generic-jobs
     needs: build
     steps:
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
@@ -66,27 +72,27 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE_TAG: ghcr.io/ultihash/cluster:${{ github.head_ref }}
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: helm-values-template.yaml
+          input: feature-testing/helm-values-template.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ github.head_ref }} -n ${{ github.head_ref }} --wait
-          kubectl delete pvc -n ${{ github.head_ref }} --all --force
-          kubectl delete secrets -n ${{ github.head_ref }} --all --force
-          kubectl delete ns ${{ github.head_ref }}
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
         continue-on-error: true
 
       - name: Install the Helm chart
         run: |
-          kubectl create ns ${{ github.head_ref }}
-          kubectl create secret docker-registry registry-credentials -n ${{ github.head_ref }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-          kubectl create secret generic ultihash  -n ${{ github.head_ref }} --from-literal=license='${{ secrets.UH_LICENSE }}'
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
+          kubectl create secret generic ultihash  -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ github.head_ref }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ github.head_ref }} --values helm-values.yaml --wait
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 10m
 
       - name: Run integration tests
         run: |
-          helm test ${{ github.head_ref }} -n ${{ github.head_ref }} --logs
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --logs --timeout 15m

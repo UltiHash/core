@@ -1,0 +1,101 @@
+global:
+  image: $CORE_IMAGE
+  imagePullSecrets:
+  - registry-credentials
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  ultihashSecret:
+    key: license
+    name: ultihash
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+
+featureTests:
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+entrypoint:
+  replicas: 1
+  imagePullPolicy: Always
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  
+  ingress:
+    enabled: false
+
+deduplicator:
+  replicas: 1
+  imagePullPolicy: Always
+  storageClass: local-path
+  storageSize: 2Gi
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+directory:
+  replicas: 1
+  imagePullPolicy: Always 
+  storageClass: local-path
+  storageSize: 2Gi
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+storage:
+  replicas: 1
+  imagePullPolicy: Always
+  storageClass: local-path
+  storageSize: 5Gi
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+collector:
+  config:
+    exporters:
+      otlphttp/uptrace: null
+    receivers:
+      kubeletstats: null
+      prometheus: null
+    service:
+      pipelines:
+        logs:
+          exporters:
+          - debug
+        metrics:
+          exporters:
+          - debug
+          receivers:
+          - otlp
+        traces:
+          exporters:
+          - debug
+          receivers:
+          - otlp
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  ports:
+    otlp:
+      hostPort: null
+  presets:
+    kubeletMetrics:
+      enabled: false
+
+exporter:
+  enabled: false
