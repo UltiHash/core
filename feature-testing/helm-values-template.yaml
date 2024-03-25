@@ -87,9 +87,6 @@ collector:
         fieldPath: status.hostIP
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
-  ports:
-    otlp:
-      hostPort: null
   presets:
     kubeletMetrics:
       enabled: false
