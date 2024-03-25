@@ -1,5 +1,6 @@
 global:
   image: $CORE_IMAGE
+  imagePullPolicy: Always
   imagePullSecrets:
   - registry-credentials
   logLevel: DEBUG
@@ -26,7 +27,6 @@ etcd:
 
 entrypoint:
   replicas: 1
-  imagePullPolicy: Always
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
   
@@ -35,7 +35,6 @@ entrypoint:
 
 deduplicator:
   replicas: 1
-  imagePullPolicy: Always
   storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
@@ -43,7 +42,6 @@ deduplicator:
 
 directory:
   replicas: 1
-  imagePullPolicy: Always 
   storageClass: local-path
   storageSize: 2Gi
   nodeSelector:
@@ -51,7 +49,6 @@ directory:
 
 storage:
   replicas: 1
-  imagePullPolicy: Always
   storageClass: local-path
   storageSize: 5Gi
   nodeSelector:
