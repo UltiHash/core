@@ -13,6 +13,12 @@
 
 namespace uh::cluster {
 
+/**
+ * Buffer fragments and send them to storage as bulk request.
+ *
+ * This class serves as a list of fragments, partially uploaded to the
+ * downstream storage.
+ */
 class fragmentation {
 public:
     struct unstored {
@@ -25,8 +31,14 @@ public:
 
     fragmentation();
 
+    /**
+     * Push a new fragment that was uploaded before.
+     */
     void push(const fragment& f);
 
+    /**
+     * Push a new unstored fragment.
+     */
     void push(unstored&& un);
 
     /**
@@ -38,6 +50,10 @@ public:
     std::size_t effective_size() const;
     std::size_t unstored_size() const;
 
+    /**
+     * Return the address of the fragment list. This will throw if there are
+     * still unstored fragments.
+     */
     address make_address() const;
 
 private:
