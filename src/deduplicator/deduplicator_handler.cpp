@@ -1,177 +1,12 @@
 #include "deduplicator_handler.h"
 
 #include "common/utils/common.h"
+#include "fragmentation.h"
 #include <utility>
 
 namespace uh::cluster {
 
 namespace {
-
-class fragmentation {
-public:
-    struct unstored {
-        std::string_view data;
-        std::set<fragment_set_element>::const_iterator hint;
-        bool uploaded = false;
-
-        address addr;
-    };
-
-    fragmentation(global_data_view& storage)
-        : m_storage(storage),
-          m_effective_size(0ull),
-          m_unstored_size(0ull) {}
-
-    void push(const fragment& f) { m_frags.push_back(f); }
-
-    void push(unstored&& un) {
-        m_frags.push_back(std::move(un));
-        m_effective_size += un.data.size();
-        m_unstored_size += un.data.size();
-    }
-
-    /**
-     * Convert all unstored fragments to stored fragments. Uploads all frags to
-     * downstream storage.
-     */
-    void flush() {
-        if (m_unstored_size == 0ull) {
-            return;
-        }
-
-        auto buffer = unstored_to_buffer();
-
-        auto addr = m_storage.write({&buffer[0], buffer.size()});
-
-        compute_unstored_addresses(addr);
-        m_storage.sync(addr);
-    }
-
-    void mark_as_uploaded() {
-        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-            if (!std::holds_alternative<unstored>(*it)) {
-                continue;
-            }
-
-            unstored& un = std::get<unstored>(*it);
-            un.uploaded = true;
-        }
-
-        m_unstored_size = 0ull;
-    }
-
-    std::size_t effective_size() const { return m_effective_size; }
-    std::size_t unstored_size() const { return m_unstored_size; }
-
-    void flush_fragments(fragment_set& destination) {
-        if (m_unstored_size == 0ull) {
-            return;
-        }
-
-        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-            if (!std::holds_alternative<unstored>(*it)) {
-                continue;
-            }
-
-            unstored& un = std::get<unstored>(*it);
-            if (un.uploaded) {
-                continue;
-            }
-
-            destination.insert({un.addr.pointers[0], un.addr.pointers[1]},
-                               un.data.substr(0, un.addr.sizes.front()),
-                               un.hint);
-            m_storage.add_l1({un.addr.pointers[0], un.addr.pointers[1]},
-                             un.data.substr(0, un.addr.sizes.front()));
-        }
-
-        destination.flush();
-    }
-
-    address make_address() const {
-        address rv;
-
-        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-            if (std::holds_alternative<unstored>(*it)) {
-                const unstored& un = std::get<unstored>(*it);
-                rv.append_address(un.addr);
-                continue;
-            }
-
-            if (std::holds_alternative<fragment>(*it)) {
-                rv.push_fragment(std::get<fragment>(*it));
-                continue;
-            }
-        }
-
-        return rv;
-    }
-
-private:
-    void compute_unstored_addresses(const address& addr) {
-        fragment current = addr.get_fragment(0);
-        std::size_t current_ofs = current.size;
-        std::size_t current_idx = 0ull;
-        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-            if (!std::holds_alternative<unstored>(*it)) {
-                continue;
-            }
-
-            unstored& un = std::get<unstored>(*it);
-            if (un.uploaded) {
-                continue;
-            }
-
-            std::size_t un_offs = 0ull;
-
-            while (un_offs < un.data.size()) {
-
-                if (current_ofs >= current.size) {
-                    if (current_idx >= addr.size()) {
-                        throw std::runtime_error("insufficient data");
-                    }
-                    current = addr.get_fragment(current_idx);
-                    current_ofs = 0ull;
-                    ++current_idx;
-                }
-
-                auto size = std::min(current.size - current_ofs,
-                                     un.data.size() - un_offs);
-
-                un.addr.push_fragment(
-                    fragment{current.pointer + current_ofs, size});
-                un_offs += size;
-                current_ofs += size;
-            }
-        }
-    }
-
-    std::vector<char> unstored_to_buffer() {
-        std::vector<char> buffer(m_unstored_size);
-        std::size_t offs = 0ull;
-
-        for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-            if (!std::holds_alternative<unstored>(*it)) {
-                continue;
-            }
-
-            unstored& un = std::get<unstored>(*it);
-            if (un.uploaded) {
-                continue;
-            }
-
-            memcpy(&buffer[offs], un.data.data(), un.data.size());
-            offs += un.data.size();
-        }
-
-        return buffer;
-    }
-
-    global_data_view& m_storage;
-    std::list<std::variant<fragment, unstored>> m_frags;
-    std::size_t m_effective_size;
-    std::size_t m_unstored_size;
-};
 
 template <typename container>
 size_t largest_common_prefix(const container& a, const container& b) noexcept {
@@ -187,8 +22,8 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
     const fragment_set_element& f = *frag;
 
     std::size_t common = 0ull;
+
     auto cached = storage.cached_sample(f.pointer());
-    std::size_t common = 0ull;
     if (cached.data()) {
         common = largest_common_prefix(data, cached.get_str_view());
         if (common < storage.l1_cache_sample_size()) {

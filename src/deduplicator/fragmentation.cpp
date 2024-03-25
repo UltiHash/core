@@ -1,0 +1,147 @@
+#include "fragmentation.h"
+
+namespace uh::cluster {
+
+fragmentation::fragmentation(global_data_view& storage)
+    : m_storage(storage),
+      m_effective_size(0ull),
+      m_unstored_size(0ull) {}
+
+void fragmentation::push(const fragment& f) { m_frags.push_back(f); }
+
+void fragmentation::push(unstored&& un) {
+    m_frags.push_back(std::move(un));
+    m_effective_size += un.data.size();
+    m_unstored_size += un.data.size();
+}
+
+void fragmentation::flush() {
+    if (m_unstored_size == 0ull) {
+        return;
+    }
+
+    auto buffer = unstored_to_buffer();
+
+    auto addr = m_storage.write({&buffer[0], buffer.size()});
+
+    compute_unstored_addresses(addr);
+    m_storage.sync(addr);
+}
+
+void fragmentation::mark_as_uploaded() {
+    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+        if (!std::holds_alternative<unstored>(*it)) {
+            continue;
+        }
+
+        unstored& un = std::get<unstored>(*it);
+        un.uploaded = true;
+    }
+
+    m_unstored_size = 0ull;
+}
+
+std::size_t fragmentation::effective_size() const { return m_effective_size; }
+std::size_t fragmentation::unstored_size() const { return m_unstored_size; }
+
+void fragmentation::flush_fragments(fragment_set& destination) {
+    if (m_unstored_size == 0ull) {
+        return;
+    }
+
+    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+        if (!std::holds_alternative<unstored>(*it)) {
+            continue;
+        }
+
+        unstored& un = std::get<unstored>(*it);
+        if (un.uploaded) {
+            continue;
+        }
+
+        destination.insert({un.addr.pointers[0], un.addr.pointers[1]},
+                           un.data.substr(0, un.addr.sizes.front()), un.hint);
+        m_storage.add_l1({un.addr.pointers[0], un.addr.pointers[1]},
+                         un.data.substr(0, un.addr.sizes.front()));
+    }
+}
+
+address fragmentation::make_address() const {
+    address rv;
+
+    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+        if (std::holds_alternative<unstored>(*it)) {
+            const unstored& un = std::get<unstored>(*it);
+            rv.append_address(un.addr);
+            continue;
+        }
+
+        if (std::holds_alternative<fragment>(*it)) {
+            rv.push_fragment(std::get<fragment>(*it));
+            continue;
+        }
+    }
+
+    return rv;
+}
+
+void fragmentation::compute_unstored_addresses(const address& addr) {
+    fragment current = addr.get_fragment(0);
+    std::size_t current_ofs = current.size;
+    std::size_t current_idx = 0ull;
+    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+        if (!std::holds_alternative<unstored>(*it)) {
+            continue;
+        }
+
+        unstored& un = std::get<unstored>(*it);
+        if (un.uploaded) {
+            continue;
+        }
+
+        std::size_t un_offs = 0ull;
+
+        while (un_offs < un.data.size()) {
+
+            if (current_ofs >= current.size) {
+                if (current_idx >= addr.size()) {
+                    throw std::runtime_error("insufficient data");
+                }
+                current = addr.get_fragment(current_idx);
+                current_ofs = 0ull;
+                ++current_idx;
+            }
+
+            auto size =
+                std::min(current.size - current_ofs, un.data.size() - un_offs);
+
+            un.addr.push_fragment(
+                fragment{current.pointer + current_ofs, size});
+            un_offs += size;
+            current_ofs += size;
+        }
+    }
+}
+
+std::vector<char> fragmentation::unstored_to_buffer() {
+    std::vector<char> buffer(m_unstored_size);
+    std::size_t offs = 0ull;
+
+    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
+        if (!std::holds_alternative<unstored>(*it)) {
+            continue;
+        }
+
+        unstored& un = std::get<unstored>(*it);
+        if (un.uploaded) {
+            continue;
+        }
+
+        memcpy(&buffer[offs], un.data.data(), un.data.size());
+        offs += un.data.size();
+    }
+
+    return buffer;
+}
+
+} // namespace uh::cluster
