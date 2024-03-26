@@ -13,6 +13,19 @@
 
 namespace uh::cluster {
 
+struct fragment_set_fixture : public global_data_view_fixture {
+
+    fragment_set make_frag_set() {
+        return fragment_set(tmp_dir.path() / "logfile", global_data_view());
+    }
+
+    fragment_set_log make_frag_set_log() {
+        return fragment_set_log(tmp_dir.path() / "logfile");
+    }
+
+    temp_directory tmp_dir;
+};
+
 shared_buffer<char> fragment(std::size_t size, char ch) {
     shared_buffer<char> rv(size);
     memset(rv.data(), ch, size);
@@ -86,10 +99,8 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
     BOOST_CHECK(result_b.high->get().size() == addr_c.first().size);
 }
 
-BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    fragment_set frag_set(frag_set_log_path, global_data_view());
+BOOST_FIXTURE_TEST_CASE(insert_find_basic, fragment_set_fixture) {
+    auto frag_set = make_frag_set();
 
     auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
@@ -107,9 +118,7 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
              frag_set);
 }
 
-BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
+BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, fragment_set_fixture) {
 
     auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
@@ -121,29 +130,27 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     {
-        fragment_set frag_set(frag_set_log_path, global_data_view());
+        auto frag_set = make_frag_set();
         insert_a(fragment_a, addr_a, frag_set);
         insert_a_again(fragment_a, addr_a, frag_set);
     }
 
     // destruct frag set and reconstruct it again from frag_set_log_path
     {
-        fragment_set frag_set(frag_set_log_path, global_data_view());
+        auto frag_set = make_frag_set();
         insert_c(fragment_a, addr_a, fragment_c, addr_c, frag_set);
     }
 
     // destruct frag set and reconstruct it again from frag_set_log_path
     {
-        fragment_set frag_set(frag_set_log_path, global_data_view());
+        auto frag_set = make_frag_set();
         insert_b(fragment_a, addr_a, fragment_b, addr_b, fragment_c, addr_c,
                  frag_set);
     }
 }
 
-BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    fragment_set frag_set(frag_set_log_path, global_data_view());
+BOOST_FIXTURE_TEST_CASE(less_operator, fragment_set_fixture) {
+    auto frag_set = make_frag_set();
 
     auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
@@ -178,10 +185,8 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     BOOST_CHECK(frag_element_b < frag_element_c);
 }
 
-BOOST_FIXTURE_TEST_CASE(insert_performance, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto log = fragment_set_log(frag_set_log_path);
+BOOST_FIXTURE_TEST_CASE(insert_performance, fragment_set_fixture) {
+    auto log = make_frag_set_log();
 
     fragment_set_log::log_entry entry = {
         .op = INSERT,
