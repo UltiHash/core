@@ -7,6 +7,7 @@
 #include <storage/storage.h>
 
 namespace uh::cluster {
+
 class global_data_view_fixture {
 public:
     global_data_view_fixture()
@@ -86,9 +87,6 @@ public:
         m_threads.clear();
         m_storage_instances.clear();
         m_temp_dirs.clear();
-
-        // m_ioc.stop();
-        // m_ioc.restart();
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
