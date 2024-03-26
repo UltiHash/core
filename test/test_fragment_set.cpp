@@ -83,20 +83,19 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
 BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
     temp_directory tmp_dir;
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
-    fragment_set frag_set(frag_set_log_path, *gdv);
+    fragment_set frag_set(frag_set_log_path, global_data_view());
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = gdv->write(fragment_a.get_str_view());
+    auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
     shared_buffer<char> fragment_b(4 * KIBI_BYTE);
     memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b = gdv->write(fragment_b.get_str_view());
+    auto addr_b = global_data_view().write(fragment_b.get_str_view());
 
     shared_buffer<char> fragment_c(2 * KIBI_BYTE);
     memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c = gdv->write(fragment_c.get_str_view());
+    auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     insert_a(fragment_a, addr_a, frag_set);
     insert_a_again(fragment_a, addr_a, frag_set);
@@ -108,35 +107,34 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
 BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     temp_directory tmp_dir;
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = gdv->write(fragment_a.get_str_view());
+    auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
     shared_buffer<char> fragment_b(4 * KIBI_BYTE);
     memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b = gdv->write(fragment_b.get_str_view());
+    auto addr_b = global_data_view().write(fragment_b.get_str_view());
 
     shared_buffer<char> fragment_c(2 * KIBI_BYTE);
     memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c = gdv->write(fragment_c.get_str_view());
+    auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     {
-        fragment_set frag_set(frag_set_log_path, *gdv);
+        fragment_set frag_set(frag_set_log_path, global_data_view());
         insert_a(fragment_a, addr_a, frag_set);
         insert_a_again(fragment_a, addr_a, frag_set);
     }
 
     // destruct frag set and reconstruct it again from frag_set_log_path
     {
-        fragment_set frag_set(frag_set_log_path, *gdv);
+        fragment_set frag_set(frag_set_log_path, global_data_view());
         insert_c(fragment_a, addr_a, fragment_c, addr_c, frag_set);
     }
 
     // destruct frag set and reconstruct it again from frag_set_log_path
     {
-        fragment_set frag_set(frag_set_log_path, *gdv);
+        fragment_set frag_set(frag_set_log_path, global_data_view());
         insert_b(fragment_a, addr_a, fragment_b, addr_b, fragment_c, addr_c,
                  frag_set);
     }
@@ -145,12 +143,11 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
-    fragment_set frag_set(frag_set_log_path, *gdv);
+    fragment_set frag_set(frag_set_log_path, global_data_view());
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = gdv->write(fragment_a.get_str_view());
+    auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
     shared_buffer<char> fragment_b(8 * KIBI_BYTE);
     memset(fragment_b.data(), 'a', 2 * KIBI_BYTE);
@@ -158,22 +155,22 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
 
-    auto addr_b = gdv->write(fragment_b.get_str_view());
+    auto addr_b = global_data_view().write(fragment_b.get_str_view());
 
     shared_buffer<char> fragment_c(8 * KIBI_BYTE);
     memset(fragment_c.data(), 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 2 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
-    auto addr_c = gdv->write(fragment_c.get_str_view());
+    auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     // This will create fragment_elements which ONLY contain the prefix
-    fragment_set_element frag_element_a(fragment_a.get_str_view(),
-                                        addr_a.first().pointer, *gdv);
-    fragment_set_element frag_element_b(fragment_b.get_str_view(),
-                                        addr_b.first().pointer, *gdv);
-    fragment_set_element frag_element_c(fragment_c.get_str_view(),
-                                        addr_c.first().pointer, *gdv);
+    fragment_set_element frag_element_a(
+        fragment_a.get_str_view(), addr_a.first().pointer, global_data_view());
+    fragment_set_element frag_element_b(
+        fragment_b.get_str_view(), addr_b.first().pointer, global_data_view());
+    fragment_set_element frag_element_c(
+        fragment_c.get_str_view(), addr_c.first().pointer, global_data_view());
 
     // Since all fragments have identical prefix, calling operator< will be
     // forced to consult gdv to get full body

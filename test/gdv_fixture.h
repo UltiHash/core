@@ -54,7 +54,7 @@ public:
             }
         }
 
-        m_gdv = std::make_shared<global_data_view>(
+        m_gdv = std::make_shared<uh::cluster::global_data_view>(
             m_gdv_config, m_ioc, m_workers, m_storage_services);
 
         m_threads.emplace_back([&] {
@@ -89,7 +89,7 @@ public:
         m_temp_dirs.clear();
     }
 
-    std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    uh::cluster::global_data_view& global_data_view() { return *m_gdv; }
 
 private:
     global_data_view_config m_gdv_config;
@@ -103,7 +103,7 @@ private:
     std::vector<std::unique_ptr<storage>> m_storage_instances;
     std::vector<std::thread> m_threads;
 
-    std::shared_ptr<global_data_view> m_gdv;
+    std::shared_ptr<uh::cluster::global_data_view> m_gdv;
 
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 };
