@@ -11,8 +11,10 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     }
 }
 
-void fragment_set_log::append(const log_entry& entry) {
+void fragment_set_log::append(const fragment_set_element& element) {
 
+    log_entry entry{set_operation::INSERT, element.pointer(), element.size(),
+                    element.prefix()};
     std::array<char, m_entry_size> buf{};
     zpp::bits::out{buf, zpp::bits::size4b{}}(entry).or_throw();
     std::lock_guard<std::mutex> guard(m_mutex);

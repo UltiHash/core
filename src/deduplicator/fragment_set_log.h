@@ -34,6 +34,7 @@ public:
         auto operator<=>(const log_entry&) const = default;
         using serialize = zpp::bits::members<4>;
     };
+
     /**
      * @brief Constructs a fragment_set_log from a specified path.
      *
@@ -63,7 +64,7 @@ public:
      * @param entry A constant reference the the log_entry to be appended to the
      * log file.
      */
-    void append(const log_entry& entry);
+    void append(const fragment_set_element& element);
 
     /**
      * @brief Restores the fragment_set from the log file upon startup.
