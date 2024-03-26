@@ -155,6 +155,8 @@ public:
     [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 
+    void add_l1(const uint128_t& pointer, std::string_view data);
+
 private:
     boost::asio::io_context& m_io_service;
     worker_pool& m_workers;
