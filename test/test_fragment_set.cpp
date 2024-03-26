@@ -13,6 +13,12 @@
 
 namespace uh::cluster {
 
+shared_buffer<char> fragment(std::size_t size, char ch) {
+    shared_buffer<char> rv(size);
+    memset(rv.data(), ch, size);
+    return rv;
+}
+
 void insert_a(shared_buffer<char>& fragment_a, address& addr_a,
               fragment_set& frag_set) {
     auto result_a = frag_set.find(fragment_a.get_str_view());
@@ -85,16 +91,13 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     fragment_set frag_set(frag_set_log_path, global_data_view());
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
+    auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
-    shared_buffer<char> fragment_b(4 * KIBI_BYTE);
-    memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
+    auto fragment_b = fragment(4 * KIBI_BYTE, 'b');
     auto addr_b = global_data_view().write(fragment_b.get_str_view());
 
-    shared_buffer<char> fragment_c(2 * KIBI_BYTE);
-    memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
+    auto fragment_c = fragment(2 * KIBI_BYTE, 'c');
     auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     insert_a(fragment_a, addr_a, frag_set);
@@ -108,16 +111,13 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     temp_directory tmp_dir;
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
+    auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
-    shared_buffer<char> fragment_b(4 * KIBI_BYTE);
-    memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
+    auto fragment_b = fragment(4 * KIBI_BYTE, 'b');
     auto addr_b = global_data_view().write(fragment_b.get_str_view());
 
-    shared_buffer<char> fragment_c(2 * KIBI_BYTE);
-    memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
+    auto fragment_c = fragment(2 * KIBI_BYTE, 'c');
     auto addr_c = global_data_view().write(fragment_c.get_str_view());
 
     {
@@ -145,8 +145,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     fragment_set frag_set(frag_set_log_path, global_data_view());
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
+    auto fragment_a = fragment(8 * KIBI_BYTE, 'a');
     auto addr_a = global_data_view().write(fragment_a.get_str_view());
 
     shared_buffer<char> fragment_b(8 * KIBI_BYTE);
