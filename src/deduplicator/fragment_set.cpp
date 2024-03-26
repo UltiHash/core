@@ -25,7 +25,7 @@ fragment_set::response fragment_set::find(std::string_view data) {
 }
 
 void fragment_set::insert(
-    const uint128_t& pointer, const std::string_view& data,
+    const uint128_t& pointer, std::string_view data,
     const std::set<fragment_set_element>::const_iterator& hint) {
     fragment_set_element f{data, pointer, m_storage};
     m_set_log.append(

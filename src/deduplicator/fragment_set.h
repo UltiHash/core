@@ -71,7 +71,7 @@ public:
      * @param hint A constant reference to the std::set::const_iterator yielded
      * by the #find method
      */
-    void insert(const uint128_t& pointer, const std::string_view& data,
+    void insert(const uint128_t& pointer, std::string_view data,
                 const std::set<fragment_set_element>::const_iterator& hint);
 
     /**
