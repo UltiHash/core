@@ -39,7 +39,7 @@ public:
             m_threads.emplace_back([&] {
                 try {
                     m_ioc.run();
-                } catch (std::exception& e) {
+                } catch (const std::exception& e) {
                     excp_ptr = std::current_exception();
                 }
             });
@@ -47,7 +47,7 @@ public:
             if (excp_ptr) {
                 try {
                     std::rethrow_exception(excp_ptr);
-                } catch (std::exception& e) {
+                } catch (const std::exception& e) {
                     teardown();
                     throw e;
                 }
