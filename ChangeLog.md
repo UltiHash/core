@@ -1,12 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## 0.4.0 2024-03-26
 - Refactored data store, mostly lockless writes and completely lockless reads
 - Fixed a bug in the free spot manager
 - Fixed the shared lock concurrency issue in directory service
 - Fix hanging server when requesting empty files
 - Use buffered file I/O to improve performance of fragment-set log.
 - WARNING: New layout of fragment-set logfile breaks compatibility with old logfile format.
+- Caching fragments before writing them to storage
 
 ## [0.3.4] - 2024-03-15
 - Fixed delete objects raising segmentation fault in entrypoint
