@@ -32,7 +32,12 @@ void fragment_set::insert(
         {set_operation::INSERT, f.pointer(), f.size(), f.prefix()});
     std::lock_guard<std::shared_mutex> lock(m_mutex);
     m_set.emplace_hint(hint, std::move(f));
+
+    metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
+    metric<metric_type::deduplicator_set_fragment_size_counter, byte>::increase(
+        data.size());
 }
 
 void fragment_set::flush() { m_set_log.flush(); }
+
 } // namespace uh::cluster

@@ -1,9 +1,6 @@
 #ifndef CORE_DEDUPE_NODE_HANDLER_H
 #define CORE_DEDUPE_NODE_HANDLER_H
 
-#include <utility>
-
-#include "common/utils/common.h"
 #include "common/utils/protocol_handler.h"
 #include "config.h"
 #include "fragment_set.h"
@@ -14,181 +11,20 @@ class deduplicator_handler : public protocol_handler {
 
 public:
     deduplicator_handler(deduplicator_config config, global_data_view& storage,
-                         worker_pool& dedupe_workers)
-        : m_dedupe_conf(std::move(config)),
-          m_fragment_set(m_dedupe_conf.working_dir / "log", storage),
-          m_storage(storage),
-          m_dedupe_workers(dedupe_workers) {
-        if (m_dedupe_conf.min_fragment_size >
-            m_storage.l1_cache_sample_size()) {
-            throw std::invalid_argument("L1 cache sample size should not be "
-                                        "smaller than the min fragment size!");
-        }
-    }
+                         worker_pool& dedupe_workers);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override {
-        std::stringstream remote;
-        remote << s.remote_endpoint();
-
-        messenger m(std::move(s));
-
-        for (;;) {
-            std::optional<error> err;
-
-            try {
-                const auto message_header = co_await m.recv_header();
-
-                LOG_DEBUG() << remote.str() << " received "
-                            << magic_enum::enum_name(message_header.type);
-
-                switch (message_header.type) {
-                case DEDUPLICATOR_REQ:
-
-                    co_await handle_dedupe(m, message_header);
-                    break;
-                default:
-                    throw std::invalid_argument("Invalid message type!");
-                }
-            } catch (const error_exception& e) {
-                err = e.error();
-            } catch (const std::exception& e) {
-                err = error(error::unknown, e.what());
-            }
-            if (err) {
-                LOG_WARN() << remote.str()
-                           << " error handling request: " << err->message();
-                co_await m.send_error(*err);
-            }
-        }
-    }
+    coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    coro<void> handle_dedupe(messenger& m, const messenger::header& h) {
+    coro<void> handle_dedupe(messenger& m, const messenger::header& h);
 
-        if (h.size == 0) [[unlikely]] {
-            throw std::length_error("Empty data sent do the dedupe node");
-        }
-
-        unique_buffer<char> data(h.size);
-        m.register_read_buffer(data);
-        co_await m.recv_buffers(h);
-
-        const std::size_t pieces_count =
-            std::min(m_storage.get_storage_service_connection_count(),
-                     static_cast<std::size_t>(std::ceil(
-                         static_cast<double>(data.size()) /
-                         static_cast<double>(
-                             m_dedupe_conf.dedupe_worker_minimum_data_size))));
-        size_t piece_size = std::ceil(static_cast<double>(data.size()) /
-                                      static_cast<double>(pieces_count));
-        std::vector<std::string_view> pieces;
-        pieces.reserve(pieces_count);
-        for (std::size_t i = 0; i < pieces_count; ++i) {
-            pieces.emplace_back(data.get_str_view().substr(
-                i * piece_size,
-                std::min(piece_size, data.size() - i * piece_size)));
-        }
-
-        auto responses =
-            co_await m_dedupe_workers.broadcast_from_io_thread_in_workers(
-                [this](const auto& piece) { return deduplicate(piece); },
-                pieces);
-
-        for (std::size_t i = 1; i < pieces_count; i++) {
-            responses[0].addr.append_address(responses[i].addr);
-            responses[0].effective_size += responses[i].effective_size;
-        }
-
-        m_fragment_set.flush();
-        m_storage.sync(responses[0].addr);
-
-        co_await m.send_dedupe_response(responses[0]);
-    }
-
-    dedupe_response deduplicate(std::string_view data) {
-        dedupe_response result{.addr = address{}};
-        auto integration_data = data;
-
-        auto check_dedupe = [&](const fragment_set_element& frag) {
-            // Here, cached_sample can only contain fragments that are 128 bytes
-            // or smaller
-            auto frag_data = m_storage.cached_sample(frag.pointer());
-            bool l1 = true;
-            if (frag_data.data() == nullptr) {
-                l1 = false;
-                frag_data =
-                    m_storage.read_fragment(frag.pointer(), frag.size());
-            }
-            auto common_prefix = largest_common_prefix(
-                integration_data, frag_data.get_str_view());
-            if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-                if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
-                    frag_data =
-                        m_storage.read_fragment(frag.pointer(), frag.size());
-                    common_prefix += largest_common_prefix(
-                        integration_data.substr(common_prefix),
-                        frag_data.get_str_view().substr(common_prefix));
-                }
-                result.addr.push_fragment(
-                    fragment{frag.pointer(), common_prefix});
-                integration_data = integration_data.substr(common_prefix);
-                return true;
-            }
-            return false;
-        };
-
-        while (!integration_data.empty()) {
-            const auto f = m_fragment_set.find(integration_data);
-
-            if (f.low.has_value()) {
-                if (check_dedupe(f.low->get())) {
-                    continue;
-                }
-            }
-            if (f.high.has_value()) {
-                if (check_dedupe(f.high->get())) {
-                    continue;
-                }
-            }
-
-            const auto frag_size = std::min(integration_data.size(),
-                                            m_dedupe_conf.max_fragment_size);
-
-            const auto addr =
-                m_storage.write(integration_data.substr(0, frag_size));
-            m_fragment_set.insert(
-                {addr.pointers[0], addr.pointers[1]},
-                integration_data.substr(0, addr.sizes.front()), f.hint);
-
-            metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
-            metric<metric_type::deduplicator_set_fragment_size_counter,
-                   byte>::increase(addr.sizes.front());
-
-            result.addr.append_address(addr);
-            result.effective_size += frag_size;
-            integration_data = integration_data.substr(frag_size);
-        }
-
-        return result;
-    }
-
-    static size_t largest_common_prefix(const std::string_view& str1,
-                                        const std::string_view& str2) noexcept {
-        if (str1.size() <= str2.size()) {
-            return std::distance(
-                str1.cbegin(),
-                std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
-        } else {
-            return std::distance(
-                str2.cbegin(),
-                std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
-        }
-    }
+    dedupe_response deduplicate(std::string_view data);
 
     deduplicator_config m_dedupe_conf;
     fragment_set m_fragment_set;
     global_data_view& m_storage;
     worker_pool& m_dedupe_workers;
+    std::size_t m_fragment_buffer_size = 8 * MEBI_BYTE;
 };
 
 } // end namespace uh::cluster
