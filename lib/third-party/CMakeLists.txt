@@ -10,6 +10,7 @@ option(WITH_OTLP_GRPC "Whether to include the OTLP gRPC exporter in the SDK" ON)
 option(BUILD_TESTING "Whether to enable tests" OFF)
 option(BUILD_SHARED_LIBS "Whether to build as shared library" OFF)
 option(WITH_EXAMPLES "Whether to include examples in build" OFF)
+option(WITH_STL "Which version of the Standard Library for C++ to use" ON)
 
 add_subdirectory(opentelemetry-cpp)
 
