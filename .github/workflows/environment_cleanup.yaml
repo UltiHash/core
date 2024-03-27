@@ -2,14 +2,13 @@ name: Environment Cleanup
 
 on:
   delete:
-  workflow_dispatch:
 
 jobs:
   cleanup:
     runs-on: lightweight-generic-jobs
     steps:
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=$(echo ${{ github.ref_name }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT_NAME=$(cat ${{ github.event_path }} | jq --raw-output '.ref' | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
