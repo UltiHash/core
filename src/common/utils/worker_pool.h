@@ -98,6 +98,7 @@ public:
         std::vector<std::shared_ptr<awaitable_promise<void>>> promises(
             inputs.size());
         for (auto& pr : promises)
+            // TODO m_ioc must run against incoming IO context
             pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
         size_t i = 0;

@@ -22,18 +22,19 @@ public:
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
-          m_ioc(boost::asio::io_context(config.server.threads)),
+          m_incoming_io(boost::asio::io_context(config.server.threads)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd_client),
           m_storage_services(
-              m_ioc, config.global_data_view.storage_service_connection_count,
+              m_outgoing_io,
+              config.global_data_view.storage_service_connection_count,
               m_etcd_client, config.global_data_view.max_data_store_size),
-          m_dedupe_workers(m_ioc, config.worker_thread_count),
-          m_storage(config.global_data_view, m_ioc, m_dedupe_workers,
+          m_dedupe_workers(m_outgoing_io, config.worker_thread_count),
+          m_storage(config.global_data_view, m_outgoing_io, m_dedupe_workers,
                     m_storage_services),
           m_server(config.server,
                    std::make_unique<deduplicator_handler>(config, m_storage,
                                                           m_dedupe_workers),
-                   m_ioc) {}
+                   m_incoming_io) {}
 
     void run() {
         m_registration =
@@ -45,13 +46,14 @@ public:
 
     ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
-        m_ioc.stop();
+        m_incoming_io.stop();
     }
 
 private:
     etcd::SyncClient m_etcd_client;
     std::size_t m_service_id;
-    boost::asio::io_context m_ioc;
+    boost::asio::io_context m_incoming_io;
+    boost::asio::io_context m_outgoing_io;
 
     service_registry m_service_registry;
 
