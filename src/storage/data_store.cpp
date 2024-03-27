@@ -8,7 +8,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     : m_data_id(id),
       m_conf(std::move(conf)) {
 
-    m_open_files.reserve(m_conf.max_data_store_size / m_conf.file_size + 1);
+    m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
     m_global_offset = uint128_t(m_conf.max_data_store_size) * id;
 
     if (!std::filesystem::exists(m_conf.working_dir)) {
