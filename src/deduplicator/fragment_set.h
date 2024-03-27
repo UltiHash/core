@@ -48,9 +48,12 @@ public:
      * @param set_log_path A path specifying the location of the log file.
      * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
+     * @param enable_replay Temporary, optional switch for disabling replay of
+     * the fragment_set_log. Default value: true.
      */
     fragment_set(const std::filesystem::path& set_log_path,
-                 global_data_view& storage);
+                 global_data_view& storage,
+                 bool enable_replay = true);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
