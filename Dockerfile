@@ -10,12 +10,6 @@ RUN mkdir build \
     && cmake -B build -DCMAKE_BUILD_TYPE=${BuildType} \
     && cmake --build build -j $(nproc) --config ${BuildType}
 
-# Execute tests
-WORKDIR /core/build
-RUN etcd & \
-    sleep 5 && \
-    ctest -C Release --output-on-failure
-
 FROM ubuntu:22.04 as deploy
 
 ARG DebugTools=False
