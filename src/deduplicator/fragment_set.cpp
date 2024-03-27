@@ -2,10 +2,12 @@
 
 namespace uh::cluster {
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
-                           global_data_view& storage)
+                           global_data_view& storage,
+                           bool enable_replay)
     : m_storage(storage),
       m_set_log(set_log_path) {
-    m_set_log.replay(m_set, m_storage);
+    if(enable_replay)
+        m_set_log.replay(m_set, m_storage);
 }
 
 fragment_set::response fragment_set::find(std::string_view data) {
