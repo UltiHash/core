@@ -104,7 +104,7 @@ private:
     data_store_config m_conf;
     std::vector<int> m_open_files;
     uint128_t m_global_offset;
-    std::atomic<size_t> m_used;
+    std::atomic<size_t> m_used{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;
 };

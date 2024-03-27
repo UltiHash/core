@@ -83,7 +83,6 @@ address data_store::write(std::span<char> data) {
     address data_address;
     data_address.push_fragment(
         {.pointer = alloc.global_offset, .size = data.size()});
-    m_used += data.size();
 
     return data_address;
 }
@@ -171,8 +170,7 @@ int data_store::add_new_file(const uint128_t& offset, long file_size) {
                                 "Could not write the data size");
     }
     m_open_files.emplace_back(fd);
-    m_used =
-        (m_open_files.size() - 1) * m_conf.file_size + m_last_file_data_end;
+
     return fd;
 }
 
@@ -206,6 +204,7 @@ data_store::alloc_t data_store::allocate(long size) {
 
     if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
         sync();
+        m_used += m_conf.file_size - m_last_file_data_end + sizeof (m_last_file_data_end);
         const auto new_offset =
             m_global_offset + m_conf.file_size * m_open_files.size();
         add_new_file(new_offset, m_conf.file_size);
@@ -218,6 +217,8 @@ data_store::alloc_t data_store::allocate(long size) {
     alloc.global_offset = m_global_offset +
                           (m_open_files.size() - 1) * m_conf.file_size +
                           alloc.seek;
+
+    m_used += size;
 
     return alloc;
 }
