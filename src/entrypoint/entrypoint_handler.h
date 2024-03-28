@@ -31,10 +31,8 @@ namespace uh::cluster {
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(reference_collection& collection,
-                                RequestTypes&&... request_types)
-        : m_collection(collection),
-          m_req_types(request_types...) {}
+    explicit entrypoint_handler(RequestTypes&&... request_types)
+        : m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -119,20 +117,18 @@ public:
     }
 
 private:
-    reference_collection& m_collection;
     std::tuple<RequestTypes...> m_req_types;
 };
 
 template <typename... RequestTypes>
-auto define_entrypoint_handler(reference_collection& collection,
-                               RequestTypes&&... request_types) {
+auto define_entrypoint_handler(RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        collection, std::forward<RequestTypes>(request_types)...);
+        std::forward<RequestTypes>(request_types)...);
 }
 
 auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
-        collection, create_bucket(collection), get_bucket(collection),
+        create_bucket(collection), get_bucket(collection),
         list_buckets(collection), delete_bucket(collection),
         put_object(collection), get_object(collection),
         list_objects(collection), list_objects_v2(collection),
