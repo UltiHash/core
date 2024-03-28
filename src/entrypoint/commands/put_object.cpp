@@ -1,6 +1,62 @@
 #include "put_object.h"
 
+#include "common/utils/awaitable_promise.h"
+
 namespace uh::cluster {
+
+namespace {
+
+class buffers {
+public:
+    buffers(const reference_collection& collection, std::size_t size)
+        : m_collection(collection),
+          m_buffers(),
+          m_index(0) {
+        m_buffers[0].reserve(size);
+        m_buffers[1].reserve(size);
+    }
+
+    void flip() { m_index = m_index == 0 ? 1 : 0; }
+
+    std::vector<char>& current() { return m_buffers[m_index]; }
+
+    coro<std::size_t> fill(boost::asio::ip::tcp::socket& sock, std::size_t size,
+                           std::size_t offset = 0) {
+        auto& b = current();
+        b.resize(offset + size);
+
+        return boost::asio::async_read(sock,
+                                       boost::asio::buffer(&b[offset], size),
+                                       boost::asio::use_awaitable);
+    }
+
+    std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
+        auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
+            m_collection.ioc);
+
+        auto& b = current();
+
+        if (!b.empty()) {
+            std::list<std::string_view> pieces{
+                std::string_view(b.begin(), b.end())};
+            boost::asio::co_spawn(
+                m_collection.ioc,
+                integration::integrate_data(pieces, m_collection),
+                use_awaitable_promise(pr));
+        } else {
+            pr->set(dedupe_response());
+        }
+
+        return pr;
+    }
+
+private:
+    const reference_collection& m_collection;
+    std::array<std::vector<char>, 2> m_buffers;
+    unsigned m_index;
+};
+
+} // namespace
 
 put_object::put_object(const reference_collection& collection)
     : m_collection(collection) {}
@@ -14,24 +70,46 @@ bool put_object::can_handle(const http_request& req) {
 coro<void> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     try {
-        co_await req.read_body();
-        const auto start = std::chrono::steady_clock::now();
+        buffers b(m_collection, m_buffer_size);
 
-        auto body_size = req.get_body_size();
-        const auto size_mb = static_cast<double>(body_size) /
-                             static_cast<double>(1024ul * 1024ul);
+        auto content_length = req.content_length();
 
-        dedupe_response resp{.effective_size = 0};
-        if (body_size > 0) [[likely]] {
-            std::list<std::string_view> data{req.get_body()};
-            resp = co_await integration::integrate_data(data, m_collection);
+        std::size_t transferred = req.payload_begin().size();
+        b.current().resize(transferred);
+        auto asio_b = boost::asio::buffer(b.current());
+        boost::asio::buffer_copy(asio_b, req.payload_begin().data());
+
+        auto size = std::min(content_length, m_buffer_size) - transferred;
+        transferred += co_await b.fill(req.socket(), size, transferred);
+
+        address addr;
+        std::size_t effective_size = 0ull;
+
+        do {
+            auto promise = b.upload();
+
+            b.flip();
+
+            auto size = std::min(content_length - transferred, m_buffer_size);
+            transferred += co_await b.fill(req.socket(), size);
+
+            auto resp = co_await promise->get();
+            addr.append_address(resp.addr);
+            effective_size += resp.effective_size;
+        } while (transferred < content_length);
+
+        if (!b.current().empty()) {
+            auto promise = b.upload();
+            auto resp = co_await promise->get();
+            addr.append_address(resp.addr);
+            effective_size += resp.effective_size;
         }
 
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
             .object_key =
                 std::make_unique<std::string>(req.get_uri().get_object_key()),
-            .addr = std::make_unique<address>(std::move(resp.addr)),
+            .addr = std::make_unique<address>(addr),
         };
 
         auto directories = m_collection.directory_services.get_clients();
@@ -49,34 +127,20 @@ coro<void> put_object::handle(http_request& req) const {
         co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
             directories, std::bind_front(func, std::cref(dir_req)));
 
-        double effective_size = 0;
-        double space_saving = 0;
-        if (body_size) {
-            effective_size =
-                static_cast<double>(resp.effective_size) / MEBI_BYTE;
-            space_saving = 1.0 - static_cast<double>(resp.effective_size) /
-                                     static_cast<double>(body_size);
-        }
-
-        const auto stop = std::chrono::steady_clock::now();
-        const std::chrono::duration<double> duration = stop - start;
-        const auto bandwidth = size_mb / duration.count();
-
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
-            size_mb);
-
-        LOG_INFO() << "original size " << size_mb << " MB, "
-                   << "effective size " << effective_size << " MB, "
-                   << "space saving " << space_saving << ", "
-                   << "integration duration " << duration.count() << " s, "
-                   << "integration bandwidth " << bandwidth << " MB/s";
+            static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-        res.set_etag(calculate_md5(req.get_body()));
-        res.set_original_size(req.get_body_size());
-        res.set_effective_size(resp.effective_size);
-        res.set_space_savings(space_saving);
-        res.set_bandwidth(bandwidth);
+
+        md5 hash;
+        hash.consume({reinterpret_cast<const char*>(&addr.pointers[0]),
+                      addr.pointers.size() * sizeof(uint64_t)});
+        hash.consume({reinterpret_cast<const char*>(&addr.sizes[0]),
+                      addr.sizes.size() * sizeof(uint32_t)});
+
+        res.set_etag(hash.finalize());
+        res.set_original_size(content_length);
+        res.set_effective_size(effective_size);
 
         co_await req.respond(res.get_prepared_response());
 

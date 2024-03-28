@@ -1,7 +1,5 @@
 #include "md5.h"
-#include <memory>
 #include <openssl/err.h>
-#include <openssl/evp.h>
 #include <stdexcept>
 
 namespace uh::cluster {
@@ -27,25 +25,23 @@ constexpr const char* EMPTY_MD5_HASH = "d41d8cd98f00b204e9800998ecf8427e";
 
 } // namespace
 
-std::string calculate_md5(const std::string& input) {
-    if (input.empty()) [[unlikely]]
-        return EMPTY_MD5_HASH;
-
-    auto ctx = std::unique_ptr<EVP_MD_CTX, void (*)(EVP_MD_CTX*)>(
-        EVP_MD_CTX_create(), EVP_MD_CTX_free);
-
-    unsigned char unMdValue[EVP_MAX_MD_SIZE];
-    unsigned int uiMdLength;
-
-    if (!EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr)) {
+md5::md5()
+    : m_ctx(EVP_MD_CTX_create(), EVP_MD_CTX_free) {
+    if (!EVP_DigestInit_ex(m_ctx.get(), EVP_md5(), nullptr)) {
         throw_from_error("error on digest initialization");
     }
+}
 
-    if (!EVP_DigestUpdate(ctx.get(), input.c_str(), input.length())) {
+void md5::consume(std::span<const char> data) {
+    if (!EVP_DigestUpdate(m_ctx.get(), data.data(), data.size())) {
         throw_from_error("error on digest update");
     }
+}
 
-    if (!EVP_DigestFinal_ex(ctx.get(), unMdValue, &uiMdLength)) {
+std::string md5::finalize() {
+    unsigned char unMdValue[EVP_MAX_MD_SIZE];
+    unsigned int uiMdLength;
+    if (!EVP_DigestFinal_ex(m_ctx.get(), unMdValue, &uiMdLength)) {
         throw_from_error("error on digest finalization");
     }
 
@@ -57,6 +53,14 @@ std::string calculate_md5(const std::string& input) {
     }
 
     return hex_md5;
+}
+
+std::string calculate_md5(const std::string& input) {
+    md5 hash;
+
+    hash.consume({input.data(), input.size()});
+
+    return hash.finalize();
 }
 
 } // namespace uh::cluster
