@@ -13,7 +13,9 @@ public:
 
     static bool can_handle(const http_request& req);
 
-    coro<void> handle(http_request& req) const;
+    http_response handle(http_request& req) const;
+
+    static constexpr bool new_interface = true;
 
 private:
     const reference_collection& m_collection;

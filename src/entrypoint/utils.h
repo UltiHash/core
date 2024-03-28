@@ -13,6 +13,7 @@ struct reference_collection {
     const services<DEDUPLICATOR_SERVICE>& dedupe_services;
     const services<DIRECTORY_SERVICE>& directory_services;
     state& server_state;
+    boost::asio::io_context& outgoing;
 };
 
 struct collapsed_objects {

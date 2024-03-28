@@ -19,18 +19,21 @@ public:
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(ENTRYPOINT_SERVICE),
                                       sc.working_dir)),
-          m_ioc(boost::asio::io_context(config.server.threads)),
+          m_incoming_context(config.server.threads),
+          // TODO *start* outgoing IO threads
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
-          m_dedupe_services(m_ioc, config.dedupe_node_connection_count,
-                            m_etcd_client),
-          m_directory_services(m_ioc, config.directory_connection_count,
+          m_dedupe_services(m_outgoing_context,
+                            config.dedupe_node_connection_count, m_etcd_client),
+          m_directory_services(m_outgoing_context,
+                               config.directory_connection_count,
                                m_etcd_client),
-          m_workers(m_ioc, config.worker_thread_count),
+          m_workers(m_outgoing_context, config.worker_thread_count),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection),
-                   m_ioc) {}
+                   m_incoming_context) {}
 
     void run() {
+        // TODO start worker threads here
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
@@ -46,12 +49,14 @@ private:
         return {.workers = m_workers,
                 .dedupe_services = m_dedupe_services,
                 .directory_services = m_directory_services,
-                .server_state = m_state};
+                .server_state = m_state,
+                .outgoing = m_outgoing_context};
     }
 
     etcd::SyncClient m_etcd_client;
     std::size_t m_service_id;
-    boost::asio::io_context m_ioc;
+    boost::asio::io_context m_incoming_context;
+    boost::asio::io_context m_outgoing_context;
 
     service_registry m_service_registry;
 

@@ -4,6 +4,7 @@
 #include "common/registry/services.h"
 #include "common/utils/class_name.h"
 #include "common/utils/protocol_handler.h"
+#include "thread_pool.h"
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/parser.hpp>
@@ -28,11 +29,17 @@
 
 namespace uh::cluster {
 
+template <typename command>
+concept new_interface = requires { command::new_interface; };
+
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(RequestTypes&&... request_types)
-        : m_req_types(request_types...) {}
+    explicit entrypoint_handler(boost::asio::io_context& outgoing,
+                                RequestTypes&&... request_types)
+        : m_req_types(request_types...),
+          m_outgoing(outgoing),
+          m_thread_pool(8) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         LOG_INFO() << "connection from: " << s.remote_endpoint();
@@ -100,14 +107,30 @@ public:
         return dispatch_front(req, std::get<Is>(req_types)...);
     }
 
+    template <typename command>
+    requires new_interface<command>
+    coro<void> call_command(command& cmd, http_request& req) {
+        auto future = m_thread_pool.push(m_outgoing, req, cmd);
+        auto response = co_await future.get();
+        co_await req.respond(response.get_prepared_response());
+        co_return;
+    }
+
+    template <typename command>
+    coro<void> call_command(command& cmd, http_request& req) {
+        return cmd.handle(req);
+    }
+
     template <typename command, typename... commands>
     coro<void> dispatch_front(http_request& req, command&& head,
                               commands&&... tail) {
         if (head.can_handle(req)) {
             LOG_DEBUG() << req.socket().remote_endpoint()
                         << " handling request " << class_name<command>();
-            return head.handle(req);
+
+            return call_command(head, req);
         }
+
         return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
@@ -118,17 +141,20 @@ public:
 
 private:
     std::tuple<RequestTypes...> m_req_types;
+    boost::asio::io_context& m_outgoing;
+    thread_pool m_thread_pool;
 };
 
 template <typename... RequestTypes>
-auto define_entrypoint_handler(RequestTypes&&... request_types) {
+auto define_entrypoint_handler(boost::asio::io_context& out,
+                               RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        std::forward<RequestTypes>(request_types)...);
+        out, std::forward<RequestTypes>(request_types)...);
 }
 
 auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
-        create_bucket(collection), get_bucket(collection),
+        collection.outgoing, create_bucket(collection), get_bucket(collection),
         list_buckets(collection), delete_bucket(collection),
         put_object(collection), get_object(collection),
         list_objects(collection), list_objects_v2(collection),

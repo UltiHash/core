@@ -13,35 +13,35 @@ bool create_bucket::can_handle(const http_request& req) {
            uri.get_object_key().empty() && uri.get_query_parameters().empty();
 }
 
-coro<void> create_bucket::handle(http_request& req) const {
+http_response create_bucket::handle(http_request& req) const {
+
     metric<entrypoint_create_bucket_req>::increase(1);
+
     auto bucket_id = req.get_uri().get_bucket_id();
-    try {
-        auto func = [&bucket_id](const auto& bucket,
-                                 client::acquired_messenger m,
-                                 long id) -> coro<void> {
+    auto futures = m_collection.directory_services.broad_cast<void>(
+        [bucket_id](auto m) -> coro<void> {
             directory_message dir_req{.bucket_id = bucket_id};
             co_await m.get().send_directory_message(DIRECTORY_BUCKET_PUT_REQ,
                                                     dir_req);
             co_await m.get().recv_header();
-        };
-        co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
-            m_collection.directory_services.get_clients(),
-            std::bind_front(func, std::cref(bucket_id)));
+        });
 
-        http_response res;
-        co_await req.respond(res.get_prepared_response());
+    try {
+        for (auto& f : futures) {
+            f.get();
+        }
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to add the bucket " << bucket_id
-                    << " to the directory: " << e;
-        switch (*e.error()) {
-        case error::bucket_already_exists:
+        LOG_ERROR() << "create_bucket: " << e.what();
+
+        if (*e.error() == error::bucket_already_exists) {
             throw command_exception(http::status::conflict,
                                     command_error::bucket_already_exists);
-        default:
-            throw command_exception(http::status::internal_server_error);
         }
+
+        throw command_exception(http::status::internal_server_error);
     }
+
+    return http_response();
 }
 
 } // namespace uh::cluster

@@ -10,6 +10,7 @@
 
 #include "common/network/client.h"
 #include "common/telemetry/log.h"
+#include "common/utils/awaitable_promise.h"
 #include "common/utils/time_utils.h"
 #include "namespace.h"
 
@@ -177,6 +178,24 @@ public:
                           std::back_inserter(clients_list));
 
         return clients_list;
+    }
+
+    boost::asio::io_context& executor() { return m_ioc; }
+
+    template <typename result, typename func>
+    std::vector<std::future<result>> broad_cast(func f) const {
+        auto clients = get_clients();
+
+        std::vector<std::future<result>> rv;
+        unsigned index = 0u;
+
+        for (auto& cl : clients) {
+            rv[index] = boost::asio::co_spawn(m_ioc, f(cl->acquire_messenger()),
+                                              boost::asio::use_future);
+            ++index;
+        }
+
+        return rv;
     }
 
 private:
