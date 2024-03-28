@@ -43,8 +43,7 @@ public:
 
 private:
     reference_collection get_reference_collection() {
-        return {.ioc = m_ioc,
-                .workers = m_workers,
+        return {.workers = m_workers,
                 .dedupe_services = m_dedupe_services,
                 .directory_services = m_directory_services,
                 .server_state = m_state};
