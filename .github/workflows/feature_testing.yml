@@ -40,6 +40,9 @@ jobs:
           build-args: |
             BuildType=RelWithDebInfo
             DebugTools=True
+      
+      - name: Test service startup with invalid licenses
+        run: bash feature-testing/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
