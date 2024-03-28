@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:latest as build
+FROM ghcr.io/ultihash/build-base:testing as build
 
 ARG BuildType=Release
 
