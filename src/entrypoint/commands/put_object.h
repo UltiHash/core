@@ -19,6 +19,7 @@ public:
 
 private:
     const reference_collection& m_collection;
+    std::size_t m_buffer_size = 4 * MEBI_BYTE;
 };
 
 } // namespace uh::cluster

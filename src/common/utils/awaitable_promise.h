@@ -96,6 +96,27 @@ public:
         }
     }
 };
+
+/**
+ * Use as a completion token in cojunction with boost async operations.
+ *
+ * Usage:
+ *    auto promise = std::make_shared<awaitable_promise<std::size_t>>(ioc);
+ *    ioc.async_read(..., ..., use_awaitable_promise(promise));
+ *    ...
+ *    auto result = promise->get();
+ */
+template <typename result>
+auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
+    return [p](std::exception_ptr e, result r) -> void {
+        if (e) {
+            p->set_exception(e);
+        } else {
+            p->set(std::move(r));
+        }
+    };
+}
+
 } // namespace uh::cluster
 
 #endif // UH_CLUSTER_AWAITABLE_PROMISE_H

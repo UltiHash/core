@@ -30,6 +30,11 @@ public:
         return m_stream;
     }
 
+    const boost::beast::flat_buffer& payload_begin() const { return m_buffer; }
+    std::size_t content_length() const {
+        return m_req.content_length().value();
+    }
+
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
