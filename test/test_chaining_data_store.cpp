@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "chaining_data_store tests"
-#endif
 
 #include "common/utils/common.h"
 #include "common/utils/free_spot_manager.h"

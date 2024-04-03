@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "serialization tests"
-#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"

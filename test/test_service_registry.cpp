@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "service_registry tests"
-#endif
 
 #include "common/registry/namespace.h"
 #include "common/registry/service_registry.h"
