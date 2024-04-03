@@ -110,7 +110,7 @@ public:
 
         co_await boost::asio::async_read(
             m_socket, buffers,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
+            boost::asio::use_awaitable);
 
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
@@ -131,7 +131,7 @@ public:
 
         co_await boost::asio::async_read(
             m_socket, m_read_buffers,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
+            boost::asio::use_awaitable);
 
         m_read_buffers.clear();
         m_read_size = 0;
@@ -167,7 +167,7 @@ public:
 
         co_await boost::asio::async_write(
             m_socket, m_write_buffers,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
+            boost::asio::use_awaitable);
 
         reset_write_buffers();
     }
@@ -204,7 +204,7 @@ public:
 
         co_await boost::asio::async_write(
             m_socket, buffers,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
+            boost::asio::use_awaitable);
     }
 
     void clear_buffers() {

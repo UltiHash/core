@@ -9,3 +9,7 @@ target_include_directories(${PROJECT_NAME}-basic-client PRIVATE ${${PROJECT_NAME
 add_executable(${PROJECT_NAME}-storage-stress-test storage_stress_test/main.cpp)
 target_link_libraries(${PROJECT_NAME}-storage-stress-test ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-storage-stress-test PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+add_executable(${PROJECT_NAME}-dd-stress-test dd_stress_test/main.cpp)
+target_link_libraries(${PROJECT_NAME}-dd-stress-test ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME}-dd-stress-test PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
