@@ -5,6 +5,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/
 
 project(uh-cluster VERSION 0.4.0)
 
+option(BUILD_EXPERIMENTS "Build experiments" OFF)
+option(BUILD_TOOLS "Build tools" OFF)
+
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -64,43 +67,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIR
 enable_testing()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 
-add_subdirectory(experiments)
-add_subdirectory(tools)
-
-# Packaging
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/packaging/CMakeLists.txt)
-
-set(CPACK_PACKAGE_NAME "ultihash")
-set(CPACK_PACKAGE_VENDOR "UltiHash, Inc.")
-
-set(CPACK_VERBATIM_VARIABLES YES)
-
-set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
-SET(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_SOURCE_DIR}/packaging")
-
-set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/")
-
-set(CPACK_PACKAGE_VERSION_MAJOR 0)
-set(CPACK_PACKAGE_VERSION_MINOR 2)
-set(CPACK_PACKAGE_VERSION_PATCH 0)
-
-set(CPACK_PACKAGE_CONTACT "hello@ultihash.io")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "UltiHash Inc. <hello@ultihash.io>")
-
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS YES)
-set(CPACK_STRIP_FILES YES)
-set(CPACK_DEBIAN_PACKAGE_SECTION database)
-set(CPACK_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
-        OWNER_READ OWNER_WRITE OWNER_EXECUTE
-        GROUP_READ GROUP_EXECUTE
-        WORLD_READ WORLD_EXECUTE
-)
-
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
-set(CPACK_DEB_COMPONENT_INSTALL YES)
-
-set(CPACK_DEBIAN_UH-CLUSTER_PACKAGE_NAME "ultihash-cluster")
-set(CPACK_DEBIAN_UH-CLUSTER_DESCRIPTION "Scale-out storage cluster  for the UltiHash high-performance object storage")
-
-include(CPack)
+if(BUILD_EXPERIMENTS)
+    message(STATUS "Building experiments")
+    add_subdirectory(experiments)
+endif()
+if(BUILD_TOOLS)
+    message(STATUS "Building tools")
+    add_subdirectory(tools)
+endif()
