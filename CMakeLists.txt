@@ -6,8 +6,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/
 project(uh-cluster VERSION 0.4.0)
 
 option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
-option(BUILD_TOOLS "Build tools" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
