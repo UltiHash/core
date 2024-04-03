@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "bucket tests"
-#endif
 
 #include "common/utils/temp_directory.h"
 #include "directory/bucket.h"

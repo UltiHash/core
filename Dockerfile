@@ -7,7 +7,7 @@ WORKDIR /core
 
 # Configure and compile
 RUN mkdir build \
-    && cmake -B build -DCMAKE_BUILD_TYPE=${BuildType} \
+    && cmake -B build -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${BuildType} \
     && cmake --build build -j $(nproc) --config ${BuildType}
 
 FROM ubuntu:22.04 as deploy
@@ -20,7 +20,7 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
    && apt-get upgrade --yes \
-   && apt-get install --yes --no-install-recommends libpugixml1v5 libgrpc10 libgrpc++1 lsof \
+   && apt-get install --yes --no-install-recommends libgrpc10 libgrpc++1 \
    && if [ "$DebugTools" = "True" ]; then \
         apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
     fi
