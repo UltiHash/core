@@ -5,6 +5,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/
 
 project(uh-cluster VERSION 0.4.0)
 
+option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(BUILD_TOOLS "Build tools" OFF)
 
@@ -63,10 +64,12 @@ add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-# Testing
-enable_testing()
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
-
+# Unit tests
+if(BUILD_TESTS)
+    message(STATUS "Building unit tests")
+    enable_testing()
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
+endif()
 if(BUILD_EXPERIMENTS)
     message(STATUS "Building experiments")
     add_subdirectory(experiments)

@@ -7,7 +7,7 @@ WORKDIR /core
 
 # Configure and compile
 RUN mkdir build \
-    && cmake -B build -DCMAKE_BUILD_TYPE=${BuildType} \
+    && cmake -B build -DBUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${BuildType} \
     && cmake --build build -j $(nproc) --config ${BuildType}
 
 FROM ubuntu:22.04 as deploy
