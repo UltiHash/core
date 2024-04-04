@@ -80,7 +80,7 @@ coro<void> delete_objects::handle(http_request& req) const {
             auto func2 = [](const std::string& key,
                             const std::string& bucket_id,
                             std::vector<std::string>& success,
-                            client::acquired_messenger m) -> coro<void> {
+                            acquired_messenger m) -> coro<void> {
                 directory_message dir_req;
                 dir_req.bucket_id = bucket_id;
                 dir_req.object_key = std::make_unique<std::string>(key);

@@ -90,8 +90,8 @@ coro<void> complete_multipart::handle(http_request& req) const {
         throw std::runtime_error("no directory services available");
     }
 
-    auto func_dir = [](const directory_message& dir_req,
-                       client::acquired_messenger m, long id) -> coro<void> {
+    auto func_dir = [](const directory_message& dir_req, acquired_messenger m,
+                       long id) -> coro<void> {
         co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
                                                 dir_req);
         co_await m.get().recv_header();

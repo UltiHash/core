@@ -29,7 +29,7 @@ public:
             co_await m_collection.workers
                 .io_thread_acquire_messenger_and_post_in_io_threads(
                     m_collection.directory_services.get(),
-                    [&req](client::acquired_messenger m) -> coro<void> {
+                    [&req](acquired_messenger m) -> coro<void> {
                         directory_message dir_req{
                             .bucket_id = req.get_uri().get_bucket_id()};
 

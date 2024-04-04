@@ -15,38 +15,34 @@
 
 namespace uh::cluster {
 
-class client {
+class client;
 
+class acquired_messenger {
 public:
-    class acquired_messenger {
-    public:
-        acquired_messenger(std::unique_ptr<messenger> m, client& cl)
-            : m_messenger(std::move(m)),
-              m_client(cl) {}
+    acquired_messenger(std::unique_ptr<messenger> m, client& cl)
+        : m_messenger(std::move(m)),
+          m_client(cl) {}
 
-        acquired_messenger(acquired_messenger&& m) noexcept
-            : m_messenger(std::move(m.m_messenger)),
-              m_client(m.m_client) {}
+    acquired_messenger(acquired_messenger&& m) noexcept
+        : m_messenger(std::move(m.m_messenger)),
+          m_client(m.m_client) {}
 
-        [[nodiscard]] messenger& get() const { return *m_messenger; }
+    [[nodiscard]] messenger& get() const { return *m_messenger; }
 
-        messenger* operator->() { return m_messenger.get(); }
-        messenger& operator*() { return *m_messenger; }
+    messenger* operator->() { return m_messenger.get(); }
+    messenger& operator*() { return *m_messenger; }
 
-        ~acquired_messenger() { release(); }
+    ~acquired_messenger() { release(); }
 
-    private:
-        void release() {
-            if (m_messenger) {
-                m_messenger->clear_buffers();
-                m_client.push_messenger(std::move(m_messenger));
-            }
-        }
+private:
+    void release();
 
-        std::unique_ptr<messenger> m_messenger;
-        client& m_client;
-    };
+    std::unique_ptr<messenger> m_messenger;
+    client& m_client;
+};
 
+class client {
+public:
     client(boost::asio::io_context& ioc, const std::string& address,
            const std::uint16_t port, const int connections) {
         boost::asio::io_service io_service;
@@ -78,6 +74,8 @@ public:
     }
 
 private:
+    friend class acquired_messenger;
+
     std::deque<std::unique_ptr<messenger>> m_messengers;
     std::condition_variable m_cv;
     std::mutex m;
@@ -89,6 +87,13 @@ private:
         m_cv.notify_one();
     }
 };
+
+inline void acquired_messenger::release() {
+    if (m_messenger) {
+        m_messenger->clear_buffers();
+        m_client.push_messenger(std::move(m_messenger));
+    }
+}
 
 } // end namespace uh::cluster
 
