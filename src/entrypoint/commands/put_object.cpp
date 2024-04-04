@@ -1,6 +1,60 @@
 #include "put_object.h"
 
+#include "common/utils/awaitable_promise.h"
+
+using namespace boost;
+
 namespace uh::cluster {
+
+namespace {
+
+class double_buffer {
+public:
+    double_buffer(const reference_collection& collection, std::size_t size)
+        : m_collection(collection),
+          m_buffers(),
+          m_index(0) {
+        m_buffers[0].reserve(size);
+        m_buffers[1].reserve(size);
+    }
+
+    void flip() { m_index = m_index == 0 ? 1 : 0; }
+
+    std::vector<char>& current() { return m_buffers[m_index]; }
+
+    coro<std::size_t> fill(asio::ip::tcp::socket& sock, std::size_t size,
+                           std::size_t offset = 0) {
+        auto& b = current();
+        b.resize(offset + size);
+
+        return asio::async_read(sock, asio::buffer(&b[offset], size),
+                                asio::use_awaitable);
+    }
+
+    std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
+        auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
+            m_collection.ioc);
+
+        auto& b = current();
+
+        if (!b.empty()) {
+            asio::co_spawn(m_collection.ioc,
+                           integration::integrate_data(b, m_collection),
+                           use_awaitable_promise(pr));
+        } else {
+            pr->set(dedupe_response());
+        }
+
+        return pr;
+    }
+
+private:
+    const reference_collection& m_collection;
+    std::array<std::vector<char>, 2> m_buffers;
+    unsigned m_index;
+};
+
+} // namespace
 
 put_object::put_object(const reference_collection& collection)
     : m_collection(collection) {}
@@ -14,18 +68,20 @@ bool put_object::can_handle(const http_request& req) {
 coro<void> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     try {
-        co_await req.read_body();
-        const auto start = std::chrono::steady_clock::now();
+        auto content_length = req.content_length();
 
-        auto body_size = req.get_body_size();
-        const auto size_mb = static_cast<double>(body_size) /
-                             static_cast<double>(1024ul * 1024ul);
-
-        dedupe_response resp{.effective_size = 0};
-        if (body_size > 0) [[likely]] {
-            std::list<std::string_view> data{req.get_body()};
-            resp = co_await integration::integrate_data(data, m_collection);
+        dedupe_response resp;
+        if (content_length >= m_buffer_size) {
+            resp = co_await put_large_object(req);
+        } else {
+            resp = co_await put_small_object(req);
         }
+
+        md5 hash;
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
+                      resp.addr.pointers.size() * sizeof(uint64_t)});
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
+                      resp.addr.sizes.size() * sizeof(uint32_t)});
 
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
@@ -49,34 +105,14 @@ coro<void> put_object::handle(http_request& req) const {
         co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
             directories, std::bind_front(func, std::cref(dir_req)));
 
-        double effective_size = 0;
-        double space_saving = 0;
-        if (body_size) {
-            effective_size =
-                static_cast<double>(resp.effective_size) / MEBI_BYTE;
-            space_saving = 1.0 - static_cast<double>(resp.effective_size) /
-                                     static_cast<double>(body_size);
-        }
-
-        const auto stop = std::chrono::steady_clock::now();
-        const std::chrono::duration<double> duration = stop - start;
-        const auto bandwidth = size_mb / duration.count();
-
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
-            size_mb);
-
-        LOG_INFO() << "original size " << size_mb << " MB, "
-                   << "effective size " << effective_size << " MB, "
-                   << "space saving " << space_saving << ", "
-                   << "integration duration " << duration.count() << " s, "
-                   << "integration bandwidth " << bandwidth << " MB/s";
+            static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-        res.set_etag(calculate_md5(req.get_body()));
-        res.set_original_size(req.get_body_size());
+
+        res.set_etag(hash.finalize());
+        res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
-        res.set_space_savings(space_saving);
-        res.set_bandwidth(bandwidth);
 
         co_await req.respond(res.get_prepared_response());
 
@@ -85,7 +121,7 @@ coro<void> put_object::handle(http_request& req) const {
                     << "`: " << e;
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw command_exception(boost::beast::http::status::not_found,
+            throw command_exception(beast::http::status::not_found,
                                     command_error::bucket_not_found);
         case error::storage_limit_exceeded:
             throw command_exception(http::status::insufficient_storage,
@@ -95,6 +131,57 @@ coro<void> put_object::handle(http_request& req) const {
             throw command_exception(http::status::internal_server_error);
         }
     }
+}
+
+coro<dedupe_response> put_object::put_large_object(http_request& req) const {
+    double_buffer b(m_collection, m_buffer_size);
+
+    auto content_length = req.content_length();
+
+    std::size_t transferred = req.payload().size();
+    b.current().resize(transferred);
+    asio::buffer_copy(asio::buffer(b.current()), req.payload().data());
+
+    auto size = std::min(content_length, m_buffer_size) - transferred;
+    transferred += co_await b.fill(req.socket(), size, transferred);
+
+    dedupe_response rv;
+
+    do {
+        auto promise = b.upload();
+
+        b.flip();
+
+        auto size = std::min(content_length - transferred, m_buffer_size);
+        transferred += co_await b.fill(req.socket(), size);
+
+        rv.append(co_await promise->get());
+    } while (transferred < content_length);
+
+    auto promise = b.upload();
+    rv.append(co_await promise->get());
+
+    co_return rv;
+}
+
+coro<dedupe_response> put_object::put_small_object(http_request& req) const {
+    auto content_length = req.content_length();
+
+    if (content_length == 0) {
+        co_return dedupe_response();
+    }
+
+    std::vector<char> buffer(content_length);
+
+    auto& payload = req.payload();
+    asio::buffer_copy(asio::buffer(buffer), payload.data(), payload.size());
+
+    (void)co_await asio::async_read(
+        req.socket(),
+        asio::buffer(&buffer[payload.size()], content_length - payload.size()),
+        asio::use_awaitable);
+
+    co_return co_await integration::integrate_data(buffer, m_collection);
 }
 
 } // namespace uh::cluster
