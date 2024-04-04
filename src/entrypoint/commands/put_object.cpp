@@ -8,9 +8,9 @@ namespace uh::cluster {
 
 namespace {
 
-class buffers {
+class double_buffer {
 public:
-    buffers(const reference_collection& collection, std::size_t size)
+    double_buffer(const reference_collection& collection, std::size_t size)
         : m_collection(collection),
           m_buffers(),
           m_index(0) {
@@ -134,14 +134,13 @@ coro<void> put_object::handle(http_request& req) const {
 }
 
 coro<dedupe_response> put_object::put_large_object(http_request& req) const {
-    buffers b(m_collection, m_buffer_size);
+    double_buffer b(m_collection, m_buffer_size);
 
     auto content_length = req.content_length();
 
-    std::size_t transferred = req.payload_begin().size();
+    std::size_t transferred = req.payload().size();
     b.current().resize(transferred);
-    auto asio_b = asio::buffer(b.current());
-    asio::buffer_copy(asio_b, req.payload_begin().data());
+    asio::buffer_copy(asio::buffer(b.current()), req.payload().data());
 
     auto size = std::min(content_length, m_buffer_size) - transferred;
     transferred += co_await b.fill(req.socket(), size, transferred);
@@ -174,14 +173,12 @@ coro<dedupe_response> put_object::put_small_object(http_request& req) const {
 
     std::vector<char> buffer(content_length);
 
-    auto asio_b = asio::buffer(buffer);
-    auto& payload_begin = req.payload_begin();
-    asio::buffer_copy(asio_b, payload_begin.data(), payload_begin.size());
+    auto& payload = req.payload();
+    asio::buffer_copy(asio::buffer(buffer), payload.data(), payload.size());
 
     (void)co_await asio::async_read(
         req.socket(),
-        asio::buffer(&buffer[payload_begin.size()],
-                     content_length - payload_begin.size()),
+        asio::buffer(&buffer[payload.size()], content_length - payload.size()),
         asio::use_awaitable);
 
     co_return co_await integration::integrate_data(buffer, m_collection);
