@@ -158,15 +158,11 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
         auto size = std::min(content_length - transferred, m_buffer_size);
         transferred += co_await b.fill(req.socket(), size);
 
-        auto resp = co_await promise->get();
-        rv.addr.append_address(resp.addr);
-        rv.effective_size += resp.effective_size;
+        rv.append(co_await promise->get());
     } while (transferred < content_length);
 
     auto promise = b.upload();
-    auto resp = co_await promise->get();
-    rv.addr.append_address(resp.addr);
-    rv.effective_size += resp.effective_size;
+    rv.append(co_await promise->get());
 
     co_return rv;
 }
