@@ -19,7 +19,7 @@ integration::integrate_data(std::span<const char> data,
 
     std::vector<dedupe_response> responses(dedupe_services_size);
 
-    auto func = [&](acquired_messenger m, long i) -> coro<void> {
+    auto func = [&](acquired_messenger<client> m, long i) -> coro<void> {
         auto chunk = data.subspan(i * part_size, part_size);
         m.get().register_write_buffer(chunk);
         co_await m.get().send_buffers(DEDUPLICATOR_REQ);

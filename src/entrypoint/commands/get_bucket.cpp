@@ -30,7 +30,7 @@ coro<void> get_bucket::handle(http_request& req) const {
 
     try {
         auto func = [](const std::string& bucket_name,
-                       acquired_messenger m) -> coro<void> {
+                       acquired_messenger<client> m) -> coro<void> {
             directory_message dir_req;
             dir_req.bucket_id = bucket_name;
             co_await m.get().send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,

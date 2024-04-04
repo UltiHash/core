@@ -177,7 +177,7 @@ coro<void> list_objects::handle(http_request& req) const {
         directory_list_objects_message list_objs_res;
         auto func = [](const directory_message& dir_req,
                        directory_list_objects_message& list_objs_res,
-                       acquired_messenger m) -> coro<void> {
+                       acquired_messenger<client> m) -> coro<void> {
             co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
                                                     dir_req);
             const auto h_dir = co_await m.get().recv_header();

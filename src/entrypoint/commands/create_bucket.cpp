@@ -17,7 +17,8 @@ coro<void> create_bucket::handle(http_request& req) const {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.get_uri().get_bucket_id();
     try {
-        auto func = [&bucket_id](const auto& bucket, acquired_messenger m,
+        auto func = [&bucket_id](const auto& bucket,
+                                 acquired_messenger<client> m,
                                  long id) -> coro<void> {
             directory_message dir_req{.bucket_id = bucket_id};
             co_await m.get().send_directory_message(DIRECTORY_BUCKET_PUT_REQ,

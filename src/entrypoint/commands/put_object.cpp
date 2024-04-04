@@ -96,8 +96,8 @@ coro<void> put_object::handle(http_request& req) const {
             throw std::runtime_error("no directory services available");
         }
 
-        auto func = [](const directory_message& req, acquired_messenger m,
-                       long id) -> coro<void> {
+        auto func = [](const directory_message& req,
+                       acquired_messenger<client> m, long id) -> coro<void> {
             co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ, req);
             co_await m->recv_header();
         };

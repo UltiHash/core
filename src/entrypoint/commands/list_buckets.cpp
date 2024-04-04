@@ -41,7 +41,7 @@ coro<void> list_buckets::handle(http_request& req) const {
     std::vector<std::string> buckets_found;
 
     auto func = [](std::vector<std::string>& buckets_found,
-                   acquired_messenger m) -> coro<void> {
+                   acquired_messenger<client> m) -> coro<void> {
         co_await m.get().send(DIRECTORY_BUCKET_LIST_REQ, {});
         const auto h = co_await m.get().recv_header();
         auto list_buckets_res =

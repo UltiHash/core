@@ -19,7 +19,7 @@ coro<void> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         auto func = [](const http_request& req,
-                       acquired_messenger m) -> coro<void> {
+                       acquired_messenger<client> m) -> coro<void> {
             directory_message dir_req{
                 .bucket_id = req.get_uri().get_bucket_id(),
                 .object_key = std::make_unique<std::string>(
