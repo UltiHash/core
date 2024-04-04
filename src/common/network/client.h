@@ -20,8 +20,7 @@ class client {
 public:
     class acquired_messenger {
     public:
-        acquired_messenger(std::unique_ptr<messenger> m,
-                           const std::reference_wrapper<client> cl)
+        acquired_messenger(std::unique_ptr<messenger> m, client& cl)
             : m_messenger(std::move(m)),
               m_client(cl),
               m_owning(true) {}
@@ -37,7 +36,7 @@ public:
 
         void release() {
             m_messenger->clear_buffers();
-            m_client.get().push_messenger(std::move(m_messenger));
+            m_client.push_messenger(std::move(m_messenger));
             m_owning = false;
         }
 
@@ -48,7 +47,7 @@ public:
         }
 
         std::unique_ptr<messenger> m_messenger;
-        const std::reference_wrapper<client> m_client;
+        client& m_client;
         bool m_owning;
     };
 
@@ -83,7 +82,7 @@ public:
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = std::move(m_messengers.front());
         m_messengers.pop_front();
-        return acquired_messenger{std::move(messenger), std::ref(*this)};
+        return acquired_messenger{std::move(messenger), *this};
     }
 
 private:
