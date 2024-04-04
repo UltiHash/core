@@ -22,34 +22,26 @@ public:
     public:
         acquired_messenger(std::unique_ptr<messenger> m, client& cl)
             : m_messenger(std::move(m)),
-              m_client(cl),
-              m_owning(true) {}
+              m_client(cl) {}
 
         acquired_messenger(acquired_messenger&& m) noexcept
             : m_messenger(std::move(m.m_messenger)),
-              m_client(m.m_client),
-              m_owning(true) {
-            m.m_owning = false;
-        }
+              m_client(m.m_client) {}
 
         [[nodiscard]] messenger& get() const { return *m_messenger; }
 
-        ~acquired_messenger() {
-            if (m_owning) {
-                release();
-            }
-        }
+        ~acquired_messenger() { release(); }
 
     private:
         void release() {
-            m_messenger->clear_buffers();
-            m_client.push_messenger(std::move(m_messenger));
-            m_owning = false;
+            if (m_messenger) {
+                m_messenger->clear_buffers();
+                m_client.push_messenger(std::move(m_messenger));
+            }
         }
 
         std::unique_ptr<messenger> m_messenger;
         client& m_client;
-        bool m_owning;
     };
 
     client(boost::asio::io_context& ioc, const std::string& address,
