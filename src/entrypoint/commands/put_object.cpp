@@ -2,6 +2,8 @@
 
 #include "common/utils/awaitable_promise.h"
 
+using namespace boost;
+
 namespace uh::cluster {
 
 namespace {
@@ -20,14 +22,13 @@ public:
 
     std::vector<char>& current() { return m_buffers[m_index]; }
 
-    coro<std::size_t> fill(boost::asio::ip::tcp::socket& sock, std::size_t size,
+    coro<std::size_t> fill(asio::ip::tcp::socket& sock, std::size_t size,
                            std::size_t offset = 0) {
         auto& b = current();
         b.resize(offset + size);
 
-        return boost::asio::async_read(sock,
-                                       boost::asio::buffer(&b[offset], size),
-                                       boost::asio::use_awaitable);
+        return asio::async_read(sock, asio::buffer(&b[offset], size),
+                                asio::use_awaitable);
     }
 
     std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
@@ -39,10 +40,9 @@ public:
         if (!b.empty()) {
             std::list<std::string_view> pieces{
                 std::string_view(b.begin(), b.end())};
-            boost::asio::co_spawn(
-                m_collection.ioc,
-                integration::integrate_data(pieces, m_collection),
-                use_awaitable_promise(pr));
+            asio::co_spawn(m_collection.ioc,
+                           integration::integrate_data(pieces, m_collection),
+                           use_awaitable_promise(pr));
         } else {
             pr->set(dedupe_response());
         }
@@ -123,7 +123,7 @@ coro<void> put_object::handle(http_request& req) const {
                     << "`: " << e;
         switch (*e.error()) {
         case error::bucket_not_found:
-            throw command_exception(boost::beast::http::status::not_found,
+            throw command_exception(beast::http::status::not_found,
                                     command_error::bucket_not_found);
         case error::storage_limit_exceeded:
             throw command_exception(http::status::insufficient_storage,
@@ -142,8 +142,8 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
 
     std::size_t transferred = req.payload_begin().size();
     b.current().resize(transferred);
-    auto asio_b = boost::asio::buffer(b.current());
-    boost::asio::buffer_copy(asio_b, req.payload_begin().data());
+    auto asio_b = asio::buffer(b.current());
+    asio::buffer_copy(asio_b, req.payload_begin().data());
 
     auto size = std::min(content_length, m_buffer_size) - transferred;
     transferred += co_await b.fill(req.socket(), size, transferred);
@@ -180,16 +180,15 @@ coro<dedupe_response> put_object::put_small_object(http_request& req) const {
 
     std::vector<char> buffer(content_length);
 
-    auto asio_b = boost::asio::buffer(buffer);
+    auto asio_b = asio::buffer(buffer);
     auto& payload_begin = req.payload_begin();
-    boost::asio::buffer_copy(asio_b, payload_begin.data(),
-                             payload_begin.size());
+    asio::buffer_copy(asio_b, payload_begin.data(), payload_begin.size());
 
-    (void)co_await boost::asio::async_read(
+    (void)co_await asio::async_read(
         req.socket(),
-        boost::asio::buffer(&buffer[payload_begin.size()],
-                            content_length - payload_begin.size()),
-        boost::asio::use_awaitable);
+        asio::buffer(&buffer[payload_begin.size()],
+                     content_length - payload_begin.size()),
+        asio::use_awaitable);
 
     std::list<std::string_view> pieces{
         std::string_view(buffer.begin(), buffer.end())};
