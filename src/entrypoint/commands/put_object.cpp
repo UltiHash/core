@@ -38,10 +38,8 @@ public:
         auto& b = current();
 
         if (!b.empty()) {
-            std::list<std::string_view> pieces{
-                std::string_view(b.begin(), b.end())};
             asio::co_spawn(m_collection.ioc,
-                           integration::integrate_data(pieces, m_collection),
+                           integration::integrate_data(b, m_collection),
                            use_awaitable_promise(pr));
         } else {
             pr->set(dedupe_response());
@@ -186,10 +184,7 @@ coro<dedupe_response> put_object::put_small_object(http_request& req) const {
                      content_length - payload_begin.size()),
         asio::use_awaitable);
 
-    std::list<std::string_view> pieces{
-        std::string_view(buffer.begin(), buffer.end())};
-
-    co_return co_await integration::integrate_data(pieces, m_collection);
+    co_return co_await integration::integrate_data(buffer, m_collection);
 }
 
 } // namespace uh::cluster
