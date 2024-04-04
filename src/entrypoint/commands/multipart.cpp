@@ -38,9 +38,9 @@ coro<void> multipart::handle(http_request& req) const {
     co_await req.read_body();
 
     if (req.get_body_size() > 0) [[likely]] {
-        std::list<std::string_view> data{req.get_body()};
-        const auto dir_resp =
-            co_await integration::integrate_data(data, m_collection);
+        auto& body = req.get_body();
+        const auto dir_resp = co_await integration::integrate_data(
+            {body.begin(), body.size()}, m_collection);
 
         m_collection.server_state.m_uploads.append_upload_part_info(
             req.get_uri().get_query_parameters().at("uploadId"),

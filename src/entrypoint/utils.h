@@ -22,9 +22,8 @@ struct collapsed_objects {
 };
 
 struct integration {
-    static coro<dedupe_response>
-    integrate_data(const std::list<std::string_view>&,
-                   const reference_collection&);
+    static coro<dedupe_response> integrate_data(std::span<const char>,
+                                                const reference_collection&);
 };
 
 struct retrieval {
