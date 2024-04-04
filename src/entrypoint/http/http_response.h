@@ -16,10 +16,6 @@ public:
 
     void set_effective_size(std::size_t effective_size);
 
-    void set_space_savings(double space_savings);
-
-    void set_bandwidth(double bandwidth);
-
     void set_original_size(std::size_t original_size);
 
     const http::response<http::string_body>& get_prepared_response();
