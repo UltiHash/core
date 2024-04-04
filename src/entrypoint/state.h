@@ -18,7 +18,6 @@ struct upload_info {
     std::map<uint16_t, std::string> etags;
     std::map<uint16_t, size_t> part_sizes;
     std::map<uint16_t, address> addresses;
-    unsigned long long upload_init_time{0};
 
     std::string key;
     std::string bucket;
