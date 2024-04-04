@@ -70,46 +70,20 @@ bool put_object::can_handle(const http_request& req) {
 coro<void> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     try {
-        buffers b(m_collection, m_buffer_size);
-
         auto content_length = req.content_length();
 
-        std::size_t transferred = req.payload_begin().size();
-        b.current().resize(transferred);
-        auto asio_b = boost::asio::buffer(b.current());
-        boost::asio::buffer_copy(asio_b, req.payload_begin().data());
-
-        auto size = std::min(content_length, m_buffer_size) - transferred;
-        transferred += co_await b.fill(req.socket(), size, transferred);
-
-        address addr;
-        std::size_t effective_size = 0ull;
-
-        do {
-            auto promise = b.upload();
-
-            b.flip();
-
-            auto size = std::min(content_length - transferred, m_buffer_size);
-            transferred += co_await b.fill(req.socket(), size);
-
-            auto resp = co_await promise->get();
-            addr.append_address(resp.addr);
-            effective_size += resp.effective_size;
-        } while (transferred < content_length);
-
-        if (!b.current().empty()) {
-            auto promise = b.upload();
-            auto resp = co_await promise->get();
-            addr.append_address(resp.addr);
-            effective_size += resp.effective_size;
+        dedupe_response resp;
+        if (content_length >= m_buffer_size) {
+            resp = co_await put_large_object(req);
+        } else {
+            resp = co_await put_small_object(req);
         }
 
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
             .object_key =
                 std::make_unique<std::string>(req.get_uri().get_object_key()),
-            .addr = std::make_unique<address>(addr),
+            .addr = std::make_unique<address>(resp.addr),
         };
 
         auto directories = m_collection.directory_services.get_clients();
@@ -133,14 +107,14 @@ coro<void> put_object::handle(http_request& req) const {
         http_response res;
 
         md5 hash;
-        hash.consume({reinterpret_cast<const char*>(&addr.pointers[0]),
-                      addr.pointers.size() * sizeof(uint64_t)});
-        hash.consume({reinterpret_cast<const char*>(&addr.sizes[0]),
-                      addr.sizes.size() * sizeof(uint32_t)});
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
+                      resp.addr.pointers.size() * sizeof(uint64_t)});
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
+                      resp.addr.sizes.size() * sizeof(uint32_t)});
 
         res.set_etag(hash.finalize());
         res.set_original_size(content_length);
-        res.set_effective_size(effective_size);
+        res.set_effective_size(resp.effective_size);
 
         co_await req.respond(res.get_prepared_response());
 
@@ -159,6 +133,68 @@ coro<void> put_object::handle(http_request& req) const {
             throw command_exception(http::status::internal_server_error);
         }
     }
+}
+
+coro<dedupe_response> put_object::put_large_object(http_request& req) const {
+    buffers b(m_collection, m_buffer_size);
+
+    auto content_length = req.content_length();
+
+    std::size_t transferred = req.payload_begin().size();
+    b.current().resize(transferred);
+    auto asio_b = boost::asio::buffer(b.current());
+    boost::asio::buffer_copy(asio_b, req.payload_begin().data());
+
+    auto size = std::min(content_length, m_buffer_size) - transferred;
+    transferred += co_await b.fill(req.socket(), size, transferred);
+
+    dedupe_response rv;
+
+    do {
+        auto promise = b.upload();
+
+        b.flip();
+
+        auto size = std::min(content_length - transferred, m_buffer_size);
+        transferred += co_await b.fill(req.socket(), size);
+
+        auto resp = co_await promise->get();
+        rv.addr.append_address(resp.addr);
+        rv.effective_size += resp.effective_size;
+    } while (transferred < content_length);
+
+    auto promise = b.upload();
+    auto resp = co_await promise->get();
+    rv.addr.append_address(resp.addr);
+    rv.effective_size += resp.effective_size;
+
+    co_return rv;
+}
+
+coro<dedupe_response> put_object::put_small_object(http_request& req) const {
+    auto content_length = req.content_length();
+
+    if (content_length == 0) {
+        co_return dedupe_response();
+    }
+
+    std::vector<char> buffer(content_length);
+
+    auto asio_b = boost::asio::buffer(buffer);
+    auto& payload_begin = req.payload_begin();
+    boost::asio::buffer_copy(asio_b, payload_begin.data(),
+                             payload_begin.size());
+
+    (void)co_await boost::asio::async_read(
+        req.socket(),
+        boost::asio::buffer(&buffer[payload_begin.size()],
+                            content_length - payload_begin.size()),
+        boost::asio::use_awaitable);
+
+    std::list<std::string_view> pieces{
+        std::string_view(buffer.begin(), buffer.end())};
+
+    co_return co_await integration::integrate_data(pieces, m_collection);
 }
 
 } // namespace uh::cluster
