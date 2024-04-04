@@ -77,11 +77,17 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req);
         }
 
+        md5 hash;
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
+                      resp.addr.pointers.size() * sizeof(uint64_t)});
+        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
+                      resp.addr.sizes.size() * sizeof(uint32_t)});
+
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
             .object_key =
                 std::make_unique<std::string>(req.get_uri().get_object_key()),
-            .addr = std::make_unique<address>(resp.addr),
+            .addr = std::make_unique<address>(std::move(resp.addr)),
         };
 
         auto directories = m_collection.directory_services.get_clients();
@@ -103,12 +109,6 @@ coro<void> put_object::handle(http_request& req) const {
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-
-        md5 hash;
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
-                      resp.addr.pointers.size() * sizeof(uint64_t)});
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
-                      resp.addr.sizes.size() * sizeof(uint32_t)});
 
         res.set_etag(hash.finalize());
         res.set_original_size(content_length);
