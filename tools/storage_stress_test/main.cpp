@@ -55,7 +55,8 @@ size_t do_io(const params& ps) {
 
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<size_t> distribution(min_frag_size, max_frag_size);
+    std::uniform_int_distribution<size_t> distribution(min_frag_size,
+                                                       max_frag_size);
 
     size_t total_size = 0;
     for (size_t i = 0; i < ps.message_count; ++i) {
@@ -119,6 +120,7 @@ int main(int argc, char* args[]) {
         LOG_ERROR() << "Error in parameters:";
         LOG_ERROR() << e.what();
         LOG_ERROR() << dump_usage();
+        exit(1);
     }
 
     create_connections(ps);
@@ -156,7 +158,7 @@ int main(int argc, char* args[]) {
 
     const auto stop = std::chrono::steady_clock::now();
     const std::chrono::duration<double> duration = stop - start;
-    const auto size = accumulated_size / static_cast<double>(1024ul * 1024ul);
+    const auto size = accumulated_size / static_cast<double>(MEBI_BYTE);
     const auto bandwidth = size / duration.count();
     LOG_INFO() << "Wrote " << size << " MB";
     LOG_INFO() << "Operation duration " << duration.count() << " s";

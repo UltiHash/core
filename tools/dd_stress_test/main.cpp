@@ -50,13 +50,14 @@ void return_connection(auto&& s) {
     cv.notify_one();
 }
 
-std::vector <std::vector <std::string>> generate_data (const params& ps) {
+std::vector<std::vector<std::string>> generate_data(const params& ps) {
 
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<size_t> distribution(min_data_size, max_data_size);
+    std::uniform_int_distribution<size_t> distribution(min_data_size,
+                                                       max_data_size);
 
-    std::vector <std::vector <std::string>> random_data;
+    std::vector<std::vector<std::string>> random_data;
     random_data.reserve(ps.threads);
 
     for (int t = 0; t < ps.threads; t++) {
@@ -71,12 +72,12 @@ std::vector <std::vector <std::string>> generate_data (const params& ps) {
     return random_data;
 }
 
-std::pair <size_t, size_t> do_io(const std::vector <std::string>& random_data) {
+std::pair<size_t, size_t> do_io(const std::vector<std::string>& random_data) {
 
     size_t total_size = 0;
     size_t effective_size = 0;
 
-    for (const auto& data: random_data) {
+    for (const auto& data : random_data) {
         message_type type = DEDUPLICATOR_REQ;
         const auto length = data.length();
         std::vector<boost::asio::const_buffer> send_buffers{
@@ -95,8 +96,9 @@ std::pair <size_t, size_t> do_io(const std::vector <std::string>& random_data) {
         dedupe_response dedupe_resp;
         dedupe_resp.addr.allocate_for_serialized_data(
             h.size - sizeof(dedupe_resp.effective_size));
-        std::vector <boost::asio::mutable_buffer> buffers {
-            boost::asio::buffer(&dedupe_resp.effective_size, sizeof dedupe_resp.effective_size),
+        std::vector<boost::asio::mutable_buffer> buffers{
+            boost::asio::buffer(&dedupe_resp.effective_size,
+                                sizeof dedupe_resp.effective_size),
             boost::asio::buffer(dedupe_resp.addr.pointers),
             boost::asio::buffer(dedupe_resp.addr.sizes),
         };
@@ -144,7 +146,7 @@ int main(int argc, char* args[]) {
         LOG_ERROR() << "Error in parameters:";
         LOG_ERROR() << e.what();
         LOG_ERROR() << dump_usage();
-        exit(0);
+        exit(1);
     }
 
     create_connections(ps);
@@ -152,7 +154,7 @@ int main(int argc, char* args[]) {
     std::vector<std::thread> threads;
     threads.reserve(ps.threads);
 
-    std::vector<std::pair <size_t, size_t>> io_sizes(ps.threads);
+    std::vector<std::pair<size_t, size_t>> io_sizes(ps.threads);
     std::vector<std::exception_ptr> exceptions(ps.threads);
 
     const auto random_data = generate_data(ps);
@@ -175,24 +177,34 @@ int main(int argc, char* args[]) {
     }
 
     for (const auto& e : exceptions) {
-        if (e)
-            std::rethrow_exception(e);
+        if (e) {
+            try {
+                std::rethrow_exception(e);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "Error occurred in threads: " << e.what();
+                exit(1);
+            }
+        }
     }
 
     const auto accumulated_total_size =
-        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0, [] (auto sum, auto& v) {return sum + v.first;});
+        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0,
+                        [](auto sum, auto& v) { return sum + v.first; });
 
     const auto accumulated_eff_size =
-        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0, [] (auto sum, auto& v) {return sum + v.second;});
+        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0,
+                        [](auto sum, auto& v) { return sum + v.second; });
 
     const auto stop = std::chrono::steady_clock::now();
     const std::chrono::duration<double> duration = stop - start;
-    const auto total_size = accumulated_total_size / static_cast<double>(1024ul * 1024ul);
-    const auto eff_size = accumulated_eff_size / static_cast<double>(1024ul * 1024ul);
+    const auto total_size =
+        accumulated_total_size / static_cast<double>(MEBI_BYTE);
+    const auto eff_size = accumulated_eff_size / static_cast<double>(MEBI_BYTE);
     const auto bandwidth = total_size / duration.count();
     LOG_INFO() << "Integrated " << total_size << " MB";
     LOG_INFO() << "Effective size " << eff_size << " MB";
-    LOG_INFO() << "Deduplication ratio " << 1.0 - eff_size/total_size << " MB";
+    LOG_INFO() << "Deduplication ratio " << 1.0 - eff_size / total_size
+               << " MB";
     LOG_INFO() << "Operation duration " << duration.count() << " s";
     LOG_INFO() << "Operation bandwidth " << bandwidth << " MB/s";
 }
