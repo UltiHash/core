@@ -3,10 +3,10 @@
 
 #include "common/utils/common.h"
 #include "messenger.h"
+#include "tools.h"
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <condition_variable>
 #include <deque>
@@ -45,17 +45,9 @@ class client {
 public:
     client(boost::asio::io_context& ioc, const std::string& address,
            const std::uint16_t port, const int connections) {
-        boost::asio::io_service io_service;
-        boost::asio::ip::tcp::resolver resolver(io_service);
-        boost::asio::ip::tcp::resolver::query query(address,
-                                                    std::to_string(port));
-        boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
-        boost::asio::ip::tcp::resolver::iterator end; // End marker.
-        boost::asio::ip::tcp::endpoint endpoint;
-        while (iter != end) {
-            endpoint = iter->endpoint();
-            iter++;
-        }
+
+        auto endpoint = resolve(address, port).back();
+
         for (int i = 0; i < connections; ++i) {
             m_messengers.emplace_back(std::make_unique<messenger>(
                 ioc, endpoint.address().to_string(), port));
