@@ -195,10 +195,6 @@ CLI::App* sub_directory(CLI::App& app, directory_config& cfg) {
                    "number of worker threads")
         ->default_val(cfg.worker_thread_count);
 
-    rv->add_option("--working-dir", cfg.directory_store_conf.working_dir,
-                   "directory persistence directory")
-        ->default_val(cfg.directory_store_conf.working_dir);
-
     rv->add_option("--max-store-size", cfg.max_data_store_size,
                    "maximum size of data store")
         ->default_val(cfg.max_data_store_size);
@@ -212,10 +208,6 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
 
     register_server(*rv, cfg.server);
     register_global_data_view(*rv, cfg.global_data_view);
-
-    rv->add_option("--working-dir", cfg.working_dir,
-                   "directory persistence directory")
-        ->default_val(cfg.working_dir);
 
     rv->add_option("--worker-count", cfg.worker_thread_count,
                    "number of worker threads")
@@ -287,6 +279,11 @@ std::optional<config> read_config(int argc, char** argv) {
 
     rv.log = make_log_config(rv.service, log_level, rv.role);
     rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
+
+    rv.directory.directory_store_conf.working_dir =
+        rv.service.working_dir / "directory";
+    rv.deduplicator.working_dir = rv.service.working_dir / "deduplicator";
+    rv.storage.data_store.working_dir = rv.service.working_dir / "storage";
 
     return rv;
 }
