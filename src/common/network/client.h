@@ -30,6 +30,9 @@ public:
 
         [[nodiscard]] messenger& get() const { return *m_messenger; }
 
+        messenger* operator->() { return m_messenger.get(); }
+        messenger& operator*() { return *m_messenger; }
+
         ~acquired_messenger() { release(); }
 
     private:
