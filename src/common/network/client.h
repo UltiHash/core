@@ -34,26 +34,23 @@ public:
 
         [[nodiscard]] messenger& get() const { return *m_messenger; }
 
-        void release() {
-            m_messenger->clear_buffers();
-            m_client.push_messenger(std::move(m_messenger));
-            m_owning = false;
-        }
-
         ~acquired_messenger() {
             if (m_owning) {
                 release();
             }
         }
 
+    private:
+        void release() {
+            m_messenger->clear_buffers();
+            m_client.push_messenger(std::move(m_messenger));
+            m_owning = false;
+        }
+
         std::unique_ptr<messenger> m_messenger;
         client& m_client;
         bool m_owning;
     };
-
-    std::deque<std::unique_ptr<messenger>> m_messengers;
-    std::condition_variable m_cv;
-    std::mutex m;
 
     client(boost::asio::io_context& ioc, const std::string& address,
            const std::uint16_t port, const int connections) {
@@ -86,6 +83,10 @@ public:
     }
 
 private:
+    std::deque<std::unique_ptr<messenger>> m_messengers;
+    std::condition_variable m_cv;
+    std::mutex m;
+
     void push_messenger(std::unique_ptr<messenger> msg) {
         std::unique_lock<std::mutex> lk(m);
         m_messengers.emplace_back(std::move(msg));
