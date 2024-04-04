@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "global data view tests"
-#endif
 
 #include "gdv_fixture.h"
 #include <boost/test/unit_test.hpp>

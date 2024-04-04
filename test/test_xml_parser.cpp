@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "xml parser tests"
-#endif
 
 #include "common/utils/xml_parser.h"
 #include <boost/test/unit_test.hpp>

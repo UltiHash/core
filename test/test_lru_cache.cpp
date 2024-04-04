@@ -1,8 +1,4 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
 #define BOOST_TEST_MODULE "big_int tests"
-#endif
 
 #include <atomic>
 #include <boost/test/unit_test.hpp>
