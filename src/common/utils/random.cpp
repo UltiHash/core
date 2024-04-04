@@ -12,7 +12,7 @@ std::string random_string(std::size_t length, const std::string& chars) {
         pick(0, chars.size());
 
     std::string s;
-
+    s.reserve(length);
     while (s.size() < length) {
         s += 97 + chars[pick(rg)] % 25;
     }

@@ -49,6 +49,12 @@ public:
                 default:
                     throw std::invalid_argument("Invalid message type!");
                 }
+            } catch (const boost::system::system_error& e) {
+                if (e.code() == boost::asio::error::eof) {
+                    LOG_INFO() << remote.str() << " disconnected";
+                    break;
+                }
+                err = error(error::unknown, e.what());
             } catch (const error_exception& e) {
                 err = e.error();
             } catch (const std::exception& e) {
@@ -68,6 +74,7 @@ private:
         unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
+
         const auto addr = m_data_store.write(data.get_span());
         co_await m.send_address(SUCCESS, addr);
     }
