@@ -64,8 +64,7 @@ integration::integrate_data(const std::list<std::string_view>& data_pieces,
     dedupe_response resp{.effective_size = 0};
 
     for (const auto& r : responses) {
-        resp.effective_size += r.effective_size;
-        resp.addr.append_address(r.addr);
+        resp.append(r);
     }
     co_return resp;
 }

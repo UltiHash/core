@@ -20,6 +20,11 @@ static constexpr std::size_t PEBI_BYTE = 1024 * TEBI_BYTE;
 struct dedupe_response {
     std::size_t effective_size{};
     address addr;
+
+    void append(const dedupe_response& other) {
+        effective_size += other.effective_size;
+        addr.append_address(other.addr);
+    }
 };
 
 struct directory_message {
