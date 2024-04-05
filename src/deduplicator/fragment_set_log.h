@@ -26,7 +26,7 @@ class fragment_set_log {
 public:
 
     static constexpr std::size_t m_entry_size =
-        sizeof(set_operation) + sizeof(uint16_t) + PREFIX_SIZE;
+        sizeof(set_operation) + sizeof(uint16_t) + sizeof (uint128_t) + PREFIX_SIZE + sizeof (uint16_t);
 
     struct log_entry {
         set_operation op{};
