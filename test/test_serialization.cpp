@@ -37,8 +37,7 @@ BOOST_AUTO_TEST_CASE(serialization_frag_set_log_entry) {
     fragment_set_log::log_entry entry_orig{
         .op = INSERT,
         .pointer = {0x6465647570, 0x6c69636174696f6e},
-        .size = 13,
-        .prefix = {0x707265666978}};
+        .size = 13};
 
     std::array<char, sizeof entry_orig> serData{};
     zpp::bits::out{serData, zpp::bits::size4b{}}(entry_orig).or_throw();
