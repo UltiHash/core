@@ -22,10 +22,12 @@ class fragment_set_log {
 
     std::filesystem::path m_log_path;
     std::fstream m_log_file;
+
+public:
+
     static constexpr std::size_t m_entry_size =
         sizeof(set_operation) + sizeof(uint16_t) + PREFIX_SIZE;
 
-public:
     struct log_entry {
         set_operation op{};
         uint128_t pointer;
