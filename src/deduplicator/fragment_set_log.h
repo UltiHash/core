@@ -29,7 +29,7 @@ public:
         set_operation op{};
         uint128_t pointer;
         uint16_t size{};
-        uint128_t prefix{0};
+        std::string prefix;
 
         auto operator<=>(const log_entry&) const = default;
         using serialize = zpp::bits::members<4>;

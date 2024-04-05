@@ -58,22 +58,6 @@ public:
     address write(const std::string_view& data);
 
     /**
-     * @brief Retrieves fragment from L1 read cache if present.
-     *
-     * The L1 read cache only contains up to the first 128 byte of a fragment,
-     * but holds a much larger number of entries and can thus be used for
-     * efficient sample comparison, to avoid a large number of read requests to
-     * the storage services.
-     *
-     * @param pointer A constant uint128_t specifying the location of the
-     * fragment.
-     * @param size A constant size_t specifying the size of the fragment.
-     * @return If the fragment exists in the cache, its content is returned.
-     * Otherwise, nullptr is returned.
-     */
-    shared_buffer<char> cached_sample(const uint128_t pointer);
-
-    /**
      * @brief Retrieves fragment from storage services.
      *
      * The L2 read cache is consulted to see if it contains the requested
@@ -140,13 +124,6 @@ public:
     [[nodiscard]] boost::asio::io_context& get_executor() const;
 
     /**
-     * @brief Returns the configured sample size used by the L1 read
-     * cache.
-     * @return The configured sample size used by the L1 read cache.
-     */
-    [[nodiscard]] std::size_t l1_cache_sample_size() const noexcept;
-
-    /**
      * @brief Returns the configured number of connections maintained to each
      * storage service instance.
      * @return The configured number of connections maintained to each storage
@@ -155,15 +132,11 @@ public:
     [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 
-    void add_l1(const uint128_t& pointer, std::string_view data);
-
 private:
     boost::asio::io_context& m_io_service;
     worker_pool& m_workers;
     services<STORAGE_SERVICE>& m_storage_services;
     global_data_view_config m_config;
-
-    lru_cache<uint128_t, shared_buffer<char>> m_cache_l1;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 };
 

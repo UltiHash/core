@@ -9,7 +9,6 @@ global_data_view::global_data_view(const global_data_view_config& config,
       m_workers(workers),
       m_storage_services(storage_services),
       m_config(config),
-      m_cache_l1(m_config.read_cache_capacity_l1),
       m_cache_l2(m_config.read_cache_capacity_l2) {
     m_storage_services.get();
 }
@@ -29,15 +28,6 @@ address global_data_view::write(const std::string_view& data) {
         .get();
 
     return addr;
-}
-
-shared_buffer<char> global_data_view::cached_sample(const uint128_t pointer) {
-    if (const auto c = m_cache_l1.get(pointer); c.has_value()) {
-        metric<metric_type::gdv_l1_cache_hit_counter>::increase(1);
-        return c.value();
-    }
-    metric<metric_type::gdv_l1_cache_miss_counter>::increase(1);
-    return nullptr;
 }
 
 shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
@@ -67,19 +57,10 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
         boost::asio::use_future)
         .get();
 
-    // l1 cache
-    add_l1(pointer, buffer.get_str_view());
-
     // l2 cache
     m_cache_l2.put(pointer, buffer);
 
     return buffer;
-}
-
-void global_data_view::add_l1(const uint128_t& pointer, std::string_view data) {
-    shared_buffer<char> l1_buf(std::min(data.size(), m_config.l1_sample_size));
-    std::memcpy(l1_buf.data(), data.data(), l1_buf.size());
-    m_cache_l1.put(pointer, std::move(l1_buf));
 }
 
 std::size_t global_data_view::read_address(char* buffer, const address& addr) {
@@ -170,11 +151,6 @@ void global_data_view::sync(const address& addr) {
 
 [[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
     return m_io_service;
-}
-
-[[nodiscard]] std::size_t
-global_data_view::l1_cache_sample_size() const noexcept {
-    return m_config.l1_sample_size;
 }
 
 [[nodiscard]] std::size_t
