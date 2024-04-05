@@ -1,18 +1,18 @@
 #include "fragment_set.h"
+#include "config.h"
 
 namespace uh::cluster {
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
-                           global_data_view& storage, size_t prefix_size,
+                           global_data_view& storage,
                            bool enable_replay)
     : m_storage(storage),
-      m_set_log(set_log_path),
-      m_prefix_size (prefix_size) {
+      m_set_log(set_log_path) {
     if(enable_replay)
         m_set_log.replay(m_set, m_storage);
 }
 
 fragment_set::response fragment_set::find(std::string_view data) {
-    auto prefix = data.substr(0, std::min (m_prefix_size, data.size()));
+    auto prefix = data.substr(0, std::min (PREFIX_SIZE, data.size()));
     fragment_set_element f{data, std::string (prefix), m_storage};
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     const auto res = m_set.lower_bound(f);
@@ -31,10 +31,16 @@ fragment_set::response fragment_set::find(std::string_view data) {
 void fragment_set::insert(
     const uint128_t& pointer, const std::string_view& data,
     const std::set<fragment_set_element>::const_iterator& hint) {
-    auto prefix = data.substr(0, std::min (m_prefix_size, data.size()));
+    auto prefix = data.substr(0, std::min (PREFIX_SIZE, data.size()));
     fragment_set_element f{data, pointer, std::string (prefix), m_storage};
-    m_set_log.append(
-        {set_operation::INSERT, f.pointer(), f.size(), f.prefix()});
+    fragment_set_log::log_entry entry {
+        .op = set_operation::INSERT,
+        .pointer = f.pointer(),
+        .size = f.size(),
+        .prefix_size = static_cast<uint16_t>(f.prefix().size()),
+    };
+    memcpy(entry.prefix, f.prefix().data(), f.prefix().size());
+    m_set_log.append(entry);
     std::lock_guard<std::shared_mutex> lock(m_mutex);
     m_set.emplace_hint(hint, std::move(f));
 

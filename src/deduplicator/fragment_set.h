@@ -52,7 +52,7 @@ public:
      * the fragment_set_log. Default value: true.
      */
     fragment_set(const std::filesystem::path& set_log_path,
-                 global_data_view& storage, size_t prefix_size,
+                 global_data_view& storage,
                  bool enable_replay = true);
 
     /**
@@ -91,7 +91,6 @@ private:
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
     fragment_set_log m_set_log;
-    size_t m_prefix_size{};
 };
 
 } // end namespace uh::cluster

@@ -8,6 +8,8 @@
 
 namespace uh::cluster {
 
+constexpr std::size_t PREFIX_SIZE = 128;
+
 struct deduplicator_config {
     server_config server = {
         .threads = 4,
@@ -22,7 +24,6 @@ struct deduplicator_config {
     std::size_t dedupe_worker_minimum_data_size = 128 * KIBI_BYTE;
     std::size_t worker_thread_count = 32ul;
     std::size_t fragment_buffer_size = 8 * MEBI_BYTE;
-    std::size_t prefix_size = 128;
 };
 
 } // namespace uh::cluster

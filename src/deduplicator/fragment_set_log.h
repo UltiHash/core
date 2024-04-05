@@ -3,6 +3,7 @@
 
 #include "common/global_data/global_data_view.h"
 #include "common/types/common_types.h"
+#include "config.h"
 #include "fragment_set_element.h"
 
 #include <cstring>
@@ -22,17 +23,18 @@ class fragment_set_log {
     std::filesystem::path m_log_path;
     std::fstream m_log_file;
     static constexpr std::size_t m_entry_size =
-        sizeof(set_operation) + sizeof(uint16_t) + 2 * sizeof(uint128_t);
+        sizeof(set_operation) + sizeof(uint16_t) + PREFIX_SIZE;
 
 public:
     struct log_entry {
         set_operation op{};
         uint128_t pointer;
         uint16_t size{};
-        std::string prefix;
+        uint16_t prefix_size{};
+        char prefix [PREFIX_SIZE]{};
 
         auto operator<=>(const log_entry&) const = default;
-        using serialize = zpp::bits::members<4>;
+        using serialize = zpp::bits::members<5>;
     };
     /**
      * @brief Constructs a fragment_set_log from a specified path.
