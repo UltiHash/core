@@ -8,7 +8,7 @@
 
 namespace uh::cluster {
 
-constexpr std::size_t PREFIX_SIZE = 128;
+constexpr std::size_t PREFIX_SIZE = 16;
 
 struct deduplicator_config {
     server_config server = {

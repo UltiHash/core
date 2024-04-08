@@ -23,11 +23,11 @@ void insert_a_again(shared_buffer<char>& fragment_a, address& addr_a,
     auto result_a = frag_set.find(fragment_a.get_str_view());
     BOOST_CHECK(!result_a.low.has_value());
     BOOST_CHECK(result_a.high.has_value());
-    auto prefix_a = shared_buffer<char>(sizeof(uint128_t));
+    auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_a.data(), result_a.high->get().prefix().data(),
            result_a.high->get().prefix().size());
     BOOST_CHECK(prefix_a.get_str_view() ==
-                fragment_a.get_str_view().substr(0, sizeof(uint128_t)));
+                fragment_a.get_str_view().substr(0, PREFIX_SIZE));
     BOOST_CHECK(result_a.high->get().pointer() == addr_a.first().pointer);
     BOOST_CHECK(result_a.high->get().size() == addr_a.first().size);
     frag_set.insert(addr_a.first().pointer, fragment_a.get_str_view(),
@@ -41,11 +41,11 @@ void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
     frag_set.insert(addr_c.first().pointer, fragment_c.get_str_view(),
                     result_c.hint);
     BOOST_CHECK(result_c.low.has_value());
-    auto prefix_a = shared_buffer<char>(sizeof(uint128_t));
+    auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_a.data(), result_c.low->get().prefix().data(),
            result_c.low->get().prefix().size());
     BOOST_CHECK(prefix_a.get_str_view() ==
-                fragment_a.get_str_view().substr(0, sizeof(uint128_t)));
+                fragment_a.get_str_view().substr(0, PREFIX_SIZE));
     BOOST_CHECK(result_c.low->get().pointer() == addr_a.first().pointer);
     BOOST_CHECK(result_c.low->get().size() == addr_a.first().size);
     BOOST_CHECK(!result_c.high.has_value());
@@ -59,19 +59,19 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
     frag_set.insert(addr_b.first().pointer, fragment_b.get_str_view(),
                     result_b.hint);
     BOOST_CHECK(result_b.low.has_value());
-    auto prefix_b_low = shared_buffer<char>(sizeof(uint128_t));
+    auto prefix_b_low = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_b_low.data(), result_b.low->get().prefix().data(),
            result_b.low->get().prefix().size());
     BOOST_CHECK(prefix_b_low.get_str_view() ==
-                fragment_a.get_str_view().substr(0, sizeof(uint128_t)));
+                fragment_a.get_str_view().substr(0, PREFIX_SIZE));
     BOOST_CHECK(result_b.low->get().pointer() == addr_a.first().pointer);
     BOOST_CHECK(result_b.low->get().size() == addr_a.first().size);
     BOOST_CHECK(result_b.high.has_value());
-    auto prefix_b_high = shared_buffer<char>(sizeof(uint128_t));
+    auto prefix_b_high = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_b_high.data(), result_b.high->get().prefix().data(),
            result_b.high->get().prefix().size());
     BOOST_CHECK(prefix_b_high.get_str_view() ==
-                fragment_c.get_str_view().substr(0, sizeof(uint128_t)));
+                fragment_c.get_str_view().substr(0, PREFIX_SIZE));
     BOOST_CHECK(result_b.high->get().pointer() == addr_c.first().pointer);
     BOOST_CHECK(result_b.high->get().size() == addr_c.first().size);
 }
