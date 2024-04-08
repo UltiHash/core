@@ -26,7 +26,6 @@ public:
                             m_etcd_client),
           m_directory_services(m_ioc, config.directory_connection_count,
                                m_etcd_client),
-          m_workers(m_ioc, config.worker_thread_count),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection),
                    m_ioc) {}
@@ -45,7 +44,6 @@ public:
 private:
     reference_collection get_reference_collection() {
         return {.ioc = m_ioc,
-                .workers = m_workers,
                 .dedupe_services = m_dedupe_services,
                 .directory_services = m_directory_services,
                 .server_state = m_state,
@@ -60,11 +58,10 @@ private:
 
     entrypoint_config m_config;
 
-    services<DEDUPLICATOR_SERVICE> m_dedupe_services;
-    services<DIRECTORY_SERVICE> m_directory_services;
+    services<DEDUPLICATOR_SERVICE, coro_client> m_dedupe_services;
+    services<DIRECTORY_SERVICE, coro_client> m_directory_services;
     state m_state;
 
-    worker_pool m_workers;
     reference_collection m_collection;
     server m_server;
 

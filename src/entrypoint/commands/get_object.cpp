@@ -1,5 +1,5 @@
 #include "get_object.h"
-#include "common/utils/worker_pool.h"
+#include "common/utils/awaitable_promise.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -20,47 +20,6 @@ coro<void> get_object::handle(http_request& req) const {
         std::chrono::time_point<std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now();
 
-        auto func = [this](const http_request& req) {
-            auto m = m_collection.directory_services.get()->acquire_messenger();
-            directory_message dir_req;
-            dir_req.bucket_id = req.get_uri().get_bucket_id();
-            dir_req.object_key =
-                std::make_unique<std::string>(req.get_uri().get_object_key());
-
-            m_collection.workers
-                .get_coro_future(m.get().send_directory_message(
-                    DIRECTORY_OBJECT_GET_REQ, dir_req))
-                .get();
-
-            bool has_next = true;
-            size_t total_size = 0;
-            std::optional<std::pair<std::future<size_t>, std::string>>
-                send_to_client;
-            while (has_next) {
-                auto h =
-                    m_collection.workers.get_coro_future(m.get().recv_header())
-                        .get();
-                auto [b_next, buf] =
-                    m_collection.workers
-                        .get_coro_future(
-                            m.get().recv_directory_get_object_chunk(h))
-                        .get();
-                total_size += buf.size();
-
-                if (send_to_client)
-                    send_to_client->first.get();
-                send_to_client.emplace(boost::asio::async_write(
-                                           req.socket(),
-                                           http::make_chunk(boost::asio::buffer(
-                                               buf.data(), buf.size())),
-                                           boost::asio::use_future),
-                                       std::move(buf));
-                has_next = b_next;
-            }
-            send_to_client->first.get();
-            return total_size;
-        };
-
         http::response<http::empty_body> res{http::status::ok, 11};
         res.chunked(true);
         http::response_serializer<http::empty_body> sr(res);
@@ -68,8 +27,47 @@ coro<void> get_object::handle(http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        const auto total_size = co_await m_collection.workers.post_in_workers(
-            std::bind_front(func, std::cref(req)));
+        auto m =
+            co_await m_collection.directory_services.get()->acquire_messenger();
+
+        directory_message dir_req;
+        dir_req.bucket_id = req.get_uri().get_bucket_id();
+        dir_req.object_key =
+            std::make_unique<std::string>(req.get_uri().get_object_key());
+
+        co_await m->send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req);
+
+        bool has_next = true;
+        size_t total_size = 0;
+
+        std::shared_ptr<awaitable_promise<std::size_t>> promise;
+        std::string buffer;
+
+        while (has_next) {
+            auto h = co_await m->recv_header();
+            auto [b_next, buf] = co_await m->recv_directory_get_object_chunk(h);
+            total_size += buf.size();
+
+            if (promise) {
+                co_await promise->get();
+            }
+
+            buffer = std::move(buf);
+            promise = std::make_shared<awaitable_promise<std::size_t>>(
+                m_collection.ioc);
+
+            boost::asio::async_write(req.socket(),
+                                     http::make_chunk(boost::asio::buffer(
+                                         buffer.data(), buffer.size())),
+                                     use_awaitable_promise(promise));
+
+            has_next = b_next;
+        }
+
+        if (promise) {
+            co_await promise->get();
+            promise.reset();
+        }
 
         co_await boost::asio::async_write(
             req.socket(), http::make_chunk_last(),
