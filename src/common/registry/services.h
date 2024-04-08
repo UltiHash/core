@@ -199,7 +199,7 @@ public:
 
             auto messenger = co_await c->acquire_messenger();
             boost::asio::co_spawn(m_ioc, f(std::move(messenger), index),
-                                  use_awaitable_promise(promise));
+                                  use_awaitable_promise_cospawn(promise));
 
             results[index] = promise;
             ++index;
@@ -231,7 +231,7 @@ public:
 
             auto messenger = co_await c->acquire_messenger();
             boost::asio::co_spawn(m_ioc, f(messenger, index),
-                                  use_awaitable_promise(promise));
+                                  use_awaitable_promise_cospawn(promise));
 
             results[index] = promise;
             ++index;

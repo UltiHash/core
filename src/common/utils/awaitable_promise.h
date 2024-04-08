@@ -107,12 +107,59 @@ public:
  *    auto result = promise->get();
  */
 template <typename result>
+requires(!std::is_same_v<result, void>)
 auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
+    return [p](const boost::system::error_code& e, result r) -> void {
+        if (e.failed()) {
+            try {
+                throw std::runtime_error(e.to_string());
+            } catch (const std::exception& e) {
+                p->set_exception(std::current_exception());
+            }
+        } else {
+            p->set(std::move(r));
+        }
+    };
+}
+
+template <typename result>
+requires std::is_same_v<result, void>
+auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
+    return [p](const boost::system::error_code& e) -> void {
+        if (e.failed()) {
+            try {
+                throw std::runtime_error(e.to_string());
+            } catch (const std::exception& e) {
+                p->set_exception(std::current_exception());
+            }
+        } else {
+            p->set();
+        }
+    };
+}
+
+template <typename result>
+requires(!std::is_same_v<result, void>)
+auto use_awaitable_promise_cospawn(
+    std::shared_ptr<awaitable_promise<result>> p) {
     return [p](std::exception_ptr e, result r) -> void {
         if (e) {
             p->set_exception(e);
         } else {
             p->set(std::move(r));
+        }
+    };
+}
+
+template <typename result>
+requires(std::is_same_v<result, void>)
+auto use_awaitable_promise_cospawn(
+    std::shared_ptr<awaitable_promise<result>> p) {
+    return [p](std::exception_ptr e) -> void {
+        if (e) {
+            p->set_exception(e);
+        } else {
+            p->set();
         }
     };
 }
