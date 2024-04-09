@@ -40,7 +40,7 @@ void fragment_set::insert(
         .prefix_size = static_cast<uint16_t>(f.prefix().size()),
     };
     memcpy(entry.prefix, f.prefix().data(), f.prefix().size());
-    //m_set_log.append(entry);
+    m_set_log.append(entry);
     std::lock_guard<std::shared_mutex> lock(m_mutex);
     m_set.emplace_hint(hint, std::move(f));
 
