@@ -33,6 +33,9 @@ address global_data_view::write(const std::string_view& data) {
 shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
                                                     const size_t size) {
 
+    if (size == 0) {
+        throw std::runtime_error ("Read fragment size must be larger than zero");
+    }
     if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
         if (c->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);

@@ -22,7 +22,7 @@ fragment_set_element::fragment_set_element(const std::string_view& data,
                                            global_data_view& storage)
     : m_storage(storage),
       m_pointer(ptr),
-      m_size(data.size()),
+      m_size(std::min (static_cast <size_t> (std::numeric_limits <uint16_t>::max()), data.size())),
       m_prefix(std::move(prefix)),
       m_data(std::nullopt) {
 }
