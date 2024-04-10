@@ -40,10 +40,8 @@ public:
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
             boost::asio::ip::make_address(m_config.bind_address),
             m_config.port});
-        boost::asio::co_spawn(m_ioc,
-
-                              do_accept(std::move(acceptor)),
-                              [&](const std::exception_ptr& e) {
+        boost::asio::co_spawn(m_ioc, do_accept(std::move(acceptor)),
+                              [](const std::exception_ptr& e) {
                                   if (e)
                                       try {
                                           std::rethrow_exception(e);
@@ -124,18 +122,17 @@ private:
                 stream.remote_endpoint().address().to_string();
             const auto conn_port = stream.remote_endpoint().port();
 
-            boost::asio::co_spawn(m_ioc, do_session(std::move(stream)),
-                                  [&](const std::exception_ptr& e) {
-                                      if (e)
-                                          try {
-                                              std::rethrow_exception(e);
-                                          } catch (const std::exception& e) {
-                                              LOG_ERROR() << "in session: ["
-                                                          << conn_address << ":"
-                                                          << conn_port << "] "
-                                                          << e.what();
-                                          }
-                                  });
+            boost::asio::co_spawn(
+                m_ioc, do_session(std::move(stream)),
+                [conn_address, conn_port](const std::exception_ptr& e) {
+                    if (e)
+                        try {
+                            std::rethrow_exception(e);
+                        } catch (const std::exception& e) {
+                            LOG_ERROR() << "in session: [" << conn_address
+                                        << ":" << conn_port << "] " << e.what();
+                        }
+                });
         }
     }
 
