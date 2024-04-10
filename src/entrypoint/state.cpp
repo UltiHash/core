@@ -110,17 +110,11 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
             part,
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     }
+
     total_resp->effective_size += resp.effective_size;
     total_resp->data_size += data.size();
     total_resp->part_sizes.emplace(part, data.size());
     total_resp->addresses.emplace(part, resp.addr);
-    if (total_resp->upload_init_time == 0) {
-        const auto time = std::chrono::steady_clock::now();
-        total_resp->upload_init_time =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                time.time_since_epoch())
-                .count();
-    }
 }
 
 void upload_state::clear_infos() {
