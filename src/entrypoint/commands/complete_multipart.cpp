@@ -100,35 +100,14 @@ coro<void> complete_multipart::handle(http_request& req) const {
     co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
         directories, std::bind_front(func_dir, std::cref(dir_req)));
 
-    const auto size_mb = static_cast<double>(up_info->data_size) / MEBI_BYTE;
-    auto effective_size =
-        static_cast<double>(up_info->effective_size) / MEBI_BYTE;
-    auto space_saving = 1.0 - effective_size / size_mb;
-    const auto stop = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          std::chrono::steady_clock::now().time_since_epoch())
-                          .count();
-    const auto dur_ms = stop - up_info->upload_init_time;
-
-    const double dur_s = static_cast<double>(dur_ms) / 1000.0;
-    const auto bandwidth = size_mb / dur_s;
-
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);
-
-    LOG_DEBUG() << "upload size: " << req.get_body_size();
-    LOG_DEBUG() << "original size " << size_mb << " MB";
-    LOG_DEBUG() << "effective size " << effective_size << " MB";
-    LOG_DEBUG() << "space saving " << space_saving;
-    LOG_DEBUG() << "integration duration " << dur_s << " s";
-    LOG_DEBUG() << "integration bandwidth " << bandwidth << " MB/s";
 
     auto etag = calculate_md5(req.get_body());
     http_response res;
     res.set_etag(etag);
     res.set_original_size(up_info->data_size);
     res.set_effective_size(up_info->effective_size);
-    res.set_space_savings(space_saving);
-    res.set_bandwidth(bandwidth);
 
     res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                  "<CompleteMultipartUploadResult>\n"
