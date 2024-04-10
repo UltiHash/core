@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 struct storage_config {
     server_config server = {
-        .threads = 16,
+        .threads = 4,
         .port = 9200,
         .bind_address = "0.0.0.0",
     };

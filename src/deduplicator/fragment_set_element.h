@@ -22,6 +22,7 @@ public:
      * Creates a fragment_set_element that holds the full fragment data, used
      * for the parameter to the #find method in the fragment_set
      * @param data The full content of the fragment
+     * @param prefix_ the prefix of data to be stored in set
      * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
@@ -32,6 +33,7 @@ public:
      * @param data The full content of the fragment, where only the prefix of 16
      * bytes is kept of.
      * @param ptr The pointer to the full fragment.
+     * @param prefix_ the prefix of data to be stored in set
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */

@@ -1,7 +1,6 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
 #include <mutex>
-
 namespace uh::cluster {
 
 data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
@@ -75,6 +74,7 @@ address data_store::write(std::span<char> data) {
     }
 
     auto alloc = allocate(static_cast<long>(data.size()));
+
     for (long written = 0; written < static_cast<long>(data.size());
          written += ::pwrite(alloc.fd, data.data() + written,
                              data.size() - written, alloc.seek + written))
@@ -149,6 +149,7 @@ data_store::get_file_offset_pair(const uint128_t& pointer) const {
 int data_store::add_new_file(const uint128_t& offset, long file_size) {
     const auto file_path = m_conf.working_dir / get_name(offset);
     const int fd = open(file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+
     if (fd <= 0) [[unlikely]] {
         throw std::filesystem::filesystem_error(
             "Could not create new files in the data store root",
