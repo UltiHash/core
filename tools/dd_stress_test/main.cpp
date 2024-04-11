@@ -17,8 +17,8 @@ struct params {
     size_t message_count{};
 };
 
-size_t min_data_size = 128ul * MEBI_BYTE;
-size_t max_data_size = 512ul * MEBI_BYTE;
+size_t min_data_size = 64ul * MEBI_BYTE;
+size_t max_data_size = 64ul * MEBI_BYTE;
 
 boost::asio::io_context ioc;
 std::deque<std::unique_ptr<boost::asio::ip::tcp::socket>> sockets;

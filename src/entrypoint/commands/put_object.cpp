@@ -66,6 +66,7 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<void> put_object::handle(http_request& req) const {
+
     metric<entrypoint_put_object_req>::increase(1);
     try {
         auto content_length = req.content_length();
@@ -152,7 +153,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
 
         b.flip();
 
-        auto size = std::min(content_length - transferred, m_buffer_size);
+        size = std::min(content_length - transferred, m_buffer_size);
         transferred += co_await b.fill(req.socket(), size);
 
         rv.append(co_await promise->get());
