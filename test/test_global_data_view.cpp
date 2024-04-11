@@ -76,30 +76,4 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
     BOOST_CHECK(input_buffer.get_str_view() == result_buffer.get_str_view());
 }
 
-BOOST_FIXTURE_TEST_CASE(invalid_cached_sample, global_data_view_fixture) {
-    auto gdv = get_global_data_view();
-    auto sample = gdv->cached_sample(std::numeric_limits<uint64_t>::max());
-    BOOST_CHECK(sample.data() == nullptr);
-}
-
-BOOST_FIXTURE_TEST_CASE(valid_cached_sample, global_data_view_fixture) {
-    auto gdv = get_global_data_view();
-    auto input_buffer = unique_buffer<char>(8 * KIBI_BYTE);
-    fill_random(input_buffer.data(), input_buffer.size());
-    auto addr = gdv->write(input_buffer.get_str_view());
-    BOOST_CHECK(input_buffer.size() == addr.data_size());
-    BOOST_CHECK(addr.pointers.size() == 2);
-    BOOST_CHECK(addr.sizes.size() == 1);
-    gdv->sync(addr);
-
-    gdv->add_l1(addr.first().pointer, input_buffer.get_str_view());
-
-    auto frag = addr.first();
-    auto short_sample = gdv->cached_sample(frag.pointer);
-    BOOST_CHECK(short_sample.size() == gdv->l1_cache_sample_size());
-    BOOST_CHECK(
-        input_buffer.get_str_view().substr(0, gdv->l1_cache_sample_size()) ==
-        short_sample.get_str_view());
-}
-
 } // namespace uh::cluster

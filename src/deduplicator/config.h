@@ -8,6 +8,8 @@
 
 namespace uh::cluster {
 
+constexpr std::size_t PREFIX_SIZE = 16;
+
 struct deduplicator_config {
     server_config server = {
         .threads = 4,

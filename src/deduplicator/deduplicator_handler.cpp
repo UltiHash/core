@@ -21,14 +21,9 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
 
     const fragment_set_element& f = *frag;
 
-    std::size_t common = 0ull;
-
-    auto cached = storage.cached_sample(f.pointer());
-    if (cached.data()) {
-        common = largest_common_prefix(data, cached.get_str_view());
-        if (common < storage.l1_cache_sample_size()) {
-            return common;
-        }
+    std::size_t common = largest_common_prefix(std::string_view (f.prefix()), data);
+    if (common < f.prefix().size()) {
+        return common;
     }
 
     auto complete = storage.read_fragment(f.pointer(), f.size());
@@ -46,10 +41,7 @@ deduplicator_handler::deduplicator_handler(deduplicator_config config,
       m_storage(storage),
       m_dedupe_workers(dedupe_workers),
       m_fragment_buffer_size(config.fragment_buffer_size) {
-    if (m_dedupe_conf.min_fragment_size > m_storage.l1_cache_sample_size()) {
-        throw std::invalid_argument("L1 cache sample size should not be "
-                                    "smaller than the min fragment size!");
-    }
+
 }
 
 coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
@@ -168,9 +160,11 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
     }
 
     fragments.flush(m_storage, m_fragment_set);
+    auto addr = fragments.make_address();
 
+    m_storage.sync(addr);
     dedupe_response result{.effective_size = fragments.effective_size(),
-                           .addr = fragments.make_address()};
+                           .addr = std::move (addr)};
 
     return result;
 }

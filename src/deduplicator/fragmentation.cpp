@@ -8,10 +8,10 @@ fragmentation::fragmentation()
     : m_effective_size(0ull),
       m_unstored_size(0ull) {}
 
-void fragmentation::push(const fragment& f) { m_frags.push_back(f); }
+void fragmentation::push(const fragment& f) { m_frags.emplace_back(f); }
 
 void fragmentation::push(unstored&& un) {
-    m_frags.push_back(std::move(un));
+    m_frags.emplace_back(std::move(un));
     m_effective_size += un.data.size();
     m_unstored_size += un.data.size();
 }
@@ -36,15 +36,15 @@ address fragmentation::make_address() const {
 
     address rv;
 
-    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-        if (std::holds_alternative<unstored>(*it)) {
-            const unstored& un = std::get<unstored>(*it);
+    for (const auto & m_frag : m_frags) {
+        if (std::holds_alternative<unstored>(m_frag)) {
+            const auto& un = std::get<unstored>(m_frag);
             rv.append_address(un.addr);
             continue;
         }
 
-        if (std::holds_alternative<fragment>(*it)) {
-            rv.push_fragment(std::get<fragment>(*it));
+        if (std::holds_alternative<fragment>(m_frag)) {
+            rv.push_fragment(std::get<fragment>(m_frag));
             continue;
         }
     }
@@ -58,7 +58,6 @@ void fragmentation::flush_data(global_data_view& gdv) {
     auto addr = gdv.write({&buffer[0], buffer.size()});
 
     compute_unstored_addresses(addr);
-    gdv.sync(addr);
 }
 
 void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
@@ -66,30 +65,28 @@ void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
         return;
     }
 
-    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-        if (!std::holds_alternative<unstored>(*it)) {
+    for (auto & m_frag : m_frags) {
+        if (!std::holds_alternative<unstored>(m_frag)) {
             continue;
         }
 
-        unstored& un = std::get<unstored>(*it);
+        auto& un = std::get<unstored>(m_frag);
         if (un.uploaded) {
             continue;
         }
 
         set.insert({un.addr.pointers[0], un.addr.pointers[1]},
                    un.data.substr(0, un.addr.sizes.front()), un.hint);
-        gdv.add_l1({un.addr.pointers[0], un.addr.pointers[1]},
-                   un.data.substr(0, un.addr.sizes.front()));
     }
 }
 
 void fragmentation::mark_as_uploaded() {
-    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-        if (!std::holds_alternative<unstored>(*it)) {
+    for (auto & m_frag : m_frags) {
+        if (!std::holds_alternative<unstored>(m_frag)) {
             continue;
         }
 
-        unstored& un = std::get<unstored>(*it);
+        auto& un = std::get<unstored>(m_frag);
         un.uploaded = true;
     }
 
@@ -101,12 +98,12 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
     std::size_t current_ofs = 0ull;
     std::size_t current_idx = 0ull;
 
-    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-        if (!std::holds_alternative<unstored>(*it)) {
+    for (auto & m_frag : m_frags) {
+        if (!std::holds_alternative<unstored>(m_frag)) {
             continue;
         }
 
-        unstored& un = std::get<unstored>(*it);
+        auto& un = std::get<unstored>(m_frag);
         if (un.uploaded) {
             continue;
         }
@@ -139,12 +136,12 @@ std::vector<char> fragmentation::unstored_to_buffer() {
     std::vector<char> buffer(m_unstored_size);
     std::size_t offs = 0ull;
 
-    for (auto it = m_frags.begin(); it != m_frags.end(); ++it) {
-        if (!std::holds_alternative<unstored>(*it)) {
+    for (auto & m_frag : m_frags) {
+        if (!std::holds_alternative<unstored>(m_frag)) {
             continue;
         }
 
-        unstored& un = std::get<unstored>(*it);
+        auto& un = std::get<unstored>(m_frag);
         if (un.uploaded) {
             continue;
         }
