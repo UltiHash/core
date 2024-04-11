@@ -13,6 +13,7 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
 
 void fragment_set_log::append(const log_entry& entry) {
 
+
     std::array<char, m_entry_size> buf{};
     zpp::bits::out{buf, zpp::bits::size4b{}}(entry).or_throw();
     std::lock_guard<std::mutex> guard(m_mutex);
@@ -28,7 +29,7 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
         auto element = read_entry();
         switch (element.op) {
         case set_operation::INSERT:
-            set.emplace(element.pointer, element.size, element.prefix, storage);
+            set.emplace(element.pointer, element.size, std::string {element.prefix, element.prefix_size}, storage);
             break;
         default:
             throw std::invalid_argument("invalid entry in fragment set log");

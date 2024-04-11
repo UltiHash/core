@@ -10,14 +10,14 @@ namespace uh::cluster {
 
 struct storage_config {
     server_config server = {
-        .threads = 16,
+        .threads = 4,
         .port = 9200,
         .bind_address = "0.0.0.0",
     };
 
     data_store_config data_store = {
         .working_dir = "/var/lib/uh/storage",
-        .file_size = 8 * GIBI_BYTE,
+        .file_size = 1 * GIBI_BYTE,
         .max_data_store_size = DATASTORE_MAX_SIZE,
     };
 };

@@ -18,8 +18,8 @@ struct params {
     size_t message_count{};
 };
 
-size_t min_frag_size = 128;
-size_t max_frag_size = 8 * KIBI_BYTE;
+size_t min_frag_size = 1ul * GIBI_BYTE;
+size_t max_frag_size = 1ul * GIBI_BYTE;
 
 boost::asio::io_context ioc;
 std::deque<std::unique_ptr<boost::asio::ip::tcp::socket>> sockets;
@@ -85,6 +85,22 @@ size_t do_io(const params& ps) {
 
         return_connection(std::move(socket));
         total_size += length;
+    }
+    message_type type = STORAGE_SYNC_REQ;
+    size_t length = 0;
+    std::vector<boost::asio::const_buffer> send_buffers{
+        {&type, sizeof(type)},
+        {&length, sizeof(length)}};
+
+    auto socket = borrow_connection();
+    boost::asio::write(*socket, send_buffers);
+
+    messenger_core::header h{};
+    std::vector<boost::asio::mutable_buffer> recv_buffers{
+        {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
+    boost::asio::read(*socket, recv_buffers);
+    if (h.type != SUCCESS) [[unlikely]] {
+        throw std::runtime_error("unsuccessful sync");
     }
 
     return total_size;
