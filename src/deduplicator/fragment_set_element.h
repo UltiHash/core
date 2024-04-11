@@ -12,32 +12,32 @@ public:
      * operation of the fragment_set_log
      * @param ptr Content of the pointer member
      * @param size_ Content of the size member
-     * @param prefix_ Content of the prefix member
+     * @param prefix Content of the prefix member
      * @param storage  A reference to the global_data_view to be used.
      */
     fragment_set_element(const uint128_t& ptr, uint16_t size_,
-                         std::string prefix_, global_data_view& storage);
+                         std::string prefix, global_data_view& storage);
 
     /**
      * Creates a fragment_set_element that holds the full fragment data, used
      * for the parameter to the #find method in the fragment_set
      * @param data The full content of the fragment
-     * @param prefix_ the prefix of data to be stored in set
+     * @param prefix the prefix of data to be stored in set
      * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
-    fragment_set_element(const std::string_view& data, std::string prefix_,
+    fragment_set_element(const std::string_view& data, std::string prefix,
                          global_data_view& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
      * @param data The full content of the fragment, where only the prefix of 16
      * bytes is kept of.
      * @param ptr The pointer to the full fragment.
-     * @param prefix_ the prefix of data to be stored in set
+     * @param prefix the prefix of data to be stored in set
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
-    fragment_set_element(const std::string_view& data, const uint128_t& ptr, std::string prefix_,
+    fragment_set_element(const std::string_view& data, const uint128_t& ptr, std::string prefix,
                          global_data_view& storage);
 
     /**

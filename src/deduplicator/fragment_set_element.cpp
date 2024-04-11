@@ -1,13 +1,13 @@
 #include "fragment_set_element.h"
 
 namespace uh::cluster {
-fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size_,
-                                           std::string prefix_,
+fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
+                                           std::string prefix,
                                            global_data_view& storage)
     : m_storage(storage),
       m_pointer(ptr),
-      m_size(size_),
-      m_prefix(std::move(prefix_)),
+      m_size(size),
+      m_prefix(std::move(prefix)),
       m_data(std::nullopt) {}
 
 fragment_set_element::fragment_set_element(const std::string_view& data, std::string prefix,
@@ -50,7 +50,8 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
 }
 
 bool fragment_set_element::operator<(const fragment_set_element& f) const {
-    if (const auto comp = m_prefix.compare(f.m_prefix); comp != 0) [[likely]] {
+    const auto comp = m_prefix.compare(f.m_prefix);
+    if (comp != 0) [[likely]] {
         return comp < 0;
     }
 

@@ -21,8 +21,8 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
 
     const fragment_set_element& f = *frag;
 
-    std::size_t common;
-    if (common = largest_common_prefix(std::string_view (f.prefix()), data); common < f.prefix().size()) {
+    std::size_t common = largest_common_prefix(std::string_view (f.prefix()), data);
+    if (common < f.prefix().size()) {
         return common;
     }
 
