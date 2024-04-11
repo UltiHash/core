@@ -102,11 +102,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.storage_service_connection_count);
 
     group
-        ->add_option("--l1-capacity", cfg.read_cache_capacity_l1,
-                     "number of L1 cache entries")
-        ->default_val(cfg.read_cache_capacity_l1);
-
-    group
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
