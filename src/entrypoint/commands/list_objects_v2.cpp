@@ -2,85 +2,14 @@
 
 #include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
+#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 
-list_objects_v2::list_objects_v2(const reference_collection& collection)
-    : m_collection(collection) {}
+namespace {
 
-bool list_objects_v2::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() &&
-           uri.query_string_exists("list-type") &&
-           uri.get_query_string_value("list-type") == "2";
-}
-
-coro<void> list_objects_v2::handle(http_request& req) {
-    metric<entrypoint_list_objects_v2_req>::increase(1);
-    try {
-        const auto& req_uri = req.get_uri();
-        directory_message dir_req;
-        dir_req.bucket_id = req_uri.get_bucket_id();
-
-        if (req_uri.query_string_exists("prefix")) {
-            if (const auto& prefix = req_uri.get_query_string_value("prefix");
-                !prefix.empty()) {
-                dir_req.object_key_prefix =
-                    std::make_unique<std::string>(prefix);
-            }
-        }
-
-        if (req_uri.query_string_exists("start-after")) {
-            if (const auto& start_after =
-                    req_uri.get_query_string_value("start-after");
-                !start_after.empty()) {
-                dir_req.object_key_lower_bound =
-                    std::make_unique<std::string>(start_after);
-            }
-        }
-        if (req_uri.query_string_exists("continuation-token")) {
-            if (const auto& continuation_token =
-                    req_uri.get_query_string_value("continuation-token");
-                !continuation_token.empty()) {
-                if (!dir_req.object_key_lower_bound ||
-                    continuation_token > *dir_req.object_key_lower_bound)
-                    dir_req.object_key_lower_bound =
-                        std::make_unique<std::string>(continuation_token);
-            }
-        }
-
-        directory_list_objects_message list_objs_res;
-
-        auto client = m_collection.directory_services.get();
-        auto m = co_await client->acquire_messenger();
-
-        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
-        const auto h_dir = co_await m->recv_header();
-
-        list_objs_res = co_await m->recv_directory_list_objects_message(h_dir);
-
-        auto res = get_response(list_objs_res.objects, req);
-        co_await req.respond(res.get_prepared_response());
-
-    } catch (const error_exception& e) {
-        LOG_ERROR() << e.what();
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::invalid_bucket_name:
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
-    }
-}
-
-http_response list_objects_v2::get_response(const std::vector<object>& objects,
-                                            const http_request& req) {
+http_response get_response(const std::vector<object>& objects,
+                           const http_request& req) {
 
     const auto& req_uri = req.get_uri();
 
@@ -229,6 +158,82 @@ http_response list_objects_v2::get_response(const std::vector<object>& objects,
                  next_continuation_token_xml + "</ListBucketResult>");
 
     return res;
+}
+
+} // namespace
+
+list_objects_v2::list_objects_v2(const reference_collection& collection)
+    : m_collection(collection) {}
+
+bool list_objects_v2::can_handle(const http_request& req) {
+    const auto& uri = req.get_uri();
+
+    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
+           uri.get_object_key().empty() &&
+           uri.query_string_exists("list-type") &&
+           uri.get_query_string_value("list-type") == "2";
+}
+
+coro<void> list_objects_v2::handle(http_request& req) const {
+    metric<entrypoint_list_objects_v2_req>::increase(1);
+    try {
+        const auto& req_uri = req.get_uri();
+        directory_message dir_req;
+        dir_req.bucket_id = req_uri.get_bucket_id();
+
+        if (req_uri.query_string_exists("prefix")) {
+            if (const auto& prefix = req_uri.get_query_string_value("prefix");
+                !prefix.empty()) {
+                dir_req.object_key_prefix =
+                    std::make_unique<std::string>(prefix);
+            }
+        }
+
+        if (req_uri.query_string_exists("start-after")) {
+            if (const auto& start_after =
+                    req_uri.get_query_string_value("start-after");
+                !start_after.empty()) {
+                dir_req.object_key_lower_bound =
+                    std::make_unique<std::string>(start_after);
+            }
+        }
+        if (req_uri.query_string_exists("continuation-token")) {
+            if (const auto& continuation_token =
+                    req_uri.get_query_string_value("continuation-token");
+                !continuation_token.empty()) {
+                if (!dir_req.object_key_lower_bound ||
+                    continuation_token > *dir_req.object_key_lower_bound)
+                    dir_req.object_key_lower_bound =
+                        std::make_unique<std::string>(continuation_token);
+            }
+        }
+
+        directory_list_objects_message list_objs_res;
+
+        auto client = m_collection.directory_services.get();
+        auto m = co_await client->acquire_messenger();
+
+        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
+        const auto h_dir = co_await m->recv_header();
+
+        list_objs_res = co_await m->recv_directory_list_objects_message(h_dir);
+
+        auto res = get_response(list_objs_res.objects, req);
+        co_await req.respond(res.get_prepared_response());
+
+    } catch (const error_exception& e) {
+        LOG_ERROR() << e.what();
+        switch (*e.error()) {
+        case error::bucket_not_found:
+            throw command_exception(http::status::not_found,
+                                    command_error::bucket_not_found);
+        case error::invalid_bucket_name:
+            throw command_exception(http::status::bad_request,
+                                    command_error::invalid_bucket_name);
+        default:
+            throw command_exception(http::status::internal_server_error);
+        }
+    }
 }
 
 } // namespace uh::cluster
