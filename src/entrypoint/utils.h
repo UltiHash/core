@@ -4,6 +4,7 @@
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
 #include "common/utils/worker_pool.h"
+#include "config.h"
 #include "entrypoint/state.h"
 
 namespace uh::cluster {
@@ -14,6 +15,7 @@ struct reference_collection {
     const services<DEDUPLICATOR_SERVICE>& dedupe_services;
     const services<DIRECTORY_SERVICE>& directory_services;
     state& server_state;
+    entrypoint_config& config;
 };
 
 struct collapsed_objects {

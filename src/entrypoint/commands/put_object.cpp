@@ -66,12 +66,13 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<void> put_object::handle(http_request& req) const {
+
     metric<entrypoint_put_object_req>::increase(1);
     try {
         auto content_length = req.content_length();
 
         dedupe_response resp;
-        if (content_length >= m_buffer_size) {
+        if (content_length >= m_collection.config.buffer_size) {
             resp = co_await put_large_object(req);
         } else {
             resp = co_await put_small_object(req);
@@ -134,7 +135,8 @@ coro<void> put_object::handle(http_request& req) const {
 }
 
 coro<dedupe_response> put_object::put_large_object(http_request& req) const {
-    double_buffer b(m_collection, m_buffer_size);
+    const auto buffer_size = m_collection.config.buffer_size;
+    double_buffer b(m_collection, buffer_size);
 
     auto content_length = req.content_length();
 
@@ -142,7 +144,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
     b.current().resize(transferred);
     asio::buffer_copy(asio::buffer(b.current()), req.payload().data());
 
-    auto size = std::min(content_length, m_buffer_size) - transferred;
+    auto size = std::min(content_length, buffer_size) - transferred;
     transferred += co_await b.fill(req.socket(), size, transferred);
 
     dedupe_response rv;
@@ -152,7 +154,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
 
         b.flip();
 
-        auto size = std::min(content_length - transferred, m_buffer_size);
+        size = std::min(content_length - transferred, buffer_size);
         transferred += co_await b.fill(req.socket(), size);
 
         rv.append(co_await promise->get());
