@@ -170,6 +170,10 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "number of worker threads")
         ->default_val(cfg.worker_thread_count);
 
+    rv->add_option("--buffer-size", cfg.buffer_size,
+                   "buffer size before sending data to deduplicators")
+        ->default_val(cfg.worker_thread_count);
+
     return rv;
 }
 

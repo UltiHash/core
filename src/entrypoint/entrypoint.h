@@ -21,6 +21,7 @@ public:
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+          m_config(config),
           m_dedupe_services(m_ioc, config.dedupe_node_connection_count,
                             m_etcd_client),
           m_directory_services(m_ioc, config.directory_connection_count,
@@ -47,7 +48,8 @@ private:
                 .workers = m_workers,
                 .dedupe_services = m_dedupe_services,
                 .directory_services = m_directory_services,
-                .server_state = m_state};
+                .server_state = m_state,
+                .config = m_config};
     }
 
     etcd::SyncClient m_etcd_client;
