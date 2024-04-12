@@ -18,21 +18,15 @@ bool delete_object::can_handle(const http_request& req) {
 coro<void> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
-        auto func = [](const http_request& req,
-                       client::acquired_messenger m) -> coro<void> {
-            directory_message dir_req{
-                .bucket_id = req.get_uri().get_bucket_id(),
-                .object_key = std::make_unique<std::string>(
-                    req.get_uri().get_object_key())};
-            co_await m.get().send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
-                                                    dir_req);
-            co_await m.get().recv_header();
-        };
+        auto cl = m_collection.directory_services.get();
+        auto mgr = co_await cl->acquire_messenger();
 
-        co_await m_collection.workers
-            .io_thread_acquire_messenger_and_post_in_io_threads(
-                m_collection.directory_services.get(),
-                std::bind_front(func, std::cref(req)));
+        directory_message dir_req{.bucket_id = req.get_uri().get_bucket_id(),
+                                  .object_key = std::make_unique<std::string>(
+                                      req.get_uri().get_object_key())};
+        co_await mgr->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
+                                             dir_req);
+        co_await mgr->recv_header();
 
         http_response res;
         co_await req.respond(res.get_prepared_response());

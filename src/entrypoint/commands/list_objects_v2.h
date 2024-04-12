@@ -63,24 +63,15 @@ public:
 
             directory_list_objects_message list_objs_res;
 
-            auto func = [](const directory_message& dir_req,
-                           directory_list_objects_message& list_objs_res,
-                           client::acquired_messenger m) -> coro<void> {
-                co_await m.get().send_directory_message(
-                    DIRECTORY_OBJECT_LIST_REQ, dir_req);
-                const auto h_dir = co_await m.get().recv_header();
+            auto client = m_collection.directory_services.get();
+            auto m = co_await client->acquire_messenger();
 
-                unique_buffer<char> buffer(h_dir.size);
+            co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
+                                               dir_req);
+            const auto h_dir = co_await m->recv_header();
 
-                list_objs_res =
-                    co_await m.get().recv_directory_list_objects_message(h_dir);
-            };
-
-            co_await m_collection.workers
-                .io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_collection.directory_services.get(),
-                    std::bind_front(func, std::cref(dir_req),
-                                    std::ref(list_objs_res)));
+            list_objs_res =
+                co_await m->recv_directory_list_objects_message(h_dir);
 
             auto res = get_response(list_objs_res.objects, req);
             co_await req.respond(res.get_prepared_response());

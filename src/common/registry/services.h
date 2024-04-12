@@ -32,13 +32,13 @@ inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
         throw std::invalid_argument("invalid etcd action");
 }
 
-template <role r> class services_index {
+template <role r, typename client> class services_index {
 public:
     void add(const std::size_t&, std::shared_ptr<client>) {}
     void erase(const std::size_t&) {}
 };
 
-template <> class services_index<STORAGE_SERVICE> {
+template <typename client> class services_index<STORAGE_SERVICE, client> {
 public:
     explicit services_index(const uint128_t& max_data_store_size)
         : m_max_data_store_size(max_data_store_size) {}
@@ -83,7 +83,7 @@ private:
     const uint128_t m_max_data_store_size;
 };
 
-template <role r> class services {
+template <role r, typename client = uh::cluster::client> class services {
 public:
     template <typename... index_args>
     services(boost::asio::io_context& ioc, const std::size_t connection_count,
@@ -113,13 +113,13 @@ public:
     ~services() { m_watcher.Cancel(); }
 
     template <typename key> std::shared_ptr<client> get(key k) const {
-        std::shared_ptr<client> client;
+        std::shared_ptr<client> cl;
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
         if (m_cv.wait_for(
-                lk, std::chrono::seconds(m_timeout_s), [this, &k, &client]() {
+                lk, std::chrono::seconds(m_timeout_s), [this, &k, &cl]() {
                     try {
-                        client = m_services_index.get(k);
+                        cl = m_services_index.get(k);
                         return true;
                     } catch (const std::out_of_range& range_exception) {
                         return false;
@@ -128,27 +128,27 @@ public:
         } else
             throw std::runtime_error("timeout waiting for client");
 
-        return client;
+        return cl;
     }
 
     std::shared_ptr<client> get(std::size_t id) const {
-        std::shared_ptr<client> client;
+        std::shared_ptr<client> cl;
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
         if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
-                          [this, &id, &client]() {
+                          [this, &id, &cl]() {
                               auto it = m_clients.find(id);
 
                               if (it == m_clients.end())
                                   return false;
 
-                              client = it->second;
+                              cl = it->second;
                               return true;
                           })) {
         } else
             throw std::runtime_error("timeout waiting for client");
 
-        return client;
+        return cl;
     }
 
     std::shared_ptr<client> get() const {
@@ -177,6 +177,72 @@ public:
                           std::back_inserter(clients_list));
 
         return clients_list;
+    }
+
+    template <typename func, typename result = std::invoke_result<
+                                 func, acquired_messenger<client>,
+                                 std::size_t>::type::value_type>
+    requires(std::is_same_v<client, coro_client> &&
+             std::is_same_v<result, void>)
+    coro<void> broadcast(func f) const {
+        auto clients = get_clients();
+        if (clients.empty()) {
+            throw std::runtime_error("no services available");
+        }
+
+        std::vector<std::shared_ptr<awaitable_promise<void>>> results(
+            clients.size());
+
+        std::size_t index = 0;
+        for (const auto& c : clients) {
+            auto promise = std::make_shared<awaitable_promise<void>>(m_ioc);
+
+            auto messenger = co_await c->acquire_messenger();
+            boost::asio::co_spawn(m_ioc, f(std::move(messenger), index),
+                                  use_awaitable_promise_cospawn(promise));
+
+            results[index] = promise;
+            ++index;
+        }
+
+        for (auto p : results) {
+            co_await p->get();
+        }
+    }
+
+    template <typename func, typename result = std::invoke_result<
+                                 func, acquired_messenger<client>,
+                                 std::size_t>::type::value_type>
+    requires(std::is_same_v<client, coro_client> &&
+             !std::is_same_v<result, void>)
+    coro<std::vector<result>> broadcast(func f) const {
+        auto clients = get_clients();
+        if (clients.empty()) {
+            throw std::runtime_error("no services available");
+        }
+
+        std::vector<std::shared_ptr<awaitable_promise<result>>> results(
+            clients.size());
+
+        std::size_t index = 0;
+        for (const auto& c : clients) {
+            auto promise =
+                std::make_shared<awaitable_promise<coro<result>>>(m_ioc);
+
+            auto messenger = co_await c->acquire_messenger();
+            boost::asio::co_spawn(m_ioc, f(messenger, index),
+                                  use_awaitable_promise_cospawn(promise));
+
+            results[index] = promise;
+            ++index;
+        }
+
+        std::vector<result> rv;
+        for (auto p : results) {
+            rv.push_back(co_await p->get());
+        }
+
+        co_return rv;
     }
 
 private:
@@ -302,7 +368,7 @@ private:
 
     mutable std::map<std::size_t, std::shared_ptr<client>>::const_iterator
         m_robin_index;
-    services_index<r> m_services_index;
+    services_index<r, client> m_services_index;
 
     static constexpr std::size_t m_timeout_s = 10;
 };

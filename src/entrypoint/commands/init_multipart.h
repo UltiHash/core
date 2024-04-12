@@ -26,21 +26,16 @@ public:
     [[nodiscard]] coro<void> handle(http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
-            co_await m_collection.workers
-                .io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_collection.directory_services.get(),
-                    [&req](client::acquired_messenger m) -> coro<void> {
-                        directory_message dir_req{
-                            .bucket_id = req.get_uri().get_bucket_id()};
+            auto cl = m_collection.directory_services.get();
+            auto m = co_await cl->acquire_messenger();
 
-                        co_await m.get().send_directory_message(
-                            DIRECTORY_BUCKET_EXISTS_REQ, dir_req);
-                        co_await m.get().recv_header();
-                    });
+            directory_message dir_req{.bucket_id =
+                                          req.get_uri().get_bucket_id()};
 
-        }
-
-        catch (const error_exception& e) {
+            co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
+                                               dir_req);
+            co_await m->recv_header();
+        } catch (const error_exception& e) {
             switch (*e.error()) {
             case error::bucket_not_found:
                 throw command_exception(boost::beast::http::status::not_found,

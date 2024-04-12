@@ -166,6 +166,7 @@ coro<void> list_objects::handle(http_request& req) const {
                     std::make_unique<std::string>(prefix);
             }
         }
+
         if (req_uri.query_string_exists("marker")) {
             if (const auto& marker = req_uri.get_query_string_value("marker");
                 !marker.empty()) {
@@ -174,25 +175,15 @@ coro<void> list_objects::handle(http_request& req) const {
             }
         }
 
-        directory_list_objects_message list_objs_res;
-        auto func = [](const directory_message& dir_req,
-                       directory_list_objects_message& list_objs_res,
-                       client::acquired_messenger m) -> coro<void> {
-            co_await m.get().send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
-                                                    dir_req);
-            const auto h_dir = co_await m.get().recv_header();
+        auto cl = m_collection.directory_services.get();
+        auto mgr = co_await cl->acquire_messenger();
 
-            unique_buffer<char> buffer(h_dir.size);
+        co_await mgr->send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
+                                             dir_req);
 
-            list_objs_res =
-                co_await m.get().recv_directory_list_objects_message(h_dir);
-        };
-
-        co_await m_collection.workers
-            .io_thread_acquire_messenger_and_post_in_io_threads(
-                m_collection.directory_services.get(),
-                std::bind_front(func, std::cref(dir_req),
-                                std::ref(list_objs_res)));
+        auto h_dir = co_await mgr->recv_header();
+        auto list_objs_res =
+            co_await mgr->recv_directory_list_objects_message(h_dir);
 
         auto res = get_response(list_objs_res.objects, req);
         co_await req.respond(res.get_prepared_response());

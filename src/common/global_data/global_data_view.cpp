@@ -19,7 +19,8 @@ address global_data_view::write(const std::string_view& data) {
     address addr;
     boost::asio::co_spawn(
         m_io_service,
-        [&data, &addr](client::acquired_messenger m) -> coro<void> {
+        [&data,
+         &addr](acquired_messenger<uh::cluster::client> m) -> coro<void> {
             co_await m.get().send(STORAGE_WRITE_REQ, data);
             const auto message_header = co_await m.get().recv_header();
             addr = co_await m.get().recv_address(message_header);
@@ -48,7 +49,7 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     const fragment frag{pointer, size};
     boost::asio::co_spawn(
         m_io_service,
-        [&frag, &buffer](client::acquired_messenger m) -> coro<void> {
+        [&frag, &buffer](acquired_messenger<client> m) -> coro<void> {
             co_await m.get().send_fragment(STORAGE_READ_FRAGMENT_REQ, frag);
             const auto h = co_await m.get().recv_header();
             if (h.size != frag.size) [[unlikely]] {
@@ -90,7 +91,7 @@ std::size_t global_data_view::read_address(char* buffer, const address& addr) {
     m_workers.broadcast_from_worker_in_io_threads(
         nodes,
         [&buffer, &nodes, &node_address_map, &node_data_offsets_map](
-            client::acquired_messenger m, long id) -> coro<void> {
+            acquired_messenger<client> m, long id) -> coro<void> {
             const auto node = nodes.at(id);
             const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
@@ -127,7 +128,7 @@ void global_data_view::sync(const address& addr) {
     }
 
     m_workers.broadcast_from_worker_in_io_threads(
-        nodes, [](client::acquired_messenger m, long id) -> coro<void> {
+        nodes, [](acquired_messenger<client> m, long id) -> coro<void> {
             co_await m.get().send(STORAGE_SYNC_REQ, {});
             co_await m.get().recv_header();
         });
@@ -140,7 +141,7 @@ void global_data_view::sync(const address& addr) {
 
     m_workers.broadcast_from_worker_in_io_threads(
         nodes,
-        [&used_spaces](client::acquired_messenger m, long id) -> coro<void> {
+        [&used_spaces](acquired_messenger<client> m, long id) -> coro<void> {
             co_await m.get().send(STORAGE_USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             used_spaces[id] = co_await m.get().recv_uint128_t(message_header);

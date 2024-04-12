@@ -76,28 +76,18 @@ coro<void> delete_objects::handle(http_request& req) const {
         }
 
         try {
+            auto cl = m_collection.directory_services.get();
+            auto m = co_await cl->acquire_messenger();
 
-            auto func2 = [](const std::string& key,
-                            const std::string& bucket_id,
-                            std::vector<std::string>& success,
-                            client::acquired_messenger m) -> coro<void> {
-                directory_message dir_req;
-                dir_req.bucket_id = bucket_id;
-                dir_req.object_key = std::make_unique<std::string>(key);
+            directory_message dir_req;
+            dir_req.bucket_id = bucket_id;
+            dir_req.object_key = std::make_unique<std::string>(*key);
 
-                co_await m.get().send_directory_message(
-                    DIRECTORY_OBJECT_DELETE_REQ, dir_req);
+            co_await m->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
+                                               dir_req);
+            co_await m->recv_header();
 
-                co_await m.get().recv_header();
-
-                success.emplace_back(key);
-            };
-
-            co_await m_collection.workers
-                .io_thread_acquire_messenger_and_post_in_io_threads(
-                    m_collection.directory_services.get(),
-                    std::bind_front(func2, *key, std::cref(bucket_id),
-                                    std::ref(success)));
+            success.emplace_back(*key);
 
         } catch (const error_exception& e) {
             LOG_ERROR() << "Failed to delete the bucket " << bucket_id

@@ -40,7 +40,7 @@ public:
         if (!b.empty()) {
             asio::co_spawn(m_collection.ioc,
                            integration::integrate_data(b, m_collection),
-                           use_awaitable_promise(pr));
+                           use_awaitable_promise_cospawn(pr));
         } else {
             pr->set(dedupe_response());
         }
@@ -91,20 +91,14 @@ coro<void> put_object::handle(http_request& req) const {
             .addr = std::make_unique<address>(std::move(resp.addr)),
         };
 
-        auto directories = m_collection.directory_services.get_clients();
-        if (directories.empty()) {
-            throw std::runtime_error("no directory services available");
-        }
-
-        auto func = [](const directory_message& dir_req,
-                       client::acquired_messenger m, long id) -> coro<void> {
-            co_await m.get().send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
-                                                    dir_req);
-            co_await m.get().recv_header();
+        auto func = [&](acquired_messenger<coro_client> m,
+                        long id) -> coro<void> {
+            co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
+                                               dir_req);
+            co_await m->recv_header();
         };
 
-        co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
-            directories, std::bind_front(func, std::cref(dir_req)));
+        co_await m_collection.directory_services.broadcast(func);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);

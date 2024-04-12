@@ -20,17 +20,15 @@ coro<void> delete_bucket::handle(http_request& req) const {
     try {
         std::string bucket_name = req.get_uri().get_bucket_id();
 
-        auto func = [](const std::string& bucket_name,
-                       client::acquired_messenger m, long id) -> coro<void> {
-            directory_message dir_req;
-            dir_req.bucket_id = bucket_name;
-            co_await m.get().send_directory_message(DIRECTORY_BUCKET_DELETE_REQ,
-                                                    dir_req);
-            co_await m.get().recv_header();
+        auto func = [&bucket_name](acquired_messenger<coro_client> m,
+                                   long id) -> coro<void> {
+            directory_message req;
+            req.bucket_id = bucket_name;
+            co_await m->send_directory_message(DIRECTORY_BUCKET_DELETE_REQ,
+                                               req);
+            co_await m->recv_header();
         };
-        co_await m_collection.workers.broadcast_from_io_thread_in_io_threads(
-            m_collection.directory_services.get_clients(),
-            std::bind_front(func, std::cref(bucket_name)));
+        co_await m_collection.directory_services.broadcast(func);
 
         http_response res;
         co_await req.respond(res.get_prepared_response());

@@ -19,20 +19,20 @@ integration::integrate_data(std::span<const char> data,
 
     std::vector<dedupe_response> responses(dedupe_services_size);
 
-    auto func = [&](client::acquired_messenger m, long i) -> coro<void> {
-
+    std::size_t i = 0;
+    for (auto& client : dedupe_services) {
         auto chunk = data.subspan(i * part_size, part_size);
-        m.get().register_write_buffer(chunk);
-        co_await m.get().send_buffers(DEDUPLICATOR_REQ);
+
+        auto m = co_await client->acquire_messenger();
+        m->register_write_buffer(chunk);
+        co_await m->send_buffers(DEDUPLICATOR_REQ);
+
         const auto h_dedup = co_await m.get().recv_header();
-        responses[i] = co_await m.get().recv_dedupe_response(h_dedup);
-    };
+        responses[i] = co_await m->recv_dedupe_response(h_dedup);
+        ++i;
+    }
 
-    co_await collection.workers.broadcast_from_io_thread_in_io_threads(
-        dedupe_services, func);
-
-    dedupe_response resp{.effective_size = 0};
-
+    dedupe_response resp;
     for (const auto& r : responses) {
         resp.append(r);
     }

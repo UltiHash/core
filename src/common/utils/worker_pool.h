@@ -63,7 +63,7 @@ public:
     }
 
     template <typename Func>
-    requires requires(Func& func, client::acquired_messenger& m) {
+    requires requires(Func& func, acquired_messenger<client>& m) {
         { func(std::move(m)) } -> std::same_as<coro<void>>;
     }
     coro<void> io_thread_acquire_messenger_and_post_in_io_threads(
@@ -76,7 +76,7 @@ public:
     }
 
     template <typename Func>
-    requires requires(Func& func, client::acquired_messenger& m) {
+    requires requires(Func& func, acquired_messenger<client>& m) {
         { func(std::move(m), long{}) } -> std::same_as<coro<void>>;
     }
     coro<void> broadcast_from_io_thread_in_io_threads(
@@ -134,7 +134,7 @@ public:
     }
 
     template <typename Func>
-    requires requires(Func& func, client::acquired_messenger& m) {
+    requires requires(Func& func, acquired_messenger<client>& m) {
         { func(std::move(m), long{}) } -> std::same_as<coro<void>>;
     }
     void broadcast_from_worker_in_io_threads(

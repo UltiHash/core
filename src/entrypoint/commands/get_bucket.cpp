@@ -29,19 +29,15 @@ coro<void> get_bucket::handle(http_request& req) const {
     auto bucket_name = req.get_uri().get_bucket_id();
 
     try {
-        auto func = [](const std::string& bucket_name,
-                       client::acquired_messenger m) -> coro<void> {
-            directory_message dir_req;
-            dir_req.bucket_id = bucket_name;
-            co_await m.get().send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
-                                                    dir_req);
-            co_await m.get().recv_header();
-        };
+        auto client = m_collection.directory_services.get();
+        auto mgr = co_await client->acquire_messenger();
 
-        co_await m_collection.workers
-            .io_thread_acquire_messenger_and_post_in_io_threads(
-                m_collection.directory_services.get(),
-                std::bind_front(func, std::cref(bucket_name)));
+        directory_message dir_req;
+        dir_req.bucket_id = bucket_name;
+
+        co_await mgr->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
+                                             dir_req);
+        co_await mgr->recv_header();
 
         auto res = get_response(bucket_name);
         co_await req.respond(res.get_prepared_response());

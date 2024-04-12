@@ -43,22 +43,12 @@ coro<void> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.get_uri().get_bucket_id();
 
-    std::map<std::string, std::string> ongoing{};
-    auto func = [](const reference_collection& collection,
-                   const std::string& bucket_name,
-                   std::map<std::string, std::string>& ongoing) {
-        ongoing = collection.server_state.m_uploads.list_multipart_uploads(
-            bucket_name);
-
-        if (ongoing.empty()) {
-            throw command_exception(http::status::not_found,
-                                    command_error::no_mp_uploads);
-        }
-    };
-
-    co_await m_collection.workers.post_in_workers(
-        std::bind_front(func, std::ref(m_collection), std::cref(bucket_name),
-                        std::ref(ongoing)));
+    auto ongoing =
+        m_collection.server_state.m_uploads.list_multipart_uploads(bucket_name);
+    if (ongoing.empty()) {
+        throw command_exception(http::status::not_found,
+                                command_error::no_mp_uploads);
+    }
 
     auto res = get_response(bucket_name, ongoing);
     co_await req.respond(res.get_prepared_response());
