@@ -20,6 +20,8 @@ public:
 
     const http::response<http::string_body>& get_prepared_response();
 
+    http::response<http::string_body>& base() { return m_res; }
+
 private:
     http::response<http::string_body> m_res{
         http::response<http::string_body>{http::status::ok, 11}};
