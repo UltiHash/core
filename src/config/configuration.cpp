@@ -172,7 +172,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
 
     rv->add_option("--buffer-size", cfg.buffer_size,
                    "buffer size before sending data to deduplicators")
-        ->default_val(cfg.worker_thread_count);
+        ->default_val(cfg.buffer_size);
 
     return rv;
 }
