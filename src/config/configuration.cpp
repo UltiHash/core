@@ -102,19 +102,9 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.storage_service_connection_count);
 
     group
-        ->add_option("--l1-capacity", cfg.read_cache_capacity_l1,
-                     "number of L1 cache entries")
-        ->default_val(cfg.read_cache_capacity_l1);
-
-    group
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
-
-    group
-        ->add_option("--l1-sample-size", cfg.l1_sample_size,
-                     "size of samples in L1 cache")
-        ->default_val(cfg.l1_sample_size);
 
     group
         ->add_option("--max-store-size", cfg.max_data_store_size,
@@ -179,6 +169,10 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     rv->add_option("--worker", cfg.worker_thread_count,
                    "number of worker threads")
         ->default_val(cfg.worker_thread_count);
+
+    rv->add_option("--buffer-size", cfg.buffer_size,
+                   "buffer size before sending data to deduplicators")
+        ->default_val(cfg.buffer_size);
 
     return rv;
 }

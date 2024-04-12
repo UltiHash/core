@@ -22,7 +22,6 @@ private:
     coro<dedupe_response> put_small_object(http_request& req) const;
 
     const reference_collection& m_collection;
-    std::size_t m_buffer_size = 4 * MEBI_BYTE;
 };
 
 } // namespace uh::cluster
