@@ -61,6 +61,7 @@ enum metric_type {
     entrypoint_delete_objects_req,
     entrypoint_get_bucket_req,
     entrypoint_get_object_req,
+    entrypoint_head_object_req,
     entrypoint_init_multipart_req,
     entrypoint_list_buckets_req,
     entrypoint_list_multipart_req,

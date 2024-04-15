@@ -44,6 +44,7 @@ Each service measures the number of requests it receives and handles using monot
 - `entrypoint_delete_objects_req`: number of [`DeleteObjects`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html) requests received
 - `entrypoint_get_bucket_req`: number of [`GetBucket`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_control_GetBucket.html) requests received
 - `entrypoint_get_object_req`: number of [`GetObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html) requests received
+- `entrypoint_head_object_req`: number of [`HeadObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html) requests received
 - `entrypoint_init_multipart_req`: number of [`CreateMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html) requests received
 - `entrypoint_list_buckets_req`: number of [`ListBuckets`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html) requests received
 - `entrypoint_list_multipart_req`: number of [`ListMultipartUploads`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListMultipartUploads.html) requests received
