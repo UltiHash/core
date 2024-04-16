@@ -9,7 +9,7 @@ on:
   # Run only single instance of the workflow
 
 env:
-  ENVIRONMENT_NAME: stability-testing
+  ENVIRONMENT_NAME: stability-testing-x86-64
 
 jobs:
 
@@ -69,7 +69,7 @@ jobs:
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: stability-testing/helm-values-template.yaml
+          input: stability-testing/helm-values-on-premise.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists

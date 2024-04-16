@@ -12,6 +12,14 @@ global:
 stabilityTest:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  inputVolume:
+    type: hostPath
+    mountPath: /data
+    hostPath: /data/corpora_test/stability-test
+  outputVolume:
+    storageClass: local-path
+    storageSize: 100Gi
+    mountPath: /testing/test
 
 etcd:
   replicaCount: 1
