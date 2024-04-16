@@ -9,6 +9,10 @@ global:
   logLevel: DEBUG
   telemetryExportInterval: 30000
 
+stabilityTest:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
 etcd:
   replicaCount: 1
   nodeSelector:
