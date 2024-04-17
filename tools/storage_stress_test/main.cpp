@@ -18,8 +18,8 @@ struct params {
     size_t message_count{};
 };
 
-size_t min_frag_size = 1ul * GIBI_BYTE;
-size_t max_frag_size = 1ul * GIBI_BYTE;
+size_t min_frag_size = 64ul * MEBI_BYTE;
+size_t max_frag_size = 64ul * MEBI_BYTE;
 
 boost::asio::io_context ioc;
 std::deque<std::unique_ptr<boost::asio::ip::tcp::socket>> sockets;
@@ -51,41 +51,7 @@ void return_connection(auto&& s) {
     cv.notify_one();
 }
 
-size_t do_io(const params& ps) {
-
-    std::random_device rd;
-    std::mt19937 generator(rd());
-    std::uniform_int_distribution<size_t> distribution(min_frag_size,
-                                                       max_frag_size);
-
-    size_t total_size = 0;
-    for (size_t i = 0; i < ps.message_count; ++i) {
-        size_t length = distribution(generator);
-        unique_buffer<char> random_data(length);
-
-        message_type type = STORAGE_WRITE_REQ;
-        std::vector<boost::asio::const_buffer> send_buffers{
-            {&type, sizeof(type)},
-            {&length, sizeof(length)},
-            {random_data.data(), random_data.size()}};
-
-        auto socket = borrow_connection();
-        boost::asio::write(*socket, send_buffers);
-
-        messenger_core::header h{};
-        std::vector<boost::asio::mutable_buffer> recv_buffers{
-            {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
-        boost::asio::read(*socket, recv_buffers);
-        if (h.type != SUCCESS) [[unlikely]] {
-            throw std::runtime_error("unsuccessful write");
-        }
-        unique_buffer<char> recv_data(h.size);
-        boost::asio::read(
-            *socket, boost::asio::buffer(recv_data.data(), recv_data.size()));
-
-        return_connection(std::move(socket));
-        total_size += length;
-    }
+void do_sync () {
     message_type type = STORAGE_SYNC_REQ;
     size_t length = 0;
     std::vector<boost::asio::const_buffer> send_buffers{
@@ -102,6 +68,54 @@ size_t do_io(const params& ps) {
     if (h.type != SUCCESS) [[unlikely]] {
         throw std::runtime_error("unsuccessful sync");
     }
+    return_connection(std::move(socket));
+}
+
+size_t do_write (const unique_buffer<char>& buffer) {
+    message_type type = STORAGE_WRITE_REQ;
+    size_t length = buffer.size();
+    std::vector<boost::asio::const_buffer> send_buffers{
+        {&type, sizeof(type)},
+        {&length, sizeof(length)},
+        {buffer.data(), buffer.size()}};
+
+    auto socket = borrow_connection();
+    boost::asio::write(*socket, send_buffers);
+
+    messenger_core::header h{};
+    std::vector<boost::asio::mutable_buffer> recv_buffers{
+        {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
+    boost::asio::read(*socket, recv_buffers);
+    if (h.type != SUCCESS) [[unlikely]] {
+        throw std::runtime_error("unsuccessful write");
+    }
+    unique_buffer<char> recv_data(h.size);
+    boost::asio::read(
+        *socket, boost::asio::buffer(recv_data.data(), recv_data.size()));
+
+    return_connection(std::move(socket));
+    return length;
+}
+
+size_t do_io(const params& ps) {
+
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<size_t> distribution(min_frag_size,
+                                                       max_frag_size);
+
+    size_t total_size = 0;
+    for (size_t i = 0; i < ps.message_count; ++i) {
+        size_t length = distribution(generator);
+        unique_buffer<char> random_data(length);
+
+        total_size += do_write(random_data);
+
+        if (i % 4 == 0) {
+            do_sync();
+        }
+    }
+    do_sync();
 
     return total_size;
 }

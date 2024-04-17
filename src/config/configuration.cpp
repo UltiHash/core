@@ -106,10 +106,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
 
-    group
-        ->add_option("--max-store-size", cfg.max_data_store_size,
-                     "maximum size of data store")
-        ->default_val(cfg.max_data_store_size);
 }
 
 void register_bucket(CLI::App& app, bucket_config& cfg) {

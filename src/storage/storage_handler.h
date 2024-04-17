@@ -3,17 +3,25 @@
 
 #include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
+#include "common/utils/pointer_traits.h"
+
 #include "common/utils/protocol_handler.h"
 #include "config.h"
 #include "data_store.h"
 #include <utility>
+#include <execution>
 
 namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    storage_handler(data_store_config config, size_t index)
-        : m_data_store(std::move(config), index) {}
+    storage_handler(const data_store_config& config, uint32_t index, uint32_t data_store_count): m_threads (16 * data_store_count) {
+        m_data_stores.reserve(data_store_count);
+        for (uint32_t i = 0; i < data_store_count; i ++) {
+            m_data_stores.emplace_back(std::make_unique<data_store>(config, index, i));
+        }
+    }
+
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         std::stringstream remote;
@@ -25,8 +33,9 @@ public:
             std::optional<error> err;
 
             try {
+                std::cout << "m1" << std::endl;
                 const auto message_header = co_await m.recv_header();
-
+                std::cout << "m2 " << magic_enum::enum_name(message_header.type)<< std::endl;
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(message_header.type);
 
@@ -70,12 +79,42 @@ public:
     }
 
 private:
+
     coro<void> handle_write(messenger& m, const messenger::header& h) {
-        unique_buffer<char> data(h.size);
-        m.register_read_buffer(data);
+
+        shared_buffer<char> data(h.size);
+        m.register_read_buffer(data.data(), data.size());
         co_await m.recv_buffers(h);
 
-        const auto addr = m_data_store.write(data.get_span());
+        const size_t part = std::ceil ((double) data.size() / m_data_stores.size());
+
+        std::vector <std::future <address>> futures;
+        futures.reserve (m_data_stores.size());
+        address addr;
+
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+            addr.append_address(m_data_stores[i]->write(data.get_span().subspan(
+                i * part, std::min(data.size() - i * part, part))));
+            /*
+            auto p = std::make_shared<std::promise <address>>();
+            boost::asio::post (m_threads, [&data, i, this, part, p] () {
+                try {
+                    p->set_value(
+                        m_data_stores[i]->write(data.get_span().subspan(
+                            i * part, std::min(data.size() - i * part, part))));
+                }
+                catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+             */
+        }
+
+        for(auto& f: futures){
+            addr.append_address(f.get());
+        }
+
         co_await m.send_address(SUCCESS, addr);
     }
 
@@ -83,7 +122,7 @@ private:
         const auto resp = co_await m.recv_fragment(h);
         unique_buffer<char> buffer(resp.size);
         const auto size =
-            m_data_store.read(buffer.data(), resp.pointer, resp.size);
+            get_data_store(resp.pointer).read(buffer.data(), resp.pointer, resp.size);
         co_await m.send(SUCCESS, {buffer.data(), size});
     }
 
@@ -97,7 +136,7 @@ private:
         size_t offset = 0;
         for (size_t i = 0; i < resp.size(); i++) {
             const auto frag = resp.get_fragment(i);
-            if (m_data_store.read(buffer.data() + offset, frag.pointer,
+            if (get_data_store(frag.pointer).read(buffer.data() + offset, frag.pointer,
                                   frag.size) != frag.size) [[unlikely]] {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
@@ -108,16 +147,45 @@ private:
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {
-        m_data_store.sync();
+        std::vector <std::future <void>> futures;
+        futures.reserve (m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+            m_data_stores[i]->sync();
+            /*
+            auto p = std::make_shared<std::promise <void>>();
+            boost::asio::post (m_threads, [i, this, p] () {
+                try {
+                    m_data_stores[i]->sync();
+                    p->set_value();
+                }
+                catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+             */
+        }
+        for(auto& f: futures){
+           f.get();
+        }
         co_await m.send(SUCCESS, {});
     }
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
-        const auto used = m_data_store.get_used_space();
+        size_t used = 0;
+        for (const auto& ds: m_data_stores) {
+            used += ds->get_used_space();
+        }
         co_await m.send_uint128_t(SUCCESS, used);
     }
 
-    uh::cluster::data_store m_data_store;
+    data_store& get_data_store (const uint128_t& pointer) {
+        return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
+    }
+
+
+    std::vector <std::unique_ptr <data_store>> m_data_stores;
+    boost::asio::thread_pool m_threads;
 };
 
 } // end namespace uh::cluster
