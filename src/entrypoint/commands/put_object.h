@@ -18,8 +18,8 @@ public:
     coro<void> handle(http_request& req) const;
 
 private:
-    coro<dedupe_response> put_large_object(http_request& req) const;
-    coro<dedupe_response> put_small_object(http_request& req) const;
+    coro<dedupe_response> put_large_object(http_request& req, md5& hash) const;
+    coro<dedupe_response> put_small_object(http_request& req, md5& hash) const;
 
     const reference_collection& m_collection;
 };

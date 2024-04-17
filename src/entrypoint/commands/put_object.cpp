@@ -71,18 +71,14 @@ coro<void> put_object::handle(http_request& req) const {
     try {
         auto content_length = req.content_length();
 
+        md5 hash;
+
         dedupe_response resp;
         if (content_length >= m_collection.config.buffer_size) {
-            resp = co_await put_large_object(req);
+            resp = co_await put_large_object(req, hash);
         } else {
-            resp = co_await put_small_object(req);
+            resp = co_await put_small_object(req, hash);
         }
-
-        md5 hash;
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
-                      resp.addr.pointers.size() * sizeof(uint64_t)});
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
-                      resp.addr.sizes.size() * sizeof(uint32_t)});
 
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
@@ -128,7 +124,8 @@ coro<void> put_object::handle(http_request& req) const {
     }
 }
 
-coro<dedupe_response> put_object::put_large_object(http_request& req) const {
+coro<dedupe_response> put_object::put_large_object(http_request& req,
+                                                   md5& hash) const {
     const auto buffer_size = m_collection.config.buffer_size;
     double_buffer b(m_collection, buffer_size);
 
@@ -140,6 +137,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
 
     auto size = std::min(content_length, buffer_size) - transferred;
     transferred += co_await b.fill(req.socket(), size, transferred);
+    hash.consume(b.current());
 
     dedupe_response rv;
 
@@ -150,6 +148,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
 
         size = std::min(content_length - transferred, buffer_size);
         transferred += co_await b.fill(req.socket(), size);
+        hash.consume(b.current());
 
         rv.append(co_await promise->get());
     } while (transferred < content_length);
@@ -160,7 +159,8 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
     co_return rv;
 }
 
-coro<dedupe_response> put_object::put_small_object(http_request& req) const {
+coro<dedupe_response> put_object::put_small_object(http_request& req,
+                                                   md5& hash) const {
     auto content_length = req.content_length();
 
     if (content_length == 0) {
@@ -176,6 +176,8 @@ coro<dedupe_response> put_object::put_small_object(http_request& req) const {
         req.socket(),
         asio::buffer(&buffer[payload.size()], content_length - payload.size()),
         asio::use_awaitable);
+
+    hash.consume(buffer);
 
     co_return co_await integration::integrate_data(buffer, m_collection);
 }
