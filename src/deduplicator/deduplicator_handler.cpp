@@ -123,7 +123,7 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
         responses[0].addr.append_address(responses[i].addr);
         responses[0].effective_size += responses[i].effective_size;
     }
-    m_storage.sync(responses[0].addr);
+    co_await m_dedupe_workers.post_in_workers([this, &responses](){m_storage.sync(responses[0].addr);});
     co_await m.send_dedupe_response(responses[0]);
 }
 

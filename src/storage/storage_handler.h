@@ -15,7 +15,7 @@ namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    storage_handler(const data_store_config& config, uint32_t index, uint32_t data_store_count): m_threads (16 * data_store_count) {
+    storage_handler(const data_store_config& config, uint32_t index, uint32_t data_store_count): m_threads(16 * data_store_count) {
         m_data_stores.reserve(data_store_count);
         for (uint32_t i = 0; i < data_store_count; i ++) {
             m_data_stores.emplace_back(std::make_unique<data_store>(config, index, i));
@@ -33,9 +33,7 @@ public:
             std::optional<error> err;
 
             try {
-                std::cout << "m1" << std::endl;
                 const auto message_header = co_await m.recv_header();
-                std::cout << "m2 " << magic_enum::enum_name(message_header.type)<< std::endl;
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(message_header.type);
 
@@ -88,14 +86,20 @@ private:
 
         const size_t part = std::ceil ((double) data.size() / m_data_stores.size());
 
+        //std::vector <std::pair <data_store&, std::span <char>>> ds_data;
+        //for (size_t i = 0; i < m_data_stores.size(); ++i) {
+        //    ds_data.emplace_back(*m_data_stores[i], data.get_span().subspan(i * part, std::min(data.size() - i * part, part)));
+        //}
+        //auto addresses = co_await m_workers.broadcast_from_io_thread_in_workers([] (auto ds_data) {return ds_data.first.write (ds_data.second);}, ds_data);
+
         std::vector <std::future <address>> futures;
         futures.reserve (m_data_stores.size());
         address addr;
 
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
-            addr.append_address(m_data_stores[i]->write(data.get_span().subspan(
-                i * part, std::min(data.size() - i * part, part))));
-            /*
+            //addr.append_address(m_data_stores[i]->write(data.get_span().subspan(
+            //    i * part, std::min(data.size() - i * part, part))));
+
             auto p = std::make_shared<std::promise <address>>();
             boost::asio::post (m_threads, [&data, i, this, part, p] () {
                 try {
@@ -108,12 +112,15 @@ private:
                 }
             });
             futures.emplace_back(p->get_future());
-             */
+
         }
 
         for(auto& f: futures){
             addr.append_address(f.get());
         }
+        //for (auto& a: addresses) {
+        //    addr.append_address(a);
+        //}
 
         co_await m.send_address(SUCCESS, addr);
     }
@@ -151,7 +158,7 @@ private:
         futures.reserve (m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
             m_data_stores[i]->sync();
-            /*
+
             auto p = std::make_shared<std::promise <void>>();
             boost::asio::post (m_threads, [i, this, p] () {
                 try {
@@ -163,11 +170,13 @@ private:
                 }
             });
             futures.emplace_back(p->get_future());
-             */
+
         }
         for(auto& f: futures){
            f.get();
         }
+
+        //co_await m_workers.broadcast_from_io_thread_in_workers([](const auto& ds){ds->sync(); return SUCCESS;}, m_data_stores);
         co_await m.send(SUCCESS, {});
     }
 

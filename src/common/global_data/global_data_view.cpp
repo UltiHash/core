@@ -128,20 +128,11 @@ void global_data_view::sync(const address& addr) {
         node_address.push_fragment(frag);
     }
 
-    std::cout << "b1" << std::endl;
-
     m_workers.broadcast_from_worker_in_io_threads(
         nodes, [](acquired_messenger<client> m, long id) -> coro<void> {
-            std::cout << "s1" << std::endl;
-
             co_await m.get().send(STORAGE_SYNC_REQ, {});
-            std::cout << "s2" << std::endl;
-
             co_await m.get().recv_header();
-            std::cout << "s3" << std::endl;
-
         });
-    std::cout << "b2" << std::endl;
 
 }
 
