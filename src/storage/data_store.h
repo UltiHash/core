@@ -96,16 +96,7 @@ private:
     alloc_t internal_allocate(long size);
 
 
-    std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size) {
-        auto async_data = m_async_data.upper_bound(pointer);
-        if (async_data != m_async_data.cbegin()) {
-            async_data --;
-            if (async_data->first + async_data->second.second.size() >= pointer + size) {
-                return {async_data->first, async_data->second.second};
-            }
-        }
-        return {0, nullptr};
-    }
+    std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;

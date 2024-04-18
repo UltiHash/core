@@ -168,7 +168,6 @@ void data_store::perform_write(const address& addr) {
         ;
     std::lock_guard <std::mutex> rm_lk (m_async_mutex);
     m_async_data.erase(pointer);
-    std::cout << "removed " << pointer << " " << addr.size() << std::endl;
     m_async_cv.notify_all();
 }
 
@@ -272,6 +271,18 @@ data_store::alloc_t data_store::internal_allocate(long size) {
     m_used += size;
 
     return alloc;
+}
+
+std::pair<size_t, shared_buffer<char>>
+data_store::find_async_data(size_t pointer, size_t size) {
+    auto async_data = m_async_data.upper_bound(pointer);
+    if (async_data != m_async_data.cbegin()) {
+        async_data --;
+        if (async_data->first + async_data->second.second.size() >= pointer + size) {
+            return {async_data->first, async_data->second.second};
+        }
+    }
+    return {0, nullptr};
 }
 
 } // end namespace uh::cluster
