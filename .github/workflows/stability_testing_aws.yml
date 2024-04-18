@@ -92,6 +92,7 @@ jobs:
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
           kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete pv stability-test-input --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
         continue-on-error: true
@@ -148,6 +149,7 @@ jobs:
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
           kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete pv stability-test-input --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
         continue-on-error: true
