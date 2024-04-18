@@ -14,7 +14,7 @@ public:
           m_etcd_client("http://127.0.0.1:2379"),
           m_storage_services(m_ioc,
                              m_gdv_config.storage_service_connection_count,
-                             m_etcd_client, m_gdv_config.max_data_store_size) {}
+                             m_etcd_client) {}
 
     ~global_data_view_fixture() { teardown(); }
 

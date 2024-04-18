@@ -9,7 +9,6 @@
 #include "config.h"
 #include "data_store.h"
 #include <utility>
-#include <execution>
 
 namespace uh::cluster {
 
@@ -17,7 +16,7 @@ class storage_handler : public protocol_handler {
 public:
     storage_handler(const data_store_config& config, uint32_t index, int data_store_count): m_threads(16 * data_store_count) {
         m_data_stores.reserve(data_store_count);
-        for (uint32_t i = 0; i < data_store_count; i ++) {
+        for (int i = 0; i < data_store_count; i ++) {
             m_data_stores.emplace_back(std::make_unique<data_store>(config, index, i));
         }
     }

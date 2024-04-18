@@ -2,7 +2,6 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "common/global_data/global_data_view.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "common/registry/services.h"
@@ -10,6 +9,7 @@
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
+#include "storage/data_store.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
 
@@ -27,8 +27,7 @@ template <role r, role service_role = r> struct base_fixture {
     constexpr uh::cluster::services<r> make_services() {
         if constexpr (r == STORAGE_SERVICE) {
             return uh::cluster::services<r>(
-                ioc, 2, etcd_client,
-                global_data_view_config().max_data_store_size);
+                ioc, 2, etcd_client);
         } else {
             return uh::cluster::services<r>(ioc, 2, etcd_client);
         }
@@ -142,7 +141,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
      * - each nodes storage offset is determined by product of the node's id
      *   and max_data_store_size
      */
-    auto node_addr_range = global_data_view_config().max_data_store_size;
+    auto node_addr_range = data_store_config().max_data_store_size;
 
     BOOST_CHECK(services.get_clients().empty());
     BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
