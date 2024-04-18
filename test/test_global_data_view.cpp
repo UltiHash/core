@@ -26,12 +26,12 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     fill_random(input_buffer.data(), input_buffer.size());
     auto addr = gdv->write(input_buffer.get_str_view());
     BOOST_CHECK(input_buffer.size() == addr.data_size());
-    BOOST_CHECK(addr.pointers.size() == 2);
-    BOOST_CHECK(addr.sizes.size() == 1);
+    BOOST_TEST(addr.pointers.size() == 2ul * m_data_store_count);
+    BOOST_TEST(addr.sizes.size() == 1ul * m_data_store_count);
     gdv->sync(addr);
 
-    auto frag = addr.first();
-    auto result_buffer = gdv->read_fragment(frag.pointer, frag.size);
+    unique_buffer <char> result_buffer (addr.data_size());
+    gdv->read_address(result_buffer.data(), addr);
     BOOST_CHECK(input_buffer.get_str_view() == result_buffer.get_str_view());
 }
 

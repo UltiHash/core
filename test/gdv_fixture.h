@@ -29,6 +29,7 @@ public:
             storage_cfg.server.port = 10000 + i;
             storage_cfg.data_store.working_dir =
                 service_cfg.working_dir / "storage";
+            storage_cfg.data_store_count = m_data_store_count;
             m_storage_instances.emplace_back(
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
@@ -92,6 +93,7 @@ public:
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    const int m_data_store_count = 2;
 
 private:
     global_data_view_config m_gdv_config;
