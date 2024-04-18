@@ -4,9 +4,9 @@ on:
   push:
     branches:
     - eng-364
+  workflow_dispatch:
+
   # Need to run nightly
-  # Ability to run manually
-  # Run only single instance of the workflow
 
 env:
   ENVIRONMENT_NAME: stability-testing-x86-64
