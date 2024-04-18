@@ -110,7 +110,7 @@ jobs:
 
       - name: Run stability test
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-stability-test --logs --timeout 4h
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-stability-test --logs --timeout 5h
   
   cleanup:
     runs-on: lightweight-generic-jobs

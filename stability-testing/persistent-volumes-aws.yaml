@@ -15,9 +15,6 @@ kind: PersistentVolume
 metadata:
   name: stability-test-input
 spec:
-  nodeSelector:
-    workload-type: entrypoint
-    purpose: performance-and-stability-testing
   capacity:
     storage: 1Gi # Ignored
   accessModes:
