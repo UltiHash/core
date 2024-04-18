@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& out, const http_request& req) {
 
     std::string delim;
     for (const auto& field : req.m_req.get().base()) {
-        out << delim << field.name() << ": " << field.value();
+        out << delim << field.name_string() << ": " << field.value();
         delim = ", ";
     }
 
