@@ -38,8 +38,6 @@ public:
           m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
-        LOG_INFO() << "connection from: " << s.remote_endpoint();
-
         try {
 
             for (;;) {
