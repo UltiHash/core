@@ -40,6 +40,9 @@ jobs:
           platforms: linux/amd64
           tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           push: true
+          build-args: |
+            BuildType=RelWithDebInfo
+            DebugTools=True
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
@@ -90,7 +93,7 @@ jobs:
 
       - name: Run stability test
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-stability-test --logs --timeout 1h
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-stability-test --logs --timeout 2h
 
       - name: Environment cleanup
         run: |
