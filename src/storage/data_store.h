@@ -2,6 +2,9 @@
 #define CORE_DATA_STORE_H
 
 #include "common/utils/free_spot_manager.h"
+#include "common/types/shared_buffer.h"
+
+#include <condition_variable>
 #include <atomic>
 #include <cstring>
 #include <fcntl.h>
@@ -41,6 +44,10 @@ public:
      * @affects get_available_space()
      */
     address write(std::span<char> data);
+
+    address note (const shared_buffer <char>& data);
+    void perform_write (const address& addr);
+    void wait_for_ongoing_writes (const address& addr);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -86,9 +93,19 @@ private:
         uint128_t global_offset;
     };
 
-    alloc_t allocate(long size);
+    alloc_t internal_allocate(long size);
 
 
+    std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size) {
+        auto async_data = m_async_data.upper_bound(pointer);
+        if (async_data != m_async_data.cbegin()) {
+            async_data --;
+            if (async_data->first + async_data->second.second.size() >= pointer + size) {
+                return {async_data->first, async_data->second.second};
+            }
+        }
+        return {0, nullptr};
+    }
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;
@@ -113,6 +130,9 @@ private:
     std::atomic<size_t> m_used{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;
+    std::mutex m_async_mutex;
+    std::condition_variable m_async_cv;
+    std::map <size_t, std::pair <alloc_t, shared_buffer<char>>> m_async_data;
 };
 
 } // end namespace uh::cluster
