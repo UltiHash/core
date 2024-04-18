@@ -90,6 +90,7 @@ jobs:
       - name: Delete the testing environment if exists
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
@@ -102,6 +103,10 @@ jobs:
           kubectl create secret generic ultihash  -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+
+      - name: Provision persistent volumes for testing
+        run: |
+          kubectl apply -f stability-testing/persistent-volumes-aws.yaml -n ${{ env.ENVIRONMENT_NAME }}
 
       - name: Run stability test
         run: |
@@ -145,4 +150,5 @@ jobs:
           kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+        continue-on-error: true
       

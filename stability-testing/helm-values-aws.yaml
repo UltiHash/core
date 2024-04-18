@@ -21,14 +21,10 @@ stabilityTest:
   inputVolume:
     type: S3
     mountPath: /data
-    S3:
-      bucketName: ultihash-stability-test-corpora
-      region: eu-central-1
+    pvcName: stability-test-input
   outputVolume:
-    storageClass: ebs-csi-gp3
-    storageSize: 100Gi
+    pvcName: stability-test-output
     mountPath: /testing/test
-
 
 etcd:
   replicaCount: 1

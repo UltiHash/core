@@ -17,8 +17,7 @@ stabilityTest:
     mountPath: /data
     hostPath: /data/corpora_test/stability-test
   outputVolume:
-    storageClass: local-path
-    storageSize: 100Gi
+    pvcName: stability-test-output
     mountPath: /testing/test
 
 etcd:
