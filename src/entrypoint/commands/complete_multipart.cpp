@@ -1,4 +1,5 @@
 #include "complete_multipart.h"
+#include "common/utils/md5.h"
 #include "common/utils/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"

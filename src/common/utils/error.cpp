@@ -10,8 +10,8 @@ namespace {
 static const std::vector<std::string> error_messages = {
     "success",
     "unknown",
-    "bucket does not exists",
-    "object does not exists",
+    "bucket does not exist",
+    "object does not exist",
     "bucket is not empty",
     "bucket name is invalid",
     "storage limit is exceeded",

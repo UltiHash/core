@@ -1,7 +1,6 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "common/utils/md5.h"
 #include "uri.h"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
