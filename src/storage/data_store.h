@@ -30,23 +30,30 @@ public:
     data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id);
 
     /**
-     * @brief Writes the data into the data store and returns the address of
-     * the data written. Data might be split up and stored at different
-     * locations. This is why we return an address struct which is simply a
-     * collection of pointers and sizes.
-     * @param data: span of characters
-     * @return address: collection of pointers and sizes
-     *
-     * @throws std::bad_alloc: if allocated size exceeds on write.
-     * @throws std::exception: corrupted storage
+     * Allocates for the given data size and stores the
+     * data, the allocation, and internal allocation info in the
+     * ongoing async writes queue.
      *
      * @affects get_used_space()
      * @affects get_available_space()
+     *
+     * @param data
+     * @return  allocated address
      */
-    address write(std::span<char> data);
+    address register_write (const shared_buffer <char>& data);
 
-    address note (const shared_buffer <char>& data);
+    /**
+     * Writes the data that is registered by the given address to disk.
+     *
+     * @param addr the address that the data is registered with
+     */
     void perform_write (const address& addr);
+
+    /**
+     * Waits for completion of async write operations for the given address
+     *
+     * @param addr
+     */
     void wait_for_ongoing_writes (const address& addr);
 
     /**
@@ -123,7 +130,7 @@ private:
     std::mutex m_sync_end_offset_mutex;
     std::mutex m_async_mutex;
     std::condition_variable m_async_cv;
-    std::map <size_t, std::pair <alloc_t, shared_buffer<char>>> m_async_data;
+    std::map <size_t, std::pair <alloc_t, shared_buffer<char>>> m_ongoing_async_writes;
 };
 
 } // end namespace uh::cluster

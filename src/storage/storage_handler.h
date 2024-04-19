@@ -92,7 +92,7 @@ private:
         std::vector <address> addresses;
         addresses.reserve(m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
-            addresses.emplace_back(m_data_stores[i]->note(data[i]));
+            addresses.emplace_back(m_data_stores[i]->register_write(data[i]));
             addr.append_address(addresses.back());
         }
 
