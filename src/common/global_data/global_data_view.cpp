@@ -129,8 +129,8 @@ void global_data_view::sync(const address& addr) {
     }
 
     m_workers.broadcast_from_worker_in_io_threads(
-        nodes, [](acquired_messenger<client> m, long id) -> coro<void> {
-            co_await m.get().send(STORAGE_SYNC_REQ, {});
+        nodes, [&node_address_map, &nodes](acquired_messenger<client> m, long id) -> coro<void> {
+            co_await m.get().send_address(STORAGE_SYNC_REQ, node_address_map.at (nodes[id]));
             co_await m.get().recv_header();
         });
 

@@ -79,38 +79,28 @@ private:
 
     coro<void> handle_write(messenger& m, const messenger::header& h) {
 
-        shared_buffer<char> data(h.size);
-        m.register_read_buffer(data.data(), data.size());
+        const size_t part = std::ceil ((double) h.size / m_data_stores.size());
+        std::vector <shared_buffer<char>> data;
+        data.reserve(m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+            data.emplace_back(std::min(h.size - i * part, part));
+            m.register_read_buffer(data.back().data(), data.back().size());
+        }
         co_await m.recv_buffers(h);
 
-        const size_t part = std::ceil ((double) data.size() / m_data_stores.size());
-
-        std::vector <std::future <address>> futures;
-        futures.reserve (m_data_stores.size());
         address addr;
-
+        std::vector <address> addresses;
+        addresses.reserve(m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
-
-            auto p = std::make_shared<std::promise <address>>();
-            boost::asio::post (m_threads, [&data, i, this, part, p] () {
-                try {
-                    p->set_value(
-                        m_data_stores[i]->write(data.get_span().subspan(
-                            i * part, std::min(data.size() - i * part, part))));
-                }
-                catch (const std::exception&) {
-                    p->set_exception(std::current_exception());
-                }
-            });
-            futures.emplace_back(p->get_future());
-
-        }
-
-        for(auto& f: futures){
-            addr.append_address(f.get());
+            addresses.emplace_back(m_data_stores[i]->register_write(data[i]));
+            addr.append_address(addresses.back());
         }
 
         co_await m.send_address(SUCCESS, addr);
+
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+            boost::asio::post (m_threads, [addr=addresses[i], i, this] () {m_data_stores[i]->perform_write(addr);});
+        }
     }
 
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {
@@ -141,14 +131,25 @@ private:
         co_await m.send(SUCCESS, {buffer.data(), offset});
     }
 
-    coro<void> handle_sync(messenger& m, const messenger::header&) {
+    coro<void> handle_sync(messenger& m, const messenger::header& h) {
+
+        const auto addr = co_await m.recv_address(h);
+
+        std::vector <address> ds_addresses (m_data_stores.size());
+        for (size_t i = 0; i < addr.size(); i++) {
+            const auto f = addr.get_fragment(i);
+            const auto id = pointer_traits::get_data_store_id(f.pointer);
+            ds_addresses.at(id).push_fragment(f);
+        }
+
         std::vector <std::future <void>> futures;
         futures.reserve (m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
 
             auto p = std::make_shared<std::promise <void>>();
-            boost::asio::post (m_threads, [i, this, p] () {
+            boost::asio::post (m_threads, [i, this, p, &ds_addresses] () {
                 try {
+                    m_data_stores[i]->wait_for_ongoing_writes(ds_addresses[i]);
                     m_data_stores[i]->sync();
                     p->set_value();
                 }
