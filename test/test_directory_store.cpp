@@ -34,7 +34,7 @@ struct directory_store_fixture {
     }
 
     void setup() {
-        ds = std::make_unique<data_store>(make_data_store_config(), 0);
+        ds = std::make_unique<data_store>(make_data_store_config(), 0, 0);
         dir_s = make_directory_store();
 
         fill_random_dirstore(data1, sizeof(data1));

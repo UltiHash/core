@@ -24,7 +24,7 @@ struct data_store_config {
 class data_store {
 
 public:
-    data_store(data_store_config conf, std::size_t id, bool adaptive = true);
+    data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id);
 
     /**
      * @brief Writes the data into the data store and returns the address of
@@ -53,7 +53,7 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(char* buffer, uint128_t pointer, size_t size);
+    std::size_t read(char* buffer, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Flushes modified files to disk.
@@ -76,7 +76,10 @@ public:
 
     ~data_store();
 
+
+
 private:
+
     struct alloc_t {
         int fd;
         long seek;
@@ -85,25 +88,28 @@ private:
 
     alloc_t allocate(long size);
 
+
+
     [[nodiscard]] std::pair<int, long>
-    get_file_offset_pair(const uint128_t& pointer) const;
+    get_file_offset_pair(size_t pointer) const;
 
     [[nodiscard]] size_t fetch_used_space() const noexcept;
 
-    int add_new_file(const uint128_t& offset, long file_size);
+    int add_new_file(size_t offset, long file_size);
 
-    [[nodiscard]] static std::pair<size_t, uint128_t>
+    [[nodiscard]] static std::pair<size_t, size_t>
     parse_file_name(const std::string& filename);
 
-    [[nodiscard]] std::string get_name(const uint128_t& offset) const;
+    [[nodiscard]] std::string get_name(size_t offset) const;
 
     static bool is_data_file(const std::filesystem::path& path);
 
     long m_last_file_data_end{};
-    size_t m_data_id;
+    const uint32_t m_storage_id;
+    const uint32_t m_data_store_id;
+    const std::filesystem::path m_root;
     data_store_config m_conf;
     std::vector<int> m_open_files;
-    uint128_t m_global_offset;
     std::atomic<size_t> m_used{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;

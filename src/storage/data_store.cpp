@@ -1,35 +1,34 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
+#include "common/utils/pointer_traits.h"
 #include <mutex>
+#include "iostream"
+
 namespace uh::cluster {
 
-data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
-    : m_data_id(id),
+data_store::data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id)
+    : m_storage_id (service_id),
+      m_data_store_id (data_store_id),
+      m_root (conf.working_dir / std::to_string (data_store_id)),
       m_conf(std::move(conf)) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
-    m_global_offset = uint128_t(m_conf.max_data_store_size) * id;
 
-    if (!std::filesystem::exists(m_conf.working_dir)) {
-        std::filesystem::create_directories(m_conf.working_dir);
+    if (!std::filesystem::exists(m_root)) {
+        std::filesystem::create_directories(m_root);
     }
 
     std::map<uint128_t, int> open_files;
     for (const auto& entry :
-         std::filesystem::directory_iterator(m_conf.working_dir)) {
+         std::filesystem::directory_iterator(m_root)) {
         if (!is_data_file(entry.path())) {
             continue;
         }
 
         const auto id_offset = parse_file_name(entry.path().filename());
-        if (!adaptive and id_offset.first != m_data_id)
-            [[unlikely]] { // non-adaptive data store with fixed id
+        if (id_offset.first != m_storage_id) [[unlikely]] { // non-adaptive data store with fixed id
             throw std::range_error(
                 "The data store is spawned on the wrong data node");
-        } else if (adaptive) { // data store with adaptive id (assuming one data
-                               // store per node)
-            adaptive = false;
-            m_data_id = id_offset.first;
         }
 
         const int fd = open(entry.path().c_str(), O_RDWR);
@@ -47,7 +46,7 @@ data_store::data_store(data_store_config conf, std::size_t id, bool adaptive)
     }
 
     if (m_open_files.empty()) {
-        add_new_file(m_global_offset, static_cast<long>(m_conf.file_size));
+        add_new_file(0, static_cast<long>(m_conf.file_size));
     } else {
         const auto ret = ::pread(m_open_files.back(), &m_last_file_data_end,
                                  sizeof(m_last_file_data_end), 0);
@@ -87,13 +86,12 @@ address data_store::write(std::span<char> data) {
     return data_address;
 }
 
-std::size_t data_store::read(char* buffer, uint128_t pointer, size_t size) {
-    if (pointer < m_global_offset ||
-        pointer + size > m_global_offset + m_used.load()) {
+std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size_t size) {
+    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or pointer_traits::get_pointer(global_pointer) + size >  m_used.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
-    const auto [fd, seek] = get_file_offset_pair(pointer);
+    const auto [fd, seek] = get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
     ssize_t tr = 0;
     do {
@@ -120,7 +118,9 @@ void data_store::sync() {
     }
 
     lock.unlock();
-    fsync(m_open_files.back());
+
+
+    fdatasync(m_open_files.back());
 }
 
 size_t data_store::fetch_used_space() const noexcept {
@@ -138,16 +138,14 @@ data_store::~data_store() {
 }
 
 std::pair<int, long>
-data_store::get_file_offset_pair(const uint128_t& pointer) const {
-
-    const auto data_store_offset = (pointer - m_global_offset).get_low();
-    const auto fd_index = data_store_offset / m_conf.file_size;
-    const auto seek = data_store_offset - fd_index * m_conf.file_size;
+data_store::get_file_offset_pair(size_t pointer) const {
+    const auto fd_index = pointer / m_conf.file_size;
+    const auto seek = pointer - fd_index * m_conf.file_size;
     return {m_open_files.at(fd_index), seek};
 }
 
-int data_store::add_new_file(const uint128_t& offset, long file_size) {
-    const auto file_path = m_conf.working_dir / get_name(offset);
+int data_store::add_new_file(size_t offset, long file_size) {
+    const auto file_path = m_root / get_name(offset);
     const int fd = open(file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 
     if (fd <= 0) [[unlikely]] {
@@ -175,17 +173,17 @@ int data_store::add_new_file(const uint128_t& offset, long file_size) {
     return fd;
 }
 
-std::pair<size_t, uint128_t>
+std::pair<size_t, size_t>
 data_store::parse_file_name(const std::string& filename) {
-    const auto index1 = filename.find('_') + 1;
+    const auto index1 = filename.find_first_of('_') + 1;
     const auto index2 = filename.substr(index1).find('_') + index1 + 1;
     const auto id_str = filename.substr(index1, index2 - 1 - index1);
     const auto offset_str = filename.substr(index2);
-    return {std::stoul(id_str), big_int(offset_str)};
+    return {std::stoul(id_str), std::stoul(offset_str)};
 }
 
-std::string data_store::get_name(const uint128_t& offset) const {
-    return "data_" + std::to_string(m_data_id) + "_" + offset.to_string();
+std::string data_store::get_name(size_t offset) const {
+    return "data_" + std::to_string(m_storage_id) + "_" + std::to_string(offset);
 }
 
 bool data_store::is_data_file(const std::filesystem::path& path) {
@@ -195,7 +193,7 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
 uint64_t data_store::get_used_space() const noexcept { return m_used; }
 
 size_t data_store::get_available_space() const noexcept {
-    auto space = std::filesystem::space(m_conf.working_dir);
+    auto space = std::filesystem::space(m_root);
     return std::min(space.available, m_conf.max_data_store_size - m_used);
 }
 
@@ -206,18 +204,15 @@ data_store::alloc_t data_store::allocate(long size) {
     if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
         sync();
         m_used += m_conf.file_size - m_last_file_data_end + sizeof (m_last_file_data_end);
-        const auto new_offset =
-            m_global_offset + m_conf.file_size * m_open_files.size();
-        add_new_file(new_offset, m_conf.file_size);
+        add_new_file(m_conf.file_size * m_open_files.size(), m_conf.file_size);
     }
 
     alloc_t alloc;
     alloc.seek = m_last_file_data_end;
     alloc.fd = m_open_files.back();
     m_last_file_data_end = alloc.seek + size;
-    alloc.global_offset = m_global_offset +
-                          (m_open_files.size() - 1) * m_conf.file_size +
-                          alloc.seek;
+    alloc.global_offset = pointer_traits::get_global_pointer((m_open_files.size() - 1) * m_conf.file_size +
+                          alloc.seek, m_storage_id, m_data_store_id);
 
     m_used += size;
 

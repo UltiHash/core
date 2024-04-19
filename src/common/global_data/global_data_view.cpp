@@ -117,6 +117,7 @@ void global_data_view::sync(const address& addr) {
     std::unordered_map<std::shared_ptr<client>, address> node_address_map;
     std::vector<std::shared_ptr<client>> nodes;
 
+
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get_fragment(i);
         auto n = m_storage_services.get(frag.pointer);
@@ -132,6 +133,7 @@ void global_data_view::sync(const address& addr) {
             co_await m.get().send(STORAGE_SYNC_REQ, {});
             co_await m.get().recv_header();
         });
+
 }
 
 [[nodiscard]] uint128_t global_data_view::get_used_space() {
