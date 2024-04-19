@@ -1,10 +1,17 @@
 #ifndef UTIL_RANDOM_H
 #define UTIL_RANDOM_H
 
+#include "common/types/shared_buffer.h"
 #include <random>
 #include <string>
 
 namespace uh::cluster {
+
+// ---------------------------------------------------------------------
+
+shared_buffer<char>
+random_buffer(std::size_t length = 16,
+              const std::string& chars = "0123456789abcdefghijklmnopqrstuvwyz");
 
 // ---------------------------------------------------------------------
 

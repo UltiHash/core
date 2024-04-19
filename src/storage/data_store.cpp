@@ -120,6 +120,10 @@ size_t data_store::fetch_used_space() const noexcept {
 }
 
 address data_store::register_write(const shared_buffer<char>& data) {
+    if (m_used + data.size() > m_conf.max_data_store_size or
+        data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
+        throw std::bad_alloc();
+    }
     auto alloc = internal_allocate(data.size());
     address data_address;
     data_address.push_fragment(
