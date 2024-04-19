@@ -1,6 +1,7 @@
 #include "list_objects.h"
 #include "common/utils/strings.h"
 #include "common/utils/worker_pool.h"
+#include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -81,7 +82,7 @@ static http_response get_response(const std::vector<object>& objects,
                 contents_xml +=
                     "<Contents>\n"
                     "<LastModified>" +
-                    object._object->get().last_modified +
+                    iso8601_date(object._object->get().last_modified) +
                     "</LastModified>\n"
                     "<Key>" +
                     (encoding_type ? url_encode(object._object->get().name)

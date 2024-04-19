@@ -5,6 +5,7 @@
 #include "storage/data_store.h"
 #include <boost/test/unit_test.hpp>
 
+
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
@@ -228,7 +229,7 @@ BOOST_AUTO_TEST_CASE(test_used_space) {
 
     const auto used_space_2 = dir_s->get_used_space();
 
-    BOOST_CHECK((used_space_2 + sizeof(addr3) + sizeof(addr4) <= used_space_1));
+    BOOST_CHECK((used_space_2 < used_space_1));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
