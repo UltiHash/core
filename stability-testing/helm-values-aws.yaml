@@ -1,0 +1,166 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:               
+    - registry-credentials
+  ultihashSecret:
+    name: ultihash
+    key: license
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+
+stabilityTest:
+  nodeSelector:
+    workload-type: entrypoint
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  inputVolume:
+    type: S3
+    mountPath: /data
+    pvcName: stability-test-input
+  outputVolume:
+    pvcName: stability-test-output
+    mountPath: /testing/test
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    workload-type: entrypoint
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  persistence:
+    size: 5Gi
+    storageClass: ebs-csi-gp3
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    workload-type: entrypoint
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+  ingress:
+    enabled: false
+
+storage:
+  replicas: 2
+  storageClass: ebs-csi-gp3            
+  storageSize: 50Gi
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - storage
+        topologyKey: kubernetes.io/hostname                  
+  nodeSelector:
+    workload-type: storage
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+deduplicator:
+  replicas: 2
+  storageClass: ebs-csi-gp3
+  storageSize: 4Gi
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - deduplicator
+        topologyKey: kubernetes.io/hostname
+  nodeSelector:
+    workload-type: storage
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+directory:
+  replicas: 1
+  storageClass: ebs-csi-gp3
+  storageSize: 4Gi
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+collector:
+  nodeSelector:
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  presets:
+    kubeletMetrics:              
+      enabled: false           
+  config:                         
+    exporters:
+      otlphttp/uptrace: null
+    receivers:
+      prometheus: null
+      kubeletstats: null
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+        metrics:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+
+exporter:
+  enabled: false
+                   

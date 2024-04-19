@@ -1,0 +1,104 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:               
+    - registry-credentials
+  ultihashSecret:
+    name: ultihash
+    key: license
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+
+stabilityTest:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  inputVolume:
+    type: hostPath
+    mountPath: /data
+    hostPath: /data/corpora_test/stability-test
+  outputVolume:
+    pvcName: stability-test-output
+    mountPath: /testing/test
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+  ingress:
+    enabled: false
+
+storage:
+  replicas: 2
+  storageClass: local-path            
+  storageSize: 50Gi                  
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+deduplicator:
+  replicas: 2
+  storageClass: local-path
+  storageSize: 4Gi
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+directory:
+  replicas: 1
+  storageClass: local-path
+  storageSize: 4Gi
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+collector:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  presets:
+    kubeletMetrics:              
+      enabled: false           
+  config:                         
+    exporters:
+      otlphttp/uptrace: null
+    receivers:
+      prometheus: null
+      kubeletstats: null
+    service:
+      pipelines:
+        logs:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+        metrics:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+        traces:
+          exporters:
+            - debug
+          receivers:
+            - otlp
+
+exporter:
+  enabled: false
