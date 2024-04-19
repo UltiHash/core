@@ -5,6 +5,7 @@
 #include "big_int.h"
 #include "unique_buffer.h"
 
+#include <chrono>
 #include <span>
 #include <vector>
 #include <zpp_bits.h>
@@ -77,10 +78,25 @@ struct directory_list_buckets_message {
     std::vector<std::string> entities;
 };
 
+using utc_time = std::chrono::time_point<std::chrono::system_clock>;
+
 struct object {
     std::string name;
-    std::string last_modified;
+    utc_time last_modified;
     std::size_t size{};
+
+    constexpr static auto serialize(auto& archive, auto& self) {
+        std::size_t count = 0;
+        auto res = archive(self.name, count, self.size);
+
+        self.last_modified = utc_time(utc_time::duration(count));
+        return res;
+    }
+
+    constexpr static auto serialize(auto& archive, const auto& self) {
+        std::size_t count = self.last_modified.time_since_epoch().count();
+        return archive(self.name, count, self.size);
+    }
 };
 
 struct directory_list_objects_message {

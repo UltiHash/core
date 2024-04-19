@@ -14,7 +14,20 @@ namespace uh::cluster {
 
 struct object_meta {
     address addr;
-    std::string last_modified;
+    utc_time last_modified;
+
+    constexpr static auto serialize(auto& archive, auto& self) {
+        std::size_t count = 0;
+        auto res = archive(self.addr, count);
+
+        self.last_modified = utc_time(utc_time::duration(count));
+        return res;
+    }
+
+    constexpr static auto serialize(auto& archive, const auto& self) {
+        std::size_t count = self.last_modified.time_since_epoch().count();
+        return archive(self.addr, count);
+    }
 };
 
 class bucket {
@@ -66,10 +79,15 @@ public:
     void insert_object(const std::string& key, address addr) {
         object_meta obj;
         obj.addr = std::move(addr);
-        obj.last_modified = get_current_ISO8601_datetime();
+        obj.last_modified = utc_time::clock::now();
 
         std::vector<char> bytes;
-        zpp::bits::out{bytes, zpp::bits::size4b{}}(obj).or_throw();
+        /*
+         * Note: obj needs to be passed as const here, otherwise ZPP will call
+         * the de-serialization function and we will not write the data.
+         */
+        zpp::bits::out{bytes, zpp::bits::size4b{}}(std::as_const(obj))
+            .or_throw();
         const auto index = m_data_store.post_write(bytes);
 
         m_transaction_log.append(key, index,

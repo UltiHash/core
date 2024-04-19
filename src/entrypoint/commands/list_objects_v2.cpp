@@ -1,6 +1,7 @@
 #include "list_objects_v2.h"
 
 #include "common/utils/strings.h"
+#include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_response.h"
 
@@ -79,7 +80,7 @@ http_response get_response(const std::vector<object>& objects,
                 content_xml_string +=
                     "<Contents>\n"
                     "<LastModified>" +
-                    object._object->get().last_modified +
+                    iso8601_date(object._object->get().last_modified) +
                     "</LastModified>\n"
                     "<Key>" +
                     (encoding_type ? url_encode(object._object->get().name)

@@ -1,5 +1,6 @@
 #include "head_object.h"
 
+#include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -36,7 +37,8 @@ coro<void> head_object::handle(const http_request& req) const {
 
         http::response<http::empty_body> res{http::status::ok, 11};
         res.base().set("Content-Length", std::to_string(lst.objects[0].size));
-        res.base().set("Last-Modified", "Sun, 1 Jan 2006 12:00:00 GMT");
+        res.base().set("Last-Modified",
+                       imf_fixdate(lst.objects[0].last_modified));
 
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
