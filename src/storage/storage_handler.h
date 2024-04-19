@@ -149,7 +149,6 @@ private:
             auto p = std::make_shared<std::promise <void>>();
             boost::asio::post (m_threads, [i, this, p, &ds_addresses] () {
                 try {
-
                     m_data_stores[i]->wait_for_ongoing_writes(ds_addresses[i]);
                     m_data_stores[i]->sync();
                     p->set_value();

@@ -1,7 +1,6 @@
 #include "data_store.h"
 #include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
-#include "iostream"
 #include <mutex>
 
 namespace uh::cluster {
@@ -79,7 +78,7 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size
     }
     lk.unlock ();
 
-    const auto [fd, seek] = get_file_offset_pair(pointer);
+    const auto [fd, seek] = get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
     ssize_t tr = 0;
     do {
