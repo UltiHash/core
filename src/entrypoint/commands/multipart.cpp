@@ -36,21 +36,23 @@ coro<void> multipart::handle(http_request& req) const {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);
-    co_await req.read_body();
+    std::vector<char> buffer(req.content_length());
 
-    if (req.get_body_size() > 0) [[likely]] {
-        auto& body = req.get_body();
-        const auto dir_resp = co_await integration::integrate_data(
-            {body.begin(), body.size()}, m_collection);
+    if (req.content_length() > 0) [[likely]] {
+        auto size = co_await req.read_body(buffer);
+        buffer.resize(size);
+
+        const auto dir_resp =
+            co_await integration::integrate_data(buffer, m_collection);
 
         m_collection.server_state.m_uploads.append_upload_part_info(
             req.get_uri().get_query_parameters().at("uploadId"),
             std::stoi(req.get_uri().get_query_parameters().at("partNumber")),
-            dir_resp, req.get_body());
+            dir_resp, buffer);
     }
 
     http_response res;
-    res.set_etag(calculate_md5(req.get_body()));
+    res.set_etag(calculate_md5(buffer));
 
     co_await req.respond(res.get_prepared_response());
 }

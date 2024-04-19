@@ -90,7 +90,7 @@ bool upload_state::contains_upload(const std::string& id) {
 
 void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
                                            const dedupe_response& resp,
-                                           const std::string& data) {
+                                           std::span<char> data) {
 
     clear_infos();
 

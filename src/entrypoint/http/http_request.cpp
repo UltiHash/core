@@ -24,45 +24,31 @@ http_request::http_request(
     : m_stream(stream),
       m_req(std::move(req)),
       m_buffer(std::move(buffer)),
-      m_uri(m_req) {}
+      m_uri(m_req),
+      m_body_read(0ull) {}
 
 const uri& http_request::get_uri() const { return m_uri; }
 
-const std::string& http_request::get_body() const { return m_body; }
-
-std::size_t http_request::get_body_size() const { return m_body.size(); }
-
 method http_request::get_method() const { return m_uri.get_method(); }
 
-coro<void> http_request::read_body() {
-    try {
-        std::size_t length = content_length();
-        if (length == 0) {
-            co_return;
-        }
+coro<std::size_t> http_request::read_body(std::span<char> buffer) {
+    std::size_t offs = 0;
 
-        m_body.append(length, 0);
+    if (m_buffer.size() > 0) {
+        auto read = asio::buffer_copy(asio::buffer(buffer), m_buffer.data());
+        m_buffer.clear();
 
-        auto data_left = length - m_buffer.size();
-
-        // copy remaining bytes from flat buffer to body_buffer
-        boost::asio::buffer_copy(boost::asio::buffer(m_body), m_buffer.data());
-        auto size_transferred = co_await boost::asio::async_read(
-            m_stream,
-            boost::asio::buffer(m_body.data() + m_buffer.size(), data_left),
-            boost::asio::transfer_exactly(data_left),
-            boost::asio::use_awaitable);
-
-        if (size_transferred + m_buffer.size() != length) {
-            throw std::runtime_error("error reading the http body");
-        }
-    } catch (const std::out_of_range&) {
-        throw std::runtime_error(
-            "please specify the content length on requests as other methods "
-            "without content length are currently not supported");
+        m_body_read += read;
+        offs += read;
     }
 
-    co_return;
+    auto count = std::min(content_length() - m_body_read, buffer.size() - offs);
+
+    auto read = co_await asio::async_read(
+        m_stream, asio::buffer(buffer.data() + offs, count),
+        asio::use_awaitable);
+    m_body_read += read;
+    co_return offs + read;
 }
 
 coro<void>

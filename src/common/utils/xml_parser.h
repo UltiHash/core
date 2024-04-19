@@ -4,6 +4,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <pugixml.hpp>
 #include <span>
+#include <string_view>
 
 namespace uh::cluster {
 namespace pt = boost::property_tree;
@@ -12,7 +13,7 @@ class xml_parser {
 public:
     xml_parser() = default;
 
-    bool parse(const std::string& body);
+    bool parse(std::string_view body);
 
     std::vector<std::reference_wrapper<const pt::ptree>>
     get_nodes(pt::ptree::path_type&& path);

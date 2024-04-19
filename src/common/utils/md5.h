@@ -24,7 +24,8 @@ private:
  * Compute MD5 checksum of provided string and return it as hexadecimal string.
  * @throws on error
  */
-std::string calculate_md5(const std::string& input);
+std::string calculate_md5(std::span<const char> input);
+std::string calculate_md5(const std::string& s);
 
 } // namespace uh::cluster
 

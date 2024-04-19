@@ -55,12 +55,16 @@ std::string md5::finalize() {
     return hex_md5;
 }
 
-std::string calculate_md5(const std::string& input) {
+std::string calculate_md5(std::span<const char> input) {
     md5 hash;
 
-    hash.consume({input.data(), input.size()});
+    hash.consume(input);
 
     return hash.finalize();
+}
+
+std::string calculate_md5(const std::string& s) {
+    return calculate_md5({s.begin(), s.size()});
 }
 
 } // namespace uh::cluster

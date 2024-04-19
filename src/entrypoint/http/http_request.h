@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <map>
+#include <span>
 
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
@@ -18,13 +18,9 @@ public:
 
     [[nodiscard]] const uri& get_uri() const;
 
-    [[nodiscard]] const std::string& get_body() const;
-
-    [[nodiscard]] std::size_t get_body_size() const;
-
     [[nodiscard]] method get_method() const;
 
-    coro<void> read_body();
+    coro<std::size_t> read_body(std::span<char> buffer);
 
     coro<void> respond(const http::response<http::string_body>& resp);
 
@@ -34,7 +30,6 @@ public:
 
     /** Payload that was read while reading the request headers.
      */
-    const boost::beast::flat_buffer& payload() const { return m_buffer; }
     std::size_t content_length() const {
         return std::stoul(m_req.at("Content-Length"));
     }
@@ -53,7 +48,7 @@ private:
     boost::beast::flat_buffer m_buffer;
 
     uri m_uri;
-    std::string m_body{};
+    std::size_t m_body_read;
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);

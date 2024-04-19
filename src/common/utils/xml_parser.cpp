@@ -1,12 +1,16 @@
 #include "xml_parser.h"
 
+#include <boost/iostreams/stream.hpp>
+
 namespace uh::cluster {
-bool xml_parser::parse(const std::string& body) {
+bool xml_parser::parse(std::string_view body) {
 
     bool flag;
     try {
-        std::istringstream string_stream(body);
-        pt::read_xml(string_stream, m_tree);
+        boost::iostreams::stream<boost::iostreams::basic_array_source<char>>
+            stream(body.begin(), body.size());
+
+        pt::read_xml(stream, m_tree);
         flag = true;
     } catch (const std::exception& e) {
         flag = false;
