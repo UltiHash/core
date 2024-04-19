@@ -2,7 +2,6 @@
 #include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
 #include <mutex>
-#include "iostream"
 
 namespace uh::cluster {
 
@@ -65,31 +64,19 @@ data_store::data_store(data_store_config conf, uint32_t service_id, uint32_t dat
     m_used = fetch_used_space();
 }
 
-address data_store::write(std::span<char> data) {
-
-    if (m_used + data.size() > m_conf.max_data_store_size or
-        data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
-        throw std::bad_alloc();
-    }
-
-    auto alloc = allocate(static_cast<long>(data.size()));
-
-    for (long written = 0; written < static_cast<long>(data.size());
-         written += ::pwrite(alloc.fd, data.data() + written,
-                             data.size() - written, alloc.seek + written))
-        ;
-
-    address data_address;
-    data_address.push_fragment(
-        {.pointer = alloc.global_offset, .size = data.size()});
-
-    return data_address;
-}
-
 std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size_t size) {
-    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or pointer_traits::get_pointer(global_pointer) + size >  m_used.load()) {
+    const auto pointer = pointer_traits::get_pointer(global_pointer);
+    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or pointer + size >  m_used.load()) {
         throw std::out_of_range("pointer is out of range");
     }
+
+    std::unique_lock <std::mutex> lk (m_async_mutex);
+    if (const auto [async_offset, data] = find_async_data(pointer, size); data.data() != nullptr) {
+        const auto offset = pointer - async_offset;
+        std::memcpy(buffer, data.data() + offset, size);
+        return size;
+    }
+    lk.unlock ();
 
     const auto [fd, seek] = get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
@@ -105,6 +92,8 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size
 
     return tr;
 }
+
+
 
 void data_store::sync() {
 
@@ -127,6 +116,52 @@ size_t data_store::fetch_used_space() const noexcept {
     const auto prev_files_data_size =
         m_conf.file_size * (m_open_files.size() - 1);
     return prev_files_data_size + m_last_file_data_end;
+}
+
+address data_store::register_write(const shared_buffer<char>& data) {
+    if (m_used + data.size() > m_conf.max_data_store_size or
+        data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
+        throw std::bad_alloc();
+    }
+    auto alloc = internal_allocate(data.size());
+    address data_address;
+    data_address.push_fragment(
+        {.pointer = alloc.global_offset, .size = data.size()});
+
+    std::lock_guard <std::mutex> lk (m_async_mutex);
+    m_ongoing_async_writes.emplace(pointer_traits::get_pointer(alloc.global_offset), std::make_pair(alloc, data));
+    return data_address;
+}
+
+void data_store::perform_write(const address& addr) {
+    if (addr.size() != 1) {
+        throw std::runtime_error ("Invalid address size");
+    }
+
+    const auto pointer = pointer_traits::get_pointer(addr.first().pointer);
+    std::unique_lock <std::mutex> lk (m_async_mutex);
+    auto& [alloc, data] = m_ongoing_async_writes.at (pointer);
+    lk.unlock();
+
+    for (long written = 0; written < static_cast<long>(data.size());
+         written += ::pwrite(alloc.fd, data.data() + written,
+                             data.size() - written, alloc.seek + written))
+        ;
+    std::lock_guard <std::mutex> rm_lk (m_async_mutex);
+    m_ongoing_async_writes.erase(pointer);
+    m_async_cv.notify_all();
+}
+
+void data_store::wait_for_ongoing_writes(const address& addr) {
+    for (size_t i = 0; i < addr.size(); ++i) {
+        const auto frag = addr.get_fragment(i);
+        const auto pointer = pointer_traits::get_pointer(frag.pointer);
+
+        std::unique_lock <std::mutex> lk (m_async_mutex);
+        m_async_cv.wait(lk, [this, pointer, size=frag.size] () {
+            return find_async_data(pointer, size).first == 0;
+        });
+    }
 }
 
 data_store::~data_store() {
@@ -197,7 +232,7 @@ size_t data_store::get_available_space() const noexcept {
     return std::min(space.available, m_conf.max_data_store_size - m_used);
 }
 
-data_store::alloc_t data_store::allocate(long size) {
+data_store::alloc_t data_store::internal_allocate(long size) {
 
     std::lock_guard<std::mutex> lock(m_allocate_mutex);
 
@@ -217,6 +252,18 @@ data_store::alloc_t data_store::allocate(long size) {
     m_used += size;
 
     return alloc;
+}
+
+std::pair<size_t, shared_buffer<char>>
+data_store::find_async_data(size_t pointer, size_t size) {
+    auto async_data = m_ongoing_async_writes.upper_bound(pointer);
+    if (async_data != m_ongoing_async_writes.cbegin()) {
+        async_data --;
+        if (async_data->first + async_data->second.second.size() >= pointer + size) {
+            return {async_data->first, async_data->second.second};
+        }
+    }
+    return {0, nullptr};
 }
 
 } // end namespace uh::cluster

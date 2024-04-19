@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "bucket tests"
 
+#include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "directory/bucket.h"
 #include "storage/data_store.h"
@@ -35,8 +36,8 @@ struct config_fixture {
         bt = std::make_unique<bucket>(dir.path(), BUCKET_NAME,
                                       get_bucket_config());
 
-        char data1[] = "Would be a shame if we lost this data!";
-        original_addr = ds->write(data1);
+        auto data1 = random_buffer (30);
+        original_addr = ds->register_write(data1);
 
         bt->insert_object(KEY_NAME, original_addr);
     }

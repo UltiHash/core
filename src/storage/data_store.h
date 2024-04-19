@@ -2,6 +2,9 @@
 #define CORE_DATA_STORE_H
 
 #include "common/utils/free_spot_manager.h"
+#include "common/types/shared_buffer.h"
+
+#include <condition_variable>
 #include <atomic>
 #include <cstring>
 #include <fcntl.h>
@@ -27,20 +30,31 @@ public:
     data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id);
 
     /**
-     * @brief Writes the data into the data store and returns the address of
-     * the data written. Data might be split up and stored at different
-     * locations. This is why we return an address struct which is simply a
-     * collection of pointers and sizes.
-     * @param data: span of characters
-     * @return address: collection of pointers and sizes
-     *
-     * @throws std::bad_alloc: if allocated size exceeds on write.
-     * @throws std::exception: corrupted storage
+     * Allocates for the given data size and stores the
+     * data, the allocation, and internal allocation info in the
+     * ongoing async writes queue.
      *
      * @affects get_used_space()
      * @affects get_available_space()
+     *
+     * @param data
+     * @return  allocated address
      */
-    address write(std::span<char> data);
+    address register_write (const shared_buffer <char>& data);
+
+    /**
+     * Writes the data that is registered by the given address to disk.
+     *
+     * @param addr the address that the data is registered with
+     */
+    void perform_write (const address& addr);
+
+    /**
+     * Waits for completion of async write operations for the given address
+     *
+     * @param addr
+     */
+    void wait_for_ongoing_writes (const address& addr);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -86,7 +100,10 @@ private:
         uint128_t global_offset;
     };
 
-    alloc_t allocate(long size);
+    alloc_t internal_allocate(long size);
+
+
+    std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size);
 
 
 
@@ -113,6 +130,9 @@ private:
     std::atomic<size_t> m_used{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;
+    std::mutex m_async_mutex;
+    std::condition_variable m_async_cv;
+    std::map <size_t, std::pair <alloc_t, shared_buffer<char>>> m_ongoing_async_writes;
 };
 
 } // end namespace uh::cluster

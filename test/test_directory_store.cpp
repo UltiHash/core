@@ -1,10 +1,10 @@
 #define BOOST_TEST_MODULE "directory_store tests"
 
+#include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "directory/directory_store.h"
 #include "storage/data_store.h"
 #include <boost/test/unit_test.hpp>
-
 
 // ------------- Tests Suites Follow --------------
 
@@ -37,24 +37,20 @@ struct directory_store_fixture {
         ds = std::make_unique<data_store>(make_data_store_config(), 0, 0);
         dir_s = make_directory_store();
 
-        fill_random_dirstore(data1, sizeof(data1));
-        fill_random_dirstore(data2, sizeof(data2));
-        fill_random_dirstore(data3, sizeof(data3));
-        fill_random_dirstore(data4, sizeof(data4));
-        fill_random_dirstore(data5, sizeof(data5));
-        fill_random_dirstore(data6, sizeof(data6));
-        fill_random_dirstore(data7, sizeof(data7));
-        fill_random_dirstore(data8, sizeof(data8));
-        fill_random_dirstore(data9, sizeof(data9));
-        fill_random_dirstore(data10, sizeof(data10));
-        fill_random_dirstore(data11, sizeof(data11));
+        data1 = random_buffer(512);
+        data2 = random_buffer(1024);
+        data3 = random_buffer(164);
+        data4 = random_buffer(1520);
+        data5 = random_buffer(2572);
+        data6 = random_buffer(3021);
+        data7 = random_buffer(102);
+        data8 = random_buffer(5021);
+        data9 = random_buffer(2048);
+        data10 = random_buffer(3202);
+        data11 = random_buffer(2021);
+
     }
 
-    static void fill_random_dirstore(char* buf, size_t size) {
-        for (size_t i = 0; i < size; ++i) {
-            buf[i] = rand() & 0xff;
-        }
-    }
 
     static bool find(const auto& key, const auto& objects) {
         for (const auto& obj : objects) {
@@ -78,35 +74,36 @@ struct directory_store_fixture {
 
     void write_all() {
         dir_s->add_bucket("b1");
-        dir_s->insert("b1", "k1", addr1 = ds->write(data1));
-        dir_s->insert("b1", "k2", addr2 = ds->write(data2));
-        dir_s->insert("b1", "k3", addr3 = ds->write(data3));
+        dir_s->insert("b1", "k1", addr1 = ds->register_write(data1));
+        dir_s->insert("b1", "k2", addr2 = ds->register_write(data2));
+        dir_s->insert("b1", "k3", addr3 = ds->register_write(data3));
         dir_s->add_bucket("b2");
-        dir_s->insert("b2", "k4", addr4 = ds->write(data4));
-        dir_s->insert("b2", "k5", addr5 = ds->write(data5));
-        dir_s->insert("b2", "k6", addr6 = ds->write(data6));
-        dir_s->insert("b2", "k7", addr7 = ds->write(data7));
+        dir_s->insert("b2", "k4", addr4 = ds->register_write(data4));
+        dir_s->insert("b2", "k5", addr5 = ds->register_write(data5));
+        dir_s->insert("b2", "k6", addr6 = ds->register_write(data6));
+        dir_s->insert("b2", "k7", addr7 = ds->register_write(data7));
         dir_s->add_bucket("b3");
-        dir_s->insert("b3", "k8", addr8 = ds->write(data8));
-        dir_s->insert("b3", "k9", addr9 = ds->write(data9));
-        dir_s->insert("b3", "k10", addr10 = ds->write(data10));
+        dir_s->insert("b3", "k8", addr8 = ds->register_write(data8));
+        dir_s->insert("b3", "k9", addr9 = ds->register_write(data9));
+        dir_s->insert("b3", "k10", addr10 = ds->register_write(data10));
     }
 
     temp_directory m_dir;
     std::unique_ptr<data_store> ds;
     std::unique_ptr<directory_store> dir_s;
 
-    char data1[512];
-    char data2[1024];
-    char data3[164];
-    char data4[1520];
-    char data5[2572];
-    char data6[3021];
-    char data7[102];
-    char data8[5021];
-    char data9[2048];
-    char data10[3202];
-    char data11[2021];
+    shared_buffer <char> data1;
+    shared_buffer <char> data2;
+    shared_buffer <char> data3;
+    shared_buffer <char> data4;
+    shared_buffer <char> data5;
+    shared_buffer <char> data6;
+    shared_buffer <char> data7;
+    shared_buffer <char> data8;
+    shared_buffer <char> data9;
+    shared_buffer <char> data10;
+    shared_buffer <char> data11;
+
     address addr1, addr2, addr3, addr4, addr5, addr6, addr7, addr8, addr9,
         addr10;
 };
