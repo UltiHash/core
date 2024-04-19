@@ -4,15 +4,15 @@
 
 namespace uh::cluster {
 
-uri::uri(const http::request_parser<http::empty_body>& req) {
-    if (req.get().base().version() != 11) {
+uri::uri(const http::request_parser<http::empty_body>::value_type& req) {
+    if (req.base().version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    m_method = req.get().method();
+    m_method = req.method();
 
-    auto target = req.get().target();
+    auto target = req.target();
 
     auto query_index = target.find('?');
 

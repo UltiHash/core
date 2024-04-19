@@ -13,6 +13,9 @@ template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class http_request {
 public:
+    static coro<std::unique_ptr<http_request>>
+    create(boost::asio::ip::tcp::socket& s);
+
     [[nodiscard]] const uri& get_uri() const;
 
     [[nodiscard]] const std::string& get_body() const;
@@ -33,20 +36,20 @@ public:
      */
     const boost::beast::flat_buffer& payload() const { return m_buffer; }
     std::size_t content_length() const {
-        return m_req.content_length().value();
+        return std::stoul(m_req.at("Content-Length"));
     }
 
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
-    friend coro<std::unique_ptr<http_request>>
-    read_request(boost::asio::ip::tcp::socket&);
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
-    http_request(boost::asio::ip::tcp::socket& stream);
+    http_request(boost::asio::ip::tcp::socket& stream,
+                 http::request_parser<http::empty_body>::value_type&& req,
+                 boost::beast::flat_buffer&& buffer);
 
     boost::asio::ip::tcp::socket& m_stream;
-    http::request_parser<http::empty_body> m_req;
+    http::request_parser<http::empty_body>::value_type m_req;
     boost::beast::flat_buffer m_buffer;
 
     uri m_uri;
@@ -54,9 +57,6 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);
-
-coro<std::unique_ptr<http_request>>
-read_request(boost::asio::ip::tcp::socket& s);
 
 } // namespace uh::cluster
 

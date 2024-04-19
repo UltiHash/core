@@ -42,7 +42,7 @@ public:
 
             for (;;) {
 
-                auto req = co_await read_request(s);
+                auto req = co_await http_request::create(s);
                 LOG_DEBUG() << s.remote_endpoint() << " read request: " << *req;
 
                 co_await handle_request(*req);
