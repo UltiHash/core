@@ -15,10 +15,11 @@ struct storage_config {
         .bind_address = "0.0.0.0",
     };
 
+    int data_store_count = 2;
     data_store_config data_store = {
         .working_dir = "/var/lib/uh/storage",
         .file_size = 1 * GIBI_BYTE,
-        .max_data_store_size = DATASTORE_MAX_SIZE,
+        .max_data_store_size = 1ul * PEBI_BYTE,
     };
 };
 

@@ -10,6 +10,7 @@
 
 #include "common/network/client.h"
 #include "common/telemetry/log.h"
+#include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "namespace.h"
 
@@ -40,47 +41,23 @@ public:
 
 template <typename client> class services_index<STORAGE_SERVICE, client> {
 public:
-    explicit services_index(const uint128_t& max_data_store_size)
-        : m_max_data_store_size(max_data_store_size) {}
 
     void add(const std::size_t& id, std::shared_ptr<client> cl) {
-        m_offsets.emplace(m_max_data_store_size * id, std::move(cl));
+        m_clients.emplace(id, std::move(cl));
     }
 
     void erase(const std::size_t& id) {
-        m_offsets.erase(m_max_data_store_size * id);
+        m_clients.erase(id);
     }
 
     [[nodiscard]] std::shared_ptr<client> get(const uint128_t& pointer) const {
 
-        auto it = m_offsets.upper_bound(pointer);
-
-        if (it == m_offsets.cbegin()) [[unlikely]] {
-            throw std::out_of_range("pointer out of range");
-        }
-
-        if (it == m_offsets.end()) {
-            auto last = m_offsets.rbegin();
-            if (!(last->first > pointer) &&
-                last->first + m_max_data_store_size > pointer) {
-                return last->second;
-            }
-
-            throw std::out_of_range("pointer out of range");
-        }
-
-        it = std::prev(it);
-        if (!(it->first > pointer) &&
-            it->first + m_max_data_store_size > pointer) {
-            return it->second;
-        }
-
-        throw std::out_of_range("pointer out of range");
+        auto id = pointer_traits::get_service_id (pointer);
+        return m_clients.at(id);
     }
 
 private:
-    std::map<uint128_t, std::shared_ptr<client>> m_offsets;
-    const uint128_t m_max_data_store_size;
+    std::map <uint32_t, std::shared_ptr<client>> m_clients;
 };
 
 template <role r, typename client = uh::cluster::client> class services {

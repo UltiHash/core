@@ -25,7 +25,7 @@ public:
           m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd_client),
           m_server(
               sc.server,
-              std::make_unique<storage_handler>(sc.data_store, m_service_id),
+              std::make_unique<storage_handler>(sc.data_store, m_service_id, sc.data_store_count),
               m_ioc) {}
 
     void run() {

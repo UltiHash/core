@@ -42,7 +42,7 @@ struct data_store_fixture {
 
     [[nodiscard]] auto make_data_store() const {
         return std::make_unique<data_store>(make_data_store_config(),
-                                            DATA_STORE_ID);
+                                            DATA_STORE_ID, 0);
     }
 
     void setup() {

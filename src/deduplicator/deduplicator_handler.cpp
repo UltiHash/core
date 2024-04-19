@@ -123,7 +123,7 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
         responses[0].addr.append_address(responses[i].addr);
         responses[0].effective_size += responses[i].effective_size;
     }
-
+    co_await m_dedupe_workers.post_in_workers([this, &responses](){m_storage.sync(responses[0].addr);});
     co_await m.send_dedupe_response(responses[0]);
 }
 
@@ -160,11 +160,8 @@ dedupe_response deduplicator_handler::deduplicate(std::string_view data) {
     }
 
     fragments.flush(m_storage, m_fragment_set);
-    auto addr = fragments.make_address();
-
-    m_storage.sync(addr);
     dedupe_response result{.effective_size = fragments.effective_size(),
-                           .addr = std::move (addr)};
+                           .addr = fragments.make_address()};
 
     return result;
 }

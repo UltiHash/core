@@ -14,7 +14,7 @@ public:
           m_etcd_client("http://127.0.0.1:2379"),
           m_storage_services(m_ioc,
                              m_gdv_config.storage_service_connection_count,
-                             m_etcd_client, m_gdv_config.max_data_store_size) {}
+                             m_etcd_client) {}
 
     ~global_data_view_fixture() { teardown(); }
 
@@ -29,6 +29,7 @@ public:
             storage_cfg.server.port = 10000 + i;
             storage_cfg.data_store.working_dir =
                 service_cfg.working_dir / "storage";
+            storage_cfg.data_store_count = m_data_store_count;
             m_storage_instances.emplace_back(
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
@@ -92,6 +93,7 @@ public:
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    const int m_data_store_count = 2;
 
 private:
     global_data_view_config m_gdv_config;

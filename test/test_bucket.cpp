@@ -31,7 +31,7 @@ struct config_fixture {
     }
 
     void setup() {
-        ds = std::make_unique<data_store>(make_data_store_config(), 0);
+        ds = std::make_unique<data_store>(make_data_store_config(), 0, 0);
         bt = std::make_unique<bucket>(dir.path(), BUCKET_NAME,
                                       get_bucket_config());
 
