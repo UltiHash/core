@@ -1,12 +1,9 @@
 name: Stability Testing On Premise
 
 on:
-  push:
-    branches:
-    - eng-364
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
-
-  # Need to run nightly
 
 env:
   ENVIRONMENT_NAME: stability-testing-x86-64

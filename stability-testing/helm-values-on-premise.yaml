@@ -8,6 +8,10 @@ global:
     key: license
   logLevel: DEBUG
   telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
 
 stabilityTest:
   nodeSelector:
