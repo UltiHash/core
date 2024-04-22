@@ -28,6 +28,8 @@ enum message_type : uint8_t {
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
     STORAGE_USED_REQ = 5,
+    STORAGE_AVAILABLE_REQ = 7,
+
 
     DEDUPLICATOR_REQ = 6,
 

@@ -35,6 +35,15 @@ public:
         co_return num;
     }
 
+    template <typename T>
+    requires std::is_arithmetic_v <T>
+    coro<T> recv_primitive(const header& message_header) {
+        T val;
+        register_read_buffer(val);
+        co_await recv_buffers(message_header);
+        co_return val;
+    }
+
     coro<dedupe_response> recv_dedupe_response(const header& message_header) {
         dedupe_response dedupe_resp;
         register_read_buffer(dedupe_resp.effective_size);
@@ -101,6 +110,13 @@ public:
 
     coro<void> send_uint128_t(const message_type type, const uint128_t num) {
         register_write_buffer(num.get_data(), 2);
+        co_await send_buffers(type);
+    }
+
+    template <typename T>
+    requires std::is_arithmetic_v <T>
+    coro<void> send_primitive(const message_type type, const T val) {
+        register_write_buffer(val);
         co_await send_buffers(type);
     }
 

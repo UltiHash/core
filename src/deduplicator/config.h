@@ -23,7 +23,7 @@ struct deduplicator_config {
     std::size_t max_fragment_size = 8 * KIBI_BYTE;
     std::size_t dedupe_worker_minimum_data_size = 128 * KIBI_BYTE;
     std::size_t worker_thread_count = 16ul;
-    std::size_t fragment_buffer_size = 256ul * MEBI_BYTE;
+    std::size_t fragment_buffer_size = 1ul * MEBI_BYTE;
 };
 
 } // namespace uh::cluster
