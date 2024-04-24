@@ -11,6 +11,12 @@ namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
+class transport_decoder {
+public:
+    ~transport_decoder() = default;
+    virtual coro<std::size_t> read(std::span<char> dest) = 0;
+};
+
 class http_request {
 public:
     static coro<std::unique_ptr<http_request>>
@@ -41,14 +47,13 @@ private:
 
     http_request(boost::asio::ip::tcp::socket& stream,
                  http::request_parser<http::empty_body>::value_type&& req,
-                 boost::beast::flat_buffer&& buffer);
+                 boost::beast::flat_buffer&& initial);
 
     boost::asio::ip::tcp::socket& m_stream;
     http::request_parser<http::empty_body>::value_type m_req;
-    boost::beast::flat_buffer m_buffer;
+    std::unique_ptr<transport_decoder> m_decoder;
 
     uri m_uri;
-    std::size_t m_body_read;
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);

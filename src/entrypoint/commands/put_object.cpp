@@ -100,8 +100,10 @@ coro<void> put_object::handle(http_request& req) const {
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
+        auto tag = hash.finalize();
+        LOG_DEBUG() << "etag: " << tag;
 
-        res.set_etag(hash.finalize());
+        res.set_etag(tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
@@ -159,14 +161,14 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
                                                    md5& hash) const {
     auto content_length = req.content_length();
 
-    if (content_length == 0) {
-        co_return dedupe_response();
-    }
-
     std::vector<char> buffer(content_length);
     auto read = co_await req.read_body(buffer);
     buffer.resize(read);
     hash.consume(buffer);
+
+    if (buffer.empty()) {
+        co_return dedupe_response();
+    }
 
     co_return co_await integration::integrate_data(buffer, m_collection);
 }

@@ -28,6 +28,16 @@ std::string url_encode(const std::string&) noexcept;
  */
 bool to_bool(std::string str_to_eval);
 
+/**
+ * Return a string representing the provided char as hex string.
+ */
+std::string to_hex(unsigned char value);
+
+/**
+ * Return a string representing the provided buffer as hex string.
+ */
+std::string to_hex(std::span<char> buffer);
+
 } // namespace uh::cluster
 
 #endif

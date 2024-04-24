@@ -1,4 +1,6 @@
 #include "md5.h"
+#include "common/utils/strings.h"
+
 #include <openssl/err.h>
 #include <stdexcept>
 
@@ -6,22 +8,12 @@ namespace uh::cluster {
 
 namespace {
 
-std::string to_hex(unsigned char value) {
-    static const char hexChars[] = "0123456789abcdef";
-    std::string result;
-    result.push_back(hexChars[value >> 4]);
-    result.push_back(hexChars[value & 0xf]);
-    return result;
-}
-
 void throw_from_error(const std::string& prefix) {
     char buffer[256];
     ERR_error_string_n(ERR_get_error(), buffer, sizeof(buffer));
 
     throw std::runtime_error(prefix + ": " + std::string(buffer));
 }
-
-constexpr const char* EMPTY_MD5_HASH = "d41d8cd98f00b204e9800998ecf8427e";
 
 } // namespace
 
