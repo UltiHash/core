@@ -2,10 +2,11 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/network/client.h"
-#include "common/registry/services.h"
 #include "common/types/shared_buffer.h"
 #include "common/utils/worker_pool.h"
 #include "lru_cache.h"
+#include "storage/storage_interface.h"
+#include "storage/tmp_services.h"
 #include <map>
 
 namespace uh::cluster {
@@ -29,15 +30,12 @@ public:
      * global_data_view_config, providing all tunable configuration parameters.
      * @param ioc A reference to an instance of boost::asio::io_context used for
      * spawning co-routines.
-     * @param workers A reference to a worker_pool, which must be constructed
-     * from the same boost::asio::io_context instance #ioc is referencing.
      * @param storage_services A reference to an instance of
      * services<STORAGE_SERVICE> used for service discovery.
      */
     explicit global_data_view(const global_data_view_config& config,
                               boost::asio::io_context& ioc,
-                              worker_pool& workers,
-                              services<STORAGE_SERVICE>& storage_services);
+                              tmp_services<storage_interface>& storage_services);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -114,6 +112,13 @@ public:
     [[nodiscard]] uint128_t get_used_space();
 
     /**
+     * @brief Computes available space across all available storage service
+     * instances.
+     * @return The available space across all available storage service instances.
+     */
+    [[nodiscard]] uint128_t get_available_space();
+
+    /**
      * @brief Provides access to the I/O context used by the global_data_view
      * @return A reference to the boost::asio::io_context used by the
      * global_data_view
@@ -131,8 +136,7 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    worker_pool& m_workers;
-    services<STORAGE_SERVICE>& m_storage_services;
+    tmp_services<storage_interface>& m_storage_services;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 };

@@ -53,7 +53,7 @@ public:
      * @param data
      * @return  allocated address
      */
-    address register_write (const std::span <char>& data);
+    address register_write (const std::string_view& data);
 
     /**
      * Writes the data that is registered by the given address to disk.

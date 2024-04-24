@@ -133,7 +133,7 @@ address data_store::register_write(const shared_buffer<char>& data) {
     return data_address;
 }
 
-address data_store::register_write(const std::span<char>& data) {
+address data_store::register_write(const std::string_view& data) {
     shared_buffer <char> buffer (data.size());
     std::memcpy(buffer.data(), data.data(), data.size());
     return register_write(buffer);

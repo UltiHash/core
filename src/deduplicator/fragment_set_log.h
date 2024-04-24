@@ -1,7 +1,6 @@
 #ifndef UH_CLUSTER_FRAGMENT_SET_LOG_H
 #define UH_CLUSTER_FRAGMENT_SET_LOG_H
 
-#include "common/global_data/global_data_view.h"
 #include "common/types/common_types.h"
 #include "config.h"
 #include "fragment_set_element.h"
@@ -10,6 +9,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <mutex>
 
 namespace uh::cluster {
