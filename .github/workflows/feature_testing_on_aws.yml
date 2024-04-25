@@ -1,12 +1,9 @@
 name: Feature Testing AWS
 
 on:
-  push:
-  # Need to run the workflow daily
-  # Manual trigger is also required
-  #schedule:
-  #  - cron: '0 0 * * 1'
-  #workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
 
 env:
   ENVIRONMENT_NAME: feature-testing-aarch64

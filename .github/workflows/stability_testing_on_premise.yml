@@ -2,7 +2,7 @@ name: Stability Testing On Premise
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
 
 env:
