@@ -108,6 +108,7 @@ coro<void> delete_objects::handle(http_request& req) const {
     }
 
     auto res = get_response(success, failure);
+    LOG_DEBUG() "delete_objects: " << res;
     co_await req.respond(res.get_prepared_response());
 }
 

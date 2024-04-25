@@ -29,6 +29,8 @@ coro<void> delete_object::handle(http_request& req) const {
         co_await mgr->recv_header();
 
         http_response res;
+
+        LOG_DEBUG() << "delete_object response: " << res;
         co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         switch (*e.error()) {
