@@ -45,8 +45,8 @@ coro<void> head_object::handle(const http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found,
-                                command_error::object_not_found);
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
     }
 }
 

@@ -46,8 +46,8 @@ coro<void> list_multipart::handle(http_request& req) const {
     auto ongoing =
         m_collection.server_state.m_uploads.list_multipart_uploads(bucket_name);
     if (ongoing.empty()) {
-        throw command_exception(http::status::not_found,
-                                command_error::no_mp_uploads);
+        throw command_exception(http::status::not_found, "NoMultiPartUploads",
+                                "no multipart uploads");
     }
 
     auto res = get_response(bucket_name, ongoing);

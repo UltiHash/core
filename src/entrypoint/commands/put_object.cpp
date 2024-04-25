@@ -112,17 +112,7 @@ coro<void> put_object::handle(http_request& req) const {
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << req.get_uri().get_bucket_id()
                     << "`: " << e;
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(beast::http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::storage_limit_exceeded:
-            throw command_exception(http::status::insufficient_storage,
-                                    command_error::insufficient_storage);
-
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

@@ -75,14 +75,16 @@ void uri::extract_bucket_and_object() {
     if (!m_bucket_id.empty()) {
         if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63) {
             throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
+                                    "InvalidBucketName",
+                                    "bucket name has invalid characters");
         }
 
         std::regex bucket_pattern(
             R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
         if (!std::regex_match(m_bucket_id, bucket_pattern)) {
             throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
+                                    "InvalidBucketName",
+                                    "bucket name has invalid characters");
         }
     }
 }

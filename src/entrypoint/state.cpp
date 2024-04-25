@@ -2,6 +2,7 @@
 #include "common/telemetry/log.h"
 #include "common/utils/md5.h"
 #include "common/utils/random.h"
+#include "entrypoint/http/command_exception.h"
 #include <algorithm>
 #include <source_location>
 
@@ -58,8 +59,7 @@ void upload_state::remove_upload(const std::string& id) {
     clear_infos();
 
     std::lock_guard<std::mutex> lock(mutex);
-    auto it = m_infos.find(id);
-    if (it != m_infos.end() && !it->second->erased) {
+    if (auto it = find(id); !it->second->erased) {
         m_deletions.push(info_deletion(it, DEFAULT_TIMEOUT));
         it->second->erased = true;
     }
@@ -67,18 +67,12 @@ void upload_state::remove_upload(const std::string& id) {
 
 std::shared_ptr<upload_info>
 upload_state::get_upload_info(const std::string& id) {
-    clear_infos();
-
     LOG_DEBUG() << "get upload info, id: " << id;
 
-    std::lock_guard<std::mutex> lock(mutex);
+    clear_infos();
 
-    auto itr = m_infos.find(id);
-    if (itr != m_infos.end()) {
-        return itr->second;
-    } else {
-        return {};
-    }
+    std::lock_guard<std::mutex> lock(mutex);
+    return find(id)->second;
 }
 
 bool upload_state::contains_upload(const std::string& id) {
@@ -92,17 +86,12 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
                                            const dedupe_response& resp,
                                            std::span<char> data) {
 
-    clear_infos();
-
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
-    std::lock_guard<std::mutex> lock(mutex);
-    auto info = m_infos.find(id);
-    if (info == m_infos.end()) {
-        throw std::runtime_error("unkown upload id: " + id);
-    }
+    clear_infos();
 
-    auto& total_resp = info->second;
+    std::lock_guard<std::mutex> lock(mutex);
+    auto& total_resp = find(id)->second;
     if (!data.empty()) {
         total_resp->etags.emplace(part, calculate_md5(data));
     } else { // default etag
@@ -125,6 +114,23 @@ void upload_state::clear_infos() {
         m_infos.erase(m_deletions.top().where);
         m_deletions.pop();
     }
+}
+
+std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
+upload_state::find(const std::string& id) {
+
+    if (id.empty()) {
+        throw command_exception(http::status::bad_request, "BadUploadId",
+                                "invalid upload id");
+    }
+
+    auto itr = m_infos.find(id);
+    if (itr == m_infos.end()) {
+        throw command_exception(http::status::not_found, "NoSuchUpload",
+                                "upload id not found");
+    }
+
+    return itr;
 }
 
 } // namespace uh::cluster

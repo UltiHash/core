@@ -33,16 +33,7 @@ coro<void> delete_object::handle(http_request& req) const {
         LOG_DEBUG() << "delete_object response: " << res;
         co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
-        switch (*e.error()) {
-        case error::object_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::object_not_found);
-        case error::bucket_not_found:
-            throw command_exception(boost::beast::http::status::not_found,
-                                    command_error::bucket_not_found);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

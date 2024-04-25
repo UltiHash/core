@@ -17,8 +17,8 @@ bool delete_objects::can_handle(const http_request& req) {
 
 namespace {
 struct fail {
-    uint32_t code;
     std::string key;
+    std::string code;
 };
 
 http_response get_response(const std::vector<std::string>& success,
@@ -34,13 +34,12 @@ http_response get_response(const std::vector<std::string>& success,
                       "</Deleted>\n";
     }
     for (const auto& val : failure) {
-        auto error = command_error::get_code_message(val.code);
         xml_string += "<Error>\n"
                       "<Key>" +
-                      error.first +
+                      val.key +
                       "</Key>\n"
                       "<Code>" +
-                      error.second +
+                      val.code +
                       "</Code>\n"
                       "</Error>\n";
     }
@@ -71,8 +70,8 @@ coro<void> delete_objects::handle(http_request& req) const {
 
     if (!parsed || object_nodes.empty() ||
         object_nodes.size() > MAXIMUM_DELETE_KEYS)
-        throw command_exception(http::status::bad_request,
-                                command_error::type::malformed_xml);
+        throw command_exception(http::status::bad_request, "MalformedXML",
+                                "xml is invalid");
 
     auto bucket_id = req.get_uri().get_bucket_id();
     std::vector<std::string> success;
@@ -80,8 +79,8 @@ coro<void> delete_objects::handle(http_request& req) const {
     for (const auto& object : object_nodes) {
         auto key = object.get().get_optional<std::string>("Key");
         if (!key) {
-            throw command_exception(http::status::bad_request,
-                                    command_error::type::malformed_xml);
+            throw command_exception(http::status::bad_request, "MalformedXML",
+                                    "xml is invalid");
         }
 
         try {
@@ -103,7 +102,16 @@ coro<void> delete_objects::handle(http_request& req) const {
         } catch (const error_exception& e) {
             LOG_ERROR() << "Failed to delete the bucket " << bucket_id
                         << " to the directory: " << e;
-            failure.emplace_back(e.error().code(), *key);
+            switch (*e.error()) {
+            case error::object_not_found:
+                failure.emplace_back(*key, "NoSuchKey");
+                break;
+            case error::bucket_not_found:
+                failure.emplace_back(*key, "NoSuchBucket");
+                break;
+            default:
+                failure.emplace_back(*key);
+            }
         }
     }
 

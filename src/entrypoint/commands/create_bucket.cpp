@@ -31,13 +31,7 @@ coro<void> create_bucket::handle(http_request& req) const {
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;
-        switch (*e.error()) {
-        case error::bucket_already_exists:
-            throw command_exception(http::status::conflict,
-                                    command_error::bucket_already_exists);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

@@ -44,14 +44,7 @@ coro<void> get_bucket::handle(http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to get bucket `" << bucket_name << "`: " << e;
-
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

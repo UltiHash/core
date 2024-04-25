@@ -34,16 +34,7 @@ coro<void> delete_bucket::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to delete bucket: " << e;
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::bucket_not_empty:
-            throw command_exception(http::status::conflict,
-                                    command_error::bucket_not_empty);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

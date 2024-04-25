@@ -1,8 +1,8 @@
 #include "complete_multipart.h"
 #include "common/utils/md5.h"
-#include "common/utils/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
+#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 
@@ -19,48 +19,40 @@ bool complete_multipart::can_handle(const http_request& req) {
 void complete_multipart::validate(const http_request& req,
                                   const std::vector<char>& body) const {
     const auto& upload_id = req.get_uri().get_query_parameters().at("uploadId");
-    if (upload_id.empty()) {
-        throw command_exception(http::status::bad_request,
-                                command_error::type::bad_upload_id);
-    }
-
-    const auto up_info =
+    auto up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
-    if (up_info == nullptr) {
-        throw command_exception(http::status::not_found,
-                                command_error::type::no_such_upload);
-    }
 
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
     if (!parsed || part_nodes.empty())
-        throw command_exception(http::status::bad_request,
-                                command_error::type::malformed_xml);
+        throw command_exception(http::status::bad_request, "MalformedXML",
+                                "xml is invalid");
 
     for (uint16_t part_counter = 1; const auto& part : part_nodes) {
         auto part_num = part.get().get_optional<std::size_t>("PartNumber");
         auto etag = part.get().get_optional<std::string>("ETag");
 
         if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
-            throw command_exception(http::status::bad_request,
-                                    command_error::type::malformed_xml);
+            throw command_exception(http::status::bad_request, "MalformedXML",
+                                    "xml is invalid");
 
         if (*part_num != part_counter) {
             throw command_exception(http::status::bad_request,
-                                    command_error::type::invalid_part_oder);
+                                    "InvalidPartOrder",
+                                    "part order is not ascending");
         }
 
         if (up_info->part_sizes.at(*part_num) < MAXIMUM_CHUNK_SIZE and
             part_num != up_info->part_sizes.size()) {
-            throw command_exception(http::status::bad_request,
-                                    command_error::type::entity_too_small);
+            throw command_exception(http::status::bad_request, "EntityTooSmall",
+                                    "entity is too small");
         }
 
         if (up_info->etags.at(*part_num) != etag) {
-            throw command_exception(http::status::bad_request,
-                                    command_error::type::invalid_part);
+            throw command_exception(http::status::bad_request, "InvalidPart",
+                                    "part not found");
         }
 
         part_counter++;

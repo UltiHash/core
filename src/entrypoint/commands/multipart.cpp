@@ -19,16 +19,10 @@ bool multipart::can_handle(const http_request& req) {
 static void validate(const http_request& req) {
     const auto& req_uri = req.get_uri();
 
-    auto upload_id = req_uri.get_query_parameters().at("uploadId");
-    if (upload_id.empty()) {
-        throw command_exception(boost::beast::http::status::bad_request,
-                                command_error::type::bad_upload_id);
-    }
-
     auto part_num = std::stoi(req_uri.get_query_parameters().at("partNumber"));
     if (part_num < 1 || part_num > 10000) {
-        throw command_exception(boost::beast::http::status::bad_request,
-                                command_error::type::bad_part_number);
+        throw command_exception(http::status::bad_request, "BadPartNumber",
+                                "part number is invalid");
     }
 }
 

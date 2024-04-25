@@ -46,7 +46,8 @@ static http_response get_response(const std::vector<object>& objects,
     if (encoding_type) {
         if (*encoding_type != "url") {
             throw command_exception(http::status::bad_request,
-                                    command_error::invalid_query_parameter);
+                                    "InvalidQueryParameters",
+                                    "encountered unexpected query parameter");
         }
     }
 
@@ -191,16 +192,7 @@ coro<void> list_objects::handle(http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::invalid_bucket_name:
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

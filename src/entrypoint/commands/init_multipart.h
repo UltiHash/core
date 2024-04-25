@@ -36,13 +36,7 @@ public:
                                                dir_req);
             co_await m->recv_header();
         } catch (const error_exception& e) {
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw command_exception(boost::beast::http::status::not_found,
-                                        command_error::bucket_not_found);
-            default:
-                throw command_exception(http::status::internal_server_error);
-            }
+            throw_from_error(e.error());
         }
 
         const auto upload_id =

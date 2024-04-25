@@ -2,7 +2,6 @@
 #define ENTRYPOINT_HTTP_COMPLETE_MULTIPART_H
 
 #include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
 #include "entrypoint/utils.h"
 
 namespace uh::cluster {
