@@ -1,4 +1,4 @@
-name: Feature Testing
+name: Feature Testing On Premise
 
 on:
   pull_request:
@@ -77,7 +77,7 @@ jobs:
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: feature-testing/helm-values-template.yaml
+          input: feature-testing/helm-values-on-premise.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
@@ -96,6 +96,6 @@ jobs:
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 10m
 
-      - name: Run integration tests
+      - name: Run feature tests
         run: |
           helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 15m
