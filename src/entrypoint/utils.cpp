@@ -21,7 +21,8 @@ integration::integrate_data(std::span<const char> data,
 
     std::size_t i = 0;
     for (auto& client : dedupe_services) {
-        auto chunk = data.subspan(i * part_size, part_size);
+        std::size_t size = data.size() - (i * part_size) < part_size ? data.size() - (i * part_size) : part_size;
+        auto chunk = data.subspan(i * part_size, size);
 
         auto m = co_await client->acquire_messenger();
         m->register_write_buffer(chunk);
