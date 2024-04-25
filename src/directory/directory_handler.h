@@ -292,7 +292,9 @@ private:
                 const auto size = addr.data_size();
                 decrement_stored_size(size);
                 directory.remove_object(request.bucket_id, *request.object_key);
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                LOG_WARN() << "deletion of " << *request.object_key << " in "
+                           << request.bucket_id << " failed: " << e.what();
             }
         };
 

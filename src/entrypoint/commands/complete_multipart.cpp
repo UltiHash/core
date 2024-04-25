@@ -1,4 +1,5 @@
 #include "complete_multipart.h"
+#include "common/utils/md5.h"
 #include "common/utils/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
@@ -15,7 +16,8 @@ bool complete_multipart::can_handle(const http_request& req) {
            !uri.get_object_key().empty() && uri.query_string_exists("uploadId");
 }
 
-void complete_multipart::validate(const http_request& req) const {
+void complete_multipart::validate(const http_request& req,
+                                  const std::vector<char>& body) const {
     const auto& upload_id = req.get_uri().get_query_parameters().at("uploadId");
     if (upload_id.empty()) {
         throw command_exception(http::status::bad_request,
@@ -30,7 +32,7 @@ void complete_multipart::validate(const http_request& req) const {
     }
 
     xml_parser xml_parser;
-    bool parsed = xml_parser.parse(req.get_body());
+    bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
     if (!parsed || part_nodes.empty())
@@ -68,8 +70,11 @@ void complete_multipart::validate(const http_request& req) const {
 coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
-    co_await req.read_body();
-    validate(req);
+    std::vector<char> buffer(req.content_length());
+    auto size = co_await req.read_body(buffer);
+    buffer.resize(size);
+
+    validate(req, buffer);
 
     const auto& req_uri = req.get_uri();
     const auto& upload_id = req_uri.get_query_parameters().at("uploadId");
@@ -96,7 +101,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);
 
-    auto etag = calculate_md5(req.get_body());
+    auto etag = calculate_md5(buffer);
     http_response res;
     res.set_etag(etag);
     res.set_original_size(up_info->data_size);

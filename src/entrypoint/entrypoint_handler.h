@@ -38,13 +38,11 @@ public:
           m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
-        LOG_INFO() << "connection from: " << s.remote_endpoint();
-
         try {
 
             for (;;) {
 
-                auto req = co_await read_request(s);
+                auto req = co_await http_request::create(s);
                 LOG_DEBUG() << s.remote_endpoint() << " read request: " << *req;
 
                 co_await handle_request(*req);

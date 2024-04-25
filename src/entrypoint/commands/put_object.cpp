@@ -20,16 +20,16 @@ public:
 
     void flip() { m_index = m_index == 0 ? 1 : 0; }
 
-    std::vector<char>& current() { return m_buffers[m_index]; }
+    coro<std::size_t> fill(http_request& req) {
+        current().resize(current().capacity());
 
-    coro<std::size_t> fill(asio::ip::tcp::socket& sock, std::size_t size,
-                           std::size_t offset = 0) {
-        auto& b = current();
-        b.resize(offset + size);
+        auto read = co_await req.read_body(current());
+        current().resize(read);
 
-        return asio::async_read(sock, asio::buffer(&b[offset], size),
-                                asio::use_awaitable);
+        co_return read;
     }
+
+    std::vector<char>& current() { return m_buffers[m_index]; }
 
     std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
         auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
@@ -71,18 +71,14 @@ coro<void> put_object::handle(http_request& req) const {
     try {
         auto content_length = req.content_length();
 
+        md5 hash;
+
         dedupe_response resp;
         if (content_length >= m_collection.config.buffer_size) {
-            resp = co_await put_large_object(req);
+            resp = co_await put_large_object(req, hash);
         } else {
-            resp = co_await put_small_object(req);
+            resp = co_await put_small_object(req, hash);
         }
-
-        md5 hash;
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.pointers[0]),
-                      resp.addr.pointers.size() * sizeof(uint64_t)});
-        hash.consume({reinterpret_cast<const char*>(&resp.addr.sizes[0]),
-                      resp.addr.sizes.size() * sizeof(uint32_t)});
 
         const directory_message dir_req{
             .bucket_id = req.get_uri().get_bucket_id(),
@@ -104,8 +100,10 @@ coro<void> put_object::handle(http_request& req) const {
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
+        auto tag = hash.finalize();
+        LOG_DEBUG() << "etag: " << tag;
 
-        res.set_etag(hash.finalize());
+        res.set_etag(tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
@@ -128,28 +126,27 @@ coro<void> put_object::handle(http_request& req) const {
     }
 }
 
-coro<dedupe_response> put_object::put_large_object(http_request& req) const {
+coro<dedupe_response> put_object::put_large_object(http_request& req,
+                                                   md5& hash) const {
     const auto buffer_size = m_collection.config.buffer_size;
     double_buffer b(m_collection, buffer_size);
 
     auto content_length = req.content_length();
+    std::size_t transferred = 0;
 
-    std::size_t transferred = req.payload().size();
-    b.current().resize(transferred);
-    asio::buffer_copy(asio::buffer(b.current()), req.payload().data());
-
-    auto size = std::min(content_length, buffer_size) - transferred;
-    transferred += co_await b.fill(req.socket(), size, transferred);
+    auto read = co_await b.fill(req);
+    hash.consume(b.current());
+    transferred += read;
 
     dedupe_response rv;
 
     do {
         auto promise = b.upload();
-
         b.flip();
 
-        size = std::min(content_length - transferred, buffer_size);
-        transferred += co_await b.fill(req.socket(), size);
+        auto read = co_await b.fill(req);
+        hash.consume(b.current());
+        transferred += read;
 
         rv.append(co_await promise->get());
     } while (transferred < content_length);
@@ -160,22 +157,18 @@ coro<dedupe_response> put_object::put_large_object(http_request& req) const {
     co_return rv;
 }
 
-coro<dedupe_response> put_object::put_small_object(http_request& req) const {
+coro<dedupe_response> put_object::put_small_object(http_request& req,
+                                                   md5& hash) const {
     auto content_length = req.content_length();
 
-    if (content_length == 0) {
+    std::vector<char> buffer(content_length);
+    auto read = co_await req.read_body(buffer);
+    buffer.resize(read);
+    hash.consume(buffer);
+
+    if (buffer.empty()) {
         co_return dedupe_response();
     }
-
-    std::vector<char> buffer(content_length);
-
-    auto& payload = req.payload();
-    asio::buffer_copy(asio::buffer(buffer), payload.data(), payload.size());
-
-    (void)co_await asio::async_read(
-        req.socket(),
-        asio::buffer(&buffer[payload.size()], content_length - payload.size()),
-        asio::use_awaitable);
 
     co_return co_await integration::integrate_data(buffer, m_collection);
 }

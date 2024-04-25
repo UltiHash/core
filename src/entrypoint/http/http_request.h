@@ -1,28 +1,32 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "common/utils/md5.h"
 #include "uri.h"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <map>
+#include <span>
 
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
+class transport_decoder {
+public:
+    ~transport_decoder() = default;
+    virtual coro<std::size_t> read(std::span<char> dest) = 0;
+};
+
 class http_request {
 public:
+    static coro<std::unique_ptr<http_request>>
+    create(boost::asio::ip::tcp::socket& s);
+
     [[nodiscard]] const uri& get_uri() const;
-
-    [[nodiscard]] const std::string& get_body() const;
-
-    [[nodiscard]] std::size_t get_body_size() const;
 
     [[nodiscard]] method get_method() const;
 
-    coro<void> read_body();
+    coro<std::size_t> read_body(std::span<char> buffer);
 
     coro<void> respond(const http::response<http::string_body>& resp);
 
@@ -32,32 +36,27 @@ public:
 
     /** Payload that was read while reading the request headers.
      */
-    const boost::beast::flat_buffer& payload() const { return m_buffer; }
     std::size_t content_length() const {
-        return m_req.content_length().value();
+        return std::stoul(m_req.at("Content-Length"));
     }
 
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
-    friend coro<std::unique_ptr<http_request>>
-    read_request(boost::asio::ip::tcp::socket&);
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
-    http_request(boost::asio::ip::tcp::socket& stream);
+    http_request(boost::asio::ip::tcp::socket& stream,
+                 http::request_parser<http::empty_body>::value_type&& req,
+                 boost::beast::flat_buffer&& initial);
 
     boost::asio::ip::tcp::socket& m_stream;
-    http::request_parser<http::empty_body> m_req;
-    boost::beast::flat_buffer m_buffer;
+    http::request_parser<http::empty_body>::value_type m_req;
+    std::unique_ptr<transport_decoder> m_decoder;
 
     uri m_uri;
-    std::string m_body{};
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);
-
-coro<std::unique_ptr<http_request>>
-read_request(boost::asio::ip::tcp::socket& s);
 
 } // namespace uh::cluster
 

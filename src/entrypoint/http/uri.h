@@ -22,7 +22,7 @@ enum class scheme { HTTP, HTTPS };
 
 class uri {
 public:
-    explicit uri(const http::request_parser<http::empty_body>&);
+    explicit uri(const http::request_parser<http::empty_body>::value_type&);
     ~uri() = default;
 
     const std::string& get_bucket_id() const;

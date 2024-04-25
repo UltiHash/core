@@ -54,10 +54,19 @@ http_response get_response(const std::vector<std::string>& success,
 
 coro<void> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
-    co_await req.read_body();
+
+    LOG_DEBUG() << "delete_objects::handle(): content-length: "
+                << req.content_length();
+
+    std::vector<char> buffer(req.content_length());
+    auto count = co_await req.read_body(buffer);
+    buffer.resize(count);
+
+    LOG_DEBUG() << "delete_objects::handle(): request XML: "
+                << std::string(buffer.data(), buffer.data() + buffer.size());
 
     xml_parser xml_parser;
-    bool parsed = xml_parser.parse(req.get_body());
+    bool parsed = xml_parser.parse({&*buffer.begin(), buffer.size()});
     auto object_nodes = xml_parser.get_nodes("Delete.Object");
 
     if (!parsed || object_nodes.empty() ||
@@ -78,6 +87,8 @@ coro<void> delete_objects::handle(http_request& req) const {
         try {
             auto cl = m_collection.directory_services.get();
             auto m = co_await cl->acquire_messenger();
+
+            LOG_DEBUG() << "delete_objects::handle(): deleting " << *key;
 
             directory_message dir_req;
             dir_req.bucket_id = bucket_id;
