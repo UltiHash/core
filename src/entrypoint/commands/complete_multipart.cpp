@@ -10,15 +10,15 @@ complete_multipart::complete_multipart(reference_collection& collection)
     : m_collection(collection) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
+    const auto& uri = req.uri();
 
-    return req.get_method() == method::post && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() && uri.query_string_exists("uploadId");
+    return req.method() == method::post && !uri.bucket().empty() &&
+           !uri.object_key().empty() && uri.has("uploadId");
 }
 
 void complete_multipart::validate(const http_request& req,
                                   const std::vector<char>& body) const {
-    const auto& upload_id = req.get_uri().get_query_parameters().at("uploadId");
+    const auto& upload_id = req.uri().get("uploadId");
     auto up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
 
@@ -68,10 +68,9 @@ coro<void> complete_multipart::handle(http_request& req) const {
 
     validate(req, buffer);
 
-    const auto& req_uri = req.get_uri();
-    const auto& upload_id = req_uri.get_query_parameters().at("uploadId");
-    const auto& bucket_name = req.get_uri().get_bucket_id();
-    const auto& object_name = req_uri.get_object_key();
+    const auto& upload_id = req.uri().get("uploadId");
+    const auto& bucket_name = req.uri().bucket();
+    const auto& object_name = req.uri().object_key();
 
     const auto& up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);

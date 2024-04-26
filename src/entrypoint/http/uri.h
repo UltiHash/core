@@ -1,10 +1,7 @@
 #ifndef ENTRYPOINT_HTTP_URI_H
 #define ENTRYPOINT_HTTP_URI_H
 
-#include "boost/url/decode_view.hpp"
 #include "boost/url/url.hpp"
-#include <boost/asio.hpp>
-#include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <map>
 #include <string>
@@ -23,25 +20,38 @@ enum class scheme { HTTP, HTTPS };
 class uri {
 public:
     explicit uri(const http::request_parser<http::empty_body>::value_type&);
-    ~uri() = default;
 
-    const std::string& get_bucket_id() const;
-    const std::string& get_object_key() const;
-    bool query_string_exists(const std::string& key) const;
-    const std::string& get_query_string_value(const std::string& key) const;
-    const std::map<std::string, std::string>& get_query_parameters() const;
-    method get_method() const;
+    const std::string& bucket() const;
+    const std::string& object_key() const;
+
+    /**
+     * Access query string fields. Throws if name is not set.
+     */
+    const std::string& get(const std::string& name) const;
+
+    /**
+     * Access query string fields. Return std::nullopt if name is not set.
+     */
+    std::optional<std::string> get_opt(const std::string& name) const;
+
+    /**
+     * Return true if there are no parameters defined.
+     */
+    bool empty() const;
+
+    /**
+     * Return true if a given query parameter exists.
+     */
+    bool has(const std::string& name) const;
 
 private:
     void extract_bucket_and_object();
     void extract_query_parameters();
 
-    scheme m_scheme = scheme::HTTP;
-    method m_method;
     std::string m_bucket_id{};
     std::string m_object_key{};
     url m_url;
-    std::map<std::string, std::string> m_query_parameters;
+    std::map<std::string, std::string> m_params;
 };
 
 } // namespace uh::cluster

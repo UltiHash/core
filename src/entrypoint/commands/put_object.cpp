@@ -60,9 +60,9 @@ put_object::put_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool put_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() && uri.get_query_parameters().empty();
+    const auto& uri = req.uri();
+    return req.method() == method::put && !uri.bucket().empty() &&
+           !uri.object_key().empty() && uri.empty();
 }
 
 coro<void> put_object::handle(http_request& req) const {
@@ -81,9 +81,8 @@ coro<void> put_object::handle(http_request& req) const {
         }
 
         const directory_message dir_req{
-            .bucket_id = req.get_uri().get_bucket_id(),
-            .object_key =
-                std::make_unique<std::string>(req.get_uri().get_object_key()),
+            .bucket_id = req.uri().bucket(),
+            .object_key = std::make_unique<std::string>(req.uri().object_key()),
             .addr = std::make_unique<address>(std::move(resp.addr)),
         };
 
@@ -110,7 +109,7 @@ coro<void> put_object::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to get bucket `" << req.get_uri().get_bucket_id()
+        LOG_ERROR() << "Failed to get bucket `" << req.uri().bucket()
                     << "`: " << e;
         throw_from_error(e.error());
     }

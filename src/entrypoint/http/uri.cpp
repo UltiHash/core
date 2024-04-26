@@ -10,53 +10,43 @@ uri::uri(const http::request_parser<http::empty_body>::value_type& req) {
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    m_method = req.method();
-
     auto target = req.target();
-
     auto query_index = target.find('?');
 
     if (query_index != std::string::npos) {
-        // extract query string
         m_url.set_encoded_query(target.substr(query_index + 1));
-
-        // extract path
         m_url.set_encoded_path(target.substr(0, query_index));
     } else {
-        // extract path
-        m_url.set_encoded_path(target.substr(0));
+        m_url.set_encoded_path(target);
     }
 
     extract_bucket_and_object();
     extract_query_parameters();
 }
 
-const std::string& uri::get_bucket_id() const { return m_bucket_id; }
+const std::string& uri::bucket() const { return m_bucket_id; }
 
-const std::string& uri::get_object_key() const { return m_object_key; }
+const std::string& uri::object_key() const { return m_object_key; }
 
-method uri::get_method() const { return m_method; }
+const std::string& uri::get(const std::string& name) const {
+    return m_params.at(name);
+}
 
-bool uri::query_string_exists(const std::string& key) const {
-    auto itr = m_query_parameters.find(key);
-    if (itr != m_query_parameters.end()) {
-        return true;
-    } else {
-        return false;
+std::optional<std::string> uri::get_opt(const std::string& name) const {
+    if (auto it = m_params.find(name); it != m_params.end()) {
+        return it->second;
     }
+
+    return std::nullopt;
 }
 
-const std::string& uri::get_query_string_value(const std::string& key) const {
-    return m_query_parameters.at(key);
-}
+bool uri::empty() const { return m_params.empty(); }
 
-const std::map<std::string, std::string>& uri::get_query_parameters() const {
-    return m_query_parameters;
-}
+bool uri::has(const std::string& name) const { return m_params.contains(name); }
 
 void uri::extract_query_parameters() {
     for (const auto& param : m_url.params()) {
-        m_query_parameters[param.key] = param.value;
+        m_params[param.key] = param.value;
     }
 }
 
@@ -71,12 +61,11 @@ void uri::extract_bucket_and_object() {
     if (!m_object_key.empty())
         m_object_key.pop_back();
 
-    // check bucket id and object key for validity
     if (!m_bucket_id.empty()) {
         if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63) {
             throw command_exception(http::status::bad_request,
                                     "InvalidBucketName",
-                                    "bucket name has invalid characters");
+                                    "bucket name has invalid length");
         }
 
         std::regex bucket_pattern(

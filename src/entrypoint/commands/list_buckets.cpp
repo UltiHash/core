@@ -9,10 +9,10 @@ list_buckets::list_buckets(const reference_collection& collection)
 
 bool list_buckets::can_handle(const http_request& req) {
 
-    const auto& uri = req.get_uri();
+    const auto& uri = req.uri();
 
-    return req.get_method() == method::get && uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() && uri.get_query_parameters().empty();
+    return req.method() == method::get && uri.bucket().empty() &&
+           uri.object_key().empty() && uri.empty();
 }
 
 static http_response

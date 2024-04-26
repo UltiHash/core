@@ -12,47 +12,32 @@ list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() &&
-           !uri.query_string_exists("uploads") &&
-           !uri.query_string_exists("list-type");
+    const auto& uri = req.uri();
+    return req.method() == method::get && !uri.bucket().empty() &&
+           uri.object_key().empty() && !uri.has("uploads") &&
+           !uri.has("list-type");
 }
 
 static http_response get_response(const std::vector<object>& objects,
                                   const http_request& req) {
 
-    const auto& req_uri = req.get_uri();
+    const auto marker = req.uri().get_opt("marker");
+    const auto prefix = req.uri().get_opt("prefix");
 
-    const auto get_if_exists =
-        [&req_uri](auto&& key) -> std::optional<std::string> {
-        if (req_uri.query_string_exists(key)) {
-            return req_uri.get_query_string_value(key);
-        }
-        return std::nullopt;
-    };
-
-    const auto marker = get_if_exists("marker");
-    const auto prefix = get_if_exists("prefix");
-
-    std::optional<std::string> delimiter = std::nullopt;
-    if (req_uri.query_string_exists("delimiter")) {
-        if (auto value = req_uri.get_query_string_value("delimiter");
-            !value.empty())
-            delimiter = value;
+    std::optional<std::string> delimiter = req.uri().get_opt("delimiter");
+    if (delimiter && delimiter->empty()) {
+        delimiter = std::nullopt;
     }
 
-    const auto encoding_type = get_if_exists("encoding-type");
-    if (encoding_type) {
-        if (*encoding_type != "url") {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidQueryParameters",
-                                    "encountered unexpected query parameter");
-        }
+    const auto encoding_type = req.uri().get_opt("encoding-type");
+    if (encoding_type && *encoding_type != "url") {
+        throw command_exception(http::status::bad_request,
+                                "InvalidQueryParameters",
+                                "encountered unexpected query parameter");
     }
 
     size_t max_keys = 1000;
-    const auto max_keys_val = get_if_exists("max-keys");
+    const auto max_keys_val = req.uri().get_opt("max-keys");
     if (max_keys_val) {
         max_keys = std::stoul(*max_keys_val);
     }
@@ -120,7 +105,7 @@ static http_response get_response(const std::vector<object>& objects,
     }
 
     std::string name_xml_string;
-    name_xml_string += "<Name>" + req_uri.get_bucket_id() + "</Name>\n";
+    name_xml_string += "<Name>" + req.uri().bucket() + "</Name>\n";
 
     std::string max_keys_xml_string =
         "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
@@ -156,25 +141,18 @@ static http_response get_response(const std::vector<object>& objects,
 coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
-        const auto& req_uri = req.get_uri();
-
         directory_message dir_req;
-        dir_req.bucket_id = req_uri.get_bucket_id();
+        dir_req.bucket_id = req.uri().bucket();
 
-        if (req_uri.query_string_exists("prefix")) {
-            if (const auto& prefix = req_uri.get_query_string_value("prefix");
-                !prefix.empty()) {
-                dir_req.object_key_prefix =
-                    std::make_unique<std::string>(prefix);
-            }
+        if (auto prefix = req.uri().get_opt("prefix");
+            prefix && !prefix->empty()) {
+            dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
         }
 
-        if (req_uri.query_string_exists("marker")) {
-            if (const auto& marker = req_uri.get_query_string_value("marker");
-                !marker.empty()) {
-                dir_req.object_key_lower_bound =
-                    std::make_unique<std::string>(marker);
-            }
+        if (auto marker = req.uri().get_opt("marker");
+            marker && !marker->empty()) {
+            dir_req.object_key_lower_bound =
+                std::make_unique<std::string>(*marker);
         }
 
         auto cl = m_collection.directory_services.get();

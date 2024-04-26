@@ -233,9 +233,9 @@ http_request::http_request(
       m_decoder(make_decoder(m_req, m_stream, std::move(initial))),
       m_uri(m_req) {}
 
-const uri& http_request::get_uri() const { return m_uri; }
+const uh::cluster::uri& http_request::uri() const { return m_uri; }
 
-method http_request::get_method() const { return m_uri.get_method(); }
+http::verb http_request::method() const { return m_req.method(); }
 
 coro<std::size_t> http_request::read_body(std::span<char> buffer) {
     return m_decoder->read(buffer);

@@ -22,9 +22,9 @@ public:
     static coro<std::unique_ptr<http_request>>
     create(boost::asio::ip::tcp::socket& s);
 
-    [[nodiscard]] const uri& get_uri() const;
+    [[nodiscard]] const uh::cluster::uri& uri() const;
 
-    [[nodiscard]] method get_method() const;
+    [[nodiscard]] http::verb method() const;
 
     coro<std::size_t> read_body(std::span<char> buffer);
 
@@ -53,7 +53,7 @@ private:
     http::request_parser<http::empty_body>::value_type m_req;
     std::unique_ptr<transport_decoder> m_decoder;
 
-    uri m_uri;
+    uh::cluster::uri m_uri;
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);

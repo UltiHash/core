@@ -9,10 +9,9 @@ head_object::head_object(const reference_collection& coll)
     : m_coll(coll) {}
 
 bool head_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::head && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() &&
-           !uri.query_string_exists("attributes");
+    const auto& uri = req.uri();
+    return req.method() == method::head && !uri.bucket().empty() &&
+           !uri.object_key().empty() && !uri.has("attributes");
 }
 
 coro<void> head_object::handle(const http_request& req) const {
@@ -23,9 +22,9 @@ coro<void> head_object::handle(const http_request& req) const {
 
     try {
         directory_message dir_req;
-        dir_req.bucket_id = req.get_uri().get_bucket_id();
+        dir_req.bucket_id = req.uri().bucket();
         dir_req.object_key_prefix =
-            std::make_unique<std::string>(req.get_uri().get_object_key());
+            std::make_unique<std::string>(req.uri().object_key());
 
         co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
         auto hdr = co_await m->recv_header();

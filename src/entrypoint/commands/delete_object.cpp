@@ -8,11 +8,10 @@ delete_object::delete_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
+    const auto& uri = req.uri();
 
-    return req.get_method() == method::delete_ &&
-           !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-           !uri.query_string_exists("uploadId");
+    return req.method() == method::delete_ && !uri.bucket().empty() &&
+           !uri.object_key().empty() && !uri.has("uploadId");
 }
 
 coro<void> delete_object::handle(http_request& req) const {
@@ -21,9 +20,9 @@ coro<void> delete_object::handle(http_request& req) const {
         auto cl = m_collection.directory_services.get();
         auto mgr = co_await cl->acquire_messenger();
 
-        directory_message dir_req{.bucket_id = req.get_uri().get_bucket_id(),
+        directory_message dir_req{.bucket_id = req.uri().bucket(),
                                   .object_key = std::make_unique<std::string>(
-                                      req.get_uri().get_object_key())};
+                                      req.uri().object_key())};
         co_await mgr->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
                                              dir_req);
         co_await mgr->recv_header();

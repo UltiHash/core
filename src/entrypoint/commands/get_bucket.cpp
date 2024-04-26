@@ -8,10 +8,10 @@ get_bucket::get_bucket(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool get_bucket::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
+    const auto& uri = req.uri();
 
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() && uri.get_query_parameters().empty();
+    return req.method() == method::get && !uri.bucket().empty() &&
+           uri.object_key().empty() && uri.empty();
 }
 
 static http_response get_response(const std::string& bucket_name) noexcept {
@@ -26,7 +26,7 @@ static http_response get_response(const std::string& bucket_name) noexcept {
 
 coro<void> get_bucket::handle(http_request& req) const {
     metric<entrypoint_get_bucket_req>::increase(1);
-    auto bucket_name = req.get_uri().get_bucket_id();
+    auto bucket_name = req.uri().bucket();
 
     try {
         auto client = m_collection.directory_services.get();
