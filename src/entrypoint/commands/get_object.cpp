@@ -8,9 +8,8 @@ get_object::get_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool get_object::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
     return req.method() == method::get && !req.bucket().empty() &&
-           !req.object_key().empty() && !uri.has("attributes");
+           !req.object_key().empty() && !req.query("attributes");
 }
 
 coro<void> get_object::handle(http_request& req) const {

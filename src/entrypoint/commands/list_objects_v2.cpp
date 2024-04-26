@@ -12,34 +12,31 @@ namespace {
 http_response get_response(const std::vector<object>& objects,
                            const http_request& req) {
 
-    const auto start_after = req.uri().get_opt("start-after");
-    const auto prefix = req.uri().get_opt("prefix");
+    const auto start_after = req.query("start-after");
+    const auto prefix = req.query("prefix");
 
-    std::optional<std::string> delimiter = std::nullopt;
-    if (req.uri().has("delimiter")) {
-        if (auto value = req.uri().get("delimiter"); !value.empty())
-            delimiter = value;
+    auto delimiter = req.query("delimiter");
+    if (delimiter && delimiter->empty()) {
+        delimiter = std::nullopt;
     }
 
-    const auto encoding_type = req.uri().get_opt("encoding-type");
-    if (encoding_type) {
-        if (*encoding_type != "url") {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidQueryParameters",
-                                    "encountered unexpected query parameter");
-        }
+    const auto encoding_type = req.query("encoding-type");
+    if (encoding_type && *encoding_type != "url") {
+        throw command_exception(http::status::bad_request,
+                                "InvalidQueryParameters",
+                                "encountered unexpected query parameter");
     }
 
-    const auto continuation_token = req.uri().get_opt("continuation-token");
+    const auto continuation_token = req.query("continuation-token");
 
     size_t max_keys = 1000;
-    if (const auto max_keys_str = req.uri().get_opt("max-keys");
+    if (const auto max_keys_str = req.query("max-keys");
         max_keys_str.has_value()) {
         max_keys = std::stoul(*max_keys_str);
     }
 
     bool fetch_owner_set = false;
-    if (const auto fetch_owner = req.uri().get_opt("fetch-owner");
+    if (const auto fetch_owner = req.query("fetch-owner");
         fetch_owner.has_value()) {
         if (to_bool(*fetch_owner))
             fetch_owner_set = true;
@@ -157,11 +154,9 @@ list_objects_v2::list_objects_v2(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects_v2::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::get && !req.bucket().empty() &&
-           req.object_key().empty() && uri.has("list-type") &&
-           uri.get("list-type") == "2";
+           req.object_key().empty() && req.query("list-type") &&
+           *req.query("list-type") == "2";
 }
 
 coro<void> list_objects_v2::handle(http_request& req) const {
@@ -170,18 +165,17 @@ coro<void> list_objects_v2::handle(http_request& req) const {
         directory_message dir_req;
         dir_req.bucket_id = req.bucket();
 
-        if (auto prefix = req.uri().get_opt("prefix");
-            prefix && !prefix->empty()) {
+        if (auto prefix = req.query("prefix"); prefix && !prefix->empty()) {
             dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
         }
 
-        if (auto start_after = req.uri().get_opt("start-after");
+        if (auto start_after = req.query("start-after");
             start_after && !start_after->empty()) {
             dir_req.object_key_lower_bound =
                 std::make_unique<std::string>(*start_after);
         }
 
-        if (auto continuation_token = req.uri().get_opt("continuation-token");
+        if (auto continuation_token = req.query("continuation-token");
             continuation_token && !continuation_token->empty()) {
             if (!dir_req.object_key_lower_bound ||
                 continuation_token > *dir_req.object_key_lower_bound)

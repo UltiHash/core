@@ -10,17 +10,14 @@ complete_multipart::complete_multipart(reference_collection& collection)
     : m_collection(collection) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::post && !req.bucket().empty() &&
-           !req.object_key().empty() && uri.has("uploadId");
+           !req.object_key().empty() && req.query("uploadId");
 }
 
 void complete_multipart::validate(const http_request& req,
                                   const std::vector<char>& body) const {
-    const auto& upload_id = req.uri().get("uploadId");
-    auto up_info =
-        m_collection.server_state.m_uploads.get_upload_info(upload_id);
+    auto up_info = m_collection.server_state.m_uploads.get_upload_info(
+        *req.query("uploadId"));
 
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
@@ -68,7 +65,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
 
     validate(req, buffer);
 
-    const auto& upload_id = req.uri().get("uploadId");
+    const auto& upload_id = *req.query("uploadId");
     const auto& bucket_name = req.bucket();
     const auto& object_name = req.object_key();
 

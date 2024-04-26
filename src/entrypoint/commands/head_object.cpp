@@ -9,9 +9,8 @@ head_object::head_object(const reference_collection& coll)
     : m_coll(coll) {}
 
 bool head_object::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
     return req.method() == method::head && !req.bucket().empty() &&
-           !req.object_key().empty() && !uri.has("attributes");
+           !req.object_key().empty() && !req.query("attributes");
 }
 
 coro<void> head_object::handle(const http_request& req) const {

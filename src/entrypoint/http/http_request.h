@@ -1,14 +1,16 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "uri.h"
+#include "boost/url/url.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <map>
 #include <span>
 
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
+typedef http::verb method;
 template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class transport_decoder {
@@ -21,8 +23,6 @@ class http_request {
 public:
     static coro<std::unique_ptr<http_request>>
     create(boost::asio::ip::tcp::socket& s);
-
-    [[nodiscard]] const uh::cluster::uri& uri() const;
 
     [[nodiscard]] http::verb method() const;
 
@@ -43,6 +43,14 @@ public:
         return std::stoul(m_req.at("Content-Length"));
     }
 
+    /**
+     * Return value of query parameter specified by `name`. Return
+     * `std::nullopt` if parameter is not set.
+     */
+    std::optional<std::string> query(const std::string& name) const;
+
+    bool has_query() const;
+
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
@@ -58,9 +66,9 @@ private:
     http::request_parser<http::empty_body>::value_type m_req;
     std::unique_ptr<transport_decoder> m_decoder;
 
-    uh::cluster::uri m_uri;
     std::string m_bucket_id{};
     std::string m_object_key{};
+    std::map<std::string, std::string> m_params;
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);

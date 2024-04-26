@@ -8,10 +8,8 @@ delete_bucket::delete_bucket(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::delete_ && !req.bucket().empty() &&
-           req.object_key().empty() && uri.empty();
+           req.object_key().empty() && !req.has_query();
 }
 
 coro<void> delete_bucket::handle(http_request& req) const {

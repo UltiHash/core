@@ -8,10 +8,8 @@ delete_object::delete_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_object::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::delete_ && !req.bucket().empty() &&
-           !req.object_key().empty() && !uri.has("uploadId");
+           !req.object_key().empty() && !req.query("uploadId");
 }
 
 coro<void> delete_object::handle(http_request& req) const {

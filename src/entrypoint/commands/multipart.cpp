@@ -9,14 +9,13 @@ multipart::multipart(reference_collection& collection)
     : m_collection(collection) {}
 
 bool multipart::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
     return req.method() == method::put && !req.bucket().empty() &&
-           !req.object_key().empty() && uri.has("partNumber") &&
-           uri.has("uploadId");
+           !req.object_key().empty() && req.query("partNumber") &&
+           req.query("uploadId");
 }
 
 static void validate(const http_request& req) {
-    auto part_num = std::stoi(req.uri().get("partNumber"));
+    auto part_num = std::stoi(*req.query("partNumber"));
     if (part_num < 1 || part_num > 10000) {
         throw command_exception(http::status::bad_request, "BadPartNumber",
                                 "part number is invalid");
@@ -38,7 +37,7 @@ coro<void> multipart::handle(http_request& req) const {
     }
 
     m_collection.server_state.m_uploads.append_upload_part_info(
-        req.uri().get("uploadId"), std::stoi(req.uri().get("partNumber")), resp,
+        *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer);
 
     http_response res;

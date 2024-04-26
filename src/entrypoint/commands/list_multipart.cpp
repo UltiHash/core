@@ -34,9 +34,8 @@ list_multipart::list_multipart(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_multipart::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
     return req.method() == method::get && !req.bucket().empty() &&
-           req.object_key().empty() && uri.has("uploads");
+           req.object_key().empty() && req.query("uploads");
 }
 
 coro<void> list_multipart::handle(http_request& req) const {

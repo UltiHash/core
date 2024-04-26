@@ -9,10 +9,8 @@ delete_objects::delete_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_objects::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::post && !req.bucket().empty() &&
-           req.object_key().empty() && uri.has("delete");
+           req.object_key().empty() && req.query("delete");
 }
 
 namespace {

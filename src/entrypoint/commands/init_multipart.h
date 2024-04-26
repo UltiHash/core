@@ -16,10 +16,8 @@ public:
         : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
-        const auto& uri = req.uri();
-
         return req.method() == method::post && !req.bucket().empty() &&
-               !req.object_key().empty() && uri.has("uploads");
+               !req.object_key().empty() && req.query("uploads");
     }
 
     [[nodiscard]] coro<void> handle(http_request& req) {

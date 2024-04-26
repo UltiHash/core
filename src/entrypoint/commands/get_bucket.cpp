@@ -8,10 +8,8 @@ get_bucket::get_bucket(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool get_bucket::can_handle(const http_request& req) {
-    const auto& uri = req.uri();
-
     return req.method() == method::get && !req.bucket().empty() &&
-           req.object_key().empty() && uri.empty();
+           req.object_key().empty() && !req.has_query();
 }
 
 static http_response get_response(const std::string& bucket_name) noexcept {

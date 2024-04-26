@@ -12,6 +12,23 @@ namespace uh::cluster {
 
 namespace {
 
+boost::urls::url
+load_url(const http::request_parser<http::empty_body>::value_type& req) {
+    boost::urls::url url;
+
+    auto target = req.target();
+    auto query_index = target.find('?');
+
+    if (query_index != std::string::npos) {
+        url.set_encoded_query(target.substr(query_index + 1));
+        url.set_encoded_path(target.substr(0, query_index));
+    } else {
+        url.set_encoded_path(target);
+    }
+
+    return url;
+}
+
 class raw_decoder : public transport_decoder {
 public:
     raw_decoder(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
@@ -232,12 +249,21 @@ http_request::http_request(
     beast::flat_buffer&& initial)
     : m_stream(stream),
       m_req(std::move(req)),
-      m_decoder(make_decoder(m_req, m_stream, std::move(initial))),
-      m_uri(m_req) {
-    extract_bucket_and_object(m_uri.url());
-}
+      m_decoder(make_decoder(m_req, m_stream, std::move(initial))) {
 
-const uh::cluster::uri& http_request::uri() const { return m_uri; }
+    if (req.base().version() != 11) {
+        throw std::runtime_error(
+            "bad http version. support exists only for HTTP 1.1.\n");
+    }
+
+    auto url = load_url(m_req);
+
+    for (const auto& param : url.params()) {
+        m_params[param.key] = param.value;
+    }
+
+    extract_bucket_and_object(url);
+}
 
 http::verb http_request::method() const { return m_req.method(); }
 
@@ -254,6 +280,16 @@ http_request::respond(const http::response<http::string_body>& resp) {
     co_await boost::beast::http::async_write(m_stream, resp,
                                              boost::asio::use_awaitable);
 }
+
+std::optional<std::string> http_request::query(const std::string& name) const {
+    if (auto it = m_params.find(name); it != m_params.end()) {
+        return it->second;
+    }
+
+    return std::nullopt;
+}
+
+bool http_request::has_query() const { return !m_params.empty(); }
 
 void http_request::extract_bucket_and_object(boost::urls::url url) {
     for (const auto& seg : url.segments()) {
