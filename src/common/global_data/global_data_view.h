@@ -4,17 +4,13 @@
 #include "common/network/client.h"
 #include "common/types/shared_buffer.h"
 #include "common/utils/worker_pool.h"
+#include "config.h"
 #include "lru_cache.h"
 #include "storage/storage_interface.h"
 #include "storage/tmp_services.h"
 #include <map>
 
 namespace uh::cluster {
-
-struct global_data_view_config {
-    std::size_t storage_service_connection_count = 16;
-    std::size_t read_cache_capacity_l2 = 4000ul;
-};
 
 class global_data_view {
 
@@ -33,9 +29,9 @@ public:
      * @param storage_services A reference to an instance of
      * services<STORAGE_SERVICE> used for service discovery.
      */
-    explicit global_data_view(const global_data_view_config& config,
-                              boost::asio::io_context& ioc,
-                              tmp_services<storage_interface>& storage_services);
+    explicit global_data_view(
+        const global_data_view_config& config, boost::asio::io_context& ioc,
+        tmp_services<storage_interface>& storage_services);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -114,7 +110,8 @@ public:
     /**
      * @brief Computes available space across all available storage service
      * instances.
-     * @return The available space across all available storage service instances.
+     * @return The available space across all available storage service
+     * instances.
      */
     [[nodiscard]] uint128_t get_available_space();
 

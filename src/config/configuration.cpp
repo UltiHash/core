@@ -105,7 +105,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
-
 }
 
 void register_bucket(CLI::App& app, bucket_config& cfg) {
@@ -215,6 +214,8 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
                    "minimum worker data size")
         ->default_val(cfg.dedupe_worker_minimum_data_size);
 
+    storage_config sc;
+
     return rv;
 }
 
@@ -230,6 +231,11 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
     auto sub_dir = sub_directory(app, rv.directory);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
+
+    auto sub_dd_str =
+        sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
+    auto sub_dr_str =
+        sub_storage(*sub_dir, rv.directory.m_attached_storage.emplace());
 
     register_service(app, rv.service);
 
@@ -265,6 +271,13 @@ std::optional<config> read_config(int argc, char** argv) {
         rv.role = DEDUPLICATOR_SERVICE;
     } else {
         throw std::runtime_error("unsupported sub command given");
+    }
+
+    if (!sub_dd_str->parsed()) {
+        rv.deduplicator.m_attached_storage.reset();
+    }
+    if (!sub_dr_str->parsed()) {
+        rv.directory.m_attached_storage.reset();
     }
 
     rv.log = make_log_config(rv.service, log_level, rv.role);

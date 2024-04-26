@@ -5,7 +5,6 @@
 #include "common/registry/namespace.h"
 #include "common/registry/service_id.h"
 #include "common/registry/services.h"
-#include "common/utils/host_utils.h"
 #include "common/utils/service_factory.h"
 #include "storage_interface.h"
 #include <etcd/SyncClient.hpp>
@@ -22,41 +21,43 @@ public:
 
 template <> class tmp_services_index<storage_interface> {
 public:
-
     void add(const std::size_t& id, std::shared_ptr<storage_interface> cl) {
         m_clients.emplace(id, std::move(cl));
     }
 
-    void erase(const std::size_t& id) {
-        m_clients.erase(id);
-    }
+    void erase(const std::size_t& id) { m_clients.erase(id); }
 
-    [[nodiscard]] std::shared_ptr<storage_interface> get(const uint128_t& pointer) const {
+    [[nodiscard]] std::shared_ptr<storage_interface>
+    get(const uint128_t& pointer) const {
 
-        auto id = pointer_traits::get_service_id (pointer);
+        auto id = pointer_traits::get_service_id(pointer);
         return m_clients.at(id);
     }
 
 private:
-    std::map <uint32_t, std::shared_ptr<storage_interface>> m_clients;
+    std::map<uint32_t, std::shared_ptr<storage_interface>> m_clients;
 };
 
 template <typename service_interface> class tmp_services {
 public:
     template <typename... index_args>
-    tmp_services(etcd::SyncClient& etcd_client, std::unique_ptr <service_factory <service_interface>> service_factory, index_args... ia)
+    tmp_services(etcd::SyncClient& etcd_client,
+                 service_factory<service_interface> service_factory,
+                 index_args... ia)
         : m_etcd_client(etcd_client),
           m_watcher(
               m_etcd_client,
-              etcd_services_announced_key_prefix + get_service_string(service_interface::service_role),
+              etcd_services_announced_key_prefix +
+                  get_service_string(service_interface::service_role),
               [this](etcd::Response response) {
                   return handle_state_changes(response);
               },
               true),
           m_robin_index(m_clients.end()),
           m_services_index(ia...),
-          m_service_factory (std::move (service_factory)) {
-        auto path = etcd_services_announced_key_prefix + get_service_string(service_interface::service_role);
+          m_service_factory(std::move(service_factory)) {
+        auto path = etcd_services_announced_key_prefix +
+                    get_service_string(service_interface::service_role);
 
         auto resp = wait_for_success(
             ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
@@ -68,7 +69,8 @@ public:
 
     ~tmp_services() { m_watcher.Cancel(); }
 
-    template <typename key> std::shared_ptr<service_interface> get(key k) const {
+    template <typename key>
+    std::shared_ptr<service_interface> get(key k) const {
         std::shared_ptr<service_interface> cl;
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
@@ -140,13 +142,6 @@ public:
     }
 
 private:
-    struct service_endpoint {
-        std::size_t id{};
-        std::string host{};
-        std::uint16_t port{};
-        int pid{};
-    };
-
     void handle_state_changes(const etcd::Response& response) {
         LOG_DEBUG() << "action: " << response.action()
                     << ", key: " << response.value().key()
@@ -178,8 +173,9 @@ private:
         service_endpoint.id = std::stoul(id);
 
         const std::string attributes_prefix(
-            etcd_services_attributes_key_prefix + get_service_string(service_interface::service_role) + '/' +
-            id + '/');
+            etcd_services_attributes_key_prefix +
+            get_service_string(service_interface::service_role) + '/' + id +
+            '/');
 
         const auto attributes = wait_for_success(
             ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this, &attributes_prefix]() {
@@ -198,8 +194,7 @@ private:
                 host = attributes.value(i).as_string();
             } else if (attribute_name == get_config_string(CFG_ENDPOINT_PORT)) {
                 port = std::stoul(attributes.value(i).as_string());
-            }
-            else if (attribute_name == get_config_string(CFG_ENDPOINT_PID)) {
+            } else if (attribute_name == get_config_string(CFG_ENDPOINT_PID)) {
                 pid = std::stol(attributes.value(i).as_string());
             }
         }
@@ -217,7 +212,8 @@ private:
     void add(const std::string& path) {
         const auto service_endpoint = extract(path);
 
-        LOG_DEBUG() << "add callback for service " << get_service_string(service_interface::service_role)
+        LOG_DEBUG() << "add callback for service "
+                    << get_service_string(service_interface::service_role)
                     << ": " << service_endpoint.id
                     << " called. host: " << service_endpoint.host
                     << " port: " << service_endpoint.port;
@@ -226,15 +222,7 @@ private:
         if (m_clients.contains(service_endpoint.id)) [[unlikely]]
             return;
 
-        std::shared_ptr<service_interface> cl;
-        if (service_endpoint.host == get_host() and service_endpoint.pid == getpid ()) {
-            cl = m_service_factory->make_service();
-            m_local_client = cl;
-        }
-        else {
-             cl = m_service_factory->make_service(service_endpoint.host, service_endpoint.port);
-        }
-
+        auto cl = m_service_factory.make_service(service_endpoint);
 
         m_clients.emplace(service_endpoint.id, cl);
         m_services_index.add(service_endpoint.id, std::move(cl));
@@ -246,7 +234,8 @@ private:
         const auto id =
             std::stoull(std::filesystem::path(path).filename().string());
 
-        LOG_DEBUG() << "remove callback for service " << get_service_string(service_interface::service_role)
+        LOG_DEBUG() << "remove callback for service "
+                    << get_service_string(service_interface::service_role)
                     << ": " << id << " called. ";
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
@@ -269,14 +258,15 @@ private:
 
     mutable std::shared_mutex m_mutex;
     mutable std::condition_variable_any m_cv;
-    std::shared_ptr <service_interface> m_local_client;
+    std::shared_ptr<service_interface> m_local_client;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
 
-    mutable std::map<std::size_t, std::shared_ptr<service_interface>>::const_iterator
+    mutable std::map<std::size_t,
+                     std::shared_ptr<service_interface>>::const_iterator
         m_robin_index;
     tmp_services_index<service_interface> m_services_index;
-    std::unique_ptr <service_factory <service_interface>> m_service_factory;
+    service_factory<service_interface> m_service_factory;
     static constexpr std::size_t m_timeout_s = 10;
 };
-}
+} // namespace uh::cluster
 #endif // UH_CLUSTER_TMP_SERVICES_H

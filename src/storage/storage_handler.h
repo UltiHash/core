@@ -14,8 +14,8 @@ namespace uh::cluster {
 
 class storage_handler : public protocol_handler {
 public:
-    explicit storage_handler(local_storage& storage): m_storage (storage) {}
-
+    explicit storage_handler(local_storage& storage)
+        : m_storage(storage) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         std::stringstream remote;
@@ -74,10 +74,10 @@ public:
     }
 
 private:
-
     coro<void> handle_write(messenger& m, const messenger::header& h) {
-        unique_buffer<char> data (h.size);
+        unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
+        co_await m.recv_buffers(h);
         auto addr = co_await m_storage.write(data.get_str_view());
         co_await m.send_address(SUCCESS, addr);
     }
@@ -96,10 +96,10 @@ private:
 
         unique_buffer<char> buffer(addr.data_size());
 
-        std::vector <size_t> offsets;
+        std::vector<size_t> offsets;
         offsets.reserve(addr.size());
         size_t offset = 0;
-        for (const auto fsize: addr.sizes) {
+        for (const auto fsize : addr.sizes) {
             offsets.emplace_back(offset);
             offset += fsize;
         }
@@ -118,12 +118,12 @@ private:
 
     coro<void> handle_get_used(messenger& m, const messenger::header&) {
         const auto used = co_await m_storage.get_used_space();
-        co_await m.send_primitive <size_t>(SUCCESS, used);
+        co_await m.send_primitive<size_t>(SUCCESS, used);
     }
 
     coro<void> handle_get_available(messenger& m, const messenger::header&) {
         const auto available = co_await m_storage.get_free_space();
-        co_await m.send_primitive <size_t>(SUCCESS, available);
+        co_await m.send_primitive<size_t>(SUCCESS, available);
     }
 
     local_storage& m_storage;
