@@ -11,8 +11,8 @@ delete_objects::delete_objects(const reference_collection& collection)
 bool delete_objects::can_handle(const http_request& req) {
     const auto& uri = req.uri();
 
-    return req.method() == method::post && !uri.bucket().empty() &&
-           uri.object_key().empty() && uri.has("delete");
+    return req.method() == method::post && !req.bucket().empty() &&
+           req.object_key().empty() && uri.has("delete");
 }
 
 namespace {
@@ -73,7 +73,7 @@ coro<void> delete_objects::handle(http_request& req) const {
         throw command_exception(http::status::bad_request, "MalformedXML",
                                 "xml is invalid");
 
-    auto bucket_id = req.uri().bucket();
+    auto bucket_id = req.bucket();
     std::vector<std::string> success;
     std::vector<fail> failure;
     for (const auto& object : object_nodes) {

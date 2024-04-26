@@ -9,13 +9,13 @@ create_bucket::create_bucket(const reference_collection& collection)
 
 bool create_bucket::can_handle(const http_request& req) {
     const auto& uri = req.uri();
-    return req.method() == method::put && !uri.bucket().empty() &&
-           uri.object_key().empty() && uri.empty();
+    return req.method() == method::put && !req.bucket().empty() &&
+           req.object_key().empty() && uri.empty();
 }
 
 coro<void> create_bucket::handle(http_request& req) const {
     metric<entrypoint_create_bucket_req>::increase(1);
-    auto bucket_id = req.uri().bucket();
+    auto bucket_id = req.bucket();
     try {
         auto func = [&bucket_id](acquired_messenger<coro_client> m,
                                  std::size_t id) -> coro<void> {

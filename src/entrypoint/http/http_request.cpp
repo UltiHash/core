@@ -2,7 +2,9 @@
 
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
+#include "entrypoint/http/command_exception.h"
 #include <charconv>
+#include <regex>
 
 using namespace boost;
 
@@ -231,11 +233,17 @@ http_request::http_request(
     : m_stream(stream),
       m_req(std::move(req)),
       m_decoder(make_decoder(m_req, m_stream, std::move(initial))),
-      m_uri(m_req) {}
+      m_uri(m_req) {
+    extract_bucket_and_object(m_uri.url());
+}
 
 const uh::cluster::uri& http_request::uri() const { return m_uri; }
 
 http::verb http_request::method() const { return m_req.method(); }
+
+const std::string& http_request::bucket() const { return m_bucket_id; }
+
+const std::string& http_request::object_key() const { return m_object_key; }
 
 coro<std::size_t> http_request::read_body(std::span<char> buffer) {
     return m_decoder->read(buffer);
@@ -245,6 +253,34 @@ coro<void>
 http_request::respond(const http::response<http::string_body>& resp) {
     co_await boost::beast::http::async_write(m_stream, resp,
                                              boost::asio::use_awaitable);
+}
+
+void http_request::extract_bucket_and_object(boost::urls::url url) {
+    for (const auto& seg : url.segments()) {
+        if (m_bucket_id.empty())
+            m_bucket_id = seg;
+        else
+            m_object_key += seg + '/';
+    }
+
+    if (!m_object_key.empty())
+        m_object_key.pop_back();
+
+    if (!m_bucket_id.empty()) {
+        if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63) {
+            throw command_exception(http::status::bad_request,
+                                    "InvalidBucketName",
+                                    "bucket name has invalid length");
+        }
+
+        std::regex bucket_pattern(
+            R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
+        if (!std::regex_match(m_bucket_id, bucket_pattern)) {
+            throw command_exception(http::status::bad_request,
+                                    "InvalidBucketName",
+                                    "bucket name has invalid characters");
+        }
+    }
 }
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {

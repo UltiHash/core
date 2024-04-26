@@ -26,6 +26,9 @@ public:
 
     [[nodiscard]] http::verb method() const;
 
+    const std::string& bucket() const;
+    const std::string& object_key() const;
+
     coro<std::size_t> read_body(std::span<char> buffer);
 
     coro<void> respond(const http::response<http::string_body>& resp);
@@ -43,6 +46,8 @@ public:
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
+    void extract_bucket_and_object(boost::urls::url url);
+
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
     http_request(boost::asio::ip::tcp::socket& stream,
@@ -54,6 +59,8 @@ private:
     std::unique_ptr<transport_decoder> m_decoder;
 
     uh::cluster::uri m_uri;
+    std::string m_bucket_id{};
+    std::string m_object_key{};
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);

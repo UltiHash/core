@@ -13,8 +13,8 @@ list_objects::list_objects(const reference_collection& collection)
 
 bool list_objects::can_handle(const http_request& req) {
     const auto& uri = req.uri();
-    return req.method() == method::get && !uri.bucket().empty() &&
-           uri.object_key().empty() && !uri.has("uploads") &&
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && !uri.has("uploads") &&
            !uri.has("list-type");
 }
 
@@ -105,7 +105,7 @@ static http_response get_response(const std::vector<object>& objects,
     }
 
     std::string name_xml_string;
-    name_xml_string += "<Name>" + req.uri().bucket() + "</Name>\n";
+    name_xml_string += "<Name>" + req.bucket() + "</Name>\n";
 
     std::string max_keys_xml_string =
         "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
@@ -142,7 +142,7 @@ coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
         directory_message dir_req;
-        dir_req.bucket_id = req.uri().bucket();
+        dir_req.bucket_id = req.bucket();
 
         if (auto prefix = req.uri().get_opt("prefix");
             prefix && !prefix->empty()) {

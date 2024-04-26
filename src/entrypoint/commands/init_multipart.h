@@ -18,8 +18,8 @@ public:
     static bool can_handle(const http_request& req) {
         const auto& uri = req.uri();
 
-        return req.method() == method::post && !uri.bucket().empty() &&
-               !uri.object_key().empty() && uri.has("uploads");
+        return req.method() == method::post && !req.bucket().empty() &&
+               !req.object_key().empty() && uri.has("uploads");
     }
 
     [[nodiscard]] coro<void> handle(http_request& req) {
@@ -28,7 +28,7 @@ public:
             auto cl = m_collection.directory_services.get();
             auto m = co_await cl->acquire_messenger();
 
-            directory_message dir_req{.bucket_id = req.uri().bucket()};
+            directory_message dir_req{.bucket_id = req.bucket()};
 
             co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
                                                dir_req);
@@ -38,8 +38,8 @@ public:
         }
 
         const auto upload_id =
-            m_collection.server_state.m_uploads.insert_upload(
-                req.uri().bucket(), req.uri().object_key());
+            m_collection.server_state.m_uploads.insert_upload(req.bucket(),
+                                                              req.object_key());
 
         auto res = get_response(req, upload_id);
         co_await req.respond(res.get_prepared_response());
@@ -53,10 +53,10 @@ private:
         res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                      "<InitiateMultipartUploadResult>\n"
                      "<Bucket>" +
-                     req.uri().bucket() +
+                     req.bucket() +
                      "</Bucket>\n"
                      "<Key>" +
-                     req.uri().object_key() +
+                     req.object_key() +
                      "</Key>\n"
                      "<UploadId>" +
                      upload_id +

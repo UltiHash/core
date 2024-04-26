@@ -21,9 +21,6 @@ class uri {
 public:
     explicit uri(const http::request_parser<http::empty_body>::value_type&);
 
-    const std::string& bucket() const;
-    const std::string& object_key() const;
-
     /**
      * Access query string fields. Throws if name is not set.
      */
@@ -44,13 +41,12 @@ public:
      */
     bool has(const std::string& name) const;
 
+    const boost::urls::url& url() const { return m_url; }
+
 private:
-    void extract_bucket_and_object();
     void extract_query_parameters();
 
-    std::string m_bucket_id{};
-    std::string m_object_key{};
-    url m_url;
+    boost::urls::url m_url;
     std::map<std::string, std::string> m_params;
 };
 

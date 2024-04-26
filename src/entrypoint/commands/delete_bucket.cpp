@@ -10,14 +10,14 @@ delete_bucket::delete_bucket(const reference_collection& collection)
 bool delete_bucket::can_handle(const http_request& req) {
     const auto& uri = req.uri();
 
-    return req.method() == method::delete_ && !uri.bucket().empty() &&
-           uri.object_key().empty() && uri.empty();
+    return req.method() == method::delete_ && !req.bucket().empty() &&
+           req.object_key().empty() && uri.empty();
 }
 
 coro<void> delete_bucket::handle(http_request& req) const {
     metric<entrypoint_delete_bucket_req>::increase(1);
     try {
-        std::string bucket_name = req.uri().bucket();
+        std::string bucket_name = req.bucket();
 
         auto func = [&bucket_name](acquired_messenger<coro_client> m,
                                    long id) -> coro<void> {

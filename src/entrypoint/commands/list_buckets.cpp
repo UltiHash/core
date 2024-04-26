@@ -11,8 +11,8 @@ bool list_buckets::can_handle(const http_request& req) {
 
     const auto& uri = req.uri();
 
-    return req.method() == method::get && uri.bucket().empty() &&
-           uri.object_key().empty() && uri.empty();
+    return req.method() == method::get && req.bucket().empty() &&
+           req.object_key().empty() && uri.empty();
 }
 
 static http_response

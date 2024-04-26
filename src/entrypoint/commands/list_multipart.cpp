@@ -35,13 +35,13 @@ list_multipart::list_multipart(const reference_collection& collection)
 
 bool list_multipart::can_handle(const http_request& req) {
     const auto& uri = req.uri();
-    return req.method() == method::get && !uri.bucket().empty() &&
-           uri.object_key().empty() && uri.has("uploads");
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && uri.has("uploads");
 }
 
 coro<void> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
-    const std::string& bucket_name = req.uri().bucket();
+    const std::string& bucket_name = req.bucket();
 
     auto ongoing =
         m_collection.server_state.m_uploads.list_multipart_uploads(bucket_name);

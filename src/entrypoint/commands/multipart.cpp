@@ -10,8 +10,8 @@ multipart::multipart(reference_collection& collection)
 
 bool multipart::can_handle(const http_request& req) {
     const auto& uri = req.uri();
-    return req.method() == method::put && !uri.bucket().empty() &&
-           !uri.object_key().empty() && uri.has("partNumber") &&
+    return req.method() == method::put && !req.bucket().empty() &&
+           !req.object_key().empty() && uri.has("partNumber") &&
            uri.has("uploadId");
 }
 

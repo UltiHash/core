@@ -159,8 +159,8 @@ list_objects_v2::list_objects_v2(const reference_collection& collection)
 bool list_objects_v2::can_handle(const http_request& req) {
     const auto& uri = req.uri();
 
-    return req.method() == method::get && !uri.bucket().empty() &&
-           uri.object_key().empty() && uri.has("list-type") &&
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && uri.has("list-type") &&
            uri.get("list-type") == "2";
 }
 
@@ -168,7 +168,7 @@ coro<void> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     try {
         directory_message dir_req;
-        dir_req.bucket_id = req.uri().bucket();
+        dir_req.bucket_id = req.bucket();
 
         if (auto prefix = req.uri().get_opt("prefix");
             prefix && !prefix->empty()) {

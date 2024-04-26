@@ -10,8 +10,8 @@ abort_multipart::abort_multipart(reference_collection& collection)
 bool abort_multipart::can_handle(const http_request& req) {
     const auto& uri = req.uri();
 
-    return req.method() == method::delete_ && !uri.bucket().empty() &&
-           !uri.object_key().empty() && uri.has("uploadId");
+    return req.method() == method::delete_ && !req.bucket().empty() &&
+           !req.object_key().empty() && uri.has("uploadId");
 }
 
 coro<void> abort_multipart::handle(http_request& req) const {

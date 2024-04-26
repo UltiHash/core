@@ -12,8 +12,8 @@ complete_multipart::complete_multipart(reference_collection& collection)
 bool complete_multipart::can_handle(const http_request& req) {
     const auto& uri = req.uri();
 
-    return req.method() == method::post && !uri.bucket().empty() &&
-           !uri.object_key().empty() && uri.has("uploadId");
+    return req.method() == method::post && !req.bucket().empty() &&
+           !req.object_key().empty() && uri.has("uploadId");
 }
 
 void complete_multipart::validate(const http_request& req,
@@ -69,8 +69,8 @@ coro<void> complete_multipart::handle(http_request& req) const {
     validate(req, buffer);
 
     const auto& upload_id = req.uri().get("uploadId");
-    const auto& bucket_name = req.uri().bucket();
-    const auto& object_name = req.uri().object_key();
+    const auto& bucket_name = req.bucket();
+    const auto& object_name = req.object_key();
 
     const auto& up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
