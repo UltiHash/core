@@ -7,7 +7,7 @@ project(uh-cluster VERSION 0.4.1)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
-option(BUILD_EXPERIMENTS "Build experiments" ON)
+option(BUILD_EXPERIMENTS "Build experiments" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
