@@ -91,15 +91,9 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
     clear_infos();
 
     std::lock_guard<std::mutex> lock(mutex);
-    auto& total_resp = find(id)->second;
-    if (!data.empty()) {
-        total_resp->etags.emplace(part, calculate_md5(data));
-    } else { // default etag
-        total_resp->etags.emplace(
-            part,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
-    }
 
+    auto& total_resp = find(id)->second;
+    total_resp->etags.emplace(part, calculate_md5(data));
     total_resp->effective_size += resp.effective_size;
     total_resp->data_size += data.size();
     total_resp->part_sizes.emplace(part, data.size());
