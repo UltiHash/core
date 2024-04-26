@@ -6,9 +6,9 @@
 #include "common/registry/service_id.h"
 #include "common/registry/services.h"
 #include "common/utils/service_factory.h"
-#include "storage_interface.h"
-#include <etcd/SyncClient.hpp>
-#include <etcd/Watcher.hpp>
+#include "storage/storage_interface.h"
+#include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
+#include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 #include <ranges>
 
 namespace uh::cluster {

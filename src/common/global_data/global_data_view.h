@@ -2,12 +2,12 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/network/client.h"
+#include "common/registry/tmp_services.h"
 #include "common/types/shared_buffer.h"
 #include "common/utils/worker_pool.h"
 #include "config.h"
 #include "lru_cache.h"
 #include "storage/storage_interface.h"
-#include "storage/tmp_services.h"
 #include <map>
 
 namespace uh::cluster {
