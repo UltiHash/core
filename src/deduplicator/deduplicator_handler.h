@@ -3,6 +3,7 @@
 
 #include "common/utils/protocol_handler.h"
 #include "config.h"
+#include "deduplicator_interface.h"
 #include "fragment_set.h"
 
 namespace uh::cluster {
@@ -10,21 +11,14 @@ namespace uh::cluster {
 class deduplicator_handler : public protocol_handler {
 
 public:
-    deduplicator_handler(deduplicator_config config, global_data_view& storage,
-                         worker_pool& dedupe_workers);
+    deduplicator_handler(local_deduplicator& local_dedupe);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
     coro<void> handle_dedupe(messenger& m, const messenger::header& h);
 
-    dedupe_response deduplicate(std::string_view data);
-
-    deduplicator_config m_dedupe_conf;
-    fragment_set m_fragment_set;
-    global_data_view& m_storage;
-    worker_pool& m_dedupe_workers;
-    std::size_t m_fragment_buffer_size = 8 * MEBI_BYTE;
+    local_deduplicator& m_local_dedupe;
 };
 
 } // end namespace uh::cluster

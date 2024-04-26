@@ -36,9 +36,13 @@ public:
         return m_local_service;
     }
 
+    std::shared_ptr<service_interface> get_local_service() const {
+        return m_local_service;
+    }
+
     virtual ~service_factory() = default;
 
-protected:
+private:
     std::shared_ptr<service_interface>
     make_remote_service(const service_endpoint& service);
 

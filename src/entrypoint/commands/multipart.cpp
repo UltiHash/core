@@ -32,8 +32,9 @@ coro<void> multipart::handle(http_request& req) const {
     buffer.resize(size);
 
     dedupe_response resp = {};
-    if (buffer.size() > 0) {
-        resp = co_await integration::integrate_data(buffer, m_collection);
+    if (!buffer.empty()) {
+        resp = co_await m_collection.dedupe_services.get()->deduplicate(
+            {buffer.data(), buffer.size()});
     }
 
     m_collection.server_state.m_uploads.append_upload_part_info(

@@ -39,7 +39,8 @@ public:
 
         if (!b.empty()) {
             asio::co_spawn(m_collection.ioc,
-                           integration::integrate_data(b, m_collection),
+                           m_collection.dedupe_services.get()->deduplicate(
+                               {b.data(), b.size()}),
                            use_awaitable_promise_cospawn(pr));
         } else {
             pr->set(dedupe_response());
@@ -131,7 +132,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
         auto promise = b.upload();
         b.flip();
 
-        auto read = co_await b.fill(req);
+        read = co_await b.fill(req);
         hash.consume(b.current());
         transferred += read;
 
@@ -157,7 +158,8 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
         co_return dedupe_response();
     }
 
-    co_return co_await integration::integrate_data(buffer, m_collection);
+    co_return co_await m_collection.dedupe_services.get()->deduplicate(
+        {buffer.data(), buffer.size()});
 }
 
 } // namespace uh::cluster

@@ -116,8 +116,8 @@ public:
         } else
             throw std::runtime_error("timeout waiting for client");
 
-        if (m_local_client) {
-            return m_local_client;
+        if (auto lc = m_service_factory.get_local_service(); lc) {
+            return lc;
         }
 
         if (m_robin_index == m_clients.end()) {
@@ -258,7 +258,6 @@ private:
 
     mutable std::shared_mutex m_mutex;
     mutable std::condition_variable_any m_cv;
-    std::shared_ptr<service_interface> m_local_client;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
 
     mutable std::map<std::size_t,

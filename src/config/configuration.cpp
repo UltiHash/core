@@ -236,6 +236,8 @@ std::optional<config> read_config(int argc, char** argv) {
         sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
     auto sub_dr_str =
         sub_storage(*sub_dir, rv.directory.m_attached_storage.emplace());
+    auto sub_en_dd = sub_deduplicator(
+        *sub_ep, rv.entrypoint.m_attached_deduplicator.emplace());
 
     register_service(app, rv.service);
 
@@ -278,6 +280,9 @@ std::optional<config> read_config(int argc, char** argv) {
     }
     if (!sub_dr_str->parsed()) {
         rv.directory.m_attached_storage.reset();
+    }
+    if (!sub_en_dd->parsed()) {
+        rv.entrypoint.m_attached_deduplicator.reset();
     }
 
     rv.log = make_log_config(rv.service, log_level, rv.role);

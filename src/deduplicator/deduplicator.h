@@ -10,6 +10,7 @@
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "deduplicator_handler.h"
+#include "deduplicator_interface.h"
 #include "storage/storage.h"
 #include <functional>
 #include <iostream>
@@ -36,9 +37,10 @@ public:
                   m_attached_storage.get_local_service_interface())),
           m_dedupe_workers(m_ioc, config.worker_thread_count),
           m_data_view(config.global_data_view, m_ioc, m_storage_services),
+          m_deduplicator(
+              std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server,
-                   std::make_unique<deduplicator_handler>(config, m_data_view,
-                                                          m_dedupe_workers),
+                   std::make_unique<deduplicator_handler>(*m_deduplicator),
                    m_ioc) {}
 
     void run() {
@@ -49,6 +51,10 @@ public:
     }
 
     void stop() { m_server.stop(); }
+
+    std::shared_ptr<local_deduplicator> get_local_interface() {
+        return m_deduplicator;
+    }
 
     ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
@@ -63,12 +69,12 @@ private:
     service_registry m_service_registry;
 
     attached_service<storage> m_attached_storage;
-
     tmp_services<storage_interface> m_storage_services;
 
     worker_pool m_dedupe_workers;
 
     global_data_view m_data_view;
+    std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };
