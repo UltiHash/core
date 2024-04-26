@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1 2024-04-26
+- Fixed a bug where data corruption could occur when using multiple deduplicator instances
+- Implemented asynchronous write support in storage service
+- Improved write throughput of storage service
+- Improved handling of command line arguments
+- Reduced memory footprint of entrypoint service
+- Fixed timeout issues when uploading large objects
+- Improved throughput of deduplicator service
+- Fixed formatting of timestamps in HTTP response
+- Fixed computation of ETAG
+
 ## 0.4.0 2024-03-26
 - Refactored data store, mostly lockless writes and completely lockless reads
 - Fixed a bug in the free spot manager
