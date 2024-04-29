@@ -20,15 +20,28 @@ coro<void> head_object::handle(const http_request& req) const {
 
     try {
         auto obj_list = co_await client->list_objects(req.bucket(), req.object_key(), std::nullopt);
-
         if (obj_list.empty()) {
             throw std::runtime_error("not found");
         }
 
         http::response<http::empty_body> res{http::status::ok, 11};
-        res.base().set("Content-Length", std::to_string(obj_list[0].size));
-        res.base().set("Last-Modified", imf_fixdate(obj_list[0].last_modified));
 
+        auto found = false;
+        for (const auto& obj : lst.objects) {
+            if (obj.name == req.object_key()) {
+                res.base().set("Content-Length", std::to_string(obj.size));
+                res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            throw command_exception(http::status::not_found, "NoSuchKey",
+                                    "object not found");
+        }
+
+        LOG_DEBUG() << "head_object response: " << res;
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
             req.socket(), sr,
