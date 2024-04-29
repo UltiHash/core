@@ -36,7 +36,7 @@ public:
     }
 
     template <typename T>
-    requires std::is_arithmetic_v <T>
+    requires std::is_arithmetic_v<T>
     coro<T> recv_primitive(const header& message_header) {
         T val;
         register_read_buffer(val);
@@ -114,7 +114,7 @@ public:
     }
 
     template <typename T>
-    requires std::is_arithmetic_v <T>
+    requires std::is_arithmetic_v<T>
     coro<void> send_primitive(const message_type type, const T val) {
         register_write_buffer(val);
         co_await send_buffers(type);
@@ -144,7 +144,7 @@ public:
     }
 
     coro<void> send_directory_get_object_chunk(bool has_next,
-                                               unique_buffer<char> buffer) {
+                                               std::string buffer) {
         register_write_buffer(has_next);
         register_write_buffer(buffer);
         co_await send_buffers(SUCCESS);

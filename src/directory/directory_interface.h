@@ -13,41 +13,49 @@ namespace uh::cluster {
 struct directory_interface {
 
     struct read_handle {
-        virtual bool has_next () = 0;
-        virtual coro<unique_buffer<char>> next () = 0;
+        virtual bool has_next() = 0;
+        virtual coro<std::string> next() = 0;
         virtual ~read_handle() = default;
     };
 
     static constexpr role service_role = DIRECTORY_SERVICE;
 
-    virtual coro<void> put_object (const std::string& bucket, const std::string& object_id, address&& addr) = 0;
-    virtual coro<std::unique_ptr <read_handle>> get_object (const std::string& bucket, const std::string& object_id) = 0;
-    virtual coro<void> put_bucket (const std::string& bucket) = 0;
-    virtual coro<void> bucket_exists (const std::string& bucket) = 0;
-    virtual coro<void> delete_bucket (const std::string& bucket) = 0;
-    virtual coro<void> delete_object (const std::string& bucket, const std::string& object_id) = 0;
-    virtual coro<std::vector<std::string>> list_buckets () = 0;
-    virtual coro<std::vector<object>> list_objects (const std::string& bucket, const std::optional<std::string>& prefix, const std::optional<std::string>& lower_bound) = 0;
+    virtual coro<void> put_object(const std::string& bucket,
+                                  const std::string& object_id,
+                                  const address& addr) = 0;
+    virtual coro<std::unique_ptr<read_handle>>
+    get_object(const std::string& bucket, const std::string& object_id) = 0;
+    virtual coro<void> put_bucket(const std::string& bucket) = 0;
+    virtual coro<void> bucket_exists(const std::string& bucket) = 0;
+    virtual coro<void> delete_bucket(const std::string& bucket) = 0;
+    virtual coro<void> delete_object(const std::string& bucket,
+                                     const std::string& object_id) = 0;
+    virtual coro<std::vector<std::string>> list_buckets() = 0;
+    virtual coro<std::vector<object>>
+    list_objects(const std::string& bucket,
+                 const std::optional<std::string>& prefix,
+                 const std::optional<std::string>& lower_bound) = 0;
 
     virtual ~directory_interface() = default;
 };
 
-struct local_directory: public directory_interface {
+struct local_directory : public directory_interface {
 
-    struct local_read_handle: public read_handle {
+    struct local_read_handle : public read_handle {
         global_data_view& m_storage;
         const address m_addr;
         const size_t m_chunk_size;
         size_t m_addr_index = 0;
 
-        local_read_handle(global_data_view& storage, address&& addr, size_t chunk_size): m_storage(storage), m_addr(std::move (addr)), m_chunk_size(chunk_size) {
-        }
+        local_read_handle(global_data_view& storage, address&& addr,
+                          size_t chunk_size)
+            : m_storage(storage),
+              m_addr(std::move(addr)),
+              m_chunk_size(chunk_size) {}
 
-        bool has_next () override {
-            return m_addr_index != m_addr.size();
-        }
+        bool has_next() override { return m_addr_index != m_addr.size(); }
 
-        coro<unique_buffer<char>> next () override {
+        coro<std::string> next() override {
             std::size_t buffer_size = 0;
             address partial_addr;
             while (m_addr_index < m_addr.size() and
@@ -57,7 +65,7 @@ struct local_directory: public directory_interface {
                 buffer_size += frag.size;
                 m_addr_index++;
             }
-            unique_buffer<char> buffer(buffer_size);
+            std::string buffer(buffer_size, '\0');
 
             m_storage.read_address(buffer.data(), partial_addr);
             co_return buffer;
@@ -69,8 +77,8 @@ struct local_directory: public directory_interface {
     // number of files to upload between two warnings
     static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
 
-    local_directory (directory_config config, global_data_view& storage):
-          m_config(std::move(config)),
+    local_directory(directory_config config, global_data_view& storage)
+        : m_config(std::move(config)),
           m_directory(m_config.directory_store_conf),
           m_storage(storage),
           m_stored_size(restore_stored_size()) {
@@ -82,51 +90,59 @@ struct local_directory: public directory_interface {
                 std::bind(&local_directory::get_effective_size_64, this));
     }
 
-    coro<void> put_object (const std::string& bucket, const std::string& object_id, address&& addr) override {
+    coro<void> put_object(const std::string& bucket,
+                          const std::string& object_id,
+                          const address& addr) override {
         check_size_limit(addr.data_size());
-        m_directory.insert(bucket, object_id, std::move(addr));
+        m_directory.insert(bucket, object_id, addr);
         co_return;
     }
 
-    coro<std::unique_ptr <read_handle>> get_object (const std::string& bucket, const std::string& object_id) override {
+    coro<std::unique_ptr<read_handle>>
+    get_object(const std::string& bucket,
+               const std::string& object_id) override {
         auto addr = m_directory.get(bucket, object_id);
-        co_return std::make_unique<local_read_handle>(m_storage, std::move (addr), m_config.download_chunk_size);
+        co_return std::make_unique<local_read_handle>(
+            m_storage, std::move(addr), m_config.download_chunk_size);
     }
 
-    coro<void> put_bucket (const std::string& bucket) override {
+    coro<void> put_bucket(const std::string& bucket) override {
         m_directory.add_bucket(bucket);
         co_return;
     }
 
-    coro<void> bucket_exists (const std::string& bucket) override {
+    coro<void> bucket_exists(const std::string& bucket) override {
         m_directory.bucket_exists(bucket);
         co_return;
     }
 
-    coro<void> delete_bucket (const std::string& bucket) override {
+    coro<void> delete_bucket(const std::string& bucket) override {
         m_directory.remove_bucket(bucket);
         co_return;
     }
 
-    coro<void> delete_object (const std::string& bucket, const std::string& object_id) override {
+    coro<void> delete_object(const std::string& bucket,
+                             const std::string& object_id) override {
         try {
-            const auto addr =
-                m_directory.get(bucket, object_id);
+            const auto addr = m_directory.get(bucket, object_id);
             const auto size = addr.data_size();
             decrement_stored_size(size);
             m_directory.remove_object(bucket, object_id);
         } catch (const std::exception& e) {
-            LOG_WARN() << "deletion of " << object_id << " in "
-                       << bucket << " failed: " << e.what();
+            LOG_WARN() << "deletion of " << object_id << " in " << bucket
+                       << " failed: " << e.what();
         }
         co_return;
     }
 
-    coro<std::vector<std::string>> list_buckets () override {
+    coro<std::vector<std::string>> list_buckets() override {
         co_return m_directory.list_buckets();
     }
 
-    coro<std::vector<object>> list_objects (const std::string& bucket, const std::optional<std::string>& prefix, const std::optional<std::string>& lower_bound) override {
+    coro<std::vector<object>>
+    list_objects(const std::string& bucket,
+                 const std::optional<std::string>& prefix,
+                 const std::optional<std::string>& lower_bound) override {
         std::string lower_bound_str, prefix_str;
         if (lower_bound) {
             lower_bound_str = *lower_bound;
@@ -137,8 +153,11 @@ struct local_directory: public directory_interface {
         co_return m_directory.list_objects(bucket, lower_bound_str, prefix_str);
     }
 
-private:
+    boost::asio::io_context& get_executor() { return m_storage.get_executor(); }
 
+    ~local_directory() override { persist_stored_size(); }
+
+private:
     uint64_t get_stored_size_64() { return m_stored_size.get_low(); }
     uint64_t get_effective_size_64() {
         return m_storage.get_used_space().get_low();
@@ -231,87 +250,84 @@ private:
     uint128_t m_stored_size;
 };
 
-struct remote_directory: public directory_interface {
+struct remote_directory : public directory_interface {
 
-    struct remote_read_handle: public read_handle {
+    struct remote_read_handle : public read_handle {
         acquired_messenger<coro_client> m_messenger;
+
         bool m_transfer_completed = false;
-        remote_read_handle(acquired_messenger<coro_client> m): m_messenger(std::move (m)) {
+        remote_read_handle(acquired_messenger<coro_client> m)
+            : m_messenger(std::move(m)) {}
 
-        }
+        bool has_next() override { return !m_transfer_completed; }
 
-        bool has_next () override {
-            return !m_transfer_completed;
-        }
-
-        coro<unique_buffer<char>> next () override {
-            co_return unique_buffer<char>{};
+        coro<std::string> next() override {
+            auto h = co_await m_messenger->recv_header();
+            auto [b_next, buf] =
+                co_await m_messenger->recv_directory_get_object_chunk(h);
+            m_transfer_completed = !b_next;
+            co_return buf;
         }
     };
 
-    explicit remote_directory (coro_client directory_service): m_directory_service(std::move (directory_service)) {}
-    coro<void> put_object (const std::string& bucket, const std::string& object_id, address&& addr) override {
-        metric<entrypoint_put_object_req>::increase(1);
+    explicit remote_directory(coro_client directory_service)
+        : m_directory_service(std::move(directory_service)) {}
+    coro<void> put_object(const std::string& bucket,
+                          const std::string& object_id,
+                          const address& addr) override {
         const directory_message dir_req{
             .bucket_id = bucket,
-            .object_key =
-                std::make_unique<std::string>(object_id),
-            .addr = std::make_unique<address>(std::move (addr)),
+            .object_key = std::make_unique<std::string>(object_id),
+            .addr = std::make_unique<address>(addr),
         };
         auto m = co_await m_directory_service.acquire_messenger();
         co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ, dir_req);
         co_await m->recv_header();
     }
-    coro<std::unique_ptr <read_handle>> get_object (const std::string& bucket, const std::string& object_id) override {
-        metric<entrypoint_get_object_req>::increase(1);
-        auto m =
-            co_await m_directory_service.acquire_messenger();
+    coro<std::unique_ptr<read_handle>>
+    get_object(const std::string& bucket,
+               const std::string& object_id) override {
+        auto m = co_await m_directory_service.acquire_messenger();
 
         directory_message dir_req;
         dir_req.bucket_id = bucket;
-        dir_req.object_key =
-            std::make_unique<std::string>(object_id);
+        dir_req.object_key = std::make_unique<std::string>(object_id);
 
         co_await m->send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req);
-        co_return std::make_unique<remote_read_handle>(std::move (m));
+        co_return std::make_unique<remote_read_handle>(std::move(m));
     }
-    coro<void> put_bucket (const std::string& bucket) override {
-        metric<entrypoint_create_bucket_req>::increase(1);
-        auto m =
-            co_await m_directory_service.acquire_messenger();
+    coro<void> put_bucket(const std::string& bucket) override {
+        auto m = co_await m_directory_service.acquire_messenger();
         directory_message req{.bucket_id = bucket};
         co_await m->send_directory_message(DIRECTORY_BUCKET_PUT_REQ, req);
         co_await m->recv_header();
     }
-    coro<void> bucket_exists (const std::string& bucket) override {
+    coro<void> bucket_exists(const std::string& bucket) override {
         auto m = co_await m_directory_service.acquire_messenger();
         directory_message req{.bucket_id = bucket};
         co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ, req);
         co_await m->recv_header();
     }
-    coro<void> delete_bucket (const std::string& bucket) override {
-        metric<entrypoint_delete_bucket_req>::increase(1);
+    coro<void> delete_bucket(const std::string& bucket) override {
 
         auto m = co_await m_directory_service.acquire_messenger();
         directory_message req;
         req.bucket_id = bucket;
-        co_await m->send_directory_message(DIRECTORY_BUCKET_DELETE_REQ,
-                                           req);
+        co_await m->send_directory_message(DIRECTORY_BUCKET_DELETE_REQ, req);
         co_await m->recv_header();
     }
-    coro<void> delete_object (const std::string& bucket, const std::string& object_id) override {
-        metric<entrypoint_delete_object_req>::increase(1);
+    coro<void> delete_object(const std::string& bucket,
+                             const std::string& object_id) override {
         directory_message dir_req{.bucket_id = bucket,
-                                 .object_key = std::make_unique<std::string>(
-                                     object_id)};
+                                  .object_key =
+                                      std::make_unique<std::string>(object_id)};
         auto m = co_await m_directory_service.acquire_messenger();
 
         co_await m->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
-                                             dir_req);
+                                           dir_req);
         co_await m->recv_header();
     }
-    coro<std::vector<std::string>> list_buckets () override {
-        metric<entrypoint_list_buckets_req>::increase(1);
+    coro<std::vector<std::string>> list_buckets() override {
         auto m = co_await m_directory_service.acquire_messenger();
 
         co_await m->send(DIRECTORY_BUCKET_LIST_REQ, {});
@@ -325,13 +341,14 @@ struct remote_directory: public directory_interface {
         }
         co_return buckets_found;
     }
-    coro<std::vector<object>> list_objects (const std::string& bucket, const std::optional<std::string>& prefix, const std::optional<std::string>& lower_bound) override {
-        metric<entrypoint_list_objects_req>::increase(1);
+    coro<std::vector<object>>
+    list_objects(const std::string& bucket,
+                 const std::optional<std::string>& prefix,
+                 const std::optional<std::string>& lower_bound) override {
         auto m = co_await m_directory_service.acquire_messenger();
-        directory_message dir_req {.bucket_id = bucket};
+        directory_message dir_req{.bucket_id = bucket};
 
-        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
-                                             dir_req);
+        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
 
         auto h_dir = co_await m->recv_header();
         auto list_objs_res =
@@ -343,6 +360,6 @@ private:
     coro_client m_directory_service;
 };
 
-}
+} // namespace uh::cluster
 
 #endif // UH_CLUSTER_DIRECTORY_INTERFACE_H

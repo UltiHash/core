@@ -23,14 +23,8 @@ public:
     [[nodiscard]] coro<void> handle(http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
-            auto cl = m_collection.directory_services.get();
-            auto m = co_await cl->acquire_messenger();
-
-            directory_message dir_req{.bucket_id = req.bucket()};
-
-            co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
-                                               dir_req);
-            co_await m->recv_header();
+            auto c = m_collection.directory_services.get();
+            co_await c->bucket_exists(req.bucket());
         } catch (const error_exception& e) {
             throw_from_error(e.error());
         }

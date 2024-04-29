@@ -31,13 +31,11 @@ public:
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_dir_services (
+          m_directory_services(
               m_etcd_client,
               service_factory<directory_interface>(
-                m_ioc, config.directory_connection_count,
-                m_attached_directory.get_local_service_interface())),
-          m_directory_services(m_ioc, config.directory_connection_count,
-                               m_etcd_client),
+                  m_ioc, config.directory_connection_count,
+                  m_attached_directory.get_local_service_interface())),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection),
                    m_ioc) {}
@@ -74,9 +72,8 @@ private:
     attached_service<directory> m_attached_directory;
 
     tmp_services<deduplicator_interface> m_dedupe_services;
-    tmp_services<directory_interface> m_dir_services;
+    tmp_services<directory_interface> m_directory_services;
 
-    services<DIRECTORY_SERVICE, coro_client> m_directory_services;
     state m_state;
 
     reference_collection m_collection;

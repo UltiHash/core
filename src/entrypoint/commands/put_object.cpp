@@ -80,20 +80,14 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req, hash);
         }
 
-        const directory_message dir_req{
-            .bucket_id = req.bucket(),
-            .object_key = std::make_unique<std::string>(req.object_key()),
-            .addr = std::make_unique<address>(std::move(resp.addr)),
+        auto func = [&req, &resp](std::shared_ptr<directory_interface> dir,
+                                  size_t id) -> coro<void> {
+            co_await dir->put_object(req.bucket(), req.object_key(), resp.addr);
         };
 
-        auto func = [&](acquired_messenger<coro_client> m,
-                        long id) -> coro<void> {
-            co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
-                                               dir_req);
-            co_await m->recv_header();
-        };
-
-        co_await m_collection.directory_services.broadcast(func);
+        co_await broadcast<directory_interface>(
+            m_collection.ioc, func,
+            m_collection.directory_services.get_services());
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);

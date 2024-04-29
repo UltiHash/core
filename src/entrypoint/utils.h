@@ -6,6 +6,8 @@
 #include "common/utils/worker_pool.h"
 #include "config.h"
 #include "deduplicator/deduplicator_interface.h"
+#include "directory/directory_interface.h"
+
 #include "entrypoint/state.h"
 
 namespace uh::cluster {
@@ -13,7 +15,7 @@ namespace uh::cluster {
 struct reference_collection {
     boost::asio::io_context& ioc;
     const tmp_services<deduplicator_interface>& dedupe_services;
-    const services<DIRECTORY_SERVICE, coro_client>& directory_services;
+    const tmp_services<directory_interface>& directory_services;
     state& server_state;
     entrypoint_config& config;
 };
