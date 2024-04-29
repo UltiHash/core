@@ -175,6 +175,8 @@ coro<void> list_objects_v2::handle(http_request& req) const {
         auto obj_list = co_await dir->list_objects(req.bucket(), prefix, lowerbound);
 
         auto res = get_response(obj_list, req);
+
+        LOG_DEBUG() << "list_objects_v2 response: " << res;
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
