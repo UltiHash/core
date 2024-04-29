@@ -9,10 +9,8 @@ head_object::head_object(const reference_collection& coll)
     : m_coll(coll) {}
 
 bool head_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::head && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() &&
-           !uri.query_string_exists("attributes");
+    return req.method() == method::head && !req.bucket().empty() &&
+           !req.object_key().empty() && !req.query("attributes");
 }
 
 coro<void> head_object::handle(const http_request& req) const {
@@ -23,9 +21,9 @@ coro<void> head_object::handle(const http_request& req) const {
 
     try {
         directory_message dir_req;
-        dir_req.bucket_id = req.get_uri().get_bucket_id();
+        dir_req.bucket_id = req.bucket();
         dir_req.object_key_prefix =
-            std::make_unique<std::string>(req.get_uri().get_object_key());
+            std::make_unique<std::string>(req.object_key());
 
         co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
         auto hdr = co_await m->recv_header();
@@ -45,8 +43,8 @@ coro<void> head_object::handle(const http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found,
-                                command_error::object_not_found);
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
     }
 }
 

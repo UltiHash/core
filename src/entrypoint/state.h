@@ -54,6 +54,9 @@ struct upload_state {
 private:
     void clear_infos();
 
+    std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
+    find(const std::string& id);
+
     mutable std::mutex mutex;
     std::unordered_map<std::string, std::shared_ptr<upload_info>> m_infos;
 

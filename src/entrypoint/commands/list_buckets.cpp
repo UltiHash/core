@@ -8,11 +8,8 @@ list_buckets::list_buckets(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_buckets::can_handle(const http_request& req) {
-
-    const auto& uri = req.get_uri();
-
-    return req.get_method() == method::get && uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() && uri.get_query_parameters().empty();
+    return req.method() == method::get && req.bucket().empty() &&
+           req.object_key().empty() && !req.has_query();
 }
 
 static http_response

@@ -16,11 +16,8 @@ public:
         : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
-        const auto& uri = req.get_uri();
-
-        return req.get_method() == method::post &&
-               !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-               uri.query_string_exists("uploads");
+        return req.method() == method::post && !req.bucket().empty() &&
+               !req.object_key().empty() && req.query("uploads");
     }
 
     [[nodiscard]] coro<void> handle(http_request& req) {
@@ -29,25 +26,18 @@ public:
             auto cl = m_collection.directory_services.get();
             auto m = co_await cl->acquire_messenger();
 
-            directory_message dir_req{.bucket_id =
-                                          req.get_uri().get_bucket_id()};
+            directory_message dir_req{.bucket_id = req.bucket()};
 
             co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
                                                dir_req);
             co_await m->recv_header();
         } catch (const error_exception& e) {
-            switch (*e.error()) {
-            case error::bucket_not_found:
-                throw command_exception(boost::beast::http::status::not_found,
-                                        command_error::bucket_not_found);
-            default:
-                throw command_exception(http::status::internal_server_error);
-            }
+            throw_from_error(e.error());
         }
 
         const auto upload_id =
-            m_collection.server_state.m_uploads.insert_upload(
-                req.get_uri().get_bucket_id(), req.get_uri().get_object_key());
+            m_collection.server_state.m_uploads.insert_upload(req.bucket(),
+                                                              req.object_key());
 
         auto res = get_response(req, upload_id);
         co_await req.respond(res.get_prepared_response());
@@ -61,10 +51,10 @@ private:
         res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                      "<InitiateMultipartUploadResult>\n"
                      "<Bucket>" +
-                     req.get_uri().get_bucket_id() +
+                     req.bucket() +
                      "</Bucket>\n"
                      "<Key>" +
-                     req.get_uri().get_object_key() +
+                     req.object_key() +
                      "</Key>\n"
                      "<UploadId>" +
                      upload_id +

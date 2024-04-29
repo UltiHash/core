@@ -8,10 +8,8 @@ get_object::get_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool get_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() &&
-           !uri.query_string_exists("attributes");
+    return req.method() == method::get && !req.bucket().empty() &&
+           !req.object_key().empty() && !req.query("attributes");
 }
 
 coro<void> get_object::handle(http_request& req) const {
@@ -31,9 +29,8 @@ coro<void> get_object::handle(http_request& req) const {
             co_await m_collection.directory_services.get()->acquire_messenger();
 
         directory_message dir_req;
-        dir_req.bucket_id = req.get_uri().get_bucket_id();
-        dir_req.object_key =
-            std::make_unique<std::string>(req.get_uri().get_object_key());
+        dir_req.bucket_id = req.bucket();
+        dir_req.object_key = std::make_unique<std::string>(req.object_key());
 
         co_await m->send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req);
 
@@ -85,13 +82,7 @@ coro<void> get_object::handle(http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
-        switch (*e.error()) {
-        case error::object_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::object_not_found);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

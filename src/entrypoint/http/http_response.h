@@ -8,8 +8,6 @@ namespace uh::cluster {
 namespace http = boost::beast::http;
 class http_response {
 public:
-    http_response() = default;
-
     void set_body(std::string&& body) noexcept;
 
     void set_etag(const std::string& etag);
@@ -21,12 +19,14 @@ public:
     const http::response<http::string_body>& get_prepared_response();
 
     http::response<http::string_body>& base() { return m_res; }
+    const http::response<http::string_body>& base() const { return m_res; }
 
 private:
     http::response<http::string_body> m_res{
         http::response<http::string_body>{http::status::ok, 11}};
 };
 
+std::ostream& operator<<(std::ostream& out, const http_response& res);
 } // namespace uh::cluster
 
 #endif
