@@ -8,6 +8,7 @@
 #include "common/registry/services.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
+#include "directory/directory_interface.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
@@ -24,11 +25,17 @@ public:
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
           m_config(config),
           m_attached_dedupe(sc, config.m_attached_deduplicator),
+          m_attached_directory(sc, config.m_attached_directory),
           m_dedupe_services(
               m_etcd_client,
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
+          m_dir_services (
+              m_etcd_client,
+              service_factory<directory_interface>(
+                m_ioc, config.directory_connection_count,
+                m_attached_directory.get_local_service_interface())),
           m_directory_services(m_ioc, config.directory_connection_count,
                                m_etcd_client),
           m_collection(get_reference_collection()),
@@ -64,7 +71,11 @@ private:
     entrypoint_config m_config;
 
     attached_service<deduplicator> m_attached_dedupe;
+    attached_service<directory> m_attached_directory;
+
     tmp_services<deduplicator_interface> m_dedupe_services;
+    tmp_services<directory_interface> m_dir_services;
+
     services<DIRECTORY_SERVICE, coro_client> m_directory_services;
     state m_state;
 

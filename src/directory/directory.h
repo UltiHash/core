@@ -5,6 +5,7 @@
 #include "common/registry/attached_service.h"
 #include "common/registry/service_id.h"
 #include "directory_handler.h"
+#include "directory_interface.h"
 #include <common/telemetry/log.h>
 #include <functional>
 
@@ -40,6 +41,10 @@ public:
     }
 
     void stop() { m_server.stop(); }
+
+    std::shared_ptr<local_directory> get_local_interface() {
+        return {};
+    }
 
 private:
     etcd::SyncClient m_etcd_client;
