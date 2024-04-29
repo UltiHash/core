@@ -1,0 +1,130 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+  - registry-credentials
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  ultihashSecret:
+    key: license
+    name: ultihash
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+
+featureTests:
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  persistence:
+    size: 5Gi
+    storageClass: ebs-csi-gp3
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  
+  ingress:
+    enabled: false
+
+deduplicator:
+  replicas: 1
+  storageClass: ebs-csi-gp3
+  storageSize: 2Gi
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+directory:
+  replicas: 1
+  storageClass: ebs-csi-gp3
+  storageSize: 2Gi
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+storage:
+  replicas: 1
+  storageClass: ebs-csi-gp3
+  storageSize: 5Gi
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+collector:
+  config:
+    exporters:
+      otlphttp/uptrace: null
+    receivers:
+      kubeletstats: null
+      prometheus: null
+    service:
+      pipelines:
+        logs:
+          exporters:
+          - debug
+        metrics:
+          exporters:
+          - debug
+          receivers:
+          - otlp
+        traces:
+          exporters:
+          - debug
+          receivers:
+          - otlp
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  presets:
+    kubeletMetrics:
+      enabled: false
+
+exporter:
+  enabled: false
