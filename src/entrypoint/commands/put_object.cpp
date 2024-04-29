@@ -60,9 +60,8 @@ put_object::put_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool put_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::put && !uri.get_bucket_id().empty() &&
-           !uri.get_object_key().empty() && uri.get_query_parameters().empty();
+    return req.method() == method::put && !req.bucket().empty() &&
+           !req.object_key().empty() && !req.has_query();
 }
 
 coro<void> put_object::handle(http_request& req) const {
@@ -81,9 +80,8 @@ coro<void> put_object::handle(http_request& req) const {
         }
 
         const directory_message dir_req{
-            .bucket_id = req.get_uri().get_bucket_id(),
-            .object_key =
-                std::make_unique<std::string>(req.get_uri().get_object_key()),
+            .bucket_id = req.bucket(),
+            .object_key = std::make_unique<std::string>(req.object_key()),
             .addr = std::make_unique<address>(std::move(resp.addr)),
         };
 
@@ -110,19 +108,8 @@ coro<void> put_object::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to get bucket `" << req.get_uri().get_bucket_id()
-                    << "`: " << e;
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(beast::http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::storage_limit_exceeded:
-            throw command_exception(http::status::insufficient_storage,
-                                    command_error::insufficient_storage);
-
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        LOG_ERROR() << "Failed to get bucket `" << req.bucket() << "`: " << e;
+        throw_from_error(e.error());
     }
 }
 

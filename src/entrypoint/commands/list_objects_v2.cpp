@@ -12,44 +12,31 @@ namespace {
 http_response get_response(const std::vector<object>& objects,
                            const http_request& req) {
 
-    const auto& req_uri = req.get_uri();
+    const auto start_after = req.query("start-after");
+    const auto prefix = req.query("prefix");
 
-    const auto get_if_exists =
-        [&req_uri](auto&& key) -> std::optional<std::string> {
-        if (req_uri.query_string_exists(key)) {
-            return req_uri.get_query_string_value(key);
-        }
-        return std::nullopt;
-    };
-
-    const auto start_after = get_if_exists("start-after");
-    const auto prefix = get_if_exists("prefix");
-
-    std::optional<std::string> delimiter = std::nullopt;
-    if (req_uri.query_string_exists("delimiter")) {
-        if (auto value = req_uri.get_query_string_value("delimiter");
-            !value.empty())
-            delimiter = value;
+    auto delimiter = req.query("delimiter");
+    if (delimiter && delimiter->empty()) {
+        delimiter = std::nullopt;
     }
 
-    const auto encoding_type = get_if_exists("encoding-type");
-    if (encoding_type) {
-        if (*encoding_type != "url") {
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_query_parameter);
-        }
+    const auto encoding_type = req.query("encoding-type");
+    if (encoding_type && *encoding_type != "url") {
+        throw command_exception(http::status::bad_request,
+                                "InvalidQueryParameters",
+                                "encountered unexpected query parameter");
     }
 
-    const auto continuation_token = get_if_exists("continuation-token");
+    const auto continuation_token = req.query("continuation-token");
 
     size_t max_keys = 1000;
-    if (const auto max_keys_str = get_if_exists("max-keys");
+    if (const auto max_keys_str = req.query("max-keys");
         max_keys_str.has_value()) {
         max_keys = std::stoul(*max_keys_str);
     }
 
     bool fetch_owner_set = false;
-    if (const auto fetch_owner = get_if_exists("fetch-owner");
+    if (const auto fetch_owner = req.query("fetch-owner");
         fetch_owner.has_value()) {
         if (to_bool(*fetch_owner))
             fetch_owner_set = true;
@@ -167,46 +154,33 @@ list_objects_v2::list_objects_v2(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects_v2::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() &&
-           uri.query_string_exists("list-type") &&
-           uri.get_query_string_value("list-type") == "2";
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && req.query("list-type") &&
+           *req.query("list-type") == "2";
 }
 
 coro<void> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     try {
-        const auto& req_uri = req.get_uri();
         directory_message dir_req;
-        dir_req.bucket_id = req_uri.get_bucket_id();
+        dir_req.bucket_id = req.bucket();
 
-        if (req_uri.query_string_exists("prefix")) {
-            if (const auto& prefix = req_uri.get_query_string_value("prefix");
-                !prefix.empty()) {
-                dir_req.object_key_prefix =
-                    std::make_unique<std::string>(prefix);
-            }
+        if (auto prefix = req.query("prefix"); prefix && !prefix->empty()) {
+            dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
         }
 
-        if (req_uri.query_string_exists("start-after")) {
-            if (const auto& start_after =
-                    req_uri.get_query_string_value("start-after");
-                !start_after.empty()) {
+        if (auto start_after = req.query("start-after");
+            start_after && !start_after->empty()) {
+            dir_req.object_key_lower_bound =
+                std::make_unique<std::string>(*start_after);
+        }
+
+        if (auto continuation_token = req.query("continuation-token");
+            continuation_token && !continuation_token->empty()) {
+            if (!dir_req.object_key_lower_bound ||
+                continuation_token > *dir_req.object_key_lower_bound)
                 dir_req.object_key_lower_bound =
-                    std::make_unique<std::string>(start_after);
-            }
-        }
-        if (req_uri.query_string_exists("continuation-token")) {
-            if (const auto& continuation_token =
-                    req_uri.get_query_string_value("continuation-token");
-                !continuation_token.empty()) {
-                if (!dir_req.object_key_lower_bound ||
-                    continuation_token > *dir_req.object_key_lower_bound)
-                    dir_req.object_key_lower_bound =
-                        std::make_unique<std::string>(continuation_token);
-            }
+                    std::make_unique<std::string>(*continuation_token);
         }
 
         directory_list_objects_message list_objs_res;
@@ -224,16 +198,7 @@ coro<void> list_objects_v2::handle(http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::invalid_bucket_name:
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

@@ -8,11 +8,8 @@ delete_object::delete_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_object::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-
-    return req.get_method() == method::delete_ &&
-           !uri.get_bucket_id().empty() && !uri.get_object_key().empty() &&
-           !uri.query_string_exists("uploadId");
+    return req.method() == method::delete_ && !req.bucket().empty() &&
+           !req.object_key().empty() && !req.query("uploadId");
 }
 
 coro<void> delete_object::handle(http_request& req) const {
@@ -21,26 +18,19 @@ coro<void> delete_object::handle(http_request& req) const {
         auto cl = m_collection.directory_services.get();
         auto mgr = co_await cl->acquire_messenger();
 
-        directory_message dir_req{.bucket_id = req.get_uri().get_bucket_id(),
-                                  .object_key = std::make_unique<std::string>(
-                                      req.get_uri().get_object_key())};
+        directory_message dir_req{
+            .bucket_id = req.bucket(),
+            .object_key = std::make_unique<std::string>(req.object_key())};
         co_await mgr->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
                                              dir_req);
         co_await mgr->recv_header();
 
         http_response res;
+
+        LOG_DEBUG() << "delete_object response: " << res;
         co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
-        switch (*e.error()) {
-        case error::object_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::object_not_found);
-        case error::bucket_not_found:
-            throw command_exception(boost::beast::http::status::not_found,
-                                    command_error::bucket_not_found);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

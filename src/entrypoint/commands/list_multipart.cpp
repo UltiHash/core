@@ -34,20 +34,19 @@ list_multipart::list_multipart(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_multipart::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() && uri.query_string_exists("uploads");
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && req.query("uploads");
 }
 
 coro<void> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
-    const std::string& bucket_name = req.get_uri().get_bucket_id();
+    const std::string& bucket_name = req.bucket();
 
     auto ongoing =
         m_collection.server_state.m_uploads.list_multipart_uploads(bucket_name);
     if (ongoing.empty()) {
-        throw command_exception(http::status::not_found,
-                                command_error::no_mp_uploads);
+        throw command_exception(http::status::not_found, "NoMultiPartUploads",
+                                "no multipart uploads");
     }
 
     auto res = get_response(bucket_name, ongoing);

@@ -52,33 +52,33 @@ public:
                     break;
                 }
             }
-        } catch (command_exception& res_exc) {
-            LOG_ERROR() << res_exc.what();
-            http::write(s, res_exc.get_response_specific_object());
+        } catch (const command_exception& e) {
+            LOG_ERROR() << e.what();
+            http::write(s, make_response(e));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
-                command_exception err(http::status::bad_request);
-                http::write(s, err.get_response_specific_object());
+                command_exception err(http::status::bad_request, "BadRequest",
+                                      "bad request");
+                http::write(s, make_response(err));
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
             }
         } catch (const std::invalid_argument& e) {
             LOG_ERROR() << e.what();
-            command_exception err(http::status::bad_request,
-                                  command_error::invalid_argument);
-            http::write(s, err.get_response_specific_object());
+            command_exception err(http::status::bad_request, "InvalidArgument",
+                                  "encountered invalid argument");
+            http::write(s, make_response(err));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
         } catch (const std::exception& e) {
             LOG_ERROR() << e.what();
-            command_exception err(http::status::internal_server_error);
-            http::write(s, err.get_response_specific_object());
+            http::write(s, make_response(command_exception()));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
@@ -113,8 +113,8 @@ public:
     }
 
     coro<void> dispatch_front(const http_request& req) {
-        throw command_exception(http::status::not_found,
-                                command_error::command_not_found);
+        throw command_exception(http::status::bad_request, "CommandNotFound",
+                                "no such command found");
     }
 
 private:

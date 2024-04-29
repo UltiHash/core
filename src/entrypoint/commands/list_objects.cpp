@@ -12,46 +12,31 @@ list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects::can_handle(const http_request& req) {
-    const auto& uri = req.get_uri();
-    return req.get_method() == method::get && !uri.get_bucket_id().empty() &&
-           uri.get_object_key().empty() &&
-           !uri.query_string_exists("uploads") &&
-           !uri.query_string_exists("list-type");
+    return req.method() == method::get && !req.bucket().empty() &&
+           req.object_key().empty() && !req.query("uploads") &&
+           !req.query("list-type");
 }
 
 static http_response get_response(const std::vector<object>& objects,
                                   const http_request& req) {
 
-    const auto& req_uri = req.get_uri();
+    const auto marker = req.query("marker");
+    const auto prefix = req.query("prefix");
 
-    const auto get_if_exists =
-        [&req_uri](auto&& key) -> std::optional<std::string> {
-        if (req_uri.query_string_exists(key)) {
-            return req_uri.get_query_string_value(key);
-        }
-        return std::nullopt;
-    };
-
-    const auto marker = get_if_exists("marker");
-    const auto prefix = get_if_exists("prefix");
-
-    std::optional<std::string> delimiter = std::nullopt;
-    if (req_uri.query_string_exists("delimiter")) {
-        if (auto value = req_uri.get_query_string_value("delimiter");
-            !value.empty())
-            delimiter = value;
+    std::optional<std::string> delimiter = req.query("delimiter");
+    if (delimiter && delimiter->empty()) {
+        delimiter = std::nullopt;
     }
 
-    const auto encoding_type = get_if_exists("encoding-type");
-    if (encoding_type) {
-        if (*encoding_type != "url") {
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_query_parameter);
-        }
+    const auto encoding_type = req.query("encoding-type");
+    if (encoding_type && *encoding_type != "url") {
+        throw command_exception(http::status::bad_request,
+                                "InvalidQueryParameters",
+                                "encountered unexpected query parameter");
     }
 
     size_t max_keys = 1000;
-    const auto max_keys_val = get_if_exists("max-keys");
+    const auto max_keys_val = req.query("max-keys");
     if (max_keys_val) {
         max_keys = std::stoul(*max_keys_val);
     }
@@ -119,7 +104,7 @@ static http_response get_response(const std::vector<object>& objects,
     }
 
     std::string name_xml_string;
-    name_xml_string += "<Name>" + req_uri.get_bucket_id() + "</Name>\n";
+    name_xml_string += "<Name>" + req.bucket() + "</Name>\n";
 
     std::string max_keys_xml_string =
         "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
@@ -155,25 +140,16 @@ static http_response get_response(const std::vector<object>& objects,
 coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
-        const auto& req_uri = req.get_uri();
-
         directory_message dir_req;
-        dir_req.bucket_id = req_uri.get_bucket_id();
+        dir_req.bucket_id = req.bucket();
 
-        if (req_uri.query_string_exists("prefix")) {
-            if (const auto& prefix = req_uri.get_query_string_value("prefix");
-                !prefix.empty()) {
-                dir_req.object_key_prefix =
-                    std::make_unique<std::string>(prefix);
-            }
+        if (auto prefix = req.query("prefix"); prefix && !prefix->empty()) {
+            dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
         }
 
-        if (req_uri.query_string_exists("marker")) {
-            if (const auto& marker = req_uri.get_query_string_value("marker");
-                !marker.empty()) {
-                dir_req.object_key_lower_bound =
-                    std::make_unique<std::string>(marker);
-            }
+        if (auto marker = req.query("marker"); marker && !marker->empty()) {
+            dir_req.object_key_lower_bound =
+                std::make_unique<std::string>(*marker);
         }
 
         auto cl = m_collection.directory_services.get();
@@ -191,16 +167,7 @@ coro<void> list_objects::handle(http_request& req) const {
 
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
-        switch (*e.error()) {
-        case error::bucket_not_found:
-            throw command_exception(http::status::not_found,
-                                    command_error::bucket_not_found);
-        case error::invalid_bucket_name:
-            throw command_exception(http::status::bad_request,
-                                    command_error::invalid_bucket_name);
-        default:
-            throw command_exception(http::status::internal_server_error);
-        }
+        throw_from_error(e.error());
     }
 }
 

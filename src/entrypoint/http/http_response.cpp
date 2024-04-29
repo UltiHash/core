@@ -30,4 +30,18 @@ void http_response::set_etag(const std::string& etag) {
     m_res.set(http::field::etag, etag);
 }
 
+std::ostream& operator<<(std::ostream& out, const http_response& res) {
+    const auto& base = res.base();
+
+    out << base.result_int() << " " << base.reason() << ", ";
+
+    std::string delim;
+    for (const auto& field : base) {
+        out << delim << field.name_string() << ": " << field.value();
+        delim = ", ";
+    }
+
+    return out;
+}
+
 } // namespace uh::cluster
