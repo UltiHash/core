@@ -1,5 +1,5 @@
 #include "delete_object.h"
-#include "common/coroutines/worker_pool.h"
+#include "common/coroutines/coro_utils.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {

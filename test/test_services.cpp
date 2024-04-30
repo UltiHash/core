@@ -9,7 +9,7 @@
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
-#include "deduplicator/deduplicator_interface.h"
+#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "storage/data_store.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
@@ -26,13 +26,15 @@ template <typename service_interface> struct base_fixture {
     uh::cluster::services<service_interface> services;
 
     constexpr uh::cluster::services<service_interface> make_services() {
-        return uh::cluster::services<service_interface>(etcd_client, service_factory<service_interface> (ioc, 2, nullptr));
+        return uh::cluster::services<service_interface>(
+            etcd_client, service_factory<service_interface>(ioc, 2, nullptr));
     }
 
     base_fixture()
         : etcd_client(REGISTRY_ENDPOINT),
-          service_id(
-              get_service_id(etcd_client, get_service_string(service_interface::service_role), tmp.path())),
+          service_id(get_service_id(
+              etcd_client, get_service_string(service_interface::service_role),
+              tmp.path())),
           services(make_services()) {}
 };
 
@@ -137,7 +139,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
      * - each nodes storage offset is determined by product of the node's id
      *   and max_data_store_size
      */
-    auto node_addr_range = pointer_traits::get_global_pointer(data_store_config().max_data_store_size, 1, 0);
+    auto node_addr_range = pointer_traits::get_global_pointer(
+        data_store_config().max_data_store_size, 1, 0);
 
     BOOST_CHECK(services.get_services().empty());
     BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);

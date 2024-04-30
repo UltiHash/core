@@ -1,7 +1,7 @@
 #include "service_factory.h"
-#include "deduplicator/deduplicator_interface.h"
-#include "directory/directory_interface.h"
-#include "storage/storage_interface.h"
+#include "deduplicator/interfaces/remote_deduplicator.h"
+#include "directory/interfaces/remote_directory.h"
+#include "storage/interfaces/remote_storage.h"
 
 namespace uh::cluster {
 

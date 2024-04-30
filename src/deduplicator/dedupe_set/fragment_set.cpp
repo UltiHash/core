@@ -1,19 +1,18 @@
 #include "fragment_set.h"
-#include "config.h"
+#include "deduplicator/config.h"
 
 namespace uh::cluster {
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
-                           global_data_view& storage,
-                           bool enable_replay)
+                           global_data_view& storage, bool enable_replay)
     : m_storage(storage),
       m_set_log(set_log_path) {
-    if(enable_replay)
+    if (enable_replay)
         m_set_log.replay(m_set, m_storage);
 }
 
 fragment_set::response fragment_set::find(std::string_view data) {
-    auto prefix = data.substr(0, std::min (PREFIX_SIZE, data.size()));
-    fragment_set_element f{data, std::string (prefix), m_storage};
+    auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
+    fragment_set_element f{data, std::string(prefix), m_storage};
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     const auto res = m_set.lower_bound(f);
 
@@ -31,9 +30,9 @@ fragment_set::response fragment_set::find(std::string_view data) {
 void fragment_set::insert(
     const uint128_t& pointer, const std::string_view& data,
     const std::set<fragment_set_element>::const_iterator& hint) {
-    auto prefix = data.substr(0, std::min (PREFIX_SIZE, data.size()));
-    fragment_set_element f{data, pointer, std::string (prefix), m_storage};
-    fragment_set_log::log_entry entry {
+    auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
+    fragment_set_element f{data, pointer, std::string(prefix), m_storage};
+    fragment_set_log::log_entry entry{
         .op = set_operation::INSERT,
         .pointer = f.pointer(),
         .size = f.size(),

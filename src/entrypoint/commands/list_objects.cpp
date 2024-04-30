@@ -1,5 +1,4 @@
 #include "list_objects.h"
-#include "common/coroutines/worker_pool.h"
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"

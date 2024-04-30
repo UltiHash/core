@@ -8,6 +8,7 @@
 #include "common/utils/protocol_handler.h"
 #include "config.h"
 #include "data_store.h"
+#include "storage/interfaces/local_storage.h"
 #include <utility>
 
 namespace uh::cluster {

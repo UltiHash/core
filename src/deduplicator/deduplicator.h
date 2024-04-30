@@ -9,8 +9,8 @@
 #include "common/registry/services.h"
 #include "common/telemetry/log.h"
 #include "config.h"
+#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "deduplicator_handler.h"
-#include "deduplicator_interface.h"
 #include "storage/storage.h"
 #include <functional>
 #include <iostream>

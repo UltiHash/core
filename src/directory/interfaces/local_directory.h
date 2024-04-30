@@ -1,43 +1,14 @@
 
-#ifndef UH_CLUSTER_DIRECTORY_INTERFACE_H
-#define UH_CLUSTER_DIRECTORY_INTERFACE_H
+#ifndef UH_CLUSTER_LOCAL_DIRECTORY_H
+#define UH_CLUSTER_LOCAL_DIRECTORY_H
 
-#include "common/coroutines/coro_utils.h"
-#include "common/network/messenger_core.h"
+#include "common/global_data/global_data_view.h"
 #include "common/registry/services.h"
 #include "common/utils/common.h"
-#include "directory_store.h"
+#include "directory/directory_store.h"
+#include "directory_interface.h"
 
 namespace uh::cluster {
-
-struct directory_interface {
-
-    struct read_handle {
-        virtual bool has_next() = 0;
-        virtual coro<std::string> next() = 0;
-        virtual ~read_handle() = default;
-    };
-
-    static constexpr role service_role = DIRECTORY_SERVICE;
-
-    virtual coro<void> put_object(const std::string& bucket,
-                                  const std::string& object_id,
-                                  const address& addr) = 0;
-    virtual coro<std::unique_ptr<read_handle>>
-    get_object(const std::string& bucket, const std::string& object_id) = 0;
-    virtual coro<void> put_bucket(const std::string& bucket) = 0;
-    virtual coro<void> bucket_exists(const std::string& bucket) = 0;
-    virtual coro<void> delete_bucket(const std::string& bucket) = 0;
-    virtual coro<void> delete_object(const std::string& bucket,
-                                     const std::string& object_id) = 0;
-    virtual coro<std::vector<std::string>> list_buckets() = 0;
-    virtual coro<std::vector<object>>
-    list_objects(const std::string& bucket,
-                 const std::optional<std::string>& prefix,
-                 const std::optional<std::string>& lower_bound) = 0;
-
-    virtual ~directory_interface() = default;
-};
 
 struct local_directory : public directory_interface {
 
@@ -163,15 +134,6 @@ private:
         return m_storage.get_used_space().get_low();
     }
 
-    coro<void> handle_bucket_exists(messenger& m, const messenger::header& h) {
-        directory_message request = co_await m.recv_directory_message(h);
-
-        m_directory.bucket_exists(request.bucket_id);
-
-        co_await m.send(SUCCESS, {});
-        co_return;
-    }
-
     void persist_stored_size() const {
         try {
             std::ofstream out(
@@ -250,116 +212,6 @@ private:
     uint128_t m_stored_size;
 };
 
-struct remote_directory : public directory_interface {
-
-    struct remote_read_handle : public read_handle {
-        acquired_messenger m_messenger;
-
-        bool m_transfer_completed = false;
-        remote_read_handle(acquired_messenger m)
-            : m_messenger(std::move(m)) {}
-
-        bool has_next() override { return !m_transfer_completed; }
-
-        coro<std::string> next() override {
-            auto h = co_await m_messenger->recv_header();
-            auto [b_next, buf] =
-                co_await m_messenger->recv_directory_get_object_chunk(h);
-            m_transfer_completed = !b_next;
-            co_return buf;
-        }
-    };
-
-    explicit remote_directory(client directory_service)
-        : m_directory_service(std::move(directory_service)) {}
-    coro<void> put_object(const std::string& bucket,
-                          const std::string& object_id,
-                          const address& addr) override {
-        const directory_message dir_req{
-            .bucket_id = bucket,
-            .object_key = std::make_unique<std::string>(object_id),
-            .addr = std::make_unique<address>(addr),
-        };
-        auto m = co_await m_directory_service.acquire_messenger();
-        co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ, dir_req);
-        co_await m->recv_header();
-    }
-    coro<std::unique_ptr<read_handle>>
-    get_object(const std::string& bucket,
-               const std::string& object_id) override {
-        auto m = co_await m_directory_service.acquire_messenger();
-
-        directory_message dir_req;
-        dir_req.bucket_id = bucket;
-        dir_req.object_key = std::make_unique<std::string>(object_id);
-
-        co_await m->send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req);
-        co_return std::make_unique<remote_read_handle>(std::move(m));
-    }
-    coro<void> put_bucket(const std::string& bucket) override {
-        auto m = co_await m_directory_service.acquire_messenger();
-        directory_message req{.bucket_id = bucket};
-        co_await m->send_directory_message(DIRECTORY_BUCKET_PUT_REQ, req);
-        co_await m->recv_header();
-    }
-    coro<void> bucket_exists(const std::string& bucket) override {
-        auto m = co_await m_directory_service.acquire_messenger();
-        directory_message req{.bucket_id = bucket};
-        co_await m->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ, req);
-        co_await m->recv_header();
-    }
-    coro<void> delete_bucket(const std::string& bucket) override {
-
-        auto m = co_await m_directory_service.acquire_messenger();
-        directory_message req;
-        req.bucket_id = bucket;
-        co_await m->send_directory_message(DIRECTORY_BUCKET_DELETE_REQ, req);
-        co_await m->recv_header();
-    }
-    coro<void> delete_object(const std::string& bucket,
-                             const std::string& object_id) override {
-        directory_message dir_req{.bucket_id = bucket,
-                                  .object_key =
-                                      std::make_unique<std::string>(object_id)};
-        auto m = co_await m_directory_service.acquire_messenger();
-
-        co_await m->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
-                                           dir_req);
-        co_await m->recv_header();
-    }
-    coro<std::vector<std::string>> list_buckets() override {
-        auto m = co_await m_directory_service.acquire_messenger();
-
-        co_await m->send(DIRECTORY_BUCKET_LIST_REQ, {});
-
-        const auto h = co_await m->recv_header();
-        auto result = co_await m->recv_directory_list_buckets_message(h);
-
-        std::vector<std::string> buckets_found;
-        for (auto& bucket : result.entities) {
-            buckets_found.emplace_back(std::move(bucket));
-        }
-        co_return buckets_found;
-    }
-    coro<std::vector<object>>
-    list_objects(const std::string& bucket,
-                 const std::optional<std::string>& prefix,
-                 const std::optional<std::string>& lower_bound) override {
-        auto m = co_await m_directory_service.acquire_messenger();
-        directory_message dir_req{.bucket_id = bucket};
-
-        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
-
-        auto h_dir = co_await m->recv_header();
-        auto list_objs_res =
-            co_await m->recv_directory_list_objects_message(h_dir);
-        co_return std::move(list_objs_res.objects);
-    }
-
-private:
-    client m_directory_service;
-};
-
 } // namespace uh::cluster
 
-#endif // UH_CLUSTER_DIRECTORY_INTERFACE_H
+#endif // UH_CLUSTER_LOCAL_DIRECTORY_H

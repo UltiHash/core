@@ -4,8 +4,8 @@
 #include "common/license/license.h"
 #include "common/registry/attached_service.h"
 #include "common/registry/service_id.h"
+#include "directory/interfaces/directory_interface.h"
 #include "directory_handler.h"
-#include "directory_interface.h"
 #include <common/telemetry/log.h>
 #include <functional>
 

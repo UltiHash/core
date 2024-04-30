@@ -3,15 +3,15 @@
 
 #include "common/utils/protocol_handler.h"
 #include "config.h"
-#include "deduplicator_interface.h"
-#include "fragment_set.h"
+#include "deduplicator/dedupe_set/fragment_set.h"
+#include "deduplicator/interfaces/local_deduplicator.h"
 
 namespace uh::cluster {
 
 class deduplicator_handler : public protocol_handler {
 
 public:
-    deduplicator_handler(local_deduplicator& local_dedupe);
+    explicit deduplicator_handler(local_deduplicator& local_dedupe);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 

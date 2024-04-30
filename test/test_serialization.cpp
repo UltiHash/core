@@ -4,7 +4,7 @@
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 
 #include "common/types/common_types.h"
-#include "deduplicator/fragment_set_log.h"
+#include "deduplicator/dedupe_set/fragment_set_log.h"
 #include <boost/test/unit_test.hpp>
 #include <third-party/zpp_bits/zpp_bits.h>
 

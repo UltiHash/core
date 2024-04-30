@@ -2,6 +2,8 @@
 #ifndef UH_CLUSTER_CORO_UTILS_H
 #define UH_CLUSTER_CORO_UTILS_H
 
+#include "awaitable_promise.h"
+
 namespace uh::cluster {
 
 template <typename service_interface, typename func,

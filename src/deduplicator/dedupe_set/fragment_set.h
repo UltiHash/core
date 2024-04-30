@@ -1,10 +1,10 @@
 #ifndef UH_CLUSTER_FRAGMENT_SET_H
 #define UH_CLUSTER_FRAGMENT_SET_H
 
+#include "common/global_data/global_data_view.h"
 #include "common/utils/common.h"
 #include "fragment_set_element.h"
 #include "fragment_set_log.h"
-#include <common/global_data/global_data_view.h>
 #include <queue>
 #include <set>
 #include <utility>
@@ -52,8 +52,7 @@ public:
      * the fragment_set_log. Default value: true.
      */
     fragment_set(const std::filesystem::path& set_log_path,
-                 global_data_view& storage,
-                 bool enable_replay = true);
+                 global_data_view& storage, bool enable_replay = true);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data

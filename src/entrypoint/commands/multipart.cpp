@@ -1,5 +1,4 @@
 #include "multipart.h"
-#include "common/coroutines/worker_pool.h"
 #include "common/utils/md5.h"
 #include "entrypoint/http/command_exception.h"
 

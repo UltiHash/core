@@ -1,11 +1,11 @@
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
-#include "common/coroutines/worker_pool.h"
 #include "common/telemetry/log.h"
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
-#include "directory_interface.h"
+#include "directory/interfaces/directory_interface.h"
+#include "directory/interfaces/local_directory.h"
 #include "directory_store.h"
 
 #include <fstream>
@@ -14,7 +14,7 @@ namespace uh::cluster {
 
 class directory_handler : public protocol_handler {
 public:
-    directory_handler(local_directory& ldirectory)
+    explicit directory_handler(local_directory& ldirectory)
         : m_directory(ldirectory) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {

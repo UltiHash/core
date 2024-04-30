@@ -4,9 +4,10 @@
 
 #include "common/registry/namespace.h"
 #include "common/registry/service_id.h"
+#include "common/utils/pointer_traits.h"
 #include "common/utils/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "storage/storage_interface.h"
+#include "storage/interfaces/storage_interface.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 #include <ranges>

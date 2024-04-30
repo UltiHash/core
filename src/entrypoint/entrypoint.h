@@ -7,7 +7,7 @@
 #include "common/registry/service_registry.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
-#include "directory/directory_interface.h"
+#include "directory/interfaces/directory_interface.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {

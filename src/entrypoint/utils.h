@@ -2,10 +2,10 @@
 #define ENTRYPOINT_COMMON_H
 
 #include "boost/asio.hpp"
-#include "common/coroutines/worker_pool.h"
+#include "common/registry/services.h"
 #include "config.h"
-#include "deduplicator/deduplicator_interface.h"
-#include "directory/directory_interface.h"
+#include "deduplicator/interfaces/deduplicator_interface.h"
+#include "directory/interfaces/directory_interface.h"
 
 #include "entrypoint/state.h"
 
