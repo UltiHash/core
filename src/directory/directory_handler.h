@@ -143,9 +143,8 @@ private:
     }
 
     coro<void> handle_list_buckets(messenger& m, const messenger::header& h) {
-        directory_list_buckets_message response{
-            .entities = co_await m_directory.list_buckets(),
-        };
+        directory_list_buckets_message response;
+        response.entities = co_await m_directory.list_buckets();
         co_await m.send_directory_list_buckets_message(response);
     }
 

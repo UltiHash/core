@@ -92,11 +92,7 @@ struct remote_directory : public directory_interface {
         const auto h = co_await m->recv_header();
         auto result = co_await m->recv_directory_list_buckets_message(h);
 
-        std::vector<std::string> buckets_found;
-        for (auto& bucket : result.entities) {
-            buckets_found.emplace_back(std::move(bucket));
-        }
-        co_return buckets_found;
+        co_return std::move (result.entities);
     }
     coro<std::vector<object>>
     list_objects(const std::string& bucket,
