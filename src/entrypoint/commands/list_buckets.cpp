@@ -42,6 +42,7 @@ coro<void> list_buckets::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
     }catch (const std::exception& e) {
         std::cout << "__________________________________________bucket list "<< e.what() << std::endl;
+        throw e;
     }
 }
 
