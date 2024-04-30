@@ -60,8 +60,8 @@ public:
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
                 LOG_ERROR() << se.what();
-                command_exception err(http::status::bad_request, se.what(),
-                                      se.what());
+                command_exception err(http::status::bad_request, "BadRequest",
+                                      "bad request");
                 http::write(s, make_response(err));
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
