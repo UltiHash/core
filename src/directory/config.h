@@ -5,6 +5,7 @@
 #include "common/network/server.h"
 #include "common/types/big_int.h"
 #include "common/types/common_types.h"
+#include "storage/config.h"
 #include <filesystem>
 
 namespace uh::cluster {

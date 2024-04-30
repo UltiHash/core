@@ -27,11 +27,9 @@ public:
 
     std::shared_ptr<service_interface>
     make_service(const service_endpoint& service) {
-        if (service.host != get_host() or service.pid != getpid()) {
+        if (!m_local_service or service.host != get_host() or
+            service.pid != getpid()) {
             return make_remote_service(service);
-        }
-        if (!m_local_service) {
-            throw std::logic_error("No local services available");
         }
         return m_local_service;
     }
