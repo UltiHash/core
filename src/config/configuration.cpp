@@ -277,6 +277,9 @@ std::optional<config> read_config(int argc, char** argv) {
         throw std::runtime_error("unsupported sub command given");
     }
 
+    rv.log = make_log_config(rv.service, log_level, rv.role);
+    rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
+
     if (!sub_dd_str->parsed()) {
         rv.deduplicator.m_attached_storage.reset();
     }
@@ -288,10 +291,10 @@ std::optional<config> read_config(int argc, char** argv) {
     }
     if (!sub_en_dr->parsed()) {
         rv.entrypoint.m_attached_directory.reset();
+    } else {
+        rv.entrypoint.m_attached_directory->max_data_store_size =
+            rv.service.license.max_data_store_size;
     }
-
-    rv.log = make_log_config(rv.service, log_level, rv.role);
-    rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
 
     rv.directory.directory_store_conf.working_dir =
         rv.service.working_dir / "directory";
