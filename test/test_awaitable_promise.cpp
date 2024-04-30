@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------

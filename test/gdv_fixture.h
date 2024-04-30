@@ -10,11 +10,15 @@ namespace uh::cluster {
 class global_data_view_fixture {
 public:
     global_data_view_fixture()
-        : m_workers(m_ioc, 4),
-          m_etcd_client("http://127.0.0.1:2379"),
-          m_storage_services(m_ioc,
-                             m_gdv_config.storage_service_connection_count,
-                             m_etcd_client) {}
+        : m_etcd_client("http://127.0.0.1:2379"),
+          m_service_cfg(make_service_config()),
+          m_attached_storage(m_service_cfg, std::optional<storage_config>{}),
+          m_storage_services(
+              m_etcd_client,
+              service_factory<storage_interface>(
+                  m_ioc,
+                  m_gdv_config.storage_service_connection_count,
+                  m_attached_storage.get_local_service_interface())) {}
 
     ~global_data_view_fixture() { teardown(); }
 
@@ -22,9 +26,8 @@ public:
         std::exception_ptr excp_ptr;
 
         for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
-            m_temp_dirs.emplace_back();
             service_config service_cfg;
-            service_cfg.working_dir = m_temp_dirs.at(i).path();
+            service_cfg.working_dir = m_temp_dirs.emplace_back().path();
             storage_config storage_cfg;
             storage_cfg.server.port = 10000 + i;
             storage_cfg.data_store.working_dir =
@@ -55,7 +58,7 @@ public:
         }
 
         m_gdv = std::make_shared<global_data_view>(
-            m_gdv_config, m_ioc, m_workers, m_storage_services);
+            m_gdv_config, m_ioc, m_storage_services);
 
         m_threads.emplace_back([&] {
             try {
@@ -96,12 +99,20 @@ public:
     const int m_data_store_count = 2;
 
 private:
+
+    service_config make_service_config () {
+        service_config service_cfg;
+        service_cfg.working_dir = m_temp_dirs.emplace_back().path();
+        return service_cfg;
+    }
+
     global_data_view_config m_gdv_config;
     boost::asio::io_context m_ioc;
-    worker_pool m_workers;
 
     etcd::SyncClient m_etcd_client;
-    services<STORAGE_SERVICE> m_storage_services;
+    service_config m_service_cfg;
+    attached_service<storage> m_attached_storage;
+    services<storage_interface> m_storage_services;
 
     std::vector<temp_directory> m_temp_dirs;
     std::vector<std::unique_ptr<storage>> m_storage_instances;
