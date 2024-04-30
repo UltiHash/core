@@ -41,19 +41,19 @@ public:
                     co_await handle_get_obj(m, message_header);
                     break;
                 case DIRECTORY_BUCKET_PUT_REQ:
-                    // co_await handle_put_bucket(m, message_header);
+                    co_await handle_put_bucket(m, message_header);
                     break;
                 case DIRECTORY_BUCKET_LIST_REQ:
-                    // co_await handle_list_buckets(m, message_header);
+                    co_await handle_list_buckets(m, message_header);
                     break;
                 case DIRECTORY_OBJECT_LIST_REQ:
-                    // co_await handle_list_objects(m, message_header);
+                    co_await handle_list_objects(m, message_header);
                     break;
                 case DIRECTORY_BUCKET_DELETE_REQ:
-                    //  co_await handle_delete_bucket(m, message_header);
+                    co_await handle_delete_bucket(m, message_header);
                     break;
                 case DIRECTORY_OBJECT_DELETE_REQ:
-                    // co_await handle_delete_object(m, message_header);
+                    co_await handle_delete_object(m, message_header);
                     break;
                 case DIRECTORY_BUCKET_EXISTS_REQ:
                     co_await handle_bucket_exists(m, message_header);
