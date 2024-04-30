@@ -161,7 +161,6 @@ bool list_objects_v2::can_handle(const http_request& req) {
 
 coro<void> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
-    http_response resp;
     try {
         std::optional<std::string> prefix = req.query("prefix");
         std::optional<std::string> lowerbound = req.query("start-after");
@@ -177,15 +176,11 @@ coro<void> list_objects_v2::handle(http_request& req) const {
 
         auto res = get_response(obj_list, req);
         co_await req.respond(res.get_prepared_response());
-        co_return;
+
     } catch (const error_exception& e) {
         LOG_ERROR() << e.what();
-       // throw_from_error(e.error());
-        resp = get_response(std::vector{object{.name=e.what()}}, req);
-
+        throw_from_error(e.error());
     }
-    co_await req.respond(resp.get_prepared_response());
-
 }
 
 } // namespace uh::cluster
