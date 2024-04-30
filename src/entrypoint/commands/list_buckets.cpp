@@ -34,16 +34,11 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 
 coro<void> list_buckets::handle(http_request& req) const {
     metric<entrypoint_list_buckets_req>::increase(1);
+    auto client = m_collection.directory_services.get();
+    auto buckets = co_await client->list_buckets();
+    auto res = get_response(buckets);
+    co_await req.respond(res.get_prepared_response());
 
-    try {
-        auto client = m_collection.directory_services.get();
-        auto buckets = co_await client->list_buckets();
-        auto res = get_response(buckets);
-        co_await req.respond(res.get_prepared_response());
-    }catch (const std::exception& e) {
-        std::cout << "__________________________________________bucket list "<< e.what() << std::endl;
-        throw e;
-    }
 }
 
 } // namespace uh::cluster
