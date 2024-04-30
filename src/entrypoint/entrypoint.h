@@ -5,7 +5,6 @@
 
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
-#include "common/registry/services.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "directory/directory_interface.h"
@@ -71,8 +70,8 @@ private:
     attached_service<deduplicator> m_attached_dedupe;
     attached_service<directory> m_attached_directory;
 
-    tmp_services<deduplicator_interface> m_dedupe_services;
-    tmp_services<directory_interface> m_directory_services;
+    services<deduplicator_interface> m_dedupe_services;
+    services<directory_interface> m_directory_services;
 
     state m_state;
 

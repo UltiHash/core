@@ -2,7 +2,7 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/network/client.h"
-#include "common/registry/tmp_services.h"
+#include "common/registry/services.h"
 #include "common/types/shared_buffer.h"
 #include "common/utils/worker_pool.h"
 #include "config.h"
@@ -29,9 +29,9 @@ public:
      * @param storage_services A reference to an instance of
      * services<STORAGE_SERVICE> used for service discovery.
      */
-    explicit global_data_view(
-        const global_data_view_config& config, boost::asio::io_context& ioc,
-        tmp_services<storage_interface>& storage_services);
+    explicit global_data_view(const global_data_view_config& config,
+                              boost::asio::io_context& ioc,
+                              services<storage_interface>& storage_services);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -133,7 +133,7 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    tmp_services<storage_interface>& m_storage_services;
+    services<storage_interface>& m_storage_services;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 };

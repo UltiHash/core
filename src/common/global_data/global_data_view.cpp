@@ -1,9 +1,9 @@
 #include "global_data_view.h"
 
 namespace uh::cluster {
-global_data_view::global_data_view(const global_data_view_config& config,
-                                   boost::asio::io_context& ioc,
-                                   tmp_services<storage_interface>& storage_services)
+global_data_view::global_data_view(
+    const global_data_view_config& config, boost::asio::io_context& ioc,
+    services<storage_interface>& storage_services)
     : m_io_service(ioc),
       m_storage_services(storage_services),
       m_config(config),
@@ -13,14 +13,16 @@ global_data_view::global_data_view(const global_data_view_config& config,
 
 address global_data_view::write(const std::string_view& data) {
     const auto client = m_storage_services.get();
-    return boost::asio::co_spawn(m_io_service, client->write(data), boost::asio::use_future).get();
+    return boost::asio::co_spawn(m_io_service, client->write(data),
+                                 boost::asio::use_future)
+        .get();
 }
 
 shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
                                                     const size_t size) {
 
     if (size == 0) {
-        throw std::runtime_error ("Read fragment size must be larger than zero");
+        throw std::runtime_error("Read fragment size must be larger than zero");
     }
     if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
         if (c->size() >= size) [[likely]] {
@@ -33,7 +35,10 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     shared_buffer<char> buffer(size);
     const fragment frag{pointer, size};
     auto storage = m_storage_services.get(pointer);
-    boost::asio::co_spawn(m_io_service, storage->read_fragment(buffer.data(), frag), boost::asio::use_future).get();
+    boost::asio::co_spawn(m_io_service,
+                          storage->read_fragment(buffer.data(), frag),
+                          boost::asio::use_future)
+        .get();
     m_cache_l2.put(pointer, buffer);
 
     return buffer;
@@ -41,7 +46,8 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
 
 std::size_t global_data_view::read_address(char* buffer, const address& addr) {
 
-    std::unordered_map<std::shared_ptr<storage_interface>, address> node_address_map;
+    std::unordered_map<std::shared_ptr<storage_interface>, address>
+        node_address_map;
     std::unordered_map<std::shared_ptr<storage_interface>, std::vector<size_t>>
         node_data_offsets_map;
     std::vector<std::shared_ptr<storage_interface>> nodes;
@@ -60,16 +66,18 @@ std::size_t global_data_view::read_address(char* buffer, const address& addr) {
         offset += frag.size;
     }
 
-    std::vector <std::future <void>> futures;
+    std::vector<std::future<void>> futures;
     futures.reserve(nodes.size());
 
-    for (auto& dn: nodes) {
-        futures.emplace_back(boost::asio::co_spawn(m_io_service,
-                dn->read_address(buffer, node_address_map[dn], node_data_offsets_map[dn]),
-                boost::asio::use_future));
+    for (auto& dn : nodes) {
+        futures.emplace_back(
+            boost::asio::co_spawn(m_io_service,
+                                  dn->read_address(buffer, node_address_map[dn],
+                                                   node_data_offsets_map[dn]),
+                                  boost::asio::use_future));
     }
 
-    for (auto& f: futures) {
+    for (auto& f : futures) {
         f.get();
     }
     return offset;
@@ -81,7 +89,8 @@ void global_data_view::sync(const address& addr) {
         throw std::length_error("Empty address is not allowed for sync");
     }
 
-    std::unordered_map<std::shared_ptr<storage_interface>, address> node_address_map;
+    std::unordered_map<std::shared_ptr<storage_interface>, address>
+        node_address_map;
     std::vector<std::shared_ptr<storage_interface>> nodes;
 
     for (size_t i = 0; i < addr.size(); ++i) {
@@ -94,34 +103,32 @@ void global_data_view::sync(const address& addr) {
         node_address.push_fragment(frag);
     }
 
-    std::vector <std::future <void>> futures;
+    std::vector<std::future<void>> futures;
     futures.reserve(nodes.size());
 
-    for (auto& dn: nodes) {
-        futures.emplace_back(boost::asio::co_spawn(m_io_service,
-                                                   dn->sync(node_address_map[dn]),
-                                                   boost::asio::use_future));
+    for (auto& dn : nodes) {
+        futures.emplace_back(
+            boost::asio::co_spawn(m_io_service, dn->sync(node_address_map[dn]),
+                                  boost::asio::use_future));
     }
 
-    for (auto& f: futures) {
+    for (auto& f : futures) {
         f.get();
     }
-
 }
 
 [[nodiscard]] uint128_t global_data_view::get_used_space() {
     auto nodes = m_storage_services.get_services();
 
-    std::vector <std::future <size_t>> futures;
+    std::vector<std::future<size_t>> futures;
     futures.reserve(nodes.size());
-    for (auto& dn: nodes) {
-        futures.emplace_back(boost::asio::co_spawn(m_io_service,
-                                                   dn->get_used_space(),
-                                                   boost::asio::use_future));
+    for (auto& dn : nodes) {
+        futures.emplace_back(boost::asio::co_spawn(
+            m_io_service, dn->get_used_space(), boost::asio::use_future));
     }
 
     uint128_t used = 0;
-    for (auto& f: futures) {
+    for (auto& f : futures) {
         used += f.get();
     }
     return used;
@@ -130,16 +137,15 @@ void global_data_view::sync(const address& addr) {
 [[nodiscard]] uint128_t global_data_view::get_available_space() {
     auto nodes = m_storage_services.get_services();
 
-    std::vector <std::future <size_t>> futures;
+    std::vector<std::future<size_t>> futures;
     futures.reserve(nodes.size());
-    for (auto& dn: nodes) {
-        futures.emplace_back(boost::asio::co_spawn(m_io_service,
-                                                   dn->get_free_space(),
-                                                   boost::asio::use_future));
+    for (auto& dn : nodes) {
+        futures.emplace_back(boost::asio::co_spawn(
+            m_io_service, dn->get_free_space(), boost::asio::use_future));
     }
 
     uint128_t available = 0;
-    for (auto& f: futures) {
+    for (auto& f : futures) {
         available += f.get();
     }
     return available;

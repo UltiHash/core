@@ -6,7 +6,7 @@
 #include "common/registry/attached_service.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
-#include "common/registry/tmp_services.h"
+#include "common/registry/services.h"
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "deduplicator_handler.h"
@@ -69,7 +69,7 @@ private:
     service_registry m_service_registry;
 
     attached_service<storage> m_attached_storage;
-    tmp_services<storage_interface> m_storage_services;
+    services<storage_interface> m_storage_services;
 
     worker_pool m_dedupe_workers;
 

@@ -1,7 +1,6 @@
 #ifndef ENTRYPOINT_HANDLER_H
 #define ENTRYPOINT_HANDLER_H
 
-#include "common/registry/services.h"
 #include "common/utils/class_name.h"
 #include "common/utils/protocol_handler.h"
 #include <boost/beast/core/flat_buffer.hpp>

@@ -2,7 +2,6 @@
 #define ENTRYPOINT_COMMON_H
 
 #include "boost/asio.hpp"
-#include "common/registry/services.h"
 #include "common/utils/worker_pool.h"
 #include "config.h"
 #include "deduplicator/deduplicator_interface.h"
@@ -14,8 +13,8 @@ namespace uh::cluster {
 
 struct reference_collection {
     boost::asio::io_context& ioc;
-    const tmp_services<deduplicator_interface>& dedupe_services;
-    const tmp_services<directory_interface>& directory_services;
+    const services<deduplicator_interface>& dedupe_services;
+    const services<directory_interface>& directory_services;
     state& server_state;
     entrypoint_config& config;
 };

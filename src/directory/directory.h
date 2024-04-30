@@ -52,7 +52,7 @@ private:
 
     attached_service<storage> m_attached_storage;
 
-    tmp_services<storage_interface> m_storage_services;
+    services<storage_interface> m_storage_services;
 
     global_data_view m_data_view;
     std::shared_ptr<local_directory> m_directory;
