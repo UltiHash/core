@@ -1,10 +1,10 @@
 #ifndef UH_CLUSTER_WORKER_POOL_H
 #define UH_CLUSTER_WORKER_POOL_H
 
-#include "awaitable_promise.h"
-#include "common.h"
+#include "common/coroutines/awaitable_promise.h"
 #include "common/network/client.h"
 #include "common/network/messenger_core.h"
+#include "common/utils/common.h"
 #include <boost/asio/steady_timer.hpp>
 #include <exception>
 #include <memory>
@@ -57,7 +57,6 @@ public:
         co_await pr->get();
     }
 
-
     template <typename Func, typename In,
               typename R = std::invoke_result_t<Func, In>>
     coro<std::vector<R>>
@@ -101,27 +100,6 @@ public:
         }
 
         co_return results;
-    }
-
-    template <typename Func>
-    requires requires(Func& func, acquired_messenger& m) {
-        { func(std::move(m), long{}) } -> std::same_as<coro<void>>;
-    }
-    void broadcast_from_worker_in_io_threads(
-        const std::vector<std::shared_ptr<client>>& nodes, Func func) {
-        std::vector<std::future<void>> futures;
-        futures.reserve(nodes.size());
-
-        long i = 0;
-        for (auto& n : nodes) {
-            auto m = n->acquire_messenger();
-            futures.emplace_back(boost::asio::co_spawn(
-                m_ioc, func(std::move(m), i++), boost::asio::use_future));
-        }
-
-        for (auto& f : futures) {
-            f.get();
-        }
     }
 
     ~worker_pool() {

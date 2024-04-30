@@ -2,7 +2,7 @@
 #define ENTRYPOINT_COMMON_H
 
 #include "boost/asio.hpp"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/worker_pool.h"
 #include "config.h"
 #include "deduplicator/deduplicator_interface.h"
 #include "directory/directory_interface.h"

@@ -2,10 +2,10 @@
 #ifndef UH_CLUSTER_DIRECTORY_INTERFACE_H
 #define UH_CLUSTER_DIRECTORY_INTERFACE_H
 
+#include "common/coroutines/coro_utils.h"
 #include "common/network/messenger_core.h"
 #include "common/registry/services.h"
 #include "common/utils/common.h"
-#include "common/utils/coro_utils.h"
 #include "directory_store.h"
 
 namespace uh::cluster {

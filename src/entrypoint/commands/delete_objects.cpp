@@ -1,5 +1,5 @@
 #include "delete_objects.h"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/worker_pool.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -86,8 +86,7 @@ coro<void> delete_objects::handle(http_request& req) const {
 
             auto func = [&req, &key](std::shared_ptr<directory_interface> dir,
                                      size_t id) -> coro<void> {
-                co_await dir->delete_object(req.get_uri().get_bucket_id(),
-                                            *key);
+                co_await dir->delete_object(req.bucket(), *key);
             };
 
             co_await broadcast<directory_interface>(

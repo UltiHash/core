@@ -2,10 +2,10 @@
 #ifndef UH_CLUSTER_DEDUPLICATOR_INTERFACE_H
 #define UH_CLUSTER_DEDUPLICATOR_INTERFACE_H
 
+#include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
 #include "common/network/messenger_core.h"
 #include "common/types/address.h"
-#include "common/utils/worker_pool.h"
 #include "config.h"
 #include "fragment_set.h"
 #include "fragmentation.h"

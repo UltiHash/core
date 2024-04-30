@@ -2,7 +2,7 @@
 #ifndef UH_CLUSTER_INIT_MULTIPART_H
 #define UH_CLUSTER_INIT_MULTIPART_H
 
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"

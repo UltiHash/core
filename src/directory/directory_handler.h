@@ -1,10 +1,10 @@
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
+#include "common/coroutines/worker_pool.h"
 #include "common/telemetry/log.h"
 #include "common/utils/error.h"
 #include "common/utils/protocol_handler.h"
-#include "common/utils/worker_pool.h"
 #include "directory_interface.h"
 #include "directory_store.h"
 

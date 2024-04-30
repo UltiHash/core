@@ -1,5 +1,5 @@
 #include "utils.h"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/worker_pool.h"
 
 namespace uh::cluster {
 

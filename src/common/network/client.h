@@ -1,7 +1,7 @@
 #ifndef CORE_CLIENT_H
 #define CORE_CLIENT_H
 
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
 #include "common/utils/common.h"
 #include "messenger.h"
 #include "tools.h"
@@ -45,7 +45,7 @@ private:
 class client {
 public:
     client(boost::asio::io_context& ioc, const std::string& address,
-                const std::uint16_t port, const int connections)
+           const std::uint16_t port, const int connections)
         : m_ioc(ioc) {
 
         auto endpoint = resolve(address, port).back();
@@ -61,8 +61,7 @@ public:
           m_messengers(std::move(cl.m_messengers)) {}
 
     coro<acquired_messenger> acquire_messenger() {
-        std::shared_ptr<awaitable_promise<acquired_messenger>>
-            promise;
+        std::shared_ptr<awaitable_promise<acquired_messenger>> promise;
         {
             std::unique_lock<std::mutex> lk(m);
 
@@ -73,11 +72,11 @@ public:
                 lk.unlock();
 
                 co_return acquired_messenger(std::move(messenger),
-                                                          std::ref(*this));
+                                             std::ref(*this));
             }
 
-            promise = std::make_shared<
-                awaitable_promise<acquired_messenger>>(m_ioc);
+            promise =
+                std::make_shared<awaitable_promise<acquired_messenger>>(m_ioc);
             m_promises.push_back(promise);
         }
 
@@ -90,8 +89,7 @@ private:
     boost::asio::io_context& m_ioc;
     std::mutex m;
     std::deque<std::unique_ptr<messenger>> m_messengers;
-    std::list<
-        std::shared_ptr<awaitable_promise<acquired_messenger>>>
+    std::list<std::shared_ptr<awaitable_promise<acquired_messenger>>>
         m_promises;
 
     void push_messenger(std::unique_ptr<messenger> msg) {

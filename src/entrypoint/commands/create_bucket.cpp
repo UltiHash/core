@@ -1,5 +1,5 @@
 #include "create_bucket.h"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {

@@ -1,5 +1,5 @@
 #include "get_object.h"
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -27,7 +27,8 @@ coro<void> get_object::handle(http_request& req) const {
 
         auto dir = m_collection.directory_services.get();
 
-        auto read_handler = co_await dir->get_object(req.bucket(), req.object_key());
+        auto read_handler =
+            co_await dir->get_object(req.bucket(), req.object_key());
 
         size_t total_size = 0;
 
