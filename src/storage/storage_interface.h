@@ -26,7 +26,7 @@ struct storage_interface {
 
 struct remote_storage : public storage_interface {
 
-    explicit remote_storage(coro_client storage_service)
+    explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
     coro<address> write(const std::string_view& data) override {
@@ -80,7 +80,7 @@ struct remote_storage : public storage_interface {
     }
 
 private:
-    coro_client m_storage_service;
+    client m_storage_service;
 };
 
 struct local_storage : public storage_interface {

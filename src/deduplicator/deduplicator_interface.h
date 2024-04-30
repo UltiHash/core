@@ -138,7 +138,7 @@ private:
 };
 
 struct remote_deduplicator : public deduplicator_interface {
-    explicit remote_deduplicator(coro_client dedupe_service)
+    explicit remote_deduplicator(client dedupe_service)
         : m_dedupe_service(std::move(dedupe_service)) {}
 
     coro<dedupe_response> deduplicate(const std::string_view& data) override {
@@ -151,7 +151,7 @@ struct remote_deduplicator : public deduplicator_interface {
     }
 
 private:
-    coro_client m_dedupe_service;
+    client m_dedupe_service;
 };
 
 } // namespace uh::cluster

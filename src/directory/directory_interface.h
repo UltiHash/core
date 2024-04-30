@@ -253,10 +253,10 @@ private:
 struct remote_directory : public directory_interface {
 
     struct remote_read_handle : public read_handle {
-        acquired_messenger<coro_client> m_messenger;
+        acquired_messenger m_messenger;
 
         bool m_transfer_completed = false;
-        remote_read_handle(acquired_messenger<coro_client> m)
+        remote_read_handle(acquired_messenger m)
             : m_messenger(std::move(m)) {}
 
         bool has_next() override { return !m_transfer_completed; }
@@ -270,7 +270,7 @@ struct remote_directory : public directory_interface {
         }
     };
 
-    explicit remote_directory(coro_client directory_service)
+    explicit remote_directory(client directory_service)
         : m_directory_service(std::move(directory_service)) {}
     coro<void> put_object(const std::string& bucket,
                           const std::string& object_id,
@@ -357,7 +357,7 @@ struct remote_directory : public directory_interface {
     }
 
 private:
-    coro_client m_directory_service;
+    client m_directory_service;
 };
 
 } // namespace uh::cluster
