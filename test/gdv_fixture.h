@@ -12,13 +12,10 @@ public:
     global_data_view_fixture()
         : m_etcd_client("http://127.0.0.1:2379"),
           m_service_cfg(make_service_config()),
-          m_attached_storage(m_service_cfg, std::optional<storage_config>{}),
           m_storage_services(
               m_etcd_client,
               service_factory<storage_interface>(
-                  m_ioc,
-                  m_gdv_config.storage_service_connection_count,
-                  m_attached_storage.get_local_service_interface())) {}
+                  m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
 
     ~global_data_view_fixture() { teardown(); }
 
@@ -57,8 +54,8 @@ public:
             }
         }
 
-        m_gdv = std::make_shared<global_data_view>(
-            m_gdv_config, m_ioc, m_storage_services);
+        m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc,
+                                                   m_storage_services);
 
         m_threads.emplace_back([&] {
             try {
@@ -90,17 +87,13 @@ public:
         m_threads.clear();
         m_storage_instances.clear();
         m_temp_dirs.clear();
-
-        // m_ioc.stop();
-        // m_ioc.restart();
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
     const int m_data_store_count = 2;
 
 private:
-
-    service_config make_service_config () {
+    service_config make_service_config() {
         service_config service_cfg;
         service_cfg.working_dir = m_temp_dirs.emplace_back().path();
         return service_cfg;
@@ -110,11 +103,10 @@ private:
     boost::asio::io_context m_ioc;
 
     etcd::SyncClient m_etcd_client;
+    std::vector<temp_directory> m_temp_dirs;
     service_config m_service_cfg;
-    attached_service<storage> m_attached_storage;
     services<storage_interface> m_storage_services;
 
-    std::vector<temp_directory> m_temp_dirs;
     std::vector<std::unique_ptr<storage>> m_storage_instances;
     std::vector<std::thread> m_threads;
 
