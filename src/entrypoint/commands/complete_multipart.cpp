@@ -65,7 +65,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
 
     validate(req, buffer);
 
-    const auto& upload_id = *req.query("uploadId");
+    auto upload_id = *req.query("uploadId");
     const auto& bucket_name = req.bucket();
     const auto& object_name = req.object_key();
 
