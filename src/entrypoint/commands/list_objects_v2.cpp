@@ -162,38 +162,19 @@ bool list_objects_v2::can_handle(const http_request& req) {
 coro<void> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     try {
-        directory_message dir_req;
-        dir_req.bucket_id = req.bucket();
-
-        if (auto prefix = req.query("prefix"); prefix && !prefix->empty()) {
-            dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
-        }
-
-        if (auto start_after = req.query("start-after");
-            start_after && !start_after->empty()) {
-            dir_req.object_key_lower_bound =
-                std::make_unique<std::string>(*start_after);
-        }
+        std::optional<std::string> prefix = req.query("prefix");
+        std::optional<std::string> lowerbound = req.query("start-after");
 
         if (auto continuation_token = req.query("continuation-token");
             continuation_token && !continuation_token->empty()) {
-            if (!dir_req.object_key_lower_bound ||
-                continuation_token > *dir_req.object_key_lower_bound)
-                dir_req.object_key_lower_bound =
-                    std::make_unique<std::string>(*continuation_token);
+            if (!lowerbound || *continuation_token > *lowerbound)
+                lowerbound = continuation_token;
         }
 
-        directory_list_objects_message list_objs_res;
+        auto dir = m_collection.directory_services.get();
+        auto obj_list = co_await dir->list_objects(req.bucket(), prefix, lowerbound);
 
-        auto client = m_collection.directory_services.get();
-        auto m = co_await client->acquire_messenger();
-
-        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
-        const auto h_dir = co_await m->recv_header();
-
-        list_objs_res = co_await m->recv_directory_list_objects_message(h_dir);
-
-        auto res = get_response(list_objs_res.objects, req);
+        auto res = get_response(obj_list, req);
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {

@@ -1,6 +1,5 @@
 #include "list_objects.h"
 #include "common/utils/strings.h"
-#include "common/utils/worker_pool.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -140,29 +139,10 @@ static http_response get_response(const std::vector<object>& objects,
 coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
-        directory_message dir_req;
-        dir_req.bucket_id = req.bucket();
+        auto dir = m_collection.directory_services.get();
+        auto obj_list = co_await dir->list_objects(req.bucket(), req.query("prefix"), req.query("marker"));
 
-        if (auto prefix = req.query("prefix"); prefix && !prefix->empty()) {
-            dir_req.object_key_prefix = std::make_unique<std::string>(*prefix);
-        }
-
-        if (auto marker = req.query("marker"); marker && !marker->empty()) {
-            dir_req.object_key_lower_bound =
-                std::make_unique<std::string>(*marker);
-        }
-
-        auto cl = m_collection.directory_services.get();
-        auto mgr = co_await cl->acquire_messenger();
-
-        co_await mgr->send_directory_message(DIRECTORY_OBJECT_LIST_REQ,
-                                             dir_req);
-
-        auto h_dir = co_await mgr->recv_header();
-        auto list_objs_res =
-            co_await mgr->recv_directory_list_objects_message(h_dir);
-
-        auto res = get_response(list_objs_res.objects, req);
+        auto res = get_response(obj_list, req);
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {

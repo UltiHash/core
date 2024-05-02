@@ -1,5 +1,5 @@
 #include "delete_bucket.h"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/coro_utils.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -14,18 +14,17 @@ bool delete_bucket::can_handle(const http_request& req) {
 
 coro<void> delete_bucket::handle(http_request& req) const {
     metric<entrypoint_delete_bucket_req>::increase(1);
-    try {
-        std::string bucket_name = req.bucket();
 
-        auto func = [&bucket_name](acquired_messenger<coro_client> m,
-                                   long id) -> coro<void> {
-            directory_message req;
-            req.bucket_id = bucket_name;
-            co_await m->send_directory_message(DIRECTORY_BUCKET_DELETE_REQ,
-                                               req);
-            co_await m->recv_header();
+    try {
+
+        auto func = [&req](std::shared_ptr<directory_interface> dir,
+                           size_t id) -> coro<void> {
+            co_await dir->delete_bucket(req.bucket());
         };
-        co_await m_collection.directory_services.broadcast(func);
+
+        co_await broadcast<directory_interface>(
+            m_collection.ioc, func,
+            m_collection.directory_services.get_services());
 
         http_response res;
         co_await req.respond(res.get_prepared_response());

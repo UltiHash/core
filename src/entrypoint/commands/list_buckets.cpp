@@ -1,5 +1,4 @@
 #include "list_buckets.h"
-#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -35,22 +34,11 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 
 coro<void> list_buckets::handle(http_request& req) const {
     metric<entrypoint_list_buckets_req>::increase(1);
-
     auto client = m_collection.directory_services.get();
-    auto mgr = co_await client->acquire_messenger();
-
-    co_await mgr->send(DIRECTORY_BUCKET_LIST_REQ, {});
-
-    const auto h = co_await mgr->recv_header();
-    auto result = co_await mgr->recv_directory_list_buckets_message(h);
-
-    std::vector<std::string> buckets_found;
-    for (auto& bucket : result.entities) {
-        buckets_found.emplace_back(std::move(bucket));
-    }
-
-    auto res = get_response(buckets_found);
+    auto buckets = co_await client->list_buckets();
+    auto res = get_response(buckets);
     co_await req.respond(res.get_prepared_response());
+
 }
 
 } // namespace uh::cluster

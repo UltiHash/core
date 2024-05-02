@@ -28,6 +28,8 @@ enum message_type : uint8_t {
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
     STORAGE_USED_REQ = 5,
+    STORAGE_AVAILABLE_REQ = 7,
+
 
     DEDUPLICATOR_REQ = 6,
 
@@ -48,12 +50,14 @@ enum message_type : uint8_t {
 enum config_parameter {
     CFG_ENDPOINT_HOST,
     CFG_ENDPOINT_PORT,
+    CFG_ENDPOINT_PID,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 2>
+constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 3>
     string_by_config_parameter = {{
         {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
+        {uh::cluster::CFG_ENDPOINT_PID, "endpoint_pid"},
     }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";

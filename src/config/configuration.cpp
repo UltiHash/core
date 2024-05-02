@@ -105,7 +105,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
-
 }
 
 void register_bucket(CLI::App& app, bucket_config& cfg) {
@@ -215,6 +214,8 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
                    "minimum worker data size")
         ->default_val(cfg.dedupe_worker_minimum_data_size);
 
+    storage_config sc;
+
     return rv;
 }
 
@@ -230,6 +231,15 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
     auto sub_dir = sub_directory(app, rv.directory);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
+
+    auto sub_dd_str =
+        sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
+    auto sub_dr_str =
+        sub_storage(*sub_dir, rv.directory.m_attached_storage.emplace());
+    auto sub_en_dd = sub_deduplicator(
+        *sub_ep, rv.entrypoint.m_attached_deduplicator.emplace());
+    auto sub_en_dr =
+        sub_directory(*sub_ep, rv.entrypoint.m_attached_directory.emplace());
 
     register_service(app, rv.service);
 
@@ -269,6 +279,22 @@ std::optional<config> read_config(int argc, char** argv) {
 
     rv.log = make_log_config(rv.service, log_level, rv.role);
     rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
+
+    if (!sub_dd_str->parsed()) {
+        rv.deduplicator.m_attached_storage.reset();
+    }
+    if (!sub_dr_str->parsed()) {
+        rv.directory.m_attached_storage.reset();
+    }
+    if (!sub_en_dd->parsed()) {
+        rv.entrypoint.m_attached_deduplicator.reset();
+    }
+    if (!sub_en_dr->parsed()) {
+        rv.entrypoint.m_attached_directory.reset();
+    } else {
+        rv.entrypoint.m_attached_directory->max_data_store_size =
+            rv.service.license.max_data_store_size;
+    }
 
     rv.directory.directory_store_conf.working_dir =
         rv.service.working_dir / "directory";

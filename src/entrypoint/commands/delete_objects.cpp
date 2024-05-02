@@ -1,5 +1,5 @@
 #include "delete_objects.h"
-#include "common/utils/worker_pool.h"
+#include "common/coroutines/coro_utils.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -82,18 +82,16 @@ coro<void> delete_objects::handle(http_request& req) const {
         }
 
         try {
-            auto cl = m_collection.directory_services.get();
-            auto m = co_await cl->acquire_messenger();
-
             LOG_DEBUG() << "delete_objects::handle(): deleting " << *key;
 
-            directory_message dir_req;
-            dir_req.bucket_id = bucket_id;
-            dir_req.object_key = std::make_unique<std::string>(*key);
+            auto func = [&req, &key](std::shared_ptr<directory_interface> dir,
+                                     size_t id) -> coro<void> {
+                co_await dir->delete_object(req.bucket(), *key);
+            };
 
-            co_await m->send_directory_message(DIRECTORY_OBJECT_DELETE_REQ,
-                                               dir_req);
-            co_await m->recv_header();
+            co_await broadcast<directory_interface>(
+                m_collection.ioc, func,
+                m_collection.directory_services.get_services());
 
             success.emplace_back(*key);
 

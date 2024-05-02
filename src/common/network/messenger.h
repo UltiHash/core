@@ -35,6 +35,15 @@ public:
         co_return num;
     }
 
+    template <typename T>
+    requires std::is_arithmetic_v<T>
+    coro<T> recv_primitive(const header& message_header) {
+        T val;
+        register_read_buffer(val);
+        co_await recv_buffers(message_header);
+        co_return val;
+    }
+
     coro<dedupe_response> recv_dedupe_response(const header& message_header) {
         dedupe_response dedupe_resp;
         register_read_buffer(dedupe_resp.effective_size);
@@ -104,6 +113,13 @@ public:
         co_await send_buffers(type);
     }
 
+    template <typename T>
+    requires std::is_arithmetic_v<T>
+    coro<void> send_primitive(const message_type type, const T val) {
+        register_write_buffer(val);
+        co_await send_buffers(type);
+    }
+
     coro<void> send_dedupe_response(const dedupe_response& dedupe_resp) {
         register_write_buffer(dedupe_resp.effective_size);
         register_write_buffer(dedupe_resp.addr.pointers);
@@ -128,7 +144,7 @@ public:
     }
 
     coro<void> send_directory_get_object_chunk(bool has_next,
-                                               unique_buffer<char> buffer) {
+                                               std::string buffer) {
         register_write_buffer(has_next);
         register_write_buffer(buffer);
         co_await send_buffers(SUCCESS);

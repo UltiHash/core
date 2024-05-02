@@ -1,6 +1,5 @@
 #include "multipart.h"
 #include "common/utils/md5.h"
-#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -32,8 +31,9 @@ coro<void> multipart::handle(http_request& req) const {
     buffer.resize(size);
 
     dedupe_response resp = {};
-    if (buffer.size() > 0) {
-        resp = co_await integration::integrate_data(buffer, m_collection);
+    if (!buffer.empty()) {
+        resp = co_await m_collection.dedupe_services.get()->deduplicate(
+            {buffer.data(), buffer.size()});
     }
 
     m_collection.server_state.m_uploads.append_upload_part_info(

@@ -1,6 +1,7 @@
 #include "put_object.h"
 
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
+#include "common/coroutines/coro_utils.h"
 
 using namespace boost;
 
@@ -39,7 +40,8 @@ public:
 
         if (!b.empty()) {
             asio::co_spawn(m_collection.ioc,
-                           integration::integrate_data(b, m_collection),
+                           m_collection.dedupe_services.get()->deduplicate(
+                               {b.data(), b.size()}),
                            use_awaitable_promise_cospawn(pr));
         } else {
             pr->set(dedupe_response());
@@ -79,20 +81,14 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req, hash);
         }
 
-        const directory_message dir_req{
-            .bucket_id = req.bucket(),
-            .object_key = std::make_unique<std::string>(req.object_key()),
-            .addr = std::make_unique<address>(std::move(resp.addr)),
+        auto func = [&req, &resp](std::shared_ptr<directory_interface> dir,
+                                  size_t id) -> coro<void> {
+            co_await dir->put_object(req.bucket(), req.object_key(), resp.addr);
         };
 
-        auto func = [&](acquired_messenger<coro_client> m,
-                        long id) -> coro<void> {
-            co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ,
-                                               dir_req);
-            co_await m->recv_header();
-        };
-
-        co_await m_collection.directory_services.broadcast(func);
+        co_await broadcast<directory_interface>(
+            m_collection.ioc, func,
+            m_collection.directory_services.get_services());
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
@@ -131,7 +127,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
         auto promise = b.upload();
         b.flip();
 
-        auto read = co_await b.fill(req);
+        read = co_await b.fill(req);
         hash.consume(b.current());
         transferred += read;
 
@@ -157,7 +153,8 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
         co_return dedupe_response();
     }
 
-    co_return co_await integration::integrate_data(buffer, m_collection);
+    co_return co_await m_collection.dedupe_services.get()->deduplicate(
+        {buffer.data(), buffer.size()});
 }
 
 } // namespace uh::cluster

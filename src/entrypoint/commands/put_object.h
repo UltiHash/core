@@ -2,7 +2,6 @@
 #define ENTRYPOINT_HTTP_PUT_OBJECT_H
 
 #include "common/utils/md5.h"
-#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"

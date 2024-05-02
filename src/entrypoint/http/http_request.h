@@ -15,7 +15,7 @@ template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class transport_decoder {
 public:
-    ~transport_decoder() = default;
+    virtual ~transport_decoder() = default;
     virtual coro<std::size_t> read(std::span<char> dest) = 0;
 };
 

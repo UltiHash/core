@@ -22,11 +22,11 @@ public:
                                       get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
           m_ioc(sc.server.threads),
+          m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
+                                                    sc.data_store_count)),
           m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd_client),
-          m_server(
-              sc.server,
-              std::make_unique<storage_handler>(sc.data_store, m_service_id, sc.data_store_count),
-              m_ioc) {}
+          m_server(sc.server, std::make_unique<storage_handler>(*m_storage),
+                   m_ioc) {}
 
     void run() {
         m_registration =
@@ -40,10 +40,13 @@ public:
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
     }
 
+    std::shared_ptr<local_storage> get_local_interface() { return m_storage; }
+
 private:
     etcd::SyncClient m_etcd_client;
     std::size_t m_service_id;
     boost::asio::io_context m_ioc;
+    std::shared_ptr<local_storage> m_storage;
     service_registry m_service_registry;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;

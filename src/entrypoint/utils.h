@@ -3,16 +3,18 @@
 
 #include "boost/asio.hpp"
 #include "common/registry/services.h"
-#include "common/utils/worker_pool.h"
 #include "config.h"
+#include "deduplicator/interfaces/deduplicator_interface.h"
+#include "directory/interfaces/directory_interface.h"
+
 #include "entrypoint/state.h"
 
 namespace uh::cluster {
 
 struct reference_collection {
     boost::asio::io_context& ioc;
-    const services<DEDUPLICATOR_SERVICE, coro_client>& dedupe_services;
-    const services<DIRECTORY_SERVICE, coro_client>& directory_services;
+    const services<deduplicator_interface>& dedupe_services;
+    const services<directory_interface>& directory_services;
     state& server_state;
     entrypoint_config& config;
 };
@@ -20,11 +22,6 @@ struct reference_collection {
 struct collapsed_objects {
     std::optional<std::string> _prefix{};
     std::optional<std::reference_wrapper<const object>> _object{};
-};
-
-struct integration {
-    static coro<dedupe_response> integrate_data(std::span<const char>,
-                                                const reference_collection&);
 };
 
 struct retrieval {

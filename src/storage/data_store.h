@@ -43,6 +43,19 @@ public:
     address register_write (const shared_buffer <char>& data);
 
     /**
+     * Allocates for the given data size and stores the
+     * data, the allocation, and internal allocation info in the
+     * ongoing async writes queue.
+     *
+     * @affects get_used_space()
+     * @affects get_available_space()
+     *
+     * @param data
+     * @return  allocated address
+     */
+    address register_write (const std::string_view& data);
+
+    /**
      * Writes the data that is registered by the given address to disk.
      *
      * @param addr the address that the data is registered with

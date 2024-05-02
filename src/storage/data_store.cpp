@@ -133,6 +133,12 @@ address data_store::register_write(const shared_buffer<char>& data) {
     return data_address;
 }
 
+address data_store::register_write(const std::string_view& data) {
+    shared_buffer <char> buffer (data.size());
+    std::memcpy(buffer.data(), data.data(), data.size());
+    return register_write(buffer);
+}
+
 void data_store::perform_write(const address& addr) {
     if (addr.size() != 1) {
         throw std::runtime_error ("Invalid address size");
@@ -265,5 +271,4 @@ data_store::find_async_data(size_t pointer, size_t size) {
     }
     return {0, nullptr};
 }
-
 } // end namespace uh::cluster

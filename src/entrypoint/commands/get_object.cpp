@@ -1,5 +1,5 @@
 #include "get_object.h"
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -25,31 +25,26 @@ coro<void> get_object::handle(http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        auto m =
-            co_await m_collection.directory_services.get()->acquire_messenger();
+        auto dir = m_collection.directory_services.get();
 
-        directory_message dir_req;
-        dir_req.bucket_id = req.bucket();
-        dir_req.object_key = std::make_unique<std::string>(req.object_key());
+        auto read_handler =
+            co_await dir->get_object(req.bucket(), req.object_key());
 
-        co_await m->send_directory_message(DIRECTORY_OBJECT_GET_REQ, dir_req);
-
-        bool has_next = true;
         size_t total_size = 0;
 
         std::shared_ptr<awaitable_promise<std::size_t>> promise;
         std::string buffer;
 
-        while (has_next) {
-            auto h = co_await m->recv_header();
-            auto [b_next, buf] = co_await m->recv_directory_get_object_chunk(h);
-            total_size += buf.size();
+        while (read_handler->has_next()) {
+
+            auto data = co_await read_handler->next();
+            total_size += data.size();
 
             if (promise) {
                 co_await promise->get();
             }
 
-            buffer = std::move(buf);
+            buffer = std::move(data);
             promise = std::make_shared<awaitable_promise<std::size_t>>(
                 m_collection.ioc);
 
@@ -57,8 +52,6 @@ coro<void> get_object::handle(http_request& req) const {
                                      http::make_chunk(boost::asio::buffer(
                                          buffer.data(), buffer.size())),
                                      use_awaitable_promise(promise));
-
-            has_next = b_next;
         }
 
         if (promise) {

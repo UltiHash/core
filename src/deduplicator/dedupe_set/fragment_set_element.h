@@ -37,8 +37,8 @@ public:
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
-    fragment_set_element(const std::string_view& data, const uint128_t& ptr, std::string prefix,
-                         global_data_view& storage);
+    fragment_set_element(const std::string_view& data, const uint128_t& ptr,
+                         std::string prefix, global_data_view& storage);
 
     /**
      * Move-constructs a fragment_set_element

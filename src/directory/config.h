@@ -1,10 +1,11 @@
 #ifndef CORE_DIRECTORY_CONFIG_H
 #define CORE_DIRECTORY_CONFIG_H
 
-#include "common/global_data/global_data_view.h"
+#include "common/global_data/config.h"
 #include "common/network/server.h"
 #include "common/types/big_int.h"
 #include "common/types/common_types.h"
+#include "storage/config.h"
 #include <filesystem>
 
 namespace uh::cluster {
@@ -32,6 +33,7 @@ struct directory_config {
     std::size_t download_chunk_size = 64ul * MEBI_BYTE;
     uint128_t max_data_store_size = 4 * TEBI_BYTE;
     global_data_view_config global_data_view;
+    std::optional<storage_config> m_attached_storage;
 };
 
 } // namespace uh::cluster

@@ -17,26 +17,17 @@ coro<void> head_object::handle(const http_request& req) const {
     metric<entrypoint_head_object_req>::increase(1);
 
     auto client = m_coll.directory_services.get();
-    auto m = co_await client->acquire_messenger();
 
     try {
-        directory_message dir_req;
-        dir_req.bucket_id = req.bucket();
-        dir_req.object_key_prefix =
-            std::make_unique<std::string>(req.object_key());
+        auto obj_list = co_await client->list_objects(req.bucket(), req.object_key(), std::nullopt);
 
-        co_await m->send_directory_message(DIRECTORY_OBJECT_LIST_REQ, dir_req);
-        auto hdr = co_await m->recv_header();
-        auto lst = co_await m->recv_directory_list_objects_message(hdr);
-
-        if (lst.objects.empty()) {
+        if (obj_list.empty()) {
             throw std::runtime_error("not found");
         }
 
         http::response<http::empty_body> res{http::status::ok, 11};
-        res.base().set("Content-Length", std::to_string(lst.objects[0].size));
-        res.base().set("Last-Modified",
-                       imf_fixdate(lst.objects[0].last_modified));
+        res.base().set("Content-Length", std::to_string(obj_list[0].size));
+        res.base().set("Last-Modified", imf_fixdate(obj_list[0].last_modified));
 
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(

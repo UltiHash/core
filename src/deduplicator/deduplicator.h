@@ -3,11 +3,15 @@
 
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
+#include "common/registry/attached_service.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
+#include "common/registry/services.h"
 #include "common/telemetry/log.h"
 #include "config.h"
+#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "deduplicator_handler.h"
+#include "storage/storage.h"
 #include <functional>
 #include <iostream>
 #include <utility>
@@ -24,24 +28,33 @@ public:
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd_client),
+          m_attached_storage(sc, config.m_attached_storage),
           m_storage_services(
-              m_ioc, config.global_data_view.storage_service_connection_count,
-              m_etcd_client),
+              m_etcd_client,
+              service_factory<storage_interface>(
+                  m_ioc,
+                  config.global_data_view.storage_service_connection_count,
+                  m_attached_storage.get_local_service_interface())),
           m_dedupe_workers(m_ioc, config.worker_thread_count),
-          m_storage(config.global_data_view, m_ioc, m_dedupe_workers,
-                    m_storage_services),
+          m_data_view(config.global_data_view, m_ioc, m_storage_services),
+          m_deduplicator(
+              std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server,
-                   std::make_unique<deduplicator_handler>(config, m_storage,
-                                                          m_dedupe_workers),
+                   std::make_unique<deduplicator_handler>(*m_deduplicator),
                    m_ioc) {}
 
     void run() {
+
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
     void stop() { m_server.stop(); }
+
+    std::shared_ptr<local_deduplicator> get_local_interface() {
+        return m_deduplicator;
+    }
 
     ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
@@ -55,11 +68,13 @@ private:
 
     service_registry m_service_registry;
 
-    services<STORAGE_SERVICE> m_storage_services;
+    attached_service<storage> m_attached_storage;
+    services<storage_interface> m_storage_services;
 
     worker_pool m_dedupe_workers;
 
-    global_data_view m_storage;
+    global_data_view m_data_view;
+    std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;
 };

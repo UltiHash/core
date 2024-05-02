@@ -1,7 +1,7 @@
 #ifndef CORE_CLIENT_H
 #define CORE_CLIENT_H
 
-#include "common/utils/awaitable_promise.h"
+#include "common/coroutines/awaitable_promise.h"
 #include "common/utils/common.h"
 #include "messenger.h"
 #include "tools.h"
@@ -16,7 +16,9 @@
 
 namespace uh::cluster {
 
-template <typename client> class acquired_messenger {
+class client;
+
+class acquired_messenger {
 public:
     acquired_messenger(std::unique_ptr<messenger> m, client& cl)
         : m_messenger(std::move(m)),
@@ -34,12 +36,7 @@ public:
     ~acquired_messenger() { release(); }
 
 private:
-    void release() {
-        if (m_messenger) {
-            m_messenger->clear_buffers();
-            m_client.push_messenger(std::move(m_messenger));
-        }
-    }
+    void inline release();
 
     std::unique_ptr<messenger> m_messenger;
     client& m_client;
@@ -48,46 +45,7 @@ private:
 class client {
 public:
     client(boost::asio::io_context& ioc, const std::string& address,
-           const std::uint16_t port, const int connections) {
-
-        auto endpoint = resolve(address, port).back();
-
-        for (int i = 0; i < connections; ++i) {
-            m_messengers.emplace_back(std::make_unique<messenger>(
-                ioc, endpoint.address().to_string(), port));
-        }
-    }
-
-    client(client&& cl) noexcept
-        : m_messengers(std::move(cl.m_messengers)) {}
-
-    acquired_messenger<client> acquire_messenger() {
-        std::unique_lock<std::mutex> lk(m);
-        m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
-        auto messenger = std::move(m_messengers.front());
-        m_messengers.pop_front();
-        return acquired_messenger<client>{std::move(messenger), *this};
-    }
-
-private:
-    friend class acquired_messenger<client>;
-
-    std::deque<std::unique_ptr<messenger>> m_messengers;
-    std::condition_variable m_cv;
-    std::mutex m;
-
-    void push_messenger(std::unique_ptr<messenger> msg) {
-        std::unique_lock<std::mutex> lk(m);
-        m_messengers.emplace_back(std::move(msg));
-        lk.unlock();
-        m_cv.notify_one();
-    }
-};
-
-class coro_client {
-public:
-    coro_client(boost::asio::io_context& ioc, const std::string& address,
-                const std::uint16_t port, const int connections)
+           const std::uint16_t port, const int connections)
         : m_ioc(ioc) {
 
         auto endpoint = resolve(address, port).back();
@@ -98,13 +56,12 @@ public:
         }
     }
 
-    coro_client(coro_client&& cl) noexcept
+    client(client&& cl) noexcept
         : m_ioc(cl.m_ioc),
           m_messengers(std::move(cl.m_messengers)) {}
 
-    coro<acquired_messenger<coro_client>> acquire_messenger() {
-        std::shared_ptr<awaitable_promise<acquired_messenger<coro_client>>>
-            promise;
+    coro<acquired_messenger> acquire_messenger() {
+        std::shared_ptr<awaitable_promise<acquired_messenger>> promise;
         {
             std::unique_lock<std::mutex> lk(m);
 
@@ -114,12 +71,12 @@ public:
                 m_messengers.pop_front();
                 lk.unlock();
 
-                co_return acquired_messenger<coro_client>(std::move(messenger),
-                                                          std::ref(*this));
+                co_return acquired_messenger(std::move(messenger),
+                                             std::ref(*this));
             }
 
-            promise = std::make_shared<
-                awaitable_promise<acquired_messenger<coro_client>>>(m_ioc);
+            promise =
+                std::make_shared<awaitable_promise<acquired_messenger>>(m_ioc);
             m_promises.push_back(promise);
         }
 
@@ -127,13 +84,12 @@ public:
     }
 
 private:
-    friend class acquired_messenger<coro_client>;
+    friend class acquired_messenger;
 
     boost::asio::io_context& m_ioc;
     std::mutex m;
     std::deque<std::unique_ptr<messenger>> m_messengers;
-    std::list<
-        std::shared_ptr<awaitable_promise<acquired_messenger<coro_client>>>>
+    std::list<std::shared_ptr<awaitable_promise<acquired_messenger>>>
         m_promises;
 
     void push_messenger(std::unique_ptr<messenger> msg) {
@@ -150,6 +106,13 @@ private:
         m_messengers.emplace_back(std::move(msg));
     }
 };
+
+void inline acquired_messenger::release() {
+    if (m_messenger) {
+        m_messenger->clear_buffers();
+        m_client.push_messenger(std::move(m_messenger));
+    }
+}
 
 } // end namespace uh::cluster
 

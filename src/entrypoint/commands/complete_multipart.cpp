@@ -1,4 +1,5 @@
 #include "complete_multipart.h"
+#include "common/coroutines/coro_utils.h"
 #include "common/utils/md5.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
@@ -72,19 +73,14 @@ coro<void> complete_multipart::handle(http_request& req) const {
     const auto& up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
 
-    const directory_message dir_req{
-        .bucket_id = bucket_name,
-        .object_key = std::make_unique<std::string>(object_name),
-        .addr = std::make_unique<address>(up_info->generate_total_address()),
+    auto func = [&](std::shared_ptr<directory_interface> dir,
+                    size_t id) -> coro<void> {
+        co_await dir->put_object(bucket_name, object_name,
+                                 up_info->generate_total_address());
     };
 
-    auto func = [&](acquired_messenger<coro_client> m,
-                    std::size_t id) -> coro<void> {
-        co_await m->send_directory_message(DIRECTORY_OBJECT_PUT_REQ, dir_req);
-        co_await m->recv_header();
-    };
-
-    co_await m_collection.directory_services.broadcast(func);
+    co_await broadcast<directory_interface>(
+        m_collection.ioc, func, m_collection.directory_services.get_services());
 
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);

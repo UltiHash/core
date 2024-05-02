@@ -1,8 +1,9 @@
 #ifndef CORE_DEDUPLICATOR_CONFIG_H
 #define CORE_DEDUPLICATOR_CONFIG_H
 
-#include "common/global_data/global_data_view.h"
+#include "common/global_data/config.h"
 #include "common/network/server.h"
+#include "storage/config.h"
 
 #include <filesystem>
 
@@ -23,7 +24,8 @@ struct deduplicator_config {
     std::size_t max_fragment_size = 8 * KIBI_BYTE;
     std::size_t dedupe_worker_minimum_data_size = 128 * KIBI_BYTE;
     std::size_t worker_thread_count = 16ul;
-    std::size_t fragment_buffer_size = 256ul * MEBI_BYTE;
+    std::size_t fragment_buffer_size = 16ul * MEBI_BYTE;
+    std::optional<storage_config> m_attached_storage;
 };
 
 } // namespace uh::cluster

@@ -1,5 +1,4 @@
 #include "get_bucket.h"
-#include "common/utils/worker_pool.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -28,14 +27,7 @@ coro<void> get_bucket::handle(http_request& req) const {
 
     try {
         auto client = m_collection.directory_services.get();
-        auto mgr = co_await client->acquire_messenger();
-
-        directory_message dir_req;
-        dir_req.bucket_id = bucket_name;
-
-        co_await mgr->send_directory_message(DIRECTORY_BUCKET_EXISTS_REQ,
-                                             dir_req);
-        co_await mgr->recv_header();
+        co_await client->bucket_exists(bucket_name);
 
         auto res = get_response(bucket_name);
         co_await req.respond(res.get_prepared_response());

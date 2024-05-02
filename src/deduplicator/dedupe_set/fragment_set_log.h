@@ -1,9 +1,8 @@
 #ifndef UH_CLUSTER_FRAGMENT_SET_LOG_H
 #define UH_CLUSTER_FRAGMENT_SET_LOG_H
 
-#include "common/global_data/global_data_view.h"
 #include "common/types/common_types.h"
-#include "config.h"
+#include "deduplicator/config.h"
 #include "fragment_set_element.h"
 
 #include <cstring>
@@ -11,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <set>
 
 namespace uh::cluster {
 
@@ -24,16 +24,16 @@ class fragment_set_log {
     std::fstream m_log_file;
 
 public:
-
     static constexpr std::size_t m_entry_size =
-        sizeof(set_operation) + sizeof(uint16_t) + sizeof (uint128_t) + PREFIX_SIZE + sizeof (uint16_t);
+        sizeof(set_operation) + sizeof(uint16_t) + sizeof(uint128_t) +
+        PREFIX_SIZE + sizeof(uint16_t);
 
     struct log_entry {
         set_operation op{};
         uint128_t pointer;
         uint16_t size{};
         uint16_t prefix_size{};
-        char prefix [PREFIX_SIZE]{};
+        char prefix[PREFIX_SIZE]{};
 
         auto operator<=>(const log_entry&) const = default;
         using serialize = zpp::bits::members<5>;

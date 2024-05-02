@@ -1,18 +1,16 @@
+
 #ifndef UH_CLUSTER_SERVICES_H
 #define UH_CLUSTER_SERVICES_H
 
-#include <etcd/SyncClient.hpp>
-#include <etcd/Watcher.hpp>
-#include <ranges>
-#include <set>
-#include <shared_mutex>
-#include <utility>
-
-#include "common/network/client.h"
-#include "common/telemetry/log.h"
+#include "common/registry/namespace.h"
+#include "common/registry/service_id.h"
 #include "common/utils/pointer_traits.h"
+#include "common/utils/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "namespace.h"
+#include "storage/interfaces/storage_interface.h"
+#include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
+#include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
+#include <ranges>
 
 namespace uh::cluster {
 
@@ -33,51 +31,51 @@ inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
         throw std::invalid_argument("invalid etcd action");
 }
 
-template <role r, typename client> class services_index {
+template <typename service_interface> class tmp_services_index {
 public:
-    void add(const std::size_t&, std::shared_ptr<client>) {}
+    void add(const std::size_t&, std::shared_ptr<service_interface>) {}
     void erase(const std::size_t&) {}
 };
 
-template <typename client> class services_index<STORAGE_SERVICE, client> {
+template <> class tmp_services_index<storage_interface> {
 public:
-
-    void add(const std::size_t& id, std::shared_ptr<client> cl) {
+    void add(const std::size_t& id, std::shared_ptr<storage_interface> cl) {
         m_clients.emplace(id, std::move(cl));
     }
 
-    void erase(const std::size_t& id) {
-        m_clients.erase(id);
-    }
+    void erase(const std::size_t& id) { m_clients.erase(id); }
 
-    [[nodiscard]] std::shared_ptr<client> get(const uint128_t& pointer) const {
+    [[nodiscard]] std::shared_ptr<storage_interface>
+    get(const uint128_t& pointer) const {
 
-        auto id = pointer_traits::get_service_id (pointer);
+        auto id = pointer_traits::get_service_id(pointer);
         return m_clients.at(id);
     }
 
 private:
-    std::map <uint32_t, std::shared_ptr<client>> m_clients;
+    std::map<uint32_t, std::shared_ptr<storage_interface>> m_clients;
 };
 
-template <role r, typename client = uh::cluster::client> class services {
+template <typename service_interface> class services {
 public:
     template <typename... index_args>
-    services(boost::asio::io_context& ioc, const std::size_t connection_count,
-             etcd::SyncClient& etcd_client, index_args... ia)
-        : m_ioc(ioc),
-          m_connection_count(connection_count),
-          m_etcd_client(etcd_client),
+    services(etcd::SyncClient& etcd_client,
+             service_factory<service_interface> service_factory,
+             index_args... ia)
+        : m_etcd_client(etcd_client),
           m_watcher(
               m_etcd_client,
-              etcd_services_announced_key_prefix + get_service_string(r),
+              etcd_services_announced_key_prefix +
+                  get_service_string(service_interface::service_role),
               [this](etcd::Response response) {
                   return handle_state_changes(response);
               },
               true),
           m_robin_index(m_clients.end()),
-          m_services_index(ia...) {
-        auto path = etcd_services_announced_key_prefix + get_service_string(r);
+          m_services_index(ia...),
+          m_service_factory(std::move(service_factory)) {
+        auto path = etcd_services_announced_key_prefix +
+                    get_service_string(service_interface::service_role);
 
         auto resp = wait_for_success(
             ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
@@ -89,8 +87,9 @@ public:
 
     ~services() { m_watcher.Cancel(); }
 
-    template <typename key> std::shared_ptr<client> get(key k) const {
-        std::shared_ptr<client> cl;
+    template <typename key>
+    std::shared_ptr<service_interface> get(key k) const {
+        std::shared_ptr<service_interface> cl;
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
         if (m_cv.wait_for(
@@ -108,8 +107,8 @@ public:
         return cl;
     }
 
-    std::shared_ptr<client> get(std::size_t id) const {
-        std::shared_ptr<client> cl;
+    std::shared_ptr<service_interface> get(std::size_t id) const {
+        std::shared_ptr<service_interface> cl;
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
         if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
@@ -128,12 +127,16 @@ public:
         return cl;
     }
 
-    std::shared_ptr<client> get() const {
+    std::shared_ptr<service_interface> get() const {
         std::unique_lock<std::shared_mutex> lk(m_mutex);
         if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
                           [this]() { return !m_clients.empty(); })) {
         } else
             throw std::runtime_error("timeout waiting for client");
+
+        if (auto lc = m_service_factory.get_local_service(); lc) {
+            return lc;
+        }
 
         if (m_robin_index == m_clients.end()) {
             m_robin_index = m_clients.begin();
@@ -145,8 +148,8 @@ public:
         return rv;
     }
 
-    std::vector<std::shared_ptr<client>> get_clients() const {
-        std::vector<std::shared_ptr<client>> clients_list;
+    std::vector<std::shared_ptr<service_interface>> get_services() const {
+        std::vector<std::shared_ptr<service_interface>> clients_list;
 
         std::shared_lock<std::shared_mutex> lk(m_mutex);
         clients_list.reserve(m_clients.size());
@@ -156,79 +159,7 @@ public:
         return clients_list;
     }
 
-    template <typename func, typename result = std::invoke_result<
-                                 func, acquired_messenger<client>,
-                                 std::size_t>::type::value_type>
-    requires(std::is_same_v<client, coro_client> &&
-             std::is_same_v<result, void>)
-    coro<void> broadcast(func f) const {
-        auto clients = get_clients();
-        if (clients.empty()) {
-            throw std::runtime_error("no services available");
-        }
-
-        std::vector<std::shared_ptr<awaitable_promise<void>>> results(
-            clients.size());
-
-        std::size_t index = 0;
-        for (const auto& c : clients) {
-            auto promise = std::make_shared<awaitable_promise<void>>(m_ioc);
-
-            auto messenger = co_await c->acquire_messenger();
-            boost::asio::co_spawn(m_ioc, f(std::move(messenger), index),
-                                  use_awaitable_promise_cospawn(promise));
-
-            results[index] = promise;
-            ++index;
-        }
-
-        for (auto p : results) {
-            co_await p->get();
-        }
-    }
-
-    template <typename func, typename result = std::invoke_result<
-                                 func, acquired_messenger<client>,
-                                 std::size_t>::type::value_type>
-    requires(std::is_same_v<client, coro_client> &&
-             !std::is_same_v<result, void>)
-    coro<std::vector<result>> broadcast(func f) const {
-        auto clients = get_clients();
-        if (clients.empty()) {
-            throw std::runtime_error("no services available");
-        }
-
-        std::vector<std::shared_ptr<awaitable_promise<result>>> results(
-            clients.size());
-
-        std::size_t index = 0;
-        for (const auto& c : clients) {
-            auto promise =
-                std::make_shared<awaitable_promise<coro<result>>>(m_ioc);
-
-            auto messenger = co_await c->acquire_messenger();
-            boost::asio::co_spawn(m_ioc, f(messenger, index),
-                                  use_awaitable_promise_cospawn(promise));
-
-            results[index] = promise;
-            ++index;
-        }
-
-        std::vector<result> rv;
-        for (auto p : results) {
-            rv.push_back(co_await p->get());
-        }
-
-        co_return rv;
-    }
-
 private:
-    struct service_endpoint {
-        std::size_t id{};
-        std::string host{};
-        std::uint16_t port{};
-    };
-
     void handle_state_changes(const etcd::Response& response) {
         LOG_DEBUG() << "action: " << response.action()
                     << ", key: " << response.value().key()
@@ -260,8 +191,9 @@ private:
         service_endpoint.id = std::stoul(id);
 
         const std::string attributes_prefix(
-            etcd_services_attributes_key_prefix + get_service_string(r) + '/' +
-            id + '/');
+            etcd_services_attributes_key_prefix +
+            get_service_string(service_interface::service_role) + '/' + id +
+            '/');
 
         const auto attributes = wait_for_success(
             ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this, &attributes_prefix]() {
@@ -270,6 +202,8 @@ private:
 
         std::optional<std::string> host;
         std::optional<uint16_t> port;
+        std::optional<int> pid;
+
         for (size_t i = 0; i < attributes.keys().size(); i++) {
             const auto attribute_name =
                 std::filesystem::path(attributes.key(i)).filename().string();
@@ -278,22 +212,26 @@ private:
                 host = attributes.value(i).as_string();
             } else if (attribute_name == get_config_string(CFG_ENDPOINT_PORT)) {
                 port = std::stoul(attributes.value(i).as_string());
+            } else if (attribute_name == get_config_string(CFG_ENDPOINT_PID)) {
+                pid = std::stol(attributes.value(i).as_string());
             }
         }
 
-        if (!host || !port) {
+        if (!host || !port || !pid) {
             throw std::runtime_error("client not available");
         }
 
         service_endpoint.port = *port;
         service_endpoint.host = *host;
+        service_endpoint.pid = *pid;
         return service_endpoint;
     }
 
     void add(const std::string& path) {
         const auto service_endpoint = extract(path);
 
-        LOG_DEBUG() << "add callback for service " << get_service_string(r)
+        LOG_DEBUG() << "add callback for service "
+                    << get_service_string(service_interface::service_role)
                     << ": " << service_endpoint.id
                     << " called. host: " << service_endpoint.host
                     << " port: " << service_endpoint.port;
@@ -302,9 +240,7 @@ private:
         if (m_clients.contains(service_endpoint.id)) [[unlikely]]
             return;
 
-        auto cl =
-            std::make_shared<client>(m_ioc, service_endpoint.host,
-                                     service_endpoint.port, m_connection_count);
+        auto cl = m_service_factory.make_service(service_endpoint);
 
         m_clients.emplace(service_endpoint.id, cl);
         m_services_index.add(service_endpoint.id, std::move(cl));
@@ -316,7 +252,8 @@ private:
         const auto id =
             std::stoull(std::filesystem::path(path).filename().string());
 
-        LOG_DEBUG() << "remove callback for service " << get_service_string(r)
+        LOG_DEBUG() << "remove callback for service "
+                    << get_service_string(service_interface::service_role)
                     << ": " << id << " called. ";
 
         std::unique_lock<std::shared_mutex> lk(m_mutex);
@@ -334,22 +271,19 @@ private:
         m_services_index.erase(id);
     }
 
-    boost::asio::io_context& m_ioc;
-    const std::size_t m_connection_count;
     etcd::SyncClient& m_etcd_client;
     etcd::Watcher m_watcher;
 
     mutable std::shared_mutex m_mutex;
     mutable std::condition_variable_any m_cv;
-    std::map<std::size_t, std::shared_ptr<client>> m_clients;
+    std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
 
-    mutable std::map<std::size_t, std::shared_ptr<client>>::const_iterator
+    mutable std::map<std::size_t,
+                     std::shared_ptr<service_interface>>::const_iterator
         m_robin_index;
-    services_index<r, client> m_services_index;
-
+    tmp_services_index<service_interface> m_services_index;
+    service_factory<service_interface> m_service_factory;
     static constexpr std::size_t m_timeout_s = 10;
 };
-
-} // end namespace uh::cluster
-
+} // namespace uh::cluster
 #endif // UH_CLUSTER_SERVICES_H

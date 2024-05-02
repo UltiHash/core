@@ -1,42 +1,13 @@
 #include "service_registry.h"
 
 #include "common/utils/common.h"
+#include "common/utils/host_utils.h"
 #include "etcd/v3/Transaction.hpp"
 #include "namespace.h"
-#include <boost/asio.hpp>
 
 using namespace boost::asio;
 
 namespace uh::cluster {
-
-namespace {
-
-bool is_valid_ip(const std::string& ip) {
-    try {
-        ip::address address = ip::address::from_string(ip);
-        return address.is_v4() || address.is_v6();
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
-std::string get_host() {
-    const char* var_value = std::getenv(ENV_CFG_ENDPOINT_HOST);
-    if (var_value == nullptr) {
-        return ip::host_name();
-    } else {
-        if (is_valid_ip(var_value))
-            return {var_value};
-        else
-            throw std::invalid_argument(
-                "the environmental variable " +
-                std::string(ENV_CFG_ENDPOINT_HOST) +
-                " does not contain a valid IPv4 or IPv6 address: '" +
-                std::string(var_value) + "'");
-    }
-}
-
-} // namespace
 
 service_registry::service_registry(uh::cluster::role role, std::size_t index,
                                    etcd::SyncClient& etcd_client)
@@ -77,6 +48,8 @@ service_registry::register_service(const server_config& config) {
          get_host()},
         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),
          std::to_string(config.port)},
+        {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PID),
+         std::to_string(getpid ())},
         {announced_key_base, {}},
     };
 
