@@ -158,10 +158,11 @@ private:
         if (request.object_key_prefix) {
             prefix = *request.object_key_prefix;
         }
-        directory_list_objects_message response{
-            .objects = co_await m_directory.list_objects(request.bucket_id,
-                                                         prefix, lower_bound),
-        };
+
+        auto objs = co_await m_directory.list_objects(request.bucket_id, prefix,
+                                                      lower_bound);
+
+        directory_list_objects_message response{.objects = std::move(objs)};
 
         co_await m.send_directory_list_objects_message(response);
     }
