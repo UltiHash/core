@@ -18,7 +18,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     BOOST_CHECK_THROW(
         gdv->read_fragment(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
-        uh::cluster::error_exception);
+        std::runtime_error);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
