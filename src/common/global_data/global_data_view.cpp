@@ -69,7 +69,6 @@ coro <std::size_t> global_data_view::read_address(char* buffer, const address& a
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
     promises.reserve(nodes.size());
-    LOG_INFO() << to_hex (std::span <char> (buffer, 100));
 
     for (auto& dn : nodes) {
         promises.emplace_back(std::make_shared<awaitable_promise<void>>(m_io_service));
@@ -84,7 +83,6 @@ coro <std::size_t> global_data_view::read_address(char* buffer, const address& a
     for (auto& p : promises) {
         co_await p->get();
     }
-    LOG_INFO() << to_hex (std::span <char> (buffer, 100));
 
     co_return offset;
 }
