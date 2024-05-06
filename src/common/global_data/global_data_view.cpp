@@ -1,5 +1,4 @@
 #include "global_data_view.h"
-#include "common/utils/strings.h"
 
 namespace uh::cluster {
 global_data_view::global_data_view(
