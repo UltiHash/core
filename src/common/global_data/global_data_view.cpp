@@ -1,4 +1,5 @@
 #include "global_data_view.h"
+#include "common/utils/strings.h"
 
 namespace uh::cluster {
 global_data_view::global_data_view(
@@ -68,6 +69,7 @@ coro <std::size_t> global_data_view::read_address(char* buffer, const address& a
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
     promises.reserve(nodes.size());
+    LOG_INFO() << to_hex (std::span <char> (buffer, 100));
 
     for (auto& dn : nodes) {
         promises.emplace_back(std::make_shared<awaitable_promise<void>>(m_io_service));
@@ -76,11 +78,14 @@ coro <std::size_t> global_data_view::read_address(char* buffer, const address& a
                               dn->read_address(buffer, node_address_map[dn],
                                                node_data_offsets_map[dn]),
                               use_awaitable_promise_cospawn(promises.back()));
+
     }
 
     for (auto& p : promises) {
-        co_await p.get();
+        co_await p->get();
     }
+    LOG_INFO() << to_hex (std::span <char> (buffer, 100));
+
     co_return offset;
 }
 
