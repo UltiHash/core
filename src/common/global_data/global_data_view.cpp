@@ -44,7 +44,7 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     return buffer;
 }
 
-std::size_t global_data_view::read_address(char* buffer, const address& addr) {
+coro <std::size_t> global_data_view::read_address(char* buffer, const address& addr) {
 
     std::unordered_map<std::shared_ptr<storage_interface>, address>
         node_address_map;
@@ -66,21 +66,24 @@ std::size_t global_data_view::read_address(char* buffer, const address& addr) {
         offset += frag.size;
     }
 
-    std::vector<std::future<void>> futures;
-    futures.reserve(nodes.size());
+    std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
+    promises.reserve(nodes.size());
 
     for (auto& dn : nodes) {
-        futures.emplace_back(
-            boost::asio::co_spawn(m_io_service,
-                                  dn->read_address(buffer, node_address_map[dn],
-                                                   node_data_offsets_map[dn]),
-                                  boost::asio::use_future));
+        promises.emplace_back(std::make_shared<awaitable_promise<void>>(m_io_service));
+
+        boost::asio::co_spawn(m_io_service,
+                              dn->read_address(buffer, node_address_map[dn],
+                                               node_data_offsets_map[dn]),
+                              use_awaitable_promise_cospawn(promises.back()));
+
     }
 
-    for (auto& f : futures) {
-        f.get();
+    for (auto& p : promises) {
+        co_await p->get();
     }
-    return offset;
+
+    co_return offset;
 }
 
 void global_data_view::sync(const address& addr) {

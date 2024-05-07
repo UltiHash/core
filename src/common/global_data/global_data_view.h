@@ -86,7 +86,7 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    std::size_t read_address(char* buffer, const address& addr);
+    coro <std::size_t> read_address(char* buffer, const address& addr);
 
     /**
      * @brief Must be called on all addresses returned #write to ensure their

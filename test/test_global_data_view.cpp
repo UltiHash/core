@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "global data view tests"
 
+#include "common/utils/strings.h"
 #include "gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
 
@@ -31,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     gdv->sync(addr);
 
     unique_buffer <char> result_buffer (addr.data_size());
-    gdv->read_address(result_buffer.data(), addr);
+    boost::asio::co_spawn(gdv->get_executor(), gdv->read_address(result_buffer.data(), addr), boost::asio::use_future).get();
     BOOST_CHECK(input_buffer.get_str_view() == result_buffer.get_str_view());
 }
 
@@ -41,7 +42,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
     addr.push_fragment({23, 42});
     auto result_buffer = unique_buffer<char>(addr.data_size());
 
-    BOOST_CHECK_THROW(gdv->read_address(result_buffer.data(), addr),
+    BOOST_CHECK_THROW(boost::asio::co_spawn(gdv->get_executor(), gdv->read_address(result_buffer.data(), addr), boost::asio::use_future).get(),
                       std::runtime_error);
 }
 
@@ -72,7 +73,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
     gdv->sync(addr);
 
     auto result_buffer = unique_buffer<char>(addr.data_size());
-    gdv->read_address(result_buffer.data(), addr);
+    boost::asio::co_spawn(gdv->get_executor(), gdv->read_address(result_buffer.data(), addr), boost::asio::use_future).get();
     BOOST_CHECK(input_buffer.get_str_view() == result_buffer.get_str_view());
 }
 
