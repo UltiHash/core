@@ -44,7 +44,7 @@ struct upload_state {
     std::shared_ptr<upload_info> get_upload_info(const std::string& id);
     void append_upload_part_info(const std::string& id, uint16_t part_id,
                                  const dedupe_response& resp,
-                                 std::span<char> data);
+                                 size_t data_size, std::string&& md5);
 
     void remove_upload(const std::string& id);
 
