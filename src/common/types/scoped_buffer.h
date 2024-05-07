@@ -46,6 +46,21 @@ public:
 
     inline T* data() const noexcept { return m_data_info->m_data_ptr; }
 
+    inline constexpr void reserve (size_t size) {
+        if (size > m_data_info->m_capacity) {
+            m_data_info->m_data_ptr = (T*)realloc(m_data_info->m_data_ptr, size);
+            m_data_info->m_capacity = size;
+        }
+    }
+
+    inline T& operator[](size_t index) const noexcept {
+        return m_data_info->m_data_ptr[index];
+    }
+
+    inline bool constexpr empty() const noexcept {
+        return m_data_info->m_size == 0;
+    }
+
     [[nodiscard]] inline constexpr size_t size() const noexcept {
         return m_data_info->m_size;
     }
