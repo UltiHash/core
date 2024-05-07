@@ -1,8 +1,8 @@
 #ifndef CORE_DATA_STORE_H
 #define CORE_DATA_STORE_H
 
+#include "common/types/scoped_buffer.h"
 #include "common/utils/free_spot_manager.h"
-#include "common/types/shared_buffer.h"
 
 #include <condition_variable>
 #include <atomic>

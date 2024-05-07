@@ -3,7 +3,7 @@
 
 #include "common/network/client.h"
 #include "common/registry/services.h"
-#include "common/types/shared_buffer.h"
+#include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "lru_cache.h"
 #include "storage/interfaces/storage_interface.h"

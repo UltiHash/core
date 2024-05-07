@@ -3,7 +3,7 @@
 
 #include "address.h"
 #include "big_int.h"
-#include "unique_buffer.h"
+#include "scoped_buffer.h"
 
 #include <chrono>
 #include <span>

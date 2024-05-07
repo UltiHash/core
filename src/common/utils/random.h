@@ -1,7 +1,7 @@
 #ifndef UTIL_RANDOM_H
 #define UTIL_RANDOM_H
 
-#include "common/types/shared_buffer.h"
+#include "common/types/scoped_buffer.h"
 #include <random>
 #include <string>
 
