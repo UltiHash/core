@@ -88,9 +88,9 @@ collector:
   config:
     exporters:
       otlphttp/uptrace:
-        endpoint: http://uptrace-backend.uptrace.cluster.local:14318
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
         headers:
-          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.cluster.local:14318
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
     receivers:
       kubeletstats: null
       prometheus: null
