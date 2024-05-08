@@ -84,7 +84,8 @@ public:
 
     [[nodiscard]] constexpr inline std::string_view
     string_view() const noexcept {
-        return {m_data_info->m_data_ptr, m_data_info->m_size * sizeof(T)};
+        return {(char*)(m_data_info->m_data_ptr),
+                m_data_info->m_size * sizeof(T)};
     }
 };
 
