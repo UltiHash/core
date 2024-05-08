@@ -34,7 +34,7 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
 
     auto complete = storage.read_fragment(f.pointer(), f.size());
     return largest_common_prefix(data.substr(common),
-                                 complete.get_str_view().substr(common));
+                                 complete.string_view().substr(common));
 }
 
 } // namespace

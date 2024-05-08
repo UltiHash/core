@@ -63,7 +63,7 @@ private:
 
     void compute_unstored_addresses(const address& addr);
 
-    std::vector<char> unstored_to_buffer();
+    unique_buffer<char> unstored_to_buffer();
 
     std::list<std::variant<fragment, unstored>> m_frags;
     std::size_t m_effective_size;

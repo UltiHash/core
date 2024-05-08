@@ -21,16 +21,17 @@ public:
 
     void flip() { m_index = m_index == 0 ? 1 : 0; }
 
+    auto& current() { return m_buffers[m_index]; }
+
     coro<std::size_t> fill(http_request& req) {
         current().resize(current().capacity());
 
-        auto read = co_await req.read_body(current());
+        auto read = co_await req.read_body(current().span());
         current().resize(read);
 
         co_return read;
     }
 
-    std::vector<char>& current() { return m_buffers[m_index]; }
 
     std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
         auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
@@ -52,7 +53,7 @@ public:
 
 private:
     const reference_collection& m_collection;
-    std::array<std::vector<char>, 2> m_buffers;
+    std::array<unique_buffer<char>, 2> m_buffers;
     unsigned m_index;
 };
 
@@ -118,7 +119,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
     std::size_t transferred = 0;
 
     auto read = co_await b.fill(req);
-    hash.consume(b.current());
+    hash.consume(b.current().span());
     transferred += read;
 
     dedupe_response rv;
@@ -128,7 +129,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
         b.flip();
 
         read = co_await b.fill(req);
-        hash.consume(b.current());
+        hash.consume(b.current().span());
         transferred += read;
 
         rv.append(co_await promise->get());
@@ -144,10 +145,10 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
                                                    md5& hash) const {
     auto content_length = req.content_length();
 
-    std::vector<char> buffer(content_length);
-    auto read = co_await req.read_body(buffer);
+    unique_buffer<char> buffer(content_length);
+    auto read = co_await req.read_body(buffer.span());
     buffer.resize(read);
-    hash.consume(buffer);
+    hash.consume(buffer.span());
 
     if (buffer.empty()) {
         co_return dedupe_response();

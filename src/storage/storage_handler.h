@@ -79,7 +79,7 @@ private:
         unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
-        auto addr = co_await m_storage.write(data.get_str_view());
+        auto addr = co_await m_storage.write(data.string_view());
         co_await m.send_address(SUCCESS, addr);
     }
 
@@ -89,7 +89,7 @@ private:
         unique_buffer<char> buffer(frag.size);
         co_await m_storage.read_fragment(buffer.data(), frag);
 
-        co_await m.send(SUCCESS, buffer.get_span());
+        co_await m.send(SUCCESS, buffer.span());
     }
 
     coro<void> handle_read_address(messenger& m, const messenger::header& h) {
@@ -106,7 +106,7 @@ private:
         }
 
         co_await m_storage.read_address(buffer.data(), addr, offsets);
-        co_await m.send(SUCCESS, buffer.get_span());
+        co_await m.send(SUCCESS, buffer.span());
     }
 
     coro<void> handle_sync(messenger& m, const messenger::header& h) {

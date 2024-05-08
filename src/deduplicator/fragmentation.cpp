@@ -132,8 +132,8 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
     }
 }
 
-std::vector<char> fragmentation::unstored_to_buffer() {
-    std::vector<char> buffer(m_unstored_size);
+unique_buffer<char> fragmentation::unstored_to_buffer() {
+    unique_buffer<char> buffer(m_unstored_size);
     std::size_t offs = 0ull;
 
     for (auto & m_frag : m_frags) {

@@ -25,9 +25,9 @@ coro<void> multipart::handle(http_request& req) const {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);
-    std::vector<char> buffer(req.content_length());
+    unique_buffer<char> buffer(req.content_length());
 
-    auto size = co_await req.read_body(buffer);
+    auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
     dedupe_response resp = {};
@@ -36,12 +36,14 @@ coro<void> multipart::handle(http_request& req) const {
             {buffer.data(), buffer.size()});
     }
 
+
+    auto md5 = calculate_md5(buffer.span());
+    http_response res;
+    res.set_etag(md5);
+
     m_collection.server_state.m_uploads.append_upload_part_info(
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
-        buffer);
-
-    http_response res;
-    res.set_etag(calculate_md5(buffer));
+        buffer.size(), std::move (md5));
 
     co_await req.respond(res.get_prepared_response());
 }

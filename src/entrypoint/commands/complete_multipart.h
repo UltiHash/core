@@ -19,7 +19,7 @@ private:
     static constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
     static constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 
-    void validate(const http_request& req, const std::vector<char>& body) const;
+    void validate(const http_request& req, const std::span<char> body) const;
 };
 
 } // namespace uh::cluster

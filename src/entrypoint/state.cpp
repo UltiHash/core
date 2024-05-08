@@ -1,7 +1,6 @@
 #include "state.h"
 
 #include "common/telemetry/log.h"
-#include "common/utils/md5.h"
 #include "common/utils/random.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -83,7 +82,7 @@ bool upload_state::contains_upload(const std::string& id) {
 
 void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
                                            const dedupe_response& resp,
-                                           std::span<char> data) {
+                                           size_t data_size, std::string&& md5) {
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -92,10 +91,10 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
     std::lock_guard<std::mutex> lock(mutex);
 
     auto& total_resp = find(id)->second;
-    total_resp->etags.emplace(part, calculate_md5(data));
+    total_resp->etags.emplace(part, std::move (md5));
     total_resp->effective_size += resp.effective_size;
-    total_resp->data_size += data.size();
-    total_resp->part_sizes.emplace(part, data.size());
+    total_resp->data_size += data_size;
+    total_resp->part_sizes.emplace(part, data_size);
     total_resp->addresses.emplace(part, resp.addr);
 }
 

@@ -76,7 +76,7 @@ int main(int argc, char* args[]) {
     const auto start = std::chrono::steady_clock::now();
 
     boost::asio::co_spawn(
-        ioc, perform_operation(m, ps.req_type, buf.get_span()),
+        ioc, perform_operation(m, ps.req_type, buf.span()),
         [](const std::exception_ptr& eptr) {
             if (eptr) {
                 try {

@@ -62,7 +62,7 @@ coro<void> deduplicator_handler::handle_dedupe(messenger& m,
     m.register_read_buffer(data);
     co_await m.recv_buffers(h);
 
-    auto dedupe_resp = co_await m_local_dedupe.deduplicate(data.get_str_view());
+    auto dedupe_resp = co_await m_local_dedupe.deduplicate(data.string_view());
     co_await m.send_dedupe_response(dedupe_resp);
 }
 

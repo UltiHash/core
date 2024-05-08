@@ -16,7 +16,7 @@ bool complete_multipart::can_handle(const http_request& req) {
 }
 
 void complete_multipart::validate(const http_request& req,
-                                  const std::vector<char>& body) const {
+                                  const std::span<char> body) const {
     auto up_info = m_collection.server_state.m_uploads.get_upload_info(
         *req.query("uploadId"));
 
@@ -60,11 +60,11 @@ void complete_multipart::validate(const http_request& req,
 coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
-    std::vector<char> buffer(req.content_length());
-    auto size = co_await req.read_body(buffer);
+    unique_buffer<char> buffer(req.content_length());
+    auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
-    validate(req, buffer);
+    validate(req, buffer.span());
 
     auto upload_id = *req.query("uploadId");
     const auto& bucket_name = req.bucket();
@@ -85,7 +85,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);
 
-    auto etag = calculate_md5(buffer);
+    auto etag = calculate_md5(buffer.span());
     http_response res;
     res.set_etag(etag);
     res.set_original_size(up_info->data_size);
