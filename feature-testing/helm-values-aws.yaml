@@ -87,23 +87,16 @@ storage:
 collector:
   config:
     exporters:
-      otlphttp/uptrace: null
+      otlphttp/uptrace:
+        endpoint: http://uptrace-backend.uptrace.cluster.local:14318
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.cluster.local:14318
     receivers:
       kubeletstats: null
       prometheus: null
     service:
       pipelines:
-        logs:
-          exporters:
-          - debug
         metrics:
-          exporters:
-          - debug
-          receivers:
-          - otlp
-        traces:
-          exporters:
-          - debug
           receivers:
           - otlp
   extraEnvs:
@@ -115,6 +108,11 @@ collector:
     valueFrom:
       fieldRef:
         fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN 
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
   nodeSelector:
     purpose: feature-testing
   tolerations:
