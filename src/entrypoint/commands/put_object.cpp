@@ -26,7 +26,7 @@ public:
     coro<std::size_t> fill(http_request& req) {
         current().resize(current().capacity());
 
-        auto read = co_await req.read_body(current().get_span());
+        auto read = co_await req.read_body(current().span());
         current().resize(read);
 
         co_return read;
@@ -119,7 +119,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
     std::size_t transferred = 0;
 
     auto read = co_await b.fill(req);
-    hash.consume(b.current().get_span());
+    hash.consume(b.current().span());
     transferred += read;
 
     dedupe_response rv;
@@ -129,7 +129,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
         b.flip();
 
         read = co_await b.fill(req);
-        hash.consume(b.current().get_span());
+        hash.consume(b.current().span());
         transferred += read;
 
         rv.append(co_await promise->get());
@@ -146,9 +146,9 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
     auto content_length = req.content_length();
 
     unique_buffer<char> buffer(content_length);
-    auto read = co_await req.read_body(buffer.get_span());
+    auto read = co_await req.read_body(buffer.span());
     buffer.resize(read);
-    hash.consume(buffer.get_span());
+    hash.consume(buffer.span());
 
     if (buffer.empty()) {
         co_return dedupe_response();

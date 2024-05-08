@@ -61,7 +61,7 @@ public:
         register_read_buffer(data);
         co_await recv_buffers(message_header);
         directory_message req;
-        zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
+        zpp::bits::in{data.span(), zpp::bits::size4b{}}(req).or_throw();
         co_return std::move(req);
     }
 
@@ -82,7 +82,7 @@ public:
         register_read_buffer(data);
         co_await recv_buffers(message_header);
         directory_list_buckets_message req;
-        zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
+        zpp::bits::in{data.span(), zpp::bits::size4b{}}(req).or_throw();
         co_return std::move(req);
     }
 
@@ -92,7 +92,7 @@ public:
         register_read_buffer(data);
         co_await recv_buffers(message_header);
         directory_list_objects_message req;
-        zpp::bits::in{data.get_span(), zpp::bits::size4b{}}(req).or_throw();
+        zpp::bits::in{data.span(), zpp::bits::size4b{}}(req).or_throw();
         co_return std::move(req);
     }
 

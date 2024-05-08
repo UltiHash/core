@@ -78,12 +78,12 @@ public:
         m_data_info->m_size = new_size;
     }
 
-    [[nodiscard]] constexpr inline std::span<T> get_span() const noexcept {
+    [[nodiscard]] constexpr inline std::span<T> span() const noexcept {
         return {m_data_info->m_data_ptr, m_data_info->m_size};
     }
 
     [[nodiscard]] constexpr inline std::string_view
-    get_str_view() const noexcept {
+    string_view() const noexcept {
         return {m_data_info->m_data_ptr, m_data_info->m_size * sizeof(T)};
     }
 };

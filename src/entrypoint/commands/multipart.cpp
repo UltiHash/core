@@ -27,7 +27,7 @@ coro<void> multipart::handle(http_request& req) const {
     validate(req);
     unique_buffer<char> buffer(req.content_length());
 
-    auto size = co_await req.read_body(buffer.get_span());
+    auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
     dedupe_response resp = {};
@@ -37,7 +37,7 @@ coro<void> multipart::handle(http_request& req) const {
     }
 
 
-    auto md5 = calculate_md5(buffer.get_span());
+    auto md5 = calculate_md5(buffer.span());
     http_response res;
     res.set_etag(md5);
 

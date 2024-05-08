@@ -64,7 +64,7 @@ public:
             } else if (start->first.starts_with(prefix)) {
                 const auto bytes = m_data_store.read(start->second);
                 object_meta obj;
-                zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj)
+                zpp::bits::in{bytes.span(), zpp::bits::size4b{}}(obj)
                     .or_throw();
                 objects.push_back(
                     {.name = start->first,
@@ -119,7 +119,7 @@ public:
 
         const auto bytes = m_data_store.read(it->second);
         object_meta obj;
-        zpp::bits::in{bytes.get_span(), zpp::bits::size4b{}}(obj).or_throw();
+        zpp::bits::in{bytes.span(), zpp::bits::size4b{}}(obj).or_throw();
 
         return obj.addr;
     }

@@ -61,10 +61,10 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
-    auto size = co_await req.read_body(buffer.get_span());
+    auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
-    validate(req, buffer.get_span());
+    validate(req, buffer.span());
 
     auto upload_id = *req.query("uploadId");
     const auto& bucket_name = req.bucket();
@@ -85,7 +85,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);
 
-    auto etag = calculate_md5(buffer.get_span());
+    auto etag = calculate_md5(buffer.span());
     http_response res;
     res.set_etag(etag);
     res.set_original_size(up_info->data_size);
