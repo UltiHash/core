@@ -1,0 +1,73 @@
+#ifndef CORE_COMMON_DB_CONNECTION_H
+#define CORE_COMMON_DB_CONNECTION_H
+
+#include "common/telemetry/log.h"
+#include "common/utils/templates.h"
+#include "result.h"
+#include <libpq-fe.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <signal.h>
+
+namespace uh::cluster::db {
+
+class connection {
+public:
+    connection(const std::string& connstr);
+    connection(const connection&) = delete;
+    connection(connection&&) = default;
+
+    result exec(const std::string& query);
+
+    result execp(const std::string& query,
+                 const std::vector<std::string>& args);
+
+    void append_args(std::span<char> s, std::vector<const char*>& values,
+                     std::vector<int>& lengths, std::vector<int>& format) {
+        values.push_back(s.data());
+        lengths.push_back(s.size());
+        format.push_back(1);
+    }
+
+    void append_args(std::string_view s, std::vector<const char*>& values,
+                     std::vector<int>& lengths, std::vector<int>& format) {
+        values.push_back(s.data());
+        lengths.push_back(s.size());
+        format.push_back(0);
+    }
+
+    template <typename... args>
+    result execv(const std::string& query, args... a) {
+        std::vector<const char*> values;
+        std::vector<int> lengths;
+        std::vector<int> format;
+
+        foreach (
+            [&](const auto& h) { append_args(h, values, lengths, format); },
+            a...)
+            ;
+
+        LOG_DEBUG() << "execv: \"" << query << "\"";
+        // raise(SIGTRAP);
+
+        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
+            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
+                         values.data(), lengths.data(), format.data(), 1),
+            PQclear);
+
+        check_result(res.get());
+
+        return result(std::move(res));
+    }
+
+private:
+    void check_result(const PGresult* result);
+
+    std::unique_ptr<PGconn, void (*)(PGconn*)> m_ptr;
+};
+
+} // namespace uh::cluster::db
+
+#endif
