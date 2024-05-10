@@ -1,0 +1,189 @@
+--
+-- This script provisions PostgreSQL directory database
+--
+\c postgres;
+DROP DATABASE IF EXISTS uh_directory WITH (FORCE);
+CREATE DATABASE uh_directory;
+GRANT ALL ON DATABASE uh_directory TO SESSION_USER;
+\c uh_directory;
+
+-- ------------------------------------------------------------------------
+--
+-- Database tables
+--
+
+--
+-- The table `__buckets` lists all available buckets in the system.
+--
+CREATE TABLE __buckets (
+    id bigint GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(64) NOT NULL
+);
+
+-- ------------------------------------------------------------------------
+--
+-- Database functions for controlling the directory
+--
+
+--
+-- uh_check_bucket(bucket) -- raise an exception when the bucket references
+-- internal tables
+--
+CREATE OR REPLACE PROCEDURE uh_check_bucket(bucket regclass)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF bucket = '__buckets'::regclass THEN
+        RAISE 'cannot create bucket: %', bucket;
+    END IF;
+END
+$$;
+
+CREATE OR REPLACE PROCEDURE uh_check_bucket(bucket text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF bucket LIKE '%__buckets%' THEN
+        RAISE 'cannot create bucket: %', bucket;
+    END IF;
+END
+$$;
+
+--
+-- uh_create_bucket(bucket) -- create a new bucket
+--
+CREATE OR REPLACE PROCEDURE uh_create_bucket(bucket text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE 'CREATE table ' || quote_ident(bucket) || ' (
+        id bigint GENERATED ALWAYS AS IDENTITY,
+        name TEXT NOT NULL PRIMARY KEY,
+        small BYTEA DEFAULT NULL,
+        large OID DEFAULT NULL
+    )';
+
+    INSERT INTO __buckets (name) VALUES (bucket);
+END
+$$;
+
+--
+-- uh_put_small_obj(bucket, key, addr) -- add an object with name `key`
+-- described by `addr` to `bucket`. The object size is limited to 1GB.
+--
+CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYTEA)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('INSERT INTO %s ("name", "small") VALUES(%L, %L)', bucket, key, addr);
+END
+$$;
+
+--
+-- uh_put_large_obj(bucket, key, addr) -- add an object with name `key`
+-- described by `addr` to `bucket`. The object data must be written using
+-- PostGre's large object facility. The resulting OID is passed to this
+-- function as addr.
+--
+CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('INSERT INTO %s ("name", "large") VALUES(%L, %L)', bucket, key, addr);
+END
+$$;
+
+--
+-- uh_get_object(bucket, key) -- retrieve the address portion of an object
+-- identified by `bucket` and `key`. If the object contains no small address
+-- data, NULL is returned.
+--
+CREATE OR REPLACE FUNCTION uh_get_object(bucket regclass, key text)
+    RETURNS TABLE (small BYTEA, large oid)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    RETURN QUERY EXECUTE format('SELECT small, large FROM %s WHERE name = %L', bucket, key);
+END;
+$$;
+
+--
+-- uh_bucket_exists(bucket): return true if the bucket exists
+--
+CREATE OR REPLACE FUNCTION uh_bucket_exists(bucket regclass) RETURNS BOOLEAN
+LANGUAGE plpgsql AS $$
+DECLARE result BOOLEAN;
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('SELECT (EXISTS (SELECT count(1) FROM %s))', bucket)
+        INTO result;
+    RETURN result;
+END;
+$$;
+
+--
+-- uh_delete_bucket(bucket): delete bucket from system
+--
+CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket regclass)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('DELETE FROM __buckets WHERE name = %L', bucket);
+    EXECUTE format('DROP TABLE %s', bucket);
+END;
+$$;
+
+--
+-- uh_delete_object(bucket, object_id): delete object
+--
+CREATE OR REPLACE PROCEDURE uh_delete_object(bucket regclass, key text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('DELETE FROM %s WHERE name = %L', bucket, key);
+END;
+$$;
+
+--
+-- uh_list_buckets(): list all buckets
+--
+CREATE OR REPLACE FUNCTION uh_list_buckets() RETURNS TABLE(name text)
+LANGUAGE SQL AS 'SELECT name FROM __buckets;';
+
+--
+-- uh_list_objects(bucket): return all objects in `bucket`
+--
+CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass)
+    RETURNS TABLE(id bigint, name text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    RETURN QUERY EXECUTE format('SELECT id, name FROM %s', bucket);
+END;
+$$;
+
+--
+-- uh_list_objects(bucket, prefix): return all objects in `bucket` with a
+-- given `prefix`
+--
+CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text)
+    RETURNS TABLE(id bigint, name text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    RETURN QUERY EXECUTE format('SELECT id, name FROM %s WHERE name LIKE %L', bucket, prefix || '%');
+END;
+$$;
+
+--
+-- uh_list_objects(bucket, prefix): return all objects in `bucket` with a
+-- given `prefix` that are bigger than `lower_bound`
+--
+CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text, lower_bound text)
+    RETURNS TABLE(id bigint, name text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    RETURN QUERY EXECUTE
+        format('SELECT id, name FROM %s WHERE name LIKE %L and name >= %L',
+            bucket, prefix || '%', lower_bound);
+END;
+$$;
