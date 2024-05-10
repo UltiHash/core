@@ -15,14 +15,8 @@ bool delete_object::can_handle(const http_request& req) {
 coro<void> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
-        auto func = [&req](std::shared_ptr<directory_interface> dir,
-                           size_t id) -> coro<void> {
-            co_await dir->delete_object(req.bucket(), req.object_key());
-        };
-
-        co_await broadcast<directory_interface>(
-            m_collection.ioc, func,
-            m_collection.directory_services.get_services());
+        co_await m_collection.directory.delete_object(req.bucket(),
+                                                      req.object_key());
 
         http_response res;
 

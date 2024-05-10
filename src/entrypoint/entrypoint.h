@@ -3,11 +3,12 @@
 
 #include <functional>
 
+#include "common/db/db.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
-#include "directory/interfaces/directory_interface.h"
+#include "directory/interfaces/pgsql_directory.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
@@ -21,20 +22,24 @@ public:
                                       get_service_string(ENTRYPOINT_SERVICE),
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
+          m_attached_storage(sc, config.m_attached_storage),
+          m_storage_services(
+              m_etcd_client,
+              service_factory<storage_interface>(
+                  m_ioc,
+                  config.global_data_view.storage_service_connection_count,
+                  m_attached_storage.get_local_service_interface())),
+          m_storage(config.global_data_view, m_ioc, m_storage_services),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+          m_db(config.database),
           m_config(config),
           m_attached_dedupe(sc, config.m_attached_deduplicator),
-          m_attached_directory(sc, config.m_attached_directory),
           m_dedupe_services(
               m_etcd_client,
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_directory_services(
-              m_etcd_client,
-              service_factory<directory_interface>(
-                  m_ioc, config.directory_connection_count,
-                  m_attached_directory.get_local_service_interface())),
+          m_directory(m_db, m_storage),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection),
                    m_ioc) {}
@@ -54,7 +59,7 @@ private:
     reference_collection get_reference_collection() {
         return {.ioc = m_ioc,
                 .dedupe_services = m_dedupe_services,
-                .directory_services = m_directory_services,
+                .directory = m_directory,
                 .server_state = m_state,
                 .config = m_config};
     }
@@ -62,16 +67,19 @@ private:
     etcd::SyncClient m_etcd_client;
     std::size_t m_service_id;
     boost::asio::io_context m_ioc;
+    attached_service<storage> m_attached_storage;
+    services<storage_interface> m_storage_services;
+    global_data_view m_storage;
 
     service_registry m_service_registry;
+    db::database m_db;
 
     entrypoint_config m_config;
 
     attached_service<deduplicator> m_attached_dedupe;
-    attached_service<directory> m_attached_directory;
 
     services<deduplicator_interface> m_dedupe_services;
-    services<directory_interface> m_directory_services;
+    pgsql_directory m_directory;
 
     state m_state;
 

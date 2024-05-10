@@ -152,6 +152,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     auto* rv = app.add_subcommand("entrypoint", "Run as entrypoint service");
 
     register_server(*rv, cfg.server);
+    register_global_data_view(*rv, cfg.global_data_view);
 
     rv->add_option("--dedupe-connections", cfg.dedupe_node_connection_count,
                    "number of connections per deduplication service")
@@ -168,6 +169,11 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     rv->add_option("--buffer-size", cfg.buffer_size,
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
+
+    rv->add_option("--db-conn,-D", cfg.database.conn_str,
+                   "PGSQL connection string")
+        ->default_val(cfg.database.conn_str)
+        ->envname(ENV_CFG_DB_CONN);
 
     return rv;
 }

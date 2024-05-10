@@ -33,12 +33,15 @@ struct remote_storage : public storage_interface {
     coro<void> read_address(char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
+
         co_await m.get().send_address(STORAGE_READ_ADDRESS_REQ, addr);
         const auto h = co_await m.get().recv_header();
+
         m.get().reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
             m.get().register_read_buffer(buffer + offsets.at(i), addr.sizes[i]);
         }
+
         co_await m.get().recv_buffers(h);
     }
 

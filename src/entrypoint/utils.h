@@ -14,7 +14,7 @@ namespace uh::cluster {
 struct reference_collection {
     boost::asio::io_context& ioc;
     const services<deduplicator_interface>& dedupe_services;
-    const services<directory_interface>& directory_services;
+    directory_interface& directory;
     state& server_state;
     entrypoint_config& config;
 };

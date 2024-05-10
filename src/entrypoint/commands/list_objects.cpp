@@ -139,8 +139,8 @@ static http_response get_response(const std::vector<object>& objects,
 coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
     try {
-        auto dir = m_collection.directory_services.get();
-        auto obj_list = co_await dir->list_objects(req.bucket(), req.query("prefix"), req.query("marker"));
+        auto obj_list = co_await m_collection.directory.list_objects(
+            req.bucket(), req.query("prefix"), req.query("marker"));
 
         auto res = get_response(obj_list, req);
         co_await req.respond(res.get_prepared_response());

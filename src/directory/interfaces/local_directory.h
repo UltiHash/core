@@ -38,7 +38,9 @@ struct local_directory : public directory_interface {
             }
             std::string buffer(buffer_size, '\0');
 
+            LOG_DEBUG() << "local_read_handle::next reading " << buffer_size;
             co_await m_storage.read_address(buffer.data(), partial_addr);
+            LOG_DEBUG() << "local_read_handle::next done";
             co_return buffer;
         }
     };

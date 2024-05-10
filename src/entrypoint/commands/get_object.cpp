@@ -25,10 +25,8 @@ coro<void> get_object::handle(http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        auto dir = m_collection.directory_services.get();
-
-        auto read_handler =
-            co_await dir->get_object(req.bucket(), req.object_key());
+        auto read_handler = co_await m_collection.directory.get_object(
+            req.bucket(), req.object_key());
 
         size_t total_size = 0;
 
