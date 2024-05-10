@@ -5,7 +5,7 @@
 #include "common/registry/services.h"
 #include "config.h"
 #include "deduplicator/interfaces/deduplicator_interface.h"
-#include "directory/interfaces/directory_interface.h"
+#include "entrypoint/directory_interface.h"
 
 #include "entrypoint/state.h"
 

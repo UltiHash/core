@@ -6,7 +6,6 @@
 #include "common/types/big_int.h"
 #include "common/utils/common.h"
 #include "deduplicator/config.h"
-#include "directory/config.h"
 #include "entrypoint/config.h"
 #include "storage/config.h"
 #include <filesystem>
@@ -29,7 +28,6 @@ struct config {
 
     entrypoint_config entrypoint;
     storage_config storage;
-    directory_config directory;
     deduplicator_config deduplicator;
 };
 

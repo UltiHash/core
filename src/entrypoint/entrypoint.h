@@ -8,7 +8,7 @@
 #include "common/registry/service_registry.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
-#include "directory/interfaces/pgsql_directory.h"
+#include "entrypoint/pgsql_directory.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {

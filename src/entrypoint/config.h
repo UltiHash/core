@@ -5,7 +5,6 @@
 #include "common/global_data/config.h"
 #include "common/network/server.h"
 #include "deduplicator/config.h"
-#include "directory/config.h"
 
 namespace uh::cluster {
 
@@ -18,7 +17,6 @@ struct entrypoint_config {
     std::size_t worker_thread_count = 16ul;
     std::size_t buffer_size = 64ul * MEBI_BYTE;
     std::optional<deduplicator_config> m_attached_deduplicator;
-    std::optional<directory_config> m_attached_directory;
     std::optional<storage_config> m_attached_storage;
     db::config database;
     global_data_view_config global_data_view;

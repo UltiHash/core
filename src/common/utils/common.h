@@ -12,14 +12,12 @@ namespace uh::cluster {
 enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
-    DIRECTORY_SERVICE,
     ENTRYPOINT_SERVICE,
 };
 
 const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
     {"storage", STORAGE_SERVICE},
     {"deduplicator", DEDUPLICATOR_SERVICE},
-    {"directory", DIRECTORY_SERVICE},
     {"entrypoint", ENTRYPOINT_SERVICE}};
 
 enum message_type : uint8_t {
@@ -31,16 +29,6 @@ enum message_type : uint8_t {
     STORAGE_AVAILABLE_REQ = 7,
 
     DEDUPLICATOR_REQ = 6,
-
-    DIRECTORY_BUCKET_LIST_REQ = 7,
-    DIRECTORY_BUCKET_PUT_REQ = 8,
-    DIRECTORY_BUCKET_DELETE_REQ = 9,
-    DIRECTORY_BUCKET_EXISTS_REQ = 10,
-
-    DIRECTORY_OBJECT_LIST_REQ = 11,
-    DIRECTORY_OBJECT_PUT_REQ = 12,
-    DIRECTORY_OBJECT_GET_REQ = 13,
-    DIRECTORY_OBJECT_DELETE_REQ = 14,
 
     SUCCESS = 15,
     FAILURE = 16

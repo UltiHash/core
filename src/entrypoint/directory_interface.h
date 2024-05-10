@@ -14,8 +14,6 @@ struct directory_interface {
         virtual ~read_handle() = default;
     };
 
-    static constexpr role service_role = DIRECTORY_SERVICE;
-
     virtual coro<void> put_object(const std::string& bucket,
                                   const std::string& object_id,
                                   const address& addr) = 0;
