@@ -1,6 +1,8 @@
 #ifndef CORE_COMMON_DB_RESULT_H
 #define CORE_COMMON_DB_RESULT_H
 
+#include "common/types/common_types.h"
+
 #include <libpq-fe.h>
 
 #include <memory>
@@ -26,6 +28,7 @@ public:
     std::optional<std::string_view> string(int row, int col);
     std::optional<std::span<char>> data(int row, int col);
     std::optional<int64_t> number(int row, int col);
+    std::optional<utc_time> date(int row, int col);
 
 private:
     friend class connection;

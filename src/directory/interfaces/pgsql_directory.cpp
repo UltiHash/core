@@ -12,8 +12,8 @@ coro<void> pgsql_directory::put_object(const std::string& bucket,
     zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
     auto span = std::span<char>(data);
 
-    m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3)", bucket,
-                            object_id, span);
+    m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4)", bucket,
+                            object_id, span, addr.data_size());
 
     co_return;
 }
@@ -85,12 +85,16 @@ pgsql_directory::list_objects(const std::string& bucket,
                               const std::optional<std::string>& lower_bound) {
 
     auto res = m_db.directory()->execv(
-        "SELECT id, name FROM uh_list_objects($1, $2, $3)", bucket,
-        prefix.value_or(""), lower_bound.value_or(""));
+        "SELECT id, name, size, last_modified FROM uh_list_objects($1, $2, $3)",
+        bucket, prefix.value_or(""), lower_bound.value_or(""));
 
     std::vector<object> rv;
     for (auto row = 0ull; row < res.rows(); ++row) {
-        rv.push_back({.name = std::string(*res.string(row, 1))});
+        rv.push_back({
+            .name = std::string(*res.string(row, 1)),
+            .last_modified = *res.date(row, 1),
+            .size = static_cast<std::size_t>(*res.number(row, 1)),
+        });
     }
 
     co_return rv;

@@ -58,7 +58,9 @@ BEGIN
         id bigint GENERATED ALWAYS AS IDENTITY,
         name TEXT NOT NULL PRIMARY KEY,
         small BYTEA DEFAULT NULL,
-        large OID DEFAULT NULL
+        large OID DEFAULT NULL,
+        size BIGINT NOT NULL,
+        last_modified TIMESTAMP NOT NULL DEFAULT now()
     )';
 
     INSERT INTO __buckets (name) VALUES (bucket);
@@ -69,11 +71,11 @@ $$;
 -- uh_put_small_obj(bucket, key, addr) -- add an object with name `key`
 -- described by `addr` to `bucket`. The object size is limited to 1GB.
 --
-CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYTEA)
+CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYTEA, size bigint)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    EXECUTE format('INSERT INTO %s ("name", "small") VALUES(%L, %L)', bucket, key, addr);
+    EXECUTE format('INSERT INTO %s ("name", "small", "size") VALUES(%L, %L, %L)', bucket, key, addr, size);
 END
 $$;
 
@@ -83,11 +85,11 @@ $$;
 -- PostGre's large object facility. The resulting OID is passed to this
 -- function as addr.
 --
-CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid)
+CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid, size bigint)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    EXECUTE format('INSERT INTO %s ("name", "large") VALUES(%L, %L)', bucket, key, addr);
+    EXECUTE format('INSERT INTO %s ("name", "large", "size") VALUES(%L, %L, %L)', bucket, key, addr, size);
 END
 $$;
 
@@ -152,11 +154,11 @@ LANGUAGE SQL AS 'SELECT name FROM __buckets;';
 -- uh_list_objects(bucket): return all objects in `bucket`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass)
-    RETURNS TABLE(id bigint, name text)
+    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name FROM %s', bucket);
+    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s', bucket);
 END;
 $$;
 

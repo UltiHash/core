@@ -45,4 +45,18 @@ std::optional<int64_t> result::number(int row, int col) {
     return result;
 }
 
+std::optional<utc_time> result::date(int row, int col) {
+    if (PQgetisnull(m_result.get(), row, col)) {
+        return {};
+    }
+
+    char* data = PQgetvalue(m_result.get(), row, col);
+    std::stringstream in(data);
+
+    std::tm tm;
+    in >> std::get_time(&tm, "%Y-%m-%d %H-%M-%S");
+
+    return utc_time::clock::from_time_t(std::mktime(&tm));
+}
+
 } // namespace uh::cluster::db

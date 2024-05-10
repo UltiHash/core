@@ -2,6 +2,7 @@
 #define CORE_COMMON_DB_CONNECTION_H
 
 #include "common/telemetry/log.h"
+#include "common/types/scoped_buffer.h"
 #include "common/utils/templates.h"
 #include "result.h"
 #include <libpq-fe.h>
@@ -25,15 +26,29 @@ public:
                  const std::vector<std::string>& args);
 
     void append_args(std::span<char> s, std::vector<const char*>& values,
-                     std::vector<int>& lengths, std::vector<int>& format) {
+                     std::vector<int>& lengths, std::vector<int>& format,
+                     std::list<unique_buffer<>>&) {
         values.push_back(s.data());
         lengths.push_back(s.size());
         format.push_back(1);
     }
 
     void append_args(std::string_view s, std::vector<const char*>& values,
-                     std::vector<int>& lengths, std::vector<int>& format) {
+                     std::vector<int>& lengths, std::vector<int>& format,
+                     std::list<unique_buffer<>>&) {
         values.push_back(s.data());
+        lengths.push_back(s.size());
+        format.push_back(0);
+    }
+
+    void append_args(std::size_t n, std::vector<const char*>& values,
+                     std::vector<int>& lengths, std::vector<int>& format,
+                     std::list<unique_buffer<>>& mem) {
+        auto s = std::to_string(n);
+        auto& buffer = mem.emplace_back(s.size());
+        memcpy(buffer.data(), s.data(), s.size());
+
+        values.push_back(buffer.data());
         lengths.push_back(s.size());
         format.push_back(0);
     }
@@ -43,9 +58,12 @@ public:
         std::vector<const char*> values;
         std::vector<int> lengths;
         std::vector<int> format;
+        std::list<unique_buffer<>> memory;
 
         foreach (
-            [&](const auto& h) { append_args(h, values, lengths, format); },
+            [&](const auto& h) {
+                append_args(h, values, lengths, format, memory);
+            },
             a...)
             ;
 
