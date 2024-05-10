@@ -2,7 +2,6 @@
 #define UH_CLUSTER_DIRECTORY_PGSQL_DIRECTORY_H
 
 #include "common/db/db.h"
-#include "common/global_data/global_data_view.h"
 #include "directory_interface.h"
 
 namespace uh::cluster {
