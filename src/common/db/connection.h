@@ -20,11 +20,72 @@ public:
     connection(const connection&) = delete;
     connection(connection&&) = default;
 
+    /**
+     * Execute a query without parameters. The result format will be text.
+     */
     result exec(const std::string& query);
 
-    result execp(const std::string& query,
-                 const std::vector<std::string>& args);
+    /**
+     * Execute a query with parameter variables passing the variable values
+     * as parameter pack. The query result will be returned as textual value.
+     */
+    template <typename... args>
+    result execv(const std::string& query, args... a) {
+        std::vector<const char*> values;
+        std::vector<int> lengths;
+        std::vector<int> format;
+        std::list<unique_buffer<>> memory;
 
+        foreach (
+            [&](const auto& h) {
+                append_args(h, values, lengths, format, memory);
+            },
+            a...)
+            ;
+
+        LOG_DEBUG() << "execv: \"" << query << "\"";
+
+        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
+            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
+                         values.data(), lengths.data(), format.data(), 0),
+            PQclear);
+
+        check_result(res.get());
+
+        return result(std::move(res));
+    }
+
+    /**
+     * Execute a query with parameter variables passing the variable values
+     * as parameter pack. The query result will be returned as binary value.
+     */
+    template <typename... args>
+    result execb(const std::string& query, args... a) {
+        std::vector<const char*> values;
+        std::vector<int> lengths;
+        std::vector<int> format;
+        std::list<unique_buffer<>> memory;
+
+        foreach (
+            [&](const auto& h) {
+                append_args(h, values, lengths, format, memory);
+            },
+            a...)
+            ;
+
+        LOG_DEBUG() << "execv: \"" << query << "\"";
+
+        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
+            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
+                         values.data(), lengths.data(), format.data(), 1),
+            PQclear);
+
+        check_result(res.get());
+
+        return result(std::move(res));
+    }
+
+private:
     void append_args(std::span<char> s, std::vector<const char*>& values,
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<unique_buffer<>>&) {
@@ -53,34 +114,6 @@ public:
         format.push_back(0);
     }
 
-    template <typename... args>
-    result execv(const std::string& query, args... a) {
-        std::vector<const char*> values;
-        std::vector<int> lengths;
-        std::vector<int> format;
-        std::list<unique_buffer<>> memory;
-
-        foreach (
-            [&](const auto& h) {
-                append_args(h, values, lengths, format, memory);
-            },
-            a...)
-            ;
-
-        LOG_DEBUG() << "execv: \"" << query << "\"";
-        // raise(SIGTRAP);
-
-        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
-            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
-                         values.data(), lengths.data(), format.data(), 1),
-            PQclear);
-
-        check_result(res.get());
-
-        return result(std::move(res));
-    }
-
-private:
     void check_result(const PGresult* result);
 
     std::unique_ptr<PGconn, void (*)(PGconn*)> m_ptr;

@@ -17,27 +17,6 @@ result connection::exec(const std::string& query) {
     return result(std::move(res));
 }
 
-result connection::execp(const std::string& query,
-                         const std::vector<std::string>& args) {
-    std::vector<const char*> values;
-    std::vector<int> lengths;
-    std::vector<int> format;
-    for (const auto& a : args) {
-        values.push_back(a.c_str());
-        lengths.push_back(a.size());
-        format.push_back(1);
-    }
-
-    auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
-        PQexecParams(m_ptr.get(), query.c_str(), args.size(), nullptr,
-                     values.data(), lengths.data(), format.data(), 0),
-        PQclear);
-
-    check_result(res.get());
-
-    return result(std::move(res));
-}
-
 void connection::check_result(const PGresult* result) {
     switch (PQresultStatus(result)) {
     case PGRES_EMPTY_QUERY:

@@ -19,10 +19,9 @@ coro<void> pgsql_directory::put_object(const std::string& bucket,
 
 coro<object> pgsql_directory::get_object(const std::string& bucket,
                                          const std::string& object_id) {
-    auto res =
-        m_db.directory()->execv("SELECT small::BYTEA, large, size, "
-                                "last_modified FROM uh_get_object($1, $2)",
-                                bucket, object_id);
+    auto res = m_db.directory()->execb(
+        "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
+        object_id);
 
     auto large = res.number(0, 1);
     if (large) {
@@ -37,9 +36,13 @@ coro<object> pgsql_directory::get_object(const std::string& bucket,
     address addr;
     zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
 
+    auto metadata = m_db.directory()->execv(
+        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        object_id);
+
     co_return object{.name = object_id,
-                     .last_modified = *res.date(0, 3),
-                     .size = static_cast<std::size_t>(*res.number(0, 2)),
+                     .last_modified = *metadata.date(0, 3),
+                     .size = static_cast<std::size_t>(*metadata.number(0, 2)),
                      .addr = std::move(addr)};
 }
 
