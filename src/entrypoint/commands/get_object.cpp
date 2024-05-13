@@ -1,6 +1,7 @@
 #include "get_object.h"
 #include "common/coroutines/awaitable_promise.h"
 #include "common/utils/double_buffer.h"
+#include "common/utils/time_utils.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -88,7 +89,7 @@ bool get_object::can_handle(const http_request& req) {
 coro<void> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
     try {
-        const auto start = std::chrono::steady_clock::now();
+        timer tt;
 
         auto obj = co_await m_collection.directory.get_object(req.bucket(),
                                                               req.object_key());
@@ -105,8 +106,7 @@ coro<void> get_object::handle(http_request& req) const {
 
         size_t total_size = co_await upload(reader, req, m_collection.ioc);
 
-        const auto stop = std::chrono::steady_clock::now();
-        const std::chrono::duration<double> duration = stop - start;
+        const std::chrono::duration<double> duration = tt.passed();
         const auto size = static_cast<double>(total_size) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();
 
