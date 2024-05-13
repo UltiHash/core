@@ -41,8 +41,8 @@ coro<object> pgsql_directory::get_object(const std::string& bucket,
         object_id);
 
     co_return object{.name = object_id,
-                     .last_modified = *metadata.date(0, 3),
-                     .size = static_cast<std::size_t>(*metadata.number(0, 2)),
+                     .last_modified = *metadata.date(0, 1),
+                     .size = static_cast<std::size_t>(*metadata.number(0, 0)),
                      .addr = std::move(addr)};
 }
 
