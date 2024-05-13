@@ -104,4 +104,17 @@ directory::list_objects(const std::string& bucket,
     co_return rv;
 }
 
+coro<std::size_t> directory::data_size() {
+    std::size_t rv = 0;
+
+    auto buckets = co_await list_buckets();
+    for (const auto& bucket : buckets) {
+        auto result =
+            m_db.directory()->execv("SELECT size FROM uh_bucket_size");
+        rv += *result.number(0, 0);
+    }
+
+    return rv;
+}
+
 } // namespace uh::cluster

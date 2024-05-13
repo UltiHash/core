@@ -33,6 +33,11 @@ struct directory {
                  const std::optional<std::string>& prefix,
                  const std::optional<std::string>& lower_bound);
 
+    /**
+     * Return amount of data stored in all buckets.
+     */
+    coro<std::size_t> data_size();
+
 private:
     db::database& m_db;
 };

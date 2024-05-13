@@ -189,3 +189,16 @@ BEGIN
             bucket, prefix || '%', lower_bound);
 END;
 $$;
+
+--
+--
+--
+--
+CREATE OR REPLACE FUNCTION uh_bucket_size(bucket regclass)
+    RETURNS BIGINT
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+    RETURN QUERY EXECUTE format('SELECT sum(size) FROM %s', bucket);
+END;
+$$;

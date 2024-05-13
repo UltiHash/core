@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& out, const object& obj) {
     return out;
 }
 
-coro<void> list_bucket(directory dir, const std::string& target) {
+coro<void> list_bucket(directory& dir, const std::string& target) {
     if (target.empty()) {
         for (const auto& bucket : co_await dir.list_buckets()) {
             std::cout << bucket << "\n";
@@ -75,11 +75,11 @@ coro<void> list_bucket(directory dir, const std::string& target) {
     }
 }
 
-coro<void> make_bucket(directory dir, const std::string& target) {
+coro<void> make_bucket(directory& dir, const std::string& target) {
     co_await dir.put_bucket(target);
 }
 
-coro<void> remove_bucket(directory dir, const std::string& target) {
+coro<void> remove_bucket(directory& dir, const std::string& target) {
     co_await dir.delete_bucket(target);
 }
 
@@ -99,18 +99,20 @@ int main(int argc, char** argv) {
             }
         };
 
+        directory dir(db);
+        std::cout << "Accumulated directory size: " << dir.data_size() << "\n";
+
         switch (cfg->cmd) {
         case config::command::ls:
-            boost::asio::co_spawn(
-                executor, list_bucket(directory(db), cfg->target_ls), handler);
+            boost::asio::co_spawn(executor, list_bucket(dir, cfg->target_ls),
+                                  handler);
             break;
         case config::command::mkb:;
-            boost::asio::co_spawn(
-                executor, make_bucket(directory(db), cfg->target_mkb), handler);
+            boost::asio::co_spawn(executor, make_bucket(dir, cfg->target_mkb),
+                                  handler);
             break;
         case config::command::rmb:;
-            boost::asio::co_spawn(executor,
-                                  remove_bucket(directory(db), cfg->target_rmb),
+            boost::asio::co_spawn(executor, remove_bucket(dir, cfg->target_rmb),
                                   handler);
             break;
 
