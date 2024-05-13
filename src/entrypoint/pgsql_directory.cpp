@@ -4,42 +4,6 @@
 
 namespace uh::cluster {
 
-namespace {
-
-struct local_read_handle : public directory_interface::read_handle {
-    global_data_view& m_storage;
-    const address m_addr;
-    const size_t m_chunk_size;
-    size_t m_addr_index = 0;
-
-    local_read_handle(global_data_view& storage, address&& addr,
-                      size_t chunk_size)
-        : m_storage(storage),
-          m_addr(std::move(addr)),
-          m_chunk_size(chunk_size) {}
-
-    bool has_next() override { return m_addr_index != m_addr.size(); }
-
-    coro<std::string> next() override {
-        std::size_t buffer_size = 0;
-        address partial_addr;
-        while (m_addr_index < m_addr.size() and buffer_size < m_chunk_size) {
-            const auto frag = m_addr.get_fragment(m_addr_index);
-            partial_addr.push_fragment(frag);
-            buffer_size += frag.size;
-            m_addr_index++;
-        }
-        std::string buffer(buffer_size, '\0');
-
-        LOG_DEBUG() << "local_read_handle::next reading " << buffer_size;
-        co_await m_storage.read_address(buffer.data(), partial_addr);
-        LOG_DEBUG() << "local_read_handle::next done";
-        co_return buffer;
-    }
-};
-
-} // namespace
-
 coro<void> pgsql_directory::put_object(const std::string& bucket,
                                        const std::string& object_id,
                                        const address& addr) {
@@ -53,12 +17,12 @@ coro<void> pgsql_directory::put_object(const std::string& bucket,
     co_return;
 }
 
-coro<std::unique_ptr<directory_interface::read_handle>>
-pgsql_directory::get_object(const std::string& bucket,
-                            const std::string& object_id) {
-    auto res = m_db.directory()->execv(
-        "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
-        object_id);
+coro<object> pgsql_directory::get_object(const std::string& bucket,
+                                         const std::string& object_id) {
+    auto res =
+        m_db.directory()->execv("SELECT small::BYTEA, large, size, "
+                                "last_modified FROM uh_get_object($1, $2)",
+                                bucket, object_id);
 
     auto large = res.number(0, 1);
     if (large) {
@@ -73,8 +37,10 @@ pgsql_directory::get_object(const std::string& bucket,
     address addr;
     zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
 
-    co_return std::make_unique<local_read_handle>(m_storage, std::move(addr),
-                                                  m_chunk_size);
+    co_return object{.name = object_id,
+                     .last_modified = *res.date(0, 3),
+                     .size = static_cast<std::size_t>(*res.number(0, 2)),
+                     .addr = std::move(addr)};
 }
 
 coro<void> pgsql_directory::put_bucket(const std::string& bucket) {
@@ -127,8 +93,8 @@ pgsql_directory::list_objects(const std::string& bucket,
     for (auto row = 0ull; row < res.rows(); ++row) {
         rv.push_back({
             .name = std::string(*res.string(row, 1)),
-            .last_modified = *res.date(row, 1),
-            .size = static_cast<std::size_t>(*res.number(row, 1)),
+            .last_modified = *res.date(row, 3),
+            .size = static_cast<std::size_t>(*res.number(row, 2)),
         });
     }
 

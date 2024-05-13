@@ -6,19 +6,19 @@
 
 namespace uh::cluster {
 
-struct directory_interface {
+struct read_handle {
+    virtual bool has_next() = 0;
+    virtual coro<std::string> next() = 0;
+    virtual ~read_handle() = default;
+};
 
-    struct read_handle {
-        virtual bool has_next() = 0;
-        virtual coro<std::string> next() = 0;
-        virtual ~read_handle() = default;
-    };
+struct directory_interface {
 
     virtual coro<void> put_object(const std::string& bucket,
                                   const std::string& object_id,
                                   const address& addr) = 0;
-    virtual coro<std::unique_ptr<read_handle>>
-    get_object(const std::string& bucket, const std::string& object_id) = 0;
+    virtual coro<object> get_object(const std::string& bucket,
+                                    const std::string& object_id) = 0;
     virtual coro<void> put_bucket(const std::string& bucket) = 0;
     virtual coro<void> bucket_exists(const std::string& bucket) = 0;
     virtual coro<void> delete_bucket(const std::string& bucket) = 0;

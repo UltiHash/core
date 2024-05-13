@@ -9,17 +9,15 @@ namespace uh::cluster {
 
 struct pgsql_directory : public directory_interface {
 
-    pgsql_directory(db::database& db, global_data_view& storage)
-        : m_db(db),
-          m_storage(storage) {}
+    pgsql_directory(db::database& db)
+        : m_db(db) {}
 
     coro<void> put_object(const std::string& bucket,
                           const std::string& object_id,
                           const address& addr) override;
 
-    coro<std::unique_ptr<directory_interface::read_handle>>
-    get_object(const std::string& bucket,
-               const std::string& object_id) override;
+    coro<object> get_object(const std::string& bucket,
+                            const std::string& object_id) override;
 
     coro<void> put_bucket(const std::string& bucket) override;
 
@@ -39,8 +37,6 @@ struct pgsql_directory : public directory_interface {
 
 private:
     db::database& m_db;
-    global_data_view& m_storage;
-    std::size_t m_chunk_size = 4 * MEBI_BYTE;
 };
 
 } // namespace uh::cluster

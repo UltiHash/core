@@ -1,5 +1,8 @@
 #include "result.h"
+#include "common/telemetry/log.h"
+#include "common/utils/strings.h"
 #include <charconv>
+#include <endian.h>
 
 namespace uh::cluster::db {
 
@@ -36,10 +39,27 @@ std::optional<int64_t> result::number(int row, int col) {
     int len = PQgetlength(m_result.get(), row, col);
 
     int64_t result{};
-    auto [ptr, ec] = std::from_chars(data, data + len, result);
-    if (ec != std::errc()) {
-        throw std::runtime_error("from_chars failed: " +
-                                 std::make_error_condition(ec).message());
+    switch (PQfformat(m_result.get(), col)) {
+    case 0: {
+        auto [ptr, ec] = std::from_chars(data, data + len, result);
+        if (ec != std::errc()) {
+            throw std::runtime_error(
+                "from_chars '" + std::string(data, len) +
+                "' failed: " + std::make_error_condition(ec).message());
+        }
+    }; break;
+
+    case 1: {
+        if (sizeof(result) != len) {
+            throw std::runtime_error("size mismatch reading binary number");
+        }
+
+        memcpy(&result, data, sizeof(result));
+        result = htobe64(result);
+    }; break;
+
+    default:
+        throw std::runtime_error("unsupported format reference");
     }
 
     return result;

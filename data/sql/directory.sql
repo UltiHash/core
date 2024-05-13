@@ -99,11 +99,11 @@ $$;
 -- data, NULL is returned.
 --
 CREATE OR REPLACE FUNCTION uh_get_object(bucket regclass, key text)
-    RETURNS TABLE (small BYTEA, large oid)
+    RETURNS TABLE (small BYTEA, large oid, size BIGINT, last_modified TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT small, large FROM %s WHERE name = %L', bucket, key);
+    RETURN QUERY EXECUTE format('SELECT small, large, size, last_modified FROM %s WHERE name = %L', bucket, key);
 END;
 $$;
 
@@ -167,11 +167,11 @@ $$;
 -- given `prefix`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text)
-    RETURNS TABLE(id bigint, name text)
+    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name FROM %s WHERE name LIKE %L', bucket, prefix || '%');
+    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L', bucket, prefix || '%');
 END;
 $$;
 
@@ -180,12 +180,12 @@ $$;
 -- given `prefix` that are bigger than `lower_bound`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text, lower_bound text)
-    RETURNS TABLE(id bigint, name text)
+    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     RETURN QUERY EXECUTE
-        format('SELECT id, name FROM %s WHERE name LIKE %L and name >= %L',
+        format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L and name >= %L',
             bucket, prefix || '%', lower_bound);
 END;
 $$;

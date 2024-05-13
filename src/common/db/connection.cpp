@@ -30,7 +30,7 @@ result connection::execp(const std::string& query,
 
     auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
         PQexecParams(m_ptr.get(), query.c_str(), args.size(), nullptr,
-                     values.data(), lengths.data(), format.data(), 1),
+                     values.data(), lengths.data(), format.data(), 0),
         PQclear);
 
     check_result(res.get());

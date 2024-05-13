@@ -35,6 +35,8 @@ struct object {
     utc_time last_modified;
     std::size_t size{};
 
+    std::optional<address> addr;
+
     constexpr static auto serialize(auto& archive, auto& self) {
         std::size_t count = 0;
         auto res = archive(self.name, count, self.size);

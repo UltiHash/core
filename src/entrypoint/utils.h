@@ -2,6 +2,7 @@
 #define ENTRYPOINT_COMMON_H
 
 #include "boost/asio.hpp"
+#include "common/global_data/global_data_view.h"
 #include "common/registry/services.h"
 #include "config.h"
 #include "deduplicator/interfaces/deduplicator_interface.h"
@@ -17,6 +18,7 @@ struct reference_collection {
     directory_interface& directory;
     state& server_state;
     entrypoint_config& config;
+    global_data_view& gdv;
 };
 
 struct collapsed_objects {

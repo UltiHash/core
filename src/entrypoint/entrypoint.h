@@ -39,7 +39,7 @@ public:
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_directory(m_db, m_storage),
+          m_directory(m_db),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection),
                    m_ioc) {}
@@ -61,7 +61,8 @@ private:
                 .dedupe_services = m_dedupe_services,
                 .directory = m_directory,
                 .server_state = m_state,
-                .config = m_config};
+                .config = m_config,
+                .gdv = m_storage};
     }
 
     etcd::SyncClient m_etcd_client;

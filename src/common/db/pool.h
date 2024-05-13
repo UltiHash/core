@@ -43,7 +43,7 @@ public:
     void stop();
 
 private:
-    friend class connection_wrapper;
+    friend struct connection_wrapper;
 
     void put_back(connection&& conn);
 
