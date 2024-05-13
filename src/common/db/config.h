@@ -13,8 +13,7 @@ struct config {
 
     pool::config directory = {"uh_directory", 2u};
 
-    static constexpr const char* DEFAULT_CONN_STR =
-        "host=localhost port=5432 dbname=";
+    static constexpr const char* DEFAULT_CONN_STR = "host=localhost port=5432";
 };
 
 } // namespace uh::cluster::db
