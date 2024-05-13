@@ -70,11 +70,15 @@ std::optional<utc_time> result::date(int row, int col) {
         return {};
     }
 
+    if (PQfformat(m_result.get(), col) == 1) {
+        throw std::runtime_error("unsupported date format");
+    }
+
     char* data = PQgetvalue(m_result.get(), row, col);
     std::stringstream in(data);
 
-    std::tm tm;
-    in >> std::get_time(&tm, "%Y-%m-%d %H-%M-%S");
+    std::tm tm{};
+    in >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
 
     return utc_time::clock::from_time_t(std::mktime(&tm));
 }
