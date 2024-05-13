@@ -1,6 +1,6 @@
 #include "common/db/db.h"
+#include "entrypoint/directory.h"
 #include "entrypoint/formats.h"
-#include "entrypoint/pgsql_directory.h"
 
 #include <CLI/CLI.hpp>
 #include <iostream>
@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& out, const object& obj) {
     return out;
 }
 
-coro<void> list_bucket(pgsql_directory dir, const std::string& target) {
+coro<void> list_bucket(directory dir, const std::string& target) {
     if (target.empty()) {
         for (const auto& bucket : co_await dir.list_buckets()) {
             std::cout << bucket << "\n";
@@ -75,11 +75,11 @@ coro<void> list_bucket(pgsql_directory dir, const std::string& target) {
     }
 }
 
-coro<void> make_bucket(pgsql_directory dir, const std::string& target) {
+coro<void> make_bucket(directory dir, const std::string& target) {
     co_await dir.put_bucket(target);
 }
 
-coro<void> remove_bucket(pgsql_directory dir, const std::string& target) {
+coro<void> remove_bucket(directory dir, const std::string& target) {
     co_await dir.delete_bucket(target);
 }
 
@@ -102,18 +102,16 @@ int main(int argc, char** argv) {
         switch (cfg->cmd) {
         case config::command::ls:
             boost::asio::co_spawn(
-                executor, list_bucket(pgsql_directory(db), cfg->target_ls),
-                handler);
+                executor, list_bucket(directory(db), cfg->target_ls), handler);
             break;
         case config::command::mkb:;
             boost::asio::co_spawn(
-                executor, make_bucket(pgsql_directory(db), cfg->target_mkb),
-                handler);
+                executor, make_bucket(directory(db), cfg->target_mkb), handler);
             break;
         case config::command::rmb:;
-            boost::asio::co_spawn(
-                executor, remove_bucket(pgsql_directory(db), cfg->target_rmb),
-                handler);
+            boost::asio::co_spawn(executor,
+                                  remove_bucket(directory(db), cfg->target_rmb),
+                                  handler);
             break;
 
         default:

@@ -6,7 +6,7 @@
 #include "common/registry/services.h"
 #include "config.h"
 #include "deduplicator/interfaces/deduplicator_interface.h"
-#include "entrypoint/directory_interface.h"
+#include "entrypoint/directory.h"
 
 #include "entrypoint/state.h"
 
@@ -15,7 +15,7 @@ namespace uh::cluster {
 struct reference_collection {
     boost::asio::io_context& ioc;
     const services<deduplicator_interface>& dedupe_services;
-    directory_interface& directory;
+    uh::cluster::directory& directory;
     state& server_state;
     entrypoint_config& config;
     global_data_view& gdv;

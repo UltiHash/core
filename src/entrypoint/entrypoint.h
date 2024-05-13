@@ -8,7 +8,7 @@
 #include "common/registry/service_registry.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
-#include "entrypoint/pgsql_directory.h"
+#include "entrypoint/directory.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
@@ -80,7 +80,7 @@ private:
     attached_service<deduplicator> m_attached_dedupe;
 
     services<deduplicator_interface> m_dedupe_services;
-    pgsql_directory m_directory;
+    directory m_directory;
 
     state m_state;
 
