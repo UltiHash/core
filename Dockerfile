@@ -20,7 +20,7 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
    && apt-get upgrade --yes \
-   && apt-get install --yes --no-install-recommends libgrpc10 libgrpc++1 \
+   && apt-get install --yes --no-install-recommends libgrpc10 libgrpc++1 libpq5 \
    && if [ "$DebugTools" = "True" ]; then \
         apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
     fi
