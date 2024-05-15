@@ -40,12 +40,17 @@ deduplicator:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
 
-directory:
-  replicas: 1
-  storageClass: local-path
-  storageSize: 2Gi
-  nodeSelector:
-    kubernetes.io/hostname: $KUBERNETES_NODE
+database:
+  primary:
+    nodeSelector:
+      kubernetes.io/hostname: $KUBERNETES_NODE
+
+    persistence:
+      storageClass: local-path
+      size: 2Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
 
 storage:
   replicas: 1

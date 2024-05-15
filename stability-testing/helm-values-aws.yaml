@@ -106,18 +106,23 @@ deduplicator:
       value: "testing"
       effect: "NoSchedule"
 
-directory:
-  replicas: 1
-  storageClass: ebs-csi-gp3
-  storageSize: 4Gi
-  nodeSelector:
-    workload-type: directory
-    purpose: performance-and-stability-testing
-  tolerations:
+database:
+  primary:
+    nodeSelector:
+      workload-type: directory
+      purpose: performance-and-stability-testing
+    tolerations:
     - key: "purpose"
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+
+    persistence:
+      storageClass: ebs-csi-gp3
+      size: 4Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
 
 collector:
   nodeSelector:

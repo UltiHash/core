@@ -60,17 +60,22 @@ deduplicator:
       value: "testing"
       effect: "NoSchedule"
 
-directory:
-  replicas: 1
-  storageClass: ebs-csi-gp3
-  storageSize: 2Gi
-  nodeSelector:
-    purpose: feature-testing
-  tolerations:
+database:
+  primary:
+    nodeSelector:
+      purpose: feature-testing
+    tolerations:
     - key: "purpose"
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+
+    persistence:
+      storageClass: ebs-csi-gp3
+      size: 2Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
 
 storage:
   replicas: 1
