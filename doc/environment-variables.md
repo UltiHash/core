@@ -14,3 +14,8 @@ components and describes their purpose.
     licenses under `ROOT/data/licenses` for testing)
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified endpoint using OTLP via gRPC (format: "hostname:port")
 
+# Database Connection
+
+- `UH_DB_HOSTPORT` - configure host and port of the DBMS (format: "hostname:port")
+- `UH_DB_USER` - configure user name for connections to the DBMS
+- `UH_DB_PASS` - pass the connection password for the user given in `UH_DB_USER`

@@ -8,12 +8,20 @@ namespace uh::cluster::db {
 
 struct config {
 
-    // postgresql connection string
-    std::string conn_str = DEFAULT_CONN_STR;
+    // host and port of database
+    std::string host_port = DEFAULT_HOST_PORT;
+
+    // db user name
+    std::string username = DEFAULT_USER;
+
+    // db password
+    std::string password = DEFAULT_PASS;
 
     pool::config directory = {"uh_directory", 2u};
 
-    static constexpr const char* DEFAULT_CONN_STR = "host=localhost port=5432";
+    static constexpr const char* DEFAULT_HOST_PORT = "localhost:5432";
+    static constexpr const char* DEFAULT_USER = "";
+    static constexpr const char* DEFAULT_PASS = "";
 };
 
 } // namespace uh::cluster::db
