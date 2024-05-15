@@ -115,9 +115,9 @@ coro<void> get_object::handle(http_request& req) const {
         LOG_INFO() << "retrieval duration " << duration.count() << " s";
         LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
-    } catch (const error_exception& e) {
-        LOG_ERROR() << e.what();
-        throw_from_error(e.error());
+    } catch (const std::exception& e) {
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
     }
 }
 

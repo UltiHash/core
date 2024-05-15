@@ -1,6 +1,7 @@
 #include "directory.h"
 
 #include "common/utils/strings.h"
+#include "http/command_exception.h"
 
 namespace uh::cluster {
 
@@ -22,6 +23,11 @@ coro<object> directory::get_object(const std::string& bucket,
     auto res = m_db.directory()->execb(
         "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
         object_id);
+
+    if (res.rows() == 0) {
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
+    }
 
     auto large = res.number(0, 1);
     if (large) {
