@@ -46,11 +46,6 @@ public:
                    m_ioc) {}
 
     void run() {
-        m_data_storage_size =
-            boost::asio::co_spawn(m_ioc, m_directory.data_size(),
-                                  boost::asio::use_future)
-                .get();
-
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
