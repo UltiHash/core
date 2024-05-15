@@ -30,6 +30,7 @@ public:
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
           m_storage(config.global_data_view, m_ioc, m_storage_services),
+          m_max_data_size(sc.license.max_data_store_size),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
           m_db(config.database),
           m_config(config),
@@ -45,6 +46,11 @@ public:
                    m_ioc) {}
 
     void run() {
+        m_data_storage_size =
+            boost::asio::co_spawn(m_ioc, m_directory.data_size(),
+                                  boost::asio::use_future)
+                .get();
+
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
@@ -62,7 +68,9 @@ private:
                 .directory = m_directory,
                 .server_state = m_state,
                 .config = m_config,
-                .gdv = m_storage};
+                .gdv = m_storage,
+                .data_storage_size = m_data_storage_size,
+                .max_data_size = m_max_data_size};
     }
 
     etcd::SyncClient m_etcd_client;
@@ -71,6 +79,8 @@ private:
     attached_service<storage> m_attached_storage;
     services<storage_interface> m_storage_services;
     global_data_view m_storage;
+    std::atomic<std::size_t> m_data_storage_size = 0ull;
+    std::size_t m_max_data_size = 0ull;
 
     service_registry m_service_registry;
     db::database m_db;

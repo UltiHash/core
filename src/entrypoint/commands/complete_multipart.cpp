@@ -73,6 +73,8 @@ coro<void> complete_multipart::handle(http_request& req) const {
     const auto& up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
 
+    m_collection.check_storage_size(up_info->data_size);
+
     co_await m_collection.directory.put_object(
         bucket_name, object_name, up_info->generate_total_address());
 

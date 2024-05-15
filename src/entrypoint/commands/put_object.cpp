@@ -72,6 +72,8 @@ coro<void> put_object::handle(http_request& req) const {
     try {
         auto content_length = req.content_length();
 
+        m_collection.check_storage_size(content_length);
+
         md5 hash;
 
         dedupe_response resp;

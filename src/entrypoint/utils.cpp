@@ -2,6 +2,24 @@
 
 namespace uh::cluster {
 
+void reference_collection::check_storage_size(std::size_t increment) const {
+    auto new_size = data_storage_size + increment;
+    if (new_size > max_data_size) {
+        throw error_exception(error::storage_limit_exceeded);
+    }
+
+    static unsigned warn_counter = 0;
+    if (new_size * 100 > max_data_size * SIZE_LIMIT_WARNING_PERCENTAGE) {
+        if (warn_counter == 0) {
+            LOG_WARN() << "over " << SIZE_LIMIT_WARNING_PERCENTAGE
+                       << "% of storage limit reached";
+            warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
+        }
+
+        --warn_counter;
+    }
+}
+
 std::vector<collapsed_objects>
 retrieval::collapse(const std::vector<object>& objects,
                     std::optional<std::string> delimiter,
