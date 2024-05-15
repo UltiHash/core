@@ -24,10 +24,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     config rv;
 
-    app.add_option("--db-conn,-D", rv.database.conn_str,
-                   "PGSQL connection string")
-        ->default_val(rv.database.conn_str)
-        ->envname(ENV_CFG_DB_CONN);
+    db::configure(app, rv.database);
 
     auto* sub_ls = app.add_subcommand("ls", "list contents of directory");
     sub_ls->add_option("bucket", rv.target_ls, "list contents of this bucket");

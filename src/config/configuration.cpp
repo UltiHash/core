@@ -142,18 +142,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
 
-    rv->add_option("--db-host,-D", cfg.database.host_port,
-                   "PGSQL server address as HOST:PORT")
-        ->default_val(cfg.database.host_port)
-        ->envname(ENV_CFG_DB_HOSTPORT);
-
-    rv->add_option("--db-user", cfg.database.username, "PGSQL user name")
-        ->default_val(cfg.database.username)
-        ->envname(ENV_CFG_DB_USER);
-
-    rv->add_option("--db-pass", cfg.database.password, "PGSQL password")
-        ->default_val(cfg.database.password)
-        ->envname(ENV_CFG_DB_PASS);
+    db::configure(*rv, cfg.database);
 
     return rv;
 }

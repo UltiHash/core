@@ -2,6 +2,7 @@
 #define CORE_COMMON_DB_CONFIG_H
 
 #include "pool.h"
+#include <CLI/CLI.hpp>
 #include <string>
 
 namespace uh::cluster::db {
@@ -23,6 +24,8 @@ struct config {
     static constexpr const char* DEFAULT_USER = "";
     static constexpr const char* DEFAULT_PASS = "";
 };
+
+void configure(CLI::App& app, config& cfg);
 
 } // namespace uh::cluster::db
 
