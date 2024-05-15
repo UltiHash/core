@@ -67,6 +67,8 @@ coro<void> list_bucket(directory& dir, const std::string& target) {
         for (const auto& bucket : co_await dir.list_buckets()) {
             std::cout << bucket << "\n";
         }
+        std::cout << "Accumulated directory size: " << co_await dir.data_size()
+                  << "\n";
     } else {
         for (const auto& obj :
              co_await dir.list_objects(target, std::nullopt, std::nullopt)) {
@@ -100,7 +102,6 @@ int main(int argc, char** argv) {
         };
 
         directory dir(db);
-        std::cout << "Accumulated directory size: " << dir.data_size() << "\n";
 
         switch (cfg->cmd) {
         case config::command::ls:

@@ -110,11 +110,11 @@ coro<std::size_t> directory::data_size() {
     auto buckets = co_await list_buckets();
     for (const auto& bucket : buckets) {
         auto result =
-            m_db.directory()->execv("SELECT size FROM uh_bucket_size");
+            m_db.directory()->execv("SELECT uh_bucket_size($1)", bucket);
         rv += *result.number(0, 0);
     }
 
-    return rv;
+    co_return rv;
 }
 
 } // namespace uh::cluster

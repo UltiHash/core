@@ -197,8 +197,10 @@ $$;
 CREATE OR REPLACE FUNCTION uh_bucket_size(bucket regclass)
     RETURNS BIGINT
 LANGUAGE plpgsql AS $$
+DECLARE result BIGINT;
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT sum(size) FROM %s', bucket);
+    EXECUTE format('SELECT sum(size) FROM %s', bucket) INTO result;
+    RETURN result;
 END;
 $$;
