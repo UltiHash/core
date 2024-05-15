@@ -47,6 +47,9 @@ jobs:
   build-database-init:
     runs-on: lightweight-generic-jobs
     steps:
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
