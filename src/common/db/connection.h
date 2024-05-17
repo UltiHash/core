@@ -1,6 +1,7 @@
 #ifndef CORE_COMMON_DB_CONNECTION_H
 #define CORE_COMMON_DB_CONNECTION_H
 
+#include "common/db/connstr.h"
 #include "common/telemetry/log.h"
 #include "common/types/scoped_buffer.h"
 #include "common/utils/templates.h"
@@ -16,7 +17,7 @@ namespace uh::cluster::db {
 
 class connection {
 public:
-    connection(const std::string& connstr);
+    connection(const connstr& cs);
     connection(const connection&) = delete;
     connection(connection&&) = default;
 

@@ -4,14 +4,13 @@
 
 namespace uh::cluster::db {
 
-pool::pool(std::string conn_str, const config& cfg) {
-    if (cfg.count < 1) {
+pool::pool(connstr conn_str, unsigned count) {
+    if (count < 1) {
         throw std::runtime_error("at least one connection is required");
     }
 
-    conn_str = conn_str + cfg.dbname;
     LOG_INFO() << "connecting to " << conn_str;
-    for (auto n = 0u; n < cfg.count; ++n) {
+    for (auto n = 0u; n < count; ++n) {
         m_connections.emplace_back(conn_str);
     }
 

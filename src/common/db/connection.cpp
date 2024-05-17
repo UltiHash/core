@@ -2,10 +2,10 @@
 
 namespace uh::cluster::db {
 
-connection::connection(const std::string& connstr)
-    : m_ptr(PQconnectdb(connstr.c_str()), PQfinish) {
+connection::connection(const connstr& cs)
+    : m_ptr(PQconnectdb(cs), PQfinish) {
     if (PQstatus(m_ptr.get()) != CONNECTION_OK) {
-        throw std::runtime_error("cannot connect: " + connstr);
+        throw std::runtime_error("cannot connect: " + cs.printable());
     }
 }
 

@@ -2,6 +2,7 @@
 #define CORE_COMMON_DB_POOL_H
 
 #include "connection.h"
+#include "connstr.h"
 #include <condition_variable>
 #include <list>
 #include <memory>
@@ -12,11 +13,6 @@ namespace uh::cluster::db {
 
 class pool {
 public:
-    struct config {
-        std::string dbname;
-        unsigned count;
-    };
-
     struct connection_wrapper {
         ~connection_wrapper() { m_pool.put_back(std::move(m_conn)); }
 
@@ -36,7 +32,7 @@ public:
      * Construct a pool for a DBMS reachable under `connstr` and the database
      * `dbname`. Allow for `count` connections.
      */
-    pool(std::string conn_str, const config& cfg);
+    pool(connstr conn_str, unsigned count);
 
     connection_wrapper get();
 
