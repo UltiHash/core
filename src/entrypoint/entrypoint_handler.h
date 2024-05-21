@@ -37,6 +37,7 @@ public:
           m_req_types(request_types...) {}
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+        bool finished = false;
         try {
 
             for (;;) {
@@ -45,6 +46,7 @@ public:
                 LOG_DEBUG() << s.remote_endpoint() << " read request: " << *req;
 
                 co_await handle_request(*req);
+                finished = true;
                 metric<success>::increase(1);
 
                 if (!req->keep_alive()) {
@@ -66,6 +68,9 @@ public:
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
+            }
+            else if (!finished) {
+                LOG_ERROR() << "unfinished operation " << se.what();
             }
         } catch (const std::invalid_argument& e) {
             LOG_ERROR() << e.what();
