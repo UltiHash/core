@@ -44,8 +44,6 @@ public:
             a...)
             ;
 
-        LOG_DEBUG() << "execv: \"" << query << "\"";
-
         auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
             PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
                          values.data(), lengths.data(), format.data(), 0),
@@ -73,8 +71,6 @@ public:
             },
             a...)
             ;
-
-        LOG_DEBUG() << "execv: \"" << query << "\"";
 
         auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
             PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
@@ -107,8 +103,9 @@ private:
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<unique_buffer<>>& mem) {
         auto s = std::to_string(n);
-        auto& buffer = mem.emplace_back(s.size());
+        auto& buffer = mem.emplace_back(s.size() + 1);
         memcpy(buffer.data(), s.data(), s.size());
+        buffer[s.size()] = 0;
 
         values.push_back(buffer.data());
         lengths.push_back(s.size());
