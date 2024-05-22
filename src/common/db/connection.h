@@ -32,26 +32,7 @@ public:
      */
     template <typename... args>
     result execv(const std::string& query, args... a) {
-        std::vector<const char*> values;
-        std::vector<int> lengths;
-        std::vector<int> format;
-        std::list<unique_buffer<>> memory;
-
-        foreach (
-            [&](const auto& h) {
-                append_args(h, values, lengths, format, memory);
-            },
-            a...)
-            ;
-
-        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
-            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
-                         values.data(), lengths.data(), format.data(), 0),
-            PQclear);
-
-        check_result(res.get());
-
-        return result(std::move(res));
+        return exec_format(query, 0, a...);
     }
 
     /**
@@ -60,6 +41,12 @@ public:
      */
     template <typename... args>
     result execb(const std::string& query, args... a) {
+        return exec_format(query, 1, a...);
+    }
+
+private:
+    template <typename... args>
+    result exec_format(const std::string& query, int result_format, args... a) {
         std::vector<const char*> values;
         std::vector<int> lengths;
         std::vector<int> format;
@@ -74,15 +61,14 @@ public:
 
         auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
             PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
-                         values.data(), lengths.data(), format.data(), 1),
+                         values.data(), lengths.data(), format.data(),
+                         result_format),
             PQclear);
 
         check_result(res.get());
-
         return result(std::move(res));
     }
 
-private:
     void append_args(std::span<char> s, std::vector<const char*>& values,
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<unique_buffer<>>&) {
