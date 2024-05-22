@@ -33,7 +33,7 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
     }
 
     auto complete = storage.read_fragment(f.pointer(), f.size());
-    return largest_common_prefix(data.substr(common),
+    return common + largest_common_prefix(data.substr(common),
                                  complete.string_view().substr(common));
 }
 
@@ -91,13 +91,11 @@ private:
             auto match_low = match_size(m_storage, data, f.low);
             auto match_high = match_size(m_storage, data, f.high);
 
-            if (std::max(match_low, match_high) >
+            if (const auto size = std::max(match_low, match_high); size >
                 m_dedupe_conf.min_fragment_size) {
 
                 const fragment_set_element& element =
                     match_low > match_high ? *f.low : *f.high;
-                std::size_t size =
-                    match_low > match_high ? match_low : match_high;
 
                 fragments.push(fragment{element.pointer(), size});
                 data = data.substr(size);

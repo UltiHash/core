@@ -15,7 +15,7 @@ struct storage_config {
         .bind_address = "0.0.0.0",
     };
 
-    int data_store_count = 2;
+    int data_store_count = 1;
     data_store_config data_store = {
         .working_dir = "/var/lib/uh/storage",
         .file_size = 1 * GIBI_BYTE,
