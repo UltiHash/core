@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.4.1 2024-04-26
+## [0.4.2] 2024-05-22
+- Fixed two bugs that result in poor deduplication
+- Interfaces for different services, providing merging ability of services together
+- A few bug fixes in entrypoint
+- Improved performance by removing extra memory initialisations
+
+## [0.4.1] 2024-04-26
 - Fixed a bug where data corruption could occur when using multiple deduplicator instances
 - Implemented asynchronous write support in storage service
 - Improved write throughput of storage service
@@ -11,7 +17,7 @@
 - Fixed formatting of timestamps in HTTP response
 - Fixed computation of ETAG
 
-## 0.4.0 2024-03-26
+## [0.4.0] 2024-03-26
 - Refactored data store, mostly lockless writes and completely lockless reads
 - Fixed a bug in the free spot manager
 - Fixed the shared lock concurrency issue in directory service
