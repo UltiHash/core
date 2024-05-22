@@ -41,7 +41,7 @@ public:
             boost::asio::ip::make_address(m_config.bind_address),
             m_config.port});
         boost::asio::co_spawn(m_ioc, m_handler->on_startup(),
-                              boost::asio::use_future);
+                              boost::asio::detached);
         boost::asio::co_spawn(m_ioc, do_accept(std::move(acceptor)),
                               [](const std::exception_ptr& e) {
                                   if (e)
