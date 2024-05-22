@@ -12,8 +12,13 @@ coro<void> directory::put_object(const std::string& bucket,
     zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
     auto span = std::span<char>(data);
 
-    m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4)", bucket,
-                            object_id, span, addr.data_size());
+    try {
+        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4)", bucket,
+                                object_id, span, addr.data_size());
+    } catch (const std::exception& e) {
+        throw command_exception(http::status::not_found, "NoSuchBucket",
+                                "bucket not found");
+    }
 
     co_return;
 }
