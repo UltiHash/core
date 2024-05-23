@@ -142,7 +142,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
 
-    db::configure(*rv, cfg.database);
+    configure(*rv, cfg.database);
 
     return rv;
 }
@@ -239,6 +239,21 @@ std::optional<config> read_config(int argc, char** argv) {
     rv.storage.data_store.working_dir = rv.service.working_dir / "storage";
 
     return rv;
+}
+
+void configure(CLI::App& app, db::config& cfg) {
+    app.add_option("--db-host,-D", cfg.host_port,
+                   "PGSQL server address as HOST:PORT")
+        ->default_val(cfg.host_port)
+        ->envname(ENV_CFG_DB_HOSTPORT);
+
+    app.add_option("--db-user", cfg.username, "PGSQL user name")
+        ->default_val(cfg.username)
+        ->envname(ENV_CFG_DB_USER);
+
+    app.add_option("--db-pass", cfg.password, "PGSQL password")
+        ->default_val(cfg.password)
+        ->envname(ENV_CFG_DB_PASS);
 }
 
 } // namespace uh::cluster

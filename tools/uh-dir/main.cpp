@@ -1,16 +1,19 @@
 #include "common/db/db.h"
+#include "config/configuration.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/formats.h"
 
 #include <CLI/CLI.hpp>
 #include <iostream>
 
-using namespace uh::cluster;
+using uh::cluster::directory;
+using uh::cluster::imf_fixdate;
+using uh::cluster::object;
 
 struct config {
     enum class command { ls, mkb, rmb };
 
-    db::config database;
+    uh::cluster::db::config database;
 
     command cmd = command::ls;
     std::string target_ls;
@@ -24,7 +27,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     config rv;
 
-    db::configure(app, rv.database);
+    uh::cluster::configure(app, rv.database);
 
     auto* sub_ls = app.add_subcommand("ls", "list contents of directory");
     sub_ls->add_option("bucket", rv.target_ls, "list contents of this bucket");
@@ -59,7 +62,7 @@ std::ostream& operator<<(std::ostream& out, const object& obj) {
     return out;
 }
 
-coro<void> list_bucket(directory& dir, const std::string& target) {
+uh::cluster::coro<void> list_bucket(directory& dir, const std::string& target) {
     if (target.empty()) {
         for (const auto& bucket : co_await dir.list_buckets()) {
             std::cout << bucket << "\n";
@@ -74,11 +77,12 @@ coro<void> list_bucket(directory& dir, const std::string& target) {
     }
 }
 
-coro<void> make_bucket(directory& dir, const std::string& target) {
+uh::cluster::coro<void> make_bucket(directory& dir, const std::string& target) {
     co_await dir.put_bucket(target);
 }
 
-coro<void> remove_bucket(directory& dir, const std::string& target) {
+uh::cluster::coro<void> remove_bucket(directory& dir,
+                                      const std::string& target) {
     co_await dir.delete_bucket(target);
 }
 
@@ -91,7 +95,7 @@ int main(int argc, char** argv) {
 
         boost::asio::io_context executor;
 
-        db::database db(cfg->database);
+        uh::cluster::db::database db(cfg->database);
         auto handler = [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
