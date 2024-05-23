@@ -1,9 +1,7 @@
 name: Stability Testing AWS
 
 on:
-  schedule:
-    - cron: '0 0 * * 1'
-  workflow_dispatch:
+  push:
 
 env:
   ENVIRONMENT_NAME: stability-testing-aarch64

@@ -14,6 +14,8 @@ global:
       - SYS_PTRACE
 
 stabilityTest:
+  readTimeout: 9999
+  concurentJobs: 4
   nodeSelector:
     workload-type: entrypoint
     purpose: performance-and-stability-testing
