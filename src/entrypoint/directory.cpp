@@ -77,6 +77,15 @@ coro<void> directory::bucket_exists(const std::string& bucket) {
 }
 
 coro<void> directory::delete_bucket(const std::string& bucket) {
+    auto res = m_db.directory()->execv(
+        "SELECT count(*) FROM uh_list_objects($1)", bucket);
+
+    if (res.number(0, 0) > 0) {
+        throw command_exception(
+            http::status::conflict, "BucketNotEmpty",
+            "The bucket that you tried to delete is not empty.");
+    }
+
     m_db.directory()->execv("CALL uh_delete_bucket($1)", bucket);
     co_return;
 }
