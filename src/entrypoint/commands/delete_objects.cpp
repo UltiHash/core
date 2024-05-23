@@ -1,5 +1,4 @@
 #include "delete_objects.h"
-#include "common/coroutines/coro_utils.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
