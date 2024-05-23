@@ -66,7 +66,10 @@ CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYT
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    EXECUTE format('INSERT INTO %s ("name", "small", "size") VALUES(%L, %L, %L)', bucket, key, addr, size);
+    EXECUTE format('
+        INSERT INTO %s ("name", "small", "size") VALUES(%L, %L, %L)
+        ON CONFLICT ("name") DO UPDATE SET "small" = %L, "size"= %L',
+        bucket, key, addr, size, addr, size);
 END
 $$;
 
