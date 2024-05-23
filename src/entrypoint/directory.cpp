@@ -102,7 +102,7 @@ coro<std::vector<std::string>> directory::list_buckets() {
     auto res = m_db.directory()->exec("SELECT name FROM uh_list_buckets()");
 
     for (auto row = 0ull; row < res.rows(); ++row) {
-        rv.push_back(std::string(*res.string(row, 0)));
+        rv.emplace_back(*res.string(row, 0));
     }
 
     co_return rv;
@@ -117,13 +117,10 @@ directory::list_objects(const std::string& bucket,
         "SELECT id, name, size, last_modified FROM uh_list_objects($1, $2, $3)",
         bucket, prefix.value_or(""), lower_bound.value_or(""));
 
-    std::vector<object> rv;
+    std::vector<object> rv(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
-        rv.push_back({
-            .name = std::string(*res.string(row, 1)),
-            .last_modified = *res.date(row, 3),
-            .size = static_cast<std::size_t>(*res.number(row, 2)),
-        });
+        rv.emplace_back(std::string(*res.string(row, 1)), *res.date(row, 3),
+                        static_cast<std::size_t>(*res.number(row, 2)));
     }
 
     co_return rv;
