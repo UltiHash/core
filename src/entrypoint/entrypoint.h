@@ -29,7 +29,7 @@ public:
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
-          m_storage(config.global_data_view, m_ioc, m_storage_services),
+          m_data_view(config.global_data_view, m_ioc, m_storage_services),
           m_max_data_size(sc.license.max_data_store_size),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
           m_db(config.database),
@@ -63,7 +63,7 @@ private:
                 .directory = m_directory,
                 .server_state = m_state,
                 .config = m_config,
-                .gdv = m_storage,
+                .gdv = m_data_view,
                 .data_storage_size = m_data_storage_size,
                 .max_data_size = m_max_data_size};
     }
@@ -73,7 +73,7 @@ private:
     boost::asio::io_context m_ioc;
     attached_service<storage> m_attached_storage;
     services<storage_interface> m_storage_services;
-    global_data_view m_storage;
+    global_data_view m_data_view;
     std::atomic<std::size_t> m_data_storage_size = 0ull;
     std::size_t m_max_data_size = 0ull;
 
