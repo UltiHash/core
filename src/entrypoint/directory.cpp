@@ -58,7 +58,12 @@ coro<object> directory::get_object(const std::string& bucket,
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
-    m_db.directory()->execv("CALL uh_create_bucket($1)", bucket);
+    try {
+        m_db.directory()->execv("CALL uh_create_bucket($1)", bucket);
+    } catch (const std::exception&) {
+        throw command_exception(http::status::conflict, "BucketAlreadyExists",
+                                "The requested bucket name is not available.");
+    }
     co_return;
 }
 
