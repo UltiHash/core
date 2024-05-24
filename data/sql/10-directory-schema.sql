@@ -191,9 +191,15 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text, lower_b
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE
-        format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L and name > %L ORDER BY name',
-            bucket, prefix || '%', lower_bound);
+    IF lower_bound = '' THEN
+        RETURN QUERY EXECUTE
+            format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L AND name > %L ORDER BY name',
+                bucket, prefix || '%', lower_bound);
+    ELSE
+        RETURN QUERY EXECUTE
+            format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L AND name > %L AND NOT starts_with(name, %L) ORDER BY name',
+                bucket, prefix || '%', lower_bound, lower_bound);
+    END IF;
 END;
 $$;
 
