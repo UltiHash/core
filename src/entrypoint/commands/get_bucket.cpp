@@ -26,8 +26,7 @@ coro<void> get_bucket::handle(http_request& req) const {
     auto bucket_name = req.bucket();
 
     try {
-        auto client = m_collection.directory_services.get();
-        co_await client->bucket_exists(bucket_name);
+        co_await m_collection.directory.bucket_exists(bucket_name);
 
         auto res = get_response(bucket_name);
         co_await req.respond(res.get_prepared_response());

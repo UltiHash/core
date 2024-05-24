@@ -5,7 +5,6 @@ namespace uh::cluster {
 static const std::map<uh::cluster::role, std::string> abbreviation_by_role = {
     {uh::cluster::STORAGE_SERVICE, "storage"},
     {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
-    {uh::cluster::DIRECTORY_SERVICE, "directory"},
     {uh::cluster::ENTRYPOINT_SERVICE, "entrypoint"}};
 
 const std::string& get_service_string(const role& service_role) {

@@ -36,6 +36,11 @@ public:
         : m_collection(collection),
           m_req_types(request_types...) {}
 
+    coro<void> on_startup() override {
+        m_collection.data_storage_size =
+            co_await m_collection.directory.data_size();
+    }
+
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         try {
 

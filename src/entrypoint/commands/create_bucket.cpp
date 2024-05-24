@@ -1,5 +1,4 @@
 #include "create_bucket.h"
-#include "common/coroutines/coro_utils.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -16,14 +15,7 @@ coro<void> create_bucket::handle(http_request& req) const {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.bucket();
     try {
-        auto func = [&bucket_id](std::shared_ptr<directory_interface> dir,
-                                 size_t id) -> coro<void> {
-            co_await dir->put_bucket(bucket_id);
-        };
-
-        co_await broadcast<directory_interface>(
-            m_collection.ioc, func,
-            m_collection.directory_services.get_services());
+        co_await m_collection.directory.put_bucket(bucket_id);
 
         http_response res;
         co_await req.respond(res.get_prepared_response());

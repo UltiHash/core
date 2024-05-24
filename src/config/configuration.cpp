@@ -107,30 +107,6 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.read_cache_capacity_l2);
 }
 
-void register_bucket(CLI::App& app, bucket_config& cfg) {
-    auto group = app.add_option_group("bucket", "bucket configuration");
-
-    group
-        ->add_option("--min-file-size", cfg.min_file_size,
-                     "minimum allocated size for buckets")
-        ->default_val(cfg.min_file_size);
-
-    group
-        ->add_option("--max-file-size", cfg.max_file_size,
-                     "maximum allocated size for buckets")
-        ->default_val(cfg.max_file_size);
-
-    group
-        ->add_option("--max-storage-size", cfg.max_storage_size,
-                     "maximum size for buckets")
-        ->default_val(cfg.max_storage_size);
-
-    group
-        ->add_option("--max-chunk-size", cfg.max_chunk_size,
-                     "maximum size for bucket chunks")
-        ->default_val(cfg.max_chunk_size);
-}
-
 CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
     auto* rv = app.add_subcommand("storage", "Run as storage service");
 
@@ -152,14 +128,11 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     auto* rv = app.add_subcommand("entrypoint", "Run as entrypoint service");
 
     register_server(*rv, cfg.server);
+    register_global_data_view(*rv, cfg.global_data_view);
 
     rv->add_option("--dedupe-connections", cfg.dedupe_node_connection_count,
                    "number of connections per deduplication service")
         ->default_val(cfg.dedupe_node_connection_count);
-
-    rv->add_option("--directory-connections", cfg.directory_connection_count,
-                   "number of connections per directory service")
-        ->default_val(cfg.directory_connection_count);
 
     rv->add_option("--worker", cfg.worker_thread_count,
                    "number of worker threads")
@@ -169,24 +142,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
 
-    return rv;
-}
-
-CLI::App* sub_directory(CLI::App& app, directory_config& cfg) {
-
-    auto* rv = app.add_subcommand("directory", "Run as directory service");
-
-    register_server(*rv, cfg.server);
-    register_global_data_view(*rv, cfg.global_data_view);
-    register_bucket(*rv, cfg.directory_store_conf.bucket_conf);
-
-    rv->add_option("--worker-count", cfg.worker_thread_count,
-                   "number of worker threads")
-        ->default_val(cfg.worker_thread_count);
-
-    rv->add_option("--max-store-size", cfg.max_data_store_size,
-                   "maximum size of data store")
-        ->default_val(cfg.max_data_store_size);
+    configure(*rv, cfg.database);
 
     return rv;
 }
@@ -229,17 +185,12 @@ std::optional<config> read_config(int argc, char** argv) {
 
     auto sub_str = sub_storage(app, rv.storage);
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
-    auto sub_dir = sub_directory(app, rv.directory);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
 
     auto sub_dd_str =
         sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
-    auto sub_dr_str =
-        sub_storage(*sub_dir, rv.directory.m_attached_storage.emplace());
     auto sub_en_dd = sub_deduplicator(
         *sub_ep, rv.entrypoint.m_attached_deduplicator.emplace());
-    auto sub_en_dr =
-        sub_directory(*sub_ep, rv.entrypoint.m_attached_directory.emplace());
 
     register_service(app, rv.service);
 
@@ -269,8 +220,6 @@ std::optional<config> read_config(int argc, char** argv) {
         rv.role = STORAGE_SERVICE;
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
-    } else if (sub_dir->parsed()) {
-        rv.role = DIRECTORY_SERVICE;
     } else if (sub_dd->parsed()) {
         rv.role = DEDUPLICATOR_SERVICE;
     } else {
@@ -278,30 +227,33 @@ std::optional<config> read_config(int argc, char** argv) {
     }
 
     rv.log = make_log_config(rv.service, log_level, rv.role);
-    rv.directory.max_data_store_size = rv.service.license.max_data_store_size;
 
     if (!sub_dd_str->parsed()) {
         rv.deduplicator.m_attached_storage.reset();
     }
-    if (!sub_dr_str->parsed()) {
-        rv.directory.m_attached_storage.reset();
-    }
     if (!sub_en_dd->parsed()) {
         rv.entrypoint.m_attached_deduplicator.reset();
     }
-    if (!sub_en_dr->parsed()) {
-        rv.entrypoint.m_attached_directory.reset();
-    } else {
-        rv.entrypoint.m_attached_directory->max_data_store_size =
-            rv.service.license.max_data_store_size;
-    }
 
-    rv.directory.directory_store_conf.working_dir =
-        rv.service.working_dir / "directory";
     rv.deduplicator.working_dir = rv.service.working_dir / "deduplicator";
     rv.storage.data_store.working_dir = rv.service.working_dir / "storage";
 
     return rv;
+}
+
+void configure(CLI::App& app, db::config& cfg) {
+    app.add_option("--db-host,-D", cfg.host_port,
+                   "PGSQL server address as HOST:PORT")
+        ->default_val(cfg.host_port)
+        ->envname(ENV_CFG_DB_HOSTPORT);
+
+    app.add_option("--db-user", cfg.username, "PGSQL user name")
+        ->default_val(cfg.username)
+        ->envname(ENV_CFG_DB_USER);
+
+    app.add_option("--db-pass", cfg.password, "PGSQL password")
+        ->default_val(cfg.password)
+        ->envname(ENV_CFG_DB_PASS);
 }
 
 } // namespace uh::cluster

@@ -5,10 +5,11 @@
 
 namespace uh::cluster {
 
-data_store::data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id)
-    : m_storage_id (service_id),
-      m_data_store_id (data_store_id),
-      m_root (conf.working_dir / std::to_string (data_store_id)),
+data_store::data_store(data_store_config conf, uint32_t service_id,
+                       uint32_t data_store_id)
+    : m_storage_id(service_id),
+      m_data_store_id(data_store_id),
+      m_root(conf.working_dir / std::to_string(data_store_id)),
       m_conf(std::move(conf)) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
@@ -18,14 +19,14 @@ data_store::data_store(data_store_config conf, uint32_t service_id, uint32_t dat
     }
 
     std::map<uint128_t, int> open_files;
-    for (const auto& entry :
-         std::filesystem::directory_iterator(m_root)) {
+    for (const auto& entry : std::filesystem::directory_iterator(m_root)) {
         if (!is_data_file(entry.path())) {
             continue;
         }
 
         const auto id_offset = parse_file_name(entry.path().filename());
-        if (id_offset.first != m_storage_id) [[unlikely]] { // non-adaptive data store with fixed id
+        if (id_offset.first != m_storage_id)
+            [[unlikely]] { // non-adaptive data store with fixed id
             throw std::range_error(
                 "The data store is spawned on the wrong data node");
         }
@@ -64,21 +65,26 @@ data_store::data_store(data_store_config conf, uint32_t service_id, uint32_t dat
     m_used = fetch_used_space();
 }
 
-std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size_t size) {
+std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
+                             size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
-    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or pointer + size >  m_used.load()) {
+
+    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
+        pointer + size > m_used.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::unique_lock <std::mutex> lk (m_async_mutex);
-    if (const auto [async_offset, data] = find_async_data(pointer, size); data.data() != nullptr) {
+    std::unique_lock<std::mutex> lk(m_async_mutex);
+    if (const auto [async_offset, data] = find_async_data(pointer, size);
+        data.data() != nullptr) {
         const auto offset = pointer - async_offset;
         std::memcpy(buffer, data.data() + offset, size);
         return size;
     }
-    lk.unlock ();
+    lk.unlock();
 
-    const auto [fd, seek] = get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
+    const auto [fd, seek] =
+        get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
     ssize_t tr = 0;
     do {
@@ -93,8 +99,6 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer, size
     return tr;
 }
 
-
-
 void data_store::sync() {
 
     std::unique_lock<std::mutex> lock(m_sync_end_offset_mutex);
@@ -107,7 +111,6 @@ void data_store::sync() {
     }
 
     lock.unlock();
-
 
     fdatasync(m_open_files.back());
 }
@@ -128,32 +131,34 @@ address data_store::register_write(const shared_buffer<char>& data) {
     data_address.push_fragment(
         {.pointer = alloc.global_offset, .size = data.size()});
 
-    std::lock_guard <std::mutex> lk (m_async_mutex);
-    m_ongoing_async_writes.emplace(pointer_traits::get_pointer(alloc.global_offset), std::make_pair(alloc, data));
+    std::lock_guard<std::mutex> lk(m_async_mutex);
+    m_ongoing_async_writes.emplace(
+        pointer_traits::get_pointer(alloc.global_offset),
+        std::make_pair(alloc, data));
     return data_address;
 }
 
 address data_store::register_write(const std::string_view& data) {
-    shared_buffer <char> buffer (data.size());
+    shared_buffer<char> buffer(data.size());
     std::memcpy(buffer.data(), data.data(), data.size());
     return register_write(buffer);
 }
 
 void data_store::perform_write(const address& addr) {
     if (addr.size() != 1) {
-        throw std::runtime_error ("Invalid address size");
+        throw std::runtime_error("Invalid address size");
     }
 
     const auto pointer = pointer_traits::get_pointer(addr.first().pointer);
-    std::unique_lock <std::mutex> lk (m_async_mutex);
-    auto& [alloc, data] = m_ongoing_async_writes.at (pointer);
+    std::unique_lock<std::mutex> lk(m_async_mutex);
+    auto& [alloc, data] = m_ongoing_async_writes.at(pointer);
     lk.unlock();
 
     for (long written = 0; written < static_cast<long>(data.size());
          written += ::pwrite(alloc.fd, data.data() + written,
                              data.size() - written, alloc.seek + written))
         ;
-    std::lock_guard <std::mutex> rm_lk (m_async_mutex);
+    std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
     m_async_cv.notify_all();
 }
@@ -163,8 +168,8 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
         const auto frag = addr.get_fragment(i);
         const auto pointer = pointer_traits::get_pointer(frag.pointer);
 
-        std::unique_lock <std::mutex> lk (m_async_mutex);
-        m_async_cv.wait(lk, [this, pointer, size=frag.size] () {
+        std::unique_lock<std::mutex> lk(m_async_mutex);
+        m_async_cv.wait(lk, [this, pointer, size = frag.size]() {
             return find_async_data(pointer, size).first == 0;
         });
     }
@@ -178,8 +183,7 @@ data_store::~data_store() {
     }
 }
 
-std::pair<int, long>
-data_store::get_file_offset_pair(size_t pointer) const {
+std::pair<int, long> data_store::get_file_offset_pair(size_t pointer) const {
     const auto fd_index = pointer / m_conf.file_size;
     const auto seek = pointer - fd_index * m_conf.file_size;
     return {m_open_files.at(fd_index), seek};
@@ -224,7 +228,8 @@ data_store::parse_file_name(const std::string& filename) {
 }
 
 std::string data_store::get_name(size_t offset) const {
-    return "data_" + std::to_string(m_storage_id) + "_" + std::to_string(offset);
+    return "data_" + std::to_string(m_storage_id) + "_" +
+           std::to_string(offset);
 }
 
 bool data_store::is_data_file(const std::filesystem::path& path) {
@@ -244,7 +249,8 @@ data_store::alloc_t data_store::internal_allocate(long size) {
 
     if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
         sync();
-        m_used += m_conf.file_size - m_last_file_data_end + sizeof (m_last_file_data_end);
+        m_used += m_conf.file_size - m_last_file_data_end +
+                  sizeof(m_last_file_data_end);
         add_new_file(m_conf.file_size * m_open_files.size(), m_conf.file_size);
     }
 
@@ -252,8 +258,9 @@ data_store::alloc_t data_store::internal_allocate(long size) {
     alloc.seek = m_last_file_data_end;
     alloc.fd = m_open_files.back();
     m_last_file_data_end = alloc.seek + size;
-    alloc.global_offset = pointer_traits::get_global_pointer((m_open_files.size() - 1) * m_conf.file_size +
-                          alloc.seek, m_storage_id, m_data_store_id);
+    alloc.global_offset = pointer_traits::get_global_pointer(
+        (m_open_files.size() - 1) * m_conf.file_size + alloc.seek, m_storage_id,
+        m_data_store_id);
 
     m_used += size;
 
@@ -264,8 +271,9 @@ std::pair<size_t, shared_buffer<char>>
 data_store::find_async_data(size_t pointer, size_t size) {
     auto async_data = m_ongoing_async_writes.upper_bound(pointer);
     if (async_data != m_ongoing_async_writes.cbegin()) {
-        async_data --;
-        if (async_data->first + async_data->second.second.size() >= pointer + size) {
+        async_data--;
+        if (async_data->first + async_data->second.second.size() >=
+            pointer + size) {
             return {async_data->first, async_data->second.second};
         }
     }

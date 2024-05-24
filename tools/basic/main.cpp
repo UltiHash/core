@@ -1,6 +1,7 @@
 #include "common/network/messenger.h"
 #include "common/telemetry/log.h"
 #include "common/types/common_types.h"
+#include "common/utils/time_utils.h"
 #include <boost/asio/co_spawn.hpp>
 #include <filesystem>
 #include <fstream>
@@ -72,24 +73,22 @@ int main(int argc, char* args[]) {
     LOG_INFO() << "Read data from file " << ps.file_path << " of size "
                << buf.size() / static_cast<double>(1024ul * 1024ul);
 
-    std::chrono::time_point<std::chrono::steady_clock> timer;
-    const auto start = std::chrono::steady_clock::now();
+    timer tt;
 
-    boost::asio::co_spawn(
-        ioc, perform_operation(m, ps.req_type, buf.span()),
-        [](const std::exception_ptr& eptr) {
-            if (eptr) {
-                try {
-                    std::rethrow_exception(eptr);
-                } catch (std::exception& e) {
-                    LOG_ERROR() << "Operation error: " << e.what();
-                }
-            }
-        });
+    boost::asio::co_spawn(ioc, perform_operation(m, ps.req_type, buf.span()),
+                          [](const std::exception_ptr& eptr) {
+                              if (eptr) {
+                                  try {
+                                      std::rethrow_exception(eptr);
+                                  } catch (std::exception& e) {
+                                      LOG_ERROR()
+                                          << "Operation error: " << e.what();
+                                  }
+                              }
+                          });
     ioc.run();
 
-    const auto stop = std::chrono::steady_clock::now();
-    const std::chrono::duration<double> duration = stop - start;
+    const std::chrono::duration<double> duration = tt.passed();
     const auto size = buf.size() / static_cast<double>(1024ul * 1024ul);
     const auto bandwidth = size / duration.count();
     LOG_INFO() << "Operation duration " << duration.count() << " s";

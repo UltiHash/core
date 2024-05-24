@@ -54,12 +54,17 @@ deduplicator:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
 
-directory:
-  replicas: 1
-  storageClass: local-path
-  storageSize: 4Gi
-  nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-01
+database:
+  primary:
+    nodeSelector:
+      kubernetes.io/hostname: opm-k8s-worker-01
+
+    persistence:
+      storageClass: local-path
+      size: 4Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
 
 collector:
   nodeSelector:

@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  build:
+  build-core:
     runs-on: heavyweight-generic-jobs
     steps:
       - name: Define testing environment name
@@ -17,18 +17,18 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
-  
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
-  
+
       - name: Login to ghcr.io container registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: plauth
           password: ${{ secrets.PAT }}
-   
+
       - name: Build and push the Docker image
         uses: docker/build-push-action@v5
         with:
@@ -40,13 +40,46 @@ jobs:
           build-args: |
             BuildType=RelWithDebInfo
             DebugTools=True
-      
+
       - name: Test service startup with invalid licenses
         run: bash feature-testing/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
 
+  build-database-init:
+    runs-on: lightweight-generic-jobs
+    steps:
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: tools/database-init/Dockerfile
+          platforms: linux/amd64
+          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          push: true
+
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs: build
+    needs:
+      - build-core
+      - build-database-init
     steps:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' |  tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
@@ -64,18 +97,19 @@ jobs:
         run: |
           mkdir ~/.kube
           echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
-    
+
       - uses: azure/setup-helm@v4.0.0
         with:
          version: v3.14.0
 
-      - name: Select the Kuberentes node for deployment 
+      - name: Select the Kuberentes node for deployment
         run: echo "KUBERNETES_NODE=$(shuf -e -n 1 opm-k8s-worker-01 opm-k8s-worker-02)" >> $GITHUB_ENV
-        
+
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
           input: feature-testing/helm-values-on-premise.yaml
           output: helm-values.yaml
@@ -94,7 +128,7 @@ jobs:
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 10m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 20m
 
       - name: Run feature tests
         run: |
