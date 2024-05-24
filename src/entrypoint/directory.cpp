@@ -77,13 +77,16 @@ coro<void> directory::bucket_exists(const std::string& bucket) {
 }
 
 coro<void> directory::delete_bucket(const std::string& bucket) {
-    auto res = m_db.directory()->execv(
-        "SELECT count(*) FROM uh_list_objects($1)", bucket);
 
-    if (res.number(0, 0) > 0) {
-        throw command_exception(
-            http::status::conflict, "BucketNotEmpty",
-            "The bucket that you tried to delete is not empty.");
+    if (m_bucket_delete_policy == bucket_delete_policy::only_empty) {
+        auto res = m_db.directory()->execv(
+            "SELECT count(*) FROM uh_list_objects($1)", bucket);
+
+        if (res.number(0, 0) > 0) {
+            throw command_exception(
+                http::status::conflict, "BucketNotEmpty",
+                "The bucket that you tried to delete is not empty.");
+        }
     }
 
     m_db.directory()->execv("CALL uh_delete_bucket($1)", bucket);
@@ -117,7 +120,8 @@ directory::list_objects(const std::string& bucket,
         "SELECT id, name, size, last_modified FROM uh_list_objects($1, $2, $3)",
         bucket, prefix.value_or(""), lower_bound.value_or(""));
 
-    std::vector<object> rv(res.rows());
+    std::vector<object> rv;
+    rv.reserve(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
         rv.emplace_back(std::string(*res.string(row, 1)), *res.date(row, 3),
                         static_cast<std::size_t>(*res.number(row, 2)));

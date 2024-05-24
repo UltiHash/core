@@ -6,6 +6,8 @@
 
 namespace uh::cluster {
 
+enum class bucket_delete_policy { only_empty, all };
+
 struct directory {
 
     directory(db::database& db)
@@ -40,6 +42,8 @@ struct directory {
 
 private:
     db::database& m_db;
+
+    bucket_delete_policy m_bucket_delete_policy = bucket_delete_policy::all;
 };
 
 } // namespace uh::cluster
