@@ -165,7 +165,7 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s', bucket);
+    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s ORDER BY name', bucket);
 END;
 $$;
 
@@ -178,7 +178,7 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L', bucket, prefix || '%');
+    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L ORDER BY name', bucket, prefix || '%');
 END;
 $$;
 
@@ -192,7 +192,7 @@ LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     RETURN QUERY EXECUTE
-        format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L and name >= %L',
+        format('SELECT id, name, size, last_modified FROM %s WHERE name LIKE %L and name > %L ORDER BY name',
             bucket, prefix || '%', lower_bound);
 END;
 $$;
