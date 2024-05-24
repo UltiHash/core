@@ -15,7 +15,6 @@
 #include "commands/delete_bucket.h"
 #include "commands/delete_object.h"
 #include "commands/delete_objects.h"
-#include "commands/get_bucket.h"
 #include "commands/get_object.h"
 #include "commands/head_object.h"
 #include "commands/init_multipart.h"
@@ -137,9 +136,8 @@ auto define_entrypoint_handler(reference_collection& collection,
 auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
         collection, copy_object(collection), create_bucket(collection),
-        get_bucket(collection), list_buckets(collection),
-        delete_bucket(collection), put_object(collection),
-        get_object(collection), head_object(collection),
+        list_buckets(collection), delete_bucket(collection),
+        put_object(collection), get_object(collection), head_object(collection),
         list_objects(collection), list_objects_v2(collection),
         delete_object(collection), delete_objects(collection),
         init_multipart(collection), multipart(collection),
