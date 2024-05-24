@@ -40,8 +40,6 @@ public:
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
             boost::asio::ip::make_address(m_config.bind_address),
             m_config.port});
-        boost::asio::co_spawn(m_ioc, m_handler->on_startup(),
-                              boost::asio::detached);
         boost::asio::co_spawn(m_ioc, do_accept(std::move(acceptor)),
                               [](const std::exception_ptr& e) {
                                   if (e)
@@ -117,6 +115,7 @@ private:
     }
 
     coro<void> do_accept(auto acceptor) {
+        co_await m_handler->on_startup();
         while (m_is_running) {
             boost::asio::ip::tcp::socket stream =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);
