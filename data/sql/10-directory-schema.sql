@@ -13,6 +13,19 @@ CREATE TABLE __buckets (
 
 -- ------------------------------------------------------------------------
 --
+-- Database helper functions
+--
+
+--
+-- rel_name(table) -- return textual name of table
+--
+CREATE OR REPLACE FUNCTION rel_name(regclass)
+    RETURNS name LANGUAGE SQL AS $$
+    SELECT relname FROM pg_class WHERE OID = $1
+$$;
+
+-- ------------------------------------------------------------------------
+--
 -- Database functions for controlling the directory
 --
 
@@ -122,7 +135,7 @@ CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket regclass)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    EXECUTE format('DELETE FROM __buckets WHERE name = %L', bucket);
+    EXECUTE format('DELETE FROM __buckets WHERE name = %L', rel_name(bucket));
     EXECUTE format('DROP TABLE %s', bucket);
 END;
 $$;
