@@ -29,6 +29,7 @@ struct reference_collection {
     static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
 
     void check_storage_size(std::size_t increment) const;
+    void free_storage_size(std::size_t decrement) const;
 };
 
 struct collapsed_objects {

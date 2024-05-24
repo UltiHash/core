@@ -57,6 +57,23 @@ coro<object> directory::get_object(const std::string& bucket,
                      .addr = std::move(addr)};
 }
 
+coro<object> directory::head_object(const std::string& bucket,
+                                    const std::string& object_id) {
+    auto metadata = m_db.directory()->execv(
+        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        object_id);
+
+    if (metadata.rows() == 0) {
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
+    }
+
+    co_return object{.name = object_id,
+                     .last_modified = *metadata.date(0, 1),
+                     .size = static_cast<std::size_t>(*metadata.number(0, 0)),
+                     .addr = std::nullopt};
+}
+
 coro<void> directory::put_bucket(const std::string& bucket) {
     try {
         m_db.directory()->execv("CALL uh_create_bucket($1)", bucket);

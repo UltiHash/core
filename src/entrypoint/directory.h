@@ -19,6 +19,9 @@ struct directory {
     coro<object> get_object(const std::string& bucket,
                             const std::string& object_id);
 
+    coro<object> head_object(const std::string& bucket,
+                             const std::string& object_id);
+
     coro<void> put_bucket(const std::string& bucket);
 
     coro<void> bucket_exists(const std::string& bucket);

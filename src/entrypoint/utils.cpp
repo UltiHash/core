@@ -18,6 +18,17 @@ void reference_collection::check_storage_size(std::size_t increment) const {
 
         --warn_counter;
     }
+
+    data_storage_size = new_size;
+}
+
+void reference_collection::free_storage_size(std::size_t decrement) const {
+    std::size_t current = data_storage_size;
+    std::size_t desired;
+
+    do {
+        desired = current < decrement ? 0ull : current - decrement;
+    } while (!data_storage_size.compare_exchange_weak(current, desired));
 }
 
 std::vector<collapsed_objects>

@@ -14,9 +14,13 @@ bool delete_object::can_handle(const http_request& req) {
 coro<void> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
+        auto object = co_await m_collection.directory.head_object(
+            req.bucket(), req.object_key());
+
         co_await m_collection.directory.delete_object(req.bucket(),
                                                       req.object_key());
 
+        m_collection.free_storage_size(object.size);
         http_response res;
 
         LOG_DEBUG() << "delete_object response: " << res;
