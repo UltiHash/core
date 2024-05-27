@@ -26,10 +26,14 @@ coro<void> head_object::handle(const http_request& req) const {
         http::response<http::empty_body> res{http::status::ok, 11};
 
         auto found = false;
-        for (const auto& obj : lst.objects) {
+        for (const auto& obj : obj_list) {
             if (obj.name == req.object_key()) {
                 res.base().set("Content-Length", std::to_string(obj.size));
                 res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
+                if (obj.etag) {
+                    res.base().set("ETag", *obj.etag);
+                }
+
                 found = true;
                 break;
             }

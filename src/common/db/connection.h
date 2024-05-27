@@ -77,6 +77,15 @@ private:
         format.push_back(1);
     }
 
+    void append_args(std::string s, std::vector<const char*>& values,
+                     std::vector<int>& lengths, std::vector<int>& format,
+                     std::list<std::string>& mem) {
+        auto& buffer = mem.emplace_back(std::move(s));
+        values.push_back(buffer.data());
+        lengths.push_back(buffer.size());
+        format.push_back(0);
+    }
+
     void append_args(std::string_view s, std::vector<const char*>& values,
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<std::string>&) {
@@ -92,6 +101,20 @@ private:
         values.push_back(buffer.data());
         lengths.push_back(buffer.size());
         format.push_back(0);
+    }
+
+    template <typename type>
+    void append_args(const std::optional<type>& value,
+                     std::vector<const char*>& values,
+                     std::vector<int>& lengths, std::vector<int>& format,
+                     std::list<std::string>& mem) {
+        if (value) {
+            append_args(*value, values, lengths, format, mem);
+        } else {
+            values.push_back(nullptr);
+            lengths.push_back(0);
+            format.push_back(0);
+        }
     }
 
     void check_result(const PGresult* result);

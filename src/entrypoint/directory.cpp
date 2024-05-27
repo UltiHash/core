@@ -5,16 +5,19 @@
 
 namespace uh::cluster {
 
-coro<void> directory::put_object(const std::string& bucket,
-                                 const std::string& object_id,
-                                 const address& addr) {
+coro<void> directory::put_object(const std::string& bucket, const object& obj) {
+    if (!obj.addr) {
+        throw std::runtime_error("put_object requires address");
+    }
+
     std::vector<char> data;
-    zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
+    zpp::bits::out{data, zpp::bits::size4b{}}(obj.addr).or_throw();
     auto span = std::span<char>(data);
 
     try {
-        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4)", bucket,
-                                object_id, span, addr.data_size());
+        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)",
+                                bucket, obj.name, span, obj.addr->data_size(),
+                                obj.etag);
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "bucket not found");
@@ -60,7 +63,7 @@ coro<object> directory::get_object(const std::string& bucket,
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
     if (metadata.rows() == 0) {
@@ -68,10 +71,14 @@ coro<object> directory::head_object(const std::string& bucket,
                                 "object not found");
     }
 
+    auto etag = metadata.string(0, 2);
+
     co_return object{.name = object_id,
                      .last_modified = *metadata.date(0, 1),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
-                     .addr = std::nullopt};
+                     .addr = std::nullopt,
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {

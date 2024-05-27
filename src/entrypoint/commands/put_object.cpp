@@ -1,6 +1,7 @@
 #include "put_object.h"
 
 #include "common/coroutines/awaitable_promise.h"
+#include "common/types/common_types.h"
 
 using namespace boost;
 
@@ -82,16 +83,19 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req, hash);
         }
 
-        co_await m_collection.directory.put_object(req.bucket(),
-                                                   req.object_key(), resp.addr);
+        auto tag = hash.finalize();
+        LOG_DEBUG() << "etag: " << tag;
+
+        object obj{.name = req.object_key(),
+                   .size = resp.addr.data_size(),
+                   .addr = std::move(resp.addr),
+                   .etag = tag};
+        co_await m_collection.directory.put_object(req.bucket(), obj);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-        auto tag = hash.finalize();
-        LOG_DEBUG() << "etag: " << tag;
-
         res.set_etag(tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
