@@ -123,6 +123,14 @@ database:
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
 
 collector:
   nodeSelector:

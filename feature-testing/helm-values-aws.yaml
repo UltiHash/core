@@ -76,6 +76,13 @@ database:
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
 
 storage:
   replicas: 1

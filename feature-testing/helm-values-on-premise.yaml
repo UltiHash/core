@@ -51,6 +51,8 @@ database:
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
 
 storage:
   replicas: 1

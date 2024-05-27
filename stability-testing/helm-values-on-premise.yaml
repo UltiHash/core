@@ -65,6 +65,8 @@ database:
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
 
 collector:
   nodeSelector:
