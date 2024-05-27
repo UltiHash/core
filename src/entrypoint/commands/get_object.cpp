@@ -1,5 +1,6 @@
 #include "get_object.h"
 #include "common/coroutines/awaitable_promise.h"
+#include "common/utils/debug.h"
 #include "common/utils/double_buffer.h"
 #include "common/utils/time_utils.h"
 #include "entrypoint/http/command_exception.h"
@@ -20,6 +21,7 @@ struct local_read_handle {
     bool has_next() { return m_addr_index != m_addr.size(); }
 
     coro<void> next(std::vector<char>& buffer) {
+        LOG_CONTEXT();
         std::size_t buffer_size = 0;
 
         address partial_addr;
@@ -46,6 +48,7 @@ struct local_read_handle {
  */
 coro<std::size_t> upload(local_read_handle& reader, http_request& req,
                          boost::asio::io_context& context) {
+    LOG_CONTEXT();
     size_t total_size = 0;
 
     std::shared_ptr<awaitable_promise<std::size_t>> promise;
@@ -89,6 +92,7 @@ bool get_object::can_handle(const http_request& req) {
 coro<void> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
     try {
+        LOG_CONTEXT();
         timer tt;
 
         auto obj = co_await m_collection.directory.get_object(req.bucket(),

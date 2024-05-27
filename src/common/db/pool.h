@@ -1,6 +1,7 @@
 #ifndef CORE_COMMON_DB_POOL_H
 #define CORE_COMMON_DB_POOL_H
 
+#include "common/utils/debug.h"
 #include "connection.h"
 #include "connstr.h"
 #include <condition_variable>
@@ -26,6 +27,8 @@ public:
 
         connection m_conn;
         pool& m_pool;
+
+        LOG_CONTEXT();
     };
 
     /**
