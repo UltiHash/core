@@ -2,6 +2,7 @@
 #include "common/telemetry/log.h"
 #include "common/types/common_types.h"
 #include "common/utils/random.h"
+#include "common/utils/time_utils.h"
 #include <boost/asio/co_spawn.hpp>
 #include <filesystem>
 #include <fstream>
@@ -51,12 +52,11 @@ void return_connection(auto&& s) {
     cv.notify_one();
 }
 
-void do_sync () {
+void do_sync() {
     message_type type = STORAGE_SYNC_REQ;
     size_t length = 0;
     std::vector<boost::asio::const_buffer> send_buffers{
-        {&type, sizeof(type)},
-        {&length, sizeof(length)}};
+        {&type, sizeof(type)}, {&length, sizeof(length)}};
 
     auto socket = borrow_connection();
     boost::asio::write(*socket, send_buffers);
@@ -71,7 +71,7 @@ void do_sync () {
     return_connection(std::move(socket));
 }
 
-size_t do_write (const unique_buffer<char>& buffer) {
+size_t do_write(const unique_buffer<char>& buffer) {
     message_type type = STORAGE_WRITE_REQ;
     size_t length = buffer.size();
     std::vector<boost::asio::const_buffer> send_buffers{
@@ -90,8 +90,8 @@ size_t do_write (const unique_buffer<char>& buffer) {
         throw std::runtime_error("unsuccessful write");
     }
     unique_buffer<char> recv_data(h.size);
-    boost::asio::read(
-        *socket, boost::asio::buffer(recv_data.data(), recv_data.size()));
+    boost::asio::read(*socket,
+                      boost::asio::buffer(recv_data.data(), recv_data.size()));
 
     return_connection(std::move(socket));
     return length;
@@ -161,8 +161,7 @@ int main(int argc, char* args[]) {
     std::vector<size_t> io_sizes(ps.threads);
     std::vector<std::exception_ptr> exceptions(ps.threads);
 
-    std::chrono::time_point<std::chrono::steady_clock> timer;
-    const auto start = std::chrono::steady_clock::now();
+    timer tt;
 
     for (int i = 0; i < ps.threads; ++i) {
         threads.emplace_back([&ps, &io_sizes, &exceptions, i]() {
@@ -186,8 +185,7 @@ int main(int argc, char* args[]) {
     const auto accumulated_size =
         std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0);
 
-    const auto stop = std::chrono::steady_clock::now();
-    const std::chrono::duration<double> duration = stop - start;
+    const std::chrono::duration<double> duration = tt.passed();
     const auto size = accumulated_size / static_cast<double>(MEBI_BYTE);
     const auto bandwidth = size / duration.count();
     LOG_INFO() << "Wrote " << size << " MB";

@@ -7,6 +7,7 @@ namespace uh::cluster {
 
 class protocol_handler {
 public:
+    virtual coro<void> on_startup() { co_return; }
     virtual coro<void> handle(boost::asio::ip::tcp::socket m) = 0;
 
     virtual ~protocol_handler() = default;

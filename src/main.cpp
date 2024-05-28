@@ -3,7 +3,6 @@
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
-#include "directory/directory.h"
 #include "entrypoint/entrypoint.h"
 #include "storage/storage.h"
 
@@ -25,8 +24,6 @@ void execute_role(const config& c) {
             return start_service(storage(c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
             return start_service(deduplicator(c.service, c.deduplicator));
-        case DIRECTORY_SERVICE:
-            return start_service(directory(c.service, c.directory));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(c.service, c.entrypoint));
         }

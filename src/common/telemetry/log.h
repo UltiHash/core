@@ -2,7 +2,10 @@
 #define UH_LOGGING_LOGGING_BOOST_H
 
 #pragma GCC diagnostic push
+
+#if defined(__GNUG__) && !defined(__llvm__)
 #pragma GCC diagnostic ignored "-Wrestrict"
+#endif
 
 #include "common/telemetry/otel_log_sink.h"
 #include "common/utils/common.h"
@@ -88,6 +91,7 @@ static boost::log::sources::severity_logger<boost::log::trivial::severity_level>
 // ---------------------------------------------------------------------
 
 } // namespace uh::log
+
 #pragma GCC diagnostic pop
 
 #endif

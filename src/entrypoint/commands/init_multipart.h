@@ -22,8 +22,7 @@ public:
     [[nodiscard]] coro<void> handle(http_request& req) {
         metric<entrypoint_init_multipart_req>::increase(1);
         try {
-            auto c = m_collection.directory_services.get();
-            co_await c->bucket_exists(req.bucket());
+            co_await m_collection.directory.bucket_exists(req.bucket());
         } catch (const error_exception& e) {
             throw_from_error(e.error());
         }

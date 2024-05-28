@@ -24,12 +24,14 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
+
     if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
         if (c->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
             return c.value();
         }
     }
+
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     shared_buffer<char> buffer(size);
@@ -44,7 +46,8 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     return buffer;
 }
 
-coro <std::size_t> global_data_view::read_address(char* buffer, const address& addr) {
+coro<std::size_t> global_data_view::read_address(char* buffer,
+                                                 const address& addr) {
 
     std::unordered_map<std::shared_ptr<storage_interface>, address>
         node_address_map;
@@ -70,13 +73,13 @@ coro <std::size_t> global_data_view::read_address(char* buffer, const address& a
     promises.reserve(nodes.size());
 
     for (auto& dn : nodes) {
-        promises.emplace_back(std::make_shared<awaitable_promise<void>>(m_io_service));
+        promises.emplace_back(
+            std::make_shared<awaitable_promise<void>>(m_io_service));
 
         boost::asio::co_spawn(m_io_service,
                               dn->read_address(buffer, node_address_map[dn],
                                                node_data_offsets_map[dn]),
                               use_awaitable_promise_cospawn(promises.back()));
-
     }
 
     for (auto& p : promises) {

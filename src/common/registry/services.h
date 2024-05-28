@@ -102,7 +102,8 @@ public:
                     }
                 })) {
         } else
-            throw std::runtime_error("timeout waiting for client");
+            throw std::runtime_error("timeout waiting for client: " +
+                                     k.to_string());
 
         return cl;
     }

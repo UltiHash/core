@@ -58,6 +58,7 @@ struct local_storage : public storage_interface {
                     "Could not read the data with the given size");
             }
         }
+
         co_return;
     }
 

@@ -2,6 +2,7 @@
 #include "common/telemetry/log.h"
 #include "common/types/common_types.h"
 #include "common/utils/random.h"
+#include "common/utils/time_utils.h"
 #include <filesystem>
 #include <fstream>
 #include <future>
@@ -159,8 +160,7 @@ int main(int argc, char* args[]) {
 
     const auto random_data = generate_data(ps);
 
-    std::chrono::time_point<std::chrono::steady_clock> timer;
-    const auto start = std::chrono::steady_clock::now();
+    timer tt;
 
     for (int i = 0; i < ps.threads; ++i) {
         threads.emplace_back([&random_data, &io_sizes, &exceptions, i]() {
@@ -195,8 +195,7 @@ int main(int argc, char* args[]) {
         std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0,
                         [](auto sum, auto& v) { return sum + v.second; });
 
-    const auto stop = std::chrono::steady_clock::now();
-    const std::chrono::duration<double> duration = stop - start;
+    const std::chrono::duration<double> duration = tt.passed();
     const auto total_size =
         accumulated_total_size / static_cast<double>(MEBI_BYTE);
     const auto eff_size = accumulated_eff_size / static_cast<double>(MEBI_BYTE);
