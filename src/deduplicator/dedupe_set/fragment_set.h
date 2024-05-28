@@ -85,6 +85,12 @@ public:
      */
     void flush();
 
+    /**
+     * Returns the size of the dedupe set (count of fragments)
+     * @return
+     */
+    size_t size ();
+
 private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;

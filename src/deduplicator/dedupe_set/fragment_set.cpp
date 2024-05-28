@@ -49,5 +49,6 @@ void fragment_set::insert(
 }
 
 void fragment_set::flush() { m_set_log.flush(); }
+size_t fragment_set::size() {return m_set.size();}
 
 } // namespace uh::cluster
