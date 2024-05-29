@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "config.h"
+
 namespace uh::cluster {
 struct dedupe_logger {
 
@@ -75,7 +77,12 @@ private:
     static inline std::string get_string (const fragment& f) noexcept {
         return get_string(f.pointer) + " " + get_string(f.size);
     }
+
+#ifdef LOG_DEDUPE_SET
     static constexpr bool enable_log = true;
+#else
+    static constexpr bool enable_log = false;
+#endif
     const size_t m_chunk_size;
     std::fstream m_log_file;
     std::vector <std::string> m_log;
