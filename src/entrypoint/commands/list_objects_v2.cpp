@@ -176,11 +176,12 @@ coro<void> list_objects_v2::handle(http_request& req) const {
 
         auto res = get_response(obj_list, req);
 
-        LOG_DEBUG() << "list_objects_v2 response: " << res;
+        LOG_DEBUG() << req.socket().remote_endpoint()
+                    << " list_objects_v2 response: " << res;
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << e.what();
+        LOG_ERROR() << req.socket().remote_endpoint() << ": " << e.what();
         throw_from_error(e.error());
     }
 }

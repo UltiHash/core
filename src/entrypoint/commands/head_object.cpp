@@ -44,7 +44,8 @@ coro<void> head_object::handle(const http_request& req) const {
                                     "object not found");
         }
 
-        LOG_DEBUG() << "head_object response: " << res;
+        LOG_DEBUG() << req.socket().remote_endpoint()
+                    << ": head_object response: " << res;
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
             req.socket(), sr,
