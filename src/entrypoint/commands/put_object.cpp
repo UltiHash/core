@@ -1,7 +1,6 @@
 #include "put_object.h"
 
 #include "common/coroutines/awaitable_promise.h"
-#include "common/coroutines/coro_utils.h"
 
 using namespace boost;
 
@@ -31,7 +30,6 @@ public:
 
         co_return read;
     }
-
 
     std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
         auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
@@ -73,6 +71,8 @@ coro<void> put_object::handle(http_request& req) const {
     try {
         auto content_length = req.content_length();
 
+        m_collection.check_storage_size(content_length);
+
         md5 hash;
 
         dedupe_response resp;
@@ -82,14 +82,8 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req, hash);
         }
 
-        auto func = [&req, &resp](std::shared_ptr<directory_interface> dir,
-                                  size_t id) -> coro<void> {
-            co_await dir->put_object(req.bucket(), req.object_key(), resp.addr);
-        };
-
-        co_await broadcast<directory_interface>(
-            m_collection.ioc, func,
-            m_collection.directory_services.get_services());
+        co_await m_collection.directory.put_object(req.bucket(),
+                                                   req.object_key(), resp.addr);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);

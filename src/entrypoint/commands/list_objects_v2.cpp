@@ -171,8 +171,8 @@ coro<void> list_objects_v2::handle(http_request& req) const {
                 lowerbound = continuation_token;
         }
 
-        auto dir = m_collection.directory_services.get();
-        auto obj_list = co_await dir->list_objects(req.bucket(), prefix, lowerbound);
+        auto obj_list = co_await m_collection.directory.list_objects(
+            req.bucket(), prefix, lowerbound);
 
         auto res = get_response(obj_list, req);
         co_await req.respond(res.get_prepared_response());

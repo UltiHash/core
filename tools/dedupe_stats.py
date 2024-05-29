@@ -10,11 +10,6 @@ from tabulate import tabulate
 from collections import Counter, defaultdict
 import sys
 
-#dedupe_sizes = []
-#dedupe_prefixes = []
-#dedupe_pointers = []
-#dedupe_offsets = []
-
 pointers_count = Counter()
 offsets_count = Counter()
 prefixes_count = Counter()
@@ -24,15 +19,9 @@ pointers_sizes = defaultdict(int)
 age_dedupe_count = Counter()
 updated_age_dedupe_count = Counter()
 
-#added_fragments_pointers = []
-#added_fragments_sizes = []
 fragment_ages = {}
 fragment_updated_ages = {}
 fragment_dedupe_count = Counter()
-
-#set_sizes = []
-#deduped_counts = []
-#non_dedupe_counts = []
 
 age = 0
 final_set_size = 0
@@ -49,10 +38,7 @@ def record_dedupe (size, prefix, pointer, offset):
     int_offset = int (offset)
     int_prefix = int.from_bytes(bytes(prefix[0:4], 'utf-8'), byteorder=sys.byteorder)
     prefix = ''.join(c for c in prefix if c.isprintable())
-    #dedupe_sizes.append(int_size)
-    #dedupe_prefixes.append(int_prefix)
-    #dedupe_pointers.append(int_pointer)
-    #dedupe_offsets.append(int_offset)
+    
     pointers_count[int_pointer] += 1
     pointers_sizes[int_pointer] += int_size
     offsets_count[int_offset] += 1
@@ -72,10 +58,7 @@ def record_dedupe (size, prefix, pointer, offset):
     
 def record_add_to_set (pointer, size):
     global age
-    #int_size = int(size)
     int_pointer = int (pointer)
-    #added_fragments_pointers.append(int_pointer)
-    #added_fragments_sizes.append(int_size)
     fragment_dedupe_count[int_pointer] += 1
     fragment_ages[int_pointer] = age
     fragment_updated_ages[int_pointer] = age
@@ -83,9 +66,6 @@ def record_add_to_set (pointer, size):
     
 def record_stat (set_size, dedupe_count, non_dedupe_count, effective_size, total_size):
     global final_set_size, final_dedupe_count, final_non_dedupe_count, final_total_size, final_effective_size
-    #set_sizes.append(set_size)
-    #deduped_counts.append(dedupe_count)
-    #non_dedupe_counts.append(non_dedupe_count)
     final_set_size = max(int(set_size), final_set_size)
     final_dedupe_count += int(dedupe_count)
     final_non_dedupe_count += int(non_dedupe_count)
@@ -202,6 +182,3 @@ print_stats()
 
 draw_plots(False)
 draw_plots(True)
-
-
-# fig.savefig("images/" + filename + ".pdf")

@@ -115,6 +115,7 @@ private:
     }
 
     coro<void> do_accept(auto acceptor) {
+        co_await m_handler->on_startup();
         while (m_is_running) {
             boost::asio::ip::tcp::socket stream =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);

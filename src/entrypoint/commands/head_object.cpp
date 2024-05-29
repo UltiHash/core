@@ -16,10 +16,9 @@ bool head_object::can_handle(const http_request& req) {
 coro<void> head_object::handle(const http_request& req) const {
     metric<entrypoint_head_object_req>::increase(1);
 
-    auto client = m_coll.directory_services.get();
-
     try {
-        auto obj_list = co_await client->list_objects(req.bucket(), req.object_key(), std::nullopt);
+        auto obj_list = co_await m_coll.directory.list_objects(
+            req.bucket(), req.object_key(), std::nullopt);
 
         if (obj_list.empty()) {
             throw std::runtime_error("not found");

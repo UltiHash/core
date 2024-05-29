@@ -6,6 +6,57 @@ on:
      - '*'
 
 jobs:
+
+  database-init:
+    runs-on: lightweight-generic-jobs
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.PAT }}
+        submodules: recursive
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to ghcr.io container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: plauth
+        password: ${{ secrets.PAT }}
+
+    - name: Login to registry.ultihash.io container registry
+      uses: docker/login-action@v2
+      with:
+        registry: registry.ultihash.io
+        username: github
+        password: ${{ secrets.REGISTRY_USER }}
+
+    - name: Docker metadata
+      id: meta-release
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          registry.ultihash.io/stable/database-init
+          ghcr.io/ultihash/database-init
+        tags: |
+          type=raw,value=latest
+          type=semver,pattern={{version}}
+
+    - name: Build and push the Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: tools/database-init/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.meta-release.outputs.tags }}
+        labels: ${{ steps.meta-release.outputs.labels }}
+        push: true
+
   release:
     runs-on: heavyweight-generic-jobs
     steps:
