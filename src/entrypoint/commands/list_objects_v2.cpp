@@ -68,7 +68,14 @@ http_response get_response(const std::vector<object>& objects,
                     "<Contents>\n"
                     "<LastModified>" +
                     iso8601_date(object._object->get().last_modified) +
-                    "</LastModified>\n"
+                    "</LastModified>\n";
+
+                if (object._object->get().etag) {
+                    content_xml_string +=
+                        "<ETag>" + *object._object->get().etag + "</ETag>\n";
+                }
+
+                content_xml_string +=
                     "<Key>" +
                     (encoding_type ? url_encode(object._object->get().name)
                                    : object._object->get().name) +
