@@ -2,13 +2,14 @@
 #ifndef UH_CLUSTER_DEDUPE_LOGGER_H
 #define UH_CLUSTER_DEDUPE_LOGGER_H
 
+#include <config.h>
+
 #include "common/types/address.h"
 #include "common/utils/strings.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
-#include "config.h"
 
 namespace uh::cluster {
 struct dedupe_logger {
