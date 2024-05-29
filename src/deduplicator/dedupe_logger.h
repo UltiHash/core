@@ -49,9 +49,11 @@ struct dedupe_logger {
 private:
     template <typename... T>
     void log_entry(const std::string& log_type, T&&... t) {
+        auto log_entry = log_type;
+        ((log_entry += " " + get_string(std::forward<T>(t))), ...);
+
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_log.emplace_back(log_type);
-        ((m_log.back() += " " + get_string(std::forward<T>(t))), ...);
+        m_log.emplace_back(std::move(log_entry));
 
         if (m_log.size() == m_log.capacity()) {
             for (const auto& entry : m_log) {
