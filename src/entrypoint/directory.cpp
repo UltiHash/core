@@ -51,7 +51,7 @@ coro<object> directory::get_object(const std::string& bucket,
     zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
 
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
     co_return object{.name = object_id,
@@ -140,15 +140,20 @@ directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
                         const std::optional<std::string>& lower_bound) {
 
-    auto res = m_db.directory()->execv(
-        "SELECT id, name, size, last_modified FROM uh_list_objects($1, $2, $3)",
-        bucket, prefix.value_or(""), lower_bound.value_or(""));
+    auto res = m_db.directory()->execv("SELECT id, name, size, last_modified, "
+                                       "etag FROM uh_list_objects($1, $2, $3)",
+                                       bucket, prefix.value_or(""),
+                                       lower_bound.value_or(""));
 
     std::vector<object> rv;
     rv.reserve(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
-        rv.emplace_back(std::string(*res.string(row, 1)), *res.date(row, 3),
-                        static_cast<std::size_t>(*res.number(row, 2)));
+
+        auto etag = res.string(0, 4);
+        rv.emplace_back(
+            std::string(*res.string(row, 1)), *res.date(row, 3),
+            static_cast<std::size_t>(*res.number(row, 2)), std::nullopt,
+            etag ? std::optional<std::string>(*etag) : std::nullopt);
     }
 
     co_return rv;

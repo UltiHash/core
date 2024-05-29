@@ -291,6 +291,15 @@ std::optional<std::string> http_request::query(const std::string& name) const {
 
 bool http_request::has_query() const { return !m_params.empty(); }
 
+std::optional<std::string> http_request::header(const std::string& name) const {
+    auto it = m_req.base().find(name);
+    if (it == m_req.base().end()) {
+        return std::nullopt;
+    }
+
+    return it->value();
+}
+
 void http_request::extract_bucket_and_object(boost::urls::url url) {
     for (const auto& seg : url.segments()) {
         if (m_bucket_id.empty())

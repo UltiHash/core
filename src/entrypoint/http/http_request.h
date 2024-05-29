@@ -51,6 +51,8 @@ public:
 
     bool has_query() const;
 
+    std::optional<std::string> header(const std::string& name) const;
+
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:

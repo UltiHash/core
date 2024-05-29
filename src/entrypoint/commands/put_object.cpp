@@ -74,6 +74,15 @@ coro<void> put_object::handle(http_request& req) const {
 
         m_collection.check_storage_size(content_length);
 
+        if (auto expect = req.header("expect");
+            expect && *expect == "100-continue") {
+            boost::beast::http::response<http::string_body> res{
+                http::response<http::string_body>{http::status::continue_, 11}};
+            LOG_INFO() << req.socket().remote_endpoint()
+                       << " sending 100 CONTINUE";
+            co_await req.respond(res);
+        }
+
         md5 hash;
 
         dedupe_response resp;
@@ -84,7 +93,7 @@ coro<void> put_object::handle(http_request& req) const {
         }
 
         auto tag = hash.finalize();
-        LOG_DEBUG() << "etag: " << tag;
+        LOG_DEBUG() << req.socket().remote_endpoint() << " etag: " << tag;
 
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
@@ -103,7 +112,8 @@ coro<void> put_object::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to get bucket `" << req.bucket() << "`: " << e;
+        LOG_ERROR() << req.socket().remote_endpoint()
+                    << " failed to get bucket `" << req.bucket() << "`: " << e;
         throw_from_error(e.error());
     }
 }
