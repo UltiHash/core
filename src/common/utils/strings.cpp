@@ -50,24 +50,5 @@ bool to_bool(std::string str_to_eval) {
     return b;
 }
 
-std::string to_hex(unsigned char value) {
-    static constexpr auto hexChars = "0123456789abcdef";
-
-    std::string result;
-    result.push_back(hexChars[value >> 4]);
-    result.push_back(hexChars[value & 0xf]);
-
-    return result;
-}
-
-std::string to_hex(std::span<char> buffer) {
-    std::string rv;
-
-    for (auto n = 0ull; n < buffer.size(); ++n) {
-        rv += to_hex(buffer[n]);
-    }
-
-    return rv;
-}
 
 } // namespace uh::cluster

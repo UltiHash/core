@@ -31,12 +31,33 @@ bool to_bool(std::string str_to_eval);
 /**
  * Return a string representing the provided char as hex string.
  */
-std::string to_hex(unsigned char value);
+template <typename T>
+requires std::is_same_v <T, char> or std::is_same_v <T, unsigned char>
+std::string to_hex(T value) {
+    static constexpr auto hexChars = "0123456789abcdef";
+
+    std::string result;
+    result.push_back(hexChars[value >> 4]);
+    result.push_back(hexChars[value & 0xf]);
+
+    return result;
+}
 
 /**
  * Return a string representing the provided buffer as hex string.
  */
-std::string to_hex(std::span<char> buffer);
+
+template <typename Array>
+requires std::ranges::random_access_range <Array>
+std::string to_hex(const Array& buffer) {
+    std::string rv;
+
+    for (auto n = 0ull; n < buffer.size(); ++n) {
+        rv += to_hex(buffer[n]);
+    }
+
+    return rv;
+}
 
 } // namespace uh::cluster
 

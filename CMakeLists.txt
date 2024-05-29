@@ -8,6 +8,7 @@ project(uh-cluster VERSION 0.4.2)
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
+option(LOG_DEDUPE_SET "Build deduplication set log" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -23,6 +24,11 @@ find_package(PostgreSQL REQUIRED)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
+
+if(LOG_DEDUPE_SET)
+    message(STATUS "Building log dedupe set")
+    add_definitions(-DLOG_DEDUPE_SET)
+endif()
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
@@ -45,6 +51,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     message(STATUS "Using revision ${PROJECT_REPOSITORY} -- ${PROJECT_VCSID}")
 
 endif()
+
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES})
@@ -80,3 +87,4 @@ if(BUILD_TOOLS)
     message(STATUS "Building tools")
     add_subdirectory(tools)
 endif()
+
