@@ -123,6 +123,16 @@ coro<void> directory::delete_object(const std::string& bucket,
     co_return;
 }
 
+coro<void> directory::copy_object(const std::string& bucket_src,
+                                  const std::string& key_src,
+                                  const std::string& bucket_dst,
+                                  const std::string& key_dst) {
+    m_db.directory()->execv("CALL uh_copy_object($1, $2, $3, $4)", bucket_src,
+                            key_src, bucket_dst, key_dst);
+
+    co_return;
+}
+
 coro<std::vector<std::string>> directory::list_buckets() {
     std::vector<std::string> rv;
 

@@ -63,7 +63,8 @@ put_object::put_object(const reference_collection& collection)
 
 bool put_object::can_handle(const http_request& req) {
     return req.method() == method::put && !req.bucket().empty() &&
-           !req.object_key().empty() && !req.has_query();
+           !req.object_key().empty() && !req.has_query() &&
+           !req.header("x-amz-copy-source");
 }
 
 coro<void> put_object::handle(http_request& req) const {

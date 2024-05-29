@@ -31,6 +31,11 @@ struct directory {
     coro<void> delete_object(const std::string& bucket,
                              const std::string& object_id);
 
+    coro<void> copy_object(const std::string& bucket_src,
+                           const std::string& key_src,
+                           const std::string& bucket_dst,
+                           const std::string& key_dst);
+
     coro<std::vector<std::string>> list_buckets();
 
     coro<std::vector<object>>

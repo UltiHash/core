@@ -153,6 +153,21 @@ END;
 $$;
 
 --
+-- uh_copy_object(bucket_src, key_src, bucket_dest, key_dest):
+--
+CREATE OR REPLACE PROCEDURE uh_copy_object(bucket_src regclass, key_src text,
+    bucket_dst regclass, key_dst text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket_src);
+    CALL uh_check_bucket(bucket_dst);
+
+    EXECUTE format('INSERT INTO %s (name, size, last_modified, etag) (SELECT %L, size, last_modified, etag FROM %s WHERE name = %L)',
+        bucket_dst, key_dst, bucket_src, key_src);
+END;
+$$;
+
+--
 -- uh_list_buckets(): list all buckets
 --
 CREATE OR REPLACE FUNCTION uh_list_buckets() RETURNS TABLE(name text)

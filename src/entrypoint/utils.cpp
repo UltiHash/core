@@ -1,6 +1,8 @@
 #include "utils.h"
+#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
+namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 
 void reference_collection::check_storage_size(std::size_t increment) const {
     auto new_size = data_storage_size + increment;
@@ -60,6 +62,40 @@ retrieval::collapse(const std::vector<object>& objects,
     }
 
     return collapsed_objs;
+}
+
+std::tuple<std::string, std::string>
+extract_bucket_and_object(boost::urls::url url) {
+    std::string bucket_id;
+    std::string object_key;
+
+    for (const auto& seg : url.segments()) {
+        if (bucket_id.empty())
+            bucket_id = seg;
+        else
+            object_key += seg + '/';
+    }
+
+    if (!object_key.empty())
+        object_key.pop_back();
+
+    if (!bucket_id.empty()) {
+        if (bucket_id.size() < 3 || bucket_id.size() > 63) {
+            throw command_exception(http::status::bad_request,
+                                    "InvalidBucketName",
+                                    "bucket name has invalid length");
+        }
+
+        std::regex bucket_pattern(
+            R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
+        if (!std::regex_match(bucket_id, bucket_pattern)) {
+            throw command_exception(http::status::bad_request,
+                                    "InvalidBucketName",
+                                    "bucket name has invalid characters");
+        }
+    }
+
+    return std::make_tuple(bucket_id, object_key);
 }
 
 } // namespace uh::cluster
