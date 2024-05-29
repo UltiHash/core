@@ -8,6 +8,8 @@ project(uh-cluster VERSION 0.4.2)
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
+option(LOG_DEDUPE_SET "Build deduplication set log" OFF)
+
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
