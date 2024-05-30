@@ -31,7 +31,7 @@ coro<void> copy_object::handle(http_request& req) const {
 
     http_response res;
     res.set_body(
-        "<CopyObjectResult><LastModified>" + imf_fixdate(obj.last_modified) +
+        "<CopyObjectResult><LastModified>" + iso8601_date(obj.last_modified) +
         "</LastModified>" +
         (obj.etag ? std::string("<ETag>") + *obj.etag + std::string("</ETag>")
                   : std::string()) +

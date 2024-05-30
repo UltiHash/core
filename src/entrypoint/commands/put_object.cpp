@@ -80,7 +80,7 @@ coro<void> put_object::handle(http_request& req) const {
             boost::beast::http::response<http::string_body> res{
                 http::response<http::string_body>{http::status::continue_, 11}};
             LOG_INFO() << req.socket().remote_endpoint()
-                       << " sending 100 CONTINUE";
+                       << ": sending 100 CONTINUE";
             co_await req.respond(res);
         }
 
@@ -94,7 +94,7 @@ coro<void> put_object::handle(http_request& req) const {
         }
 
         auto tag = hash.finalize();
-        LOG_DEBUG() << req.socket().remote_endpoint() << " etag: " << tag;
+        LOG_DEBUG() << req.socket().remote_endpoint() << ": etag: " << tag;
 
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
