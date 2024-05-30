@@ -11,7 +11,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     }
 
     std::vector<char> data;
-    zpp::bits::out{data, zpp::bits::size4b{}}(obj.addr).or_throw();
+    zpp::bits::out{data, zpp::bits::size4b{}}(*obj.addr).or_throw();
     auto span = std::span<char>(data);
 
     try {
@@ -54,10 +54,14 @@ coro<object> directory::get_object(const std::string& bucket,
         "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
+    auto etag = metadata.string(0, 2);
+
     co_return object{.name = object_id,
                      .last_modified = *metadata.date(0, 1),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
-                     .addr = std::move(addr)};
+                     .addr = std::move(addr),
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<object> directory::head_object(const std::string& bucket,
