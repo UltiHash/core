@@ -17,31 +17,14 @@ coro<void> head_object::handle(const http_request& req) const {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto obj_list = co_await m_coll.directory.list_objects(
-            req.bucket(), req.object_key(), std::nullopt);
-        if (obj_list.empty()) {
-            throw std::runtime_error("not found");
-        }
+        auto obj = co_await m_coll.directory.head_object(req.bucket(),
+                                                         req.object_key());
 
         http::response<http::empty_body> res{http::status::ok, 11};
-
-        auto found = false;
-        for (const auto& obj : obj_list) {
-            if (obj.name == req.object_key()) {
-                res.base().set("Content-Length", std::to_string(obj.size));
-                res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
-                if (obj.etag) {
-                    res.base().set("ETag", *obj.etag);
-                }
-
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            throw command_exception(http::status::not_found, "NoSuchKey",
-                                    "object not found");
+        res.base().set("Content-Length", std::to_string(obj.size));
+        res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
+        if (obj.etag) {
+            res.base().set("ETag", *obj.etag);
         }
 
         LOG_DEBUG() << req.socket().remote_endpoint()
