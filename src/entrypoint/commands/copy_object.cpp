@@ -23,8 +23,13 @@ coro<void> copy_object::handle(http_request& req) const {
 
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
 
-    co_await m_collection.directory.copy_object(src_bucket, src_key,
-                                                req.bucket(), req.object_key());
+    if (auto ifmatch = req.header("x-amz-copy-source-if-match"); ifmatch) {
+        co_await m_collection.directory.copy_object_ifmatch(
+            src_bucket, src_key, req.bucket(), req.object_key(), *ifmatch);
+    } else {
+        co_await m_collection.directory.copy_object(
+            src_bucket, src_key, req.bucket(), req.object_key());
+    }
 
     auto obj = co_await m_collection.directory.head_object(req.bucket(),
                                                            req.object_key());

@@ -137,6 +137,17 @@ coro<void> directory::copy_object(const std::string& bucket_src,
     co_return;
 }
 
+coro<void> directory::copy_object_ifmatch(const std::string& bucket_src,
+                                          const std::string& key_src,
+                                          const std::string& bucket_dst,
+                                          const std::string& key_dst,
+                                          const std::string& etag) {
+    m_db.directory()->execv("CALL uh_copy_object_ifmatch($1, $2, $3, $4, $5)",
+                            bucket_src, key_src, bucket_dst, key_dst, etag);
+
+    co_return;
+}
+
 coro<std::vector<std::string>> directory::list_buckets() {
     std::vector<std::string> rv;
 
@@ -163,7 +174,7 @@ directory::list_objects(const std::string& bucket,
     rv.reserve(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
 
-        auto etag = res.string(0, 4);
+        auto etag = res.string(row, 4);
         rv.emplace_back(
             std::string(*res.string(row, 1)), *res.date(row, 3),
             static_cast<std::size_t>(*res.number(row, 2)), std::nullopt,

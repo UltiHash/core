@@ -36,6 +36,12 @@ struct directory {
                            const std::string& bucket_dst,
                            const std::string& key_dst);
 
+    coro<void> copy_object_ifmatch(const std::string& bucket_src,
+                                   const std::string& key_src,
+                                   const std::string& bucket_dst,
+                                   const std::string& key_dst,
+                                   const std::string& etag);
+
     coro<std::vector<std::string>> list_buckets();
 
     coro<std::vector<object>>
