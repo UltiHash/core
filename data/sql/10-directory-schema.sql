@@ -162,7 +162,10 @@ BEGIN
     CALL uh_check_bucket(bucket_src);
     CALL uh_check_bucket(bucket_dst);
 
-    EXECUTE format('INSERT INTO %s (name, size, last_modified, etag) (SELECT %L, size, last_modified, etag FROM %s WHERE name = %L)',
+    EXECUTE format('
+        INSERT INTO %s (name, small, size, last_modified, etag)
+        SELECT %L, small, size, last_modified, etag FROM %s WHERE name = %L
+        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size, last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag',
         bucket_dst, key_dst, bucket_src, key_src);
 END;
 $$;
