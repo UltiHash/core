@@ -13,7 +13,9 @@ namespace uh::cluster {
 template <typename T> std::string class_name() {
 #ifdef __GNUG__
     int status;
-    std::string name = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
+    char* buffer = abi::__cxa_demangle(typeid(T).name(), 0, 0, &status);
+    std::string name = buffer;
+    free(buffer);
 #else
     std::string name = typeid(T).name();
 #endif
