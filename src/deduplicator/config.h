@@ -25,6 +25,7 @@ struct deduplicator_config {
     std::size_t dedupe_worker_minimum_data_size = 128 * KIBI_BYTE;
     std::size_t worker_thread_count = 16ul;
     std::size_t fragment_buffer_size = 16ul * MEBI_BYTE;
+    std::size_t set_capacity = 1000;
     std::optional<storage_config> m_attached_storage;
 };
 

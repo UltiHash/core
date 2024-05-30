@@ -5,6 +5,8 @@
 #include "common/utils/common.h"
 #include "fragment_set_element.h"
 #include "fragment_set_log.h"
+#include "common/caches/lfu_cache.h"
+
 #include <queue>
 #include <set>
 #include <utility>
@@ -14,6 +16,8 @@ namespace uh::cluster {
 class fragment_set {
 
 public:
+    typedef std::multimap<uint128_t, std::shared_ptr<std::set<fragment_set_element>::const_iterator>>::const_iterator hint_type;
+
     /**
      * @brief response structure used to communicate the results of the #find
      * method
@@ -23,19 +27,19 @@ public:
          * @brief fragment_set_element indicating the preceding lexicographic
          * neighbour
          */
-        std::optional<const std::reference_wrapper<const fragment_set_element>>
+        std::optional<std::pair<fragment, std::string>>
             low;
         /**
          * @brief fragment_set_element indicating the succeeding lexicographic
          * neighbour
          */
-        std::optional<const std::reference_wrapper<const fragment_set_element>>
+        std::optional<std::pair<fragment, std::string>>
             high;
         /**
          * @brief iterator used as a placement hint to reduce the complexity of
          * an insert call
          */
-        const std::set<fragment_set_element>::const_iterator hint;
+        const hint_type hint;
     };
 
     /**
@@ -51,7 +55,7 @@ public:
      * @param enable_replay Temporary, optional switch for disabling replay of
      * the fragment_set_log. Default value: true.
      */
-    fragment_set(const std::filesystem::path& set_log_path,
+    fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
                  global_data_view& storage, bool enable_replay = true);
 
     /**
@@ -73,8 +77,16 @@ public:
      * @param hint A constant reference to the std::set::const_iterator yielded
      * by the #find method
      */
-    void insert(const uint128_t& pointer, const std::string_view& data,
-                const std::set<fragment_set_element>::const_iterator& hint);
+    void insert(const uint128_t& pointer, const std::string_view& data, const hint_type& hint);
+
+    /**
+     * Marks a successful deduplication on the given set element.
+     *
+     * @param set_element deduplicated set element
+     * @param offset offset of the deduplicated data in the incoming data
+     * @param size size of the deduplication
+     */
+    void mark_deduplication (const fragment& set_element, const hint_type& hint);
 
     /**
      * @brief synchronizes the fragment_set log file with the underlying storage
@@ -95,7 +107,10 @@ private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
+    std::mutex m_insert_hint_mutex;
     fragment_set_log m_set_log;
+    lfu_cache <uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
+    std::multimap <uint128_t, std::shared_ptr<std::set<fragment_set_element>::const_iterator>> m_hints;
 };
 
 } // end namespace uh::cluster
