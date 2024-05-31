@@ -59,7 +59,8 @@ public:
 
 private:
     void flush_data(global_data_view& gdv);
-    void flush_fragments(global_data_view& gdv, fragment_set& set);
+    void flush_fragments(global_data_view& gdv, fragment_set& set,
+                         dedupe_logger& dd_logger);
     void mark_as_uploaded();
 
     void compute_unstored_addresses(const address& addr);

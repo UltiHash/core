@@ -4,6 +4,7 @@
 
 #include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
+
 #include "deduplicator/dedupe_logger.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/fragmentation.h"
@@ -33,6 +34,7 @@ size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
     }
 
     auto complete = storage.read_fragment(f.pointer, f.size);
+
     return common +
            largest_common_prefix(data.substr(common),
                                  complete.string_view().substr(common));
@@ -50,6 +52,7 @@ struct local_deduplicator : public deduplicator_interface {
                            m_dedupe_conf.worker_thread_count),
           m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000),
           m_fragment_buffer_size(m_dedupe_conf.fragment_buffer_size) {}
+
 
     coro<dedupe_response> deduplicate(const std::string_view& data) override {
         size_t piece_size = std::ceil(static_cast<double>(data.size()) /
@@ -100,6 +103,7 @@ private:
                 m_fragment_set.mark_deduplication(frag, f.hint);
                 m_dedupe_logger.log_deduplication(size, prefix,
                                                   frag.pointer, offset);
+
                 data = data.substr(size);
                 offset += size;
                 dedupe_count++;
