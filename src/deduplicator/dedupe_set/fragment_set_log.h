@@ -49,9 +49,11 @@ public:
             memcpy(prefix, f_prefix.data(), size);
         }
 
-        log_entry(set_operation set_op, const uint128_t& f_pointer)
+        log_entry(set_operation set_op, const uint128_t& f_pointer,
+                  uint16_t f_size = 0)
             : op{set_op},
-              pointer{f_pointer} {}
+              pointer{f_pointer},
+              size{f_size} {}
 
         log_entry(const log_entry& le)
             : op{le.op},
