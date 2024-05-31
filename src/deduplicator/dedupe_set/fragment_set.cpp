@@ -81,6 +81,7 @@ void fragment_set::mark_deduplication(const fragment& frag,
 }
 
 void fragment_set::flush() { m_set_log.flush(); }
-size_t fragment_set::size() { return m_set.size(); }
+
+size_t fragment_set::size() {return m_set.size();}
 
 } // namespace uh::cluster
