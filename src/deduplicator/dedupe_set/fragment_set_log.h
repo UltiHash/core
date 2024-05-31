@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_FRAGMENT_SET_LOG_H
 #define UH_CLUSTER_FRAGMENT_SET_LOG_H
 
+#include "common/caches/plain_cache.h"
 #include "common/types/common_types.h"
 #include "deduplicator/config.h"
 #include "fragment_set_element.h"
@@ -20,9 +21,6 @@ enum set_operation : char {
 };
 
 class fragment_set_log {
-
-    std::filesystem::path m_log_path;
-    std::fstream m_log_file;
 
 public:
     static constexpr std::size_t m_entry_size =
@@ -117,7 +115,11 @@ public:
 
 private:
     [[nodiscard]] log_entry read_entry();
+
+    std::filesystem::path m_log_path;
+    std::fstream m_log_file;
     std::mutex m_mutex;
+    plain_cache m_cache;
 };
 
 } // end namespace uh::cluster
