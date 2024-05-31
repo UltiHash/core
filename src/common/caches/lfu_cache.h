@@ -25,12 +25,12 @@ template <typename Key, typename Value> class lfu_cache {
 
     std::map<Key, key_map_data> m_key_values;
     const size_t m_capacity;
-    std::optional <std::function<void(Key,Value)>> m_removal_callback;
-public:
-    explicit lfu_cache(size_t capacity)
-        : m_capacity{capacity} {}
+    std::optional<std::function<void(Key, Value)>> m_removal_callback;
 
-    lfu_cache(size_t capacity, std::function<void(Key,Value)> removal_callback)
+public:
+    lfu_cache(size_t capacity,
+              std::optional<std::function<void(Key, Value)>> removal_callback =
+                  std::nullopt)
         : m_capacity{capacity},
           m_removal_callback{std::move(removal_callback)} {}
 
@@ -52,7 +52,8 @@ public:
                 const auto rk = m_order.front().key;
                 auto value_itr = m_key_values.find(rk);
                 if (m_removal_callback) {
-                    (*m_removal_callback) (rk, std::move (value_itr->second.value));
+                    (*m_removal_callback)(rk,
+                                          std::move(value_itr->second.value));
                 }
                 m_key_values.erase(value_itr);
                 m_order.pop_front();
