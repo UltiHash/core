@@ -8,9 +8,11 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
     : m_storage(storage),
       m_set_log(set_log_path),
       m_lfu(capacity, [this](const auto& key, const auto loc) {
-          for (auto [itr, rangeEnd] = m_hints.equal_range(key); itr != rangeEnd;
+          for (auto [itr, itr_end] = m_hints.equal_range(key); itr != itr_end;
                ++itr)
               itr->second.reset();
+          fragment_set_log::log_entry entry{set_operation::REMOVE, key};
+          m_set_log.append(entry);
           m_set.erase(loc);
       }) {
     if (enable_replay)
@@ -45,13 +47,8 @@ void fragment_set::insert(const uint128_t& pointer,
 
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, pointer, std::string(prefix), m_storage};
-    fragment_set_log::log_entry entry{
-        .op = set_operation::INSERT,
-        .pointer = f.pointer(),
-        .size = f.size(),
-        .prefix_size = static_cast<uint16_t>(f.prefix().size()),
-    };
-    memcpy(entry.prefix, f.prefix().data(), f.prefix().size());
+    fragment_set_log::log_entry entry{set_operation::INSERT, f.pointer(),
+                                      f.size(), f.prefix()};
     m_set_log.append(entry);
 
     metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
