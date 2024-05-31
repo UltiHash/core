@@ -9,6 +9,7 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
@@ -30,7 +31,6 @@ public:
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
           m_data_view(config.global_data_view, m_ioc, m_storage_services),
-          m_max_data_size(sc.license.max_data_store_size),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
           m_db(config.database),
           m_config(config),
@@ -42,8 +42,8 @@ public:
                   m_attached_dedupe.get_local_service_interface())),
           m_directory(m_db),
           m_collection(get_reference_collection()),
-          m_server(config.server, make_entrypoint_handler(m_collection),
-                   m_ioc) {}
+          m_server(config.server, make_entrypoint_handler(m_collection), m_ioc),
+          m_limits(sc.license.max_data_store_size) {}
 
     void run() {
         m_registration =
@@ -64,8 +64,7 @@ private:
                 .server_state = m_state,
                 .config = m_config,
                 .gdv = m_data_view,
-                .data_storage_size = m_data_storage_size,
-                .max_data_size = m_max_data_size};
+                .limits = m_limits};
     }
 
     etcd::SyncClient m_etcd_client;
@@ -91,6 +90,7 @@ private:
 
     reference_collection m_collection;
     server m_server;
+    limits m_limits;
 
     std::unique_ptr<service_registry::registration> m_registration;
 };
