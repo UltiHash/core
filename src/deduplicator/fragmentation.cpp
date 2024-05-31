@@ -23,7 +23,7 @@ void fragmentation::flush(global_data_view& gdv, fragment_set& set) {
     }
 
     flush_data(gdv);
-    flush_fragments(gdv, set, m_dedupe_logger);
+    flush_fragments(gdv, set);
     mark_as_uploaded();
 }
 
@@ -61,8 +61,7 @@ void fragmentation::flush_data(global_data_view& gdv) {
     compute_unstored_addresses(addr);
 }
 
-void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set,
-                                    dedupe_logger& dd_logger) {
+void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
     if (m_unstored_size == 0ull) {
         return;
     }
@@ -77,7 +76,8 @@ void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set,
             continue;
         }
 
-        dd_logger.log_non_deduplication(un.addr.get_fragment(0));
+        m_dedupe_logger.log_non_deduplication(un.addr.get_fragment(0));
+
         set.insert({un.addr.pointers[0], un.addr.pointers[1]},
                    un.data.substr(0, un.addr.sizes.front()), un.hint);
     }

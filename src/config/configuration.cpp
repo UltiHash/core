@@ -170,7 +170,9 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
                    "minimum worker data size")
         ->default_val(cfg.dedupe_worker_minimum_data_size);
 
-    storage_config sc;
+    rv->add_option("--set-capacity", cfg.set_capacity,
+                   "maximum number of fragments in the dedupe set")
+        ->default_val(cfg.set_capacity);
 
     return rv;
 }

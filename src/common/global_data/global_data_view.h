@@ -1,11 +1,11 @@
 #ifndef CORE_GLOBAL_DATA_VIEW_H
 #define CORE_GLOBAL_DATA_VIEW_H
 
+#include "common/caches/lru_cache.h"
 #include "common/network/client.h"
 #include "common/registry/services.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "lru_cache.h"
 #include "storage/interfaces/storage_interface.h"
 #include <map>
 

@@ -143,7 +143,7 @@ def print_stats ():
     print ("Total effective size (MB): " + str(final_effective_size/(1024*1024)))
     print ("Deduplication ratio: " + str(1 - final_effective_size / final_total_size))
     print ("")
-    print ("Set size after the upload (total number of fragments): " + str(final_non_dedupe_count))
+    print ("Set size after the upload (total number of fragments): " + str(final_set_size))
     print ("Total number of fragments: " + str(fragment_dedupe_count.total()))
     print ("Total number of deduplicated fragments: " + str(final_dedupe_count))
     print ("Counts of fragments with lowest deduplication: ")

@@ -24,7 +24,7 @@ class fragmentation {
 public:
     struct unstored {
         std::string_view data;
-        std::set<fragment_set_element>::const_iterator hint;
+        fragment_set::hint_type hint;
         bool uploaded = false;
 
         address addr;
@@ -59,8 +59,7 @@ public:
 
 private:
     void flush_data(global_data_view& gdv);
-    void flush_fragments(global_data_view& gdv, fragment_set& set,
-                         dedupe_logger& dd_logger);
+    void flush_fragments(global_data_view& gdv, fragment_set& set);
     void mark_as_uploaded();
 
     void compute_unstored_addresses(const address& addr);

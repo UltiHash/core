@@ -8,7 +8,7 @@ project(uh-cluster VERSION 0.4.2)
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
-option(LOG_DEDUPE_SET "Build deduplication set log" OFF)
+option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -25,7 +25,7 @@ find_package(PostgreSQL REQUIRED)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
-if(LOG_DEDUPE_SET)
+if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
 endif()
