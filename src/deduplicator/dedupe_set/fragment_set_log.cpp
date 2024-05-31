@@ -1,4 +1,5 @@
 #include "fragment_set_log.h"
+#include "common/utils/temp_file.h"
 #include <fstream>
 
 namespace uh::cluster {
@@ -7,7 +8,7 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
       m_log_file(m_log_path, std::fstream::binary | std::fstream::in |
                                  std::fstream::out | std::fstream::app) {
     if (!m_log_file.is_open()) {
-        throw std::runtime_error("Could not open the transaction log file");
+        throw std::runtime_error("Could not open the set log file");
     }
 }
 
@@ -40,23 +41,25 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
         pos = m_log_file.tellg();
     }
 
-    char tmp_path[TMP_MAX];
-    std::fstream tmp_file (std::tmpnam(tmp_path), std::fstream::binary | std::fstream::out | std::fstream::trunc);
-    for (const auto& [pointer, element]: log_entries) {
+    temp_file tmp(m_log_path.parent_path());
+    std::fstream tmp_file(tmp.get_path(), std::fstream::binary |
+                                              std::fstream::out |
+                                              std::fstream::trunc);
+    for (const auto& [pointer, element] : log_entries) {
         set.emplace(element.pointer, element.size,
-                    std::string{element.prefix, element.prefix_size},
-                    storage);
+                    std::string{element.prefix, element.prefix_size}, storage);
         std::array<char, m_entry_size> buf{};
         zpp::bits::out{buf, zpp::bits::size4b{}}(element).or_throw();
         tmp_file.write(buf.data(), m_entry_size);
     }
     tmp_file.close();
     m_log_file.close();
-    std::filesystem::rename(tmp_path, m_log_path);
+    tmp.release_to(m_log_path);
+
     m_log_file.open(m_log_path, std::fstream::binary | std::fstream::in |
                                     std::fstream::out | std::fstream::app);
     if (!m_log_file.is_open()) {
-        throw std::runtime_error("Could not open the transaction log file");
+        throw std::runtime_error("Could not open the set log file");
     }
 }
 
