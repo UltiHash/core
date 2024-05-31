@@ -73,7 +73,7 @@ coro<void> put_object::handle(http_request& req) const {
     try {
         auto content_length = req.content_length();
 
-        m_collection.check_storage_size(content_length);
+        m_collection.limits.check_storage_size(content_length);
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {

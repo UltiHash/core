@@ -20,7 +20,7 @@ coro<void> delete_object::handle(http_request& req) const {
         co_await m_collection.directory.delete_object(req.bucket(),
                                                       req.object_key());
 
-        m_collection.free_storage_size(object.size);
+        m_collection.limits.free_storage_size(object.size);
         http_response res;
 
         LOG_DEBUG() << "delete_object response: " << res;

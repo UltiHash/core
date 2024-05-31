@@ -8,9 +8,8 @@
 #include "config.h"
 #include "deduplicator/interfaces/deduplicator_interface.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
 #include "entrypoint/state.h"
-
-#include <atomic>
 
 namespace uh::cluster {
 
@@ -21,16 +20,7 @@ struct reference_collection {
     state& server_state;
     entrypoint_config& config;
     global_data_view& gdv;
-    std::atomic<std::size_t>& data_storage_size;
-    std::size_t max_data_size;
-
-    // warn about a nearly reached size limit at this percentage
-    static constexpr unsigned SIZE_LIMIT_WARNING_PERCENTAGE = 80;
-    // number of files to upload between two warnings
-    static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
-
-    void check_storage_size(std::size_t increment) const;
-    void free_storage_size(std::size_t decrement) const;
+    uh::cluster::limits& limits;
 };
 
 struct collapsed_objects {

@@ -73,7 +73,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     const auto& up_info =
         m_collection.server_state.m_uploads.get_upload_info(upload_id);
 
-    m_collection.check_storage_size(up_info->data_size);
+    m_collection.limits.check_storage_size(up_info->data_size);
 
     auto etag = calculate_md5(buffer.span());
 
