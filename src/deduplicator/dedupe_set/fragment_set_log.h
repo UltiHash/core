@@ -46,7 +46,7 @@ public:
               pointer{f_pointer},
               size{f_size},
               prefix_size{static_cast<uint16_t>(f_prefix.size())} {
-            memcpy(prefix, f_prefix.data(), size);
+            memcpy(prefix, f_prefix.data(), prefix_size);
         }
 
         log_entry(set_operation set_op, const uint128_t& f_pointer,
@@ -60,7 +60,7 @@ public:
               pointer{le.pointer},
               size{le.size},
               prefix_size{le.prefix_size} {
-            std::memcpy(prefix, le.prefix, sizeof(le.prefix));
+            std::memcpy(prefix, le.prefix, prefix_size);
         }
     };
     /**

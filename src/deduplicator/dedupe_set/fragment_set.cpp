@@ -27,8 +27,7 @@ fragment_set::response fragment_set::find(std::string_view data) {
     auto res = m_set.lower_bound(f);
 
     std::unique_lock<std::mutex> hint_lock(m_insert_hint_mutex);
-    response resp{.hint = m_hints.emplace(
-                      res->pointer(), std::make_shared<decltype(res)>(res))};
+    response resp{.hint = m_hints.emplace(res->pointer(), res)};
     hint_lock.unlock();
 
     if (res != m_set.cend()) [[likely]] {
@@ -56,11 +55,9 @@ void fragment_set::insert(const uint128_t& pointer,
         data.size());
 
     std::lock_guard<std::shared_mutex> lock(m_mutex);
-    std::weak_ptr<std::set<fragment_set_element>::const_iterator> set_hint =
-        hint->second;
 
-    if (auto valid_hint = set_hint.lock()) {
-        auto res = m_set.emplace_hint(*valid_hint, std::move(f));
+    if (hint->second) {
+        auto res = m_set.emplace_hint(*hint->second, std::move(f));
         if (res->pointer() == pointer) {
             m_lfu.put(pointer, std::move(res));
         }
@@ -82,6 +79,6 @@ void fragment_set::mark_deduplication(const fragment& frag,
 
 void fragment_set::flush() { m_set_log.flush(); }
 
-size_t fragment_set::size() {return m_set.size();}
+size_t fragment_set::size() { return m_set.size(); }
 
 } // namespace uh::cluster
