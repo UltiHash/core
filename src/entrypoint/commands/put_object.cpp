@@ -1,6 +1,7 @@
 #include "put_object.h"
 
 #include "common/coroutines/awaitable_promise.h"
+#include "common/types/common_types.h"
 
 using namespace boost;
 
@@ -62,7 +63,8 @@ put_object::put_object(const reference_collection& collection)
 
 bool put_object::can_handle(const http_request& req) {
     return req.method() == method::put && !req.bucket().empty() &&
-           !req.object_key().empty() && !req.has_query();
+           !req.object_key().empty() && !req.has_query() &&
+           !req.header("x-amz-copy-source");
 }
 
 coro<void> put_object::handle(http_request& req) const {
@@ -73,6 +75,15 @@ coro<void> put_object::handle(http_request& req) const {
 
         m_collection.check_storage_size(content_length);
 
+        if (auto expect = req.header("expect");
+            expect && *expect == "100-continue") {
+            boost::beast::http::response<http::string_body> res{
+                http::response<http::string_body>{http::status::continue_, 11}};
+            LOG_INFO() << req.socket().remote_endpoint()
+                       << ": sending 100 CONTINUE";
+            co_await req.respond(res);
+        }
+
         md5 hash;
 
         dedupe_response resp;
@@ -82,16 +93,19 @@ coro<void> put_object::handle(http_request& req) const {
             resp = co_await put_small_object(req, hash);
         }
 
-        co_await m_collection.directory.put_object(req.bucket(),
-                                                   req.object_key(), resp.addr);
+        auto tag = hash.finalize();
+        LOG_DEBUG() << req.socket().remote_endpoint() << ": etag: " << tag;
+
+        object obj{.name = req.object_key(),
+                   .size = resp.addr.data_size(),
+                   .addr = std::move(resp.addr),
+                   .etag = tag};
+        co_await m_collection.directory.put_object(req.bucket(), obj);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-        auto tag = hash.finalize();
-        LOG_DEBUG() << "etag: " << tag;
-
         res.set_etag(tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
@@ -99,7 +113,8 @@ coro<void> put_object::handle(http_request& req) const {
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to get bucket `" << req.bucket() << "`: " << e;
+        LOG_ERROR() << req.socket().remote_endpoint()
+                    << " failed to get bucket `" << req.bucket() << "`: " << e;
         throw_from_error(e.error());
     }
 }

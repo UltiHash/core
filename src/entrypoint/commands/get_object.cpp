@@ -96,6 +96,9 @@ coro<void> get_object::handle(http_request& req) const {
 
         http::response<http::empty_body> res{http::status::ok, 11};
         res.base().set("Content-Length", std::to_string(obj.size));
+        if (obj.etag) {
+            res.base().set("ETag", *obj.etag);
+        }
 
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(

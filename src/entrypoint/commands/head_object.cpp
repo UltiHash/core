@@ -17,17 +17,18 @@ coro<void> head_object::handle(const http_request& req) const {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto obj_list = co_await m_coll.directory.list_objects(
-            req.bucket(), req.object_key(), std::nullopt);
-
-        if (obj_list.empty()) {
-            throw std::runtime_error("not found");
-        }
+        auto obj = co_await m_coll.directory.head_object(req.bucket(),
+                                                         req.object_key());
 
         http::response<http::empty_body> res{http::status::ok, 11};
-        res.base().set("Content-Length", std::to_string(obj_list[0].size));
-        res.base().set("Last-Modified", imf_fixdate(obj_list[0].last_modified));
+        res.base().set("Content-Length", std::to_string(obj.size));
+        res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
+        if (obj.etag) {
+            res.base().set("ETag", *obj.etag);
+        }
 
+        LOG_DEBUG() << req.socket().remote_endpoint()
+                    << ": head_object response: " << res;
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
             req.socket(), sr,

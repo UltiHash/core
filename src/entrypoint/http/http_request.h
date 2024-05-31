@@ -1,7 +1,6 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include "boost/url/url.hpp"
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -51,11 +50,11 @@ public:
 
     bool has_query() const;
 
+    std::optional<std::string> header(const std::string& name) const;
+
     bool keep_alive() const { return m_req.keep_alive(); }
 
 private:
-    void extract_bucket_and_object(boost::urls::url url);
-
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
     http_request(boost::asio::ip::tcp::socket& stream,

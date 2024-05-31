@@ -5,16 +5,19 @@
 
 namespace uh::cluster {
 
-coro<void> directory::put_object(const std::string& bucket,
-                                 const std::string& object_id,
-                                 const address& addr) {
+coro<void> directory::put_object(const std::string& bucket, const object& obj) {
+    if (!obj.addr) {
+        throw std::runtime_error("put_object requires address");
+    }
+
     std::vector<char> data;
-    zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
+    zpp::bits::out{data, zpp::bits::size4b{}}(*obj.addr).or_throw();
     auto span = std::span<char>(data);
 
     try {
-        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4)", bucket,
-                                object_id, span, addr.data_size());
+        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)",
+                                bucket, obj.name, span, obj.addr->data_size(),
+                                obj.etag);
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "bucket not found");
@@ -48,19 +51,23 @@ coro<object> directory::get_object(const std::string& bucket,
     zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
 
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
+
+    auto etag = metadata.string(0, 2);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata.date(0, 1),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
-                     .addr = std::move(addr)};
+                     .addr = std::move(addr),
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
     if (metadata.rows() == 0) {
@@ -68,10 +75,14 @@ coro<object> directory::head_object(const std::string& bucket,
                                 "object not found");
     }
 
+    auto etag = metadata.string(0, 2);
+
     co_return object{.name = object_id,
                      .last_modified = *metadata.date(0, 1),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
-                     .addr = std::nullopt};
+                     .addr = std::nullopt,
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
@@ -116,6 +127,27 @@ coro<void> directory::delete_object(const std::string& bucket,
     co_return;
 }
 
+coro<void> directory::copy_object(const std::string& bucket_src,
+                                  const std::string& key_src,
+                                  const std::string& bucket_dst,
+                                  const std::string& key_dst) {
+    m_db.directory()->execv("CALL uh_copy_object($1, $2, $3, $4)", bucket_src,
+                            key_src, bucket_dst, key_dst);
+
+    co_return;
+}
+
+coro<void> directory::copy_object_ifmatch(const std::string& bucket_src,
+                                          const std::string& key_src,
+                                          const std::string& bucket_dst,
+                                          const std::string& key_dst,
+                                          const std::string& etag) {
+    m_db.directory()->execv("CALL uh_copy_object_ifmatch($1, $2, $3, $4, $5)",
+                            bucket_src, key_src, bucket_dst, key_dst, etag);
+
+    co_return;
+}
+
 coro<std::vector<std::string>> directory::list_buckets() {
     std::vector<std::string> rv;
 
@@ -133,15 +165,20 @@ directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
                         const std::optional<std::string>& lower_bound) {
 
-    auto res = m_db.directory()->execv(
-        "SELECT id, name, size, last_modified FROM uh_list_objects($1, $2, $3)",
-        bucket, prefix.value_or(""), lower_bound.value_or(""));
+    auto res = m_db.directory()->execv("SELECT id, name, size, last_modified, "
+                                       "etag FROM uh_list_objects($1, $2, $3)",
+                                       bucket, prefix.value_or(""),
+                                       lower_bound.value_or(""));
 
     std::vector<object> rv;
     rv.reserve(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
-        rv.emplace_back(std::string(*res.string(row, 1)), *res.date(row, 3),
-                        static_cast<std::size_t>(*res.number(row, 2)));
+
+        auto etag = res.string(row, 4);
+        rv.emplace_back(
+            std::string(*res.string(row, 1)), *res.date(row, 3),
+            static_cast<std::size_t>(*res.number(row, 2)), std::nullopt,
+            etag ? std::optional<std::string>(*etag) : std::nullopt);
     }
 
     co_return rv;

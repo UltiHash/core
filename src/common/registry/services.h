@@ -102,8 +102,10 @@ public:
                     }
                 })) {
         } else
-            throw std::runtime_error("timeout waiting for client: " +
-                                     k.to_string());
+            throw std::runtime_error(
+                "timeout waiting for " +
+                get_service_string(service_interface::service_role) +
+                " client: " + k.to_string());
 
         return cl;
     }
@@ -123,7 +125,10 @@ public:
                               return true;
                           })) {
         } else
-            throw std::runtime_error("timeout waiting for client");
+            throw std::runtime_error(
+                "timeout waiting for " +
+                get_service_string(service_interface::service_role) +
+                " client: " + std::to_string(id));
 
         return cl;
     }
@@ -133,7 +138,10 @@ public:
         if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
                           [this]() { return !m_clients.empty(); })) {
         } else
-            throw std::runtime_error("timeout waiting for client");
+            throw std::runtime_error(
+                "timeout waiting for any " +
+                get_service_string(service_interface::service_role) +
+                " client");
 
         if (auto lc = m_service_factory.get_local_service(); lc) {
             return lc;
