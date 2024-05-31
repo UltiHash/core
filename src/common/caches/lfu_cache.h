@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <optional>
+#include <functional>
 
 namespace uh::cluster {
 
