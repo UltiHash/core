@@ -3,6 +3,7 @@
 
 #include "common/db/db.h"
 #include "common/network/messenger_core.h"
+#include "common/types/common_types.h"
 
 namespace uh::cluster {
 
@@ -13,8 +14,7 @@ struct directory {
     directory(db::database& db)
         : m_db(db) {}
 
-    coro<void> put_object(const std::string& bucket,
-                          const std::string& object_id, const address& addr);
+    coro<void> put_object(const std::string& bucket, const object& obj);
 
     coro<object> get_object(const std::string& bucket,
                             const std::string& object_id);
@@ -30,6 +30,17 @@ struct directory {
 
     coro<void> delete_object(const std::string& bucket,
                              const std::string& object_id);
+
+    coro<void> copy_object(const std::string& bucket_src,
+                           const std::string& key_src,
+                           const std::string& bucket_dst,
+                           const std::string& key_dst);
+
+    coro<void> copy_object_ifmatch(const std::string& bucket_src,
+                                   const std::string& key_src,
+                                   const std::string& bucket_dst,
+                                   const std::string& key_dst,
+                                   const std::string& etag);
 
     coro<std::vector<std::string>> list_buckets();
 

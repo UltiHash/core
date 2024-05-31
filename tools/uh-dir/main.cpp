@@ -58,7 +58,8 @@ std::optional<config> read_config(int argc, char** argv) {
 
 std::ostream& operator<<(std::ostream& out, const object& obj) {
     out << obj.name << "\t" << obj.size << "\t"
-        << imf_fixdate(obj.last_modified);
+        << imf_fixdate(obj.last_modified) << "\t"
+        << obj.etag.value_or("<-- no etag -->");
     return out;
 }
 

@@ -36,6 +36,7 @@ struct object {
     std::size_t size{};
 
     std::optional<address> addr;
+    std::optional<std::string> etag;
 
     constexpr static auto serialize(auto& archive, auto& self) {
         std::size_t count = 0;

@@ -1,4 +1,5 @@
 #include "complete_multipart.h"
+#include "common/types/common_types.h"
 #include "common/utils/md5.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
@@ -74,13 +75,18 @@ coro<void> complete_multipart::handle(http_request& req) const {
 
     m_collection.check_storage_size(up_info->data_size);
 
-    co_await m_collection.directory.put_object(
-        bucket_name, object_name, up_info->generate_total_address());
+    auto etag = calculate_md5(buffer.span());
+
+    auto addr = up_info->generate_total_address();
+    object obj{.name = object_name,
+               .size = addr.data_size(),
+               .addr = std::move(addr),
+               .etag = etag};
+    co_await m_collection.directory.put_object(bucket_name, obj);
 
     metric<entrypoint_ingested_data_counter, byte>::increase(
         up_info->data_size);
 
-    auto etag = calculate_md5(buffer.span());
     http_response res;
     res.set_etag(etag);
     res.set_original_size(up_info->data_size);

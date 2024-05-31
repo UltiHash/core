@@ -24,14 +24,16 @@ const char* command_exception::what() const noexcept {
 
 http::response<http::string_body> make_response(const command_exception& e) {
     http::response<http::string_body> res{e.m_status, 11};
-    res.body() = "<Error>\n"
-                 "<Code>" +
-                 e.m_code +
-                 "</Code>\n"
-                 "<Message>" +
-                 e.m_reason +
-                 "</Message>\n"
-                 "</Error>";
+    if (e.m_status != http::status::not_found) {
+        res.body() = "<Error>\n"
+                     "<Code>" +
+                     e.m_code +
+                     "</Code>\n"
+                     "<Message>" +
+                     e.m_reason +
+                     "</Message>\n"
+                     "</Error>";
+    }
 
     res.prepare_payload();
 

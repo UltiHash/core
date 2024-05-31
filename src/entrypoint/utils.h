@@ -2,6 +2,7 @@
 #define ENTRYPOINT_COMMON_H
 
 #include "boost/asio.hpp"
+#include "boost/url/url.hpp"
 #include "common/global_data/global_data_view.h"
 #include "common/registry/services.h"
 #include "config.h"
@@ -43,6 +44,12 @@ struct retrieval {
              std::optional<std::string> delimiter,
              std::optional<std::string> prefix);
 };
+
+/**
+ * Return bucket and object key.
+ */
+std::tuple<std::string, std::string>
+extract_bucket_and_object(boost::urls::url url);
 
 } // namespace uh::cluster
 

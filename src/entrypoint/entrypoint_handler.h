@@ -10,6 +10,7 @@
 
 #include "commands/abort_multipart.h"
 #include "commands/complete_multipart.h"
+#include "commands/copy_object.h"
 #include "commands/create_bucket.h"
 #include "commands/delete_bucket.h"
 #include "commands/delete_object.h"
@@ -47,24 +48,24 @@ public:
             for (;;) {
 
                 auto req = co_await http_request::create(s);
-                LOG_DEBUG() << s.remote_endpoint() << " read request: " << *req;
+                LOG_DEBUG()
+                    << s.remote_endpoint() << ": read request: " << *req;
 
-                co_await handle_request(*req);
-                metric<success>::increase(1);
+                try {
+                    co_await handle_request(*req);
+                    metric<success>::increase(1);
+                } catch (const command_exception& e) {
+                    LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                    http::write(s, make_response(e));
+                }
 
                 if (!req->keep_alive()) {
                     break;
                 }
             }
-        } catch (const command_exception& e) {
-            LOG_ERROR() << e.what();
-            http::write(s, make_response(e));
-            s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            s.close();
-            throw;
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
-                LOG_ERROR() << se.what();
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
                 command_exception err(http::status::bad_request, "BadRequest",
                                       "bad request");
                 http::write(s, make_response(err));
@@ -73,7 +74,7 @@ public:
                 throw;
             }
         } catch (const std::invalid_argument& e) {
-            LOG_ERROR() << e.what();
+            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             command_exception err(http::status::bad_request, "InvalidArgument",
                                   "encountered invalid argument");
             http::write(s, make_response(err));
@@ -81,7 +82,7 @@ public:
             s.close();
             throw;
         } catch (const std::exception& e) {
-            LOG_ERROR() << e.what();
+            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             http::write(s, make_response(command_exception()));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
@@ -110,7 +111,7 @@ public:
                               commands&&... tail) {
         if (head.can_handle(req)) {
             LOG_DEBUG() << req.socket().remote_endpoint()
-                        << " handling request " << class_name<command>();
+                        << ": handling request " << class_name<command>();
             return head.handle(req);
         }
         return dispatch_front(req, std::forward<commands>(tail)...);
@@ -135,9 +136,10 @@ auto define_entrypoint_handler(reference_collection& collection,
 
 auto make_entrypoint_handler(reference_collection& collection) {
     return define_entrypoint_handler(
-        collection, create_bucket(collection), get_bucket(collection),
-        list_buckets(collection), delete_bucket(collection),
-        put_object(collection), get_object(collection), head_object(collection),
+        collection, copy_object(collection), create_bucket(collection),
+        get_bucket(collection), list_buckets(collection),
+        delete_bucket(collection), put_object(collection),
+        get_object(collection), head_object(collection),
         list_objects(collection), list_objects_v2(collection),
         delete_object(collection), delete_objects(collection),
         init_multipart(collection), multipart(collection),
