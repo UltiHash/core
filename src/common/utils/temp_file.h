@@ -8,12 +8,12 @@
 
 class temp_file {
 public:
-    temp_file(const std::filesystem::path& directory)
+    explicit temp_file(const std::filesystem::path& directory)
         : m_path(open_temp_file(directory)) {}
 
-    auto get_path() const noexcept { return m_path; }
+    [[nodiscard]] inline auto get_path() const noexcept { return m_path; }
 
-    void release_to(const std::filesystem::path& path) {
+    inline void release_to(const std::filesystem::path& path) {
         std::filesystem::rename(m_path, path);
         m_remove = false;
     }
@@ -24,7 +24,7 @@ public:
     }
 
 private:
-    std::filesystem::path
+    static std::filesystem::path
     open_temp_file(const std::filesystem::path& temp_dir) {
         auto path = (temp_dir / FILENAME_TEMPLATE).string();
 
