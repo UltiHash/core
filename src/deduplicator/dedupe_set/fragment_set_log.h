@@ -16,6 +16,7 @@ namespace uh::cluster {
 
 enum set_operation : char {
     INSERT,
+    REMOVE,
 };
 
 class fragment_set_log {
@@ -32,11 +33,20 @@ public:
         set_operation op{};
         uint128_t pointer;
         uint16_t size{};
-        uint16_t prefix_size{};
+        uint16_t prefix_size;
         char prefix[PREFIX_SIZE]{};
 
         auto operator<=>(const log_entry&) const = default;
         using serialize = zpp::bits::members<5>;
+
+        log_entry() = default;
+        log_entry(const log_entry& le):
+              op {le.op},
+              pointer {le.pointer},
+              size{le.size},
+              prefix_size {le.prefix_size} {
+            std::memcpy(prefix, le.prefix, sizeof (le.prefix));
+        }
     };
     /**
      * @brief Constructs a fragment_set_log from a specified path.
