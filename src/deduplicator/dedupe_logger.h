@@ -10,15 +10,17 @@
 #include <fstream>
 #include <sstream>
 
-
 namespace uh::cluster {
 struct dedupe_logger {
 
     dedupe_logger(const std::filesystem::path& log_path, size_t chunk_size)
-        : m_chunk_size(chunk_size),
-          m_log_file(log_path, std::fstream::out | std::fstream::app) {
-        if (!m_log_file) {
-            throw std::runtime_error("Could not open the set log file");
+        : m_chunk_size(chunk_size) {
+        if constexpr (enable_log) {
+            m_log_file =
+                std::fstream(log_path, std::fstream::out | std::fstream::app);
+            if (!m_log_file) {
+                throw std::runtime_error("Could not open the set log file");
+            }
         }
         m_log.reserve(m_chunk_size);
     }
