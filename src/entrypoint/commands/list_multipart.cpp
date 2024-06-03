@@ -41,8 +41,7 @@ coro<void> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.bucket();
 
-    auto ongoing =
-        m_collection.server_state.m_uploads.list_multipart_uploads(bucket_name);
+    auto ongoing = m_collection.uploads.list_multipart_uploads(bucket_name);
     if (ongoing.empty()) {
         throw command_exception(http::status::not_found, "NoMultiPartUploads",
                                 "no multipart uploads");

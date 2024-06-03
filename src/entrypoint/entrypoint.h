@@ -61,7 +61,7 @@ private:
         return {.ioc = m_ioc,
                 .dedupe_services = m_dedupe_services,
                 .directory = m_directory,
-                .server_state = m_state,
+                .uploads = m_uploads,
                 .config = m_config,
                 .gdv = m_data_view,
                 .limits = m_limits};
@@ -86,7 +86,7 @@ private:
     services<deduplicator_interface> m_dedupe_services;
     directory m_directory;
 
-    state m_state;
+    upload_state m_uploads;
 
     reference_collection m_collection;
     server m_server;

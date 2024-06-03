@@ -17,7 +17,7 @@ struct reference_collection {
     boost::asio::io_context& ioc;
     const services<deduplicator_interface>& dedupe_services;
     uh::cluster::directory& directory;
-    state& server_state;
+    upload_state& uploads;
     entrypoint_config& config;
     global_data_view& gdv;
     uh::cluster::limits& limits;

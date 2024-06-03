@@ -82,10 +82,6 @@ private:
         m_deletions;
 };
 
-struct state {
-    struct upload_state m_uploads;
-};
-
 } // namespace uh::cluster
 
 #endif

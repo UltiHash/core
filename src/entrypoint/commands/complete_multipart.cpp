@@ -17,7 +17,7 @@ bool complete_multipart::can_handle(const http_request& req) {
 
 void complete_multipart::validate(const http_request& req,
                                   const std::span<char> body) const {
-    auto up_info = m_collection.server_state.m_uploads.get_upload_info(
+    auto up_info = m_collection.uploads.get_upload_info(
         *req.query("uploadId"));
 
     xml_parser xml_parser;
@@ -71,7 +71,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     const auto& object_name = req.object_key();
 
     const auto& up_info =
-        m_collection.server_state.m_uploads.get_upload_info(upload_id);
+        m_collection.uploads.get_upload_info(upload_id);
 
     m_collection.limits.check_storage_size(up_info->data_size);
 
@@ -106,7 +106,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
                  "</ETag>\n"
                  "</CompleteMultipartUploadResult>\n");
 
-    m_collection.server_state.m_uploads.remove_upload(upload_id);
+    m_collection.uploads.remove_upload(upload_id);
 
     co_await req.respond(res.get_prepared_response());
 }
