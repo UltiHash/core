@@ -59,6 +59,8 @@ static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
+static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
+
 uh::cluster::role get_service_role(const std::string& service_role_str);
 const std::string& get_service_string(const uh::cluster::role& service_role);
 

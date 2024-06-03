@@ -7,7 +7,7 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     : m_log_path(std::move(log_path)),
       m_log_file(m_log_path, std::fstream::binary | std::fstream::in |
                                  std::fstream::out | std::fstream::app),
-      m_cache(10000, m_entry_size, [this](std::span<char> data) {
+      m_cache(SET_LOG_CACHE_SIZE, [this](std::span<char> data) {
           m_log_file.write(data.data(), data.size());
       }) {
     if (!m_log_file.is_open()) {
