@@ -8,7 +8,7 @@ using namespace uh::cluster;
 
 constexpr std::string_view data1 = "d41d8cd98f00b204e9800998ecf8427ed41d8cd98f00b204e9800998ecab32f";
 BOOST_AUTO_TEST_CASE(data_sanity) {
-    int failures;
+    int failures = 0;
     plain_cache pc (32, [&failures] (std::span<char> str) {
         auto [in, out] = zpp::bits::in_out(str);
         while (in.position() < str.size()) {
@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(data_sanity) {
 }
 
 BOOST_AUTO_TEST_CASE(callback_count) {
-    int callbacks;
+    int callbacks = 0;
     plain_cache pc (32, [&callbacks] (std::span<char> str) {
         callbacks ++;
     });
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(callback_count) {
 }
 
 BOOST_AUTO_TEST_CASE(destruction) {
-    int callbacks;
+    int callbacks = 0;
     {
         plain_cache pc(32, [&callbacks](std::span<char> str) { callbacks++; });
 
