@@ -59,12 +59,12 @@ void fragment_set::insert(const uint128_t& pointer,
     if (hint->second) {
         auto res = m_set.emplace_hint(*hint->second, std::move(f));
         if (res->pointer() == pointer) {
-            m_lfu.put(pointer, std::move(res));
+            m_lfu.put_non_existing(pointer, std::move(res));
         }
     } else {
         auto res = m_set.emplace(std::move(f));
         if (res.second) {
-            m_lfu.put(pointer, std::move(res.first));
+            m_lfu.put_non_existing(pointer, std::move(res.first));
         }
     }
     m_hints.erase(hint);

@@ -17,7 +17,7 @@ fragment_set_log::fragment_set_log(std::filesystem::path log_path)
 
 void fragment_set_log::append(const log_entry& entry) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    m_cache.put(entry);
+    m_cache << entry;
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
