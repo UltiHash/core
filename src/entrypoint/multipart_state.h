@@ -32,13 +32,8 @@ struct upload_info {
     }
 };
 
-struct multipart_state {
-    using clock = std::chrono::system_clock;
-    using duration = std::chrono::seconds;
-    using time_point = std::chrono::time_point<clock>;
-
-    static constexpr auto DEFAULT_TIMEOUT = duration(300);
-
+class multipart_state {
+public:
     std::string insert_upload(std::string bucket, std::string object_key);
     bool contains_upload(const std::string& id);
     std::shared_ptr<upload_info> get_upload_info(const std::string& id);
@@ -52,6 +47,12 @@ struct multipart_state {
     list_multipart_uploads(const std::string&);
 
 private:
+    using clock = std::chrono::system_clock;
+    using duration = std::chrono::seconds;
+    using time_point = std::chrono::time_point<clock>;
+
+    static constexpr auto DEFAULT_TIMEOUT = duration(300);
+
     void clear_infos();
 
     std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
