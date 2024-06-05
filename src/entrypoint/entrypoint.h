@@ -32,7 +32,6 @@ public:
                   m_attached_storage.get_local_service_interface())),
           m_data_view(config.global_data_view, m_ioc, m_storage_services),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
-          m_db(m_ioc, config.database),
           m_config(config),
           m_attached_dedupe(sc, config.m_attached_deduplicator),
           m_dedupe_services(
@@ -40,7 +39,7 @@ public:
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_directory(m_db),
+          m_directory(m_ioc, config.database),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection), m_ioc),
           m_limits(sc.license.max_data_store_size) {}
@@ -77,7 +76,6 @@ private:
     std::size_t m_max_data_size = 0ull;
 
     service_registry m_service_registry;
-    db::database m_db;
 
     entrypoint_config m_config;
 
