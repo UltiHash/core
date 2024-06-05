@@ -25,16 +25,16 @@ template <typename Key, typename Value> class lfu_cache {
     };
 
 public:
-    explicit lfu_cache(size_t capacity, auto
-                           removal_callback = [](const auto& ...){})
+    explicit lfu_cache(
+        size_t capacity, std::function<void(Key, Value)> removal_callback =
+                             [](const auto&...) {})
         : m_capacity{capacity},
           m_removal_callback{std::move(removal_callback)} {}
 
     inline void put(const Key& key, Value&& val) {
         if (auto itr = m_key_data.find(key); itr != m_key_data.cend()) {
             increment(itr);
-        }
-        else {
+        } else {
             put_non_existing(key, std::forward<Value>(val));
         }
     }
@@ -113,7 +113,6 @@ private:
 
     std::unordered_map<Key, key_data> m_key_data;
     std::list<freq_bucket> m_freq_buckets;
-
 };
 
 } // end namespace uh::cluster
