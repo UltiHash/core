@@ -24,18 +24,20 @@ template <typename Key, typename Value> class lfu_cache {
         std::list<Key>::const_iterator pos;
     };
 
-    size_t m_capacity;
-    std::optional<std::function<void(Key, Value)>> m_removal_callback;
-
-    std::unordered_map<Key, key_data> m_key_data;
-    std::list<freq_bucket> m_freq_buckets;
-
 public:
-    explicit lfu_cache(size_t capacity,
-                       std::optional<std::function<void(Key, Value)>>
-                           removal_callback = std::nullopt)
+    explicit lfu_cache(
+        size_t capacity, std::function<void(Key, Value)> removal_callback =
+                             [](const auto&...) {})
         : m_capacity{capacity},
           m_removal_callback{std::move(removal_callback)} {}
+
+    inline void put(const Key& key, Value&& val) {
+        if (auto itr = m_key_data.find(key); itr != m_key_data.cend()) {
+            increment(itr);
+        } else {
+            put_non_existing(key, std::forward<Value>(val));
+        }
+    }
 
     inline void put_non_existing(const Key& key, Value&& val) {
 
@@ -43,7 +45,7 @@ public:
             m_freq_buckets.emplace_front(1);
         }
 
-        auto first_bucket = m_freq_buckets.begin();
+        const auto first_bucket = m_freq_buckets.begin();
         first_bucket->items.emplace_back(key);
 
         m_key_data.emplace(key,
@@ -55,10 +57,8 @@ public:
         if (m_capacity == 0) {
             auto& front_list = m_freq_buckets.front().items;
             const auto& rem_key = front_list.front();
-            auto rem_itr = m_key_data.find(rem_key);
-            if (m_removal_callback) {
-                (*m_removal_callback)(rem_key, rem_itr->second.val);
-            }
+            const auto rem_itr = m_key_data.find(rem_key);
+            m_removal_callback(rem_key, rem_itr->second.val);
 
             m_key_data.erase(rem_itr);
             front_list.pop_front();
@@ -88,7 +88,7 @@ private:
     inline void increment(auto& itr) {
 
         auto& bucket_itr = itr->second.bucket;
-        auto& key = itr->first;
+        const auto& key = itr->first;
         const auto new_freq = bucket_itr->freq + 1;
         auto next_bucket = std::next(bucket_itr);
 
@@ -107,6 +107,12 @@ private:
         itr->second.pos = std::prev(next_bucket->items.cend());
         bucket_itr = next_bucket;
     }
+
+    size_t m_capacity;
+    const std::function<void(Key, Value)> m_removal_callback;
+
+    std::unordered_map<Key, key_data> m_key_data;
+    std::list<freq_bucket> m_freq_buckets;
 };
 
 } // end namespace uh::cluster

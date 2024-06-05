@@ -13,7 +13,6 @@ struct entrypoint_config {
         .threads = 4, .port = 8080, .bind_address = "0.0.0.0"};
 
     std::size_t dedupe_node_connection_count = 16ul;
-    std::size_t directory_connection_count = 4ul;
     std::size_t worker_thread_count = 16ul;
     std::size_t buffer_size = 64ul * MEBI_BYTE;
     std::optional<deduplicator_config> m_attached_deduplicator;
