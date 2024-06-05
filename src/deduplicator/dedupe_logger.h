@@ -31,6 +31,12 @@ struct dedupe_logger {
         }
     }
 
+    template <typename... T> inline void log_pursue_deduplication(T&&... t) {
+        if constexpr (enable_log) {
+            log_entry("pursue", std::forward<T>(t)...);
+        }
+    }
+
     template <typename... T> inline void log_non_deduplication(T&&... t) {
         if constexpr (enable_log) {
             log_entry("non-dedupe", std::forward<T>(t)...);

@@ -110,6 +110,8 @@ coro<void> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
+        LOG_INFO() << "dedupe ratio " << (1.0 - double (resp.effective_size) / content_length);
+
         co_await req.respond(res.get_prepared_response());
 
     } catch (const error_exception& e) {

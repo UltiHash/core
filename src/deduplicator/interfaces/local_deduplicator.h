@@ -80,6 +80,29 @@ struct local_deduplicator : public deduplicator_interface {
     }
 
 private:
+    void pursue_pointer(std::string_view& data, uint128_t pointer, fragmentation& fragments) {
+        size_t common_size;
+        size_t deduplicated = 0;
+        shared_buffer<char> stored_data;
+        do {
+            try {
+                stored_data = m_storage.read_fragment(
+                    pointer, m_dedupe_conf.max_fragment_size * m_pursue_count);
+
+            } catch (const std::exception&) {
+                break;
+            }
+            common_size = largest_common_prefix(stored_data.string_view(), data);
+            if (common_size > m_dedupe_conf.min_fragment_size) {
+                fragments.push(fragment{pointer, common_size});
+                data = data.substr(common_size);
+                pointer += common_size;
+                deduplicated += common_size;
+            }
+        } while (common_size == m_dedupe_conf.max_fragment_size * m_pursue_count);
+        m_dedupe_logger.log_pursue_deduplication (deduplicated, pointer - deduplicated);
+    }
+
     dedupe_response deduplicate_data(std::string_view data) {
 
         fragmentation fragments(m_dedupe_logger);
@@ -105,6 +128,9 @@ private:
                                                   frag.pointer, offset);
 
                 data = data.substr(size);
+                if (size == m_dedupe_conf.max_fragment_size) {
+                    pursue_pointer (data, frag.pointer + m_dedupe_conf.max_fragment_size, fragments);
+                }
                 offset += size;
                 dedupe_count++;
                 continue;
@@ -137,7 +163,8 @@ private:
     global_data_view& m_storage;
     worker_pool m_dedupe_workers;
     dedupe_logger m_dedupe_logger;
-    std::size_t m_fragment_buffer_size = 8 * MEBI_BYTE;
+    const std::size_t m_fragment_buffer_size;
+    constexpr static std::size_t m_pursue_count = 4;
     constexpr static std::size_t pieces_count = 2;
 };
 } // namespace uh::cluster
