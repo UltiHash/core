@@ -86,7 +86,7 @@ private:
     services<deduplicator_interface> m_dedupe_services;
     directory m_directory;
 
-    upload_state m_uploads;
+    multipart_state m_uploads;
 
     reference_collection m_collection;
     server m_server;

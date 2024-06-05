@@ -9,7 +9,7 @@
 #include "deduplicator/interfaces/deduplicator_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
-#include "entrypoint/state.h"
+#include "entrypoint/multipart_state.h"
 
 namespace uh::cluster {
 
@@ -17,7 +17,7 @@ struct reference_collection {
     boost::asio::io_context& ioc;
     const services<deduplicator_interface>& dedupe_services;
     uh::cluster::directory& directory;
-    upload_state& uploads;
+    multipart_state& uploads;
     entrypoint_config& config;
     global_data_view& gdv;
     uh::cluster::limits& limits;

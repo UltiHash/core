@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_STATE_H
-#define ENTRYPOINT_STATE_H
+#ifndef ENTRYPOINT_MULTIPART_STATE_H
+#define ENTRYPOINT_MULTIPART_STATE_H
 
 #include "common/types/common_types.h"
 #include <chrono>
@@ -32,7 +32,7 @@ struct upload_info {
     }
 };
 
-struct upload_state {
+struct multipart_state {
     using clock = std::chrono::system_clock;
     using duration = std::chrono::seconds;
     using time_point = std::chrono::time_point<clock>;
@@ -43,8 +43,8 @@ struct upload_state {
     bool contains_upload(const std::string& id);
     std::shared_ptr<upload_info> get_upload_info(const std::string& id);
     void append_upload_part_info(const std::string& id, uint16_t part_id,
-                                 const dedupe_response& resp,
-                                 size_t data_size, std::string&& md5);
+                                 const dedupe_response& resp, size_t data_size,
+                                 std::string&& md5);
 
     void remove_upload(const std::string& id);
 

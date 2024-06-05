@@ -1,4 +1,4 @@
-#include "state.h"
+#include "multipart_state.h"
 
 #include "common/telemetry/log.h"
 #include "common/utils/random.h"
@@ -7,7 +7,7 @@
 namespace uh::cluster {
 
 std::map<std::string, std::string>
-upload_state::list_multipart_uploads(const std::string& bucket) {
+multipart_state::list_multipart_uploads(const std::string& bucket) {
 
     clear_infos();
 
@@ -25,8 +25,8 @@ upload_state::list_multipart_uploads(const std::string& bucket) {
     return rv;
 }
 
-std::string upload_state::insert_upload(std::string bucket,
-                                        std::string object_key) {
+std::string multipart_state::insert_upload(std::string bucket,
+                                           std::string object_key) {
     clear_infos();
 
     auto info = std::make_shared<upload_info>();
@@ -51,7 +51,7 @@ std::string upload_state::insert_upload(std::string bucket,
     return id;
 }
 
-void upload_state::remove_upload(const std::string& id) {
+void multipart_state::remove_upload(const std::string& id) {
     LOG_DEBUG() << "remove upload, id: " << id;
 
     clear_infos();
@@ -64,7 +64,7 @@ void upload_state::remove_upload(const std::string& id) {
 }
 
 std::shared_ptr<upload_info>
-upload_state::get_upload_info(const std::string& id) {
+multipart_state::get_upload_info(const std::string& id) {
     LOG_DEBUG() << "get upload info, id: " << id;
 
     clear_infos();
@@ -73,16 +73,18 @@ upload_state::get_upload_info(const std::string& id) {
     return find(id)->second;
 }
 
-bool upload_state::contains_upload(const std::string& id) {
+bool multipart_state::contains_upload(const std::string& id) {
     clear_infos();
 
     std::lock_guard<std::mutex> lock(mutex);
     return m_infos.contains(id);
 }
 
-void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
-                                           const dedupe_response& resp,
-                                           size_t data_size, std::string&& md5) {
+void multipart_state::append_upload_part_info(const std::string& id,
+                                              uint16_t part,
+                                              const dedupe_response& resp,
+                                              size_t data_size,
+                                              std::string&& md5) {
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -91,14 +93,14 @@ void upload_state::append_upload_part_info(const std::string& id, uint16_t part,
     std::lock_guard<std::mutex> lock(mutex);
 
     auto& total_resp = find(id)->second;
-    total_resp->etags.emplace(part, std::move (md5));
+    total_resp->etags.emplace(part, std::move(md5));
     total_resp->effective_size += resp.effective_size;
     total_resp->data_size += data_size;
     total_resp->part_sizes.emplace(part, data_size);
     total_resp->addresses.emplace(part, resp.addr);
 }
 
-void upload_state::clear_infos() {
+void multipart_state::clear_infos() {
     auto now = clock::now();
 
     std::lock_guard<std::mutex> lock(mutex);
@@ -109,7 +111,7 @@ void upload_state::clear_infos() {
 }
 
 std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
-upload_state::find(const std::string& id) {
+multipart_state::find(const std::string& id) {
 
     if (id.empty()) {
         throw command_exception(http::status::bad_request, "BadUploadId",
