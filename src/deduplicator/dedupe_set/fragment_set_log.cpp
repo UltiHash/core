@@ -6,18 +6,18 @@ namespace uh::cluster {
 fragment_set_log::fragment_set_log(std::filesystem::path log_path)
     : m_log_path(std::move(log_path)),
       m_log_file(m_log_path, std::fstream::binary | std::fstream::in |
-                                 std::fstream::out | std::fstream::app) {
+                                 std::fstream::out | std::fstream::app),
+      m_cache(SET_LOG_CACHE_SIZE, [this](std::span<char> data) {
+          m_log_file.write(data.data(), data.size());
+      }) {
     if (!m_log_file.is_open()) {
         throw std::runtime_error("Could not open the set log file");
     }
 }
 
 void fragment_set_log::append(const log_entry& entry) {
-
-    std::array<char, m_entry_size> buf{};
-    zpp::bits::out{buf, zpp::bits::size4b{}}(entry).or_throw();
     std::lock_guard<std::mutex> guard(m_mutex);
-    m_log_file.write(buf.data(), m_entry_size);
+    m_cache << entry;
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
@@ -63,10 +63,7 @@ void fragment_set_log::replay(std::set<fragment_set_element>& set,
     }
 }
 
-fragment_set_log::~fragment_set_log() {
-    m_log_file.flush();
-    m_log_file.close();
-}
+fragment_set_log::~fragment_set_log() { flush(); }
 
 [[nodiscard]] fragment_set_log::log_entry fragment_set_log::read_entry() {
     std::array<char, m_entry_size> buf{};
@@ -78,6 +75,7 @@ fragment_set_log::~fragment_set_log() {
 
 void fragment_set_log::flush() {
     std::lock_guard<std::mutex> guard(m_mutex);
+    m_cache.flush();
     m_log_file.flush();
 }
 
