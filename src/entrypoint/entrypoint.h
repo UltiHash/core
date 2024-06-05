@@ -32,7 +32,7 @@ public:
                   m_attached_storage.get_local_service_interface())),
           m_data_view(config.global_data_view, m_ioc, m_storage_services),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
-          m_db(config.database),
+          m_db(m_ioc, config.database),
           m_config(config),
           m_attached_dedupe(sc, config.m_attached_deduplicator),
           m_dedupe_services(

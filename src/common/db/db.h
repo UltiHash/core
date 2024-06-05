@@ -1,20 +1,21 @@
 #ifndef CORE_COMMON_DB_DB_H
 #define CORE_COMMON_DB_DB_H
 
+#include "common/utils/pool.h"
 #include "config.h"
-#include "pool.h"
+#include "connection.h"
+#include <boost/asio.hpp>
 
 namespace uh::cluster::db {
 
 class database {
 public:
-    database(const config& cfg);
+    database(boost::asio::io_context& ioc, const config& cfg);
 
-    pool::connection_wrapper directory();
+    coro<pool<connection>::handle> directory();
 
 private:
-    config m_cfg;
-    pool m_directory;
+    pool<connection> m_directory;
 };
 
 } // namespace uh::cluster::db

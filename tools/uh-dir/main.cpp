@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 
         boost::asio::io_context executor;
 
-        uh::cluster::db::database db(cfg->database);
+        uh::cluster::db::database db(executor, cfg->database);
         auto handler = [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
