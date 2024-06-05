@@ -34,17 +34,38 @@ struct upload_info {
 
 class multipart_state {
 public:
-    std::string insert_upload(std::string bucket, std::string object_key);
-    bool contains_upload(const std::string& id);
-    std::shared_ptr<upload_info> get_upload_info(const std::string& id);
-    void append_upload_part_info(const std::string& id, uint16_t part_id,
-                                 const dedupe_response& resp, size_t data_size,
-                                 std::string&& md5);
+    /**
+     * Insert a new multipart upload and retrieve it's id.
+     */
+    coro<std::string> insert_upload(std::string bucket, std::string object_key);
 
-    void remove_upload(const std::string& id);
+    /**
+     * Check if an upload exists.
+     */
+    coro<bool> contains_upload(const std::string& id);
 
-    std::map<std::string, std::string>
-    list_multipart_uploads(const std::string&);
+    /**
+     * Retrieve a pointer to the upload info for a given id.
+     */
+    coro<std::shared_ptr<upload_info>> get_upload_info(const std::string& id);
+
+    /**
+     * Set a part info for a given id.
+     */
+    coro<void> append_upload_part_info(const std::string& id, uint16_t part_id,
+                                       const dedupe_response& resp,
+                                       size_t data_size, std::string&& md5);
+
+    /**
+     * Delete an upload with a given id
+     */
+    coro<void> remove_upload(const std::string& id);
+
+    /**
+     * Return a mapping of upload-id to object key for a given bucket.
+     */
+    coro<std::map<std::string, std::string>>
+    list_multipart_uploads(const std::string& bucket);
 
 private:
     using clock = std::chrono::system_clock;

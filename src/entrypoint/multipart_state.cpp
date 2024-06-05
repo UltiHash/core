@@ -6,7 +6,7 @@
 
 namespace uh::cluster {
 
-std::map<std::string, std::string>
+coro<std::map<std::string, std::string>>
 multipart_state::list_multipart_uploads(const std::string& bucket) {
 
     clear_infos();
@@ -22,11 +22,11 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
         }
     }
 
-    return rv;
+    co_return rv;
 }
 
-std::string multipart_state::insert_upload(std::string bucket,
-                                           std::string object_key) {
+coro<std::string> multipart_state::insert_upload(std::string bucket,
+                                                 std::string object_key) {
     clear_infos();
 
     auto info = std::make_shared<upload_info>();
@@ -48,10 +48,10 @@ std::string multipart_state::insert_upload(std::string bucket,
     LOG_DEBUG() << "insert upload, id " << id << ", bucket: " << bucket
                 << ", key: " << object_key;
 
-    return id;
+    co_return id;
 }
 
-void multipart_state::remove_upload(const std::string& id) {
+coro<void> multipart_state::remove_upload(const std::string& id) {
     LOG_DEBUG() << "remove upload, id: " << id;
 
     clear_infos();
@@ -61,30 +61,32 @@ void multipart_state::remove_upload(const std::string& id) {
         m_deletions.push(info_deletion(it, DEFAULT_TIMEOUT));
         it->second->erased = true;
     }
+
+    co_return;
 }
 
-std::shared_ptr<upload_info>
+coro<std::shared_ptr<upload_info>>
 multipart_state::get_upload_info(const std::string& id) {
     LOG_DEBUG() << "get upload info, id: " << id;
 
     clear_infos();
 
     std::lock_guard<std::mutex> lock(mutex);
-    return find(id)->second;
+    co_return find(id)->second;
 }
 
-bool multipart_state::contains_upload(const std::string& id) {
+coro<bool> multipart_state::contains_upload(const std::string& id) {
     clear_infos();
 
     std::lock_guard<std::mutex> lock(mutex);
-    return m_infos.contains(id);
+    co_return m_infos.contains(id);
 }
 
-void multipart_state::append_upload_part_info(const std::string& id,
-                                              uint16_t part,
-                                              const dedupe_response& resp,
-                                              size_t data_size,
-                                              std::string&& md5) {
+coro<void> multipart_state::append_upload_part_info(const std::string& id,
+                                                    uint16_t part,
+                                                    const dedupe_response& resp,
+                                                    size_t data_size,
+                                                    std::string&& md5) {
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -98,6 +100,8 @@ void multipart_state::append_upload_part_info(const std::string& id,
     total_resp->data_size += data_size;
     total_resp->part_sizes.emplace(part, data_size);
     total_resp->addresses.emplace(part, resp.addr);
+
+    co_return;
 }
 
 void multipart_state::clear_infos() {

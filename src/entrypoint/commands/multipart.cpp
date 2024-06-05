@@ -40,7 +40,7 @@ coro<void> multipart::handle(http_request& req) const {
     http_response res;
     res.set_etag(md5);
 
-    m_collection.uploads.append_upload_part_info(
+    co_await m_collection.uploads.append_upload_part_info(
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer.size(), std::move(md5));
 
