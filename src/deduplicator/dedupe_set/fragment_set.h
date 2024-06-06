@@ -16,10 +16,24 @@ namespace uh::cluster {
 class fragment_set {
 
 public:
-    typedef std::multimap<
-        uint128_t,
-        std::optional<std::set<fragment_set_element>::const_iterator>>::
-        const_iterator hint_type;
+    struct hint_type {
+        ~hint_type() {
+            if (m_own)
+                m_hint->m_hint_count--;
+        }
+        friend fragment_set;
+        explicit hint_type(std::set<fragment_set_element>::const_iterator hint)
+            : m_hint(hint) {}
+        hint_type(const hint_type&) = delete;
+        hint_type(hint_type&& h) noexcept
+            : m_hint(h.m_hint) {
+            h.m_own = false;
+        }
+
+    private:
+        const std::set<fragment_set_element>::const_iterator m_hint;
+        bool m_own = true;
+    };
 
     /**
      * @brief response structure used to communicate the results of the #find
@@ -40,7 +54,7 @@ public:
          * @brief iterator used as a placement hint to reduce the complexity of
          * an insert call
          */
-        const hint_type hint;
+        std::optional<hint_type> hint;
     };
 
     /**
@@ -69,6 +83,10 @@ public:
      */
     response find(std::string_view data);
 
+    std::lock_guard<std::shared_mutex> lock() {
+        return std::lock_guard<std::shared_mutex>(m_mutex);
+    }
+
     /**
      * @brief Inserts the provided fragment into the fragment_set
      * The fragment provided in #data is inserted into the fragment_set.
@@ -79,7 +97,7 @@ public:
      * by the #find method
      */
     void insert(const uint128_t& pointer, const std::string_view& data,
-                const hint_type& hint);
+                const std::optional<hint_type>& hint = std::nullopt);
 
     /**
      * Marks a successful deduplication on the given set element.
@@ -88,7 +106,7 @@ public:
      * @param offset offset of the deduplicated data in the incoming data
      * @param size size of the deduplication
      */
-    void mark_deduplication(const fragment& set_element, const hint_type& hint);
+    void mark_deduplication(const fragment& set_element);
 
     /**
      * @brief synchronizes the fragment_set log file with the underlying storage
@@ -109,12 +127,9 @@ private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
-    std::mutex m_insert_hint_mutex;
     fragment_set_log m_set_log;
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
-    std::multimap<uint128_t,
-                  std::optional<std::set<fragment_set_element>::const_iterator>>
-        m_hints;
+    std::list<std::set<fragment_set_element>::const_iterator> m_colds;
 };
 
 } // end namespace uh::cluster
