@@ -89,6 +89,18 @@ struct address {
     auto operator<=>(const address&) const = default;
 };
 
+inline std::vector<char> to_buffer(const address& addr) {
+    std::vector<char> data;
+    zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
+    return data;
+}
+
+inline address to_address(std::span<char> data) {
+    address addr;
+    zpp::bits::in{data, zpp::bits::size4b{}}(addr).or_throw();
+    return addr;
+}
+
 } // namespace uh::cluster
 
 template <> struct std::hash<uh::cluster::fragment> {

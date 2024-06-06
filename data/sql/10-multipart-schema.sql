@@ -21,16 +21,16 @@ CREATE TABLE uploads (
 CREATE TABLE upload_parts (
     id bigint GENERATED ALWAYS AS IDENTITY,
     upload_id UUID REFERENCES uploads(id) ON DELETE CASCADE NOT NULL,
-    part_id SMALLINT NOT NULL,
+    part_id BIGINT NOT NULL,
     size BIGINT NOT NULL,
     effective_size BIGINT NOT NULL,
-    address TEXT NOT NULL,
+    address BYTEA NOT NULL,
     etag TEXT NOT NULL,
     UNIQUE (upload_id, part_id));
 
 -- ------------------------------------------------------------------------
 --
--- Database functions for controlling the directory
+-- Database functions for controlling the multipart state
 --
 
 --
@@ -51,14 +51,14 @@ $$;
 -- uh_put_multipart(id, part_id, size, effective_size, address, etag) --
 -- register an uploaded part with a multipart upload
 --
-CREATE OR REPLACE PROCEDURE uh_put_multipart(id TEXT, part_id SMALLINT, size BIGINT, effective_size BIGINT, address TEXT, etag TEXT)
+CREATE OR REPLACE PROCEDURE uh_put_multipart(id TEXT, part_id BIGINT, size BIGINT, effective_size BIGINT, address BYTEA, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     EXECUTE format('
         INSERT INTO upload_parts (upload_id, part_id, size, effective_size, address, etag)
         VALUES (%L, %L, %L, %L, %L, %L) ON CONFLICT(upload_id, part_id) DO UPDATE SET
         size = EXCLUDED.size, effective_size = EXCLUDED.effective_size, address = EXCLUDED.address, etag = EXCLUDED.etag',
-        id, part_d, size, effective_size, address, etag);
+        id, part_id, size, effective_size, address, etag);
 END;
 $$;
 
@@ -66,10 +66,10 @@ $$;
 -- uh_get_upload(id) -- return metadata for upload id
 --
 CREATE OR REPLACE FUNCTION uh_get_upload(id TEXT)
-    RETURNS TABLE (bucket TEXT, key TEXT, erased TIMESTAMP)
+    RETURNS TABLE (bucket TEXT, key TEXT, erased_since TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT bucket, key, erased FROM uploads WHERE id = %L', id);
+    RETURN QUERY EXECUTE format('SELECT bucket, key, erased_since FROM uploads WHERE id = %L', id);
 END;
 $$;
 
@@ -78,10 +78,28 @@ $$;
 -- id
 --
 CREATE OR REPLACE FUNCTION uh_get_upload_parts(id TEXT)
-    RETURNS TABLE (part_id SMALLINT, size BIGINT, effective_size BIGINT, address TEXT, etag TEXT)
+    RETURNS TABLE (part_id BIGINT, size BIGINT, effective_size BIGINT, address BYTEA, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT part_id, size, effective_size, address, etag FROM upload_parts WHERE id = %L', id);
+    RETURN QUERY EXECUTE format('SELECT part_id, size, effective_size, address, etag FROM upload_parts WHERE upload_id = %L', id);
+END;
+$$;
+
+--
+-- uh_get_uploads() -- return a list of all active uploads
+--
+CREATE OR REPLACE FUNCTION uh_get_uploads()
+    RETURNS TABLE (id UUID, bucket TEXT, key TEXT)
+LANGUAGE SQL AS 'SELECT id, bucket, key FROM uploads WHERE erased_since IS NULL';
+
+--
+-- uh_get_uploads(bucket) -- return a list of all active uploads for the given bucket
+--
+CREATE OR REPLACE FUNCTION uh_get_uploads(bucket TEXT)
+    RETURNS TABLE (id UUID, key TEXT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY EXECUTE format('SELECT id, key FROM uploads WHERE erased_since IS NULL AND bucket = %L', bucket);
 END;
 $$;
 

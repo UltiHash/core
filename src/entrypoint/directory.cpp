@@ -10,8 +10,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
         throw std::runtime_error("put_object requires address");
     }
 
-    std::vector<char> data;
-    zpp::bits::out{data, zpp::bits::size4b{}}(*obj.addr).or_throw();
+    auto data = to_buffer(*obj.addr);
     auto span = std::span<char>(data);
 
     try {
@@ -48,8 +47,7 @@ coro<object> directory::get_object(const std::string& bucket,
         throw std::runtime_error("small not defined");
     }
 
-    address addr;
-    zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
+    address addr = to_address(*small);
 
     auto metadata = dir->execv(
         "SELECT size, effective_size, last_modified, etag FROM uh_get_object($1, $2)", bucket,

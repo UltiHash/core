@@ -6,80 +6,70 @@
 
 namespace uh::cluster {
 
-coro<std::map<std::string, std::string>>
-multipart_state::list_multipart_uploads(const std::string& bucket) {
-
-    clear_infos();
-
-    LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
-
-    std::lock_guard<std::mutex> lock(mutex);
-
-    std::map<std::string, std::string> rv;
-    for (const auto& info : m_infos) {
-        if (info.second->bucket == bucket) {
-            rv[info.first] = info.second->key;
-        }
-    }
-
-    co_return rv;
-}
+multipart_state::multipart_state(boost::asio::io_context& ioc,
+                                 const db::config& cfg)
+    : m_db(ioc, connection_factory(cfg, cfg.multipart), cfg.multipart.count) {}
 
 coro<std::string> multipart_state::insert_upload(std::string bucket,
-                                                 std::string object_key) {
-    clear_infos();
+                                                 std::string key) {
+    auto conn = co_await m_db.get();
 
-    auto info = std::make_shared<upload_info>();
-    info->key = object_key;
-    info->bucket = bucket;
+    clear_infos(*conn);
 
-    std::string id;
-
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-
-        do {
-            id = generate_unique_id();
-        } while (m_infos.contains(id));
-
-        m_infos.emplace(id, info);
-    }
+    auto res = conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
+    auto id = *res.string(0, 0);
 
     LOG_DEBUG() << "insert upload, id " << id << ", bucket: " << bucket
-                << ", key: " << object_key;
+                << ", key: " << key;
 
     co_return id;
-}
-
-coro<void> multipart_state::remove_upload(const std::string& id) {
-    LOG_DEBUG() << "remove upload, id: " << id;
-
-    clear_infos();
-
-    std::lock_guard<std::mutex> lock(mutex);
-    if (auto it = find(id); !it->second->erased) {
-        m_deletions.push(info_deletion(it, DEFAULT_TIMEOUT));
-        it->second->erased = true;
-    }
-
-    co_return;
 }
 
 coro<std::shared_ptr<upload_info>>
 multipart_state::get_upload_info(const std::string& id) {
     LOG_DEBUG() << "get upload info, id: " << id;
 
-    clear_infos();
+    auto conn = co_await m_db.get();
 
-    std::lock_guard<std::mutex> lock(mutex);
-    co_return find(id)->second;
-}
+    auto rv = std::make_shared<upload_info>();
+    {
+        auto res = conn->execv(
+            "SELECT bucket, key, erased_since FROM uh_get_upload($1)", id);
+        if (res.rows() != 1) {
+            throw command_exception(http::status::not_found, "NoSuchUpload",
+                                    "upload id not found");
+        }
 
-coro<bool> multipart_state::contains_upload(const std::string& id) {
-    clear_infos();
+        rv->bucket = *res.string(0, 0);
+        rv->key = *res.string(0, 1);
+        rv->erased = res.date(0, 2).has_value();
+    }
 
-    std::lock_guard<std::mutex> lock(mutex);
-    co_return m_infos.contains(id);
+    auto res = conn->execv("SELECT part_id, size, effective_size, etag FROM "
+                           "uh_get_upload_parts($1)",
+                           id);
+    for (auto row = 0ull; row < res.rows(); ++row) {
+        auto id = *res.number(row, 0);
+        auto size = *res.number(row, 1);
+        auto eff_size = *res.number(row, 2);
+
+        rv->data_size += size;
+        rv->effective_size += eff_size;
+
+        rv->etags[id] = *res.string(row, 3);
+        rv->part_sizes[id] = size;
+    }
+
+    {
+        auto res = conn->execb(
+            "SELECT part_id, address FROM uh_get_upload_parts($1)", id);
+        for (auto row = 0ull; row < res.rows(); ++row) {
+            auto id = *res.number(row, 0);
+            rv->addresses.emplace(id, to_address(*res.data(row, 1)));
+        }
+    }
+
+    co_return rv;
 }
 
 coro<void> multipart_state::append_upload_part_info(const std::string& id,
@@ -90,45 +80,40 @@ coro<void> multipart_state::append_upload_part_info(const std::string& id,
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
-    clear_infos();
+    auto data = to_buffer(resp.addr);
 
-    std::lock_guard<std::mutex> lock(mutex);
-
-    auto& total_resp = find(id)->second;
-    total_resp->etags.emplace(part, std::move(md5));
-    total_resp->effective_size += resp.effective_size;
-    total_resp->data_size += data_size;
-    total_resp->part_sizes.emplace(part, data_size);
-    total_resp->addresses.emplace(part, resp.addr);
-
-    co_return;
+    auto conn = co_await m_db.get();
+    conn->execv("CALL uh_put_multipart($1, $2, $3, $4, $5, $6)", id, part,
+                data_size, resp.effective_size, std::span<char>(data), md5);
 }
 
-void multipart_state::clear_infos() {
-    auto now = clock::now();
+coro<void> multipart_state::remove_upload(const std::string& id) {
+    LOG_DEBUG() << "remove upload, id: " << id;
 
-    std::lock_guard<std::mutex> lock(mutex);
-    while (!m_deletions.empty() && now > m_deletions.top().when) {
-        m_infos.erase(m_deletions.top().where);
-        m_deletions.pop();
-    }
+    auto conn = co_await m_db.get();
+    conn->execv("CALL uh_delete_upload($1)", id);
+
+    clear_infos(*conn);
 }
 
-std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
-multipart_state::find(const std::string& id) {
+coro<std::map<std::string, std::string>>
+multipart_state::list_multipart_uploads(const std::string& bucket) {
 
-    if (id.empty()) {
-        throw command_exception(http::status::bad_request, "BadUploadId",
-                                "invalid upload id");
+    LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
+
+    auto conn = co_await m_db.get();
+    auto res = conn->execv("SELECT id, key FROM uh_get_uploads($1)", bucket);
+
+    std::map<std::string, std::string> rv;
+    for (auto row = 0ull; row < res.rows(); ++row) {
+        rv[std::string(*res.string(row, 0))] = *res.string(row, 1);
     }
 
-    auto itr = m_infos.find(id);
-    if (itr == m_infos.end()) {
-        throw command_exception(http::status::not_found, "NoSuchUpload",
-                                "upload id not found");
-    }
+    co_return rv;
+}
 
-    return itr;
+void multipart_state::clear_infos(db::connection& conn) {
+    conn.execv("CALL uh_clean_deleted(MAKE_INTERVAL($1))", DEFAULT_TIMEOUT);
 }
 
 } // namespace uh::cluster

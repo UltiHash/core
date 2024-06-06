@@ -1,7 +1,10 @@
 #ifndef ENTRYPOINT_MULTIPART_STATE_H
 #define ENTRYPOINT_MULTIPART_STATE_H
 
+#include "common/db/db.h"
 #include "common/types/common_types.h"
+#include "common/utils/pool.h"
+
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -34,15 +37,12 @@ struct upload_info {
 
 class multipart_state {
 public:
+    multipart_state(boost::asio::io_context& ioc, const db::config& cfg);
+
     /**
      * Insert a new multipart upload and retrieve it's id.
      */
     coro<std::string> insert_upload(std::string bucket, std::string object_key);
-
-    /**
-     * Check if an upload exists.
-     */
-    coro<bool> contains_upload(const std::string& id);
 
     /**
      * Retrieve a pointer to the upload info for a given id.
@@ -68,40 +68,12 @@ public:
     list_multipart_uploads(const std::string& bucket);
 
 private:
-    using clock = std::chrono::system_clock;
-    using duration = std::chrono::seconds;
-    using time_point = std::chrono::time_point<clock>;
+    pool<db::connection> m_db;
 
-    static constexpr auto DEFAULT_TIMEOUT = duration(300);
+    /// Default grace period for deleted entries in seconds.
+    static constexpr auto DEFAULT_TIMEOUT = 300;
 
-    void clear_infos();
-
-    std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
-    find(const std::string& id);
-
-    mutable std::mutex mutex;
-    std::unordered_map<std::string, std::shared_ptr<upload_info>> m_infos;
-
-    struct info_deletion {
-    public:
-        info_deletion(
-            std::unordered_map<std::string,
-                               std::shared_ptr<upload_info>>::iterator where,
-            duration timeout)
-            : where(where),
-              when(clock::now() + timeout) {}
-
-        bool operator>(const info_deletion& other) const {
-            return when > other.when;
-        }
-
-        std::unordered_map<std::string, std::shared_ptr<upload_info>>::iterator
-            where;
-        time_point when;
-    };
-    std::priority_queue<info_deletion, std::vector<info_deletion>,
-                        std::greater<info_deletion>>
-        m_deletions;
+    void clear_infos(db::connection& conn);
 };
 
 } // namespace uh::cluster

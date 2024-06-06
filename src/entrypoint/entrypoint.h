@@ -40,6 +40,7 @@ public:
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
           m_directory(m_ioc, config.database),
+          m_uploads(m_ioc, config.database),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection), m_ioc),
           m_limits(sc.license.max_data_store_size) {}
