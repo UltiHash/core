@@ -125,6 +125,7 @@ private:
                     match_low > match_high ? *f.low : *f.high;
 
                 fragments.push(fragment{frag.pointer, size});
+
                 m_dedupe_logger.log_deduplication(size, prefix, frag.pointer,
                                                   offset);
 
