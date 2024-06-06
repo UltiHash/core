@@ -12,7 +12,7 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
           m_set_log.append(entry);
           if (element->m_hint_count > 0) {
               element->m_state = COLD;
-              m_colds.emplace_back(element);
+              m_colds.emplace_front(element);
           } else {
               m_set.erase(element);
           }
@@ -81,5 +81,9 @@ void fragment_set::mark_deduplication(const fragment& frag) {
 void fragment_set::flush() { m_set_log.flush(); }
 
 size_t fragment_set::size() { return m_set.size(); }
+
+std::lock_guard<std::shared_mutex> fragment_set::lock() {
+    return std::lock_guard<std::shared_mutex>(m_mutex);
+}
 
 } // namespace uh::cluster
