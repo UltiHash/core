@@ -34,7 +34,6 @@ fragment_set::response fragment_set::find(std::string_view data) {
     response resp;
     if (res->m_state != COLD) {
         resp.hint.emplace(res);
-        res->m_hint_count++;
     }
 
     if (res != m_set.cend()) [[likely]] {

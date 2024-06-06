@@ -23,7 +23,9 @@ public:
         }
         friend fragment_set;
         explicit hint_type(std::set<fragment_set_element>::const_iterator hint)
-            : m_hint(hint) {}
+            : m_hint(hint) {
+            m_hint->m_hint_count++;
+        }
         hint_type(const hint_type&) = delete;
         hint_type(hint_type&& h) noexcept
             : m_hint(h.m_hint) {
