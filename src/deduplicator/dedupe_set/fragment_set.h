@@ -103,8 +103,6 @@ public:
      * Marks a successful deduplication on the given set element.
      *
      * @param set_element deduplicated set element
-     * @param offset offset of the deduplicated data in the incoming data
-     * @param size size of the deduplication
      */
     void mark_deduplication(const fragment& set_element);
 

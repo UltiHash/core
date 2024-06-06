@@ -1,7 +1,7 @@
 # Changelog
 ## [0.5.0] 2024-06-06
 - Removed get bucket command
-- Deduplication statistic collection and plot generation script
+- Deduplication statistic collection
 - PySpark fixes (copy object, head object, etc.)
 - Removal of cold fragments
 - Better caching mechanism for deduplication set log

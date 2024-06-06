@@ -59,7 +59,9 @@ public:
     bool operator<(const fragment_set_element& f) const;
 
     [[nodiscard]] const uint128_t& pointer() const noexcept;
+
     [[nodiscard]] uint16_t size() const noexcept;
+
     [[nodiscard]] const std::string& prefix() const noexcept;
 
     mutable fragment_state m_state = NORM;

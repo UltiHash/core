@@ -69,7 +69,9 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
 const uint128_t& fragment_set_element::pointer() const noexcept {
     return m_pointer;
 }
+
 uint16_t fragment_set_element::size() const noexcept { return m_size; }
+
 const std::string& fragment_set_element::prefix() const noexcept {
     return m_prefix;
 }
