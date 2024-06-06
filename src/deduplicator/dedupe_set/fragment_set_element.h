@@ -4,7 +4,10 @@
 #include "common/global_data/global_data_view.h"
 
 namespace uh::cluster {
-
+enum fragment_state : uint8_t {
+    NORM,
+    COLD,
+};
 class fragment_set_element {
 public:
     /**
@@ -55,9 +58,14 @@ public:
      */
     bool operator<(const fragment_set_element& f) const;
 
-    [[nodiscard]] const uint128_t& pointer() const;
-    [[nodiscard]] uint16_t size() const;
-    [[nodiscard]] const std::string& prefix() const;
+    [[nodiscard]] const uint128_t& pointer() const noexcept;
+
+    [[nodiscard]] uint16_t size() const noexcept;
+
+    [[nodiscard]] const std::string& prefix() const noexcept;
+
+    mutable fragment_state m_state = NORM;
+    mutable std::atomic<int> m_hint_count = 0;
 
 private:
     std::reference_wrapper<global_data_view> m_storage;
@@ -65,7 +73,6 @@ private:
     uint16_t m_size{};
     std::string m_prefix;
     std::optional<std::string_view> m_data{};
-
     void catch_frag(const fragment_set_element& f, shared_buffer<char>& data,
                     std::string_view& str, size_t size) const;
 };

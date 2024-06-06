@@ -94,12 +94,17 @@ private:
             }
             common_size =
                 largest_common_prefix(stored_data.string_view(), data);
-            if (common_size > m_dedupe_conf.min_fragment_size) {
-                fragments.push(fragment{pointer, common_size});
-                data = data.substr(common_size);
-                pointer += common_size;
-                deduplicated += common_size;
+            size_t pushed_size = 0;
+            while (common_size - pushed_size >
+                   m_dedupe_conf.min_fragment_size) {
+                const auto s = std::min(m_dedupe_conf.max_fragment_size,
+                                        common_size - pushed_size);
+                fragments.push(fragment{pointer, s});
+                pointer += s;
+                pushed_size += s;
             }
+            data = data.substr(pushed_size);
+            deduplicated += pushed_size;
         } while (common_size == m_dedupe_conf.max_fragment_size * pursue_count);
         m_dedupe_logger.log_pursue_deduplication(deduplicated,
                                                  pointer - deduplicated);
@@ -113,7 +118,7 @@ private:
         size_t dedupe_count = 0;
 
         while (!data.empty()) {
-            const auto f = m_fragment_set.find(data);
+            auto f = m_fragment_set.find(data);
 
             auto match_low = match_size(m_storage, data, f.low);
             auto match_high = match_size(m_storage, data, f.high);
@@ -125,7 +130,7 @@ private:
                     match_low > match_high ? *f.low : *f.high;
 
                 fragments.push(fragment{frag.pointer, size});
-                m_fragment_set.mark_deduplication(frag, f.hint);
+
                 m_dedupe_logger.log_deduplication(size, prefix, frag.pointer,
                                                   offset);
 
@@ -142,8 +147,8 @@ private:
 
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
-            fragments.push(
-                fragmentation::unstored{data.substr(0, frag_size), f.hint});
+            fragments.push(fragmentation::unstored{data.substr(0, frag_size),
+                                                   std::move(f.hint)});
             data = data.substr(frag_size);
             offset += frag_size;
             non_dedupe_count++;
