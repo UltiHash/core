@@ -5,7 +5,7 @@
 #include "common/telemetry/log.h"
 #include "common/types/scoped_buffer.h"
 #include "common/utils/templates.h"
-#include "result.h"
+#include "row.h"
 #include <libpq-fe.h>
 #include <memory>
 #include <string>
