@@ -34,6 +34,7 @@ struct object {
     std::string name;
     utc_time last_modified;
     std::size_t size{};
+    std::size_t effective_size{};
 
     std::optional<address> addr;
     std::optional<std::string> etag;
