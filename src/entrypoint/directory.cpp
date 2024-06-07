@@ -15,8 +15,8 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     auto span = std::span<char>(data);
 
     try {
-        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)",
-                                bucket, obj.name, span, obj.addr->data_size(),
+        m_db.directory()->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5, $6)",
+                                bucket, obj.name, span, obj.addr->data_size(), obj.effective_size,
                                 obj.etag);
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
@@ -51,14 +51,15 @@ coro<object> directory::get_object(const std::string& bucket,
     zpp::bits::in{*small, zpp::bits::size4b{}}(addr).or_throw();
 
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, effective_size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
-    auto etag = metadata.string(0, 2);
+    auto etag = metadata.string(0, 3);
 
     co_return object{.name = object_id,
-                     .last_modified = *metadata.date(0, 1),
+                     .last_modified = *metadata.date(0, 2),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
+                     .effective_size = static_cast<std::size_t>(*metadata.number(0, 1)),
                      .addr = std::move(addr),
                      .etag = etag ? std::optional<std::string>(*etag)
                                   : std::nullopt};
@@ -67,7 +68,7 @@ coro<object> directory::get_object(const std::string& bucket,
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
     auto metadata = m_db.directory()->execv(
-        "SELECT size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
+        "SELECT size, effective_size, last_modified, etag FROM uh_get_object($1, $2)", bucket,
         object_id);
 
     if (metadata.rows() == 0) {
@@ -75,11 +76,12 @@ coro<object> directory::head_object(const std::string& bucket,
                                 "object not found");
     }
 
-    auto etag = metadata.string(0, 2);
+    auto etag = metadata.string(0, 3);
 
     co_return object{.name = object_id,
-                     .last_modified = *metadata.date(0, 1),
+                     .last_modified = *metadata.date(0, 2),
                      .size = static_cast<std::size_t>(*metadata.number(0, 0)),
+                     .effective_size = static_cast<std::size_t>(*metadata.number(0, 1)),
                      .addr = std::nullopt,
                      .etag = etag ? std::optional<std::string>(*etag)
                                   : std::nullopt};
@@ -165,7 +167,7 @@ directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
                         const std::optional<std::string>& lower_bound) {
 
-    auto res = m_db.directory()->execv("SELECT id, name, size, last_modified, "
+    auto res = m_db.directory()->execv("SELECT id, name, size, effective_size, last_modified, "
                                        "etag FROM uh_list_objects($1, $2, $3)",
                                        bucket, prefix.value_or(""),
                                        lower_bound.value_or(""));
@@ -174,10 +176,12 @@ directory::list_objects(const std::string& bucket,
     rv.reserve(res.rows());
     for (auto row = 0ull; row < res.rows(); ++row) {
 
-        auto etag = res.string(row, 4);
+        auto etag = res.string(row, 5);
         rv.emplace_back(
-            std::string(*res.string(row, 1)), *res.date(row, 3),
-            static_cast<std::size_t>(*res.number(row, 2)), std::nullopt,
+            std::string(*res.string(row, 1)), *res.date(row, 4),
+            static_cast<std::size_t>(*res.number(row, 2)),
+            static_cast<std::size_t>(*res.number(row, 3)),
+            std::nullopt,
             etag ? std::optional<std::string>(*etag) : std::nullopt);
     }
 
@@ -191,6 +195,19 @@ coro<std::size_t> directory::data_size() {
     for (const auto& bucket : buckets) {
         auto result =
             m_db.directory()->execv("SELECT uh_bucket_size($1)", bucket);
+        rv += *result.number(0, 0);
+    }
+
+    co_return rv;
+}
+
+coro<std::size_t> directory::effective_data_size() {
+    std::size_t rv = 0;
+
+    auto buckets = co_await list_buckets();
+    for (const auto& bucket : buckets) {
+        auto result =
+            m_db.directory()->execv("SELECT uh_bucket_effective_size($1)", bucket);
         rv += *result.number(0, 0);
     }
 

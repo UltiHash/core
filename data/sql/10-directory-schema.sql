@@ -64,6 +64,7 @@ BEGIN
         small BYTEA DEFAULT NULL,
         large OID DEFAULT NULL,
         size BIGINT NOT NULL,
+        effective_size BIGINT NOT NULL,
         last_modified TIMESTAMP NOT NULL DEFAULT now(),
         etag TEXT DEFAULT NULL
     )';
@@ -76,14 +77,14 @@ $$;
 -- uh_put_small_obj(bucket, key, addr, etag) -- add an object with name `key`
 -- described by `addr` to `bucket`. The object size is limited to 1GB.
 --
-CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYTEA, size bigint, etag TEXT)
+CREATE OR REPLACE PROCEDURE uh_put_small_obj(bucket regclass, key text, addr BYTEA, size bigint, effective_size bigint, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     EXECUTE format('
-        INSERT INTO %s ("name", "small", "size", "etag") VALUES(%L, %L, %L, %L)
-        ON CONFLICT ("name") DO UPDATE SET "small" = %L, "size"= %L',
-        bucket, key, addr, size, etag, addr, size);
+        INSERT INTO %s ("name", "small", "size", "effective_size", "etag") VALUES(%L, %L, %L, %L, %L)
+        ON CONFLICT ("name") DO UPDATE SET "small" = %L, "size"= %L, "effective_size" = %L',
+        bucket, key, addr, size, effective_size, etag, addr, size, effective_size);
 END
 $$;
 
@@ -93,11 +94,11 @@ $$;
 -- PostGre's large object facility. The resulting OID is passed to this
 -- function as addr.
 --
-CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid, size bigint)
+CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid, size bigint, effective_size bigint)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    EXECUTE format('INSERT INTO %s ("name", "large", "size") VALUES(%L, %L, %L)', bucket, key, addr, size);
+    EXECUTE format('INSERT INTO %s ("name", "large", "size", "effective_size") VALUES(%L, %L, %L, %L)', bucket, key, addr, size, effective_size);
 END
 $$;
 
@@ -107,11 +108,11 @@ $$;
 -- data, NULL is returned.
 --
 CREATE OR REPLACE FUNCTION uh_get_object(bucket regclass, key text)
-    RETURNS TABLE (small BYTEA, large oid, size BIGINT, last_modified TIMESTAMP, etag TEXT)
+    RETURNS TABLE (small BYTEA, large oid, size BIGINT, effective_size BIGINT, last_modified TIMESTAMP, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT small, large, size, last_modified, etag FROM %s WHERE name = %L', bucket, key);
+    RETURN QUERY EXECUTE format('SELECT small, large, size, effective_size, last_modified, etag FROM %s WHERE name = %L', bucket, key);
 END;
 $$;
 
@@ -163,9 +164,9 @@ BEGIN
     CALL uh_check_bucket(bucket_dst);
 
     EXECUTE format('
-        INSERT INTO %s (name, small, size, last_modified, etag)
-        SELECT %L, small, size, last_modified, etag FROM %s WHERE name = %L
-        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size, last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag',
+        INSERT INTO %s (name, small, size, effective_size, last_modified, etag)
+        SELECT %L, small, size, 0, last_modified, etag FROM %s WHERE name = %L
+        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size, effective_size = 0, last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag',
         bucket_dst, key_dst, bucket_src, key_src);
 END;
 $$;
@@ -181,9 +182,9 @@ BEGIN
     CALL uh_check_bucket(bucket_dst);
 
     EXECUTE format('
-        INSERT INTO %s (name, small, size, last_modified, etag)
-        SELECT %L, small, size, last_modified, etag FROM %s WHERE name = %L AND etag = %L
-        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size, last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag',
+        INSERT INTO %s (name, small, size, effective_size, last_modified, etag)
+        SELECT %L, small, size, 0, last_modified, etag FROM %s WHERE name = %L AND etag = %L
+        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size, effective_size = 0, last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag',
         bucket_dst, key_dst, bucket_src, key_src, etag);
 END;
 $$;
@@ -198,11 +199,11 @@ LANGUAGE SQL AS 'SELECT name FROM __buckets;';
 -- uh_list_objects(bucket): return all objects in `bucket`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass)
-    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP, etag TEXT)
+    RETURNS TABLE(id bigint, name text, size bigint, effective_size bigint, last_modified TIMESTAMP, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified, etag FROM %s ORDER BY name', bucket);
+    RETURN QUERY EXECUTE format('SELECT id, name, size, effective_size, last_modified, etag FROM %s ORDER BY name', bucket);
 END;
 $$;
 
@@ -211,11 +212,11 @@ $$;
 -- given `prefix`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text)
-    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP, etag TEXT)
+    RETURNS TABLE(id bigint, name text, size bigint, effective_size bigint, last_modified TIMESTAMP, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT id, name, size, last_modified, etag FROM %s WHERE name LIKE %L ORDER BY name', bucket, prefix || '%');
+    RETURN QUERY EXECUTE format('SELECT id, name, size, effective_size, last_modified, etag FROM %s WHERE name LIKE %L ORDER BY name', bucket, prefix || '%');
 END;
 $$;
 
@@ -224,17 +225,17 @@ $$;
 -- given `prefix` that are bigger than `lower_bound`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket regclass, prefix text, lower_bound text)
-    RETURNS TABLE(id bigint, name text, size bigint, last_modified TIMESTAMP, etag TEXT)
+    RETURNS TABLE(id bigint, name text, size bigint, effective_size bigint, last_modified TIMESTAMP, etag TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     IF lower_bound = '' THEN
         RETURN QUERY EXECUTE
-            format('SELECT id, name, size, last_modified, etag FROM %s WHERE name LIKE %L AND name > %L ORDER BY name',
+            format('SELECT id, name, size, effective_size, last_modified, etag FROM %s WHERE name LIKE %L AND name > %L ORDER BY name',
                 bucket, prefix || '%', lower_bound);
     ELSE
         RETURN QUERY EXECUTE
-            format('SELECT id, name, size, last_modified, etag FROM %s WHERE name LIKE %L AND name > %L AND NOT starts_with(name, %L) ORDER BY name',
+            format('SELECT id, name, size, effective_size, last_modified, etag FROM %s WHERE name LIKE %L AND name > %L AND NOT starts_with(name, %L) ORDER BY name',
                 bucket, prefix || '%', lower_bound, lower_bound);
     END IF;
 END;
@@ -251,6 +252,21 @@ DECLARE result BIGINT;
 BEGIN
     CALL uh_check_bucket(bucket);
     EXECUTE format('SELECT sum(size) FROM %s', bucket) INTO result;
+    RETURN result;
+END;
+$$;
+
+--
+--
+--
+--
+CREATE OR REPLACE FUNCTION uh_bucket_effective_size(bucket regclass)
+    RETURNS BIGINT
+    LANGUAGE plpgsql AS $$
+DECLARE result BIGINT;
+BEGIN
+    CALL uh_check_bucket(bucket);
+    EXECUTE format('SELECT sum(effective_size) FROM %s', bucket) INTO result;
     RETURN result;
 END;
 $$;

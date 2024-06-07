@@ -98,6 +98,7 @@ coro<void> put_object::handle(http_request& req) const {
 
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
+                   .effective_size = resp.effective_size,
                    .addr = std::move(resp.addr),
                    .etag = tag};
         co_await m_collection.directory.put_object(req.bucket(), obj);
