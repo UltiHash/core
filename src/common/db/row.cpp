@@ -1,4 +1,4 @@
-#include "result.h"
+#include "row.h"
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
 #include <charconv>
@@ -6,37 +6,39 @@
 
 namespace uh::cluster::db {
 
-std::size_t result::rows() const { return PQntuples(m_result.get()); }
+row::row(std::shared_ptr<PGresult> result, int id)
+    : m_result(result),
+      m_row(id) {}
 
-std::optional<std::span<char>> result::data(int row, int col) {
-    if (PQgetisnull(m_result.get(), row, col)) {
+std::optional<std::span<char>> row::data(int col) {
+    if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
     }
 
-    char* data = PQgetvalue(m_result.get(), row, col);
-    int len = PQgetlength(m_result.get(), row, col);
+    char* data = PQgetvalue(m_result.get(), m_row, col);
+    int len = PQgetlength(m_result.get(), m_row, col);
 
     return std::span(data, len);
 }
 
-std::optional<std::string_view> result::string(int row, int col) {
-    if (PQgetisnull(m_result.get(), row, col)) {
+std::optional<std::string_view> row::string(int col) {
+    if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
     }
 
-    char* data = PQgetvalue(m_result.get(), row, col);
-    int len = PQgetlength(m_result.get(), row, col);
+    char* data = PQgetvalue(m_result.get(), m_row, col);
+    int len = PQgetlength(m_result.get(), m_row, col);
 
     return std::string_view(data, len);
 }
 
-std::optional<int64_t> result::number(int row, int col) {
-    if (PQgetisnull(m_result.get(), row, col)) {
+std::optional<int64_t> row::number(int col) {
+    if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
     }
 
-    char* data = PQgetvalue(m_result.get(), row, col);
-    int len = PQgetlength(m_result.get(), row, col);
+    char* data = PQgetvalue(m_result.get(), m_row, col);
+    int len = PQgetlength(m_result.get(), m_row, col);
 
     int64_t result{};
     switch (PQfformat(m_result.get(), col)) {
@@ -65,8 +67,8 @@ std::optional<int64_t> result::number(int row, int col) {
     return result;
 }
 
-std::optional<utc_time> result::date(int row, int col) {
-    if (PQgetisnull(m_result.get(), row, col)) {
+std::optional<utc_time> row::date(int col) {
+    if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
     }
 
@@ -74,7 +76,7 @@ std::optional<utc_time> result::date(int row, int col) {
         throw std::runtime_error("unsupported date format");
     }
 
-    char* data = PQgetvalue(m_result.get(), row, col);
+    char* data = PQgetvalue(m_result.get(), m_row, col);
     std::stringstream in(data);
 
     std::tm tm{};

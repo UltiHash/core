@@ -5,7 +5,7 @@
 #include "common/telemetry/log.h"
 #include "common/types/scoped_buffer.h"
 #include "common/utils/templates.h"
-#include "result.h"
+#include "row.h"
 #include <libpq-fe.h>
 #include <memory>
 #include <string>
@@ -17,21 +17,28 @@ namespace uh::cluster::db {
 
 class connection {
 public:
-    connection(const connstr& cs);
+    connection(boost::asio::io_context& ioc, const connstr& cs);
     connection(const connection&) = delete;
     connection(connection&&) = default;
 
     /**
      * Execute a query without parameters. The result format will be text.
      */
-    result exec(const std::string& query);
+    coro<std::optional<row>> exec(const std::string& query);
+
+    /**
+     * Execute a query synchronously and return the first row. You can use
+     * `next()` to retrieve subsequent rows, though this requires coroutine
+     * context.
+     */
+    std::optional<row> raw_exec(const std::string& query);
 
     /**
      * Execute a query with parameter variables passing the variable values
      * as parameter pack. The query result will be returned as textual value.
      */
     template <typename... args>
-    result execv(const std::string& query, args... a) {
+    coro<std::optional<row>> execv(const std::string& query, args... a) {
         return exec_format(query, 0, a...);
     }
 
@@ -40,13 +47,25 @@ public:
      * as parameter pack. The query result will be returned as binary value.
      */
     template <typename... args>
-    result execb(const std::string& query, args... a) {
+    coro<std::optional<row>> execb(const std::string& query, args... a) {
         return exec_format(query, 1, a...);
     }
 
+    /**
+     * Return the next row for the current command. Returns std::nullopt if
+     * there are no more rows to retrieve.
+     */
+    coro<std::optional<row>> next();
+
+    /**
+     * Cancel the current command.
+     */
+    coro<void> cancel();
+
 private:
     template <typename... args>
-    result exec_format(const std::string& query, int result_format, args... a) {
+    coro<std::optional<row>> exec_format(const std::string& query,
+                                         int result_format, args... a) {
         std::vector<const char*> values;
         std::vector<int> lengths;
         std::vector<int> format;
@@ -59,15 +78,19 @@ private:
             a...)
             ;
 
-        auto res = std::unique_ptr<PGresult, void (*)(PGresult*)>(
-            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
-                         values.data(), lengths.data(), format.data(),
-                         result_format),
-            PQclear);
+        co_await cancel();
+        if (!PQsendQueryParams(m_ptr.get(), query.c_str(), sizeof...(a),
+                               nullptr, values.data(), lengths.data(),
+                               format.data(), result_format)) {
+            throw_error_message();
+        }
 
-        check_result(res.get());
-        return result(std::move(res));
+        co_return co_await next();
     }
+
+    coro<void> wait();
+
+    [[noreturn]] void throw_error_message();
 
     void append_args(std::span<char> s, std::vector<const char*>& values,
                      std::vector<int>& lengths, std::vector<int>& format,
@@ -117,9 +140,12 @@ private:
         }
     }
 
-    void check_result(const PGresult* result);
-
+    boost::asio::io_context& m_ioc;
     std::unique_ptr<PGconn, void (*)(PGconn*)> m_ptr;
+    boost::asio::posix::stream_descriptor m_fd;
+
+    std::shared_ptr<PGresult> m_result;
+    int m_row = 0;
 };
 
 } // namespace uh::cluster::db

@@ -27,9 +27,8 @@ public:
             throw_from_error(e.error());
         }
 
-        const auto upload_id =
-            m_collection.server_state.m_uploads.insert_upload(req.bucket(),
-                                                              req.object_key());
+        const auto upload_id = co_await m_collection.uploads.insert_upload(
+            req.bucket(), req.object_key());
 
         auto res = get_response(req, upload_id);
         co_await req.respond(res.get_prepared_response());

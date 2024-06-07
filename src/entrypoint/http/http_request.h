@@ -1,7 +1,7 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
-#include <boost/asio.hpp>
+#include "common/types/common_types.h"
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <map>
@@ -10,7 +10,6 @@
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 typedef http::verb method;
-template <typename T> using coro = boost::asio::awaitable<T>; // for coroutine
 
 class transport_decoder {
 public:
