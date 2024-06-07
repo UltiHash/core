@@ -149,8 +149,10 @@ private:
 
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
+                
             fragments.push(fragmentation::unstored{
                 data.substr(0, frag_size), (offset == 0), std::move(f.hint)});
+
             data = data.substr(frag_size);
             offset += frag_size;
             non_dedupe_count++;

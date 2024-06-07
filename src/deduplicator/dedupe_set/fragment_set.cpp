@@ -9,6 +9,7 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
       m_set_log(set_log_path),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
       m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {
+
     if (enable_replay)
         m_set_log.replay(m_set, m_storage);
 }
