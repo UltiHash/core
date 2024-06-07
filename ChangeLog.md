@@ -1,4 +1,12 @@
 # Changelog
+## [0.5.0] 2024-06-06
+- Removed get bucket command
+- Deduplication statistic collection
+- PySpark fixes (copy object, head object, etc.)
+- Removal of cold fragments
+- Better caching mechanism for deduplication set log
+- Pursuing perfect matches without looking into the set
+- Use postgresql database instead of directory service
 
 ## [0.4.2] 2024-05-22
 - Fixed two bugs that result in poor deduplication

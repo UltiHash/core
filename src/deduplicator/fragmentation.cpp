@@ -66,8 +66,10 @@ void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
         return;
     }
 
+    auto lock = set.lock();
     for (auto& m_frag : m_frags) {
         if (!std::holds_alternative<unstored>(m_frag)) {
+            set.mark_deduplication(std::get<fragment>(m_frag));
             continue;
         }
 

@@ -29,7 +29,8 @@ fragment_set_element::fragment_set_element(const std::string_view& data,
       m_data(std::nullopt) {}
 
 fragment_set_element::fragment_set_element(fragment_set_element&& f) noexcept
-    : m_storage(f.m_storage),
+    : m_state(f.m_state),
+      m_storage(f.m_storage),
       m_pointer(f.m_pointer),
       m_size(f.m_size),
       m_prefix(std::move(f.m_prefix)),
@@ -65,10 +66,14 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
     return s1 < s2;
 }
 
-const uint128_t& fragment_set_element::pointer() const { return m_pointer; }
+const uint128_t& fragment_set_element::pointer() const noexcept {
+    return m_pointer;
+}
 
-uint16_t fragment_set_element::size() const { return m_size; }
+uint16_t fragment_set_element::size() const noexcept { return m_size; }
 
-const std::string& fragment_set_element::prefix() const { return m_prefix; }
+const std::string& fragment_set_element::prefix() const noexcept {
+    return m_prefix;
+}
 
 } // namespace uh::cluster

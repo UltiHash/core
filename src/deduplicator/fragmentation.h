@@ -24,7 +24,7 @@ class fragmentation {
 public:
     struct unstored {
         std::string_view data;
-        fragment_set::hint_type hint;
+        std::optional<fragment_set::hint_type> hint;
         bool uploaded = false;
 
         address addr;
