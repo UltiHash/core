@@ -73,7 +73,7 @@ private:
     /// Default grace period for deleted entries in seconds.
     static constexpr auto DEFAULT_TIMEOUT = 300;
 
-    void clear_infos(db::connection& conn);
+    coro<void> clear_infos(db::connection& conn);
 };
 
 } // namespace uh::cluster

@@ -8,16 +8,18 @@ namespace uh::cluster {
 
 multipart_state::multipart_state(boost::asio::io_context& ioc,
                                  const db::config& cfg)
-    : m_db(ioc, connection_factory(cfg, cfg.multipart), cfg.multipart.count) {}
+    : m_db(ioc, connection_factory(ioc, cfg, cfg.multipart),
+           cfg.multipart.count) {}
 
 coro<std::string> multipart_state::insert_upload(std::string bucket,
                                                  std::string key) {
     auto conn = co_await m_db.get();
 
-    clear_infos(*conn);
+    co_await clear_infos(*conn);
 
-    auto res = conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
-    auto id = *res.string(0, 0);
+    auto row =
+        co_await conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
+    auto id = *row->string(0);
 
     LOG_DEBUG() << "insert upload, id " << id << ", bucket: " << bucket
                 << ", key: " << key;
@@ -33,39 +35,39 @@ multipart_state::get_upload_info(const std::string& id) {
 
     auto rv = std::make_shared<upload_info>();
     {
-        auto res = conn->execv(
+        auto row = co_await conn->execv(
             "SELECT bucket, key, erased_since FROM uh_get_upload($1)", id);
-        if (res.rows() != 1) {
+        if (!row) {
             throw command_exception(http::status::not_found, "NoSuchUpload",
                                     "upload id not found");
         }
 
-        rv->bucket = *res.string(0, 0);
-        rv->key = *res.string(0, 1);
-        rv->erased = res.date(0, 2).has_value();
+        rv->bucket = *row->string(0);
+        rv->key = *row->string(1);
+        rv->erased = row->date(2).has_value();
     }
 
-    auto res = conn->execv("SELECT part_id, size, effective_size, etag FROM "
-                           "uh_get_upload_parts($1)",
-                           id);
-    for (auto row = 0ull; row < res.rows(); ++row) {
-        auto id = *res.number(row, 0);
-        auto size = *res.number(row, 1);
-        auto eff_size = *res.number(row, 2);
+    auto row = co_await conn->execv("SELECT part_id, size, effective_size, "
+                                    "etag FROM uh_get_upload_parts($1)",
+                                    id);
+    for (; row; row = co_await conn->next()) {
+        auto id = *row->number(0);
+        auto size = *row->number(1);
+        auto eff_size = *row->number(2);
 
         rv->data_size += size;
         rv->effective_size += eff_size;
 
-        rv->etags[id] = *res.string(row, 3);
+        rv->etags[id] = *row->string(3);
         rv->part_sizes[id] = size;
     }
 
     {
-        auto res = conn->execb(
+        auto row = co_await conn->execb(
             "SELECT part_id, address FROM uh_get_upload_parts($1)", id);
-        for (auto row = 0ull; row < res.rows(); ++row) {
-            auto id = *res.number(row, 0);
-            rv->addresses.emplace(id, to_address(*res.data(row, 1)));
+        for (; row; row = co_await conn->next()) {
+            auto id = *row->number(0);
+            rv->addresses.emplace(id, to_address(*row->data(1)));
         }
     }
 
@@ -83,17 +85,18 @@ coro<void> multipart_state::append_upload_part_info(const std::string& id,
     auto data = to_buffer(resp.addr);
 
     auto conn = co_await m_db.get();
-    conn->execv("CALL uh_put_multipart($1, $2, $3, $4, $5, $6)", id, part,
-                data_size, resp.effective_size, std::span<char>(data), md5);
+    co_await conn->execv("CALL uh_put_multipart($1, $2, $3, $4, $5, $6)", id,
+                         part, data_size, resp.effective_size,
+                         std::span<char>(data), md5);
 }
 
 coro<void> multipart_state::remove_upload(const std::string& id) {
     LOG_DEBUG() << "remove upload, id: " << id;
 
     auto conn = co_await m_db.get();
-    conn->execv("CALL uh_delete_upload($1)", id);
+    co_await conn->execv("CALL uh_delete_upload($1)", id);
 
-    clear_infos(*conn);
+    co_await clear_infos(*conn);
 }
 
 coro<std::map<std::string, std::string>>
@@ -102,18 +105,21 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
     LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
 
     auto conn = co_await m_db.get();
-    auto res = conn->execv("SELECT id, key FROM uh_get_uploads($1)", bucket);
 
     std::map<std::string, std::string> rv;
-    for (auto row = 0ull; row < res.rows(); ++row) {
-        rv[std::string(*res.string(row, 0))] = *res.string(row, 1);
+
+    auto row =
+        co_await conn->execv("SELECT id, key FROM uh_get_uploads($1)", bucket);
+    for (; row; row = co_await conn->next()) {
+        rv[std::string(*row->string(0))] = *row->string(1);
     }
 
     co_return rv;
 }
 
-void multipart_state::clear_infos(db::connection& conn) {
-    conn.execv("CALL uh_clean_deleted(MAKE_INTERVAL($1))", DEFAULT_TIMEOUT);
+coro<void> multipart_state::clear_infos(db::connection& conn) {
+    co_await conn.execv("CALL uh_clean_deleted(MAKE_INTERVAL($1))",
+                        DEFAULT_TIMEOUT);
 }
 
 } // namespace uh::cluster

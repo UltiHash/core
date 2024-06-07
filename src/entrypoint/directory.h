@@ -12,7 +12,7 @@ enum class bucket_delete_policy { only_empty, all };
 struct directory {
 
     directory(boost::asio::io_context& ioc, const db::config& cfg)
-        : m_db(ioc, connection_factory(cfg, cfg.directory),
+        : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
     coro<void> put_object(const std::string& bucket, const object& obj);
