@@ -1,4 +1,7 @@
 # Changelog
+## in-progress
+- Added object attribute for reporting effective size
+
 ## [0.5.0] 2024-06-06
 - Removed get bucket command
 - Deduplication statistic collection
