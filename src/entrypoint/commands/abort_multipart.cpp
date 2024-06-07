@@ -15,7 +15,7 @@ bool abort_multipart::can_handle(const http_request& req) {
 coro<void> abort_multipart::handle(http_request& req) const {
     metric<entrypoint_abort_multipart_req>::increase(1);
 
-    m_collection.server_state.m_uploads.remove_upload(*req.query("uploadId"));
+    co_await m_collection.uploads.remove_upload(*req.query("uploadId"));
 
     http_response resp;
     co_await req.respond(resp.get_prepared_response());

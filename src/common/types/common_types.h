@@ -5,6 +5,7 @@
 #include "big_int.h"
 #include "scoped_buffer.h"
 
+#include <boost/asio.hpp>
 #include <chrono>
 #include <span>
 #include <vector>
@@ -52,6 +53,8 @@ struct object {
         return archive(self.name, count, self.size);
     }
 };
+
+template <typename T> using coro = boost::asio::awaitable<T>;
 
 } // end namespace uh::cluster
 

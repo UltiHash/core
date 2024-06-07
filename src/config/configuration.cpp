@@ -256,6 +256,14 @@ void configure(CLI::App& app, db::config& cfg) {
     app.add_option("--db-pass", cfg.password, "PGSQL password")
         ->default_val(cfg.password)
         ->envname(ENV_CFG_DB_PASS);
+
+    app.add_option("--db-directory-connections", cfg.directory.count,
+                   "Number of connections to directory database")
+        ->default_val(cfg.directory.count);
+
+    app.add_option("--db-multipart-connections", cfg.multipart.count,
+                   "Number of connections to multipart database")
+        ->default_val(cfg.multipart.count);
 }
 
 } // namespace uh::cluster

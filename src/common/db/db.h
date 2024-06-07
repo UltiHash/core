@@ -1,21 +1,29 @@
 #ifndef CORE_COMMON_DB_DB_H
 #define CORE_COMMON_DB_DB_H
 
+#include "common/utils/pool.h"
 #include "config.h"
-#include "pool.h"
+#include "connection.h"
 
 namespace uh::cluster::db {
 
-class database {
-public:
-    database(const config& cfg);
+/**
+ * Create a connection factory that can be passed to `uh::cluster::pool`.
+ */
+inline auto connection_factory(boost::asio::io_context& ioc, const config& cfg,
+                               const config::database& db_cfg) {
 
-    pool::connection_wrapper directory();
+    connstr cs(cfg, db_cfg.dbname);
 
-private:
-    config m_cfg;
-    pool m_directory;
-};
+    return [cs, &ioc]() {
+        LOG_INFO() << "connecting to " << cs;
+
+        auto conn = std::make_unique<connection>(ioc, cs);
+        auto row = conn->raw_exec("SELECT version();");
+        LOG_INFO() << "connected to `" << cs << "`: " << *row->string(0);
+        return conn;
+    };
+}
 
 } // namespace uh::cluster::db
 
