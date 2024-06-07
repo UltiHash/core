@@ -111,7 +111,7 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_delete_upload(id TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('UPDATE uploads SET erased_since = now() WHERE id = %L', id);
+    EXECUTE format('UPDATE uploads SET erased_since = now(), bucket = gen_random_uuid(), key = gen_random_uuid() WHERE id = %L', id);
 END;
 $$;
 

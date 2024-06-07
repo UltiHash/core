@@ -15,10 +15,9 @@ coro<std::string> multipart_state::insert_upload(std::string bucket,
                                                  std::string key) {
     auto conn = co_await m_db.get();
 
-    co_await clear_infos(*conn);
-
     auto row =
         co_await conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
+
     auto id = *row->string(0);
 
     LOG_DEBUG() << "insert upload, id " << id << ", bucket: " << bucket
@@ -118,8 +117,9 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
 }
 
 coro<void> multipart_state::clear_infos(db::connection& conn) {
-    co_await conn.execv("CALL uh_clean_deleted(MAKE_INTERVAL($1))",
-                        DEFAULT_TIMEOUT);
+    co_await conn.execv(
+        "CALL uh_clean_deleted(MAKE_INTERVAL(0, 0, 0, 0, 0, 0, $1))",
+        DEFAULT_TIMEOUT);
 }
 
 } // namespace uh::cluster

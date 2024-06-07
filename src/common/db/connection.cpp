@@ -69,7 +69,16 @@ coro<std::optional<row>> connection::next() {
         co_await wait();
 
         auto result = PQgetResult(m_ptr.get());
+
         if (result == nullptr) {
+            m_result.reset();
+            m_row = 0;
+            co_return std::nullopt;
+        }
+
+        check_result(result);
+        if (PQntuples(result) == 0) {
+            PQclear(result);
             m_result.reset();
             m_row = 0;
             co_return std::nullopt;
@@ -77,7 +86,6 @@ coro<std::optional<row>> connection::next() {
 
         m_result = std::shared_ptr<PGresult>(result, PQclear);
         m_row = 0;
-        check_result(m_result.get());
     }
 
     co_return row(m_result, m_row++);
