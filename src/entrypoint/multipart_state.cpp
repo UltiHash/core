@@ -26,13 +26,13 @@ coro<std::string> multipart_state::insert_upload(std::string bucket,
     co_return id;
 }
 
-coro<std::shared_ptr<upload_info>>
-multipart_state::get_upload_info(const std::string& id) {
+coro<upload_info> multipart_state::details(const std::string& id) {
     LOG_DEBUG() << "get upload info, id: " << id;
 
     auto conn = co_await m_db.get();
 
-    auto rv = std::make_shared<upload_info>();
+    upload_info rv;
+
     {
         auto row = co_await conn->execv(
             "SELECT bucket, key, erased_since FROM uh_get_upload($1)", id);
@@ -41,9 +41,9 @@ multipart_state::get_upload_info(const std::string& id) {
                                     "upload id not found");
         }
 
-        rv->bucket = *row->string(0);
-        rv->key = *row->string(1);
-        rv->erased = row->date(2).has_value();
+        rv.bucket = *row->string(0);
+        rv.key = *row->string(1);
+        rv.erased = row->date(2).has_value();
     }
 
     auto row = co_await conn->execv("SELECT part_id, size, effective_size, "
@@ -51,22 +51,20 @@ multipart_state::get_upload_info(const std::string& id) {
                                     id);
     for (; row; row = co_await conn->next()) {
         auto id = *row->number(0);
-        auto size = *row->number(1);
-        auto eff_size = *row->number(2);
+        std::size_t size = *row->number(1);
 
-        rv->data_size += size;
-        rv->effective_size += eff_size;
+        rv.parts[id] = upload_info::part{.etag = std::string(*row->string(3)),
+                                         .size = size};
 
-        rv->etags[id] = *row->string(3);
-        rv->part_sizes[id] = size;
+        rv.data_size += size;
+        rv.effective_size += *row->number(2);
     }
 
     {
         auto row = co_await conn->execb(
             "SELECT part_id, address FROM uh_get_upload_parts($1)", id);
         for (; row; row = co_await conn->next()) {
-            auto id = *row->number(0);
-            rv->addresses.emplace(id, to_address(*row->data(1)));
+            rv.parts[*row->number(0)].addr = to_address(*row->data(1));
         }
     }
 

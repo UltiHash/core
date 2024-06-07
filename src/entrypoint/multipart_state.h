@@ -5,32 +5,31 @@
 #include "common/types/common_types.h"
 #include "common/utils/pool.h"
 
-#include <chrono>
-#include <cstdint>
 #include <map>
-#include <memory>
-#include <queue>
-#include <unordered_map>
-#include <vector>
 
 namespace uh::cluster {
 
 struct upload_info {
-    size_t effective_size{0};
-    size_t data_size{0};
-    std::map<uint16_t, std::string> etags;
-    std::map<uint16_t, size_t> part_sizes;
-    std::map<uint16_t, address> addresses;
+    struct part {
+        std::string etag;
+        std::size_t size;
+        address addr;
+    };
 
     std::string key;
     std::string bucket;
-    bool erased = false;
+    bool erased;
+    std::map<uint16_t, part> parts;
+
+    size_t effective_size{0};
+    size_t data_size{0};
 
     [[nodiscard]] address generate_total_address() const {
         address addr;
-        for (const auto& a : addresses) {
-            addr.append_address(a.second);
+        for (const auto& p : parts) {
+            addr.append_address(p.second.addr);
         }
+
         return addr;
     }
 };
@@ -47,7 +46,7 @@ public:
     /**
      * Retrieve a pointer to the upload info for a given id.
      */
-    coro<std::shared_ptr<upload_info>> get_upload_info(const std::string& id);
+    coro<upload_info> details(const std::string& id);
 
     /**
      * Set a part info for a given id.

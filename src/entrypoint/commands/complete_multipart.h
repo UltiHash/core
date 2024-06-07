@@ -15,12 +15,11 @@ public:
     coro<void> handle(http_request& req) const;
 
 private:
+    void validate(const upload_info& info, std::span<char> body) const;
+
     reference_collection& m_collection;
     static constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
     static constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
-
-    coro<void> validate(const http_request& req,
-                        const std::span<char> body) const;
 };
 
 } // namespace uh::cluster
