@@ -15,7 +15,7 @@ public:
         : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
-        return req.method() == method::post && !req.bucket().empty() &&
+        return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
                !req.object_key().empty() && req.query("uploads");
     }
 

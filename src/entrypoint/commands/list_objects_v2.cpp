@@ -161,7 +161,7 @@ list_objects_v2::list_objects_v2(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects_v2::can_handle(const http_request& req) {
-    return req.method() == method::get && !req.bucket().empty() &&
+    return req.method() == method::get && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && req.query("list-type") &&
            *req.query("list-type") == "2";
 }
