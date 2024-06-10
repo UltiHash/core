@@ -52,7 +52,7 @@ public:
 
                 try {
                     timeout to(m_collection.ioc);
-                    to.start(600);
+                    to.start(30);
                     co_await handle_request(*req);
                     to.stop();
                     metric<success>::increase(1);

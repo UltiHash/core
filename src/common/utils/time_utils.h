@@ -42,7 +42,7 @@ public:
     basic_timer()
         : m_start(clock::now()) {}
 
-    std::chrono::duration<double> passed() const {
+    [[nodiscard]] std::chrono::duration<double> passed() const {
         return clock::now() - m_start;
     }
 
@@ -78,10 +78,6 @@ struct timeout {
         boost::asio::co_spawn(
             m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
             [t, nsecs](const std::exception_ptr& e) {
-
-                if (e) {
-                    return;
-                }
 
                 if (auto passed = t->passed().count(); passed >= nsecs) {
 
