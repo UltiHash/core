@@ -47,11 +47,14 @@ public:
             for (;;) {
 
                 auto req = co_await http_request::create(s);
+                timeout to(m_collection.ioc);
+                to.start(600);
                 LOG_DEBUG()
                     << s.remote_endpoint() << ": read request: " << *req;
 
                 try {
                     co_await handle_request(*req);
+                    to.stop();
                     metric<success>::increase(1);
                 } catch (const command_exception& e) {
                     LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
