@@ -80,7 +80,6 @@ coro<void> complete_multipart::handle(http_request& req) const {
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),
                .size = addr.data_size(),
-               .effective_size = info.effective_size,
                .addr = std::move(addr),
                .etag = etag};
     co_await m_collection.directory.put_object(req.bucket(), obj);

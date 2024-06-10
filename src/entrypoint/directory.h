@@ -55,11 +55,6 @@ struct directory {
      */
     coro<std::size_t> data_size();
 
-    /**
-     * Return amount of effective data volume stored in all buckets.
-     */
-    coro<std::size_t> effective_data_size();
-
 private:
     pool<db::connection> m_db;
 
