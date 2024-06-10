@@ -3,6 +3,7 @@
 
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
+#include "common/types/common_types.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 
@@ -11,8 +12,6 @@
 #include <boost/asio/ip/tcp.hpp>
 
 namespace uh::cluster {
-
-template <typename T> using coro = boost::asio::awaitable<T>;
 
 using size_type = size_t;
 
@@ -108,9 +107,8 @@ public:
         std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
 
-        co_await boost::asio::async_read(
-            m_socket, buffers,
-            boost::asio::use_awaitable);
+        co_await boost::asio::async_read(m_socket, buffers,
+                                         boost::asio::use_awaitable);
 
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
@@ -129,9 +127,8 @@ public:
                 "The size of the buffers does not match with the header size!");
         }
 
-        co_await boost::asio::async_read(
-            m_socket, m_read_buffers,
-            boost::asio::use_awaitable);
+        co_await boost::asio::async_read(m_socket, m_read_buffers,
+                                         boost::asio::use_awaitable);
 
         m_read_buffers.clear();
         m_read_size = 0;
@@ -165,9 +162,8 @@ public:
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
 
-        co_await boost::asio::async_write(
-            m_socket, m_write_buffers,
-            boost::asio::use_awaitable);
+        co_await boost::asio::async_write(m_socket, m_write_buffers,
+                                          boost::asio::use_awaitable);
 
         reset_write_buffers();
     }
@@ -202,9 +198,8 @@ public:
             {&size, sizeof(size)},
             {data.data(), data.size()}};
 
-        co_await boost::asio::async_write(
-            m_socket, buffers,
-            boost::asio::use_awaitable);
+        co_await boost::asio::async_write(m_socket, buffers,
+                                          boost::asio::use_awaitable);
     }
 
     void clear_buffers() {

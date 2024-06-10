@@ -32,7 +32,6 @@ public:
                   m_attached_storage.get_local_service_interface())),
           m_data_view(config.global_data_view, m_ioc, m_storage_services),
           m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
-          m_db(config.database),
           m_config(config),
           m_attached_dedupe(sc, config.m_attached_deduplicator),
           m_dedupe_services(
@@ -40,7 +39,8 @@ public:
               service_factory<deduplicator_interface>(
                   m_ioc, config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_directory(m_db),
+          m_directory(m_ioc, config.database),
+          m_uploads(m_ioc, config.database),
           m_collection(get_reference_collection()),
           m_server(config.server, make_entrypoint_handler(m_collection), m_ioc),
           m_limits(sc.license.max_data_store_size) {}
@@ -61,7 +61,7 @@ private:
         return {.ioc = m_ioc,
                 .dedupe_services = m_dedupe_services,
                 .directory = m_directory,
-                .server_state = m_state,
+                .uploads = m_uploads,
                 .config = m_config,
                 .gdv = m_data_view,
                 .limits = m_limits};
@@ -76,7 +76,6 @@ private:
     std::atomic<std::size_t> m_data_storage_size = 0ull;
 
     service_registry m_service_registry;
-    db::database m_db;
 
     entrypoint_config m_config;
 
@@ -85,7 +84,7 @@ private:
     services<deduplicator_interface> m_dedupe_services;
     directory m_directory;
 
-    state m_state;
+    multipart_state m_uploads;
 
     reference_collection m_collection;
     server m_server;

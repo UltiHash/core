@@ -11,8 +11,9 @@ enum class bucket_delete_policy { only_empty, all };
 
 struct directory {
 
-    directory(db::database& db)
-        : m_db(db) {}
+    directory(boost::asio::io_context& ioc, const db::config& cfg)
+        : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
+               cfg.directory.count) {}
 
     coro<void> put_object(const std::string& bucket, const object& obj);
 
@@ -55,7 +56,7 @@ struct directory {
     coro<std::size_t> data_size();
 
 private:
-    db::database& m_db;
+    pool<db::connection> m_db;
 
     bucket_delete_policy m_bucket_delete_policy = bucket_delete_policy::all;
 };
