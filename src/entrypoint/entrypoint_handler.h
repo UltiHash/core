@@ -47,12 +47,12 @@ public:
             for (;;) {
 
                 auto req = co_await http_request::create(s);
-                timeout to(m_collection.ioc);
-                to.start(600);
                 LOG_DEBUG()
                     << s.remote_endpoint() << ": read request: " << *req;
 
                 try {
+                    timeout to(m_collection.ioc);
+                    to.start(600);
                     co_await handle_request(*req);
                     to.stop();
                     metric<success>::increase(1);

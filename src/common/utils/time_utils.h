@@ -74,25 +74,35 @@ struct timeout {
         m_waiter = std::make_shared<boost::asio::steady_timer>(
             m_strand, std::chrono::seconds(nsecs));
         auto t = std::make_shared<timer>();
+
         boost::asio::co_spawn(
             m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
             [t, nsecs](const std::exception_ptr& e) {
+
                 if (e) {
-                    std::rethrow_exception(e);
+                    return;
                 }
-                if (auto passed = t->passed().count(); passed >= nsecs)
+
+                if (auto passed = t->passed().count(); passed >= nsecs) {
+
                     throw std::runtime_error("timeout after " +
                                              std::to_string(passed));
+                }
             });
+
     }
 
     void stop() const {
+
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
         });
+
     }
 
-    ~timeout() { stop(); }
+    ~timeout() {
+        stop();
+    }
 };
 } // namespace uh::cluster
 
