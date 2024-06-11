@@ -56,6 +56,8 @@ static constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
 static constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
+static constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
+
 static constexpr int ETCD_TIMEOUT = 60;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 

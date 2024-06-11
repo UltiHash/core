@@ -7,7 +7,7 @@ delete_bucket::delete_bucket(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
-    return req.method() == method::delete_ && !req.bucket().empty() &&
+    return req.method() == method::delete_ && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && !req.has_query();
 }
 

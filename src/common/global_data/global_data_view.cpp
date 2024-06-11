@@ -123,38 +123,14 @@ void global_data_view::sync(const address& addr) {
     }
 }
 
-[[nodiscard]] uint128_t global_data_view::get_used_space() {
+coro<std::size_t> global_data_view::get_used_space() {
     auto nodes = m_storage_services.get_services();
 
-    std::vector<std::future<size_t>> futures;
-    futures.reserve(nodes.size());
-    for (auto& dn : nodes) {
-        futures.emplace_back(boost::asio::co_spawn(
-            m_io_service, dn->get_used_space(), boost::asio::use_future));
+    size_t used = 0;
+    for (const auto& dn : nodes) {
+        used += co_await dn->get_used_space();
     }
-
-    uint128_t used = 0;
-    for (auto& f : futures) {
-        used += f.get();
-    }
-    return used;
-}
-
-[[nodiscard]] uint128_t global_data_view::get_available_space() {
-    auto nodes = m_storage_services.get_services();
-
-    std::vector<std::future<size_t>> futures;
-    futures.reserve(nodes.size());
-    for (auto& dn : nodes) {
-        futures.emplace_back(boost::asio::co_spawn(
-            m_io_service, dn->get_free_space(), boost::asio::use_future));
-    }
-
-    uint128_t available = 0;
-    for (auto& f : futures) {
-        available += f.get();
-    }
-    return available;
+    co_return used;
 }
 
 [[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
