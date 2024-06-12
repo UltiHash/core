@@ -104,15 +104,7 @@ public:
      * instances.
      * @return The used space across all available storage service instances.
      */
-    [[nodiscard]] uint128_t get_used_space();
-
-    /**
-     * @brief Computes available space across all available storage service
-     * instances.
-     * @return The available space across all available storage service
-     * instances.
-     */
-    [[nodiscard]] uint128_t get_available_space();
+    coro<std::size_t> get_used_space();
 
     /**
      * @brief Provides access to the I/O context used by the global_data_view

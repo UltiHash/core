@@ -11,7 +11,7 @@ list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects::can_handle(const http_request& req) {
-    return req.method() == method::get && !req.bucket().empty() &&
+    return req.method() == method::get && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && !req.query("uploads") &&
            !req.query("list-type");
 }
