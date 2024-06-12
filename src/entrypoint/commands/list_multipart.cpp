@@ -1,5 +1,6 @@
 #include "list_multipart.h"
 #include "entrypoint/http/command_exception.h"
+#include "common/utils/strings.h"
 
 namespace uh::cluster {
 
@@ -12,7 +13,7 @@ get_response(const std::string& bucket_name,
     for (const auto& val : ongoing) {
         upload_xml_string += "<Upload>\n"
                              "<Key>" +
-                             val.second +
+                             xml_escape(val.second) +
                              "</Key>\n"
                              "<UploadId>" +
                              val.first +

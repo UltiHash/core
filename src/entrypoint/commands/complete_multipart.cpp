@@ -2,6 +2,7 @@
 #include "common/types/common_types.h"
 #include "common/utils/md5.h"
 #include "common/utils/xml_parser.h"
+#include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_response.h"
 
@@ -97,7 +98,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
                  info.bucket +
                  "</Bucket>\n"
                  "<Key>" +
-                 info.key +
+                 xml_escape(info.key) +
                  "</Key>\n"
                  "<ETag>" +
                  etag +
