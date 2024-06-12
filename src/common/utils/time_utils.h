@@ -67,14 +67,17 @@ struct timeout {
     std::shared_ptr<boost::asio::steady_timer> m_waiter;
     awaitable_promise<void> m_prom;
     bool m_stopped = false;
+  
     explicit timeout(boost::asio::io_context& ioc)
         : m_strand(ioc.get_executor()),
           m_prom(ioc) {}
+
 
     void start(int nsecs) {
         m_waiter = std::make_shared<boost::asio::steady_timer>(
             m_strand, std::chrono::seconds(nsecs));
         auto t = std::make_shared<timer>();
+
         boost::asio::co_spawn(
             m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
             [this, t, nsecs](const std::exception_ptr& e) {

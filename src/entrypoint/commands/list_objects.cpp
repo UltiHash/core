@@ -70,7 +70,7 @@ static http_response get_response(const std::vector<object>& objects,
                     "</LastModified>\n"
                     "<Key>" +
                     (encoding_type ? url_encode(object._object->get().name)
-                                   : object._object->get().name) +
+                                   : xml_escape(object._object->get().name)) +
                     "</Key>\n"
                     "<Size>" +
                     std::to_string(object._object->get().size) +
