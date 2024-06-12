@@ -1,4 +1,8 @@
 # Changelog
+## [Current]
+- Fixed handling of XML-reserved characters in object keys
+- Added REST API for querying raw and effective size of data in the cluster
+
 ## [0.5.0] 2024-06-06
 - Removed get bucket command
 - Deduplication statistic collection
