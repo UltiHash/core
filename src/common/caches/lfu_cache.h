@@ -26,20 +26,23 @@ template <typename Key, typename Value> class lfu_cache {
 
 public:
     explicit lfu_cache(
-        size_t capacity, std::function<void(Key, Value)> removal_callback =
-                             [](const auto&...) {})
+        size_t capacity,
+        std::function<void(Value)> removal_callback = [](const auto&) {})
         : m_capacity{capacity},
           m_removal_callback{std::move(removal_callback)} {}
 
-    inline void put(const Key& key, Value&& val) {
+    template <class KeyType, class ValueType>
+    inline void put(KeyType&& key, ValueType&& val) {
         if (auto itr = m_key_data.find(key); itr != m_key_data.cend()) {
             increment(itr);
         } else {
-            put_non_existing(key, std::forward<Value>(val));
+            put_non_existing(std::forward<KeyType>(key),
+                             std::forward<ValueType>(val));
         }
     }
 
-    inline void put_non_existing(const Key& key, Value&& val) {
+    template <class KeyType, class ValueType>
+    inline void put_non_existing(KeyType&& key, ValueType&& val) {
 
         if (m_freq_buckets.front().freq != 1) {
             m_freq_buckets.emplace_front(1);
@@ -48,7 +51,7 @@ public:
         const auto first_bucket = m_freq_buckets.begin();
         first_bucket->items.emplace_back(key);
 
-        m_key_data.emplace(key,
+        m_key_data.emplace(std::forward<KeyType>(key),
                            key_data{
                                .val = std::forward<Value>(val),
                                .bucket = first_bucket,
@@ -58,7 +61,7 @@ public:
             auto& front_list = m_freq_buckets.front().items;
             const auto& rem_key = front_list.front();
             const auto rem_itr = m_key_data.find(rem_key);
-            m_removal_callback(rem_key, rem_itr->second.val);
+            m_removal_callback(rem_itr->second.val);
 
             m_key_data.erase(rem_itr);
             front_list.pop_front();
@@ -109,7 +112,7 @@ private:
     }
 
     size_t m_capacity;
-    const std::function<void(Key, Value)> m_removal_callback;
+    const std::function<void(Value)> m_removal_callback;
 
     std::unordered_map<Key, key_data> m_key_data;
     std::list<freq_bucket> m_freq_buckets;

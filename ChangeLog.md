@@ -10,6 +10,7 @@
 - Removal of cold fragments
 - Better caching mechanism for deduplication set log
 - Pursuing perfect matches without looking into the set
+- Avoid removing first fragments of files as cold fragment from set.
 - Use postgresql database instead of directory service
 
 ## [0.4.2] 2024-05-22

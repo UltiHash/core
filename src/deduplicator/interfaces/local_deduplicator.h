@@ -79,8 +79,8 @@ struct local_deduplicator : public deduplicator_interface {
     }
 
 private:
-    void pursue_pointer(std::string_view& data, uint128_t pointer,
-                        fragmentation& fragments) {
+    size_t pursue_pointer(std::string_view& data, uint128_t pointer,
+                          fragmentation& fragments) {
         size_t common_size;
         size_t deduplicated = 0;
         shared_buffer<char> stored_data;
@@ -108,6 +108,7 @@ private:
         } while (common_size == m_dedupe_conf.max_fragment_size * pursue_count);
         m_dedupe_logger.log_pursue_deduplication(deduplicated,
                                                  pointer - deduplicated);
+        return deduplicated;
     }
 
     dedupe_response deduplicate_data(std::string_view data) {
@@ -135,20 +136,23 @@ private:
                                                   offset);
 
                 data = data.substr(size);
+                offset += size;
+
                 if (size == m_dedupe_conf.max_fragment_size) {
-                    pursue_pointer(
+                    offset += pursue_pointer(
                         data, frag.pointer + m_dedupe_conf.max_fragment_size,
                         fragments);
                 }
-                offset += size;
                 dedupe_count++;
                 continue;
             }
 
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
-            fragments.push(fragmentation::unstored{data.substr(0, frag_size),
-                                                   std::move(f.hint)});
+                
+            fragments.push(fragmentation::unstored{
+                data.substr(0, frag_size), (offset == 0), std::move(f.hint)});
+
             data = data.substr(frag_size);
             offset += frag_size;
             non_dedupe_count++;

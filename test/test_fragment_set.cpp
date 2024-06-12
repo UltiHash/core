@@ -16,7 +16,7 @@ void insert_a(shared_buffer<char>& fragment_a, address& addr_a,
     BOOST_CHECK(!result_a.high.has_value());
     frag_set.insert(addr_a.first().pointer,
                     fragment_a.string_view().substr(0, addr_a.first().size),
-                    result_a.hint);
+                    false, result_a.hint);
 }
 
 void insert_a_again(shared_buffer<char>& fragment_a, address& addr_a,
@@ -33,7 +33,7 @@ void insert_a_again(shared_buffer<char>& fragment_a, address& addr_a,
     BOOST_CHECK(result_a.high->first.size == addr_a.first().size);
     frag_set.insert(addr_a.first().pointer,
                     fragment_a.string_view().substr(0, addr_a.first().size),
-                    result_a.hint);
+                    false, result_a.hint);
 }
 
 void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
@@ -42,7 +42,7 @@ void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
     auto result_c = frag_set.find(fragment_c.string_view());
     frag_set.insert(addr_c.first().pointer,
                     fragment_c.string_view().substr(0, addr_c.first().size),
-                    result_c.hint);
+                    false, result_c.hint);
     BOOST_CHECK(result_c.low.has_value());
     auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_a.data(), result_c.low->second.data(),
@@ -61,7 +61,7 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
     auto result_b = frag_set.find(fragment_b.string_view());
     frag_set.insert(addr_b.first().pointer,
                     fragment_b.string_view().substr(0, addr_b.first().size),
-                    result_b.hint);
+                    false, result_b.hint);
     BOOST_CHECK(result_b.low.has_value());
     auto prefix_b_low = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_b_low.data(), result_b.low->second.data(),
