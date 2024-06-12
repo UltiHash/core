@@ -61,48 +61,6 @@ std::ostream& operator<<(std::ostream& out, const basic_timer<clock>& t) {
 
 using timer = basic_timer<std::chrono::steady_clock>;
 
-struct timeout {
-
-    boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
-    std::shared_ptr<boost::asio::steady_timer> m_waiter;
-    std::promise<void> m_prom;
-    bool m_stopped = false;
-    explicit timeout(boost::asio::io_context& ioc)
-        : m_strand(ioc.get_executor()) {}
-
-    void start(int nsecs) {
-        m_waiter = std::make_shared<boost::asio::steady_timer>(
-            m_strand, std::chrono::seconds(nsecs));
-        auto t = std::make_shared<timer>();
-        boost::asio::co_spawn(
-            m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
-            [this, t, nsecs](const std::exception_ptr& e) {
-                if (auto passed = t->passed().count(); passed >= nsecs) {
-                    try {
-                        throw std::runtime_error("timeout after " +
-                                                 std::to_string(passed));
-                    } catch (const std::runtime_error& e) {
-                        m_prom.set_exception(std::current_exception());
-                    }
-                }
-                m_prom.set_value();
-            });
-    }
-
-    void stop() {
-        m_stopped = true;
-        boost::asio::post(m_strand, [waiter = m_waiter]() {
-            waiter->expires_after(std::chrono::seconds(0));
-        });
-        m_prom.get_future().get();
-    }
-
-    ~timeout() {
-        if (!m_stopped) {
-            stop();
-        }
-    }
-};
 } // namespace uh::cluster
 
 #endif // UH_CLUSTER_TIMEOUT_H
