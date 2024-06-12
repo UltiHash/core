@@ -1,11 +1,13 @@
 #include "directory.h"
 
+#include "common/utils/debug.h"
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
 namespace uh::cluster {
 
 coro<void> directory::put_object(const std::string& bucket, const object& obj) {
+    LOG_CORO_CONTEXT();
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -25,6 +27,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
 coro<object> directory::get_object(const std::string& bucket,
                                    const std::string& object_id) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     auto row = co_await dir->execb(
         "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
@@ -63,6 +66,7 @@ coro<object> directory::get_object(const std::string& bucket,
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     auto metadata = co_await dir->execv("SELECT size, last_modified, etag "
                                         "FROM uh_get_object($1, $2)",
@@ -84,6 +88,7 @@ coro<object> directory::head_object(const std::string& bucket,
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     try {
@@ -95,6 +100,7 @@ coro<void> directory::put_bucket(const std::string& bucket) {
 }
 
 coro<void> directory::bucket_exists(const std::string& bucket) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     try {
@@ -105,7 +111,7 @@ coro<void> directory::bucket_exists(const std::string& bucket) {
 }
 
 coro<void> directory::delete_bucket(const std::string& bucket) {
-
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     if (m_bucket_delete_policy == bucket_delete_policy::only_empty) {
@@ -124,6 +130,7 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 
 coro<void> directory::delete_object(const std::string& bucket,
                                     const std::string& object_id) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     co_await dir->execv("CALL uh_delete_object($1, $2)", bucket, object_id);
@@ -133,6 +140,7 @@ coro<void> directory::copy_object(const std::string& bucket_src,
                                   const std::string& key_src,
                                   const std::string& bucket_dst,
                                   const std::string& key_dst) {
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     co_await dir->execv("CALL uh_copy_object($1, $2, $3, $4)", bucket_src,
@@ -144,13 +152,14 @@ coro<void> directory::copy_object_ifmatch(const std::string& bucket_src,
                                           const std::string& bucket_dst,
                                           const std::string& key_dst,
                                           const std::string& etag) {
-
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     co_await dir->execv("CALL uh_copy_object_ifmatch($1, $2, $3, $4, $5)",
                         bucket_src, key_src, bucket_dst, key_dst, etag);
 }
 
 coro<std::vector<std::string>> directory::list_buckets() {
+    LOG_CORO_CONTEXT();
     std::vector<std::string> rv;
 
     auto dir = co_await m_db.get();
@@ -168,6 +177,7 @@ directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
                         const std::optional<std::string>& lower_bound) {
 
+    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     std::vector<object> rv;
 
@@ -188,6 +198,7 @@ directory::list_objects(const std::string& bucket,
 }
 
 coro<std::size_t> directory::data_size() {
+    LOG_CORO_CONTEXT();
     std::size_t rv = 0;
     auto dir = co_await m_db.get();
 

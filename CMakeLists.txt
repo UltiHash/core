@@ -9,6 +9,7 @@ option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
+option(ENABLE_CORO_TRACE "Trace coroutine execution" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 

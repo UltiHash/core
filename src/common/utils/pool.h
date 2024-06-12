@@ -2,6 +2,7 @@
 #define CORE_COMMON_POOL_H
 
 #include "common/coroutines/awaitable_promise.h"
+#include "common/utils/debug.h"
 
 #include <list>
 #include <memory>
@@ -52,6 +53,8 @@ public:
     }
 
     coro<handle> get() {
+        LOG_CORO_CONTEXT();
+
         std::shared_ptr<awaitable_promise<handle>> promise;
 
         {
@@ -79,6 +82,8 @@ private:
         if (!r) {
             return;
         }
+
+        LOG_CORO_CONTEXT();
 
         std::unique_lock<std::mutex> lk(*m_mutex);
 
