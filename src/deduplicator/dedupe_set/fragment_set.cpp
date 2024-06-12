@@ -7,24 +7,14 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
                            bool enable_replay)
     : m_storage(storage),
       m_set_log(set_log_path),
-      m_lfu(capacity, [this](const auto& key, const auto& element) {
-          fragment_set_log::log_entry entry{set_operation::REMOVE, key};
-          m_set_log.append(entry);
-          if (element->m_hint_count > 0) {
-              element->m_state = COLD;
-              m_colds.emplace_front(element);
-          } else {
-              m_set.erase(element);
-          }
-          std::erase_if(m_colds, [](const auto& item) {
-              return item->m_hint_count == 0;
-          });
-      }) {
+      m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
+      m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {
+
     if (enable_replay)
         m_set_log.replay(m_set, m_storage);
 }
 
-fragment_set::response fragment_set::find(std::string_view data) {
+fragment_set::response fragment_set::find(const std::string_view& data) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, std::string(prefix), m_storage};
 
@@ -48,7 +38,7 @@ fragment_set::response fragment_set::find(std::string_view data) {
 }
 
 void fragment_set::insert(const uint128_t& pointer,
-                          const std::string_view& data,
+                          const std::string_view& data, bool header,
                           const std::optional<hint_type>& hint) {
 
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
@@ -64,12 +54,18 @@ void fragment_set::insert(const uint128_t& pointer,
     if (hint) {
         auto res = m_set.emplace_hint(hint->m_hint, std::move(f));
         if (res->pointer() == pointer) {
-            m_lfu.put_non_existing(pointer, std::move(res));
+            if (header)
+                m_lfu_headers.put_non_existing(pointer, res);
+            else
+                m_lfu.put_non_existing(pointer, res);
         }
     } else {
         auto res = m_set.emplace(std::move(f));
         if (res.second) {
-            m_lfu.put_non_existing(pointer, std::move(res.first));
+            if (header)
+                m_lfu_headers.put_non_existing(pointer, res.first);
+            else
+                m_lfu.put_non_existing(pointer, res.first);
         }
     }
 }
@@ -84,6 +80,25 @@ size_t fragment_set::size() { return m_set.size(); }
 
 std::lock_guard<std::shared_mutex> fragment_set::lock() {
     return std::lock_guard<std::shared_mutex>(m_mutex);
+}
+
+void fragment_set::remove(
+    const std::set<fragment_set_element>::const_iterator& itr) {
+    fragment_set_log::log_entry entry{set_operation::REMOVE, itr->pointer()};
+    m_set_log.append(entry);
+    if (itr->m_hint_count > 0) {
+        itr->m_state = COLD;
+        m_colds.emplace_front(itr);
+    } else {
+        m_set.erase(itr);
+    }
+    std::erase_if(m_colds, [this](const auto& item) {
+        if (item->m_hint_count == 0) {
+            m_set.erase(item);
+            return true;
+        }
+        return false;
+    });
 }
 
 } // namespace uh::cluster

@@ -85,7 +85,7 @@ public:
      * @return A response structure containing the lexicographic neighbours of
      * #data as wall as an iterator used as a hint for the insert operation.
      */
-    response find(std::string_view data);
+    response find(const std::string_view& data);
 
     /**
      * @brief Inserts the provided fragment into the fragment_set
@@ -93,10 +93,13 @@ public:
      * @param pointer A constant reference to a uint128_t with the address of
      * the full fragment
      * @param data Full fragment content
+     * @param header a boolean indicating if this fragment is the first fragment
+     * of the incoming data
      * @param hint A constant reference to the std::set::const_iterator yielded
      * by the #find method
      */
     void insert(const uint128_t& pointer, const std::string_view& data,
+                bool header,
                 const std::optional<hint_type>& hint = std::nullopt);
 
     /**
@@ -128,11 +131,17 @@ public:
     std::lock_guard<std::shared_mutex> lock();
 
 private:
+    void remove(const std::set<fragment_set_element>::const_iterator& itr);
+
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
     fragment_set_log m_set_log;
+  
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
+    lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator>
+        m_lfu_headers;
+
     std::forward_list<std::set<fragment_set_element>::const_iterator> m_colds;
 };
 

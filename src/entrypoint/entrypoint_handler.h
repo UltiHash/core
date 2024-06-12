@@ -52,7 +52,10 @@ public:
                     << s.remote_endpoint() << ": read request: " << *req;
 
                 try {
+                    timeout to(m_collection.ioc);
+                    to.start(30);
                     co_await handle_request(*req);
+                    to.stop();
                     metric<success>::increase(1);
                 } catch (const command_exception& e) {
                     LOG_ERROR() << s.remote_endpoint() << ": " << e.what();

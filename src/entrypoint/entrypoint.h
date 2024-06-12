@@ -74,7 +74,6 @@ private:
     services<storage_interface> m_storage_services;
     global_data_view m_data_view;
     std::atomic<std::size_t> m_data_storage_size = 0ull;
-    std::size_t m_max_data_size = 0ull;
 
     service_registry m_service_registry;
 

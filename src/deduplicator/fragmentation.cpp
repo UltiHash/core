@@ -81,7 +81,8 @@ void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
         m_dedupe_logger.log_non_deduplication(un.addr.get_fragment(0));
 
         set.insert({un.addr.pointers[0], un.addr.pointers[1]},
-                   un.data.substr(0, un.addr.sizes.front()), un.hint);
+                   un.data.substr(0, un.addr.sizes.front()), un.header,
+                   un.hint);
     }
 }
 
