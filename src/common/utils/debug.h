@@ -48,7 +48,7 @@ private:
     std::source_location m_loc;
 };
 
-#ifdef ENABLE_CORO_TRACE
+#ifdef ENABLE_TRACE
 #define LOG_CONTEXT() context_logger __ctx
 #else
 #define LOG_CONTEXT()
@@ -63,7 +63,7 @@ private:
         return s.str();                                                        \
     }
 
-#ifdef ENABLE_CORO_TRACE
+#ifdef ENABLE_TRACE
 #define LOG_CORO_CONTEXT()                                                     \
     CORO_ID();                                                                 \
     context_logger __ctx(coro_id())

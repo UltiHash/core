@@ -64,13 +64,16 @@ for ctx in contexts_refined:
     print(f"run times for context {ctx}")
     min_period = datetime.timedelta.max
     max_period = datetime.timedelta.min
+    max_ctx = None
     sum = datetime.timedelta()
     for call in contexts_refined[ctx]:
         if max_period < call[1]:
             max_period = call[1]
+            max_ctx = call[0]
         if min_period > call[1]:
             min_period = call[1]
         sum += call[1]
 
     count = len(contexts_refined[ctx])
     print(f"  max: {max_period}, min: {min_period}, avg: {sum/count}, calls: {count}")
+    print(f"  max runtime in coroutine {max_ctx}")

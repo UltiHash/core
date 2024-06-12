@@ -16,9 +16,14 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     auto span = std::span<char>(data);
 
     try {
+        LOG_DEBUG() << coro_id() << ": before m_db::get()";
         auto dir = co_await m_db.get();
+        LOG_DEBUG() << coro_id() << ": after m_db::get()";
         co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)", bucket,
                             obj.name, span, obj.addr->data_size(), obj.etag);
+        LOG_DEBUG() << coro_id() << ": after execv, bucket: " << bucket
+                    << ", obj: " << obj.name
+                    << ", addr size: " << obj.addr->data_size();
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "bucket not found");
