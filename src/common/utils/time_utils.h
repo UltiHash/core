@@ -1,7 +1,6 @@
 #ifndef UH_CLUSTER_TIMEOUT_H
 #define UH_CLUSTER_TIMEOUT_H
 
-#include "common/coroutines/awaitable_promise.h"
 #include <chrono>
 #include <thread>
 
