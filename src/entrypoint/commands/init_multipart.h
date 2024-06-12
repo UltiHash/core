@@ -2,6 +2,7 @@
 #ifndef UH_CLUSTER_INIT_MULTIPART_H
 #define UH_CLUSTER_INIT_MULTIPART_H
 
+#include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/http/http_response.h"
@@ -45,7 +46,7 @@ private:
                      req.bucket() +
                      "</Bucket>\n"
                      "<Key>" +
-                     req.object_key() +
+                     xml_escape(req.object_key()) +
                      "</Key>\n"
                      "<UploadId>" +
                      upload_id +
