@@ -1,5 +1,6 @@
 #include "delete_objects.h"
 #include "common/utils/xml_parser.h"
+#include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -26,14 +27,14 @@ http_response get_response(const std::vector<std::string>& success,
     for (const auto& val : success) {
         xml_string += "<Deleted>\n"
                       "<Key>" +
-                      val +
+                      xml_escape(val) +
                       "</Key>\n"
                       "</Deleted>\n";
     }
     for (const auto& val : failure) {
         xml_string += "<Error>\n"
                       "<Key>" +
-                      val.key +
+                      xml_escape(val.key) +
                       "</Key>\n"
                       "<Code>" +
                       val.code +

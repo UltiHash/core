@@ -1,6 +1,8 @@
 #include "strings.h"
 
 #include <boost/beast/core/detail/base64.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
 #include <sstream>
@@ -48,6 +50,22 @@ bool to_bool(std::string str_to_eval) {
     bool b;
     is >> std::boolalpha >> b;
     return b;
+}
+
+std::string xml_escape(const std::string& str_to_encode) {
+    std::ostringstream oss;
+    boost::property_tree::ptree pt;
+    pt.put("root", str_to_encode);
+
+    boost::property_tree::write_xml(oss, pt, boost::property_tree::xml_writer_make_settings<std::string>(' ', 4));
+    std::string result = oss.str();
+
+    // removing these tags seems cumbersome, but it's better than
+    // manually having to maintain an XML escaper where boost internally
+    // already has one
+    auto start = result.find("<root>") + 6;
+    auto end = result.rfind("</root>");
+    return result.substr(start, end - start);
 }
 
 
