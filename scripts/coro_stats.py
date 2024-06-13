@@ -28,7 +28,7 @@ def refine(calls):
         if ctx in stack:
             assert action == 'leave'
             period = date - stack[ctx]
-            rv.append((ctx, period))
+            rv.append((ctx, period, stack[ctx]))
             stack.pop(ctx, None)
         else:
             assert action == 'enter'
@@ -65,15 +65,17 @@ for ctx in contexts_refined:
     min_period = datetime.timedelta.max
     max_period = datetime.timedelta.min
     max_ctx = None
+    max_start = None
     sum = datetime.timedelta()
     for call in contexts_refined[ctx]:
         if max_period < call[1]:
             max_period = call[1]
             max_ctx = call[0]
+            max_start = call[2]
         if min_period > call[1]:
             min_period = call[1]
         sum += call[1]
 
     count = len(contexts_refined[ctx])
     print(f"  max: {max_period}, min: {min_period}, avg: {sum/count}, calls: {count}")
-    print(f"  max runtime in coroutine {max_ctx}")
+    print(f"  max runtime in coroutine {max_ctx}, start: {max_start}")

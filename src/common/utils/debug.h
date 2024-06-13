@@ -68,7 +68,9 @@ private:
     CORO_ID();                                                                 \
     context_logger __ctx(coro_id())
 #else
-#define LOG_CORO_CONTEXT()
+#define LOG_CORO_CONTEXT()                                                     \
+    CORO_ID();                                                                 \
+    (void)coro_id()
 #endif
 
 inline std::string dbg_to_string(std::string v) { return v; }
