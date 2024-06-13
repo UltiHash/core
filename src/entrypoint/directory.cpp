@@ -15,9 +15,8 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
     try {
         auto dir = co_await m_db.get();
-        co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)",
-                            bucket, obj.name, span, obj.addr->data_size(),
-                            obj.etag);
+        co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)", bucket,
+                            obj.name, span, obj.addr->data_size(), obj.etag);
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "bucket not found");
@@ -48,27 +47,26 @@ coro<object> directory::get_object(const std::string& bucket,
 
     address addr = to_address(*small);
 
-    auto metadata =
-        co_await dir->execv("SELECT size, last_modified, etag "
-                            "FROM uh_get_object($1, $2)",
-                            bucket, object_id);
+    auto metadata = co_await dir->execv("SELECT size, last_modified, etag "
+                                        "FROM uh_get_object($1, $2)",
+                                        bucket, object_id);
 
-    auto etag = metadata->string(3);
+    auto etag = metadata->string(2);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
                      .size = static_cast<std::size_t>(*metadata->number(0)),
                      .addr = std::move(addr),
-                     .etag = etag ? std::optional<std::string>(*etag) : std::nullopt};
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
     auto dir = co_await m_db.get();
-    auto metadata =
-        co_await dir->execv("SELECT size, last_modified, etag "
-                            "FROM uh_get_object($1, $2)",
-                            bucket, object_id);
+    auto metadata = co_await dir->execv("SELECT size, last_modified, etag "
+                                        "FROM uh_get_object($1, $2)",
+                                        bucket, object_id);
 
     if (!metadata) {
         throw command_exception(http::status::not_found, "NoSuchKey",
@@ -77,12 +75,12 @@ coro<object> directory::head_object(const std::string& bucket,
 
     auto etag = metadata->string(2);
 
-    co_return object{
-        .name = object_id,
-        .last_modified = *metadata->date(1),
-        .size = static_cast<std::size_t>(*metadata->number(0)),
-        .addr = std::nullopt,
-        .etag = etag ? std::optional<std::string>(*etag) : std::nullopt};
+    co_return object{.name = object_id,
+                     .last_modified = *metadata->date(1),
+                     .size = static_cast<std::size_t>(*metadata->number(0)),
+                     .addr = std::nullopt,
+                     .etag = etag ? std::optional<std::string>(*etag)
+                                  : std::nullopt};
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
@@ -173,16 +171,17 @@ directory::list_objects(const std::string& bucket,
     auto dir = co_await m_db.get();
     std::vector<object> rv;
 
-    auto row = co_await dir->execv(
-        "SELECT id, name, size, last_modified, "
-        "etag FROM uh_list_objects($1, $2, $3)",
-        bucket, prefix.value_or(""), lower_bound.value_or(""));
+    auto row = co_await dir->execv("SELECT id, name, size, last_modified, "
+                                   "etag FROM uh_list_objects($1, $2, $3)",
+                                   bucket, prefix.value_or(""),
+                                   lower_bound.value_or(""));
     for (; row; row = co_await dir->next()) {
 
         auto etag = row->string(4);
         rv.emplace_back(std::string(*row->string(1)), *row->date(3),
                         static_cast<std::size_t>(*row->number(2)), std::nullopt,
-                        etag ? std::optional<std::string>(*etag) : std::nullopt);
+                        etag ? std::optional<std::string>(*etag)
+                             : std::nullopt);
     }
 
     co_return rv;
@@ -200,8 +199,8 @@ coro<std::size_t> directory::data_size() {
         rv += *row->number(0);
     }
 
-        LOG_DEBUG() << "read directory data_size: done";
-        co_return rv;
+    LOG_DEBUG() << "read directory data_size: done";
+    co_return rv;
 }
 
 } // namespace uh::cluster
