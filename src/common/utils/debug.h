@@ -88,6 +88,15 @@ inline std::string dbg_to_string(const std::optional<t>& v) {
 
 inline std::string dbg_to_string(auto v) { return std::to_string(v); }
 
+/**
+ * FOR_EACH(MACRO, ...)
+ *
+ * Apply a macro to each of the passed parameters.
+ *
+ * Note: this really hard to read preprocessor foo was simply copied
+ * from https://www.scs.stanford.edu/~dm/blog/va-opt.html which also contains
+ * some nice explainatory prose.
+ */
 #define PARENS ()
 
 #define EXPAND(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
@@ -100,14 +109,14 @@ inline std::string dbg_to_string(auto v) { return std::to_string(v); }
     macro(a1) __VA_OPT__(FOR_EACH_AGAIN PARENS(macro, __VA_ARGS__))
 #define FOR_EACH_AGAIN() FOR_EACH_HELPER
 
-#define _DUMP_VAR(X) << " " << #X "=" << dbg_to_string(X) << ","
-
 /**
  * DUMP_VARS(DEST, VAR 1 [, VAR 2 ...])
  *
  * Output values of variables/expressions. Note: parameters will be evaluated
  * multiple times, so use expressions without side-effects.
  */
+#define _DUMP_VAR(X) << " " << #X "=" << dbg_to_string(X) << ","
+
 #define DUMP_VARS(DEST, ...)                                                   \
     DEST << std::source_location::current() FOR_EACH(_DUMP_VAR, __VA_ARGS__)
 
