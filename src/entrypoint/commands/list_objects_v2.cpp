@@ -183,8 +183,8 @@ coro<void> list_objects_v2::handle(http_request& req) const {
         obj_list = co_await m_collection.directory.list_objects(
             req.bucket(), prefix, lowerbound);
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
-                                "object not found");
+        throw command_exception(http::status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 
     auto res = get_response(obj_list, req);
