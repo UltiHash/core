@@ -161,36 +161,37 @@ list_objects_v2::list_objects_v2(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects_v2::can_handle(const http_request& req) {
-    return req.method() == method::get && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::get &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && req.query("list-type") &&
            *req.query("list-type") == "2";
 }
 
 coro<void> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
-    try {
-        std::optional<std::string> prefix = req.query("prefix");
-        std::optional<std::string> lowerbound = req.query("start-after");
+    std::optional<std::string> prefix = req.query("prefix");
+    std::optional<std::string> lowerbound = req.query("start-after");
 
-        if (auto continuation_token = req.query("continuation-token");
-            continuation_token && !continuation_token->empty()) {
-            if (!lowerbound || *continuation_token > *lowerbound)
-                lowerbound = continuation_token;
-        }
-
-        auto obj_list = co_await m_collection.directory.list_objects(
-            req.bucket(), prefix, lowerbound);
-
-        auto res = get_response(obj_list, req);
-
-        LOG_DEBUG() << req.socket().remote_endpoint()
-                    << " list_objects_v2 response: " << res;
-        co_await req.respond(res.get_prepared_response());
-
-    } catch (const error_exception& e) {
-        LOG_ERROR() << req.socket().remote_endpoint() << ": " << e.what();
-        throw_from_error(e.error());
+    if (auto continuation_token = req.query("continuation-token");
+        continuation_token && !continuation_token->empty()) {
+        if (!lowerbound || *continuation_token > *lowerbound)
+            lowerbound = continuation_token;
     }
+
+    std::vector<object> obj_list;
+    try {
+        obj_list = co_await m_collection.directory.list_objects(
+            req.bucket(), prefix, lowerbound);
+    } catch (const std::exception& e) {
+        throw command_exception(http::status::not_found, "NoSuchKey",
+                                "object not found");
+    }
+
+    auto res = get_response(obj_list, req);
+
+    LOG_DEBUG() << req.socket().remote_endpoint()
+                << " list_objects_v2 response: " << res;
+    co_await req.respond(res.get_prepared_response());
 }
 
 } // namespace uh::cluster
