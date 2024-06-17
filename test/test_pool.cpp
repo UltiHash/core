@@ -11,6 +11,7 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(get) {
     io_context ctx;
+    executor_work_guard<decltype(ctx.get_executor())> work{ctx.get_executor()};
     std::thread thread([&]() { ctx.run(); });
 
     int id = 5;
@@ -35,6 +36,7 @@ BOOST_AUTO_TEST_CASE(get) {
         use_future)
         .get();
 
+    work.reset();
     thread.join();
 }
 
