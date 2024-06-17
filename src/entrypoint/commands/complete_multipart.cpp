@@ -95,7 +95,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                  "<CompleteMultipartUploadResult>\n"
                  "<Bucket>" +
-                 info.bucket +
+                 req.bucket() +
                  "</Bucket>\n"
                  "<Key>" +
                  xml_escape(info.key) +

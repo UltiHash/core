@@ -1,5 +1,6 @@
 #include "fragmentation.h"
 
+#include "config.h"
 #include <optional>
 
 namespace uh::cluster {
@@ -67,6 +68,8 @@ void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
     }
 
     auto lock = set.lock();
+    LOG_CORO_CONTEXT();
+
     for (auto& m_frag : m_frags) {
         if (!std::holds_alternative<unstored>(m_frag)) {
             set.mark_deduplication(std::get<fragment>(m_frag));
