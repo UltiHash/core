@@ -19,22 +19,33 @@ struct fail {
     std::string code;
 };
 
+
 http_response get_response(const std::vector<std::string>& success,
                            const std::vector<fail>& failure) noexcept {
     http_response res;
 
     boost::property_tree::ptree pt;
+    boost::property_tree::ptree deleteResult;
+
     for (const auto& val : success) {
-        pt.put("DeleteResult.Deleted.Key", val);
+        boost::property_tree::ptree deleted;
+        deleted.put("Key", val);
+        deleteResult.add_child("Deleted", deleted);
     }
     for (const auto& val : failure) {
-        pt.put("DeleteResult.Error.Key", val.key);
-        pt.put("DeleteResult.Error.Code", val.code);
+        boost::property_tree::ptree error;
+        error.put("Key", val.key);
+        error.put("Code", val.code);
+        deleteResult.add_child("Error", error);
     }
+
+    pt.add_child("DeleteResult", deleteResult);
 
     std::ostringstream ss;
     boost::property_tree::write_xml(ss, pt);
     res.set_body(ss.str());
+
+    LOG_DEBUG() << "get_respones: " << ss.str();
 
     return res;
 }
