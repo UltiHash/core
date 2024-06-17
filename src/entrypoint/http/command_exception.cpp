@@ -30,9 +30,7 @@ http::response<http::string_body> make_response(const command_exception& e) {
     pt.put("Error.Message", e.m_reason);
 
     std::ostringstream ss;
-    boost::property_tree::write_xml(
-        ss, pt,
-        boost::property_tree::xml_writer_make_settings<std::string>(' ', 4));
+    boost::property_tree::write_xml(ss, pt);
     http::response<http::string_body> res{e.m_status, 11, ss.str()};
     res.prepare_payload();
 

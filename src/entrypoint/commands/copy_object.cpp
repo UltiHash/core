@@ -34,13 +34,17 @@ coro<void> copy_object::handle(http_request& req) const {
     auto obj = co_await m_collection.directory.head_object(req.bucket(),
                                                            req.object_key());
 
+    boost::property_tree::ptree pt;
+    pt.put("CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
+    if (obj.etag) {
+        pt.put("CopyObjectResult.Etag", *etag);
+    }
+
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+
     http_response res;
-    res.set_body(
-        "<CopyObjectResult><LastModified>" + iso8601_date(obj.last_modified) +
-        "</LastModified>" +
-        (obj.etag ? std::string("<ETag>") + *obj.etag + std::string("</ETag>")
-                  : std::string()) +
-        "</CopyObjectResult>");
+    res.set_body(ss.str());
 
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": copy_object response: " << res;
