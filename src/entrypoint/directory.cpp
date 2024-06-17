@@ -53,7 +53,7 @@ coro<object> directory::get_object(const std::string& bucket,
                             "FROM uh_get_object($1, $2)",
                             bucket, object_id);
 
-    auto etag = metadata->string(3);
+    auto etag = metadata->string(2);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),

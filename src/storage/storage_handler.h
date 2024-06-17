@@ -36,6 +36,9 @@ public:
                 case STORAGE_WRITE_REQ:
                     co_await handle_write(m, message_header);
                     break;
+                case STORAGE_READ_REQ:
+                    co_await handle_read(m, message_header);
+                    break;
                 case STORAGE_READ_FRAGMENT_REQ:
                     co_await handle_read_fragment(m, message_header);
                     break;
@@ -81,6 +84,14 @@ private:
         co_await m.recv_buffers(h);
         auto addr = co_await m_storage.write(data.string_view());
         co_await m.send_address(SUCCESS, addr);
+    }
+
+    coro<void> handle_read(messenger& m, const messenger::header& h) {
+        const auto frag = co_await m.recv_fragment(h);
+
+        auto buffer = co_await m_storage.read(frag.pointer, frag.size);
+
+        co_await m.send(SUCCESS, buffer.span());
     }
 
     coro<void> handle_read_fragment(messenger& m, const messenger::header& h) {

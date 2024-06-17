@@ -46,6 +46,13 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
+    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+        shared_buffer<> buf(size);
+        const auto read_size = get_data_store(pointer).read_up_to(buf.data(), pointer, size);
+        buf.resize(read_size);
+        co_return buf;
+    }
+
     coro<void> read_address(char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
 

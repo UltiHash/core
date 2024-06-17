@@ -32,6 +32,7 @@ struct data_store_fixture {
         }
         throwing_data = random_buffer(length);
         m_expected_used = 0;
+        m_expected_last_file_space = 0;
     }
 
     [[nodiscard]] data_store_config make_data_store_config() const {
@@ -51,18 +52,12 @@ struct data_store_fixture {
     }
 
     inline size_t get_expected_used(size_t t_written) {
-        auto files =
-                (m_expected_used + MAX_FILE_SIZE_BYTES - 1) / MAX_FILE_SIZE_BYTES;
-
-        if (m_expected_used + t_written > files * MAX_FILE_SIZE_BYTES) {
-            m_expected_used = files * MAX_FILE_SIZE_BYTES + sizeof (size_t);
-
+        if (t_written > m_expected_last_file_space) {
+            m_expected_used += sizeof(size_t);
+            m_expected_last_file_space = MAX_FILE_SIZE_BYTES - sizeof(size_t);
         }
-        else if (m_expected_used == 0) {
-            m_expected_used = sizeof (size_t);
-        }
-
         m_expected_used += t_written;
+        m_expected_last_file_space -= t_written;
         return m_expected_used;
     }
 
@@ -72,6 +67,7 @@ struct data_store_fixture {
 
     std::unique_ptr<data_store> ds;
     std::size_t m_expected_used{};
+    std::size_t m_expected_last_file_space{};
 };
 
 BOOST_FIXTURE_TEST_SUITE(data_store_test_suite, data_store_fixture)
