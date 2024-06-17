@@ -23,27 +23,18 @@ http_response get_response(const std::vector<std::string>& success,
                            const std::vector<fail>& failure) noexcept {
     http_response res;
 
-    std::string xml_string;
+    boost::property_tree::ptree pt;
     for (const auto& val : success) {
-        xml_string += "<Deleted>\n"
-                      "<Key>" +
-                      xml_escape(val) +
-                      "</Key>\n"
-                      "</Deleted>\n";
+        pt.put("DeleteResult.Deleted.Key", val);
     }
     for (const auto& val : failure) {
-        xml_string += "<Error>\n"
-                      "<Key>" +
-                      xml_escape(val.key) +
-                      "</Key>\n"
-                      "<Code>" +
-                      val.code +
-                      "</Code>\n"
-                      "</Error>\n";
+        pt.put("DeleteResult.Error.Key", val.key);
+        pt.put("DeleteResult.Error.Code", val.code);
     }
 
-    res.set_body(std::string("<DeleteResult>\n" + std::move(xml_string) +
-                             "</DeleteResult>"));
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+    res.set_body(ss.str());
 
     return res;
 }
