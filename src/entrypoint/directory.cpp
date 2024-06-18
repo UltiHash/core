@@ -84,6 +84,9 @@ coro<object> directory::head_object(const std::string& bucket,
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
+    validate_bucket_name(bucket);
+
+
     auto dir = co_await m_db.get();
 
     try {
@@ -203,6 +206,22 @@ coro<std::size_t> directory::data_size() {
 
     LOG_DEBUG() << "read directory data_size: done";
     co_return rv;
+}
+
+void directory::validate_bucket_name(const std::string& bucket_name) {
+    if (bucket_name.size() < 3 || bucket_name.size() > 63) {
+        throw command_exception(http::status::bad_request,
+                                "InvalidBucketName",
+                                "bucket name has invalid length");
+    }
+
+    std::regex bucket_pattern(
+        R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
+    if (!std::regex_match(bucket_name, bucket_pattern)) {
+        throw command_exception(http::status::bad_request,
+                                "InvalidBucketName",
+                                "bucket name has invalid characters");
+    }
 }
 
 } // namespace uh::cluster

@@ -57,8 +57,9 @@ struct directory {
 
 private:
     pool<db::connection> m_db;
+    bucket_delete_policy m_bucket_delete_policy = bucket_delete_policy::only_empty;
 
-    bucket_delete_policy m_bucket_delete_policy = bucket_delete_policy::all;
+    static void validate_bucket_name(const std::string& bucket_name);
 };
 
 } // namespace uh::cluster

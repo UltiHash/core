@@ -50,6 +50,7 @@ extract_bucket_and_object(boost::urls::url url) {
     if (!object_key.empty())
         object_key.pop_back();
 
+    /*
     if (!bucket_id.empty()) {
         if (bucket_id.size() < 3 || bucket_id.size() > 63) {
             throw command_exception(http::status::bad_request,
@@ -65,6 +66,7 @@ extract_bucket_and_object(boost::urls::url url) {
                                     "bucket name has invalid characters");
         }
     }
+     */
 
     return std::make_tuple(bucket_id, object_key);
 }
