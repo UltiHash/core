@@ -2,6 +2,7 @@
 #define UH_CLUSTER_AWAITABLE_PROMISE_H
 
 #include "common/network/messenger_core.h"
+#include "iostream"
 #include <boost/asio/steady_timer.hpp>
 #include <boost/bind/bind.hpp>
 #include <type_traits>
@@ -43,14 +44,18 @@ public:
         });
     }
 
+    std::atomic_size_t p = 0;
     coro<T> get() {
+        p++;
         co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+
         std::atomic_thread_fence(std::memory_order_seq_cst);
 
         if (m_exception) {
             std::rethrow_exception(*m_exception);
         }
-
+        p--;
+        std::cout << "p " << p << std::endl;
         co_return std::move(*m_data);
     }
 };

@@ -48,7 +48,8 @@ public:
      * Convert all unstored fragments to stored fragments. Uploads all frags to
      * downstream storage.
      */
-    void flush(global_data_view& gdv, fragment_set& set);
+    void flush_set(fragment_set& set);
+    coro<void> flush_data(global_data_view& gdv);
 
     std::size_t effective_size() const;
     std::size_t unstored_size() const;
@@ -60,8 +61,7 @@ public:
     address make_address() const;
 
 private:
-    void flush_data(global_data_view& gdv);
-    void flush_fragments(global_data_view& gdv, fragment_set& set);
+    void flush_fragments(fragment_set& set);
     void mark_as_uploaded();
 
     void compute_unstored_addresses(const address& addr);
