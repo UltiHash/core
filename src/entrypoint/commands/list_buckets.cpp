@@ -19,10 +19,15 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
     http_response res;
 
     boost::property_tree::ptree pt;
+    boost::property_tree::ptree buckets_node;
 
     for (const auto& bucket : buckets_found) {
-        pt.put("ListAllMyBucketsResult.Buckets.Bucket.Name", bucket);
+        boost::property_tree::ptree bucket_node;
+        bucket_node.put("Name", bucket);
+        buckets_node.add_child("Bucket", bucket_node);
     }
+
+    pt.add_child("ListAllMyBucketsResult.Buckets", buckets_node);
 
     std::ostringstream ss;
     boost::property_tree::write_xml(ss, pt);

@@ -12,17 +12,21 @@ get_response(const std::string& bucket_name,
              const std::map<std::string, std::string>& ongoing) noexcept {
 
     boost::property_tree::ptree pt;
+    boost::property_tree::ptree bucket_node;
 
     for (const auto& val : ongoing) {
-        pt.put("ListMultipartUploadsResult.Bucket.Upload.Key", val.second);
-        pt.put("ListMultipartUploadsResult.Bucket.Upload.UploadId", val.first);
+        boost::property_tree::ptree upload_node;
+        upload_node.put("Key", val.second);
+        upload_node.put("UploadId", val.first);
+        bucket_node.add_child("Upload", upload_node);
     }
+
+    pt.add_child("ListMultipartUploadsResult.Bucket", bucket_node);
 
     http_response res;
     std::ostringstream ss;
     boost::property_tree::write_xml(ss, pt);
     res.set_body(ss.str());
-    LOG_DEBUG() << "list multipart response: " << ss.str();
     return res;
 }
 
