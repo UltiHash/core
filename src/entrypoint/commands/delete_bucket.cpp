@@ -17,9 +17,9 @@ coro<void> delete_bucket::handle(http_request& req) const {
 
     try {
         co_await m_collection.directory.delete_bucket(req.bucket());
-    } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchBucket",
-                                "The specified bucket does not exist.");
+    } catch (const error_exception& e) {
+        LOG_ERROR() << "Failed to delete the bucket " << req.bucket() << ":" << e;
+        throw_from_error(e.error());
     }
 
     http_response res;
