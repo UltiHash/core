@@ -50,8 +50,7 @@ struct local_deduplicator : public deduplicator_interface {
           m_storage(storage),
           m_dedupe_workers(m_storage.get_executor(),
                            m_dedupe_conf.worker_thread_count),
-          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000),
-          m_fragment_buffer_size(m_dedupe_conf.fragment_buffer_size) {}
+          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000){}
 
     coro<dedupe_response> deduplicate(const std::string_view& data) override {
         size_t piece_size = std::ceil(static_cast<double>(data.size()) /
@@ -82,33 +81,22 @@ private:
     size_t pursue_pointer(std::string_view& data, uint128_t pointer,
                           fragmentation& fragments) {
         size_t common_size;
-        size_t deduplicated = 0;
-        shared_buffer<char> stored_data;
+        fragment frag {pointer - m_dedupe_conf.max_fragment_size, m_dedupe_conf.max_fragment_size};
         do {
-            try {
-                stored_data = m_storage.read_fragment(
-                    pointer, m_dedupe_conf.max_fragment_size * pursue_count);
+            auto stored_data = m_storage.read(
+                pointer, pursue_size);
 
-            } catch (const std::exception&) {
-                break;
-            }
             common_size =
                 largest_common_prefix(stored_data.string_view(), data);
-            size_t pushed_size = 0;
-            while (common_size - pushed_size >
-                   m_dedupe_conf.min_fragment_size) {
-                const auto s = std::min(m_dedupe_conf.max_fragment_size,
-                                        common_size - pushed_size);
-                fragments.push(fragment{pointer, s});
-                pointer += s;
-                pushed_size += s;
-            }
-            data = data.substr(pushed_size);
-            deduplicated += pushed_size;
-        } while (common_size == m_dedupe_conf.max_fragment_size * pursue_count);
-        m_dedupe_logger.log_pursue_deduplication(deduplicated,
-                                                 pointer - deduplicated);
-        return deduplicated;
+            data = data.substr(common_size);
+            frag.size += common_size;
+            pointer += common_size;
+        } while (common_size == pursue_size);
+
+        m_dedupe_logger.log_pursue_deduplication(frag.size,
+                                                 frag.pointer);
+        fragments.push(frag);
+        return frag.size;
     }
 
     dedupe_response deduplicate_data(std::string_view data) {
@@ -130,18 +118,17 @@ private:
                 const auto& [frag, prefix] =
                     match_low > match_high ? *f.low : *f.high;
 
-                fragments.push(fragment{frag.pointer, size});
-
-                m_dedupe_logger.log_deduplication(size, prefix, frag.pointer,
-                                                  offset);
-
                 data = data.substr(size);
-                offset += size;
-
                 if (size == m_dedupe_conf.max_fragment_size) {
                     offset += pursue_pointer(
                         data, frag.pointer + m_dedupe_conf.max_fragment_size,
                         fragments);
+                }
+                else {
+                    fragments.push(fragment{frag.pointer, size});
+                    m_dedupe_logger.log_deduplication(size, prefix,
+                                                      frag.pointer, offset);
+                    offset += size;
                 }
                 dedupe_count++;
                 continue;
@@ -149,16 +136,13 @@ private:
 
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
-                
+
             fragments.push(fragmentation::unstored{
                 data.substr(0, frag_size), (offset == 0), std::move(f.hint)});
 
             data = data.substr(frag_size);
             offset += frag_size;
             non_dedupe_count++;
-            if (fragments.unstored_size() >= m_fragment_buffer_size) {
-                fragments.flush(m_storage, m_fragment_set);
-            }
         }
 
         fragments.flush(m_storage, m_fragment_set);
@@ -176,8 +160,7 @@ private:
     global_data_view& m_storage;
     worker_pool m_dedupe_workers;
     dedupe_logger m_dedupe_logger;
-    const std::size_t m_fragment_buffer_size;
-    constexpr static std::size_t pursue_count = 4;
+    constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
     constexpr static std::size_t pieces_count = 2;
 };
 } // namespace uh::cluster

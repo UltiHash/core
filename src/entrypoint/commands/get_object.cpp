@@ -34,6 +34,7 @@ struct local_read_handle {
         }
 
         co_await m_storage.read_address(buffer.data(), partial_addr);
+
         buffer.resize(buffer_size);
     }
 };
@@ -50,18 +51,17 @@ coro<std::size_t> upload(local_read_handle& reader, http_request& req,
 
     std::shared_ptr<awaitable_promise<std::size_t>> promise;
 
-    double_buffer buffers(MEBI_BYTE);
+    double_buffer buffers(32*MEBI_BYTE);
     while (reader.has_next()) {
         auto& buffer = buffers.current();
         buffer.resize(buffer.capacity());
+
         co_await reader.next(buffer);
 
         if (promise) {
             total_size += co_await promise->get();
         }
-
         promise = std::make_shared<awaitable_promise<std::size_t>>(context);
-
         boost::asio::async_write(req.socket(), boost::asio::buffer(buffer),
                                  use_awaitable_promise(promise));
 
@@ -72,7 +72,6 @@ coro<std::size_t> upload(local_read_handle& reader, http_request& req,
         co_await promise->get();
         promise.reset();
     }
-
     co_return total_size;
 }
 
@@ -106,9 +105,7 @@ coro<void> get_object::handle(http_request& req) const {
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
         local_read_handle reader(m_collection.gdv, std::move(*obj.addr));
-
         size_t total_size = co_await upload(reader, req, m_collection.ioc);
-
         const std::chrono::duration<double> duration = tt.passed();
         const auto size = static_cast<double>(total_size) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();

@@ -39,6 +39,7 @@ enum metric_type {
     storage_used_space_gauge,
     storage_read_fragment_req,
     storage_read_address_req,
+    storage_read_req,
     storage_write_req,
     storage_sync_req,
     storage_remove_fragment_req,
