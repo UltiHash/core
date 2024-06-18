@@ -3,6 +3,7 @@
 
 #include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
+#include "common/utils/debug.h"
 #include "common/utils/pointer_traits.h"
 
 #include "common/utils/protocol_handler.h"
@@ -29,6 +30,8 @@ public:
 
             try {
                 const auto message_header = co_await m.recv_header();
+                LOG_CORO_CONTEXT();
+
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(message_header.type);
 

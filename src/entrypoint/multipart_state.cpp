@@ -1,7 +1,7 @@
 #include "multipart_state.h"
 
 #include "common/telemetry/log.h"
-#include "common/utils/random.h"
+#include "common/utils/debug.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -13,6 +13,7 @@ multipart_state::multipart_state(boost::asio::io_context& ioc,
 
 coro<std::string> multipart_state::insert_upload(std::string bucket,
                                                  std::string key) {
+    LOG_CORO_CONTEXT();
     auto conn = co_await m_db.get();
 
     auto row =
@@ -27,6 +28,7 @@ coro<std::string> multipart_state::insert_upload(std::string bucket,
 }
 
 coro<upload_info> multipart_state::details(const std::string& id) {
+    LOG_CORO_CONTEXT();
     LOG_DEBUG() << "get upload info, id: " << id;
 
     auto conn = co_await m_db.get();
@@ -76,6 +78,7 @@ coro<void> multipart_state::append_upload_part_info(const std::string& id,
                                                     const dedupe_response& resp,
                                                     size_t data_size,
                                                     std::string&& md5) {
+    LOG_CORO_CONTEXT();
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -88,6 +91,7 @@ coro<void> multipart_state::append_upload_part_info(const std::string& id,
 }
 
 coro<void> multipart_state::remove_upload(const std::string& id) {
+    LOG_CORO_CONTEXT();
     LOG_DEBUG() << "remove upload, id: " << id;
 
     auto conn = co_await m_db.get();
@@ -98,6 +102,7 @@ coro<void> multipart_state::remove_upload(const std::string& id) {
 
 coro<std::map<std::string, std::string>>
 multipart_state::list_multipart_uploads(const std::string& bucket) {
+    LOG_CORO_CONTEXT();
 
     LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
 
@@ -115,6 +120,7 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
 }
 
 coro<void> multipart_state::clear_infos(db::connection& conn) {
+    LOG_CORO_CONTEXT();
     co_await conn.execv(
         "CALL uh_clean_deleted(MAKE_INTERVAL(0, 0, 0, 0, 0, 0, $1))",
         DEFAULT_TIMEOUT);
