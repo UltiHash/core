@@ -86,7 +86,6 @@ coro<object> directory::head_object(const std::string& bucket,
 coro<void> directory::put_bucket(const std::string& bucket) {
     validate_bucket_name(bucket);
 
-
     auto dir = co_await m_db.get();
 
     try {
