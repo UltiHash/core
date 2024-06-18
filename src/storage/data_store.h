@@ -20,7 +20,7 @@ namespace uh::cluster {
 
 struct data_store_config {
     std::filesystem::path working_dir;
-    long file_size;
+    size_t file_size;
     size_t max_data_store_size;
 };
 
@@ -81,6 +81,7 @@ public:
      * @throws std::exception: corrupted storage
      */
     std::size_t read(char* buffer, const uint128_t& pointer, size_t size);
+    std::size_t read_up_to(char* buffer, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Flushes modified files to disk.
@@ -109,23 +110,21 @@ private:
 
     struct alloc_t {
         int fd;
-        long seek;
+        size_t seek;
         uint128_t global_offset;
     };
 
-    alloc_t internal_allocate(long size);
+    alloc_t internal_allocate(size_t size);
 
 
     std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size);
 
-
-
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;
 
-    [[nodiscard]] size_t fetch_used_space() const noexcept;
+    [[nodiscard]] size_t fetch_used_space(const std::filesystem::path& last_file) const noexcept;
 
-    int add_new_file(size_t offset, long file_size);
+    std::filesystem::path add_new_file(size_t offset, size_t file_size);
 
     [[nodiscard]] static std::pair<size_t, size_t>
     parse_file_name(const std::string& filename);
@@ -134,12 +133,12 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
-    long m_last_file_data_end{};
+    size_t m_last_file_data_end{};
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
-    std::vector<int> m_open_files;
+    std::vector<std::pair<int, size_t>> m_open_files;
     std::atomic<size_t> m_used{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;

@@ -46,6 +46,29 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     return buffer;
 }
 
+shared_buffer<> global_data_view::read(const uint128_t& pointer, size_t size) {
+    if (size == 0) {
+        throw std::runtime_error("Read size must be larger than zero");
+    }
+
+    if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
+        if (c->size() >= size) [[likely]] {
+            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
+            return c.value();
+        }
+    }
+
+    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
+
+    auto storage = m_storage_services.get(pointer);
+    auto buffer = boost::asio::co_spawn(m_io_service,
+                          storage->read(pointer, size),
+                          boost::asio::use_future)
+        .get();
+    m_cache_l2.put(pointer, buffer);
+    return buffer;
+}
+
 coro<std::size_t> global_data_view::read_address(char* buffer,
                                                  const address& addr) {
 

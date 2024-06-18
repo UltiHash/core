@@ -48,31 +48,40 @@ public:
     address write(const std::string_view& data);
 
     /**
+     * @brief reads the data starting from pointer, up to the given size.
+     * It is allowed to return data that is smaller than the requested size if
+     * there is no more data left in the data store file.
+     *
+     * @param pointer A constant reference to a uint128_t, specifying the
+* location of the size
+     * @param size A size_t specifying the size of the fragment.
+     * @return
+     */
+    shared_buffer<> read(const uint128_t& pointer,
+                         size_t size);
+
+    /**
      * @brief Retrieves fragment from storage services.
      *
      * The L2 read cache is consulted to see if it contains the requested
      * fragment. Otherwise, a read request is issued to the storage service
      * instance serving the address range the provided #pointer is in.
      * - If the requested fragment can be served by a storage service, the
-     * fragment and its address are (re)-inserted into both the L1 and L2
-     * read caches.
+     * fragment and its address are (re)-inserted into the L2
+     * read cache.
      * - If no storage service can serve the fragment, a std::runtime_error
      * exception is thrown
      *
-     * The L1 read cache only contains up to the first 128 byte of a fragment,
-     * but holds a much larger number of entries and can thus be used for
-     * efficient sample comparison, whereas the L2 read cache contains the
+     * The L2 read cache contains the
      * entire content of a fragment at the price of a smaller cache capacity.
-     * Together, both caches are drastically reducing the number of read
-     * requests that need to be issued to the storage service instances.
      *
      * @param pointer A constant reference to a uint128_t, specifying the
      * location of the fragment.
-     * @param size A constant size_t specifying the size of the fragment.
+     * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
     shared_buffer<char> read_fragment(const uint128_t& pointer,
-                                      const size_t size);
+                                      size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.

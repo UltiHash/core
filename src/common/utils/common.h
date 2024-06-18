@@ -23,6 +23,7 @@ const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
 enum message_type : uint8_t {
     STORAGE_READ_FRAGMENT_REQ = 0,
     STORAGE_READ_ADDRESS_REQ = 1,
+    STORAGE_READ_REQ = 8,
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
     STORAGE_USED_REQ = 5,
