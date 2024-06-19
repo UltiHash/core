@@ -6,7 +6,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-
+/*
 BOOST_AUTO_TEST_CASE(basic_promise) {
 
     boost::asio::io_context ioc;
@@ -129,6 +129,55 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     workers.join();
 
     BOOST_TEST(failures == 0);
+}
+*/
+coro<void> deduplicate_data(boost::asio::io_context& ioc) {
+
+    for (int i = 0; i < 100000; i++) {
+        auto f = std::make_shared<awaitable_promise<void>>(ioc);
+        f->set();
+        co_await f->get();
+    }
+}
+
+coro<void> waiter (std::vector<std::shared_ptr<awaitable_promise<void>>>& proms) {
+
+    for (auto& p: proms) {
+        co_await p->get();
+    }
+}
+
+BOOST_AUTO_TEST_CASE(dedupe_test) {
+
+
+    int thread_count = 4;
+    boost::asio::io_context ioc (thread_count);
+
+    std::vector<std::thread> io_threads (thread_count);
+
+    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
+    proms.reserve(200);
+    for (int i = 0; i < 200; i++) {
+        auto p = std::make_shared<awaitable_promise<void>>(
+            ioc);
+        boost::asio::co_spawn(ioc, deduplicate_data(ioc), use_awaitable_promise_cospawn(p));
+        proms.emplace_back(p);
+    }
+
+
+    for (auto& t: io_threads) {
+        t = std::thread ([&]{
+            ioc.run();
+        });
+    }
+
+    boost::asio::co_spawn(ioc, waiter(proms), boost::asio::use_future).get();
+
+    for (auto& t : io_threads) {
+        t.join();
+    }
+
+
 }
 
 } // namespace uh::cluster

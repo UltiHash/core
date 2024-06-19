@@ -47,16 +47,12 @@ coro<size_t> match_size(global_data_view& storage, std::string_view data,
 struct local_deduplicator : public deduplicator_interface {
 
     local_deduplicator(deduplicator_config config, global_data_view& storage)
-        : m_dedupe_conf(std::move(config)),
-          m_fragment_set(m_dedupe_conf.working_dir / "log",
-                         m_dedupe_conf.set_capacity, storage, false),
-          m_storage(storage),
-          m_dedupe_workers(m_storage.get_executor(),
-                           m_dedupe_conf.worker_thread_count),
-          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {
-        monitor::add_global("a", a);
-        monitor::add_global("b", b);
-        monitor::add_global("c", c);
+        :
+          m_storage(storage){
+        monitor::add_global("pending waits for promise", a);
+        monitor::add_global("total number of created promises", b);
+        monitor::add_global("total number of deduplicate calls", c);
+
 
 
     }
@@ -92,115 +88,22 @@ struct local_deduplicator : public deduplicator_interface {
     }
 
 private:
-    coro<size_t> pursue_pointer(std::string_view& data, uint128_t pointer,
-                                fragmentation& fragments) {
-        size_t common_size;
-        fragment frag{pointer - m_dedupe_conf.max_fragment_size,
-                      m_dedupe_conf.max_fragment_size};
-        do {
-            auto stored_data = co_await m_storage.read(pointer, pursue_size);
 
-            common_size =
-                largest_common_prefix(stored_data.string_view(), data);
-            data = data.substr(common_size);
-            frag.size += common_size;
-            pointer += common_size;
-        } while (common_size == pursue_size);
 
-        m_dedupe_logger.log_pursue_deduplication(frag.size, frag.pointer);
-        fragments.push(frag);
-        co_return frag.size;
-    }
-
-    std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g =0, op[2];
+    static inline std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g =0, op[2];
     coro<dedupe_response> deduplicate_data(std::string_view data) {
-/*
-        fragmentation fragments(m_dedupe_logger);
-        size_t offset = 0;
-        size_t non_dedupe_count = 0;
-        size_t dedupe_count = 0;
-*/
-        boost::asio::io_context ioc (4);
-        std::thread tr1([&ioc]{ioc.run();});
-        std::thread tr2([&ioc]{ioc.run();});
-        std::thread tr3([&ioc]{ioc.run();});
-        std::thread tr4([&ioc]{ioc.run();});
 
+        c++;
         while (!data.empty()) {
             a++;
             b++;
-            c++;
-            //auto f =  m_dedupe_workers.post_no_in_workers([this, &data] {
-            //    b--;
-                //auto res = m_fragment_set.find(data);
-                //c--;
-            //    return 8;
-            //});
             auto f = std::make_shared<awaitable_promise<void>>(
-                ioc);
+                m_storage.get_executor());
             f->set();
             co_await f->get();
             a--;
-            d++;
             data = data.substr(std::min(data.size(), 8*KIBI_BYTE));
-/*
-            auto match_low = co_await match_size(m_storage, data, f.low);
-            auto match_high = co_await match_size(m_storage, data, f.high);
-            if (const auto size = std::max(match_low, match_high);
-                size > m_dedupe_conf.min_fragment_size) {
-
-                const auto& [frag, prefix] =
-                    match_low > match_high ? *f.low : *f.high;
-
-                data = data.substr(size);
-                if (size == m_dedupe_conf.max_fragment_size) {
-                    offset += co_await pursue_pointer(
-                        data, frag.pointer + m_dedupe_conf.max_fragment_size,
-                        fragments);
-
-                } else {
-                    fragments.push(fragment{frag.pointer, size});
-                    m_dedupe_logger.log_deduplication(size, prefix,
-                                                      frag.pointer, offset);
-                    offset += size;
-                }
-                dedupe_count++;
-                d--;
-                continue;
-            }
-
-            auto frag_size =
-                std::min(data.size(), m_dedupe_conf.max_fragment_size);
-
-            fragments.push(fragmentation::unstored{
-                data.substr(0, frag_size), (offset == 0), std::move(f.hint)});
-
-            data = data.substr(frag_size);
-            offset += frag_size;
-            non_dedupe_count++;
-            d--;
-            */
         }
-
-        tr1.join();
-        tr2.join();tr3.join();tr4.join();
-        /*
-        e++;
-        co_await fragments.flush_data(m_storage);
-
-        co_await m_dedupe_workers.post_in_workers(
-            [this, &fragments] { fragments.flush_set(m_fragment_set); });
-
-        dedupe_response result{.effective_size = fragments.effective_size(),
-                               .addr = fragments.make_address()};
-
-        co_await m_storage.sync(result.addr);
-
-        m_dedupe_logger.log_stat(m_fragment_set.size(), dedupe_count,
-                                 non_dedupe_count, result.effective_size,
-                                 offset);
-        e--;
-         */
         dedupe_response result;
         address addr;
         addr.push_fragment({0,0});
@@ -208,11 +111,11 @@ private:
         co_return result;
     }
 
-    deduplicator_config m_dedupe_conf;
-    fragment_set m_fragment_set;
+    //deduplicator_config m_dedupe_conf;
+    //fragment_set m_fragment_set;
     global_data_view& m_storage;
-    worker_pool m_dedupe_workers;
-    dedupe_logger m_dedupe_logger;
+    //worker_pool m_dedupe_workers;
+    //dedupe_logger m_dedupe_logger;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
     constexpr static std::size_t pieces_count = 1;
 };
