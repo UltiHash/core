@@ -47,20 +47,17 @@ coro<size_t> match_size(global_data_view& storage, std::string_view data,
 struct local_deduplicator : public deduplicator_interface {
 
     local_deduplicator(deduplicator_config config, global_data_view& storage)
-        :
-          m_storage(storage){
+        : m_storage(storage) {
         monitor::get().add_global("pending waits for promise", a);
         monitor::get().add_global("total number of created promises", b);
         monitor::get().add_global("total number of deduplicate calls", c);
         monitor::get().add_global("total number of deduplicate calls", c);
-        monitor::get().add_fn("thread count before", []{return ids1.size();});
-        monitor::get().add_fn("thread count after", []{return ids2.size();});
-
-
-
+        monitor::get().add_fn("thread count before",
+                              [] { return ids1.size(); });
+        monitor::get().add_fn("thread count after", [] { return ids2.size(); });
     }
 
-    inline static std::set <std::thread::id> ids1, ids2;
+    inline static std::set<std::thread::id> ids1, ids2;
 
     coro<dedupe_response> deduplicate(const std::string_view& data1) override {
         c++;
@@ -79,14 +76,13 @@ struct local_deduplicator : public deduplicator_interface {
 
         dedupe_response result;
         address addr;
-        addr.push_fragment({0,0});
+        addr.push_fragment({0, 0});
         result.addr = addr;
         co_return result;
     }
 
 private:
-
-    std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g =0, op[2];
+    std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g = 0, op[2];
     coro<dedupe_response> deduplicate_data(std::string_view data) {
 
         c++;
@@ -98,20 +94,20 @@ private:
             f->set();
             co_await f->get();
             a--;
-            data = data.substr(std::min(data.size(), 8*KIBI_BYTE));
+            data = data.substr(std::min(data.size(), 8 * KIBI_BYTE));
         }
         dedupe_response result;
         address addr;
-        addr.push_fragment({0,0});
+        addr.push_fragment({0, 0});
         result.addr = addr;
         co_return result;
     }
 
-    //deduplicator_config m_dedupe_conf;
-    //fragment_set m_fragment_set;
+    // deduplicator_config m_dedupe_conf;
+    // fragment_set m_fragment_set;
     global_data_view& m_storage;
-    //worker_pool m_dedupe_workers;
-    //dedupe_logger m_dedupe_logger;
+    // worker_pool m_dedupe_workers;
+    // dedupe_logger m_dedupe_logger;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
     constexpr static std::size_t pieces_count = 1;
 };
