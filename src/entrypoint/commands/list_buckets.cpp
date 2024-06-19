@@ -1,6 +1,9 @@
 #include "list_buckets.h"
 #include "entrypoint/http/command_exception.h"
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 namespace uh::cluster {
 
 list_buckets::list_buckets(const reference_collection& collection)
@@ -15,19 +18,20 @@ static http_response
 get_response(const std::vector<std::string>& buckets_found) noexcept {
     http_response res;
 
-    std::string buckets_xml;
+    boost::property_tree::ptree pt;
+    boost::property_tree::ptree buckets_node;
+
     for (const auto& bucket : buckets_found) {
-        buckets_xml += "<Bucket>\n"
-                       "<Name>" +
-                       bucket +
-                       "</Name>\n"
-                       "</Bucket>\n";
+        boost::property_tree::ptree bucket_node;
+        bucket_node.put("Name", bucket);
+        buckets_node.add_child("Bucket", bucket_node);
     }
 
-    res.set_body(std::string("<ListAllMyBucketsResult>\n"
-                             "   <Buckets>\n" +
-                             buckets_xml + "</Buckets>\n" +
-                             "</ListAllMyBucketsResult>"));
+    pt.add_child("ListAllMyBucketsResult.Buckets", buckets_node);
+
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+    res.set_body(ss.str());
 
     return res;
 }

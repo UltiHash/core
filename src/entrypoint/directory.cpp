@@ -1,13 +1,11 @@
 #include "directory.h"
 
-#include "common/utils/debug.h"
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
 namespace uh::cluster {
 
 coro<void> directory::put_object(const std::string& bucket, const object& obj) {
-    LOG_CORO_CONTEXT();
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -16,14 +14,9 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     auto span = std::span<char>(data);
 
     try {
-        LOG_DEBUG() << coro_id() << ": before m_db::get()";
         auto dir = co_await m_db.get();
-        LOG_DEBUG() << coro_id() << ": after m_db::get()";
         co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5)", bucket,
                             obj.name, span, obj.addr->data_size(), obj.etag);
-        LOG_DEBUG() << coro_id() << ": after execv, bucket: " << bucket
-                    << ", obj: " << obj.name
-                    << ", addr size: " << obj.addr->data_size();
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "bucket not found");
@@ -32,7 +25,6 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
 coro<object> directory::get_object(const std::string& bucket,
                                    const std::string& object_id) {
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     auto row = co_await dir->execb(
         "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
@@ -71,7 +63,6 @@ coro<object> directory::get_object(const std::string& bucket,
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     auto metadata = co_await dir->execv("SELECT size, last_modified, etag "
                                         "FROM uh_get_object($1, $2)",
@@ -93,7 +84,8 @@ coro<object> directory::head_object(const std::string& bucket,
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
-    LOG_CORO_CONTEXT();
+    validate_bucket_name(bucket);
+
     auto dir = co_await m_db.get();
 
     try {
@@ -105,7 +97,6 @@ coro<void> directory::put_bucket(const std::string& bucket) {
 }
 
 coro<void> directory::bucket_exists(const std::string& bucket) {
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     try {
@@ -116,18 +107,17 @@ coro<void> directory::bucket_exists(const std::string& bucket) {
 }
 
 coro<void> directory::delete_bucket(const std::string& bucket) {
-    LOG_CORO_CONTEXT();
+    co_await bucket_exists(bucket);
+
     auto dir = co_await m_db.get();
 
-    if (m_bucket_delete_policy == bucket_delete_policy::only_empty) {
-        auto row = co_await dir->execv(
-            "SELECT count(*) FROM uh_list_objects($1)", bucket);
+    auto row = co_await dir->execv(
+        "SELECT count(*) FROM uh_list_objects($1)", bucket);
 
-        if (row->number(0) > 0) {
-            throw command_exception(
-                http::status::conflict, "BucketNotEmpty",
-                "The bucket that you tried to delete is not empty.");
-        }
+    if (row->number(0) > 0) {
+        throw command_exception(
+            http::status::conflict, "BucketNotEmpty",
+            "The bucket that you tried to delete is not empty.");
     }
 
     co_await dir->execv("CALL uh_delete_bucket($1)", bucket);
@@ -135,7 +125,6 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 
 coro<void> directory::delete_object(const std::string& bucket,
                                     const std::string& object_id) {
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     co_await dir->execv("CALL uh_delete_object($1, $2)", bucket, object_id);
@@ -145,7 +134,6 @@ coro<void> directory::copy_object(const std::string& bucket_src,
                                   const std::string& key_src,
                                   const std::string& bucket_dst,
                                   const std::string& key_dst) {
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
 
     co_await dir->execv("CALL uh_copy_object($1, $2, $3, $4)", bucket_src,
@@ -157,14 +145,13 @@ coro<void> directory::copy_object_ifmatch(const std::string& bucket_src,
                                           const std::string& bucket_dst,
                                           const std::string& key_dst,
                                           const std::string& etag) {
-    LOG_CORO_CONTEXT();
+
     auto dir = co_await m_db.get();
     co_await dir->execv("CALL uh_copy_object_ifmatch($1, $2, $3, $4, $5)",
                         bucket_src, key_src, bucket_dst, key_dst, etag);
 }
 
 coro<std::vector<std::string>> directory::list_buckets() {
-    LOG_CORO_CONTEXT();
     std::vector<std::string> rv;
 
     auto dir = co_await m_db.get();
@@ -181,8 +168,8 @@ coro<std::vector<object>>
 directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
                         const std::optional<std::string>& lower_bound) {
+    co_await bucket_exists(bucket);
 
-    LOG_CORO_CONTEXT();
     auto dir = co_await m_db.get();
     std::vector<object> rv;
 
@@ -203,7 +190,6 @@ directory::list_objects(const std::string& bucket,
 }
 
 coro<std::size_t> directory::data_size() {
-    LOG_CORO_CONTEXT();
     std::size_t rv = 0;
     auto dir = co_await m_db.get();
 
@@ -217,6 +203,22 @@ coro<std::size_t> directory::data_size() {
 
     LOG_DEBUG() << "read directory data_size: done";
     co_return rv;
+}
+
+void directory::validate_bucket_name(const std::string& bucket_name) {
+    if (bucket_name.size() < 3 || bucket_name.size() > 63) {
+        throw command_exception(http::status::bad_request,
+                                "InvalidBucketName",
+                                "bucket name has invalid length");
+    }
+
+    std::regex bucket_pattern(
+        R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
+    if (!std::regex_match(bucket_name, bucket_pattern)) {
+        throw command_exception(http::status::bad_request,
+                                "InvalidBucketName",
+                                "bucket name has invalid characters");
+    }
 }
 
 } // namespace uh::cluster
