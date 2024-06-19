@@ -111,15 +111,13 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 
     auto dir = co_await m_db.get();
 
-    if (m_bucket_delete_policy == bucket_delete_policy::only_empty) {
-        auto row = co_await dir->execv(
-            "SELECT count(*) FROM uh_list_objects($1)", bucket);
+    auto row = co_await dir->execv(
+        "SELECT count(*) FROM uh_list_objects($1)", bucket);
 
-        if (row->number(0) > 0) {
-            throw command_exception(
-                http::status::conflict, "BucketNotEmpty",
-                "The bucket that you tried to delete is not empty.");
-        }
+    if (row->number(0) > 0) {
+        throw command_exception(
+            http::status::conflict, "BucketNotEmpty",
+            "The bucket that you tried to delete is not empty.");
     }
 
     co_await dir->execv("CALL uh_delete_bucket($1)", bucket);

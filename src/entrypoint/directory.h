@@ -57,7 +57,6 @@ struct directory {
 
 private:
     pool<db::connection> m_db;
-    bucket_delete_policy m_bucket_delete_policy = bucket_delete_policy::only_empty;
 
     static void validate_bucket_name(const std::string& bucket_name);
 };
