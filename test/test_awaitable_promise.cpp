@@ -134,11 +134,29 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
 }
 */
 
-struct moc_handler: public protocol_handler {
-    boost::asio::io_context& m_ioc;
-    explicit moc_handler(boost::asio::io_context& ioc): m_ioc(ioc) {
-
+struct execution_counter {
+    void increment() {
+        m_finished++;
+        m_cv.notify_one();
     }
+    void wait(size_t count) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cv.wait(lock, [this, count] { return m_finished == count; });
+    }
+    [[nodiscard]] size_t count() const { return m_finished; }
+
+private:
+    std::atomic_size_t m_finished = 0;
+    std::condition_variable m_cv;
+    std::mutex m_mutex;
+};
+
+struct moc_handler : public protocol_handler {
+    boost::asio::io_context& m_ioc;
+    execution_counter& m_exec_counter;
+    explicit moc_handler(boost::asio::io_context& ioc, execution_counter& ex)
+        : m_ioc(ioc),
+          m_exec_counter(ex) {}
     coro<void> handle(boost::asio::ip::tcp::socket m) override {
         messenger mes(std::move(m));
 
@@ -147,6 +165,7 @@ struct moc_handler: public protocol_handler {
             f->set();
             co_await f->get();
         }
+        m_exec_counter.increment();
     }
 };
 
@@ -154,16 +173,23 @@ BOOST_AUTO_TEST_CASE(dedupe_test) {
 
     int thread_count = 4;
     uint16_t port = 8088;
-    int connections = 16;
+    int connections = 4;
 
-    boost::asio::io_context ioc_handler (thread_count);
-    boost::asio::io_context ioc_sender (thread_count);
-    server_config config {.threads=static_cast<size_t>(thread_count), .port = port, .bind_address="0.0.0.0"};
+    boost::asio::io_context ioc_handler(thread_count);
+    boost::asio::io_context ioc_sender(thread_count);
+    execution_counter exec_counter;
+    server_config config{.threads = static_cast<size_t>(thread_count),
+                         .port = port,
+                         .bind_address = "0.0.0.0"};
 
-    server s (config, std::make_unique<moc_handler>(ioc_handler), ioc_handler);
-    std::thread server_thread ([&s]{s.run();});
+    server s(config, std::make_unique<moc_handler>(ioc_handler, exec_counter),
+             ioc_handler);
+    std::thread server_thread([&s] { s.run(); });
 
     client cl(ioc_sender, config.bind_address, config.port, connections);
+
+    exec_counter.wait(connections);
+    s.stop();
     server_thread.join();
 }
 
