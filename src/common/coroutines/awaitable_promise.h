@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_AWAITABLE_PROMISE_H
 #define UH_CLUSTER_AWAITABLE_PROMISE_H
 
+#include "common/debug/monitor.h"
 #include "common/network/messenger_core.h"
 #include "iostream"
 #include <boost/asio/steady_timer.hpp>
@@ -21,13 +22,19 @@ public:
         : m_strand(ioc.get_executor()),
           m_waiter(std::make_shared<boost::asio::steady_timer>(
               m_strand,
-              boost::asio::steady_timer::clock_type::duration::max())) {}
+              boost::asio::steady_timer::clock_type::duration::max())) {
+
+    }
 
     inline void set(T&& data) {
+        s++;
+        st++;
         m_data.emplace(std::move(data));
         std::atomic_thread_fence(std::memory_order_seq_cst);
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
+            s--;
+
         });
     }
 
@@ -37,25 +44,28 @@ public:
                 std::future_errc::promise_already_satisfied);
         }
 
+        s++;
+        st++;
         m_exception = ptr;
         std::atomic_thread_fence(std::memory_order_seq_cst);
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
+            s--;
         });
     }
 
-    std::atomic_size_t p = 0;
+    inline static std::atomic_size_t p = 0, s=0, pt=0, st=0;
     coro<T> get() {
         p++;
+        pt++;
         co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        p--;
 
         std::atomic_thread_fence(std::memory_order_seq_cst);
 
         if (m_exception) {
             std::rethrow_exception(*m_exception);
         }
-        p--;
-        std::cout << "p " << p << std::endl;
         co_return std::move(*m_data);
     }
 };
@@ -65,21 +75,33 @@ template <> class awaitable_promise<void> {
     boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
     std::shared_ptr<boost::asio::steady_timer> m_waiter;
     std::optional<std::exception_ptr> m_exception;
+    inline static std::atomic_size_t p = 0, s=0, pt=0, st=0;
 
 public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_strand(ioc.get_executor()),
           m_waiter(std::make_shared<boost::asio::steady_timer>(
-              ioc, boost::asio::steady_timer::clock_type::duration::max())) {}
+              ioc, boost::asio::steady_timer::clock_type::duration::max())) {
+        monitor::add_global("pending promise get count", p);
+        monitor::add_global("pending promise set count", s);
+        monitor::add_global("count of get promise calls", pt);
+        monitor::add_global("count of set promise calls", st);
+    }
 
     inline void set() {
+        s++;
+        st++;
         std::atomic_thread_fence(std::memory_order_seq_cst);
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
+            s--;
+
         });
     }
 
     inline void set_exception(std::exception_ptr ptr) {
+        s++;
+        st++;
         if (m_exception) {
             throw std::future_error(
                 std::future_errc::promise_already_satisfied);
@@ -89,11 +111,16 @@ public:
         std::atomic_thread_fence(std::memory_order_seq_cst);
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
+            s--;
+
         });
     }
 
     coro<void> get() {
+        p++;
+        pt++;
         co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        p--;
         std::atomic_thread_fence(std::memory_order_seq_cst);
 
         if (m_exception) {

@@ -2,7 +2,7 @@
 #define CORE_COMMON_POOL_H
 
 #include "common/coroutines/awaitable_promise.h"
-#include "common/utils/debug.h"
+#include "common/debug/debug.h"
 
 #include <list>
 #include <memory>

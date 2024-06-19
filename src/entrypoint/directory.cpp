@@ -1,6 +1,6 @@
 #include "directory.h"
 
-#include "common/utils/debug.h"
+#include "common/debug/debug.h"
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
