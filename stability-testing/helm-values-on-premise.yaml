@@ -14,6 +14,9 @@ global:
       - SYS_PTRACE
 
 stabilityTest:
+  readTimeout: 600
+  maxAttempts: 3
+  concurentJobs: 2
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
   inputVolume:
