@@ -134,10 +134,11 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
 }
 */
 
-struct moc_handler : public protocol_handler {
+struct moc_handler: public protocol_handler {
     boost::asio::io_context& m_ioc;
-    explicit moc_handler(boost::asio::io_context& ioc)
-        : m_ioc(ioc) {}
+    explicit moc_handler(boost::asio::io_context& ioc): m_ioc(ioc) {
+
+    }
     coro<void> handle(boost::asio::ip::tcp::socket m) override {
         messenger mes(std::move(m));
 
@@ -155,16 +156,15 @@ BOOST_AUTO_TEST_CASE(dedupe_test) {
     uint16_t port = 8088;
     int connections = 16;
 
-    boost::asio::io_context ioc_handler(thread_count);
-    boost::asio::io_context ioc_sender(thread_count);
-    server_config config{.threads = static_cast<size_t>(thread_count),
-                         .port = port,
-                         .bind_address = "0.0.0.0"};
+    boost::asio::io_context ioc_handler (thread_count);
+    boost::asio::io_context ioc_sender (thread_count);
+    server_config config {.threads=static_cast<size_t>(thread_count), .port = port, .bind_address="0.0.0.0"};
 
-    server s(config, std::make_unique<moc_handler>(ioc_handler), ioc_handler);
-    s.run();
+    server s (config, std::make_unique<moc_handler>(ioc_handler), ioc_handler);
+    std::thread server_thread ([&s]{s.run();});
 
     client cl(ioc_sender, config.bind_address, config.port, connections);
+    server_thread.join();
 }
 
 } // namespace uh::cluster
