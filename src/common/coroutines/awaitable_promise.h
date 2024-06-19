@@ -75,17 +75,17 @@ template <> class awaitable_promise<void> {
     boost::asio::strand<boost::asio::io_context::executor_type> m_strand;
     std::shared_ptr<boost::asio::steady_timer> m_waiter;
     std::optional<std::exception_ptr> m_exception;
-    inline static std::atomic_size_t p = 0, s=0, pt=0, st=0;
+    static inline std::atomic_size_t p = 0, s=0, pt=0, st=0;
 
 public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_strand(ioc.get_executor()),
           m_waiter(std::make_shared<boost::asio::steady_timer>(
-              ioc, boost::asio::steady_timer::clock_type::duration::max())) {
-        monitor::add_global("pending promise get count", p);
-        monitor::add_global("pending promise set count", s);
-        monitor::add_global("count of get promise calls", pt);
-        monitor::add_global("count of set promise calls", st);
+              m_strand, boost::asio::steady_timer::clock_type::duration::max())) {
+        monitor::get().add_global("pending promise get count", p);
+        monitor::get().add_global("pending promise set count", s);
+        monitor::get().add_global("count of get promise calls", pt);
+        monitor::get().add_global("count of set promise calls", st);
     }
 
     inline void set() {
@@ -119,7 +119,14 @@ public:
     coro<void> get() {
         p++;
         pt++;
-        co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        try {
+            co_await m_waiter->async_wait(boost::asio::use_awaitable);
+        }
+        catch (const boost::system::system_error& e) {
+            if (e.code() != boost::asio::error::operation_aborted) {
+                throw e;
+            }
+        }
         p--;
         std::atomic_thread_fence(std::memory_order_seq_cst);
 

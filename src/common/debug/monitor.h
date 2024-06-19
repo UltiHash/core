@@ -14,22 +14,22 @@ struct monitor {
 
     class monitor_scope {
         std::map<std::string, std::function<void(std::stringstream&, const std::string&)>>::const_iterator m_itr;
-        explicit monitor_scope(const auto& itr): m_itr(itr) {}
-        monitor_scope() = default;
+        monitor_scope(const auto& itr, monitor& mon): m_itr(itr), m(mon) {}
+        explicit monitor_scope(monitor& mon): m(mon) {}
         ~monitor_scope() {
-            if (m_enabled) {
-                std::lock_guard<std::mutex> lock(m_mutex);
-                m_recorders.erase(m_itr);
+            if (m.m_enabled) {
+                std::lock_guard<std::mutex> lock(m.m_mutex);
+                m.m_recorders.erase(m_itr);
             }
         }
         friend monitor;
+        monitor& m;
     };
-    static void add_global(const std::string& name, const auto& val) {
-        if (!m_enabled)
-            return;
 
-        static auto running = init();
-        if (!running)
+    void add_global(const std::string& name, const auto& val) {
+
+        static auto& initialised = init();
+        if (!initialised)
             return;
 
         std::lock_guard<std::mutex> lock (m_mutex);
@@ -38,32 +38,52 @@ struct monitor {
         });
     }
 
-    static monitor_scope add_scoped(const std::string& name, const auto& val) {
-        if (!m_enabled)
-            return {};
+    void add_fn(const std::string& name, const auto fn) {
 
-        static auto running = init();
-        if (!running)
-            return {};
+        static auto& initialised = init();
+        if (!initialised)
+            return;
+        std::lock_guard<std::mutex> lock (m_mutex);
+        m_recorders.emplace(name, [fn](std::stringstream& stream, const auto& name) {
+            stream << name << ":\t" << fn();
+        });
+    }
+
+    monitor_scope add_scoped(const std::string& name, const auto& val) {
+
+        static auto& initialised = init();
+        if (!initialised)
+            return monitor_scope{*this};
 
         std::lock_guard<std::mutex> lock (m_mutex);
         auto itr = m_recorders.emplace(name, [&val](std::stringstream& stream, const auto& name) {
             stream << name << ":\t" << val;
         });
-        return itr;
+        return monitor_scope{itr, *this};
     }
 
 
-    static void stop () {
+    void stop () {
         m_stop = true;
     }
 
+    static monitor& get (){
+        static auto m = monitor();
+        return m;
+    }
+
+    monitor(const monitor&) = delete;
 private:
 
-    static bool init() {
+    monitor () = default;
+
+    bool& init() {
+        if (!m_enabled)
+            return m_init;
+
         LOG_INFO() << "initializing monitor";
 
-        m_watcher = std::thread([] {
+        m_watcher = std::thread([this] {
             while (!m_stop) {
                 std::stringstream stream;
                 stream << "monitoring data:\n";
@@ -80,16 +100,18 @@ private:
             }
         });
         m_watcher.detach();
-        return true;
+        m_init = true;
+        return m_init;
     }
 
-    inline static std::map<std::string, std::function<void(std::stringstream&, const std::string&)>>
+    std::map<std::string, std::function<void(std::stringstream&, const std::string&)>>
         m_recorders;
-    inline static std::atomic_bool m_stop = false;
-    inline static const bool m_enabled = true;
-    inline static const int m_interval_secs = 1;
-    inline static std::thread m_watcher;
-    inline static std::mutex m_mutex;
+    std::atomic_bool m_stop = false;
+    bool m_init = false;
+    const bool m_enabled = true;
+    const int m_interval_secs = 1;
+    std::thread m_watcher;
+    std::mutex m_mutex;
 };
 }
 #endif // UH_CLUSTER_MONITOR_H

@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
 #include "common/coroutines/awaitable_promise.h"
+#include "common/network/client.h"
+#include "common/network/server.h"
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------
@@ -147,37 +149,81 @@ coro<void> waiter (std::vector<std::shared_ptr<awaitable_promise<void>>>& proms)
     }
 }
 
+struct moc_handler: public protocol_handler {
+    boost::asio::io_context& m_ioc;
+    moc_handler(boost::asio::io_context& ioc): m_ioc(ioc) {
+
+    }
+    coro<void> handle(boost::asio::ip::tcp::socket m) override {
+        messenger mes(std::move(m));
+
+        for(;;) {
+            auto h = co_await mes.recv_header();
+
+            std::vector<char> data(h.size);
+            mes.register_read_buffer(data);
+            co_await mes.recv_buffers(h);
+
+            for (int i = 0; i < 10000; i++) {
+                auto f = std::make_shared<awaitable_promise<void>>(m_ioc);
+                f->set();
+                co_await f->get();
+            }
+        }
+    }
+};
+
+struct moc_sender {
+    boost::asio::io_context& m_ioc;
+    std::vector <std::thread> m_threads;
+    const int m_thread_count;
+    client m_cl;
+    moc_sender (int thread_count, boost::asio::io_context& ioc): m_ioc(ioc), m_thread_count(thread_count), m_cl (m_ioc, "0.0.0.0", 8088, 16) {
+
+    }
+
+    coro<void> send () {
+        for (int i = 0; i < 10000; ++i) {
+            auto m = co_await m_cl.acquire_messenger();
+            std::vector<char> data(100);
+
+            co_await m.get().send(SUCCESS, data);
+        }
+    }
+
+    void run () {
+        for (int i = 0; i < m_thread_count; ++i) {
+            m_threads.emplace_back([this]{
+                m_ioc.run();
+            });
+        }
+    }
+    ~moc_sender() {
+        for (auto& t: m_threads) {
+            t.join();
+        }
+    }
+};
+
 BOOST_AUTO_TEST_CASE(dedupe_test) {
 
 
-    int thread_count = 4;
-    boost::asio::io_context ioc (thread_count);
+    size_t thread_count = 4;
 
-    std::vector<std::thread> io_threads (thread_count);
+    boost::asio::io_context ioc_handler (thread_count);
+    server_config config {.threads=thread_count, .port = 8088, .bind_address="0.0.0.0"};
+    server s (config, std::make_unique<moc_handler>(ioc_handler), ioc_handler);
 
-    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(200);
-    for (int i = 0; i < 200; i++) {
-        auto p = std::make_shared<awaitable_promise<void>>(
-            ioc);
-        boost::asio::co_spawn(ioc, deduplicate_data(ioc), use_awaitable_promise_cospawn(p));
-        proms.emplace_back(p);
-    }
+    boost::asio::io_context ioc_sender (thread_count);
+    moc_sender sender(thread_count, ioc_sender);
+    auto fut = boost::asio::co_spawn(ioc_sender, sender.send(), boost::asio::use_future);
 
+    std::thread server_thread([&s]{s.run();});
+    std::thread sender_thread([&sender]{sender.run();});
 
-    for (auto& t: io_threads) {
-        t = std::thread ([&]{
-            ioc.run();
-        });
-    }
-
-    boost::asio::co_spawn(ioc, waiter(proms), boost::asio::use_future).get();
-
-    for (auto& t : io_threads) {
-        t.join();
-    }
-
-
+    fut.get();
+    server_thread.join();
+    sender_thread.join();
 }
 
 } // namespace uh::cluster

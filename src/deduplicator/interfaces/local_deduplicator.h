@@ -49,48 +49,44 @@ struct local_deduplicator : public deduplicator_interface {
     local_deduplicator(deduplicator_config config, global_data_view& storage)
         :
           m_storage(storage){
-        monitor::add_global("pending waits for promise", a);
-        monitor::add_global("total number of created promises", b);
-        monitor::add_global("total number of deduplicate calls", c);
+        monitor::get().add_global("pending waits for promise", a);
+        monitor::get().add_global("total number of created promises", b);
+        monitor::get().add_global("total number of deduplicate calls", c);
+        monitor::get().add_global("total number of deduplicate calls", c);
+        monitor::get().add_fn("thread count before", []{return ids1.size();});
+        monitor::get().add_fn("thread count after", []{return ids2.size();});
 
 
 
     }
 
-    coro<dedupe_response> deduplicate(const std::string_view& data) override {
-        size_t piece_size = std::ceil(static_cast<double>(data.size()) /
-                                      static_cast<double>(pieces_count));
-        std::vector<std::string_view> pieces;
-        std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
-        proms.reserve(pieces_count);
-        pieces.reserve(pieces_count);
-        for (std::size_t i = 0; i < pieces_count; ++i) {
-            pieces.emplace_back(data.substr(
-                i * piece_size,
-                std::min(piece_size, data.size() - i * piece_size)));
-            auto p = std::make_shared<awaitable_promise<dedupe_response>>(
-                m_storage.get_executor());
-            boost::asio::co_spawn(m_storage.get_executor(),
-                                  deduplicate_data(pieces.back()),
-                                  use_awaitable_promise_cospawn(p));
-            proms.emplace_back(p);
-        }
+    inline static std::set <std::thread::id> ids1, ids2;
 
-        dedupe_response dd_resp;
-        for (std::size_t i = 0; i < pieces_count; i++) {
-            op[i]++;
-            auto resp = co_await proms[i]->get();
-            op[i]--;
-            dd_resp.addr.append_address(resp.addr);
-            dd_resp.effective_size += resp.effective_size;
+    coro<dedupe_response> deduplicate(const std::string_view& data1) override {
+        c++;
+        ids1.emplace(std::this_thread::get_id());
+
+        for (int i = 0; i < 100000; ++i) {
+            a++;
+            b++;
+            auto f = std::make_shared<awaitable_promise<int>>(
+                m_storage.get_executor());
+            f->set(0);
+            a += co_await f->get();
+            a--;
         }
-        co_return dd_resp;
+        ids2.emplace(std::this_thread::get_id());
+
+        dedupe_response result;
+        address addr;
+        addr.push_fragment({0,0});
+        result.addr = addr;
+        co_return result;
     }
 
 private:
 
-
-    static inline std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g =0, op[2];
+    std::atomic<size_t> a = 0, b = 0, c = 0, d = 0, e = 0, g =0, op[2];
     coro<dedupe_response> deduplicate_data(std::string_view data) {
 
         c++;

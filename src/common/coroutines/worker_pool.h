@@ -12,17 +12,11 @@
 namespace uh::cluster {
 
 class worker_pool {
-    static inline std::atomic_size_t j = 0, pj = 0, tj =0, tj1=0;
 
 public:
     worker_pool(boost::asio::io_context& ioc, size_t worker_count)
         : m_threads(worker_count),
           m_ioc(ioc) {
-        monitor::add_global("job ex", j);
-        monitor::add_global("post fn", pj);
-        monitor::add_global("total posts", tj);
-        monitor::add_global("total posts1", tj1);
-
     }
 
     template <typename Func>
@@ -32,49 +26,17 @@ public:
             std::make_shared<awaitable_promise<std::invoke_result_t<Func>>>(
                 m_ioc);
 
-        j ++;
-        pj++;
         auto f = [](auto& f, auto promise) {
             try {
                 promise->set(f());
-                j--;
             } catch (const std::exception&) {
                 promise->set_exception(std::current_exception());
             }
         };
 
         boost::asio::post(m_threads, std::bind(f, std::ref(func), pr));
-        pj--;
-        tj++;
 
         co_return co_await pr->get();
-    }
-
-    template <typename Func>
-    requires(!std::is_void_v<std::invoke_result_t<Func>>)
-    auto post_no_in_workers(Func func) {
-        auto pr =
-            std::make_shared<awaitable_promise<std::invoke_result_t<Func>>>(
-                m_ioc);
-
-        j ++;
-        pj++;
-        tj1++;
-
-        auto f = [](auto f, auto promise) {
-            try {
-                promise->set(f());
-                j--;
-            } catch (const std::exception&) {
-                promise->set_exception(std::current_exception());
-            }
-        };
-
-        boost::asio::post(m_threads, std::bind(f, func, pr));
-        pj--;
-        tj++;
-
-        return pr;
     }
 
     template <typename Func>
