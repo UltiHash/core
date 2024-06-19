@@ -92,18 +92,13 @@ coro<void> complete_multipart::handle(http_request& req) const {
     res.set_original_size(info.data_size);
     res.set_effective_size(info.effective_size);
 
-    res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                 "<CompleteMultipartUploadResult>\n"
-                 "<Bucket>" +
-                 req.bucket() +
-                 "</Bucket>\n"
-                 "<Key>" +
-                 xml_escape(info.key) +
-                 "</Key>\n"
-                 "<ETag>" +
-                 etag +
-                 "</ETag>\n"
-                 "</CompleteMultipartUploadResult>\n");
+    boost::property_tree::ptree pt;
+    pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
+    pt.put("CompleteMultipartUploadResult.Key", info.key);
+    pt.put("CompleteMultipartUploadResult.ETag", etag);
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+    res.set_body(ss.str());
 
     co_await m_collection.uploads.remove_upload(upload_id);
     co_await req.respond(res.get_prepared_response());
