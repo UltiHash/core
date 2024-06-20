@@ -1,5 +1,6 @@
 # Changelog
 ## [Current]
+- Improved compatibility level with S3 API
 - Fixed handling of XML-reserved characters in object keys
 - Added REST API for querying raw and effective size of data in the cluster
 - A new read command in storage that returns data if available, otherwise no errors

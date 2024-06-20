@@ -1,6 +1,9 @@
 #include "list_multipart.h"
-#include "entrypoint/http/command_exception.h"
 #include "common/utils/strings.h"
+#include "entrypoint/http/command_exception.h"
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -8,25 +11,22 @@ static http_response
 get_response(const std::string& bucket_name,
              const std::map<std::string, std::string>& ongoing) noexcept {
 
-    std::string upload_xml_string;
+    boost::property_tree::ptree pt;
+    boost::property_tree::ptree bucket_node;
 
     for (const auto& val : ongoing) {
-        upload_xml_string += "<Upload>\n"
-                             "<Key>" +
-                             xml_escape(val.second) +
-                             "</Key>\n"
-                             "<UploadId>" +
-                             val.first +
-                             "</UploadId>\n"
-                             "</Upload>\n";
+        boost::property_tree::ptree upload_node;
+        upload_node.put("Key", val.second);
+        upload_node.put("UploadId", val.first);
+        bucket_node.add_child("Upload", upload_node);
     }
 
-    http_response res;
-    res.set_body(std::string("<ListMultipartUploadsResult>\n"
-                             "   <Bucket>" +
-                             bucket_name + "</Bucket>\n" + upload_xml_string +
-                             "</ListMultipartUploadsResult>"));
+    pt.add_child("ListMultipartUploadsResult.Bucket", bucket_node);
 
+    http_response res;
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+    res.set_body(ss.str());
     return res;
 }
 
