@@ -16,8 +16,7 @@ class worker_pool {
 public:
     worker_pool(boost::asio::io_context& ioc, size_t worker_count)
         : m_threads(worker_count),
-          m_ioc(ioc) {
-    }
+          m_ioc(ioc) {}
 
     template <typename Func>
     requires(!std::is_void_v<std::invoke_result_t<Func>>)

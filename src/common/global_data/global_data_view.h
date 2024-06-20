@@ -60,19 +60,6 @@ public:
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
 
     /**
-     * @brief reads the data starting from pointer, up to the given size.
-     * It is allowed to return data that is smaller than the requested size if
-     * there is no more data left in the data store file.
-     *
-     * @param pointer A constant reference to a uint128_t, specifying the
-* location of the size
-     * @param size A size_t specifying the size of the fragment.
-     * @return
-     */
-    shared_buffer<> read(const uint128_t& pointer,
-                         size_t size);
-
-    /**
      * @brief Retrieves fragment from storage services.
      *
      * The L2 read cache is consulted to see if it contains the requested
@@ -93,7 +80,6 @@ public:
      * @return A shared_buffer<char> containing the fragment data.
      */
     shared_buffer<char> read_fragment(const uint128_t& pointer, size_t size);
-
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
