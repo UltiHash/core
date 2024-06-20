@@ -153,7 +153,8 @@ private:
         dedupe_response result{.effective_size = fragments.effective_size(),
                                .addr = fragments.make_address()};
 
-        co_await m_storage.sync(result.addr);
+        if (!result.addr.empty())
+            co_await m_storage.sync(result.addr);
 
         m_dedupe_logger.log_stat(m_fragment_set.size(), dedupe_count,
                                  non_dedupe_count, result.effective_size,
