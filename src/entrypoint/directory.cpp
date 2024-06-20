@@ -1,5 +1,4 @@
 #include "directory.h"
-
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 

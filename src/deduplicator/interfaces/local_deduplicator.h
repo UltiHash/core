@@ -1,4 +1,3 @@
-
 #ifndef UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 #define UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 
@@ -20,23 +19,24 @@ size_t largest_common_prefix(const container& a, const container& b) noexcept {
     return std::distance(a.begin(), mismatch.first);
 }
 
-size_t match_size(global_data_view& storage, std::string_view data, auto frag) {
+coro<size_t> match_size(global_data_view& storage, std::string_view data,
+                        auto frag) {
     if (!frag) {
-        return 0ull;
+        co_return 0ull;
     }
 
     auto& [f, prefix] = *frag;
 
     std::size_t common = largest_common_prefix(std::string_view(prefix), data);
     if (common < prefix.size()) {
-        return common;
+        co_return common;
     }
 
-    auto complete = storage.read_fragment(f.pointer, f.size);
+    auto complete = co_await storage.read(f.pointer, f.size);
 
-    return common +
-           largest_common_prefix(data.substr(common),
-                                 complete.string_view().substr(common));
+    co_return common +
+        largest_common_prefix(data.substr(common),
+                              complete.string_view().substr(common));
 }
 
 } // namespace
@@ -50,41 +50,44 @@ struct local_deduplicator : public deduplicator_interface {
           m_storage(storage),
           m_dedupe_workers(m_storage.get_executor(),
                            m_dedupe_conf.worker_thread_count),
-          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000){}
+          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {}
 
     coro<dedupe_response> deduplicate(const std::string_view& data) override {
         size_t piece_size = std::ceil(static_cast<double>(data.size()) /
                                       static_cast<double>(pieces_count));
         std::vector<std::string_view> pieces;
+        std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
+        proms.reserve(pieces_count);
         pieces.reserve(pieces_count);
         for (std::size_t i = 0; i < pieces_count; ++i) {
             pieces.emplace_back(data.substr(
                 i * piece_size,
                 std::min(piece_size, data.size() - i * piece_size)));
+            auto p = std::make_shared<awaitable_promise<dedupe_response>>(
+                m_storage.get_executor());
+            boost::asio::co_spawn(m_storage.get_executor(),
+                                  deduplicate_data(pieces.back()),
+                                  use_awaitable_promise_cospawn(p));
+            proms.emplace_back(p);
         }
 
-        auto responses =
-            co_await m_dedupe_workers.broadcast_from_io_thread_in_workers(
-                [this](const auto& piece) { return deduplicate_data(piece); },
-                pieces);
-
-        for (std::size_t i = 1; i < pieces_count; i++) {
-            responses[0].addr.append_address(responses[i].addr);
-            responses[0].effective_size += responses[i].effective_size;
+        dedupe_response dd_resp;
+        for (std::size_t i = 0; i < pieces_count; i++) {
+            auto resp = co_await proms[i]->get();
+            dd_resp.addr.append_address(resp.addr);
+            dd_resp.effective_size += resp.effective_size;
         }
-        co_await m_dedupe_workers.post_in_workers(
-            [this, &responses]() { m_storage.sync(responses[0].addr); });
-        co_return responses[0];
+        co_return dd_resp;
     }
 
 private:
-    size_t pursue_pointer(std::string_view& data, uint128_t pointer,
-                          fragmentation& fragments) {
+    coro<size_t> pursue_pointer(std::string_view& data, uint128_t pointer,
+                                fragmentation& fragments) {
         size_t common_size;
-        fragment frag {pointer - m_dedupe_conf.max_fragment_size, m_dedupe_conf.max_fragment_size};
+        fragment frag{pointer - m_dedupe_conf.max_fragment_size,
+                      m_dedupe_conf.max_fragment_size};
         do {
-            auto stored_data = m_storage.read(
-                pointer, pursue_size);
+            auto stored_data = co_await m_storage.read(pointer, pursue_size);
 
             common_size =
                 largest_common_prefix(stored_data.string_view(), data);
@@ -93,13 +96,12 @@ private:
             pointer += common_size;
         } while (common_size == pursue_size);
 
-        m_dedupe_logger.log_pursue_deduplication(frag.size,
-                                                 frag.pointer);
+        m_dedupe_logger.log_pursue_deduplication(frag.size, frag.pointer);
         fragments.push(frag);
-        return frag.size;
+        co_return frag.size;
     }
 
-    dedupe_response deduplicate_data(std::string_view data) {
+    coro<dedupe_response> deduplicate_data(std::string_view data) {
 
         fragmentation fragments(m_dedupe_logger);
         size_t offset = 0;
@@ -107,10 +109,11 @@ private:
         size_t dedupe_count = 0;
 
         while (!data.empty()) {
-            auto f = m_fragment_set.find(data);
+            auto f = co_await m_dedupe_workers.post_in_workers(
+                [this, &data] { return m_fragment_set.find(data); });
 
-            auto match_low = match_size(m_storage, data, f.low);
-            auto match_high = match_size(m_storage, data, f.high);
+            auto match_low = co_await match_size(m_storage, data, f.low);
+            auto match_high = co_await match_size(m_storage, data, f.high);
 
             if (const auto size = std::max(match_low, match_high);
                 size > m_dedupe_conf.min_fragment_size) {
@@ -120,11 +123,10 @@ private:
 
                 data = data.substr(size);
                 if (size == m_dedupe_conf.max_fragment_size) {
-                    offset += pursue_pointer(
+                    offset += co_await pursue_pointer(
                         data, frag.pointer + m_dedupe_conf.max_fragment_size,
                         fragments);
-                }
-                else {
+                } else {
                     fragments.push(fragment{frag.pointer, size});
                     m_dedupe_logger.log_deduplication(size, prefix,
                                                       frag.pointer, offset);
@@ -144,15 +146,20 @@ private:
             offset += frag_size;
             non_dedupe_count++;
         }
+        co_await fragments.flush_data(m_storage);
+        co_await m_dedupe_workers.post_in_workers(
+            [this, &fragments] { fragments.flush_set(m_fragment_set); });
 
-        fragments.flush(m_storage, m_fragment_set);
         dedupe_response result{.effective_size = fragments.effective_size(),
                                .addr = fragments.make_address()};
+
+        if (!result.addr.empty())
+            co_await m_storage.sync(result.addr);
+
         m_dedupe_logger.log_stat(m_fragment_set.size(), dedupe_count,
                                  non_dedupe_count, result.effective_size,
                                  offset);
-
-        return result;
+        co_return result;
     }
 
     deduplicator_config m_dedupe_conf;

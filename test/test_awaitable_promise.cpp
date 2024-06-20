@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
 #include "common/coroutines/awaitable_promise.h"
+#include "common/network/client.h"
+#include "common/network/server.h"
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------
@@ -129,6 +131,68 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     workers.join();
 
     BOOST_TEST(failures == 0);
+}
+
+struct execution_counter {
+    void finished() {
+        m_finished++;
+        m_cv.notify_one();
+    }
+    void wait(size_t count) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_cv.wait(lock, [this, count] { return m_finished == count; });
+    }
+    [[nodiscard]] size_t count() const { return m_finished; }
+
+private:
+    std::atomic_size_t m_finished = 0;
+    std::condition_variable m_cv;
+    std::mutex m_mutex;
+};
+
+coro<void> handle(boost::asio::io_context& ioc, auto& counter) {
+    LOG_CORO_CONTEXT();
+
+    for (int i = 0; i < 100000; i++) {
+        boost::asio::strand<boost::asio::io_context::executor_type>(
+            ioc.get_executor());
+        auto promise = std::make_shared<awaitable_promise<void>>(ioc);
+
+        promise->set();
+        co_await promise->get();
+    }
+
+    counter.finished();
+}
+
+coro<void> do_spawn(auto& ioc, auto& counter, int count) {
+    while (count > 0) {
+        co_spawn(ioc, handle(ioc, counter), [](const std::exception_ptr& e) {});
+        --count;
+    }
+
+    co_return;
+}
+
+BOOST_AUTO_TEST_CASE(strand_test) {
+    int thread_count = 8;
+    int connections = 4;
+
+    boost::asio::io_context ioc_handler(thread_count);
+    execution_counter counter;
+
+    co_spawn(ioc_handler, do_spawn(ioc_handler, counter, connections),
+             [](const std::exception_ptr& e) {});
+
+    std::list<std::thread> server_threads;
+    for (int i = 0; i < thread_count; ++i) {
+        server_threads.emplace_back([&] { ioc_handler.run(); });
+    }
+
+    counter.wait(connections);
+    for (auto& t : server_threads) {
+        t.join();
+    }
 }
 
 } // namespace uh::cluster

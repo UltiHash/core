@@ -3,6 +3,12 @@
 - Improved compatibility level with S3 API
 - Fixed handling of XML-reserved characters in object keys
 - Added REST API for querying raw and effective size of data in the cluster
+- A new read command in storage that returns data if available, otherwise no errors
+- More efficient storage usage by truncating unused spaces in files
+- Better pursuing of perfect matches in deduplicator
+- Fixed a bug in awaitable promise
+- More coroutines and less worker threads in deduplicator
+- Fixes in XML responses (generated XML)
 
 ## [0.5.0] 2024-06-06
 - Removed get bucket command
