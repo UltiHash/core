@@ -8,6 +8,9 @@
 #include "entrypoint/http/http_response.h"
 #include "entrypoint/utils.h"
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 namespace uh::cluster {
 
 class init_multipart {
@@ -40,18 +43,14 @@ private:
                                       const std::string& upload_id) noexcept {
         http_response res;
 
-        res.set_body("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                     "<InitiateMultipartUploadResult>\n"
-                     "<Bucket>" +
-                     req.bucket() +
-                     "</Bucket>\n"
-                     "<Key>" +
-                     xml_escape(req.object_key()) +
-                     "</Key>\n"
-                     "<UploadId>" +
-                     upload_id +
-                     "</UploadId>\n"
-                     "</InitiateMultipartUploadResult>");
+        boost::property_tree::ptree pt;
+        pt.put("InitiateMultipartUploadResult.Bucket", req.bucket());
+        pt.put("InitiateMultipartUploadResult.Key", req.object_key());
+        pt.put("InitiateMultipartUploadResult.UploadId", upload_id);
+
+        std::ostringstream ss;
+        boost::property_tree::write_xml(ss, pt);
+        res.set_body(ss.str());
 
         return res;
     }

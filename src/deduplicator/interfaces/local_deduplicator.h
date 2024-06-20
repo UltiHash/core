@@ -51,7 +51,7 @@ struct local_deduplicator : public deduplicator_interface {
           m_storage(storage),
           m_dedupe_workers(m_storage.get_executor(),
                            m_dedupe_conf.worker_thread_count),
-          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {}
+          m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000){}
 
     coro<dedupe_response> deduplicate(const std::string_view& data) override {
         size_t piece_size = std::ceil(static_cast<double>(data.size()) /
@@ -90,6 +90,7 @@ private:
         do {
             auto stored_data = co_await m_storage.read(pointer, pursue_size);
 
+
             common_size =
                 largest_common_prefix(stored_data.string_view(), data);
             data = data.substr(common_size);
@@ -100,6 +101,7 @@ private:
         m_dedupe_logger.log_pursue_deduplication(frag.size, frag.pointer);
         fragments.push(frag);
         co_return frag.size;
+
     }
 
     coro<dedupe_response> deduplicate_data(std::string_view data) {
@@ -128,6 +130,12 @@ private:
                         data, frag.pointer + m_dedupe_conf.max_fragment_size,
                         fragments);
                 } else {
+                    fragments.push(fragment{frag.pointer, size});
+                    m_dedupe_logger.log_deduplication(size, prefix,
+                                                      frag.pointer, offset);
+                    offset += size;
+                }
+                else {
                     fragments.push(fragment{frag.pointer, size});
                     m_dedupe_logger.log_deduplication(size, prefix,
                                                       frag.pointer, offset);

@@ -50,22 +50,6 @@ extract_bucket_and_object(boost::urls::url url) {
     if (!object_key.empty())
         object_key.pop_back();
 
-    if (!bucket_id.empty()) {
-        if (bucket_id.size() < 3 || bucket_id.size() > 63) {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidBucketName",
-                                    "bucket name has invalid length");
-        }
-
-        std::regex bucket_pattern(
-            R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
-        if (!std::regex_match(bucket_id, bucket_pattern)) {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidBucketName",
-                                    "bucket name has invalid characters");
-        }
-    }
-
     return std::make_tuple(bucket_id, object_key);
 }
 

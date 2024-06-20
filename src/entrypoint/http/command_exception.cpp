@@ -2,6 +2,8 @@
 
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -23,18 +25,13 @@ const char* command_exception::what() const noexcept {
 }
 
 http::response<http::string_body> make_response(const command_exception& e) {
-    http::response<http::string_body> res{e.m_status, 11};
-    if (e.m_status != http::status::not_found) {
-        res.body() = "<Error>\n"
-                     "<Code>" +
-                     e.m_code +
-                     "</Code>\n"
-                     "<Message>" +
-                     e.m_reason +
-                     "</Message>\n"
-                     "</Error>";
-    }
+    boost::property_tree::ptree pt;
+    pt.put("Error.Code", e.m_code);
+    pt.put("Error.Message", e.m_reason);
 
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
+    http::response<http::string_body> res{e.m_status, 11, ss.str()};
     res.prepare_payload();
 
     LOG_DEBUG() << res.base();

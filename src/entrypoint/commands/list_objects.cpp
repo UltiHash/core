@@ -11,7 +11,8 @@ list_objects::list_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool list_objects::can_handle(const http_request& req) {
-    return req.method() == method::get && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::get &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && !req.query("uploads") &&
            !req.query("list-type");
 }
@@ -138,17 +139,18 @@ static http_response get_response(const std::vector<object>& objects,
 
 coro<void> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
+
+    std::vector<object> obj_list;
     try {
-        auto obj_list = co_await m_collection.directory.list_objects(
+        obj_list = co_await m_collection.directory.list_objects(
             req.bucket(), req.query("prefix"), req.query("marker"));
-
-        auto res = get_response(obj_list, req);
-        co_await req.respond(res.get_prepared_response());
-
-    } catch (const error_exception& e) {
-        LOG_ERROR() << e.what();
-        throw_from_error(e.error());
+    } catch (const std::exception& e) {
+        throw command_exception(http::status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
+
+    auto res = get_response(obj_list, req);
+    co_await req.respond(res.get_prepared_response());
 }
 
 } // namespace uh::cluster

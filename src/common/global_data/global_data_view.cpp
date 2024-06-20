@@ -46,6 +46,7 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
 
 coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
                                              size_t size) {
+
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");
     }
@@ -63,6 +64,7 @@ coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
     auto buffer = co_await storage->read(pointer, size);
     m_cache_l2.put(pointer, buffer);
     co_return buffer;
+
 }
 
 coro<std::size_t> global_data_view::read_address(char* buffer,
