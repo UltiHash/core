@@ -8,7 +8,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-/*
+
 BOOST_AUTO_TEST_CASE(basic_promise) {
 
     boost::asio::io_context ioc;
@@ -132,10 +132,9 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
 
     BOOST_TEST(failures == 0);
 }
-*/
 
 struct execution_counter {
-    void increment() {
+    void finished() {
         m_finished++;
         m_cv.notify_one();
     }
@@ -151,46 +150,49 @@ private:
     std::mutex m_mutex;
 };
 
-struct moc_handler : public protocol_handler {
-    boost::asio::io_context& m_ioc;
-    execution_counter& m_exec_counter;
-    explicit moc_handler(boost::asio::io_context& ioc, execution_counter& ex)
-        : m_ioc(ioc),
-          m_exec_counter(ex) {}
-    coro<void> handle(boost::asio::ip::tcp::socket m) override {
-        messenger mes(std::move(m));
+coro<void> handle(boost::asio::io_context& ioc, auto& counter) {
+    LOG_CORO_CONTEXT();
 
-        for (int i = 0; i < 1000000; i++) {
-            auto f = std::make_shared<awaitable_promise<void>>(m_ioc);
-            f->set();
-            co_await f->get();
-        }
-        m_exec_counter.increment();
+    for (int i = 0; i < 100000; i++) {
+        boost::asio::strand<boost::asio::io_context::executor_type>(
+            ioc.get_executor());
+        auto promise = std::make_shared<awaitable_promise<void>>(ioc);
+
+        promise->set();
+        co_await promise->get();
     }
-};
 
-BOOST_AUTO_TEST_CASE(dedupe_test) {
+    counter.finished();
+}
 
-    int thread_count = 4;
-    uint16_t port = 8088;
+coro<void> do_spawn(auto& ioc, auto& counter, int count) {
+    while (count > 0) {
+        co_spawn(ioc, handle(ioc, counter), [](const std::exception_ptr& e) {});
+        --count;
+    }
+
+    co_return;
+}
+
+BOOST_AUTO_TEST_CASE(strand_test) {
+    int thread_count = 8;
     int connections = 4;
 
     boost::asio::io_context ioc_handler(thread_count);
-    boost::asio::io_context ioc_sender(thread_count);
-    execution_counter exec_counter;
-    server_config config{.threads = static_cast<size_t>(thread_count),
-                         .port = port,
-                         .bind_address = "0.0.0.0"};
+    execution_counter counter;
 
-    server s(config, std::make_unique<moc_handler>(ioc_handler, exec_counter),
-             ioc_handler);
-    std::thread server_thread([&s] { s.run(); });
+    co_spawn(ioc_handler, do_spawn(ioc_handler, counter, connections),
+             [](const std::exception_ptr& e) {});
 
-    client cl(ioc_sender, config.bind_address, config.port, connections);
+    std::list<std::thread> server_threads;
+    for (int i = 0; i < thread_count; ++i) {
+        server_threads.emplace_back([&] { ioc_handler.run(); });
+    }
 
-    exec_counter.wait(connections);
-    s.stop();
-    server_thread.join();
+    counter.wait(connections);
+    for (auto& t : server_threads) {
+        t.join();
+    }
 }
 
 } // namespace uh::cluster
