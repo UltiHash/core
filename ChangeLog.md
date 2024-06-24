@@ -1,5 +1,5 @@
 # Changelog
-## [Current]
+## [0.5.1] 2024-06-24
 - Improved compatibility level with S3 API
 - Fixed handling of XML-reserved characters in object keys
 - Added REST API for querying raw and effective size of data in the cluster
