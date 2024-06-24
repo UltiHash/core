@@ -3,6 +3,7 @@
 
 #include "common/coroutines/awaitable_promise.h"
 #include "common/debug/debug.h"
+#include "templates.h"
 
 #include <list>
 #include <memory>
@@ -25,9 +26,13 @@ public:
 
         resource* operator->() { return m_r.get(); }
         resource& operator*() { return *m_r; }
-        operator resource&() { return m_r; }
+        explicit operator resource&() { return m_r; }
 
-        void release() { m_pool.put_back(std::move(m_r)); }
+        void release() {
+            if constexpr (is_streamable_v<resource>)
+                LOG_DEBUG() << "putting back resource " << m_r;
+            m_pool.put_back(std::move(m_r));
+        }
 
         ~handle() { release(); }
 
