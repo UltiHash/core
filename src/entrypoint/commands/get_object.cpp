@@ -51,7 +51,7 @@ coro<std::size_t> upload(local_read_handle& reader, http_request& req,
 
     std::shared_ptr<awaitable_promise<std::size_t>> promise;
 
-    double_buffer buffers(32*MEBI_BYTE);
+    double_buffer buffers(32 * MEBI_BYTE);
     while (reader.has_next()) {
         auto& buffer = buffers.current();
         buffer.resize(buffer.capacity());
@@ -81,7 +81,8 @@ get_object::get_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool get_object::can_handle(const http_request& req) {
-    return req.method() == method::get && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::get &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && !req.query("attributes");
 }
 

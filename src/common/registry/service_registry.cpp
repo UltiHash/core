@@ -49,7 +49,7 @@ service_registry::register_service(const server_config& config) {
         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PORT),
          std::to_string(config.port)},
         {key_base + get_config_string(uh::cluster::CFG_ENDPOINT_PID),
-         std::to_string(getpid ())},
+         std::to_string(getpid())},
         {announced_key_base, {}},
     };
 

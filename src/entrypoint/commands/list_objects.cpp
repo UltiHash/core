@@ -60,27 +60,33 @@ static http_response get_response(const std::vector<object>& objects,
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
-                boost::property_tree::ptree& common_prefixes_node = common_prefixes_nodes.emplace_back();
+                boost::property_tree::ptree& common_prefixes_node =
+                    common_prefixes_nodes.emplace_back();
                 if (encoding_type) {
-                    common_prefixes_node.put("Prefix", url_encode(*object._prefix));
+                    common_prefixes_node.put("Prefix",
+                                             url_encode(*object._prefix));
                 } else {
                     common_prefixes_node.put("Prefix", *object._prefix);
                 }
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {
-                boost::property_tree::ptree& contents_node = contents_nodes.emplace_back();
+                boost::property_tree::ptree& contents_node =
+                    contents_nodes.emplace_back();
                 if (object._object->get().etag) {
                     contents_node.put("ETag", *object._object->get().etag);
                 }
 
                 if (encoding_type) {
-                    contents_node.put("Key", url_encode(object._object->get().name));
+                    contents_node.put("Key",
+                                      url_encode(object._object->get().name));
                 } else {
                     contents_node.put("Key", object._object->get().name);
                 }
 
-                contents_node.put("LastModified", iso8601_date(object._object->get().last_modified));
+                contents_node.put(
+                    "LastModified",
+                    iso8601_date(object._object->get().last_modified));
                 contents_node.put("Size", object._object->get().size);
 
                 common_prefix_last = false;
@@ -103,31 +109,31 @@ static http_response get_response(const std::vector<object>& objects,
 
     list_bucket_result_node.put("IsTruncated", is_truncated);
 
-    if(marker)
+    if (marker)
         list_bucket_result_node.put("Marker", *marker);
 
-    if(next_marker)
+    if (next_marker)
         list_bucket_result_node.put("NextMarker", *next_marker);
 
-    for(const auto& contents : contents_nodes) {
+    for (const auto& contents : contents_nodes) {
         list_bucket_result_node.add_child("Contents", contents);
     }
 
     list_bucket_result_node.put("Name", req.bucket());
 
-    if(prefix)
+    if (prefix)
         list_bucket_result_node.put("Prefix", *prefix);
 
-    if(delimiter)
+    if (delimiter)
         list_bucket_result_node.put("Delimiter", *delimiter);
 
     list_bucket_result_node.put("MaxKeys", max_keys);
 
-    for(const auto& common_prefixes : common_prefixes_nodes) {
+    for (const auto& common_prefixes : common_prefixes_nodes) {
         list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
     }
 
-    if(encoding_type)
+    if (encoding_type)
         list_bucket_result_node.put("EncodingType", *encoding_type);
 
     pt.add_child("ListBucketResult", list_bucket_result_node);
