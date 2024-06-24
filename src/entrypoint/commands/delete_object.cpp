@@ -7,7 +7,8 @@ delete_object::delete_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_object::can_handle(const http_request& req) {
-    return req.method() == method::delete_ && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::delete_ &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && !req.query("uploadId");
 }
 

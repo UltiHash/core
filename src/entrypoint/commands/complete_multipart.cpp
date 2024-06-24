@@ -1,8 +1,8 @@
 #include "complete_multipart.h"
 #include "common/types/common_types.h"
 #include "common/utils/md5.h"
-#include "common/utils/xml_parser.h"
 #include "common/utils/strings.h"
+#include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_response.h"
 
@@ -12,7 +12,8 @@ complete_multipart::complete_multipart(reference_collection& collection)
     : m_collection(collection) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
-    return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::post &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && req.query("uploadId");
 }
 

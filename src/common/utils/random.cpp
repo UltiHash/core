@@ -6,15 +6,16 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-shared_buffer <char> random_buffer(std::size_t length, const std::string& chars) {
+shared_buffer<char> random_buffer(std::size_t length,
+                                  const std::string& chars) {
     thread_local static std::mt19937 rg{std::random_device{}()};
     thread_local static std::uniform_int_distribution<std::string::size_type>
         pick(0, chars.size());
 
-    shared_buffer <char> s (length);
+    shared_buffer<char> s(length);
     size_t i = 0;
     while (s.size() < length) {
-        s.data() [i++] = 97 + chars[pick(rg)] % 25;
+        s.data()[i++] = 97 + chars[pick(rg)] % 25;
     }
 
     return s;

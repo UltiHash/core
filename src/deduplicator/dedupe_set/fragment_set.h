@@ -137,7 +137,7 @@ private:
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
     fragment_set_log m_set_log;
-  
+
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator>
         m_lfu_headers;

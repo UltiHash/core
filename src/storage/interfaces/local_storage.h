@@ -48,7 +48,8 @@ struct local_storage : public storage_interface {
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
         shared_buffer<> buf(size);
-        const auto read_size = get_data_store(pointer).read_up_to(buf.data(), pointer, size);
+        const auto read_size =
+            get_data_store(pointer).read_up_to(buf.data(), pointer, size);
         buf.resize(read_size);
         co_return buf;
     }

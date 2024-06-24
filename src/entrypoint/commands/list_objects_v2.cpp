@@ -1,4 +1,6 @@
 #include "list_objects_v2.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
@@ -42,10 +44,13 @@ http_response get_response(const std::vector<object>& objects,
             fetch_owner_set = true;
     }
 
-    std::string common_prefixes_xml_string;
-    std::string content_xml_string;
     std::string is_truncated = "false";
-    std::string next_continuation_token_xml;
+    boost::property_tree::ptree pt;
+    boost::property_tree::ptree list_bucket_result_node;
+    std::vector<boost::property_tree::ptree> contents_nodes;
+    std::vector<boost::property_tree::ptree> common_prefixes_nodes;
+    std::optional<std::string> next_continuation_token;
+
     size_t contents_counter = 0;
     size_t common_prefixes_counter = 0;
 
@@ -56,34 +61,38 @@ http_response get_response(const std::vector<object>& objects,
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
-                common_prefixes_xml_string +=
-                    "<CommonPrefixes>\n<Prefix>" +
-                    (encoding_type ? url_encode(*object._prefix)
-                                   : *object._prefix) +
-                    "</Prefix>\n</CommonPrefixes>\n";
+                boost::property_tree::ptree& common_prefixes_node =
+                    common_prefixes_nodes.emplace_back();
+                if (encoding_type) {
+                    common_prefixes_node.put("Prefix",
+                                             url_encode(*object._prefix));
+                } else {
+                    common_prefixes_node.put("Prefix", *object._prefix);
+                }
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {
-                content_xml_string +=
-                    "<Contents>\n"
-                    "<LastModified>" +
-                    iso8601_date(object._object->get().last_modified) +
-                    "</LastModified>\n";
-
+                boost::property_tree::ptree& contents_node =
+                    contents_nodes.emplace_back();
                 if (object._object->get().etag) {
-                    content_xml_string +=
-                        "<ETag>" + *object._object->get().etag + "</ETag>\n";
+                    contents_node.put("ETag", *object._object->get().etag);
                 }
 
-                content_xml_string +=
-                    "<Key>" +
-                    (encoding_type ? url_encode(object._object->get().name)
-                                   : xml_escape(object._object->get().name)) +
-                    "</Key>\n" +
-                    (fetch_owner_set ? "<Owner>no-owner-support</Owner>" : "") +
-                    "<Size>" + std::to_string(object._object->get().size) +
-                    +"</Size>\n"
-                     "</Contents>\n";
+                if (encoding_type) {
+                    contents_node.put("Key",
+                                      url_encode(object._object->get().name));
+                } else {
+                    contents_node.put("Key", object._object->get().name);
+                }
+
+                contents_node.put(
+                    "LastModified",
+                    iso8601_date(object._object->get().last_modified));
+                if (fetch_owner_set) {
+                    contents_node.put("Owner", "no-owner-support");
+                }
+                contents_node.put("Size", object._object->get().size);
+
                 common_prefix_last = false;
                 ++contents_counter;
             }
@@ -92,65 +101,56 @@ http_response get_response(const std::vector<object>& objects,
                 collapsed_objs.size() > max_keys) {
                 is_truncated = "true";
                 if (common_prefix_last)
-                    next_continuation_token_xml = "<NextContinuationToken>" +
-                                                  *object._prefix +
-                                                  "</NextContinuationToken>";
+                    next_continuation_token = *object._prefix;
                 else
-                    next_continuation_token_xml = "<NextContinuationToken>" +
-                                                  objects[max_keys - 1].name +
-                                                  "</NextContinuationToken>";
+                    next_continuation_token = objects[max_keys - 1].name;
                 break;
             }
         }
     }
 
-    std::string delimiter_xml_string;
-    if (delimiter) {
-        delimiter_xml_string = "<Delimiter>" + *delimiter + "</Delimiter>\n";
+    list_bucket_result_node.put("IsTruncated", is_truncated);
+
+    for (const auto& contents : contents_nodes) {
+        list_bucket_result_node.add_child("Contents", contents);
     }
 
-    std::string key_count_xml;
-    content_xml_string +=
-        "<KeyCount>" +
-        std::to_string(contents_counter + common_prefixes_counter) +
-        "</KeyCount>\n";
+    list_bucket_result_node.put("Name", req.bucket());
 
-    std::string max_keys_xml_string =
-        "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
+    if (prefix)
+        list_bucket_result_node.put("Prefix", *prefix);
 
-    std::string encoding_type_xml_string;
-    if (encoding_type) {
-        encoding_type_xml_string =
-            "<EncodingType>" + *encoding_type + "</EncodingType>\n";
+    if (delimiter)
+        list_bucket_result_node.put("Delimiter", *delimiter);
+
+    list_bucket_result_node.put("MaxKeys", max_keys);
+
+    for (const auto& common_prefixes : common_prefixes_nodes) {
+        list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
     }
 
-    std::string continuation_token_xml;
-    ;
-    if (continuation_token) {
-        continuation_token_xml = "<ContinuationToken>" + *continuation_token +
-                                 "</ContinuationToken>\n";
-    }
+    if (encoding_type)
+        list_bucket_result_node.put("EncodingType", *encoding_type);
 
-    std::string start_after_xml_string;
-    if (start_after) {
-        encoding_type_xml_string =
-            "<StartAfter>" + *start_after + "</StartAfter>\n";
-    }
+    list_bucket_result_node.put("KeyCount",
+                                contents_counter + common_prefixes_counter);
 
-    std::string prefix_xml_string;
-    if (prefix) {
-        prefix_xml_string = "<Prefix>" + *prefix + "</Prefix>\n";
-    }
+    if (continuation_token)
+        list_bucket_result_node.put("ContinuationToken", *continuation_token);
 
+    if (next_continuation_token)
+        list_bucket_result_node.put("NextContinuationToken",
+                                    *next_continuation_token);
+
+    if (start_after)
+        list_bucket_result_node.put("StartAfter", *start_after);
+
+    pt.add_child("ListBucketResult", list_bucket_result_node);
+
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
     http_response res;
-    res.set_body("<ListBucketResult>\n"
-                 "<IsTruncated>" +
-                 is_truncated + "</IsTruncated>\n" + content_xml_string +
-                 prefix_xml_string + delimiter_xml_string +
-                 max_keys_xml_string + common_prefixes_xml_string +
-                 encoding_type_xml_string + key_count_xml +
-                 continuation_token_xml + start_after_xml_string +
-                 next_continuation_token_xml + "</ListBucketResult>");
+    res.set_body(ss.str());
 
     return res;
 }

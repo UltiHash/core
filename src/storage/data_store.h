@@ -3,10 +3,12 @@
 
 #include "common/types/scoped_buffer.h"
 
-#include <condition_variable>
+#include "common/types/address.h"
 #include <atomic>
+#include <condition_variable>
 #include <cstring>
 #include <fcntl.h>
+#include <filesystem>
 #include <list>
 #include <map>
 #include <memory_resource>
@@ -14,8 +16,6 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
-#include <filesystem>
-#include "common/types/address.h"
 
 namespace uh::cluster {
 
@@ -28,7 +28,8 @@ struct data_store_config {
 class data_store {
 
 public:
-    data_store(data_store_config conf, uint32_t service_id, uint32_t data_store_id);
+    data_store(data_store_config conf, uint32_t service_id,
+               uint32_t data_store_id);
 
     /**
      * Allocates for the given data size and stores the
@@ -41,7 +42,7 @@ public:
      * @param data
      * @return  allocated address
      */
-    address register_write (const shared_buffer <char>& data);
+    address register_write(const shared_buffer<char>& data);
 
     /**
      * Allocates for the given data size and stores the
@@ -54,21 +55,21 @@ public:
      * @param data
      * @return  allocated address
      */
-    address register_write (const std::string_view& data);
+    address register_write(const std::string_view& data);
 
     /**
      * Writes the data that is registered by the given address to disk.
      *
      * @param addr the address that the data is registered with
      */
-    void perform_write (const address& addr);
+    void perform_write(const address& addr);
 
     /**
      * Waits for completion of async write operations for the given address
      *
      * @param addr
      */
-    void wait_for_ongoing_writes (const address& addr);
+    void wait_for_ongoing_writes(const address& addr);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -105,10 +106,7 @@ public:
 
     ~data_store();
 
-
-
 private:
-
     struct alloc_t {
         int fd;
         size_t seek;
@@ -117,13 +115,14 @@ private:
 
     alloc_t internal_allocate(size_t size);
 
-
-    std::pair <size_t, shared_buffer<char>> find_async_data (size_t pointer, size_t size);
+    std::pair<size_t, shared_buffer<char>> find_async_data(size_t pointer,
+                                                           size_t size);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;
 
-    [[nodiscard]] size_t fetch_used_space(const std::filesystem::path& last_file) const noexcept;
+    [[nodiscard]] size_t
+    fetch_used_space(const std::filesystem::path& last_file) const noexcept;
 
     std::filesystem::path add_new_file(size_t offset, size_t file_size);
 
@@ -145,7 +144,8 @@ private:
     std::mutex m_sync_end_offset_mutex;
     std::mutex m_async_mutex;
     std::condition_variable m_async_cv;
-    std::map <size_t, std::pair <alloc_t, shared_buffer<char>>> m_ongoing_async_writes;
+    std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
+        m_ongoing_async_writes;
 };
 
 } // end namespace uh::cluster
