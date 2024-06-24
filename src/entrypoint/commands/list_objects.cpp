@@ -131,7 +131,6 @@ static http_response get_response(const std::vector<object>& objects,
     boost::property_tree::write_xml(ss, pt);
     http_response res;
     res.set_body(ss.str());
-    LOG_DEBUG() << ss.str();
 
     return res;
 }
