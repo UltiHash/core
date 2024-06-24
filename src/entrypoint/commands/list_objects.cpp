@@ -48,7 +48,7 @@ static http_response get_response(const std::vector<object>& objects,
     boost::property_tree::ptree list_bucket_result_node;
     std::vector<boost::property_tree::ptree> contents_nodes;
     std::vector<boost::property_tree::ptree> common_prefixes_nodes;
-    std::optional<std::string> next_maker;
+    std::optional<std::string> next_marker;
 
     if (!objects.empty() && max_keys > 0) {
 
@@ -92,9 +92,9 @@ static http_response get_response(const std::vector<object>& objects,
                 is_truncated = "true";
                 if (delimiter) {
                     if (common_prefix_last)
-                        next_maker = *object._prefix;
+                        next_marker = *object._prefix;
                     else
-                        next_maker = objects[max_keys - 1].name;
+                        next_marker = objects[max_keys - 1].name;
                 }
                 break;
             }
@@ -106,8 +106,8 @@ static http_response get_response(const std::vector<object>& objects,
     if(marker)
         list_bucket_result_node.put("Marker", *marker);
 
-    if(next_maker)
-        list_bucket_result_node.put("NextMarker", *next_maker);
+    if(next_marker)
+        list_bucket_result_node.put("NextMarker", *next_marker);
 
     for(const auto& contents : contents_nodes) {
         list_bucket_result_node.add_child("Contents", contents);
