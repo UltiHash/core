@@ -1,6 +1,6 @@
 #include "delete_objects.h"
-#include "common/utils/xml_parser.h"
 #include "common/utils/strings.h"
+#include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -9,7 +9,8 @@ delete_objects::delete_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_objects::can_handle(const http_request& req) {
-    return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::post &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && req.query("delete");
 }
 
@@ -18,7 +19,6 @@ struct fail {
     std::string key;
     std::string code;
 };
-
 
 http_response get_response(const std::vector<std::string>& success,
                            const std::vector<fail>& failure) noexcept {

@@ -110,8 +110,8 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 
     auto dir = co_await m_db.get();
 
-    auto row = co_await dir->execv(
-        "SELECT count(*) FROM uh_list_objects($1)", bucket);
+    auto row =
+        co_await dir->execv("SELECT count(*) FROM uh_list_objects($1)", bucket);
 
     if (row->number(0) > 0) {
         throw command_exception(
@@ -206,16 +206,14 @@ coro<std::size_t> directory::data_size() {
 
 void directory::validate_bucket_name(const std::string& bucket_name) {
     if (bucket_name.size() < 3 || bucket_name.size() > 63) {
-        throw command_exception(http::status::bad_request,
-                                "InvalidBucketName",
+        throw command_exception(http::status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid length");
     }
 
     std::regex bucket_pattern(
         R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
     if (!std::regex_match(bucket_name, bucket_pattern)) {
-        throw command_exception(http::status::bad_request,
-                                "InvalidBucketName",
+        throw command_exception(http::status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid characters");
     }
 }

@@ -2,6 +2,8 @@
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -41,10 +43,12 @@ static http_response get_response(const std::vector<object>& objects,
         max_keys = std::stoul(*max_keys_val);
     }
 
-    std::string common_prefixes_xml_string;
-    std::string contents_xml;
-    std::string next_marker_xml;
     std::string is_truncated = "false";
+    boost::property_tree::ptree pt;
+    boost::property_tree::ptree list_bucket_result_node;
+    std::vector<boost::property_tree::ptree> contents_nodes;
+    std::vector<boost::property_tree::ptree> common_prefixes_nodes;
+    std::optional<std::string> next_marker;
 
     if (!objects.empty() && max_keys > 0) {
 
@@ -56,27 +60,35 @@ static http_response get_response(const std::vector<object>& objects,
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
-                common_prefixes_xml_string +=
-                    "<CommonPrefixes>\n<Prefix>" +
-                    (encoding_type ? url_encode(*object._prefix)
-                                   : *object._prefix) +
-                    "</Prefix>\n</CommonPrefixes>\n";
+                boost::property_tree::ptree& common_prefixes_node =
+                    common_prefixes_nodes.emplace_back();
+                if (encoding_type) {
+                    common_prefixes_node.put("Prefix",
+                                             url_encode(*object._prefix));
+                } else {
+                    common_prefixes_node.put("Prefix", *object._prefix);
+                }
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {
-                contents_xml +=
-                    "<Contents>\n"
-                    "<LastModified>" +
-                    iso8601_date(object._object->get().last_modified) +
-                    "</LastModified>\n"
-                    "<Key>" +
-                    (encoding_type ? url_encode(object._object->get().name)
-                                   : xml_escape(object._object->get().name)) +
-                    "</Key>\n"
-                    "<Size>" +
-                    std::to_string(object._object->get().size) +
-                    "</Size>\n"
-                    "</Contents>\n";
+                boost::property_tree::ptree& contents_node =
+                    contents_nodes.emplace_back();
+                if (object._object->get().etag) {
+                    contents_node.put("ETag", *object._object->get().etag);
+                }
+
+                if (encoding_type) {
+                    contents_node.put("Key",
+                                      url_encode(object._object->get().name));
+                } else {
+                    contents_node.put("Key", object._object->get().name);
+                }
+
+                contents_node.put(
+                    "LastModified",
+                    iso8601_date(object._object->get().last_modified));
+                contents_node.put("Size", object._object->get().size);
+
                 common_prefix_last = false;
                 ++contents_counter;
             }
@@ -86,53 +98,50 @@ static http_response get_response(const std::vector<object>& objects,
                 is_truncated = "true";
                 if (delimiter) {
                     if (common_prefix_last)
-                        next_marker_xml =
-                            "<NextMarker>" + *object._prefix + "</NextMarker>";
+                        next_marker = *object._prefix;
                     else
-                        next_marker_xml = "<NextMarker>" +
-                                          objects[max_keys - 1].name +
-                                          "</NextMarker>";
+                        next_marker = objects[max_keys - 1].name;
                 }
                 break;
             }
         }
     }
 
-    std::string delimiter_xml_string;
-    if (delimiter) {
-        delimiter_xml_string = "<Delimiter>" + *delimiter + "</Delimiter>\n";
+    list_bucket_result_node.put("IsTruncated", is_truncated);
+
+    if (marker)
+        list_bucket_result_node.put("Marker", *marker);
+
+    if (next_marker)
+        list_bucket_result_node.put("NextMarker", *next_marker);
+
+    for (const auto& contents : contents_nodes) {
+        list_bucket_result_node.add_child("Contents", contents);
     }
 
-    std::string name_xml_string;
-    name_xml_string += "<Name>" + req.bucket() + "</Name>\n";
+    list_bucket_result_node.put("Name", req.bucket());
 
-    std::string max_keys_xml_string =
-        "<MaxKeys>" + std::to_string(max_keys) + "</MaxKeys>\n";
+    if (prefix)
+        list_bucket_result_node.put("Prefix", *prefix);
 
-    std::string encoding_type_xml;
-    if (encoding_type) {
-        encoding_type_xml =
-            "<EncodingType>" + *encoding_type + "</EncodingType>\n";
+    if (delimiter)
+        list_bucket_result_node.put("Delimiter", *delimiter);
+
+    list_bucket_result_node.put("MaxKeys", max_keys);
+
+    for (const auto& common_prefixes : common_prefixes_nodes) {
+        list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
     }
 
-    std::string prefix_xml;
-    if (prefix) {
-        prefix_xml = "<Prefix>" + *prefix + "</Prefix>\n";
-    }
+    if (encoding_type)
+        list_bucket_result_node.put("EncodingType", *encoding_type);
 
-    std::string marker_xml;
-    if (marker) {
-        marker_xml = "<Marker>" + *marker + "</Marker>\n";
-    }
+    pt.add_child("ListBucketResult", list_bucket_result_node);
 
+    std::ostringstream ss;
+    boost::property_tree::write_xml(ss, pt);
     http_response res;
-    res.set_body(std::string("<ListBucketResult>\n"
-                             "<IsTruncated>" +
-                             is_truncated + "</IsTruncated>\n" + marker_xml +
-                             next_marker_xml + contents_xml + name_xml_string +
-                             prefix_xml + delimiter_xml_string +
-                             max_keys_xml_string + common_prefixes_xml_string +
-                             encoding_type_xml + "</ListBucketResult>"));
+    res.set_body(ss.str());
 
     return res;
 }

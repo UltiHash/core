@@ -40,7 +40,7 @@ std::string xml_escape(const std::string& str_to_encode);
  * Return a string representing the provided char as hex string.
  */
 template <typename T>
-requires std::is_same_v <T, char> or std::is_same_v <T, unsigned char>
+requires std::is_same_v<T, char> or std::is_same_v<T, unsigned char>
 std::string to_hex(T value) {
     static constexpr auto hexChars = "0123456789abcdef";
 
@@ -55,7 +55,7 @@ std::string to_hex(T value) {
  * Return a string representing the provided buffer as hex string.
  */
 template <typename Array>
-requires std::ranges::random_access_range <Array>
+requires std::ranges::random_access_range<Array>
 std::string to_hex(const Array& buffer) {
     std::string rv;
 
