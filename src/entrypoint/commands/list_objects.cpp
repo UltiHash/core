@@ -116,7 +116,7 @@ static http_response get_response(const std::vector<object>& objects,
     if(delimiter)
         list_bucket_result_node.put("Delimiter", *delimiter);
 
-    list_bucket_result_node.put("MayKeys", max_keys);
+    list_bucket_result_node.put("MaxKeys", max_keys);
 
     for(const auto& common_prefixes : common_prefixes_nodes) {
         list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
@@ -131,6 +131,7 @@ static http_response get_response(const std::vector<object>& objects,
     boost::property_tree::write_xml(ss, pt);
     http_response res;
     res.set_body(ss.str());
+    LOG_DEBUG() << ss.str();
 
     return res;
 }
