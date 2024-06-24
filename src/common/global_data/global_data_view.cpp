@@ -11,11 +11,9 @@ global_data_view::global_data_view(
     m_storage_services.get();
 }
 
-address global_data_view::write(const std::string_view& data) {
+coro<address> global_data_view::write(const std::string_view& data) {
     const auto client = m_storage_services.get();
-    return boost::asio::co_spawn(m_io_service, client->write(data),
-                                 boost::asio::use_future)
-        .get();
+    co_return co_await client->write(data);
 }
 
 shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
@@ -46,7 +44,9 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     return buffer;
 }
 
-shared_buffer<> global_data_view::read(const uint128_t& pointer, size_t size) {
+coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
+                                             size_t size) {
+
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");
     }
@@ -54,19 +54,17 @@ shared_buffer<> global_data_view::read(const uint128_t& pointer, size_t size) {
     if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
         if (c->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            return c.value();
+            co_return c.value();
         }
     }
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     auto storage = m_storage_services.get(pointer);
-    auto buffer = boost::asio::co_spawn(m_io_service,
-                          storage->read(pointer, size),
-                          boost::asio::use_future)
-        .get();
+    auto buffer = co_await storage->read(pointer, size);
     m_cache_l2.put(pointer, buffer);
-    return buffer;
+    co_return buffer;
+
 }
 
 coro<std::size_t> global_data_view::read_address(char* buffer,
@@ -112,7 +110,7 @@ coro<std::size_t> global_data_view::read_address(char* buffer,
     co_return offset;
 }
 
-void global_data_view::sync(const address& addr) {
+coro<void> global_data_view::sync(const address& addr) {
 
     if (addr.empty()) [[unlikely]] {
         throw std::length_error("Empty address is not allowed for sync");
@@ -132,17 +130,18 @@ void global_data_view::sync(const address& addr) {
         node_address.push_fragment(frag);
     }
 
-    std::vector<std::future<void>> futures;
-    futures.reserve(nodes.size());
+    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
+    proms.reserve(nodes.size());
 
     for (auto& dn : nodes) {
-        futures.emplace_back(
-            boost::asio::co_spawn(m_io_service, dn->sync(node_address_map[dn]),
-                                  boost::asio::use_future));
+        proms.emplace_back(
+            std::make_shared<awaitable_promise<void>>(m_io_service));
+        boost::asio::co_spawn(m_io_service, dn->sync(node_address_map[dn]),
+                              use_awaitable_promise_cospawn(proms.back()));
     }
 
-    for (auto& f : futures) {
-        f.get();
+    for (auto& p : proms) {
+        co_await p->get();
     }
 }
 

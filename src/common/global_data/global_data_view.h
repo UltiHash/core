@@ -45,7 +45,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    address write(const std::string_view& data);
+    coro<address> write(const std::string_view& data);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.
@@ -53,12 +53,11 @@ public:
      * there is no more data left in the data store file.
      *
      * @param pointer A constant reference to a uint128_t, specifying the
-* location of the size
+     * location of the size
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    shared_buffer<> read(const uint128_t& pointer,
-                         size_t size);
+    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -80,8 +79,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(const uint128_t& pointer,
-                                      size_t size);
+    shared_buffer<char> read_fragment(const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -95,7 +93,7 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro <std::size_t> read_address(char* buffer, const address& addr);
+    coro<std::size_t> read_address(char* buffer, const address& addr);
 
     /**
      * @brief Must be called on all addresses returned #write to ensure their
@@ -106,7 +104,7 @@ public:
      *
      * @param addr The address of all data to be synced to persistent storage.
      */
-    void sync(const address& addr);
+    coro<void> sync(const address& addr);
 
     /**
      * @brief Computes used space across all available storage service

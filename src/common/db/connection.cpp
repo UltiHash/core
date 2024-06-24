@@ -1,5 +1,5 @@
 #include "connection.h"
-#include "common/utils/debug.h"
+#include "common/debug/debug.h"
 
 namespace uh::cluster::db {
 

@@ -1,7 +1,7 @@
 #include "multipart_state.h"
 
+#include "common/debug/debug.h"
 #include "common/telemetry/log.h"
-#include "common/utils/debug.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {

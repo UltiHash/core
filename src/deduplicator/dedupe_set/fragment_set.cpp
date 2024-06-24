@@ -2,6 +2,7 @@
 #include "deduplicator/config.h"
 
 namespace uh::cluster {
+
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
                            size_t capacity, global_data_view& storage,
                            bool enable_replay)
@@ -13,7 +14,6 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
     if (enable_replay)
         m_set_log.replay(m_set, m_storage);
 }
-
 fragment_set::response fragment_set::find(const std::string_view& data) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, std::string(prefix), m_storage};
@@ -33,14 +33,12 @@ fragment_set::response fragment_set::find(const std::string_view& data) {
         res--;
         resp.low.emplace(fragment{res->pointer(), res->size()}, res->prefix());
     }
-
     return resp;
 }
 
 void fragment_set::insert(const uint128_t& pointer,
                           const std::string_view& data, bool header,
                           const std::optional<hint_type>& hint) {
-
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, pointer, std::string(prefix), m_storage};
     fragment_set_log::log_entry entry{set_operation::INSERT, f.pointer(),

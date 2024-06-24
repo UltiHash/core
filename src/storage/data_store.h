@@ -2,7 +2,6 @@
 #define CORE_DATA_STORE_H
 
 #include "common/types/scoped_buffer.h"
-#include "common/utils/free_spot_manager.h"
 
 #include <condition_variable>
 #include <atomic>
@@ -15,6 +14,8 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <filesystem>
+#include "common/types/address.h"
 
 namespace uh::cluster {
 

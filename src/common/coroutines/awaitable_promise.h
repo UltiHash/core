@@ -44,13 +44,21 @@ public:
     }
 
     coro<T> get() {
-        co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        try {
+            co_await boost::asio::co_spawn(
+                m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
+                boost::asio::use_awaitable);
+        } catch (const boost::system::system_error& e) {
+            if (e.code() != boost::asio::error::operation_aborted) {
+                throw e;
+            }
+        }
+
         std::atomic_thread_fence(std::memory_order_seq_cst);
 
         if (m_exception) {
             std::rethrow_exception(*m_exception);
         }
-
         co_return std::move(*m_data);
     }
 };
@@ -65,10 +73,12 @@ public:
     explicit awaitable_promise(boost::asio::io_context& ioc)
         : m_strand(ioc.get_executor()),
           m_waiter(std::make_shared<boost::asio::steady_timer>(
-              ioc, boost::asio::steady_timer::clock_type::duration::max())) {}
+              m_strand,
+              boost::asio::steady_timer::clock_type::duration::max())) {}
 
     inline void set() {
         std::atomic_thread_fence(std::memory_order_seq_cst);
+
         boost::asio::post(m_strand, [waiter = m_waiter]() {
             waiter->expires_after(std::chrono::seconds(0));
         });
@@ -88,7 +98,15 @@ public:
     }
 
     coro<void> get() {
-        co_await m_waiter->async_wait(as_tuple(boost::asio::use_awaitable));
+        try {
+            co_await boost::asio::co_spawn(
+                m_strand, m_waiter->async_wait(boost::asio::use_awaitable),
+                boost::asio::use_awaitable);
+        } catch (const boost::system::system_error& e) {
+            if (e.code() != boost::asio::error::operation_aborted) {
+                throw e;
+            }
+        }
         std::atomic_thread_fence(std::memory_order_seq_cst);
 
         if (m_exception) {

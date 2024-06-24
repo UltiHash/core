@@ -18,13 +18,12 @@ void fragmentation::push(unstored&& un) {
     m_unstored_size += un.data.size();
 }
 
-void fragmentation::flush(global_data_view& gdv, fragment_set& set) {
+void fragmentation::flush_set(fragment_set& set) {
     if (m_unstored_size == 0ull) {
         return;
     }
 
-    flush_data(gdv);
-    flush_fragments(gdv, set);
+    flush_fragments(set);
     mark_as_uploaded();
 }
 
@@ -54,18 +53,19 @@ address fragmentation::make_address() const {
     return rv;
 }
 
-void fragmentation::flush_data(global_data_view& gdv) {
+coro<void> fragmentation::flush_data(global_data_view& gdv) {
+    if (m_unstored_size == 0ull) {
+        co_return;
+    }
+
     auto buffer = unstored_to_buffer();
 
-    auto addr = gdv.write({&buffer[0], buffer.size()});
+    auto addr = co_await gdv.write({&buffer[0], buffer.size()});
 
     compute_unstored_addresses(addr);
 }
 
-void fragmentation::flush_fragments(global_data_view& gdv, fragment_set& set) {
-    if (m_unstored_size == 0ull) {
-        return;
-    }
+void fragmentation::flush_fragments(fragment_set& set) {
 
     auto lock = set.lock();
     LOG_CORO_CONTEXT();

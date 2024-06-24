@@ -1,9 +1,9 @@
 #ifndef CORE_DATA_STORE_SERVICE_HANDLER_H
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
+#include "common/debug/debug.h"
 #include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
-#include "common/utils/debug.h"
 #include "common/utils/pointer_traits.h"
 
 #include "common/utils/protocol_handler.h"

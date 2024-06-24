@@ -2,7 +2,7 @@
 #define CORE_COMMON_POOL_H
 
 #include "common/coroutines/awaitable_promise.h"
-#include "common/utils/debug.h"
+#include "common/debug/debug.h"
 
 #include <list>
 #include <memory>
@@ -60,8 +60,6 @@ public:
         {
             std::unique_lock<std::mutex> lk(*m_mutex);
 
-            LOG_DEBUG() << coro_id() << " get lock acquired";
-
             if (!m_resources.empty()) {
                 auto res = std::move(m_resources.front());
                 m_resources.pop_front();
@@ -88,8 +86,6 @@ private:
         LOG_CORO_CONTEXT();
 
         std::unique_lock<std::mutex> lk(*m_mutex);
-
-        LOG_DEBUG() << coro_id() << " put_back lock acquired";
 
         if (!m_promises.empty()) {
             auto promise = m_promises.front();
