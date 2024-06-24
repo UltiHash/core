@@ -70,12 +70,17 @@ static http_response get_response(const std::vector<object>& objects,
                 ++common_prefixes_counter;
             } else if (object._object) {
                 boost::property_tree::ptree& contents_node = contents_nodes.emplace_back();
-                contents_node.put("LastModified", iso8601_date(object._object->get().last_modified));
+                if (object._object->get().etag) {
+                    contents_node.put("ETag", *object._object->get().etag);
+                }
+
                 if (encoding_type) {
                     contents_node.put("Key", url_encode(object._object->get().name));
                 } else {
                     contents_node.put("Key", object._object->get().name);
                 }
+
+                contents_node.put("LastModified", iso8601_date(object._object->get().last_modified));
                 contents_node.put("Size", object._object->get().size);
 
                 common_prefix_last = false;
