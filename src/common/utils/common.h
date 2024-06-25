@@ -59,7 +59,7 @@ static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
 static constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
-static constexpr int ETCD_TIMEOUT = 60;
+static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
