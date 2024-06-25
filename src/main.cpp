@@ -1,5 +1,6 @@
 #include "common/license/license.h"
 #include "common/telemetry/log.h"
+#include "common/telemetry/traces.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
@@ -41,8 +42,10 @@ int main(int argc, char** argv) {
         }
 
         log::init(config->log);
+
         initialize_metrics_exporter(config->role, config->service.telemetry_url,
                                     config->service.telemetry_interval);
+        initialize_traces_exporter(config->service.telemetry_url);
 
         LOG_INFO() << "license loaded for " << config->service.license.customer
                    << " -- storage size: "
