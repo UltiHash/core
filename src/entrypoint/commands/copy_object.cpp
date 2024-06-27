@@ -39,7 +39,7 @@ coro<void> copy_object::handle(http_request& req) const {
     boost::property_tree::ptree pt;
     pt.put("CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
     if (obj.etag) {
-        pt.put("CopyObjectResult.Etag", *obj.etag);
+        pt.put("CopyObjectResult.ETag", *obj.etag);
     }
 
     http_response res;
