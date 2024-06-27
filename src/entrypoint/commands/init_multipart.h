@@ -48,7 +48,7 @@ private:
         pt.put("InitiateMultipartUploadResult.Key", req.object_key());
         pt.put("InitiateMultipartUploadResult.UploadId", upload_id);
 
-        res.set_body(to_xml(pt));
+        res << pt;
 
         return res;
     }

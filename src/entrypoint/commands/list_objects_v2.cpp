@@ -147,7 +147,7 @@ http_response get_response(const std::vector<object>& objects,
     pt.add_child("ListBucketResult", list_bucket_result_node);
 
     http_response res;
-    res.set_body(to_xml(pt));
+    res << pt;
 
     return res;
 }

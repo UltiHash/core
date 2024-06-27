@@ -43,7 +43,7 @@ coro<void> copy_object::handle(http_request& req) const {
     }
 
     http_response res;
-    res.set_body(to_xml(pt));
+    res << pt;
 
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": copy_object response: " << res;

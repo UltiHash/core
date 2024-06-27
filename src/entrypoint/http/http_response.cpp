@@ -1,7 +1,15 @@
 #include "http_response.h"
 #include "common/types/common_types.h"
+#include <boost/property_tree/xml_parser.hpp>
+#include <sstream>
 
 namespace uh::cluster {
+
+http_response::http_response()
+    : m_res(http::status::ok, 11) {}
+
+http_response::http_response(http::status status)
+    : m_res(status, 11) {}
 
 void http_response::set_body(std::string&& body) noexcept {
     m_res.body() = std::move(body);
@@ -28,6 +36,16 @@ http_response::get_prepared_response() {
 
 void http_response::set_etag(const std::string& etag) {
     m_res.set(http::field::etag, etag);
+}
+
+http_response& operator<<(http_response& res,
+                          const boost::property_tree::ptree& pt) {
+    std::ostringstream ss;
+
+    boost::property_tree::write_xml(ss, pt);
+
+    res.base().body() += ss.str() + "\r\n";
+    return res;
 }
 
 std::ostream& operator<<(std::ostream& out, const http_response& res) {
