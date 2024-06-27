@@ -1,5 +1,6 @@
 #include "http_response.h"
 #include "common/types/common_types.h"
+#include "common/utils/random.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
 
@@ -30,6 +31,7 @@ void http_response::set_effective_size(std::size_t effective_size) {
 const http::response<http::string_body>&
 http_response::get_prepared_response() {
     m_res.set(http::field::server, "UltiHash");
+    m_res.set("x-amz-request-id", generate_unique_id());
     m_res.prepare_payload();
     return m_res;
 }
