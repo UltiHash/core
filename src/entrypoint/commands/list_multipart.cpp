@@ -3,7 +3,6 @@
 #include "entrypoint/http/command_exception.h"
 
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -24,9 +23,7 @@ get_response(const std::string& bucket_name,
     pt.add_child("ListMultipartUploadsResult.Bucket", bucket_node);
 
     http_response res;
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    res.set_body(ss.str());
+    res.set_body(to_xml(pt));
     return res;
 }
 

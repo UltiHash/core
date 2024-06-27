@@ -1,6 +1,5 @@
 #include "list_objects_v2.h"
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
@@ -147,10 +146,8 @@ http_response get_response(const std::vector<object>& objects,
 
     pt.add_child("ListBucketResult", list_bucket_result_node);
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
     http_response res;
-    res.set_body(ss.str());
+    res.set_body(to_xml(pt));
 
     return res;
 }

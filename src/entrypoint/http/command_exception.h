@@ -2,7 +2,6 @@
 #define CORE_ENTRYPOINT_HTTP_COMMAND_EXCEPTION_H
 
 #include "common/utils/error.h"
-#include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 
