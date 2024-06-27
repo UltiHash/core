@@ -30,9 +30,6 @@ http::response<http::string_body> make_response(const command_exception& e) {
 
     http::response<http::string_body> res{e.m_status, 11, to_xml(pt)};
     res.prepare_payload();
-
-    LOG_DEBUG() << res.base();
-
     return res;
 }
 

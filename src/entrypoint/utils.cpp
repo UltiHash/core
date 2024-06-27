@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
