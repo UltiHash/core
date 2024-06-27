@@ -97,9 +97,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
     pt.put("CompleteMultipartUploadResult.Key", info.key);
     pt.put("CompleteMultipartUploadResult.ETag", etag);
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    res.set_body(ss.str());
+    res.set_body(to_xml(pt));
 
     co_await m_collection.uploads.remove_upload(upload_id);
     co_await req.respond(res.get_prepared_response());
