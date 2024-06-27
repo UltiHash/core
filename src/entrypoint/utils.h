@@ -1,8 +1,6 @@
 #ifndef ENTRYPOINT_COMMON_H
 #define ENTRYPOINT_COMMON_H
 
-#include "boost/asio.hpp"
-#include "boost/url/url.hpp"
 #include "common/global_data/global_data_view.h"
 #include "common/registry/services.h"
 #include "config.h"
@@ -10,6 +8,10 @@
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
+
+#include <boost/asio.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/url/url.hpp>
 
 namespace uh::cluster {
 
@@ -40,6 +42,11 @@ struct retrieval {
  */
 std::tuple<std::string, std::string>
 extract_bucket_and_object(boost::urls::url url);
+
+/**
+ * Convert boost property_tree to XML.
+ */
+std::string to_xml(const boost::property_tree::ptree& pt);
 
 } // namespace uh::cluster
 
