@@ -2,7 +2,6 @@
 #include "entrypoint/formats.h"
 
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -10,7 +9,8 @@ copy_object::copy_object(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool copy_object::can_handle(const http_request& req) {
-    return req.method() == method::put && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::put &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && req.header("x-amz-copy-source");
 }
 
@@ -39,14 +39,11 @@ coro<void> copy_object::handle(http_request& req) const {
     boost::property_tree::ptree pt;
     pt.put("CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
     if (obj.etag) {
-        pt.put("CopyObjectResult.Etag", *obj.etag);
+        pt.put("CopyObjectResult.ETag", *obj.etag);
     }
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-
     http_response res;
-    res.set_body(ss.str());
+    res << pt;
 
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": copy_object response: " << res;

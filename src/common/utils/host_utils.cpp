@@ -26,4 +26,4 @@ std::string get_host() {
                 std::string(var_value) + "'");
     }
 }
-}
+} // namespace uh::cluster
