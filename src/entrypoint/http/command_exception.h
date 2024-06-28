@@ -2,8 +2,8 @@
 #define CORE_ENTRYPOINT_HTTP_COMMAND_EXCEPTION_H
 
 #include "common/utils/error.h"
+#include "http_response.h"
 #include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
 
 namespace uh::cluster {
 
@@ -18,14 +18,13 @@ public:
     [[nodiscard]] const char* what() const noexcept override;
 
 private:
-    friend http::response<http::string_body>
-    make_response(const command_exception&);
+    friend http_response make_response(const command_exception&);
     http::status m_status = http::status::internal_server_error;
     std::string m_code = "UnknownError";
     std::string m_reason = "Internal Server Error";
 };
 
-http::response<http::string_body> make_response(const command_exception& e);
+http_response make_response(const command_exception& e);
 
 void throw_from_error(const error& e);
 

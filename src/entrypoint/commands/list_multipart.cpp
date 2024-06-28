@@ -23,7 +23,7 @@ get_response(const std::string& bucket_name,
     pt.add_child("ListMultipartUploadsResult.Bucket", bucket_node);
 
     http_response res;
-    res.set_body(to_xml(pt));
+    res << pt;
     return res;
 }
 

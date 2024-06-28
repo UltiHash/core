@@ -1,7 +1,5 @@
 #include "utils.h"
 #include "entrypoint/http/command_exception.h"
-#include <boost/property_tree/xml_parser.hpp>
-#include <sstream>
 
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
@@ -53,14 +51,6 @@ extract_bucket_and_object(boost::urls::url url) {
         object_key.pop_back();
 
     return std::make_tuple(bucket_id, object_key);
-}
-
-std::string to_xml(const boost::property_tree::ptree& pt) {
-    std::ostringstream ss;
-
-    boost::property_tree::write_xml(ss, pt);
-
-    return ss.str();
 }
 
 } // namespace uh::cluster
