@@ -53,14 +53,14 @@ address fragmentation::make_address() const {
     return rv;
 }
 
-coro<void> fragmentation::flush_data(global_data_view& gdv) {
+coro<void> fragmentation::flush_data(context& c, global_data_view& gdv) {
     if (m_unstored_size == 0ull) {
         co_return;
     }
 
     auto buffer = unstored_to_buffer();
 
-    auto addr = co_await gdv.write({&buffer[0], buffer.size()});
+    auto addr = co_await gdv.write(c, {&buffer[0], buffer.size()});
 
     compute_unstored_addresses(addr);
 }

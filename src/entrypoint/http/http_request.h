@@ -4,6 +4,7 @@
 #include "common/types/common_types.h"
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include "common/coroutines/context.h"
 #include <map>
 #include <span>
 
@@ -20,7 +21,7 @@ public:
 class http_request {
 public:
     static coro<std::unique_ptr<http_request>>
-    create(boost::asio::ip::tcp::socket& s);
+    create(context& c, boost::asio::ip::tcp::socket& s);
 
     [[nodiscard]] http::verb method() const;
 
@@ -53,10 +54,12 @@ public:
 
     bool keep_alive() const { return m_req.keep_alive(); }
 
+    context& m_ctx;
+
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
-    http_request(boost::asio::ip::tcp::socket& stream,
+    http_request(context& c, boost::asio::ip::tcp::socket& stream,
                  http::request_parser<http::empty_body>::value_type&& req,
                  boost::beast::flat_buffer&& initial);
 

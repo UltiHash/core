@@ -11,22 +11,22 @@ global_data_view::global_data_view(
     m_storage_services.get();
 }
 
-coro<address> global_data_view::write(const std::string_view& data) {
+coro<address> global_data_view::write(context& c, const std::string_view& data) {
     const auto client = m_storage_services.get();
-    co_return co_await client->write(data);
+    co_return co_await client->write(c, data);
 }
 
-shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
+shared_buffer<char> global_data_view::read_fragment(context& c, const uint128_t& pointer,
                                                     const size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
 
-    if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
-        if (c->size() >= size) [[likely]] {
+    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
+        if (cp->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            return c.value();
+            return cp.value();
         }
     }
 
@@ -36,7 +36,7 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     const fragment frag{pointer, size};
     auto storage = m_storage_services.get(pointer);
     boost::asio::co_spawn(m_io_service,
-                          storage->read_fragment(buffer.data(), frag),
+                          storage->read_fragment(c, buffer.data(), frag),
                           boost::asio::use_future)
         .get();
     m_cache_l2.put(pointer, buffer);
@@ -44,30 +44,30 @@ shared_buffer<char> global_data_view::read_fragment(const uint128_t& pointer,
     return buffer;
 }
 
-coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
+coro<shared_buffer<>> global_data_view::read(context& c, const uint128_t& pointer,
                                              size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");
     }
 
-    if (const auto c = m_cache_l2.get(pointer); c.has_value()) {
-        if (c->size() >= size) [[likely]] {
+    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
+        if (cp->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            co_return c.value();
+            co_return cp.value();
         }
     }
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     auto storage = m_storage_services.get(pointer);
-    auto buffer = co_await storage->read(pointer, size);
+    auto buffer = co_await storage->read(c, pointer, size);
     m_cache_l2.put(pointer, buffer);
     co_return buffer;
 
 }
 
-coro<std::size_t> global_data_view::read_address(char* buffer,
+coro<std::size_t> global_data_view::read_address(context& c, char* buffer,
                                                  const address& addr) {
 
     std::unordered_map<std::shared_ptr<storage_interface>, address>
@@ -98,7 +98,7 @@ coro<std::size_t> global_data_view::read_address(char* buffer,
             std::make_shared<awaitable_promise<void>>(m_io_service));
 
         boost::asio::co_spawn(m_io_service,
-                              dn->read_address(buffer, node_address_map[dn],
+                              dn->read_address(c, buffer, node_address_map[dn],
                                                node_data_offsets_map[dn]),
                               use_awaitable_promise_cospawn(promises.back()));
     }
@@ -110,7 +110,7 @@ coro<std::size_t> global_data_view::read_address(char* buffer,
     co_return offset;
 }
 
-coro<void> global_data_view::sync(const address& addr) {
+coro<void> global_data_view::sync(context& c, const address& addr) {
 
     if (addr.empty()) [[unlikely]] {
         throw std::length_error("Empty address is not allowed for sync");
@@ -136,7 +136,7 @@ coro<void> global_data_view::sync(const address& addr) {
     for (auto& dn : nodes) {
         proms.emplace_back(
             std::make_shared<awaitable_promise<void>>(m_io_service));
-        boost::asio::co_spawn(m_io_service, dn->sync(node_address_map[dn]),
+        boost::asio::co_spawn(m_io_service, dn->sync(c, node_address_map[dn]),
                               use_awaitable_promise_cospawn(proms.back()));
     }
 
@@ -145,12 +145,12 @@ coro<void> global_data_view::sync(const address& addr) {
     }
 }
 
-coro<std::size_t> global_data_view::get_used_space() {
+coro<std::size_t> global_data_view::get_used_space(context& c) {
     auto nodes = m_storage_services.get_services();
 
     size_t used = 0;
     for (const auto& dn : nodes) {
-        used += co_await dn->get_used_space();
+        used += co_await dn->get_used_space(c);
     }
     co_return used;
 }

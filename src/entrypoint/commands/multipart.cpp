@@ -32,7 +32,7 @@ coro<void> multipart::handle(http_request& req) const {
 
     dedupe_response resp = {};
     if (!buffer.empty()) {
-        resp = co_await m_collection.dedupe_services.get()->deduplicate(
+        resp = co_await m_collection.dedupe_services.get()->deduplicate(req.m_ctx,
             {buffer.data(), buffer.size()});
     }
 

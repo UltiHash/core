@@ -40,9 +40,9 @@ std::shared_ptr<opentelemetry::trace::Tracer> get_tracer() {
     return provider->GetTracer("uh-cluster-traces", OPENTELEMETRY_SDK_VERSION);
 }
 
-auto trace::span(
+std::shared_ptr<opentelemetry::trace::Span> trace::span(
     const std::string& name,
-    std::optional<opentelemetry::context::Context> context) {
+    const std::optional<opentelemetry::context::Context>& context) {
     opentelemetry::trace::StartSpanOptions opt;
     if (context) {
         opt.parent = *context;
@@ -50,28 +50,30 @@ auto trace::span(
     return tracer()->StartSpan(name, opt);
 }
 
-auto trace::scoped_span(
+opentelemetry::trace::Scope trace::scoped_span(
     const std::string& name,
-    std::optional<opentelemetry::context::Context> context) {
+    const std::optional<opentelemetry::context::Context>& context) {
     opentelemetry::trace::StartSpanOptions opt;
     if (context) {
         opt.parent = *context;
     }
-    return opentelemetry::trace::Scope(tracer()->StartSpan(name, opt));
+    return {tracer()->StartSpan(name, opt)};
 }
 
-auto trace::deserialize_context(std::vector<char>&& buf) {
+opentelemetry::context::Context trace::deserialize_context(std::vector<char>&& buf) {
     carrier c (std::move(buf));
     auto prop        = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
-    auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
-    auto new_context = prop->Extract(c, current_ctx);
+    auto empty_ctx = opentelemetry::context::Context();
+    auto new_context = prop->Extract(c, empty_ctx);
     return new_context;
 }
 
-auto trace::serialize_context(opentelemetry::context::Context& context){
+std::vector<char> trace::serialize_context(const std::optional<opentelemetry::context::Context>& context){
+    if (!context)
+        return {};
     carrier c;
     auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
-    prop->Inject(c, context);
+    prop->Inject(c, *context);
     return c.extract_buffer();
 }
 

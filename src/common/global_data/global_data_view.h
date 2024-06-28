@@ -45,7 +45,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(const std::string_view& data);
+    coro<address> write(context& c, const std::string_view& data);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.
@@ -57,7 +57,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
+    coro<shared_buffer<>> read(context& c, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -79,7 +79,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(const uint128_t& pointer, size_t size);
+    shared_buffer<char> read_fragment(context& c, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -88,12 +88,13 @@ public:
      * each fragment to storage service instances for improved read performance.
      * This method entirely bypasses the read caches.
      *
+     * @param c open telemetry context
      * @param[out] buffer A char buffer that the retrieved data is written to.
      * @param[in] addr An constant reference to the address instance data should
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(char* buffer, const address& addr);
+    coro<std::size_t> read_address(context& c, char* buffer, const address& addr);
 
     /**
      * @brief Must be called on all addresses returned #write to ensure their
@@ -102,19 +103,22 @@ public:
      * Data written using the #write method is only guaranteed to be persistent
      * after calling this method on the resulting address.
      *
+     * @param c open telemetry context
      * @param addr The address of all data to be synced to persistent storage.
      */
-    coro<void> sync(const address& addr);
+    coro<void> sync(context& c, const address& addr);
 
     /**
      * @brief Computes used space across all available storage service
      * instances.
+     * @param c open telemetry context
      * @return The used space across all available storage service instances.
      */
-    coro<std::size_t> get_used_space();
+    coro<std::size_t> get_used_space(context& c);
 
     /**
      * @brief Provides access to the I/O context used by the global_data_view
+     * @param c open telemetry context
      * @return A reference to the boost::asio::io_context used by the
      * global_data_view
      */
@@ -123,6 +127,7 @@ public:
     /**
      * @brief Returns the configured number of connections maintained to each
      * storage service instance.
+     * @param c open telemetry context
      * @return The configured number of connections maintained to each storage
      * service instance.
      */

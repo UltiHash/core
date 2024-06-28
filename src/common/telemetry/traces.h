@@ -3,10 +3,11 @@
 
 #include "opentelemetry/context/propagation/text_map_propagator.h"
 #include "opentelemetry/std/shared_ptr.h"
+#include "opentelemetry/trace/scope.h"
 #include "opentelemetry/trace/tracer_provider.h"
-#include <vector>
-#include <unordered_map>
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
 #define OPENTELEMETRY_DEPRECATED_SDK_FACTORY
 
@@ -17,15 +18,15 @@ std::shared_ptr<opentelemetry::trace::Tracer> get_tracer();
 
 struct trace {
 
-    static auto span(const std::string& name,
-                     std::optional<opentelemetry::context::Context> context = std::nullopt);
+    static std::shared_ptr<opentelemetry::trace::Span> span(const std::string& name,
+                     const std::optional<opentelemetry::context::Context>& context = std::nullopt);
 
-    static auto scoped_span(const std::string& name,
-                        std::optional<opentelemetry::context::Context> context = std::nullopt);
+    static opentelemetry::trace::Scope scoped_span(const std::string& name,
+                                                   const std::optional<opentelemetry::context::Context>& context = std::nullopt);
 
-    static auto deserialize_context (std::vector<char>&& buf);
+    static opentelemetry::context::Context deserialize_context (std::vector<char>&& buf);
 
-    static auto serialize_context (opentelemetry::context::Context& context);
+    static std::vector<char> serialize_context (const std::optional<opentelemetry::context::Context>& context);
 
     ~trace();
 
