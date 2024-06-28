@@ -21,10 +21,11 @@ struct context {
             opentelemetry::context::Context());
     }
 
-    static thread_local context current_context;
-
 private:
     std::optional<opentelemetry::context::Context> m_otel_ctx;
 };
+
+inline thread_local context CURRENT_CONTEXT;
+
 } // namespace uh::cluster
 #endif // UH_CLUSTER_CONTEXT_H

@@ -26,7 +26,7 @@ public:
                 m_ioc);
 
         auto f = [c](auto& f, auto promise) {
-            context::current_context = c;
+            CURRENT_CONTEXT = c;
             try {
                 promise->set(f());
             } catch (const std::exception&) {
@@ -44,8 +44,9 @@ public:
     coro<void> post_in_workers(context& c, Func func) {
         auto pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
-        auto f = [](auto& f, auto promise) {
+        auto f = [c](auto& f, auto promise) {
             try {
+                CURRENT_CONTEXT = c;
                 f();
                 promise->set();
             } catch (const std::exception&) {
