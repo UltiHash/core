@@ -122,7 +122,7 @@ private:
             const auto conn_address =
                 stream.remote_endpoint().address().to_string();
             const auto conn_port = stream.remote_endpoint().port();
-            
+
             boost::asio::co_spawn(
                 m_ioc, do_session(std::move(stream)),
                 [conn_address, conn_port](const std::exception_ptr& e) {

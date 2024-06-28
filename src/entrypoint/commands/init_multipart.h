@@ -9,7 +9,6 @@
 #include "entrypoint/utils.h"
 
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -19,7 +18,8 @@ public:
         : m_collection(collection) {}
 
     static bool can_handle(const http_request& req) {
-        return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+        return req.method() == method::post &&
+               req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
                !req.object_key().empty() && req.query("uploads");
     }
 
@@ -48,9 +48,7 @@ private:
         pt.put("InitiateMultipartUploadResult.Key", req.object_key());
         pt.put("InitiateMultipartUploadResult.UploadId", upload_id);
 
-        std::ostringstream ss;
-        boost::property_tree::write_xml(ss, pt);
-        res.set_body(ss.str());
+        res << pt;
 
         return res;
     }

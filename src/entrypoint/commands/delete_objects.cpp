@@ -1,6 +1,6 @@
 #include "delete_objects.h"
-#include "common/utils/xml_parser.h"
 #include "common/utils/strings.h"
+#include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -9,7 +9,8 @@ delete_objects::delete_objects(const reference_collection& collection)
     : m_collection(collection) {}
 
 bool delete_objects::can_handle(const http_request& req) {
-    return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::post &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            req.object_key().empty() && req.query("delete");
 }
 
@@ -19,11 +20,8 @@ struct fail {
     std::string code;
 };
 
-
 http_response get_response(const std::vector<std::string>& success,
                            const std::vector<fail>& failure) noexcept {
-    http_response res;
-
     boost::property_tree::ptree pt;
     boost::property_tree::ptree deleteResult;
 
@@ -41,11 +39,8 @@ http_response get_response(const std::vector<std::string>& success,
 
     pt.add_child("DeleteResult", deleteResult);
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    res.set_body(ss.str());
-
-    LOG_DEBUG() << "get_respones: " << ss.str();
+    http_response res;
+    res << pt;
 
     return res;
 }

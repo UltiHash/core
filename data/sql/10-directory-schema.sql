@@ -84,8 +84,8 @@ BEGIN
     CALL uh_check_bucket(bucket);
     EXECUTE format('
         INSERT INTO %s ("name", "small", "size", "etag") VALUES(%L, %L, %L, %L)
-        ON CONFLICT ("name") DO UPDATE SET "small" = %L, "size"= %L',
-        bucket, key, addr, size, etag, addr, size);
+        ON CONFLICT ("name") DO UPDATE SET "small" = %L, "size"= %L, "etag"= %L',
+        bucket, key, addr, size, etag, addr, size, etag);
 END
 $$;
 

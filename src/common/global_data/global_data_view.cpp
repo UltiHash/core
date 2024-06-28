@@ -64,7 +64,6 @@ coro<shared_buffer<>> global_data_view::read(context& c, const uint128_t& pointe
     auto buffer = co_await storage->read(c, pointer, size);
     m_cache_l2.put(pointer, buffer);
     co_return buffer;
-
 }
 
 coro<std::size_t> global_data_view::read_address(context& c, char* buffer,

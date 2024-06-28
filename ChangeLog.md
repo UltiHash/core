@@ -1,4 +1,7 @@
 # Changelog
+## [0.5.2] 2024-06-25
+- Increased waiting time for etcd to 5 minutes
+
 ## [0.5.1] 2024-06-24
 - Improved compatibility level with S3 API
 - Fixed handling of XML-reserved characters in object keys

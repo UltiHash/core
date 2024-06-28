@@ -11,9 +11,11 @@ BOOST_AUTO_TEST_CASE(random_test) {
     int failures = 0;
     for (int i = 0; i < 100; ++i) {
         const auto service_id = rand() % std::numeric_limits<uint32_t>::max();
-        const auto data_store_id = rand() % std::numeric_limits<uint32_t>::max();
+        const auto data_store_id =
+            rand() % std::numeric_limits<uint32_t>::max();
         const auto pointer = rand() % std::numeric_limits<uint64_t>::max();
-        auto p = pointer_traits::get_global_pointer(pointer, service_id, data_store_id);
+        auto p = pointer_traits::get_global_pointer(pointer, service_id,
+                                                    data_store_id);
         if (pointer_traits::get_data_store_id(p) != data_store_id) {
             failures++;
         }
@@ -25,14 +27,14 @@ BOOST_AUTO_TEST_CASE(random_test) {
         }
     }
     BOOST_TEST(failures == 0);
-
 }
 
 BOOST_AUTO_TEST_CASE(edge_case_test) {
     auto service_id = std::numeric_limits<uint32_t>::max();
     auto data_store_id = std::numeric_limits<uint32_t>::max();
     auto pointer = std::numeric_limits<uint64_t>::max();
-    auto p = pointer_traits::get_global_pointer(pointer, service_id, data_store_id);
+    auto p =
+        pointer_traits::get_global_pointer(pointer, service_id, data_store_id);
 
     BOOST_TEST(pointer_traits::get_data_store_id(p) == data_store_id);
     BOOST_TEST(pointer_traits::get_pointer(p) == pointer);

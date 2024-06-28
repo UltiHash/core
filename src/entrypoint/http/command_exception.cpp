@@ -2,8 +2,7 @@
 
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
+#include "entrypoint/utils.h"
 
 namespace uh::cluster {
 
@@ -24,18 +23,13 @@ const char* command_exception::what() const noexcept {
     return m_reason.c_str();
 }
 
-http::response<http::string_body> make_response(const command_exception& e) {
+http_response make_response(const command_exception& e) {
     boost::property_tree::ptree pt;
     pt.put("Error.Code", e.m_code);
     pt.put("Error.Message", e.m_reason);
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    http::response<http::string_body> res{e.m_status, 11, ss.str()};
-    res.prepare_payload();
-
-    LOG_DEBUG() << res.base();
-
+    http_response res(e.m_status);
+    res << pt;
     return res;
 }
 

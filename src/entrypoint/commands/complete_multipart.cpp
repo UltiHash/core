@@ -1,8 +1,8 @@
 #include "complete_multipart.h"
 #include "common/types/common_types.h"
 #include "common/utils/md5.h"
-#include "common/utils/xml_parser.h"
 #include "common/utils/strings.h"
+#include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/http/http_response.h"
 
@@ -12,7 +12,8 @@ complete_multipart::complete_multipart(reference_collection& collection)
     : m_collection(collection) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
-    return req.method() == method::post && req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+    return req.method() == method::post &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && req.query("uploadId");
 }
 
@@ -96,9 +97,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
     pt.put("CompleteMultipartUploadResult.Key", info.key);
     pt.put("CompleteMultipartUploadResult.ETag", etag);
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    res.set_body(ss.str());
+    res << pt;
 
     co_await m_collection.uploads.remove_upload(upload_id);
     co_await req.respond(res.get_prepared_response());

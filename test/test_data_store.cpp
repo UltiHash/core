@@ -22,7 +22,7 @@ struct data_store_fixture {
         std::mt19937 generator(rd());
         generator.seed(3);
         std::uniform_int_distribution<> distribution(
-                1, MAX_FILE_SIZE_BYTES / 4 + 1);
+            1, MAX_FILE_SIZE_BYTES / 4 + 1);
 
         size_t length = distribution(generator);
         size_t t_size = get_expected_used(length);
@@ -90,9 +90,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
         }
     }
     BOOST_TEST(failures == 0);
-
 }
-
 
 BOOST_AUTO_TEST_CASE(test_read) {
     char buf[MAX_FILE_SIZE_BYTES];
@@ -116,10 +114,10 @@ BOOST_AUTO_TEST_CASE(test_read) {
         }
 
         if (t_read != data.size()) {
-            failures ++;
+            failures++;
         }
         if (std::memcmp(buf, data.data(), t_read) != 0) {
-            failures ++;
+            failures++;
         }
     }
     BOOST_TEST(failures == 0);
@@ -152,46 +150,49 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     BOOST_CHECK(t_read == test_data[RND_ELEM].size());
     BOOST_CHECK(std::memcmp(buf, test_data[RND_ELEM].data(), t_read) == 0);
-
 }
 
 BOOST_AUTO_TEST_CASE(stress_test) {
     size_t thread_count = 100;
     int thread_io_count = test_data.size() / thread_count;
-    std::vector <std::thread> threads;
+    std::vector<std::thread> threads;
     threads.reserve(thread_count);
     std::atomic<size_t> failures = 0;
     std::exception_ptr eptr;
     for (size_t i = 0; i < thread_count; ++i) {
-        threads.emplace_back([&, thread_id = i] () {
+        threads.emplace_back([&, thread_id = i]() {
             try {
-                std::vector <address> addresses;
+                std::vector<address> addresses;
                 addresses.reserve(test_data.size());
-                auto limit = std::min ((thread_id+1)*thread_io_count, test_data.size());
+                auto limit = std::min((thread_id + 1) * thread_io_count,
+                                      test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
                     addresses.emplace_back(ds->register_write(test_data[k]));
                     ds->perform_write(addresses.back());
                 }
-                char buf [MAX_FILE_SIZE_BYTES];
+                char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
                     auto f = addresses[j].get_fragment(0);
                     auto read_size = ds->read(buf, f.pointer, f.size);
 
-                    if ((read_size != test_data[thread_id * thread_io_count + j].size())) {
-                        failures ++;
+                    if ((read_size !=
+                         test_data[thread_id * thread_io_count + j].size())) {
+                        failures++;
                     }
-                    if (std::memcmp(buf, test_data[thread_id * thread_io_count + j].data(), f.size) != 0) {
-                        failures ++;
+                    if (std::memcmp(
+                            buf,
+                            test_data[thread_id * thread_io_count + j].data(),
+                            f.size) != 0) {
+                        failures++;
                     }
                 }
-            }
-            catch (const std::exception& e) {
+            } catch (const std::exception& e) {
                 eptr = std::current_exception();
             }
         });
     }
 
-    for (auto& t: threads) {
+    for (auto& t : threads) {
         t.join();
     }
 
@@ -202,10 +203,9 @@ BOOST_AUTO_TEST_CASE(stress_test) {
     BOOST_TEST(failures == 0);
 }
 
-
 BOOST_AUTO_TEST_CASE(test_async_write) {
 
-    auto read_address_compare = [this] (const address& addr, const auto& data) {
+    auto read_address_compare = [this](const address& addr, const auto& data) {
         char buf[MAX_FILE_SIZE_BYTES];
 
         size_t t_read = 0;
@@ -217,29 +217,29 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
         }
 
         if (t_read != data.size()) {
-            failures ++;
+            failures++;
         }
         if (std::memcmp(buf, data.data(), t_read) != 0) {
-            failures ++;
+            failures++;
         }
         return failures;
     };
 
     long failures = 0;
 
-    std::vector <address> addresses;
+    std::vector<address> addresses;
     for (auto& data : test_data) {
         addresses.emplace_back(ds->register_write(data));
-        failures += read_address_compare (addresses.back(), data);
+        failures += read_address_compare(addresses.back(), data);
     }
 
-    std::vector <std::thread> threads;
+    std::vector<std::thread> threads;
     for (auto& addr : addresses) {
-        threads.emplace_back([&addr, this](){ds->perform_write(addr);});
+        threads.emplace_back([&addr, this]() { ds->perform_write(addr); });
     }
 
     for (size_t i = 0; i < test_data.size(); ++i) {
-        failures += read_address_compare (addresses[i], test_data[i]);
+        failures += read_address_compare(addresses[i], test_data[i]);
     }
 
     for (auto& addr : addresses) {
@@ -248,14 +248,13 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
     }
 
     for (size_t i = 0; i < test_data.size(); ++i) {
-        failures += read_address_compare (addresses[i], test_data[i]);
+        failures += read_address_compare(addresses[i], test_data[i]);
     }
 
-    for (auto& t: threads)
+    for (auto& t : threads)
         t.join();
 
     BOOST_TEST(failures == 0);
-
 }
 
 BOOST_AUTO_TEST_SUITE_END()
