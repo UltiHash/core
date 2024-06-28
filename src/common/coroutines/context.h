@@ -9,18 +9,19 @@ namespace uh::cluster {
 
 struct context {
 
-    [[nodiscard]]
-    auto get_otel_context() const noexcept {
-        return m_otel_ctx;
-    }
+    [[nodiscard]] auto get_otel_context() const noexcept { return m_otel_ctx; }
 
     void set_otel_context(opentelemetry::context::Context context) {
-        m_otel_ctx = std::make_optional<opentelemetry::context::Context>(std::move(context));
+        m_otel_ctx = std::make_optional<opentelemetry::context::Context>(
+            std::move(context));
     }
 
     void init_otel_context() {
-        m_otel_ctx = std::make_optional<opentelemetry::context::Context>(opentelemetry::context::Context());
+        m_otel_ctx = std::make_optional<opentelemetry::context::Context>(
+            opentelemetry::context::Context());
     }
+
+    static thread_local context current_context;
 
 private:
     std::optional<opentelemetry::context::Context> m_otel_ctx;
