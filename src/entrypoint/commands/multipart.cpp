@@ -28,6 +28,15 @@ coro<void> multipart::handle(http_request& req) const {
     validate(req);
     unique_buffer<char> buffer(req.content_length());
 
+    if (auto expect = req.header("expect");
+        expect && *expect == "100-continue") {
+        boost::beast::http::response<http::string_body> res{
+            http::response<http::string_body>{http::status::continue_, 11}};
+        LOG_INFO() << req.socket().remote_endpoint()
+                   << ": sending 100 CONTINUE";
+        co_await req.respond(res);
+    }
+
     auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
