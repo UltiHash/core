@@ -108,6 +108,8 @@ http_response get_response(const std::vector<object>& objects,
         }
     }
 
+    list_bucket_result_node.put("<xmlattr>.xmlns",
+                                "http://s3.amazonaws.com/doc/2006-03-01/");
     list_bucket_result_node.put("IsTruncated", is_truncated);
 
     for (const auto& contents : contents_nodes) {
@@ -116,11 +118,13 @@ http_response get_response(const std::vector<object>& objects,
 
     list_bucket_result_node.put("Name", req.bucket());
 
-    if (prefix)
+    if (prefix) {
         list_bucket_result_node.put("Prefix", *prefix);
+    }
 
-    if (delimiter)
+    if (delimiter) {
         list_bucket_result_node.put("Delimiter", *delimiter);
+    }
 
     list_bucket_result_node.put("MaxKeys", max_keys);
 
@@ -128,8 +132,9 @@ http_response get_response(const std::vector<object>& objects,
         list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
     }
 
-    if (encoding_type)
+    if (encoding_type) {
         list_bucket_result_node.put("EncodingType", *encoding_type);
+    }
 
     list_bucket_result_node.put("KeyCount",
                                 contents_counter + common_prefixes_counter);

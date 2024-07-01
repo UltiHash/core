@@ -44,9 +44,18 @@ http_response& operator<<(http_response& res,
                           const boost::property_tree::ptree& pt) {
     std::ostringstream ss;
 
+    res.base().set("Content-Type", "application/xml");
     boost::property_tree::write_xml(ss, pt);
 
-    res.base().body() += ss.str() + "\r\n";
+    /**
+     * Note about line-ending: leaving the line ending out leads to errors
+     * with Apache HTTP client as for certain status codes it tries to ignore
+     * XML body skipping forward to next header, which it misses as there is
+     * no line ending.
+     * With '\r\n' line ending some component (I suppose the same client)
+     * converts '\r' to some escape sequence, leading to XML parse errors.
+     */
+    res.base().body() += ss.str() + "\n";
     return res;
 }
 
