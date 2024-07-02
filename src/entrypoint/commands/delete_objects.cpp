@@ -41,11 +41,10 @@ http_response get_response(const std::vector<std::string>& success,
 
     pt.add_child("DeleteResult", deleteResult);
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-    res.set_body(ss.str());
+    auto xml = to_xml(pt);
+    res.set_body(std::string(xml));
 
-    LOG_DEBUG() << "get_respones: " << ss.str();
+    LOG_DEBUG() << "get_respones: " << xml;
 
     return res;
 }

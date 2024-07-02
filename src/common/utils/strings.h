@@ -29,14 +29,6 @@ std::string url_encode(const std::string&) noexcept;
 bool to_bool(std::string str_to_eval);
 
 /**
- * Escapes given string for usage in XML documents.
- * @param str_to_encode a string to be escaped.
- * @return Returns a string which has been escaped for usage in an XML document.
- *
- */
-std::string xml_escape(const std::string& str_to_encode);
-
-/**
  * Return a string representing the provided char as hex string.
  */
 template <typename T>

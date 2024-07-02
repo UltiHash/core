@@ -2,7 +2,6 @@
 #include "entrypoint/formats.h"
 
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace uh::cluster {
 
@@ -43,11 +42,8 @@ coro<void> copy_object::handle(http_request& req) const {
         pt.put("CopyObjectResult.Etag", *obj.etag);
     }
 
-    std::ostringstream ss;
-    boost::property_tree::write_xml(ss, pt);
-
     http_response res;
-    res.set_body(ss.str());
+    res.set_body(to_xml(pt));
 
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": copy_object response: " << res;
