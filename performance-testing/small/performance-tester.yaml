@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: performance-test-corpora
+spec:
+  storageClassName: ebs-csi-gp3
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: performance-tester
+spec:
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: registry-credentials
+  nodeSelector:
+    workload-type: tester
+    purpose:  performance-testing-small
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  containers:
+    - name: performance-tester
+      image: ghcr.io/ultihash/core-performance-test:latest
+      imagePullPolicy: Always
+      env:
+        - name: TEST_TYPE
+          value: S3
+        - name: S3_ENDPOINT_URL
+          value: https://s3.eu-central-1.amazonaws.com
+        - name: S3_SOURCE_BUCKET
+          value: ultihash-performance-test-corpora-large-files
+        - name: S3_DESTINATION_BUCKET
+          value: ultihash-performance-test-upload
+        - name: READ_TIMEOUT
+          value: "600"
+        - name: JOBS
+          value: "2"
+        - name: AWS_ACCESS_KEY_ID
+          value: $AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          value: $AWS_SECRET_ACCESS_KEY
+      volumeMounts:
+        - mountPath: /data
+          name: corpora
+  volumes:
+    - name: corpora
+      persistentVolumeClaim:
+        claimName: performance-test-corpora

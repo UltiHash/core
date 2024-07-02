@@ -103,25 +103,56 @@ jobs:
       - uses: azure/setup-helm@v4.0.0
         with:
          version: v3.14.0
-        
-      - name: Generate Helm values
+
+      - name: Delete the testing environment if exists
+        run: |
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+        continue-on-error: true
+      
+      - name: Provision the testing environment
+        run: |
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
+          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
+
+      - name: Generate the performance tester manifest
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
         with:
-          input: performance-testing/helm-values-aws.yaml
-          output: helm-values.yaml
+          input: performance-testing/small/performance-tester.yaml
+          output: performance-tester.yaml
+      
+      - name: Deploy the S3 performance testing job
+        run: |
+          kubectl apply -f performance-tester.yaml -n ${{ env.ENVIRONMENT_NAME }}
+          kubectl wait --for=condition=ready=true --timeout=5m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
+          kubectl wait --for=condition=ready=false --timeout=10m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
+          kubectl logs pod/performance-tester -n ${{ env.ENVIRONMENT_NAME }}
+          aws s3 rm s3://ultihash-performance-test-upload --recursive
 
-#      - name: Delete the testing environment if exists
-#        run: |
-#          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
-#          kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
-#          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
-#          kubectl delete pv stability-test-input --force
-#          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
-#          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
-#        continue-on-error: true
+      #- name: Generate Helm values
+      #  uses: danielr1996/envsubst-action@1.0.0
+      #  env:
+      #    CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+      #    DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+      #  with:
+      #    input: performance-testing/helm-values-aws.yaml
+      #    output: helm-values.yaml
+
+     # - name: Delete the testing environment if exists
+     #   run: |
+     #     helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+     #     kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
+     #     kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+     #     kubectl delete pv stability-test-input --force
+     #     kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
+     #     kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+     #   continue-on-error: true
 #
 #      - name: Install the Helm chart
 #        run: |

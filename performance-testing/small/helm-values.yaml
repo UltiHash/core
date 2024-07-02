@@ -15,10 +15,10 @@ global:
 
 stabilityTest:
   readTimeout: 600
-  concurentJobs: 1
+  concurentJobs: 2
   nodeSelector:
-    workload-type: entrypoint
-    purpose: performance-and-stability-testing
+    workload-type: tester
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -36,21 +36,21 @@ etcd:
   replicaCount: 1
   nodeSelector:
     workload-type: entrypoint
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
   persistence:
-    size: 5Gi
+    size: 8Gi
     storageClass: ebs-csi-gp3
 
 entrypoint:
   replicas: 1
   nodeSelector:
     workload-type: entrypoint
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -76,7 +76,7 @@ storage:
         topologyKey: kubernetes.io/hostname                  
   nodeSelector:
     workload-type: storage
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -99,7 +99,7 @@ deduplicator:
         topologyKey: kubernetes.io/hostname
   nodeSelector:
     workload-type: storage
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -110,7 +110,7 @@ database:
   primary:
     nodeSelector:
       workload-type: directory
-      purpose: performance-and-stability-testing
+      purpose: performance-testing-small
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -119,13 +119,13 @@ database:
 
     persistence:
       storageClass: ebs-csi-gp3
-      size: 4Gi
+      size: 10Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
     workload-type: directory
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -134,7 +134,7 @@ databaseInit:
 
 collector:
   nodeSelector:
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
