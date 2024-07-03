@@ -1,16 +1,4 @@
 apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: performance-test-corpora
-spec:
-  storageClassName: ebs-csi-gp3
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Gi
----
-apiVersion: v1
 kind: Pod
 metadata:
   name: performance-tester
@@ -32,25 +20,30 @@ spec:
       imagePullPolicy: Always
       env:
         - name: TEST_TYPE
-          value: S3
+          value: $TEST_TYPE
         - name: S3_ENDPOINT_URL
-          value: https://s3.eu-central-1.amazonaws.com
+          value: $S3_ENDPOINT_URL
         - name: S3_SOURCE_BUCKET
-          value: ultihash-performance-test-corpora-large-files
+          value: $S3_SOURCE_BUCKET
         - name: S3_DESTINATION_BUCKET
-          value: ultihash-performance-test-upload
+          value: $S3_DESTINATION_BUCKET
         - name: READ_TIMEOUT
-          value: "600"
+          value: "$READ_TIMEOUT"
         - name: JOBS
-          value: "2"
+          value: "$JOBS"
         - name: AWS_ACCESS_KEY_ID
-          value: $AWS_ACCESS_KEY_ID
+          value: "$AWS_ACCESS_KEY_ID"
         - name: AWS_SECRET_ACCESS_KEY
-          value: $AWS_SECRET_ACCESS_KEY
+          value: "$AWS_SECRET_ACCESS_KEY"
       volumeMounts:
-        - mountPath: /data
-          name: corpora
+        - mountPath: /input
+          name: input
+        - mountPath: /output
+          name: output
   volumes:
-    - name: corpora
+    - name: input
       persistentVolumeClaim:
-        claimName: performance-test-corpora
+        claimName: performance-test-input
+    - name: output
+      persistentVolumeClaim:
+        claimName: performance-test-output

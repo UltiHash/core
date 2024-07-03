@@ -106,8 +106,9 @@ jobs:
 
       - name: Delete the testing environment if exists
         run: |
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
@@ -117,59 +118,74 @@ jobs:
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
+          kubectl apply -f performance-testing/small/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
 
-      - name: Generate the performance tester manifest
+      - name: Generate the performance tester manifest for S3
         uses: danielr1996/envsubst-action@1.0.0
         env:
+          TEST_TYPE: S3
+          S3_ENDPOINT_URL: https://s3.eu-central-1.amazonaws.com
+          S3_SOURCE_BUCKET: ultihash-performance-test-corpora-large-files
+          S3_DESTINATION_BUCKET: ultihash-performance-test-upload
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          READ_TIMEOUT: "600"
+          JOBS: "2"
         with:
           input: performance-testing/small/performance-tester.yaml
-          output: performance-tester.yaml
+          output: performance-tester-s3.yaml
+
+      - name: Generate the performance tester manifest for UltiHash
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          TEST_TYPE: UH
+          S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
+          S3_SOURCE_BUCKET: test
+          S3_DESTINATION_BUCKET: test
+          AWS_ACCESS_KEY_ID: mocked
+          AWS_SECRET_ACCESS_KEY: mocked
+          READ_TIMEOUT: "600"
+          JOBS: "2"
+        with:
+          input: performance-testing/small/performance-tester.yaml
+          output: performance-tester-ultihash.yaml
+
+      - name: Generate Helm values
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+        with:
+          input: performance-testing/small/ultihash-helm-values.yaml
+          output: ultihash-helm-values.yaml
       
       - name: Deploy the S3 performance testing job
         run: |
-          kubectl apply -f performance-tester.yaml -n ${{ env.ENVIRONMENT_NAME }}
+          # Run the S3 performance test and wait until it finishes
+          kubectl apply -f performance-tester-s3.yaml -n ${{ env.ENVIRONMENT_NAME }}
           kubectl wait --for=condition=ready=true --timeout=5m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
           kubectl wait --for=condition=ready=false --timeout=10m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
+          # Obtain the performance testing logs
           kubectl logs pod/performance-tester -n ${{ env.ENVIRONMENT_NAME }}
+          # Remove the tester pod and the temporary data
+          kubectl delete -f performance-tester-s3.yaml -n ${{ env.ENVIRONMENT_NAME }}
           aws s3 rm s3://ultihash-performance-test-upload --recursive
+          
+      - name: Install the UltiHash cluster
+        run: |
+          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          sleep 180
 
-      #- name: Generate Helm values
-      #  uses: danielr1996/envsubst-action@1.0.0
-      #  env:
-      #    CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-      #    DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
-      #  with:
-      #    input: performance-testing/helm-values-aws.yaml
-      #    output: helm-values.yaml
-
-     # - name: Delete the testing environment if exists
-     #   run: |
-     #     helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
-     #     kubectl delete pods -n ${{ env.ENVIRONMENT_NAME }} --all --force
-     #     kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
-     #     kubectl delete pv stability-test-input --force
-     #     kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
-     #     kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
-     #   continue-on-error: true
-#
-#      - name: Install the Helm chart
-#        run: |
-#          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
-#          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-#          kubectl create secret generic ultihash  -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
-#          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-#          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
-
-#      - name: Provision persistent volumes for testing
-#        run: |
-#          kubectl apply -f stability-testing/persistent-volumes-aws.yaml -n ${{ env.ENVIRONMENT_NAME }}
-
- #     - name: Run stability test
- #       run: |
- #         helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-stability-test --logs --timeout 5h
- # 
+      - name: Run the performance test
+        run: |
+           # Run the UltiHash performance test and wait until it finishes
+           kubectl apply -f performance-tester-ultihash.yaml -n ${{ env.ENVIRONMENT_NAME }}
+           kubectl wait --for=condition=ready=true --timeout=5m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
+           kubectl wait --for=condition=ready=false --timeout=10m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
+           # Obtain the performance testing logs
+           kubectl logs pod/performance-tester -n ${{ env.ENVIRONMENT_NAME }}
+ 
  # cleanup:
  #   runs-on: lightweight-generic-jobs
  #   needs: deploy-and-test

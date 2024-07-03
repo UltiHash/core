@@ -13,25 +13,6 @@ global:
       add:
       - SYS_PTRACE
 
-stabilityTest:
-  readTimeout: 600
-  concurentJobs: 2
-  nodeSelector:
-    workload-type: tester
-    purpose: performance-testing-small
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
-  inputVolume:
-    type: S3
-    mountPath: /data
-    pvcName: stability-test-input
-  outputVolume:
-    pvcName: stability-test-output
-    mountPath: /testing/test
-
 etcd:
   replicaCount: 1
   nodeSelector:
