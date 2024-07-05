@@ -25,7 +25,7 @@ struct dedupe_response {
 
     void append(const dedupe_response& other) {
         effective_size += other.effective_size;
-        addr.append_address(other.addr);
+        addr.append(other.addr);
     }
 };
 

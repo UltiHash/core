@@ -40,12 +40,12 @@ address fragmentation::make_address() const {
     for (const auto& frag : m_frags) {
         if (std::holds_alternative<unstored>(frag)) {
             const auto& un = std::get<unstored>(frag);
-            rv.append_address(un.addr);
+            rv.append(un.addr);
             continue;
         }
 
         if (std::holds_alternative<fragment>(frag)) {
-            rv.push_fragment(std::get<fragment>(frag));
+            rv.push(std::get<fragment>(frag));
             continue;
         }
     }
@@ -81,7 +81,7 @@ void fragmentation::flush_fragments(fragment_set& set) {
             continue;
         }
 
-        m_dedupe_logger.log_non_deduplication(un.addr.get_fragment(0));
+        m_dedupe_logger.log_non_deduplication(un.addr.get(0));
 
         set.insert({un.addr.pointers[0], un.addr.pointers[1]},
                    un.data.substr(0, un.addr.sizes.front()), un.header,
@@ -125,7 +125,7 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
                 if (current_idx >= addr.size()) {
                     throw std::runtime_error("insufficient data");
                 }
-                current = addr.get_fragment(current_idx);
+                current = addr.get(current_idx);
                 current_ofs = 0ull;
                 ++current_idx;
             }
@@ -133,8 +133,7 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
             auto size =
                 std::min(current->size - current_ofs, un.data.size() - un_offs);
 
-            un.addr.push_fragment(
-                fragment{current->pointer + current_ofs, size});
+            un.addr.push(fragment{current->pointer + current_ofs, size});
             un_offs += size;
             current_ofs += size;
         }

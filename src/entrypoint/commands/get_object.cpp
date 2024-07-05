@@ -24,11 +24,11 @@ struct local_read_handle {
 
         address partial_addr;
         while (m_addr_index < m_addr.size() and buffer_size < buffer.size()) {
-            const auto frag = m_addr.get_fragment(m_addr_index);
+            const auto frag = m_addr.get(m_addr_index);
             if (frag.size + buffer_size > buffer.size()) {
                 break;
             }
-            partial_addr.push_fragment(frag);
+            partial_addr.push(frag);
             buffer_size += frag.size;
             m_addr_index++;
         }

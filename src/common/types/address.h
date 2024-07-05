@@ -23,29 +23,27 @@ struct address {
 
     address() = default;
     explicit address(std::size_t size);
-    explicit address(const fragment& frag);
 
     address shrink() const;
 
-    void push_fragment(const fragment& frag);
+    void push(const fragment& frag);
 
-    void append_address(const address& addr);
+    [[nodiscard]] fragment get(size_t i) const;
 
-    void insert_fragment(int i, const fragment& frag);
-
-    void allocate_for_serialized_data(std::size_t size);
+    void append(const address& addr);
 
     std::size_t data_size() const;
-
-    [[nodiscard]] fragment get_fragment(size_t i) const;
-
-    void set_fragment(int i, const fragment& frag);
 
     [[nodiscard]] std::size_t size() const noexcept;
 
     [[nodiscard]] bool empty() const noexcept;
 
-    [[nodiscard]] fragment first() const;
+    /**
+     * Return number of fragments for a given allocation size.
+     */
+    static constexpr std::size_t allocated_elements(std::size_t size) {
+        return size / (2 * sizeof(uint64_t) + sizeof(uint32_t));
+    }
 
     using serialize = zpp::bits::members<2>;
     auto operator<=>(const address&) const = default;

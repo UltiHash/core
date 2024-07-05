@@ -32,7 +32,7 @@ struct local_storage : public storage_interface {
             const auto part_size = std::min(data.size() - i * part, part);
             auto addr = m_data_stores[i]->register_write(
                 data.substr(i * part, part_size));
-            total_addr.append_address(addr);
+            total_addr.append(addr);
             boost::asio::post(m_threads, [addr = std::move(addr), i, this]() {
                 m_data_stores[i]->perform_write(addr);
             });
@@ -58,7 +58,7 @@ struct local_storage : public storage_interface {
                             const std::vector<size_t>& offsets) override {
 
         for (size_t i = 0; i < addr.size(); i++) {
-            const auto frag = addr.get_fragment(i);
+            const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
                     .read(buffer + offsets[i], frag.pointer, frag.size) !=
                 frag.size) [[unlikely]] {
@@ -74,9 +74,9 @@ struct local_storage : public storage_interface {
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
-            const auto f = addr.get_fragment(i);
+            const auto f = addr.get(i);
             const auto id = pointer_traits::get_data_store_id(f.pointer);
-            ds_addresses.at(id).push_fragment(f);
+            ds_addresses.at(id).push(f);
         }
 
         std::vector<std::future<void>> futures;

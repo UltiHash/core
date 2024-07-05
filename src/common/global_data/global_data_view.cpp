@@ -78,13 +78,13 @@ coro<std::size_t> global_data_view::read_address(char* buffer,
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
 
-        const auto frag = addr.get_fragment(i);
+        const auto frag = addr.get(i);
         auto n = m_storage_services.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(n);
         }
-        node_address.push_fragment(frag);
+        node_address.push(frag);
         node_data_offsets_map[n].emplace_back(offset);
         offset += frag.size;
     }
@@ -120,13 +120,13 @@ coro<void> global_data_view::sync(const address& addr) {
     std::vector<std::shared_ptr<storage_interface>> nodes;
 
     for (size_t i = 0; i < addr.size(); ++i) {
-        const auto frag = addr.get_fragment(i);
+        const auto frag = addr.get(i);
         auto n = m_storage_services.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(std::move(n));
         }
-        node_address.push_fragment(frag);
+        node_address.push(frag);
     }
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> proms;

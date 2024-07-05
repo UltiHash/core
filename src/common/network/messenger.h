@@ -12,8 +12,7 @@ public:
     using messenger_core::messenger_core;
 
     coro<address> recv_address(const header& message_header) {
-        address addr;
-        addr.allocate_for_serialized_data(message_header.size);
+        address addr(address::allocated_elements(message_header.size));
         register_read_buffer(addr.pointers);
         register_read_buffer(addr.sizes);
         co_await recv_buffers(message_header);
@@ -47,8 +46,8 @@ public:
     coro<dedupe_response> recv_dedupe_response(const header& message_header) {
         dedupe_response dedupe_resp;
         register_read_buffer(dedupe_resp.effective_size);
-        dedupe_resp.addr.allocate_for_serialized_data(
-            message_header.size - sizeof(dedupe_resp.effective_size));
+        dedupe_resp.addr = address(address::allocated_elements(
+            message_header.size - sizeof(dedupe_resp.effective_size)));
         register_read_buffer(dedupe_resp.addr.pointers);
         register_read_buffer(dedupe_resp.addr.sizes);
         co_await recv_buffers(message_header);
