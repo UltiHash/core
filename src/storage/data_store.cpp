@@ -189,8 +189,7 @@ address data_store::register_write(const shared_buffer<char>& data) {
     }
     auto alloc = internal_allocate(data.size());
     address data_address;
-    data_address.push_fragment(
-        {.pointer = alloc.global_offset, .size = data.size()});
+    data_address.push({.pointer = alloc.global_offset, .size = data.size()});
 
     std::lock_guard<std::mutex> lk(m_async_mutex);
     m_ongoing_async_writes.emplace(
@@ -210,7 +209,7 @@ void data_store::perform_write(const address& addr) {
         throw std::runtime_error("Invalid address size");
     }
 
-    const auto pointer = pointer_traits::get_pointer(addr.first().pointer);
+    const auto pointer = pointer_traits::get_pointer(addr.get(0).pointer);
     std::unique_lock<std::mutex> lk(m_async_mutex);
     auto& [alloc, data] = m_ongoing_async_writes.at(pointer);
     lk.unlock();
@@ -227,7 +226,7 @@ void data_store::perform_write(const address& addr) {
 
 void data_store::wait_for_ongoing_writes(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
-        const auto frag = addr.get_fragment(i);
+        const auto frag = addr.get(i);
         const auto pointer = pointer_traits::get_pointer(frag.pointer);
 
         std::unique_lock<std::mutex> lk(m_async_mutex);

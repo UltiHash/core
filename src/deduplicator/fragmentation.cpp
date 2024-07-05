@@ -37,15 +37,15 @@ address fragmentation::make_address() const {
 
     address rv;
 
-    for (const auto& m_frag : m_frags) {
-        if (std::holds_alternative<unstored>(m_frag)) {
-            const auto& un = std::get<unstored>(m_frag);
-            rv.append_address(un.addr);
+    for (const auto& frag : m_frags) {
+        if (std::holds_alternative<unstored>(frag)) {
+            const auto& un = std::get<unstored>(frag);
+            rv.append(un.addr);
             continue;
         }
 
-        if (std::holds_alternative<fragment>(m_frag)) {
-            rv.push_fragment(std::get<fragment>(m_frag));
+        if (std::holds_alternative<fragment>(frag)) {
+            rv.push(std::get<fragment>(frag));
             continue;
         }
     }
@@ -70,18 +70,18 @@ void fragmentation::flush_fragments(fragment_set& set) {
     auto lock = set.lock();
     LOG_CORO_CONTEXT();
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
-            set.mark_deduplication(std::get<fragment>(m_frag));
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
+            set.mark_deduplication(std::get<fragment>(frag));
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }
 
-        m_dedupe_logger.log_non_deduplication(un.addr.get_fragment(0));
+        m_dedupe_logger.log_non_deduplication(un.addr.get(0));
 
         set.insert({un.addr.pointers[0], un.addr.pointers[1]},
                    un.data.substr(0, un.addr.sizes.front()), un.header,
@@ -90,12 +90,12 @@ void fragmentation::flush_fragments(fragment_set& set) {
 }
 
 void fragmentation::mark_as_uploaded() {
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         un.uploaded = true;
     }
 
@@ -107,12 +107,12 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
     std::size_t current_ofs = 0ull;
     std::size_t current_idx = 0ull;
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }
@@ -125,7 +125,7 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
                 if (current_idx >= addr.size()) {
                     throw std::runtime_error("insufficient data");
                 }
-                current = addr.get_fragment(current_idx);
+                current = addr.get(current_idx);
                 current_ofs = 0ull;
                 ++current_idx;
             }
@@ -133,8 +133,7 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
             auto size =
                 std::min(current->size - current_ofs, un.data.size() - un_offs);
 
-            un.addr.push_fragment(
-                fragment{current->pointer + current_ofs, size});
+            un.addr.push(fragment{current->pointer + current_ofs, size});
             un_offs += size;
             current_ofs += size;
         }
@@ -145,12 +144,12 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
     unique_buffer<char> buffer(m_unstored_size);
     std::size_t offs = 0ull;
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }

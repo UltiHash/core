@@ -14,8 +14,8 @@ void insert_a(shared_buffer<char>& fragment_a, address& addr_a,
     auto result_a = frag_set.find(fragment_a.string_view());
     BOOST_CHECK(!result_a.low.has_value());
     BOOST_CHECK(!result_a.high.has_value());
-    frag_set.insert(addr_a.first().pointer,
-                    fragment_a.string_view().substr(0, addr_a.first().size),
+    frag_set.insert(addr_a.get(0).pointer,
+                    fragment_a.string_view().substr(0, addr_a.get(0).size),
                     false, result_a.hint);
 }
 
@@ -29,10 +29,10 @@ void insert_a_again(shared_buffer<char>& fragment_a, address& addr_a,
            result_a.high->second.size());
     BOOST_CHECK(prefix_a.string_view() ==
                 fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_a.high->first.pointer == addr_a.first().pointer);
-    BOOST_CHECK(result_a.high->first.size == addr_a.first().size);
-    frag_set.insert(addr_a.first().pointer,
-                    fragment_a.string_view().substr(0, addr_a.first().size),
+    BOOST_CHECK(result_a.high->first.pointer == addr_a.get(0).pointer);
+    BOOST_CHECK(result_a.high->first.size == addr_a.get(0).size);
+    frag_set.insert(addr_a.get(0).pointer,
+                    fragment_a.string_view().substr(0, addr_a.get(0).size),
                     false, result_a.hint);
 }
 
@@ -40,8 +40,8 @@ void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
               shared_buffer<char>& fragment_c, address& addr_c,
               fragment_set& frag_set) {
     auto result_c = frag_set.find(fragment_c.string_view());
-    frag_set.insert(addr_c.first().pointer,
-                    fragment_c.string_view().substr(0, addr_c.first().size),
+    frag_set.insert(addr_c.get(0).pointer,
+                    fragment_c.string_view().substr(0, addr_c.get(0).size),
                     false, result_c.hint);
     BOOST_CHECK(result_c.low.has_value());
     auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
@@ -49,8 +49,8 @@ void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
            result_c.low->second.size());
     BOOST_CHECK(prefix_a.string_view() ==
                 fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_c.low->first.pointer == addr_a.first().pointer);
-    BOOST_CHECK(result_c.low->first.size == addr_a.first().size);
+    BOOST_CHECK(result_c.low->first.pointer == addr_a.get(0).pointer);
+    BOOST_CHECK(result_c.low->first.size == addr_a.get(0).size);
     BOOST_CHECK(!result_c.high.has_value());
 }
 
@@ -59,8 +59,8 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
               shared_buffer<char>& fragment_c, address& addr_c,
               fragment_set& frag_set) {
     auto result_b = frag_set.find(fragment_b.string_view());
-    frag_set.insert(addr_b.first().pointer,
-                    fragment_b.string_view().substr(0, addr_b.first().size),
+    frag_set.insert(addr_b.get(0).pointer,
+                    fragment_b.string_view().substr(0, addr_b.get(0).size),
                     false, result_b.hint);
     BOOST_CHECK(result_b.low.has_value());
     auto prefix_b_low = shared_buffer<char>(PREFIX_SIZE);
@@ -68,16 +68,16 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
            result_b.low->second.size());
     BOOST_CHECK(prefix_b_low.string_view() ==
                 fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_b.low->first.pointer == addr_a.first().pointer);
-    BOOST_CHECK(result_b.low->first.size == addr_a.first().size);
+    BOOST_CHECK(result_b.low->first.pointer == addr_a.get(0).pointer);
+    BOOST_CHECK(result_b.low->first.size == addr_a.get(0).size);
     BOOST_CHECK(result_b.high.has_value());
     auto prefix_b_high = shared_buffer<char>(PREFIX_SIZE);
     memcpy(prefix_b_high.data(), result_b.high->second.data(),
            result_b.high->second.size());
     BOOST_CHECK(prefix_b_high.string_view() ==
                 fragment_c.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_b.high->first.pointer == addr_c.first().pointer);
-    BOOST_CHECK(result_b.high->first.size == addr_c.first().size);
+    BOOST_CHECK(result_b.high->first.pointer == addr_c.get(0).pointer);
+    BOOST_CHECK(result_b.high->first.size == addr_c.get(0).size);
 }
 
 BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
@@ -203,14 +203,14 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
         0, std::min(PREFIX_SIZE, fragment_c.size()));
 
     fragment_set_element frag_element_a(
-        fragment_a.string_view().substr(0, addr_a.first().size),
-        addr_a.first().pointer, std::string(prefix_a), *gdv);
+        fragment_a.string_view().substr(0, addr_a.get(0).size),
+        addr_a.get(0).pointer, std::string(prefix_a), *gdv);
     fragment_set_element frag_element_b(
-        fragment_b.string_view().substr(0, addr_b.first().size),
-        addr_b.first().pointer, std::string(prefix_b), *gdv);
+        fragment_b.string_view().substr(0, addr_b.get(0).size),
+        addr_b.get(0).pointer, std::string(prefix_b), *gdv);
     fragment_set_element frag_element_c(
-        fragment_c.string_view().substr(0, addr_c.first().size),
-        addr_c.first().pointer, std::string(prefix_c), *gdv);
+        fragment_c.string_view().substr(0, addr_c.get(0).size),
+        addr_c.get(0).pointer, std::string(prefix_c), *gdv);
 
     // Since all fragments have identical prefix, calling operator< will be
     // forced to consult gdv to get full body

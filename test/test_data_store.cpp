@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(test_read) {
         ds->perform_write(address);
         size_t t_read = 0;
         for (size_t i = 0; i < address.size(); i++) {
-            const auto p = address.get_fragment(i);
+            const auto p = address.get(i);
             auto read_size = ds->read(buf + t_read, p.pointer, p.size);
             t_read += read_size;
         }
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
     size_t t_read = 0;
 
     for (size_t i = 0; i < address.size(); ++i) {
-        const auto p = address.get_fragment(i);
+        const auto p = address.get(i);
         auto read_size = ds->read(buf + t_read, p.pointer, p.size);
         t_read += read_size;
     }
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
-                    auto f = addresses[j].get_fragment(0);
+                    auto f = addresses[j].get(0);
                     auto read_size = ds->read(buf, f.pointer, f.size);
 
                     if ((read_size !=
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
         size_t t_read = 0;
         int failures = 0;
         for (size_t i = 0; i < addr.size(); i++) {
-            const auto p = addr.get_fragment(i);
+            const auto p = addr.get(i);
             auto read_size = ds->read(buf + t_read, p.pointer, p.size);
             t_read += read_size;
         }
