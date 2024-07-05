@@ -22,68 +22,30 @@ struct address {
     std::vector<uint32_t> sizes;
 
     address() = default;
-    explicit address(std::size_t size)
-        : pointers(size * 2),
-          sizes(size) {}
-    explicit address(const fragment& frag) { push_fragment(frag); }
+    explicit address(std::size_t size);
+    explicit address(const fragment& frag);
 
-    void push_fragment(const fragment& frag) {
-        pointers.emplace_back(frag.pointer.get_data()[0]);
-        pointers.emplace_back(frag.pointer.get_data()[1]);
-        sizes.emplace_back(frag.size);
-    }
+    void push_fragment(const fragment& frag);
 
-    void append_address(const address& addr) {
-        pointers.insert(pointers.cend(), addr.pointers.cbegin(),
-                        addr.pointers.cend());
-        sizes.insert(sizes.cend(), addr.sizes.cbegin(), addr.sizes.cend());
-    }
+    void append_address(const address& addr);
 
-    void insert_fragment(int i, const fragment& frag) {
-        pointers[2 * i] = frag.pointer.get_data()[0];
-        pointers[2 * i + 1] = frag.pointer.get_data()[1];
-        sizes[i] = frag.size;
-    }
+    void insert_fragment(int i, const fragment& frag);
 
-    void allocate_for_serialized_data(std::size_t size) {
-        size_t count = size / (2 * sizeof(uint64_t) + sizeof(uint32_t));
-        pointers.resize(count * 2);
-        sizes.resize(count);
-    }
+    void allocate_for_serialized_data(std::size_t size);
 
-    std::size_t data_size() const {
-        return std::accumulate(sizes.begin(), sizes.end(), 0ull);
-    }
+    std::size_t data_size() const;
 
-    [[nodiscard]] fragment get_fragment(size_t i) const {
-        return {{pointers[2 * i], pointers[2 * i + 1]}, sizes[i]};
-    }
+    [[nodiscard]] fragment get_fragment(size_t i) const;
 
-    void set_fragment(int i, const fragment& frag) {
-        pointers[2 * i] = frag.pointer.get_high();
-        pointers[2 * i + 1] = frag.pointer.get_low();
-        sizes[i] = frag.size;
-    }
+    void set_fragment(int i, const fragment& frag);
 
-    [[nodiscard]] std::size_t size() const noexcept { return sizes.size(); }
+    [[nodiscard]] std::size_t size() const noexcept;
 
-    [[nodiscard]] bool empty() const noexcept { return sizes.empty(); }
+    [[nodiscard]] bool empty() const noexcept;
 
-    // TODO: pop_front is not really cheap right now, perhaps this can be
-    // revised
+    fragment pop_front();
 
-    fragment pop_front() {
-        fragment frag = {{pointers[0], pointers[1]}, sizes[0]};
-
-        pointers.erase(pointers.begin(), pointers.begin() + 2);
-        sizes.erase(sizes.begin());
-
-        return frag;
-    }
-
-    [[nodiscard]] fragment first() const {
-        return {{pointers[0], pointers[1]}, sizes[0]};
-    }
+    [[nodiscard]] fragment first() const;
 
     using serialize = zpp::bits::members<2>;
     auto operator<=>(const address&) const = default;
