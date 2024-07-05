@@ -37,15 +37,15 @@ address fragmentation::make_address() const {
 
     address rv;
 
-    for (const auto& m_frag : m_frags) {
-        if (std::holds_alternative<unstored>(m_frag)) {
-            const auto& un = std::get<unstored>(m_frag);
+    for (const auto& frag : m_frags) {
+        if (std::holds_alternative<unstored>(frag)) {
+            const auto& un = std::get<unstored>(frag);
             rv.append_address(un.addr);
             continue;
         }
 
-        if (std::holds_alternative<fragment>(m_frag)) {
-            rv.push_fragment(std::get<fragment>(m_frag));
+        if (std::holds_alternative<fragment>(frag)) {
+            rv.push_fragment(std::get<fragment>(frag));
             continue;
         }
     }
@@ -70,13 +70,13 @@ void fragmentation::flush_fragments(fragment_set& set) {
     auto lock = set.lock();
     LOG_CORO_CONTEXT();
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
-            set.mark_deduplication(std::get<fragment>(m_frag));
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
+            set.mark_deduplication(std::get<fragment>(frag));
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }
@@ -90,12 +90,12 @@ void fragmentation::flush_fragments(fragment_set& set) {
 }
 
 void fragmentation::mark_as_uploaded() {
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         un.uploaded = true;
     }
 
@@ -107,12 +107,12 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
     std::size_t current_ofs = 0ull;
     std::size_t current_idx = 0ull;
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }
@@ -145,12 +145,12 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
     unique_buffer<char> buffer(m_unstored_size);
     std::size_t offs = 0ull;
 
-    for (auto& m_frag : m_frags) {
-        if (!std::holds_alternative<unstored>(m_frag)) {
+    for (auto& frag : m_frags) {
+        if (!std::holds_alternative<unstored>(frag)) {
             continue;
         }
 
-        auto& un = std::get<unstored>(m_frag);
+        auto& un = std::get<unstored>(frag);
         if (un.uploaded) {
             continue;
         }
