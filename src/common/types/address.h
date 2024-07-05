@@ -18,24 +18,49 @@ struct fragment {
 
 struct address {
 
-    std::vector<uint64_t> pointers;
-    std::vector<uint32_t> sizes;
-
     address() = default;
+
+    /**
+     * Construct address with given number of fragments, all set to zero.
+     */
     explicit address(std::size_t size);
 
+    auto operator<=>(const address&) const = default;
+
+    /**
+     * Return an address describing the same buffer but with adjacent fragments
+     * merged.
+     */
     address shrink() const;
 
+    /**
+     * Push a fragment to the end of the address.
+     */
     void push(const fragment& frag);
 
+    /**
+     * Get a fragment at a given index.
+     */
     [[nodiscard]] fragment get(size_t i) const;
 
+    /**
+     * Append an address to this one.
+     */
     void append(const address& addr);
 
+    /**
+     * Return amount of described data.
+     */
     std::size_t data_size() const;
 
+    /**
+     * Return size of the address itself.
+     */
     [[nodiscard]] std::size_t size() const noexcept;
 
+    /**
+     * Return true if the address is empty, ie. was default constructed.
+     */
     [[nodiscard]] bool empty() const noexcept;
 
     /**
@@ -46,7 +71,9 @@ struct address {
     }
 
     using serialize = zpp::bits::members<2>;
-    auto operator<=>(const address&) const = default;
+
+    std::vector<uint64_t> pointers;
+    std::vector<uint32_t> sizes;
 };
 
 inline std::vector<char> to_buffer(const address& addr) {
