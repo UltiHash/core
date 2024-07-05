@@ -77,6 +77,8 @@ struct local_deduplicator : public deduplicator_interface {
             dd_resp.addr.append_address(resp.addr);
             dd_resp.effective_size += resp.effective_size;
         }
+
+        dd_resp.addr = dd_resp.addr.shrink();
         co_return dd_resp;
     }
 
