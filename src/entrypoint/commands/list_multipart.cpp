@@ -11,19 +11,19 @@ get_response(const std::string& bucket_name,
              const std::map<std::string, std::string>& ongoing) noexcept {
 
     boost::property_tree::ptree pt;
-    boost::property_tree::ptree bucket_node;
 
     for (const auto& val : ongoing) {
         boost::property_tree::ptree upload_node;
         upload_node.put("Key", val.second);
         upload_node.put("UploadId", val.first);
-        bucket_node.add_child("Upload", upload_node);
+        pt.add_child("ListMultipartUploadsResult.Upload", upload_node);
     }
 
-    pt.add_child("ListMultipartUploadsResult.Bucket", bucket_node);
+    pt.put("ListMultipartUploadsResult.Bucket", bucket_name);
+    pt.put("ListMultipartUploadsResult.IsTruncated", false);
 
     http_response res;
-    res.set_body(to_xml(pt));
+    res << pt;
     return res;
 }
 

@@ -28,7 +28,7 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 
     pt.add_child("ListAllMyBucketsResult.Buckets", buckets_node);
 
-    res.set_body(to_xml(pt));
+    res << pt;
 
     return res;
 }

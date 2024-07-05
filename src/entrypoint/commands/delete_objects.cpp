@@ -22,8 +22,6 @@ struct fail {
 
 http_response get_response(const std::vector<std::string>& success,
                            const std::vector<fail>& failure) noexcept {
-    http_response res;
-
     boost::property_tree::ptree pt;
     boost::property_tree::ptree deleteResult;
 
@@ -41,10 +39,8 @@ http_response get_response(const std::vector<std::string>& success,
 
     pt.add_child("DeleteResult", deleteResult);
 
-    auto xml = to_xml(pt);
-    res.set_body(std::string(xml));
-
-    LOG_DEBUG() << "get_respones: " << xml;
+    http_response res;
+    res << pt;
 
     return res;
 }

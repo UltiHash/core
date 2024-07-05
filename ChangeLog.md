@@ -1,4 +1,7 @@
 # Changelog
+## [0.5.3] 2024-07-01
+- Several S3A compatibility fixes
+
 ## [0.5.2] 2024-06-25
 - Increased waiting time for etcd to 5 minutes
 

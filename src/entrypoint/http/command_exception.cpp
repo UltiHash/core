@@ -23,16 +23,13 @@ const char* command_exception::what() const noexcept {
     return m_reason.c_str();
 }
 
-http::response<http::string_body> make_response(const command_exception& e) {
+http_response make_response(const command_exception& e) {
     boost::property_tree::ptree pt;
     pt.put("Error.Code", e.m_code);
     pt.put("Error.Message", e.m_reason);
 
-    http::response<http::string_body> res{e.m_status, 11, to_xml(pt)};
-    res.prepare_payload();
-
-    LOG_DEBUG() << res.base();
-
+    http_response res(e.m_status);
+    res << pt;
     return res;
 }
 

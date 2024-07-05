@@ -97,7 +97,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
     pt.put("CompleteMultipartUploadResult.Key", info.key);
     pt.put("CompleteMultipartUploadResult.ETag", etag);
-    res.set_body(to_xml(pt));
+    res << pt;
 
     co_await m_collection.uploads.remove_upload(upload_id);
     co_await req.respond(res.get_prepared_response());

@@ -10,7 +10,6 @@
 #include "entrypoint/multipart_state.h"
 
 #include <boost/asio.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/url/url.hpp>
 
 namespace uh::cluster {
@@ -42,11 +41,6 @@ struct retrieval {
  */
 std::tuple<std::string, std::string>
 extract_bucket_and_object(boost::urls::url url);
-
-/**
- * Convert boost property_tree to XML.
- */
-std::string to_xml(const boost::property_tree::ptree& pt);
 
 } // namespace uh::cluster
 

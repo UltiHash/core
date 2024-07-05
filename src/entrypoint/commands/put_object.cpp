@@ -75,6 +75,7 @@ coro<void> put_object::handle(http_request& req) const {
         auto content_length = req.content_length();
 
         m_collection.limits.check_storage_size(content_length);
+        co_await m_collection.directory.bucket_exists(req.bucket());
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {

@@ -55,8 +55,12 @@ public:
                     co_await handle_request(*req);
                     metric<success>::increase(1);
                 } catch (const command_exception& e) {
+                    auto response = make_response(e);
+
                     LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-                    http::write(s, make_response(e));
+                    LOG_DEBUG() << s.remote_endpoint() << ": " << response;
+
+                    http::write(s, response.get_prepared_response());
                 }
 
                 if (!req->keep_alive()) {
@@ -65,25 +69,37 @@ public:
             }
         } catch (const boost::system::system_error& se) {
             if (se.code() != http::error::end_of_stream) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
                 command_exception err(http::status::bad_request, "BadRequest",
                                       "bad request");
-                http::write(s, make_response(err));
+                auto response = make_response(err);
+
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+                LOG_DEBUG() << s.remote_endpoint() << ": " << response;
+
+                http::write(s, response.get_prepared_response());
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
             }
         } catch (const std::invalid_argument& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             command_exception err(http::status::bad_request, "InvalidArgument",
                                   "encountered invalid argument");
-            http::write(s, make_response(err));
+            auto response = make_response(err);
+
+            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+            LOG_DEBUG() << s.remote_endpoint() << ": " << response;
+
+            http::write(s, response.get_prepared_response());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
         } catch (const std::exception& e) {
+            auto response = make_response(command_exception());
+
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-            http::write(s, make_response(command_exception()));
+            LOG_DEBUG() << s.remote_endpoint() << ": " << response;
+
+            http::write(s, response.get_prepared_response());
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
