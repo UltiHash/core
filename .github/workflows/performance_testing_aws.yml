@@ -150,7 +150,7 @@ jobs:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-ultihash.yaml
 
-      - name: Generate Helm values
+      - name: Generate Helm values for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
@@ -159,16 +159,12 @@ jobs:
           input: performance-testing/small/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml
       
-      - name: Deploy the S3 performance testing job
+      - name: Execute the performance test against S3 
         run: |
-          # Run the S3 performance test and wait until it finishes
-          kubectl apply -f performance-tester-s3.yaml -n ${{ env.ENVIRONMENT_NAME }}
-          kubectl wait --for=condition=ready=true --timeout=5m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
-          kubectl wait --for=condition=ready=false --timeout=10m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
-          # Obtain the performance testing logs
-          kubectl logs pod/performance-tester -n ${{ env.ENVIRONMENT_NAME }}
-          # Remove the tester pod and the temporary data
-          kubectl delete -f performance-tester-s3.yaml -n ${{ env.ENVIRONMENT_NAME }}
+          bash performance-testing/execute_performance_test.sh performance-tester-s3.yaml ${{ env.ENVIRONMENT_NAME }} 2h
+
+      - name: Cleanup after the S3 performance test
+        run: |
           aws s3 rm s3://ultihash-performance-test-upload --recursive
           
       - name: Install the UltiHash cluster
@@ -177,14 +173,9 @@ jobs:
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
           sleep 180
 
-      - name: Run the performance test
+      - name: Execute the performance test against UltiHash
         run: |
-           # Run the UltiHash performance test and wait until it finishes
-           kubectl apply -f performance-tester-ultihash.yaml -n ${{ env.ENVIRONMENT_NAME }}
-           kubectl wait --for=condition=ready=true --timeout=5m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
-           kubectl wait --for=condition=ready=false --timeout=10m -n ${{ env.ENVIRONMENT_NAME }} pod/performance-tester
-           # Obtain the performance testing logs
-           kubectl logs pod/performance-tester -n ${{ env.ENVIRONMENT_NAME }}
+          bash performance-testing/execute_performance_test.sh performance-tester-ultihash.yaml ${{ env.ENVIRONMENT_NAME }} 2h
  
   cleanup:
     runs-on: lightweight-generic-jobs
