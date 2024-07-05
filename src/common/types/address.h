@@ -43,8 +43,6 @@ struct address {
 
     [[nodiscard]] bool empty() const noexcept;
 
-    fragment pop_front();
-
     [[nodiscard]] fragment first() const;
 
     using serialize = zpp::bits::members<2>;

@@ -52,18 +52,6 @@ void address::set_fragment(int i, const fragment& frag) {
 
 [[nodiscard]] bool address::empty() const noexcept { return sizes.empty(); }
 
-// TODO: pop_front is not really cheap right now, perhaps this can be
-// revised
-
-fragment address::pop_front() {
-    fragment frag = {{pointers[0], pointers[1]}, sizes[0]};
-
-    pointers.erase(pointers.begin(), pointers.begin() + 2);
-    sizes.erase(sizes.begin());
-
-    return frag;
-}
-
 [[nodiscard]] fragment address::first() const {
     return {{pointers[0], pointers[1]}, sizes[0]};
 }
