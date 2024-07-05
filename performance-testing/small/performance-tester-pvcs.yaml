@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: performance-test-input
+spec:
+  storageClassName: ebs-csi-gp3
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: performance-test-output
+spec:
+  storageClassName: ebs-csi-gp3
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
