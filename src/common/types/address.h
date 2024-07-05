@@ -25,6 +25,8 @@ struct address {
     explicit address(std::size_t size);
     explicit address(const fragment& frag);
 
+    address shrink() const;
+
     void push_fragment(const fragment& frag);
 
     void append_address(const address& addr);

@@ -8,6 +8,35 @@ address::address(std::size_t size)
 
 address::address(const fragment& frag) { push_fragment(frag); }
 
+address address::shrink() const {
+    address rv;
+
+    if (empty()) {
+        return rv;
+    }
+
+    uint128_t ptr(pointers[0], pointers[1]);
+    std::size_t size = sizes[0];
+
+    for (std::size_t index = 1; index < sizes.size(); ++index) {
+
+        uint128_t current(pointers[2 * index], pointers[2 * index + 1]);
+
+        if (ptr + size == current) {
+            size += sizes[index];
+            continue;
+        }
+
+        rv.push_fragment({ptr, size});
+        ptr = current;
+        size = sizes[index];
+    }
+
+    rv.push_fragment({ptr, size});
+
+    return rv;
+}
+
 void address::push_fragment(const fragment& frag) {
     pointers.emplace_back(frag.pointer.get_data()[0]);
     pointers.emplace_back(frag.pointer.get_data()[1]);
