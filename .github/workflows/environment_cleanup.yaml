@@ -1,0 +1,31 @@
+name: Environment Cleanup
+
+on:
+  delete:
+
+jobs:
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    steps:
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=$(cat ${{ github.event_path }} | jq --raw-output '.ref' | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Delete the testing environment
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
