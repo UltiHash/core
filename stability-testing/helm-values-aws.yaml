@@ -16,6 +16,13 @@ global:
 stabilityTest:
   readTimeout: 600
   concurentJobs: 1
+  extraEnv:
+    - name: AWS_ACCESS_KEY_ID
+      value: "mocked"
+    - name: AWS_SECRET_ACCESS_KEY
+      value: "mocked"
+    - name: AWS_DEFAULT_REGION
+      value: "eu-central-1"
   nodeSelector:
     workload-type: entrypoint
     purpose: performance-and-stability-testing
