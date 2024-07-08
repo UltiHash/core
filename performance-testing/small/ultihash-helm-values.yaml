@@ -44,7 +44,7 @@ entrypoint:
 storage:
   replicas: 2
   storageClass: ebs-csi-gp3            
-  storageSize: 50Gi
+  storageSize: 70Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -67,7 +67,7 @@ storage:
 deduplicator:
   replicas: 2
   storageClass: ebs-csi-gp3
-  storageSize: 4Gi
+  storageSize: 10Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -100,7 +100,7 @@ database:
 
     persistence:
       storageClass: ebs-csi-gp3
-      size: 10Gi
+      size: 20Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
