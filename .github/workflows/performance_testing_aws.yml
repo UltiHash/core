@@ -2,6 +2,7 @@ name: Small-Sized Performance Testing AWS
 
 on:
   workflow_dispatch:
+  push: 
 
 env:
   ENVIRONMENT_NAME: performance-testing-small-aarch64
