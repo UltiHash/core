@@ -20,8 +20,10 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Git REQUIRED)
-
 find_package(PostgreSQL REQUIRED)
+
+find_path(LMDB_INCLUDE_DIR NAMES lmdb.h)
+find_library(LMDB_LIBRARY NAMES lmdb)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
@@ -55,8 +57,8 @@ endif()
 
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES})
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_INCLUDE_DIRS})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES} ${LMDB_LIBRARY})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_INCLUDE_DIRS} ${LMDB_INCLUDE_DIR})
 add_compile_options(-Wall -Werror)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
