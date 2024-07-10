@@ -38,11 +38,6 @@ stabilityTest:
   outputVolume:
     pvcName: stability-test-output
     mountPath: /testing/test
-  extraEnv:
-    - name: AWS_ACCESS_KEY_ID
-      value: mocked
-    - name: AWS_SECRET_ACCESS_KEY
-      value: mocked
 
 etcd:
   replicaCount: 1
@@ -56,7 +51,7 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 5Gi
-    storageClass: ebs-csi-gp3
+    storageClass: local-path
 
 entrypoint:
   replicas: 2
@@ -84,7 +79,7 @@ entrypoint:
 
 storage:
   replicas: 2
-  storageClass: ebs-csi-gp3            
+  storageClass: local-path           
   storageSize: 50Gi
   affinity:
     podAntiAffinity:
@@ -107,7 +102,7 @@ storage:
 
 deduplicator:
   replicas: 2
-  storageClass: ebs-csi-gp3
+  storageClass: local-path
   storageSize: 4Gi
   affinity:
     podAntiAffinity:
@@ -140,7 +135,7 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: ebs-csi-gp3
+      storageClass: local-path
       size: 4Gi
 
 databaseInit:
