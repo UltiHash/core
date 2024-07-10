@@ -38,6 +38,11 @@ stabilityTest:
   outputVolume:
     pvcName: stability-test-output
     mountPath: /testing/test
+  extraEnvs:
+    - name: AWS_ACCESS_KEY_ID
+      value: mocked
+    - name: AWS_SECRET_ACCESS_KEY
+      value: mocked
 
 etcd:
   replicaCount: 1
