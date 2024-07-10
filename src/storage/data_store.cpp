@@ -10,7 +10,8 @@ data_store::data_store(data_store_config conf, uint32_t service_id,
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
       m_root(conf.working_dir / std::to_string(data_store_id)),
-      m_conf(std::move(conf)) {
+      m_conf(std::move(conf)),
+      m_refcounter(m_root) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
 
@@ -220,6 +221,13 @@ void data_store::perform_write(const address& addr) {
          ::pwrite(alloc.fd, data.data() + written, data.size() - written,
                   static_cast<long>(alloc.seek) + written))
         ;
+
+    std::set<std::size_t> pages;
+    for (std::size_t page_pointer = pointer; page_pointer < pointer + data.size(); page_pointer += 8192) {
+        pages.insert(page_pointer / 8192);
+    }
+    m_refcounter.initialize(pages);
+
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
     m_async_cv.notify_all();
