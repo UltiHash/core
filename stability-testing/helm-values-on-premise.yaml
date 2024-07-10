@@ -43,7 +43,7 @@ etcd:
     storageClass: local-path
 
 entrypoint:
-  replicas: 1
+  replicas: 2
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
 
