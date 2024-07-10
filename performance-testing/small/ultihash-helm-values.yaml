@@ -16,7 +16,7 @@ global:
 etcd:
   replicaCount: 1
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: directory
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
@@ -28,7 +28,7 @@ etcd:
     storageClass: local-path
 
 entrypoint:
-  replicas: 1
+  replicas: 2
   nodeSelector:
     workload-type: entrypoint
     purpose: performance-testing-small
@@ -37,6 +37,16 @@ entrypoint:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - entrypoint
+        topologyKey: kubernetes.io/hostname 
 
   ingress:
     enabled: false

@@ -132,7 +132,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
           READ_TIMEOUT: "600"
-          JOBS: "2"
+          JOBS: "4"
         with:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-s3.yaml
@@ -147,7 +147,7 @@ jobs:
           AWS_ACCESS_KEY_ID: mocked
           AWS_SECRET_ACCESS_KEY: mocked
           READ_TIMEOUT: "600"
-          JOBS: "2"
+          JOBS: "4"
         with:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-ultihash.yaml

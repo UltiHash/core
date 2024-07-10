@@ -15,7 +15,7 @@ global:
 
 stabilityTest:
   readTimeout: 600
-  concurentJobs: 1
+  concurentJobs: 2
   extraEnv:
     - name: AWS_ACCESS_KEY_ID
       value: "mocked"
