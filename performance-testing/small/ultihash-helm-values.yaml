@@ -25,7 +25,7 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 8Gi
-    storageClass: ebs-csi-gp3
+    storageClass: local-path
 
 entrypoint:
   replicas: 1
@@ -43,8 +43,8 @@ entrypoint:
 
 storage:
   replicas: 2
-  storageClass: ebs-csi-gp3            
-  storageSize: 50Gi
+  storageClass: local-path          
+  storageSize: 70Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -66,8 +66,8 @@ storage:
 
 deduplicator:
   replicas: 2
-  storageClass: ebs-csi-gp3
-  storageSize: 4Gi
+  storageClass: local-path
+  storageSize: 10Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -99,8 +99,8 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: ebs-csi-gp3
-      size: 10Gi
+      storageClass: local-path
+      size: 20Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE

@@ -3,21 +3,21 @@ kind: PersistentVolumeClaim
 metadata:
   name: performance-test-input
 spec:
-  storageClassName: ebs-csi-gp3
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 100Gi
+      storage: 120Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: performance-test-output
 spec:
-  storageClassName: ebs-csi-gp3
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 100Gi
+      storage: 120Gi

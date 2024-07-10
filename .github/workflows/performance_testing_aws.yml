@@ -2,6 +2,8 @@ name: Small-Sized Performance Testing AWS
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 2'
 
 env:
   ENVIRONMENT_NAME: performance-testing-small-aarch64
@@ -161,11 +163,7 @@ jobs:
       
       - name: Execute the performance test against S3 
         run: |
-          bash performance-testing/execute_performance_test.sh performance-tester-s3.yaml ${{ env.ENVIRONMENT_NAME }} 2h
-
-      - name: Cleanup after the S3 performance test
-        run: |
-          aws s3 rm s3://ultihash-performance-test-upload --recursive
+          bash performance-testing/execute_performance_test.sh performance-tester-s3.yaml ${{ env.ENVIRONMENT_NAME }} 1h
           
       - name: Install the UltiHash cluster
         run: |
@@ -175,7 +173,7 @@ jobs:
 
       - name: Execute the performance test against UltiHash
         run: |
-          bash performance-testing/execute_performance_test.sh performance-tester-ultihash.yaml ${{ env.ENVIRONMENT_NAME }} 2h
+          bash performance-testing/execute_performance_test.sh performance-tester-ultihash.yaml ${{ env.ENVIRONMENT_NAME }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs
@@ -216,4 +214,8 @@ jobs:
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
+
+      - name: Cleanup after the S3 performance test
+        run: |
+          aws s3 rm s3://ultihash-performance-test-upload --recursive
       
