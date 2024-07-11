@@ -1,12 +1,11 @@
-name: Small-Sized Performance Testing AWS
+name: Large-Sized Performance Testing AWS
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 2'
+  push: 
 
 env:
-  ENVIRONMENT_NAME: performance-testing-small-aarch64
+  ENVIRONMENT_NAME: performance-testing-large-amd64
 
 jobs:
 
