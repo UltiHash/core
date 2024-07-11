@@ -128,21 +128,21 @@ jobs:
           input: performance-testing/large/s3-data-downloader.yaml
           output: s3-data-downloader.yaml
 
-#      - name: Generate the performance tester manifest for UltiHash
-#        uses: danielr1996/envsubst-action@1.0.0
-#        env:
-#          TEST_TYPE: UH
-#          S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
-#          S3_SOURCE_BUCKET: test
-#          S3_DESTINATION_BUCKET: test
-#          AWS_ACCESS_KEY_ID: mocked
-#          AWS_SECRET_ACCESS_KEY: mocked
-#          READ_TIMEOUT: "600"
-#          JOBS: "4"
-#        with:
-#          input: performance-testing/small/performance-tester.yaml
-#          output: performance-tester-ultihash.yaml
-#
+      - name: Generate the performance tester manifest for UltiHash
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          TEST_TYPE: UH
+          S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
+          S3_SOURCE_BUCKET: test
+          S3_DESTINATION_BUCKET: test
+          AWS_ACCESS_KEY_ID: mocked
+          AWS_SECRET_ACCESS_KEY: mocked
+          READ_TIMEOUT: "600"
+          JOBS: "4"
+        with:
+          input: performance-testing/large/performance-tester.yaml
+          output: performance-tester-ultihash.yaml
+
       - name: Generate Helm values for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
@@ -161,11 +161,11 @@ jobs:
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
           sleep 180
-#
-#      - name: Execute the performance test against UltiHash
-#        run: |
-#          bash performance-testing/execute_performance_test.sh performance-tester-ultihash.yaml ${{ env.ENVIRONMENT_NAME }} 1h
-# 
+
+      - name: Execute the performance test against UltiHash
+        run: |
+          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+ 
   cleanup:
     runs-on: lightweight-generic-jobs
     needs: deploy-and-test
