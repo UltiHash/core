@@ -15,7 +15,7 @@ global:
 
 stabilityTest:
   readTimeout: 600
-  concurentJobs: 1
+  concurentJobs: 2
   extraEnv:
     - name: AWS_ACCESS_KEY_ID
       value: "mocked"
@@ -24,7 +24,7 @@ stabilityTest:
     - name: AWS_DEFAULT_REGION
       value: "eu-central-1"
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: tester
     purpose: performance-and-stability-testing
   tolerations:
     - key: "purpose"
@@ -42,7 +42,7 @@ stabilityTest:
 etcd:
   replicaCount: 1
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: directory
     purpose: performance-and-stability-testing
   tolerations:
     - key: "purpose"
@@ -51,10 +51,10 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 5Gi
-    storageClass: ebs-csi-gp3
+    storageClass: local-path
 
 entrypoint:
-  replicas: 1
+  replicas: 2
   nodeSelector:
     workload-type: entrypoint
     purpose: performance-and-stability-testing
@@ -63,13 +63,23 @@ entrypoint:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - entrypoint
+        topologyKey: kubernetes.io/hostname    
 
   ingress:
     enabled: false
 
 storage:
   replicas: 2
-  storageClass: ebs-csi-gp3            
+  storageClass: local-path           
   storageSize: 50Gi
   affinity:
     podAntiAffinity:
@@ -92,7 +102,7 @@ storage:
 
 deduplicator:
   replicas: 2
-  storageClass: ebs-csi-gp3
+  storageClass: local-path
   storageSize: 4Gi
   affinity:
     podAntiAffinity:
@@ -125,7 +135,7 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: ebs-csi-gp3
+      storageClass: local-path
       size: 4Gi
 
 databaseInit:
