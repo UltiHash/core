@@ -259,11 +259,13 @@ void configure(CLI::App& app, db::config& cfg) {
 
     app.add_option("--db-directory-connections", cfg.directory.count,
                    "Number of connections to directory database")
-        ->default_val(cfg.directory.count);
+        ->default_val(cfg.directory.count)
+        ->envname(ENV_CFG_DB_DIRECTORY_CONNECTIONS);
 
     app.add_option("--db-multipart-connections", cfg.multipart.count,
                    "Number of connections to multipart database")
-        ->default_val(cfg.multipart.count);
+        ->default_val(cfg.multipart.count)
+        ->envname(ENV_CFG_DB_MULTIPART_CONNECTIONS);
 }
 
 } // namespace uh::cluster
