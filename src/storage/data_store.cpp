@@ -222,8 +222,8 @@ void data_store::perform_write(const address& addr) {
         ;
 
     std::set<std::size_t> pages;
-    for (std::size_t page_pointer = pointer; page_pointer < pointer + data.size(); page_pointer += 8192) {
-        pages.insert(page_pointer / 8192);
+    for (std::size_t page_pointer = pointer; page_pointer < pointer + data.size(); page_pointer += m_conf.page_size) {
+        pages.insert(page_pointer / m_conf.page_size);
     }
     m_refcounter.initialize(pages);
 

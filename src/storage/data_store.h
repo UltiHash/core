@@ -24,6 +24,7 @@ struct data_store_config {
     std::filesystem::path working_dir;
     size_t file_size;
     size_t max_data_store_size;
+    size_t page_size;
 };
 
 class data_store {
