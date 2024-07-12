@@ -139,7 +139,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: mocked
           MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
           READ_TIMEOUT: "600"
-          JOBS: "4"
+          JOBS: "5"
         with:
           input: performance-testing/large/performance-tester.yaml
           output: performance-tester-ultihash.yaml
