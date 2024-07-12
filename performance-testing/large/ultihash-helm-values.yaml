@@ -45,9 +45,9 @@ entrypoint:
         topologyKey: kubernetes.io/hostname 
   extraEnv:
     - name: UH_DB_DIRECTORY_CONNECTIONS
-      value: "20"
+      value: "10"
     - name: UH_DB_MULTIPART_CONNECTIONS
-      value: "20"
+      value: "10"
 
   ingress:
     enabled: false
