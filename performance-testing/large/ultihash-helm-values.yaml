@@ -6,7 +6,7 @@ global:
   ultihashSecret:
     name: ultihash
     key: license
-  logLevel: DEBUG
+  logLevel: INFO
   telemetryExportInterval: 30000
 
 etcd:
@@ -45,9 +45,9 @@ entrypoint:
         topologyKey: kubernetes.io/hostname 
   extraEnv:
     - name: UH_DB_DIRECTORY_CONNECTIONS
-      value: "40"
+      value: "2"
     - name: UH_DB_MULTIPART_CONNECTIONS
-      value: "40"
+      value: "2"
 
   ingress:
     enabled: false
