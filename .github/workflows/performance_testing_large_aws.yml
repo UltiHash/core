@@ -137,6 +137,7 @@ jobs:
           S3_DESTINATION_BUCKET: test
           AWS_ACCESS_KEY_ID: mocked
           AWS_SECRET_ACCESS_KEY: mocked
+          MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:

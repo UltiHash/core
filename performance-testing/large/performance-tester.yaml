@@ -31,6 +31,8 @@ spec:
           value: "$READ_TIMEOUT"
         - name: JOBS
           value: "$JOBS"
+        - name: MULTIPART_CHUNK_SIZE
+          value: "$MULTIPART_CHUNK_SIZE"
         - name: AWS_ACCESS_KEY_ID
           value: "$AWS_ACCESS_KEY_ID"
         - name: AWS_SECRET_ACCESS_KEY
