@@ -46,7 +46,12 @@ entrypoint:
             operator: In
             values:
             - entrypoint
-        topologyKey: kubernetes.io/hostname 
+        topologyKey: kubernetes.io/hostname
+  extraEnv:
+    - name: UH_DB_DIRECTORY_CONNECTIONS
+      value: "5"
+    - name: UH_DB_MULTIPART_CONNECTIONS
+      value: "5"
 
   ingress:
     enabled: false
