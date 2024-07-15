@@ -1,0 +1,208 @@
+name: Large-Sized Performance Testing AWS
+
+on:
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT_NAME: performance-testing-large-amd64
+
+jobs:
+
+  build-core:
+    runs-on: heavyweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+ 
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+  
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+   
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          push: true
+
+  build-database-init:
+    runs-on: lightweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+  
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+  
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+   
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: tools/database-init/Dockerfile
+          platforms: linux/amd64
+          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          push: true
+
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    needs: 
+      - build-core
+      - build-database-init
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+      
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Delete the testing environment if exists
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+        continue-on-error: true
+      
+      - name: Provision the testing environment
+        run: |
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
+          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
+          kubectl apply -f performance-testing/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
+
+      - name: Generate the manifest for the S3 data downloder
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          S3_SOURCE_BUCKET: ultihash-performance-test-large-scale
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        with:
+          input: performance-testing/large/s3-data-downloader.yaml
+          output: s3-data-downloader.yaml
+
+      - name: Generate the performance tester manifest for UltiHash
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          TEST_TYPE: UH
+          S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
+          S3_SOURCE_BUCKET: test
+          S3_DESTINATION_BUCKET: test
+          AWS_ACCESS_KEY_ID: mocked
+          AWS_SECRET_ACCESS_KEY: mocked
+          MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
+          READ_TIMEOUT: "600"
+          JOBS: "10"
+        with:
+          input: performance-testing/large/performance-tester.yaml
+          output: performance-tester-ultihash.yaml
+
+      - name: Generate Helm values for UltiHash
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+        with:
+          input: performance-testing/large/ultihash-helm-values.yaml
+          output: ultihash-helm-values.yaml
+      
+      - name: Download the data corpora to the tester machine
+        run: |
+          bash performance-testing/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
+          
+      - name: Install the UltiHash cluster
+        run: |
+          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          sleep 180
+
+      - name: Execute the performance test against UltiHash
+        run: |
+          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+ 
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+        continue-on-error: true
+      
