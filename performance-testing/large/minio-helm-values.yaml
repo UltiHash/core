@@ -34,13 +34,3 @@ affinity:
         topologyKey: kubernetes.io/hostname
 
 resourcesPreset: none
-
-#resources:
-#  limits:
-#    cpu: 95200m
-#    ephemeral-storage: 17Gi
-#    memory: 355000Mi
-#  requests:
-#    cpu:  95200m
-#    ephemeral-storage: 17Gi
-#    memory: 355000Mi
