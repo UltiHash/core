@@ -140,7 +140,7 @@ public:
     }
 
     void reserve_write_buffers(size_t capacity) {
-        m_write_buffers.reserve(capacity + 3);
+        m_write_buffers.reserve(capacity + 4);
     }
 
     void reserve_read_buffers(size_t capacity) {
@@ -150,6 +150,7 @@ public:
     void reset_write_buffers() {
         m_write_buffers.clear();
         m_write_size = 0;
+        m_write_buffers.emplace_back();
         m_write_buffers.emplace_back();
         m_write_buffers.emplace_back();
         m_write_buffers.emplace_back();
@@ -167,13 +168,12 @@ public:
 
 
         auto ctx_buf = trace::serialize_context(c.get_otel_context());
-        if (!ctx_buf.empty())
-            register_write_buffer(ctx_buf);
         decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = {&ctx_size, sizeof ctx_size};
+        m_write_buffers[3] = boost::asio::buffer(ctx_buf);
 
         co_await boost::asio::async_write(m_socket, m_write_buffers,
                                           boost::asio::use_awaitable);
@@ -216,8 +216,6 @@ public:
             metric<success>::increase(1);
 
         auto ctx_buf = trace::serialize_context(c.get_otel_context());
-        if (!ctx_buf.empty())
-            register_write_buffer(ctx_buf);
         decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
         const auto size = static_cast<size_type>(data.size());
@@ -226,6 +224,7 @@ public:
             {&type, sizeof(type)},
             {&size, sizeof(size)},
             {&ctx_size, sizeof ctx_size},
+            {ctx_buf.data(), ctx_buf.size()},
             {data.data(), data.size()}};
 
         co_await boost::asio::async_write(m_socket, buffers,
