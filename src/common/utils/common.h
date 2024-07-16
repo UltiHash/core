@@ -54,6 +54,8 @@ static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 static constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
 static constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
+static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS = "UH_DB_DIRECTORY_CONNECTIONS";
+static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS = "UH_DB_MULTIPART_CONNECTIONS";
 static constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 

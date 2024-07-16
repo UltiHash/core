@@ -13,51 +13,25 @@ global:
       add:
       - SYS_PTRACE
 
-stabilityTest:
-  readTimeout: 600
-  concurentJobs: 2
-  extraEnv:
-    - name: AWS_ACCESS_KEY_ID
-      value: "mocked"
-    - name: AWS_SECRET_ACCESS_KEY
-      value: "mocked"
-    - name: AWS_DEFAULT_REGION
-      value: "eu-central-1"
-  nodeSelector:
-    workload-type: tester
-    purpose: performance-and-stability-testing
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
-  inputVolume:
-    type: S3
-    mountPath: /data
-    pvcName: stability-test-input
-  outputVolume:
-    pvcName: stability-test-output
-    mountPath: /testing/test
-
 etcd:
   replicaCount: 1
   nodeSelector:
     workload-type: directory
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
   persistence:
-    size: 5Gi
+    size: 8Gi
     storageClass: local-path
 
 entrypoint:
   replicas: 2
   nodeSelector:
     workload-type: entrypoint
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -72,15 +46,20 @@ entrypoint:
             operator: In
             values:
             - entrypoint
-        topologyKey: kubernetes.io/hostname    
+        topologyKey: kubernetes.io/hostname
+  extraEnv:
+    - name: UH_DB_DIRECTORY_CONNECTIONS
+      value: "5"
+    - name: UH_DB_MULTIPART_CONNECTIONS
+      value: "5"
 
   ingress:
     enabled: false
 
 storage:
   replicas: 2
-  storageClass: local-path           
-  storageSize: 50Gi
+  storageClass: local-path          
+  storageSize: 70Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -93,7 +72,7 @@ storage:
         topologyKey: kubernetes.io/hostname                  
   nodeSelector:
     workload-type: storage
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -103,7 +82,7 @@ storage:
 deduplicator:
   replicas: 2
   storageClass: local-path
-  storageSize: 4Gi
+  storageSize: 10Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -116,7 +95,7 @@ deduplicator:
         topologyKey: kubernetes.io/hostname
   nodeSelector:
     workload-type: storage
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -127,7 +106,7 @@ database:
   primary:
     nodeSelector:
       workload-type: directory
-      purpose: performance-and-stability-testing
+      purpose: performance-testing-small
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -136,13 +115,13 @@ database:
 
     persistence:
       storageClass: local-path
-      size: 4Gi
+      size: 20Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
     workload-type: directory
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -151,7 +130,7 @@ databaseInit:
 
 collector:
   nodeSelector:
-    purpose: performance-and-stability-testing
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"

@@ -119,8 +119,8 @@ private:
             read(sock, recv_buffers);
 
             dedupe_response dedupe_resp;
-            dedupe_resp.addr.allocate_for_serialized_data(
-                h.size - sizeof(dedupe_resp.effective_size));
+            dedupe_resp.addr = address(address::allocated_elements(
+                h.size - sizeof(dedupe_resp.effective_size)));
             std::vector<mutable_buffer> buffers{
                 boost::asio::buffer(&dedupe_resp.effective_size,
                                     sizeof dedupe_resp.effective_size),

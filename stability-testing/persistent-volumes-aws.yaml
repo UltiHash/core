@@ -3,7 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: stability-test-output
 spec:
-  storageClassName: ebs-csi-gp3
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:

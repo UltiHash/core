@@ -27,7 +27,7 @@ struct upload_info {
     [[nodiscard]] address generate_total_address() const {
         address addr;
         for (const auto& p : parts) {
-            addr.append_address(p.second.addr);
+            addr.append(p.second.addr);
         }
 
         return addr;
