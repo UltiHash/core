@@ -4,76 +4,77 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 2'
+  push: 
 
 env:
   ENVIRONMENT_NAME: performance-testing-small-aarch64
 
 jobs:
 
-  build-core:
-    runs-on: heavyweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
- 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-  
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
-   
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/arm64
-          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          push: true
-          build-args: |
-            BuildType=RelWithDebInfo
-            DebugTools=True
+ # build-core:
+ #   runs-on: heavyweight-generic-jobs
+ #   steps:
+ #     - uses: actions/checkout@v4
+ #       with:
+ #         token: ${{ secrets.PAT }}
+ #         submodules: recursive
+# 
+#     - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#  
+#      - name: Login to ghcr.io container registry
+#        uses: docker/login-action@v2
+#        with:
+#          registry: ghcr.io
+#          username: plauth
+#          password: ${{ secrets.PAT }}
+#   
+#      - name: Build and push the Docker image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: .
+#          file: Dockerfile
+#          platforms: linux/arm64
+#          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+#          push: true
+#          build-args: |
+#            BuildType=RelWithDebInfo
+#            DebugTools=True
 
-  build-database-init:
-    runs-on: lightweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
-  
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-  
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
-   
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: tools/database-init/Dockerfile
-          platforms: linux/arm64
-          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
-          push: true
+#  build-database-init:
+#    runs-on: lightweight-generic-jobs
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          token: ${{ secrets.PAT }}
+#          submodules: recursive
+#  
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#  
+#      - name: Login to ghcr.io container registry
+#        uses: docker/login-action@v2
+#        with:
+#          registry: ghcr.io
+#          username: plauth
+#          password: ${{ secrets.PAT }}
+#   
+#      - name: Build and push the Docker image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: .
+#          file: tools/database-init/Dockerfile
+#          platforms: linux/arm64
+#          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+#          push: true
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+ #   needs: 
+ #     - build-core
+ #     - build-database-init
     steps:
 
       - uses: actions/checkout@v4
@@ -127,12 +128,13 @@ jobs:
         env:
           TEST_TYPE: S3
           S3_ENDPOINT_URL: https://s3.eu-central-1.amazonaws.com
-          S3_SOURCE_BUCKET: ultihash-performance-test-corpora-large-files
+          S3_SOURCE_BUCKET: ultihash-performance-test-large-scale #ultihash-performance-test-corpora-large-files
           S3_DESTINATION_BUCKET: ultihash-performance-test-upload
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
           READ_TIMEOUT: "600"
-          JOBS: "4"
+          JOBS: "10"
         with:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-s3.yaml
@@ -165,15 +167,15 @@ jobs:
         run: |
           bash performance-testing/execute_job.sh performance-tester-s3.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
           
-      - name: Install the UltiHash cluster
-        run: |
-          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
-          sleep 180
+      #- name: Install the UltiHash cluster
+      #  run: |
+      #    echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+      #    helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+      #    sleep 180
 
-      - name: Execute the performance test against UltiHash
-        run: |
-          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+      #- name: Execute the performance test against UltiHash
+      #  run: |
+      #    bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs
