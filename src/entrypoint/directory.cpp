@@ -50,7 +50,7 @@ coro<object> directory::get_object(const std::string& bucket,
                                         "FROM uh_get_object($1, $2)",
                                         bucket, object_id);
 
-    auto etag = metadata->string(2);
+    auto etag = metadata->string_view(2);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
@@ -72,7 +72,7 @@ coro<object> directory::head_object(const std::string& bucket,
                                 "object not found");
     }
 
-    auto etag = metadata->string(2);
+    auto etag = metadata->string_view(2);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
@@ -157,7 +157,7 @@ coro<std::vector<std::string>> directory::list_buckets() {
 
     for (auto row = co_await dir->exec("SELECT name FROM uh_list_buckets()");
          row; row = co_await dir->next()) {
-        rv.emplace_back(*row->string(0));
+        rv.emplace_back(*row->string_view(0));
     }
 
     co_return rv;
@@ -178,8 +178,8 @@ directory::list_objects(const std::string& bucket,
                                    lower_bound.value_or(""));
     for (; row; row = co_await dir->next()) {
 
-        auto etag = row->string(4);
-        rv.emplace_back(std::string(*row->string(1)), *row->date(3),
+        auto etag = row->string_view(4);
+        rv.emplace_back(std::string(*row->string_view(1)), *row->date(3),
                         static_cast<std::size_t>(*row->number(2)), std::nullopt,
                         etag ? std::optional<std::string>(*etag)
                              : std::nullopt);

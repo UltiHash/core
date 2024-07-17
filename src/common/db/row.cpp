@@ -21,7 +21,7 @@ std::optional<std::span<char>> row::data(int col) {
     return std::span(data, len);
 }
 
-std::optional<std::string_view> row::string(int col) {
+std::optional<std::string_view> row::string_view(int col) {
     if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
     }

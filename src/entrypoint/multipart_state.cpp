@@ -19,7 +19,7 @@ coro<std::string> multipart_state::insert_upload(std::string bucket,
     auto row =
         co_await conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
 
-    auto id = *row->string(0);
+    auto id = *row->string_view(0);
 
     LOG_DEBUG() << "insert upload, id " << id << ", bucket: " << bucket
                 << ", key: " << key;
@@ -43,8 +43,8 @@ coro<upload_info> multipart_state::details(const std::string& id) {
                                     "upload id not found");
         }
 
-        rv.bucket = *row->string(0);
-        rv.key = *row->string(1);
+        rv.bucket = *row->string_view(0);
+        rv.key = *row->string_view(1);
         rv.erased = row->date(2).has_value();
     }
 
@@ -55,8 +55,8 @@ coro<upload_info> multipart_state::details(const std::string& id) {
         auto id = *row->number(0);
         std::size_t size = *row->number(1);
 
-        rv.parts[id] = upload_info::part{.etag = std::string(*row->string(3)),
-                                         .size = size};
+        rv.parts[id] = upload_info::part{
+            .etag = std::string(*row->string_view(3)), .size = size};
 
         rv.data_size += size;
         rv.effective_size += *row->number(2);
@@ -113,7 +113,7 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
     auto row =
         co_await conn->execv("SELECT id, key FROM uh_get_uploads($1)", bucket);
     for (; row; row = co_await conn->next()) {
-        rv[std::string(*row->string(0))] = *row->string(1);
+        rv[std::string(*row->string_view(0))] = *row->string_view(1);
     }
 
     co_return rv;

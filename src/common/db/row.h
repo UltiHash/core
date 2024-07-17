@@ -16,7 +16,7 @@ class connection;
 
 class row {
 public:
-    std::optional<std::string_view> string(int col);
+    std::optional<std::string_view> string_view(int col);
     std::optional<std::span<char>> data(int col);
     std::optional<int64_t> number(int col);
     std::optional<utc_time> date(int col);
