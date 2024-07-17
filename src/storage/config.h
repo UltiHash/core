@@ -8,8 +8,6 @@
 
 namespace uh::cluster {
 
-constexpr std::size_t PAGE_SIZE = 8 * KIBI_BYTE;
-
 struct storage_config {
     server_config server = {
         .threads = 4,
@@ -22,7 +20,7 @@ struct storage_config {
         .working_dir = "/var/lib/uh/storage",
         .file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,
-        .page_size = PAGE_SIZE,
+        .page_size = DEFAULT_PAGE_SIZE,
     };
 };
 

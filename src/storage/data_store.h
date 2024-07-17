@@ -5,6 +5,8 @@
 #include "reference_counter.h"
 
 #include "common/types/address.h"
+#include "common/utils/common.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
