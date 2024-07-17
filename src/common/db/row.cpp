@@ -32,6 +32,17 @@ std::optional<std::string_view> row::string_view(int col) {
     return std::string_view(data, len);
 }
 
+std::optional<std::string> row::string(int col) {
+    if (PQgetisnull(m_result.get(), m_row, col)) {
+        return {};
+    }
+
+    char* data = PQgetvalue(m_result.get(), m_row, col);
+    int len = PQgetlength(m_result.get(), m_row, col);
+
+    return std::string(data, len);
+}
+
 std::optional<int64_t> row::number(int col) {
     if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
