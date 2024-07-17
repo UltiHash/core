@@ -163,7 +163,7 @@ jobs:
       
       - name: Execute the performance test against S3 
         run: |
-          bash performance-testing/execute_performance_test.sh performance-tester-s3.yaml ${{ env.ENVIRONMENT_NAME }} 1h
+          bash performance-testing/execute_job.sh performance-tester-s3.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
           
       - name: Install the UltiHash cluster
         run: |
@@ -173,7 +173,7 @@ jobs:
 
       - name: Execute the performance test against UltiHash
         run: |
-          bash performance-testing/execute_performance_test.sh performance-tester-ultihash.yaml ${{ env.ENVIRONMENT_NAME }} 1h
+          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs

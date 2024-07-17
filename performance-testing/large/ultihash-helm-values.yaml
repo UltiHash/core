@@ -6,18 +6,14 @@ global:
   ultihashSecret:
     name: ultihash
     key: license
-  logLevel: DEBUG
+  logLevel: INFO
   telemetryExportInterval: 30000
-  securityContext:
-    capabilities:
-      add:
-      - SYS_PTRACE
 
 etcd:
   replicaCount: 1
   nodeSelector:
     workload-type: directory
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -31,7 +27,7 @@ entrypoint:
   replicas: 2
   nodeSelector:
     workload-type: entrypoint
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -46,20 +42,20 @@ entrypoint:
             operator: In
             values:
             - entrypoint
-        topologyKey: kubernetes.io/hostname
+        topologyKey: kubernetes.io/hostname 
   extraEnv:
     - name: UH_DB_DIRECTORY_CONNECTIONS
-      value: "5"
+      value: "10"
     - name: UH_DB_MULTIPART_CONNECTIONS
-      value: "5"
+      value: "10"
 
   ingress:
     enabled: false
 
 storage:
-  replicas: 2
+  replicas: 4
   storageClass: local-path          
-  storageSize: 70Gi
+  storageSize: 800Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -72,7 +68,7 @@ storage:
         topologyKey: kubernetes.io/hostname                  
   nodeSelector:
     workload-type: storage
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -80,9 +76,9 @@ storage:
       effect: "NoSchedule"
 
 deduplicator:
-  replicas: 2
+  replicas: 4
   storageClass: local-path
-  storageSize: 10Gi
+  storageSize: 50Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -95,7 +91,7 @@ deduplicator:
         topologyKey: kubernetes.io/hostname
   nodeSelector:
     workload-type: storage
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -106,7 +102,7 @@ database:
   primary:
     nodeSelector:
       workload-type: directory
-      purpose: performance-testing-small
+      purpose: performance-testing-large
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -115,13 +111,13 @@ database:
 
     persistence:
       storageClass: local-path
-      size: 20Gi
+      size: 50Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
     workload-type: directory
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
