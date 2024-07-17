@@ -52,7 +52,7 @@ coro<object> directory::get_object(const std::string& bucket,
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
-                     .size = static_cast<std::size_t>(*metadata->number(0)),
+                     .size = *metadata->size_type(0),
                      .addr = std::move(addr),
                      .etag = metadata->string(2)};
 }
@@ -71,7 +71,7 @@ coro<object> directory::head_object(const std::string& bucket,
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
-                     .size = static_cast<std::size_t>(*metadata->number(0)),
+                     .size = *metadata->size_type(0),
                      .addr = std::nullopt,
                      .etag = metadata->string(2)};
 }
@@ -172,9 +172,8 @@ directory::list_objects(const std::string& bucket,
                                    lower_bound.value_or(""));
     for (; row; row = co_await dir->next()) {
 
-        rv.emplace_back(*row->string(1), *row->date(3),
-                        static_cast<std::size_t>(*row->number(2)), std::nullopt,
-                        row->string(4));
+        rv.emplace_back(*row->string(1), *row->date(3), *row->size_type(2),
+                        std::nullopt, row->string(4));
     }
 
     co_return rv;

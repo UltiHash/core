@@ -20,6 +20,7 @@ public:
     std::optional<std::string> string(int col);
     std::optional<std::span<char>> data(int col);
     std::optional<int64_t> number(int col);
+    std::optional<std::size_t> size_type(int col);
     std::optional<utc_time> date(int col);
 
 private:

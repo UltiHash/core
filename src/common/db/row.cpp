@@ -78,6 +78,15 @@ std::optional<int64_t> row::number(int col) {
     return result;
 }
 
+std::optional<std::size_t> row::size_type(int col) {
+    auto rv = number(col);
+    if (!rv) {
+        return std::nullopt;
+    }
+
+    return static_cast<std::size_t>(*rv);
+}
+
 std::optional<utc_time> row::date(int col) {
     if (PQgetisnull(m_result.get(), m_row, col)) {
         return {};
