@@ -2,73 +2,74 @@ name: Large-Sized Performance Testing AWS
 
 on:
   workflow_dispatch:
+  push: 
 
 env:
   ENVIRONMENT_NAME: performance-testing-large-amd64
 
 jobs:
 
-  build-core:
-    runs-on: heavyweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
- 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-  
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
-   
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64
-          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          push: true
+  #build-core:
+  #  runs-on: heavyweight-generic-jobs
+  # steps:
+  #    - uses: actions/checkout@v4
+  #      with:
+  #        token: ${{ secrets.PAT }}
+  #        submodules: recursive
+ #
+ #     - name: Set up Docker Buildx
+ #       id: buildx
+ #       uses: docker/setup-buildx-action@v3
+ # 
+ #     - name: Login to ghcr.io container registry
+ #       uses: docker/login-action@v2
+ #       with:
+ #         registry: ghcr.io
+ #         username: plauth
+ #         password: ${{ secrets.PAT }}
+ #  
+ #     - name: Build and push the Docker image
+ #       uses: docker/build-push-action@v5
+ #       with:
+ #         context: .
+ #        file: Dockerfile
+ #         platforms: linux/amd64
+ #         tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+ #         push: true
 
-  build-database-init:
-    runs-on: lightweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
-  
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-  
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
-   
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: tools/database-init/Dockerfile
-          platforms: linux/amd64
-          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
-          push: true
+  #build-database-init:
+  #  runs-on: lightweight-generic-jobs
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #      with:
+  #        token: ${{ secrets.PAT }}
+  #        submodules: recursive
+ # 
+ #     - name: Set up Docker Buildx
+ #       id: buildx
+ #       uses: docker/setup-buildx-action@v3
+ # 
+ #     - name: Login to ghcr.io container registry
+ ##       uses: docker/login-action@v2
+  #      with:
+  #        registry: ghcr.io
+  #        username: plauth
+  #        password: ${{ secrets.PAT }}
+  # 
+  #    - name: Build and push the Docker image
+  #      uses: docker/build-push-action@v5
+  #      with:
+  #        context: .
+  #        file: tools/database-init/Dockerfile
+  #        platforms: linux/amd64
+  #        tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+  #        push: true
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+   # needs: 
+   #   - build-core
+   #   - build-database-init
     steps:
 
       - uses: actions/checkout@v4
@@ -173,21 +174,21 @@ jobs:
         run: |
           bash performance-testing/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
           
-      - name: Install the UltiHash cluster
-        run: |
-          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
-          sleep 180
+      #- name: Install the UltiHash cluster
+      #  run: |
+      #    echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+      #    helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+      #    sleep 180
 
-      - name: Execute the performance test against UltiHash
-        run: |
-          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+      #- name: Execute the performance test against UltiHash
+      #  run: |
+      #    bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
 
-      - name: Uninstall the UltiHash cluster
-        run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
-          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-        continue-on-error: true
+      #- name: Uninstall the UltiHash cluster
+      #  run: |
+      #    helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+      #    kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+      #  continue-on-error: true
 
       - name: Install the MinIO cluster
         run: |
