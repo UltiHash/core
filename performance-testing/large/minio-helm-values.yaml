@@ -1,0 +1,36 @@
+mode: distributed
+
+global:
+  storageClass: local-path
+
+statefulset:
+  replicaCount: 4
+  zones: 1
+  drivesPerNode: 1
+
+auth:
+  rootUser: admin
+  rootPassword: "testpassword"
+
+tolerations:
+  - key: "purpose"
+    operator: "Equal"
+    value: "testing"
+    effect: "NoSchedule"
+
+nodeSelector:
+  workload-type: minio
+  purpose: performance-testing-large
+
+affinity: 
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/instance
+            operator: In
+            values:
+            - minio
+        topologyKey: kubernetes.io/hostname
+
+resourcesPreset: none
