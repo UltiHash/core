@@ -100,6 +100,10 @@ coro<void> get_object::handle(http_request& req) const {
             res.base().set("ETag", *obj.etag);
         }
 
+        if (obj.mime) {
+            res.base().set("Content-Type", *obj.mime);
+        }
+
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
             req.socket(), sr,

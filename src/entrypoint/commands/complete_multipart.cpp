@@ -83,7 +83,8 @@ coro<void> complete_multipart::handle(http_request& req) const {
     object obj{.name = req.object_key(),
                .size = addr.data_size(),
                .addr = std::move(addr),
-               .etag = etag};
+               .etag = etag,
+               .mime = info.mime};
     co_await m_collection.directory.put_object(req.bucket(), obj);
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
