@@ -11,13 +11,14 @@ multipart_state::multipart_state(boost::asio::io_context& ioc,
     : m_db(ioc, connection_factory(ioc, cfg, cfg.multipart),
            cfg.multipart.count) {}
 
-coro<std::string> multipart_state::insert_upload(std::string bucket,
-                                                 std::string key) {
+coro<std::string>
+multipart_state::insert_upload(std::string bucket, std::string key,
+                               std::optional<std::string> mime) {
     LOG_CORO_CONTEXT();
     auto conn = co_await m_db.get();
 
-    auto row =
-        co_await conn->execv("SELECT uh_create_upload($1, $2)", bucket, key);
+    auto row = co_await conn->execv("SELECT uh_create_upload($1, $2, $3)",
+                                    bucket, key, mime);
 
     auto id = *row->string(0);
 
@@ -37,7 +38,8 @@ coro<upload_info> multipart_state::details(const std::string& id) {
 
     {
         auto row = co_await conn->execv(
-            "SELECT bucket, key, erased_since FROM uh_get_upload($1)", id);
+            "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
+            id);
         if (!row) {
             throw command_exception(http::status::not_found, "NoSuchUpload",
                                     "upload id not found");
@@ -46,6 +48,7 @@ coro<upload_info> multipart_state::details(const std::string& id) {
         rv.bucket = *row->string(0);
         rv.key = *row->string(1);
         rv.erased = row->date(2).has_value();
+        rv.mime = row->string(3);
     }
 
     auto row = co_await conn->execv("SELECT part_id, size, effective_size, "
@@ -55,8 +58,7 @@ coro<upload_info> multipart_state::details(const std::string& id) {
         auto id = *row->number(0);
         std::size_t size = *row->number(1);
 
-        rv.parts[id] = upload_info::part{.etag = std::string(*row->string(3)),
-                                         .size = size};
+        rv.parts[id] = upload_info::part{.etag = *row->string(3), .size = size};
 
         rv.data_size += size;
         rv.effective_size += *row->number(2);
@@ -113,7 +115,7 @@ multipart_state::list_multipart_uploads(const std::string& bucket) {
     auto row =
         co_await conn->execv("SELECT id, key FROM uh_get_uploads($1)", bucket);
     for (; row; row = co_await conn->next()) {
-        rv[std::string(*row->string(0))] = *row->string(1);
+        rv[*row->string(0)] = *row->string(1);
     }
 
     co_return rv;

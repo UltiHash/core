@@ -1,4 +1,8 @@
 # Changelog
+
+## UNRELEASED
+- Support for object mime types
+
 ## [0.5.3] 2024-07-01
 - Several S3A compatibility fixes
 

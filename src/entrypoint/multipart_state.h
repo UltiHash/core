@@ -19,6 +19,7 @@ struct upload_info {
     std::string key;
     std::string bucket;
     bool erased;
+    std::optional<std::string> mime;
     std::map<uint16_t, part> parts;
 
     size_t effective_size{0};
@@ -41,7 +42,8 @@ public:
     /**
      * Insert a new multipart upload and retrieve it's id.
      */
-    coro<std::string> insert_upload(std::string bucket, std::string object_key);
+    coro<std::string> insert_upload(std::string bucket, std::string object_key,
+                                    std::optional<std::string> mime);
 
     /**
      * Retrieve a pointer to the upload info for a given id.
