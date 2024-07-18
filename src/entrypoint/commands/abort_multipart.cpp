@@ -16,7 +16,17 @@ bool abort_multipart::can_handle(const http_request& req) {
 coro<void> abort_multipart::handle(http_request& req) const {
     metric<entrypoint_abort_multipart_req>::increase(1);
 
-    co_await m_collection.uploads.remove_upload(*req.query("uploadId"));
+    auto upload_id = *req.query("uploadId");
+
+    try {
+        co_await m_collection.uploads.remove_upload(upload_id);
+    } catch (const std::exception& e) {
+        throw command_exception(
+            http::status::not_found, "NoSuchUpload",
+            "The specified multipart upload does not exist. The upload ID "
+            "might not be valid, or the multipart upload might have been "
+            "aborted or completed.");
+    }
 
     http_response resp;
     co_await req.respond(resp.get_prepared_response());

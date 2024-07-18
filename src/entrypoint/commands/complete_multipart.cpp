@@ -35,12 +35,6 @@ void complete_multipart::validate(const upload_info& info,
             throw command_exception(http::status::bad_request, "MalformedXML",
                                     "xml is invalid");
 
-        if (*part_num != part_counter) {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidPartOrder",
-                                    "part order is not ascending");
-        }
-
         auto it = info.parts.find(*part_num);
         if (it == info.parts.end()) {
             throw command_exception(http::status::bad_request, "InvalidPart",
@@ -57,6 +51,12 @@ void complete_multipart::validate(const upload_info& info,
         if (pt.etag != etag) {
             throw command_exception(http::status::bad_request, "InvalidPart",
                                     "part etag does not match");
+        }
+
+        if (*part_num != part_counter) {
+            throw command_exception(http::status::bad_request,
+                                    "InvalidPartOrder",
+                                    "part order is not ascending");
         }
 
         part_counter++;
