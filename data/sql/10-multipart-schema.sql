@@ -13,8 +13,8 @@ CREATE TABLE uploads (
     bucket TEXT NOT NULL,
     key TEXT NOT NULL,
     erased_since TIMESTAMP DEFAULT NULL, -- when not null, record is deleted
-    mime TEXT DEFAULT NULL,
-    UNIQUE (bucket, key));
+    mime TEXT DEFAULT NULL
+    );
 
 --
 -- `upload_parts` contains information about a single upload part
