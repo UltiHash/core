@@ -12,21 +12,6 @@ reference_counter::reference_counter(const std::filesystem::path& root) : m_env(
     m_env.open(root.c_str(), 0);
 }
 
-void reference_counter::initialize(const std::set<std::size_t>& pages) {
-    lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
-    lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
-
-    std::size_t init_value = 1;
-
-    for(const std::size_t& page_id : pages) {
-        lmdb::val key(&page_id, sizeof(page_id));
-        lmdb::val value(&init_value, sizeof(init_value));
-        dbi.put(txn, key, value);
-    }
-
-    txn.commit();
-}
-
 std::map<std::size_t, std::size_t> reference_counter::decrement(const std::set<std::size_t>& pages) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
@@ -68,11 +53,6 @@ std::map<std::size_t, std::size_t> reference_counter::increment(const std::set<s
         lmdb::val key(&page_id, sizeof(page_id));
         lmdb::val value;
 
-        if (!dbi.get(txn, key, value)) {
-            txn.abort();
-            throw std::runtime_error("key does not exist");
-        }
-
         std::size_t current_value = 0;
         if (dbi.get(txn, key, value)) {
             std::memcpy(&current_value, value.data(), sizeof(current_value));
@@ -88,22 +68,5 @@ std::map<std::size_t, std::size_t> reference_counter::increment(const std::set<s
     txn.commit();
     return refcount_by_pageid;
 }
-
-/*
-std::size_t reference_counter::at(std::size_t page_id) {
-    lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, MDB_RDONLY);
-    lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
-    lmdb::val key(&page_id, sizeof(page_id));
-    lmdb::val value;
-
-    std::size_t current_value = 0;
-    if (dbi.get(txn, key, value)) {
-        std::memcpy(&current_value, value.data(), sizeof(current_value));
-    }
-
-    txn.abort();
-    return current_value;
-}
-*/
 
 }

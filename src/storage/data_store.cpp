@@ -225,7 +225,7 @@ void data_store::perform_write(const address& addr) {
     for (std::size_t page_pointer = pointer; page_pointer < pointer + data.size(); page_pointer += m_conf.page_size) {
         pages.insert(page_pointer / m_conf.page_size);
     }
-    m_refcounter.initialize(pages);
+    m_refcounter.increment(pages);
 
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
