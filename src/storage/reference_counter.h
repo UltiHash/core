@@ -10,8 +10,8 @@ namespace uh::cluster {
 class reference_counter {
 public:
     explicit reference_counter(const std::filesystem::path& root, const std::size_t page_size);
-    std::vector<std::size_t> decrement(const std::size_t offset, const std::size_t size);
-    std::vector<std::size_t> increment(const std::size_t offset, const std::size_t size);
+    void decrement(const std::size_t offset, const std::size_t size);
+    void increment(const std::size_t offset, const std::size_t size);
 private:
     lmdb::env m_env;
     std::size_t m_page_size;

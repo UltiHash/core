@@ -14,11 +14,9 @@ reference_counter::reference_counter(const std::filesystem::path& root, const st
     m_env.open(root.c_str(), 0);
 }
 
-std::vector<std::size_t> reference_counter::decrement(const std::size_t offset, const std::size_t size) {
+void reference_counter::decrement(const std::size_t offset, const std::size_t size) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
-    std::vector<std::size_t> refcount;
-    refcount.reserve(size / m_page_size + 1);
 
     for (std::size_t page_pointer = offset; page_pointer < offset + size; page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
@@ -41,19 +39,14 @@ std::vector<std::size_t> reference_counter::decrement(const std::size_t offset, 
         --current_value;
         value = lmdb::val(&current_value, sizeof(current_value));
         dbi.put(txn, key, value);
-        refcount.push_back(current_value);
     }
 
     txn.commit();
-    return refcount;
 }
 
-std::vector<std::size_t> reference_counter::increment(const std::size_t offset, const std::size_t size) {
+void reference_counter::increment(const std::size_t offset, const std::size_t size) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
-    std::vector<std::size_t> refcount;
-    refcount.reserve(size / m_page_size + 1);
-
 
     for (std::size_t page_pointer = offset; page_pointer < offset + size; page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
@@ -68,12 +61,10 @@ std::vector<std::size_t> reference_counter::increment(const std::size_t offset, 
         ++current_value;
         value = lmdb::val(&current_value, sizeof(current_value));
         dbi.put(txn, key, value);
-        refcount.push_back(current_value);
     }
 
 
     txn.commit();
-    return refcount;
 }
 
 }

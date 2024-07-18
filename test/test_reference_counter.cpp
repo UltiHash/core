@@ -14,10 +14,10 @@ BOOST_AUTO_TEST_CASE(test_increment_decrement) {
     temp_directory testdir;
     reference_counter refcounter(testdir.path(), DEFAULT_PAGE_SIZE);
     BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE), std::runtime_error);
-    BOOST_CHECK(refcounter.increment(0, DEFAULT_PAGE_SIZE).at(0) == 1);
-    BOOST_CHECK(refcounter.decrement(0, DEFAULT_PAGE_SIZE).at(0) == 0);
+    BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
+    BOOST_CHECK_NO_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE));
     BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE), std::runtime_error);
-    BOOST_CHECK(refcounter.increment(0, DEFAULT_PAGE_SIZE).at(0) == 1);
+    BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
 }
 
 BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
@@ -25,13 +25,13 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
     {
         reference_counter refcounter(testdir.path(), DEFAULT_PAGE_SIZE);
         BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE), std::runtime_error);
-        BOOST_CHECK(refcounter.increment(0, DEFAULT_PAGE_SIZE).at(0) == 1);
+        BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
     }
     {
         reference_counter refcounter(testdir.path(), DEFAULT_PAGE_SIZE);
-        BOOST_CHECK(refcounter.decrement(0, DEFAULT_PAGE_SIZE).at(0) == 0);
-        BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE).at(0), std::runtime_error);
-        BOOST_CHECK(refcounter.increment(0, DEFAULT_PAGE_SIZE).at(0) == 1);
+        BOOST_CHECK_NO_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE));
+        BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE), std::runtime_error);
+        BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
     }
 }
 
