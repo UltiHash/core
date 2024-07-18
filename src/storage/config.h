@@ -20,6 +20,7 @@ struct storage_config {
         .working_dir = "/var/lib/uh/storage",
         .file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,
+        .page_size = DEFAULT_PAGE_SIZE,
     };
 };
 
