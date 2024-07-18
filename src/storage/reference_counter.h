@@ -4,17 +4,17 @@
 #include <cstdint>
 #include <filesystem>
 #include <lmdb++.h>
-#include <map>
-#include <set>
+#include <vector>
 
 namespace uh::cluster {
 class reference_counter {
 public:
-    explicit reference_counter(const std::filesystem::path& root);
-    std::map<std::size_t, std::size_t> decrement(const std::set<std::size_t>& pages);
-    std::map<std::size_t, std::size_t> increment(const std::set<std::size_t>& pages);
+    explicit reference_counter(const std::filesystem::path& root, const std::size_t page_size);
+    std::vector<std::size_t> decrement(const std::size_t offset, const std::size_t size);
+    std::vector<std::size_t> increment(const std::size_t offset, const std::size_t size);
 private:
     lmdb::env m_env;
+    std::size_t m_page_size;
 
 };
 }
