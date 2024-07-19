@@ -3,8 +3,9 @@
 
 namespace uh::cluster {
 
-reference_counter::reference_counter(const std::filesystem::path& root, const std::size_t page_size) :
-      m_env(lmdb::env::create()),
+reference_counter::reference_counter(const std::filesystem::path& root,
+                                     const std::size_t page_size)
+    : m_env(lmdb::env::create()),
       m_page_size(page_size) {
     m_env.set_max_dbs(1);
     m_env.set_mapsize(TEBI_BYTE);
@@ -14,11 +15,13 @@ reference_counter::reference_counter(const std::filesystem::path& root, const st
     m_env.open(root.c_str(), 0);
 }
 
-void reference_counter::decrement(const std::size_t offset, const std::size_t size) {
+void reference_counter::decrement(const std::size_t offset,
+                                  const std::size_t size) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
-    for (std::size_t page_pointer = offset; page_pointer < offset + size; page_pointer += m_page_size) {
+    for (std::size_t page_pointer = offset; page_pointer < offset + size;
+         page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
         lmdb::val key(&page_id, sizeof(page_id));
         lmdb::val value;
@@ -44,11 +47,13 @@ void reference_counter::decrement(const std::size_t offset, const std::size_t si
     txn.commit();
 }
 
-void reference_counter::increment(const std::size_t offset, const std::size_t size) {
+void reference_counter::increment(const std::size_t offset,
+                                  const std::size_t size) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
-    for (std::size_t page_pointer = offset; page_pointer < offset + size; page_pointer += m_page_size) {
+    for (std::size_t page_pointer = offset; page_pointer < offset + size;
+         page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
         lmdb::val key(&page_id, sizeof(page_id));
         lmdb::val value;
@@ -63,8 +68,7 @@ void reference_counter::increment(const std::size_t offset, const std::size_t si
         dbi.put(txn, key, value);
     }
 
-
     txn.commit();
 }
 
-}
+} // namespace uh::cluster

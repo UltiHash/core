@@ -91,6 +91,7 @@ public:
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
     const int m_data_store_count = 2;
+
 private:
     service_config make_service_config() {
         service_config service_cfg;

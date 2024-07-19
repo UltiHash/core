@@ -221,7 +221,7 @@ void data_store::perform_write(const address& addr) {
                   static_cast<long>(alloc.seek) + written))
         ;
 
-    if(enable_storage_refcount) {
+    if (enable_storage_refcount) {
         m_refcounter.increment(pointer, data.size());
     }
 
@@ -243,7 +243,7 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
 }
 
 void data_store::link(const address& addr) {
-    if(enable_storage_refcount){
+    if (enable_storage_refcount) {
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get(i);
             const auto pointer = pointer_traits::get_pointer(frag.pointer);
@@ -253,7 +253,7 @@ void data_store::link(const address& addr) {
 }
 
 void data_store::unlink(const address& addr) {
-    if(enable_storage_refcount){
+    if (enable_storage_refcount) {
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get(i);
             const auto pointer = pointer_traits::get_pointer(frag.pointer);

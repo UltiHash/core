@@ -140,7 +140,8 @@ private:
         co_await m.send(ctx, SUCCESS, buffer.span());
     }
 
-    coro<void> handle_link(context& ctx, messenger& m, const messenger::header& h) {
+    coro<void> handle_link(context& ctx, messenger& m,
+                           const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
         co_await m_storage.link(ctx, addr);
@@ -148,7 +149,8 @@ private:
         co_await m.send(ctx, SUCCESS, {});
     }
 
-    coro<void> handle_unlink(context& ctx, messenger& m, const messenger::header& h) {
+    coro<void> handle_unlink(context& ctx, messenger& m,
+                             const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
         co_await m_storage.unlink(ctx, addr);

@@ -165,7 +165,6 @@ private:
     std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
         m_ongoing_async_writes;
     reference_counter m_refcounter;
-
 };
 
 } // end namespace uh::cluster
