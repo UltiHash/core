@@ -38,6 +38,15 @@ http_response::get_prepared_response() {
     return m_res;
 }
 
+void http_response::set(const std::string& header,
+                        std::optional<std::string> value) {
+    if (value) {
+        m_res.set(header, *value);
+    } else {
+        m_res.erase(header);
+    }
+}
+
 void http_response::set_etag(const std::string& etag) {
     m_res.set(http::field::etag, etag);
 }

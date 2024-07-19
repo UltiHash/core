@@ -26,6 +26,12 @@ public:
     http::response<http::string_body>& base() { return m_res; }
     const http::response<http::string_body>& base() const { return m_res; }
 
+    /**
+     * Set value for header `header` to `value` or remove header in case
+     * `value == std::nullopt`.
+     */
+    void set(const std::string& header, std::optional<std::string> value);
+
 private:
     http::response<http::string_body> m_res;
 };

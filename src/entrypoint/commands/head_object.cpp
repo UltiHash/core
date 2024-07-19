@@ -21,19 +21,16 @@ coro<void> head_object::handle(const http_request& req) const {
         auto obj = co_await m_coll.directory.head_object(req.bucket(),
                                                          req.object_key());
 
-        http::response<http::empty_body> res{http::status::ok, 11};
-        res.base().set("Content-Length", std::to_string(obj.size));
-        res.base().set("Last-Modified", imf_fixdate(obj.last_modified));
-        if (obj.etag) {
-            res.base().set("ETag", *obj.etag);
-        }
+        http_response res;
+        res.set("Content-Length", std::to_string(obj.size));
+        res.set("Last-Modified", imf_fixdate(obj.last_modified));
+        res.set("ETag", obj.etag);
+        res.set("Content-Type", obj.mime);
 
         LOG_DEBUG() << req.socket().remote_endpoint()
                     << ": head_object response: " << res;
-        http::response_serializer<http::empty_body> sr(res);
-        co_await http::async_write_header(
-            req.socket(), sr,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
+
+        co_await async_write(req.socket(), std::move(res));
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");
