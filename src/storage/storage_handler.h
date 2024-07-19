@@ -56,10 +56,10 @@ public:
                     co_await handle_read_address(ctx, m, message_header);
                     break;
                 case STORAGE_LINK_REQ:
-                    co_await handle_link(m, message_header);
+                    co_await handle_link(ctx, m, message_header);
                     break;
                 case STORAGE_UNLINK_REQ:
-                    co_await handle_unlink(m, message_header);
+                    co_await handle_unlink(ctx, m, message_header);
                     break;
                 case STORAGE_SYNC_REQ:
                     co_await handle_sync(ctx, m, message_header);
@@ -140,20 +140,20 @@ private:
         co_await m.send(ctx, SUCCESS, buffer.span());
     }
 
-    coro<void> handle_link(messenger& m, const messenger::header& h) {
+    coro<void> handle_link(context& ctx, messenger& m, const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
-        co_await m_storage.link(addr);
+        co_await m_storage.link(ctx, addr);
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send(ctx, SUCCESS, {});
     }
 
-    coro<void> handle_unlink(messenger& m, const messenger::header& h) {
+    coro<void> handle_unlink(context& ctx, messenger& m, const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
-        co_await m_storage.unlink(addr);
+        co_await m_storage.unlink(ctx, addr);
 
-        co_await m.send(SUCCESS, {});
+        co_await m.send(ctx, SUCCESS, {});
     }
 
     coro<void> handle_sync(context& ctx, messenger& m,

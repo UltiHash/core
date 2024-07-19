@@ -102,7 +102,7 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<void> unlink(const address& addr) override {
+    coro<void> unlink(context& ctx, const address& addr) override {
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
