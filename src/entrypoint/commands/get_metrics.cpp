@@ -20,20 +20,21 @@ coro<void> get_metrics::handle(http_request& req) const {
     auto effective_data_size =
         co_await m_collection.gdv.get_used_space(req.m_ctx);
 
-    res.set_body("{\n"
-                 "  \"version\": \"" +
-                 std::string(PROJECT_VERSION) +
-                 "\",\n"
-                 "  \"vcsid\": \"" +
-                 std::string(PROJECT_VCSID) +
-                 "\",\n"
-                 "  \"raw_data_size\": " +
-                 std::to_string(raw_data_size) +
-                 ",\n"
-                 "  \"effective_data_size\": " +
-                 std::to_string(effective_data_size) +
-                 "\n"
-                 "}");
+    res.set_body(
+        std::make_unique<string_body>("{\n"
+                                      "  \"version\": \"" +
+                                      std::string(PROJECT_VERSION) +
+                                      "\",\n"
+                                      "  \"vcsid\": \"" +
+                                      std::string(PROJECT_VCSID) +
+                                      "\",\n"
+                                      "  \"raw_data_size\": " +
+                                      std::to_string(raw_data_size) +
+                                      ",\n"
+                                      "  \"effective_data_size\": " +
+                                      std::to_string(effective_data_size) +
+                                      "\n"
+                                      "}"));
 
     co_await write(req.socket(), std::move(res));
 }

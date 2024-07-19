@@ -114,6 +114,7 @@ coro<void> get_object::handle(http_request& req) const {
         local_read_handle reader(req.m_ctx, m_collection.gdv,
                                  std::move(*obj.addr));
         size_t total_size = co_await upload(reader, req, m_collection.ioc);
+
         const std::chrono::duration<double> duration = tt.passed();
         const auto size = static_cast<double>(total_size) / MEBI_BYTE;
         const auto bandwidth = size / duration.count();

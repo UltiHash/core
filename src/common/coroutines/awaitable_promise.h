@@ -8,9 +8,9 @@
 
 namespace uh::cluster {
 
-template <typename T> class awaitable_promise {
-    using executor_type = boost::asio::io_context::executor_type;
-
+template <typename T,
+          typename executor_type = boost::asio::io_context::executor_type>
+class awaitable_promise {
     boost::asio::strand<executor_type> m_strand;
     std::shared_ptr<boost::asio::steady_timer> m_waiter;
     std::optional<T> m_data;
@@ -133,9 +133,10 @@ public:
  *    ...
  *    auto result = promise->get();
  */
-template <typename result>
+template <typename result, typename executor>
 requires(!std::is_same_v<result, void>)
-auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
+auto use_awaitable_promise(
+    std::shared_ptr<awaitable_promise<result, executor>> p) {
     return [p](const boost::system::error_code& e, result r) -> void {
         if (e.failed()) {
             try {
@@ -149,9 +150,10 @@ auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
     };
 }
 
-template <typename result>
+template <typename result, typename executor>
 requires std::is_same_v<result, void>
-auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
+auto use_awaitable_promise(
+    std::shared_ptr<awaitable_promise<result, executor>> p) {
     return [p](const boost::system::error_code& e) -> void {
         if (e.failed()) {
             try {
@@ -165,10 +167,10 @@ auto use_awaitable_promise(std::shared_ptr<awaitable_promise<result>> p) {
     };
 }
 
-template <typename result>
+template <typename result, typename executor>
 requires(!std::is_same_v<result, void>)
 auto use_awaitable_promise_cospawn(
-    std::shared_ptr<awaitable_promise<result>> p) {
+    std::shared_ptr<awaitable_promise<result, executor>> p) {
     return [p](std::exception_ptr e, result r) -> void {
         if (e) {
             p->set_exception(e);
@@ -178,10 +180,10 @@ auto use_awaitable_promise_cospawn(
     };
 }
 
-template <typename result>
+template <typename result, typename executor>
 requires(std::is_same_v<result, void>)
 auto use_awaitable_promise_cospawn(
-    std::shared_ptr<awaitable_promise<result>> p) {
+    std::shared_ptr<awaitable_promise<result, executor>> p) {
     return [p](std::exception_ptr e) -> void {
         if (e) {
             p->set_exception(e);
