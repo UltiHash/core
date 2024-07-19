@@ -20,13 +20,13 @@ public:
 
     template <typename Func>
     requires(!std::is_void_v<std::invoke_result_t<Func>>)
-    coro<std::invoke_result_t<Func>> post_in_workers(context& c, Func func) {
+    coro<std::invoke_result_t<Func>> post_in_workers(context& ctx, Func func) {
         auto pr =
             std::make_shared<awaitable_promise<std::invoke_result_t<Func>>>(
                 m_ioc);
 
-        auto f = [c](auto& f, auto promise) {
-            CURRENT_CONTEXT = c;
+        auto f = [ctx](auto& f, auto promise) {
+            CURRENT_CONTEXT = ctx;
             try {
                 promise->set(f());
             } catch (const std::exception&) {
@@ -41,12 +41,12 @@ public:
 
     template <typename Func>
     requires(std::is_void_v<std::invoke_result_t<Func>>)
-    coro<void> post_in_workers(context& c, Func func) {
+    coro<void> post_in_workers(context& ctx, Func func) {
         auto pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
-        auto f = [c](auto& f, auto promise) {
+        auto f = [ctx](auto& f, auto promise) {
             try {
-                CURRENT_CONTEXT = c;
+                CURRENT_CONTEXT = ctx;
                 f();
                 promise->set();
             } catch (const std::exception&) {

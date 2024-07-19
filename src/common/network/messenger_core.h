@@ -1,10 +1,10 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
-#include "common/telemetry/log.h"
-#include "common/telemetry/traces.h"
-#include "common/telemetry/metrics.h"
 #include "common/coroutines/context.h"
+#include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
+#include "common/telemetry/traces.h"
 #include "common/types/common_types.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
@@ -108,7 +108,9 @@ public:
     coro<header> recv_header() {
         header h;
         std::vector<boost::asio::mutable_buffer> buffers{
-            {&h.type, sizeof h.type}, {&h.size, sizeof h.size}, {&h.ctx_size, sizeof h.ctx_size}};
+            {&h.type, sizeof h.type},
+            {&h.size, sizeof h.size},
+            {&h.ctx_size, sizeof h.ctx_size}};
 
         co_await boost::asio::async_read(m_socket, buffers,
                                          boost::asio::use_awaitable);
@@ -120,8 +122,6 @@ public:
 
         if (h.type != SUCCESS)
             measure_message_type(h.type);
-
-
 
         co_return h;
     }
@@ -161,13 +161,12 @@ public:
         m_read_size = 0;
     }
 
-    coro<void> send_buffers(context& c, const message_type type) {
+    coro<void> send_buffers(context& ctx, const message_type type) {
 
         if (type == SUCCESS)
             metric<success>::increase(1);
 
-
-        auto ctx_buf = trace::serialize_context(c.get_otel_context());
+        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
         decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
         m_write_buffers[0] = {&type, sizeof type};
@@ -181,13 +180,13 @@ public:
         reset_write_buffers();
     }
 
-    coro<void> send_error(context& c, const error& e) {
+    coro<void> send_error(context& ctx, const error& e) {
         const auto ec = e.code();
         register_write_buffer(ec);
         register_write_buffer(e.message());
         metric<failure>::increase(1);
 
-        co_await send_buffers(c, FAILURE);
+        co_await send_buffers(ctx, FAILURE);
     }
 
     coro<error> recv_error(const header& h) {
@@ -210,12 +209,13 @@ public:
         co_return c;
     }
 
-    coro<void> send(context& c, const message_type type, std::span<const char> data) {
+    coro<void> send(context& ctx, const message_type type,
+                    std::span<const char> data) {
 
         if (type == SUCCESS)
             metric<success>::increase(1);
 
-        auto ctx_buf = trace::serialize_context(c.get_otel_context());
+        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
         decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
         const auto size = static_cast<size_type>(data.size());

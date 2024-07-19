@@ -28,13 +28,14 @@ public:
 
         for (;;) {
 
-            context c;
+            context ctx;
             std::optional<error> err;
 
             try {
                 const auto message_header = co_await m.recv_header();
-                c = co_await m.recv_context(message_header);
-                auto frag_span = trace::scoped_span("received fragment", c.get_otel_context());
+                ctx = co_await m.recv_context(message_header);
+                auto frag_span = trace::scoped_span("received fragment",
+                                                    ctx.get_otel_context());
 
                 LOG_CORO_CONTEXT();
 
@@ -43,25 +44,25 @@ public:
 
                 switch (message_header.type) {
                 case STORAGE_WRITE_REQ:
-                    co_await handle_write(c, m, message_header);
+                    co_await handle_write(ctx, m, message_header);
                     break;
                 case STORAGE_READ_REQ:
-                    co_await handle_read(c, m, message_header);
+                    co_await handle_read(ctx, m, message_header);
                     break;
                 case STORAGE_READ_FRAGMENT_REQ:
-                    co_await handle_read_fragment(c, m, message_header);
+                    co_await handle_read_fragment(ctx, m, message_header);
                     break;
                 case STORAGE_READ_ADDRESS_REQ:
-                    co_await handle_read_address(c, m, message_header);
+                    co_await handle_read_address(ctx, m, message_header);
                     break;
                 case STORAGE_SYNC_REQ:
-                    co_await handle_sync(c, m, message_header);
+                    co_await handle_sync(ctx, m, message_header);
                     break;
                 case STORAGE_USED_REQ:
-                    co_await handle_get_used(c, m, message_header);
+                    co_await handle_get_used(ctx, m, message_header);
                     break;
                 case STORAGE_AVAILABLE_REQ:
-                    co_await handle_get_available(c, m, message_header);
+                    co_await handle_get_available(ctx, m, message_header);
                     break;
                 default:
                     throw std::invalid_argument("Invalid message type!");
@@ -81,38 +82,42 @@ public:
             if (err) {
                 LOG_WARN() << remote.str()
                            << " error handling request: " << err->message();
-                co_await m.send_error(c, *err);
+                co_await m.send_error(ctx, *err);
             }
         }
     }
 
 private:
-    coro<void> handle_write(context& c, messenger& m, const messenger::header& h) {
+    coro<void> handle_write(context& ctx, messenger& m,
+                            const messenger::header& h) {
         unique_buffer<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
-        auto addr = co_await m_storage.write(c, data.string_view());
-        co_await m.send_address(c, SUCCESS, addr);
+        auto addr = co_await m_storage.write(ctx, data.string_view());
+        co_await m.send_address(ctx, SUCCESS, addr);
     }
 
-    coro<void> handle_read(context& c, messenger& m, const messenger::header& h) {
+    coro<void> handle_read(context& ctx, messenger& m,
+                           const messenger::header& h) {
         const auto frag = co_await m.recv_fragment(h);
 
-        auto buffer = co_await m_storage.read(c, frag.pointer, frag.size);
+        auto buffer = co_await m_storage.read(ctx, frag.pointer, frag.size);
 
-        co_await m.send(c, SUCCESS, buffer.span());
+        co_await m.send(ctx, SUCCESS, buffer.span());
     }
 
-    coro<void> handle_read_fragment(context& c, messenger& m, const messenger::header& h) {
+    coro<void> handle_read_fragment(context& ctx, messenger& m,
+                                    const messenger::header& h) {
         const auto frag = co_await m.recv_fragment(h);
 
         unique_buffer<char> buffer(frag.size);
-        co_await m_storage.read_fragment(c, buffer.data(), frag);
+        co_await m_storage.read_fragment(ctx, buffer.data(), frag);
 
-        co_await m.send(c, SUCCESS, buffer.span());
+        co_await m.send(ctx, SUCCESS, buffer.span());
     }
 
-    coro<void> handle_read_address(context& c, messenger& m, const messenger::header& h) {
+    coro<void> handle_read_address(context& ctx, messenger& m,
+                                   const messenger::header& h) {
         const auto addr = co_await m.recv_address(h);
 
         unique_buffer<char> buffer(addr.data_size());
@@ -125,26 +130,29 @@ private:
             offset += fsize;
         }
 
-        co_await m_storage.read_address(c, buffer.data(), addr, offsets);
-        co_await m.send(c, SUCCESS, buffer.span());
+        co_await m_storage.read_address(ctx, buffer.data(), addr, offsets);
+        co_await m.send(ctx, SUCCESS, buffer.span());
     }
 
-    coro<void> handle_sync(context& c, messenger& m, const messenger::header& h) {
+    coro<void> handle_sync(context& ctx, messenger& m,
+                           const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
-        co_await m_storage.sync(c, addr);
+        co_await m_storage.sync(ctx, addr);
 
-        co_await m.send(c, SUCCESS, {});
+        co_await m.send(ctx, SUCCESS, {});
     }
 
-    coro<void> handle_get_used(context& c, messenger& m, const messenger::header&) {
-        const auto used = co_await m_storage.get_used_space(c);
-        co_await m.send_primitive<size_t>(c, SUCCESS, used);
+    coro<void> handle_get_used(context& ctx, messenger& m,
+                               const messenger::header&) {
+        const auto used = co_await m_storage.get_used_space(ctx);
+        co_await m.send_primitive<size_t>(ctx, SUCCESS, used);
     }
 
-    coro<void> handle_get_available(context& c, messenger& m, const messenger::header&) {
-        const auto available = co_await m_storage.get_free_space(c);
-        co_await m.send_primitive<size_t>(c, SUCCESS, available);
+    coro<void> handle_get_available(context& ctx, messenger& m,
+                                    const messenger::header&) {
+        const auto available = co_await m_storage.get_free_space(ctx);
+        co_await m.send_primitive<size_t>(ctx, SUCCESS, available);
     }
 
     local_storage& m_storage;

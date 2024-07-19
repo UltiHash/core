@@ -18,19 +18,19 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
 
     for (;;) {
         std::optional<error> err;
-        context c;
+        context ctx;
 
         try {
 
             const auto message_header = co_await m.recv_header();
-            c = co_await m.recv_context(message_header);
+            ctx = co_await m.recv_context(message_header);
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(message_header.type);
 
             switch (message_header.type) {
             case DEDUPLICATOR_REQ:
 
-                co_await handle_dedupe(c, m, message_header);
+                co_await handle_dedupe(ctx, m, message_header);
                 break;
             default:
                 throw std::invalid_argument("Invalid message type!");
@@ -49,12 +49,12 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
         if (err) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();
-            co_await m.send_error(c, *err);
+            co_await m.send_error(ctx, *err);
         }
     }
 }
 
-coro<void> deduplicator_handler::handle_dedupe(context& c, messenger& m,
+coro<void> deduplicator_handler::handle_dedupe(context& ctx, messenger& m,
                                                const messenger::header& h) {
 
     if (h.size == 0) [[unlikely]] {
@@ -65,8 +65,9 @@ coro<void> deduplicator_handler::handle_dedupe(context& c, messenger& m,
     m.register_read_buffer(data);
     co_await m.recv_buffers(h);
 
-    auto dedupe_resp = co_await m_local_dedupe.deduplicate(c, data.string_view());
-    co_await m.send_dedupe_response(c, dedupe_resp);
+    auto dedupe_resp =
+        co_await m_local_dedupe.deduplicate(ctx, data.string_view());
+    co_await m.send_dedupe_response(ctx, dedupe_resp);
 }
 
 } // end namespace uh::cluster

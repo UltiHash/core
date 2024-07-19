@@ -45,13 +45,11 @@ public:
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
 
-        std::unique_ptr<context> c;
         try {
 
             for (;;) {
-                c = std::make_unique<context>();
-                c->init_otel_context();
-                auto req = co_await http_request::create(*c, s);
+                auto ctx = std::make_unique<context>();
+                auto req = co_await http_request::create(*ctx, s);
                 LOG_DEBUG()
                     << s.remote_endpoint() << ": read request: " << *req;
 

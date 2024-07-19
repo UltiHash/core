@@ -14,10 +14,10 @@ struct local_read_handle {
     size_t m_addr_index = 0;
     context& m_ctx;
 
-    local_read_handle(context& c, global_data_view& storage, address&& addr)
+    local_read_handle(context& ctx, global_data_view& storage, address&& addr)
         : m_storage(storage),
           m_addr(std::move(addr)),
-          m_ctx (c) {}
+          m_ctx(ctx) {}
 
     bool has_next() { return m_addr_index != m_addr.size(); }
 
@@ -111,7 +111,8 @@ coro<void> get_object::handle(http_request& req) const {
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        local_read_handle reader(req.m_ctx, m_collection.gdv, std::move(*obj.addr));
+        local_read_handle reader(req.m_ctx, m_collection.gdv,
+                                 std::move(*obj.addr));
         size_t total_size = co_await upload(reader, req, m_collection.ioc);
         const std::chrono::duration<double> duration = tt.passed();
         const auto size = static_cast<double>(total_size) / MEBI_BYTE;

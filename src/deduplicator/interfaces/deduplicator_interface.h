@@ -7,7 +7,8 @@
 namespace uh::cluster {
 
 struct deduplicator_interface {
-    virtual coro<dedupe_response> deduplicate(context& c, const std::string_view& data) = 0;
+    virtual coro<dedupe_response> deduplicate(context& ctx,
+                                              const std::string_view& data) = 0;
     static constexpr role service_role = DEDUPLICATOR_SERVICE;
     virtual ~deduplicator_interface() = default;
 };

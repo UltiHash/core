@@ -1,14 +1,14 @@
 #include "traces.h"
+#include "common/utils/common.h"
 #include "opentelemetry/context/propagation/global_propagator.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h"
 #include "opentelemetry/sdk/trace/processor.h"
 #include "opentelemetry/sdk/trace/simple_processor_factory.h"
+#include "opentelemetry/sdk/trace/tracer_provider.h"
 #include "opentelemetry/sdk/trace/tracer_provider_factory.h"
 #include "opentelemetry/trace/propagation/http_trace_context.h"
-#include "opentelemetry/sdk/trace/tracer_provider.h"
 #include "opentelemetry/trace/provider.h"
-#include "common/utils/common.h"
 
 namespace uh::cluster {
 namespace trace_sdk = opentelemetry::sdk::trace;
@@ -40,9 +40,9 @@ std::shared_ptr<opentelemetry::trace::Tracer> get_tracer() {
     return provider->GetTracer("uh-cluster-traces", OPENTELEMETRY_SDK_VERSION);
 }
 
-std::shared_ptr<opentelemetry::trace::Span> trace::span(
-    const std::string& name,
-    const std::optional<opentelemetry::context::Context>& context) {
+std::shared_ptr<opentelemetry::trace::Span>
+trace::span(const std::string& name,
+            const std::optional<opentelemetry::context::Context>& context) {
     opentelemetry::trace::StartSpanOptions opt;
     if (context) {
         opt.parent = *context;
@@ -60,19 +60,23 @@ opentelemetry::trace::Scope trace::scoped_span(
     return {tracer()->StartSpan(name, opt)};
 }
 
-opentelemetry::context::Context trace::deserialize_context(std::vector<char>&& buf) {
-    carrier c (std::move(buf));
-    auto prop        = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
+opentelemetry::context::Context
+trace::deserialize_context(std::vector<char>&& buf) {
+    carrier c(std::move(buf));
+    auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::
+        GetGlobalPropagator();
     auto empty_ctx = opentelemetry::context::Context();
     auto new_context = prop->Extract(c, empty_ctx);
     return new_context;
 }
 
-std::vector<char> trace::serialize_context(const std::optional<opentelemetry::context::Context>& context){
+std::vector<char> trace::serialize_context(
+    const std::optional<opentelemetry::context::Context>& context) {
     if (!context)
         return {};
     carrier c;
-    auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
+    auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::
+        GetGlobalPropagator();
     prop->Inject(c, *context);
     return c.extract_buffer();
 }
@@ -104,6 +108,7 @@ trace::carrier::carrier(std::vector<char>&& buf) // for deserializing
         m_kv.emplace(std::move(key), std::move(value));
     }
 }
+
 opentelemetry::nostd::string_view
 trace::carrier::Get(opentelemetry::nostd::string_view key) const noexcept {
     auto it = m_kv.find(std::string(key));
@@ -113,7 +118,7 @@ trace::carrier::Get(opentelemetry::nostd::string_view key) const noexcept {
     return "";
 }
 void trace::carrier::Set(opentelemetry::nostd::string_view key,
-                  opentelemetry::nostd::string_view value) noexcept {
+                         opentelemetry::nostd::string_view value) noexcept {
     zpp::bits::out{m_buf, zpp::bits::size4b{}, zpp::bits::append{}}(key)
         .or_throw();
     zpp::bits::out{m_buf, zpp::bits::size4b{}, zpp::bits::append{}}(value)
