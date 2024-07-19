@@ -1,6 +1,5 @@
 #include "abort_multipart.h"
 #include "entrypoint/http/command_exception.h"
-#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 
@@ -13,7 +12,7 @@ bool abort_multipart::can_handle(const http_request& req) {
            !req.object_key().empty() && req.query("uploadId");
 }
 
-coro<void> abort_multipart::handle(http_request& req) const {
+coro<http_response> abort_multipart::handle(http_request& req) const {
     metric<entrypoint_abort_multipart_req>::increase(1);
 
     auto upload_id = *req.query("uploadId");
@@ -28,7 +27,7 @@ coro<void> abort_multipart::handle(http_request& req) const {
             "aborted or completed.");
     }
 
-    co_await write(req.socket(), http_response{});
+    co_return http_response{};
 }
 
 } // namespace uh::cluster

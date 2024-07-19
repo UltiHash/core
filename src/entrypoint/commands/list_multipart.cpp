@@ -6,7 +6,9 @@
 
 namespace uh::cluster {
 
-static http_response
+namespace {
+
+http_response
 get_response(const std::string& bucket_name,
              const std::map<std::string, std::string>& ongoing) noexcept {
 
@@ -27,6 +29,8 @@ get_response(const std::string& bucket_name,
     return res;
 }
 
+} // namespace
+
 list_multipart::list_multipart(const reference_collection& collection)
     : m_collection(collection) {}
 
@@ -36,7 +40,7 @@ bool list_multipart::can_handle(const http_request& req) {
            req.object_key().empty() && req.query("uploads");
 }
 
-coro<void> list_multipart::handle(http_request& req) const {
+coro<http_response> list_multipart::handle(http_request& req) const {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.bucket();
 
@@ -47,7 +51,7 @@ coro<void> list_multipart::handle(http_request& req) const {
                                 "no multipart uploads");
     }
 
-    co_await write(req.socket(), get_response(bucket_name, ongoing));
+    co_return get_response(bucket_name, ongoing);
 }
 
 } // namespace uh::cluster

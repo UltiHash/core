@@ -35,7 +35,7 @@ bool init_multipart::can_handle(const http_request& req) {
            !req.object_key().empty() && req.query("uploads");
 }
 
-coro<void> init_multipart::handle(http_request& req) {
+coro<http_response> init_multipart::handle(http_request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
     try {
         co_await m_collection.directory.bucket_exists(req.bucket());
@@ -46,7 +46,7 @@ coro<void> init_multipart::handle(http_request& req) {
     const auto upload_id = co_await m_collection.uploads.insert_upload(
         req.bucket(), req.object_key(), req.header("Content-Type"));
 
-    co_await write(req.socket(), get_response(req, upload_id));
+    co_return get_response(req, upload_id);
 }
 
 } // namespace uh::cluster

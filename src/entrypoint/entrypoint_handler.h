@@ -49,14 +49,51 @@ public:
             auto req = co_await http_request::create(s);
             LOG_DEBUG() << s.remote_endpoint() << ": read request: " << *req;
 
-            auto resp = co_await handle_request(*req);
+            std::optional<http_response> resp;
+            bool stay_alive = req->keep_alive();
 
-            if (resp.first) {
-                LOG_DEBUG() << s.remote_endpoint() << ": " << *resp.first;
-                co_await write(s, std::move(*resp.first));
+            try {
+                resp = co_await handle_request(*req);
+                metric<success>::increase(1);
+            } catch (const command_exception& e) {
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                resp = make_response(e);
+            } catch (const boost::system::system_error& se) {
+                if (se.code() != http::error::end_of_stream) {
+                    LOG_ERROR() << s.remote_endpoint() << ": closed connection";
+                    break;
+                }
+
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+
+                resp = make_response(command_exception(
+                    http::status::bad_request, "BadRequest", "bad request"));
+                stay_alive = false;
+            } catch (const std::invalid_argument& e) {
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+
+                resp = make_response(command_exception(
+                    http::status::bad_request, "InvalidArgument",
+                    "encountered invalid argument")),
+                stay_alive = false;
+            } catch (const std::exception& e) {
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+
+                resp = make_response(command_exception());
+                stay_alive = false;
             }
 
-            if (resp.second || !req->keep_alive()) {
+            if (resp) {
+                LOG_DEBUG()
+                    << s.remote_endpoint() << ", sending response: " << *resp;
+                co_await write(s, std::move(*resp));
+            } else {
+                LOG_INFO() << s.remote_endpoint()
+                           << ", no response, closing connection";
+                break;
+            }
+
+            if (!stay_alive) {
                 break;
             }
         }
@@ -65,55 +102,23 @@ public:
         s.close();
     }
 
-    coro<std::pair<std::optional<http_response>, bool>>
-    handle_request(http_request& req) {
-        try {
-            co_await dispatch_unpack_tuple(
-                req, m_req_types,
-                std::make_index_sequence<
-                    std::tuple_size_v<decltype(m_req_types)>>());
-            metric<success>::increase(1);
-            co_return std::make_pair(std::nullopt, false);
-        } catch (const command_exception& e) {
-            LOG_ERROR() << req.socket().remote_endpoint() << ": " << e.what();
-            co_return std::make_pair(make_response(e), false);
-        } catch (const boost::system::system_error& se) {
-            if (se.code() != http::error::end_of_stream) {
-                LOG_ERROR()
-                    << req.socket().remote_endpoint() << ": closed connection";
-                co_return std::make_pair(std::nullopt, true);
-            }
-
-            LOG_ERROR() << req.socket().remote_endpoint() << ": " << se.what();
-
-            co_return std::make_pair(
-                make_response(command_exception(http::status::bad_request,
-                                                "BadRequest", "bad request")),
-                true);
-        } catch (const std::invalid_argument& e) {
-            LOG_ERROR() << req.socket().remote_endpoint() << ": " << e.what();
-
-            co_return std::make_pair(
-                make_response(command_exception(
-                    http::status::bad_request, "InvalidArgument",
-                    "encountered invalid argument")),
-                true);
-        } catch (const std::exception& e) {
-            LOG_ERROR() << req.socket().remote_endpoint() << ": " << e.what();
-
-            co_return std::make_pair(make_response(command_exception()), true);
-        }
+    coro<http_response> handle_request(http_request& req) {
+        return dispatch_unpack_tuple(
+            req, m_req_types,
+            std::make_index_sequence<
+                std::tuple_size_v<decltype(m_req_types)>>());
     }
 
     template <std::size_t... Is>
-    coro<void> dispatch_unpack_tuple(http_request& req, auto&& req_types,
-                                     std::index_sequence<Is...>) {
+    coro<http_response> dispatch_unpack_tuple(http_request& req,
+                                              auto&& req_types,
+                                              std::index_sequence<Is...>) {
         return dispatch_front(req, std::get<Is>(req_types)...);
     }
 
     template <typename command, typename... commands>
-    coro<void> dispatch_front(http_request& req, command&& head,
-                              commands&&... tail) {
+    coro<http_response> dispatch_front(http_request& req, command&& head,
+                                       commands&&... tail) {
         if (head.can_handle(req)) {
             LOG_DEBUG() << req.socket().remote_endpoint()
                         << ": handling request " << class_name<command>();
@@ -122,7 +127,7 @@ public:
         return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
-    coro<void> dispatch_front(const http_request& req) {
+    coro<http_response> dispatch_front(const http_request& req) {
         throw command_exception(http::status::bad_request, "CommandNotFound",
                                 "no such command found");
     }

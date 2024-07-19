@@ -63,7 +63,7 @@ void complete_multipart::validate(const upload_info& info,
     }
 }
 
-coro<void> complete_multipart::handle(http_request& req) const {
+coro<http_response> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -101,7 +101,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     res << pt;
 
     co_await m_collection.uploads.remove_upload(upload_id);
-    co_await write(req.socket(), std::move(res));
+    co_return res;
 }
 
 } // namespace uh::cluster

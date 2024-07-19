@@ -22,7 +22,7 @@ static void validate(const http_request& req) {
     }
 }
 
-coro<void> multipart::handle(http_request& req) const {
+coro<http_response> multipart::handle(http_request& req) const {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);
@@ -45,6 +45,7 @@ coro<void> multipart::handle(http_request& req) const {
     }
 
     auto md5 = calculate_md5(buffer.span());
+
     http_response res;
     res.set("ETag", md5);
 
@@ -52,7 +53,7 @@ coro<void> multipart::handle(http_request& req) const {
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer.size(), std::move(md5));
 
-    co_await write(req.socket(), std::move(res));
+    co_return res;
 }
 
 } // namespace uh::cluster

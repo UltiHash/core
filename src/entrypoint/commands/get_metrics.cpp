@@ -13,13 +13,13 @@ bool get_metrics::can_handle(const http_request& req) {
            req.object_key() == "v1/metrics/cluster";
 }
 
-coro<void> get_metrics::handle(http_request& req) const {
+coro<http_response> get_metrics::handle(http_request& req) const {
     metric<entrypoint_get_metrics_req>::increase(1);
-    http_response res;
     auto raw_data_size = co_await m_collection.directory.data_size();
     auto effective_data_size =
         co_await m_collection.gdv.get_used_space(req.m_ctx);
 
+    http_response res;
     res.set_body(
         std::make_unique<string_body>("{\n"
                                       "  \"version\": \"" +
@@ -36,7 +36,7 @@ coro<void> get_metrics::handle(http_request& req) const {
                                       "\n"
                                       "}"));
 
-    co_await write(req.socket(), std::move(res));
+    co_return res;
 }
 
 } // namespace uh::cluster

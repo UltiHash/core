@@ -14,7 +14,7 @@ bool copy_object::can_handle(const http_request& req) {
            !req.object_key().empty() && req.header("x-amz-copy-source");
 }
 
-coro<void> copy_object::handle(http_request& req) const {
+coro<http_response> copy_object::handle(http_request& req) const {
     auto copy_source = req.header("x-amz-copy-source");
     if (!copy_source) {
         throw std::runtime_error("x-amz-copy-source not defined");
@@ -45,10 +45,7 @@ coro<void> copy_object::handle(http_request& req) const {
     http_response res;
     res << pt;
 
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << ": copy_object response: " << res;
-
-    co_await write(req.socket(), std::move(res));
+    co_return res;
 }
 
 } // namespace uh::cluster

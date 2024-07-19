@@ -71,7 +71,7 @@ bool put_object::can_handle(const http_request& req) {
            !req.header("x-amz-copy-source");
 }
 
-coro<void> put_object::handle(http_request& req) const {
+coro<http_response> put_object::handle(http_request& req) const {
 
     metric<entrypoint_put_object_req>::increase(1);
     try {
@@ -115,7 +115,7 @@ coro<void> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
-        co_await write(req.socket(), std::move(res));
+        co_return res;
 
     } catch (const error_exception& e) {
         LOG_ERROR() << req.socket().remote_endpoint()

@@ -27,10 +27,11 @@ coro<std::size_t> string_body::read(std::span<char> buffer) {
 }
 
 http_response::http_response()
-    : m_res(http::status::ok, 11) {}
+    : http_response(http::status::ok) {}
 
 http_response::http_response(http::status status)
-    : m_res(status, 11) {}
+    : m_res(status, 11),
+      m_body(std::make_unique<string_body>("")) {}
 
 void http_response::set_body(
     std::unique_ptr<uh::cluster::body>&& body) noexcept {

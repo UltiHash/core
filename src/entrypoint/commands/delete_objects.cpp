@@ -46,7 +46,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<void> delete_objects::handle(http_request& req) const {
+coro<http_response> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.socket().remote_endpoint()
@@ -104,10 +104,7 @@ coro<void> delete_objects::handle(http_request& req) const {
         }
     }
 
-    auto res = get_response(success, failure);
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << ": delete_objects: " << res;
-    co_await write(req.socket(), std::move(res));
+    co_return get_response(success, failure);
 }
 
 } // namespace uh::cluster

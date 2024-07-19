@@ -38,6 +38,7 @@ public:
 
         co_await m_storage.read_address(buffer.data(), partial_addr);
         m_total += buffer_size;
+        m_size -= buffer_size;
         co_return buffer_size;
     }
 
@@ -74,7 +75,7 @@ bool get_object::can_handle(const http_request& req) {
            !req.object_key().empty() && !req.query("attributes");
 }
 
-coro<void> get_object::handle(http_request& req) const {
+coro<http_response> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
     try {
 
@@ -86,8 +87,7 @@ coro<void> get_object::handle(http_request& req) const {
         res.set("Content-Type", obj.mime);
         res.set_body(std::make_unique<local_read_handle>(m_collection.gdv,
                                                          std::move(*obj.addr)));
-
-        co_await write(req.socket(), std::move(res));
+        co_return res;
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");
