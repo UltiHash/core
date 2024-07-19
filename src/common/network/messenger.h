@@ -1,6 +1,7 @@
 #ifndef CORE_MESSENGER_H
 #define CORE_MESSENGER_H
 
+#include "common/coroutines/context.h"
 #include "messenger_core.h"
 
 #include <zpp_bits.h>
@@ -54,35 +55,40 @@ public:
         co_return std::move(dedupe_resp);
     }
 
-    coro<void> send_address(const message_type type, const address& addr) {
+    coro<void> send_address(context& ctx, const message_type type,
+                            const address& addr) {
         register_write_buffer(addr.pointers);
         register_write_buffer(addr.sizes);
-        co_await send_buffers(type);
+        co_await send_buffers(ctx, type);
     }
 
-    coro<void> send_fragment(const message_type type, const fragment frag) {
+    coro<void> send_fragment(context& ctx, const message_type type,
+                             const fragment frag) {
         register_write_buffer(frag.pointer.get_data(), 2);
         register_write_buffer(frag.size);
-        co_await send_buffers(type);
+        co_await send_buffers(ctx, type);
     }
 
-    coro<void> send_uint128_t(const message_type type, const uint128_t num) {
+    coro<void> send_uint128_t(context& ctx, const message_type type,
+                              const uint128_t num) {
         register_write_buffer(num.get_data(), 2);
-        co_await send_buffers(type);
+        co_await send_buffers(ctx, type);
     }
 
     template <typename T>
     requires std::is_arithmetic_v<T>
-    coro<void> send_primitive(const message_type type, const T val) {
+    coro<void> send_primitive(context& ctx, const message_type type,
+                              const T val) {
         register_write_buffer(val);
-        co_await send_buffers(type);
+        co_await send_buffers(ctx, type);
     }
 
-    coro<void> send_dedupe_response(const dedupe_response& dedupe_resp) {
+    coro<void> send_dedupe_response(context& ctx,
+                                    const dedupe_response& dedupe_resp) {
         register_write_buffer(dedupe_resp.effective_size);
         register_write_buffer(dedupe_resp.addr.pointers);
         register_write_buffer(dedupe_resp.addr.sizes);
-        co_await send_buffers(SUCCESS);
+        co_await send_buffers(ctx, SUCCESS);
     }
 };
 
