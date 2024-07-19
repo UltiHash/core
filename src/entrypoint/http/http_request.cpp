@@ -280,12 +280,6 @@ coro<std::size_t> http_request::read_body(std::span<char> buffer) {
     return m_decoder->read(buffer);
 }
 
-coro<void>
-http_request::respond(const http::response<http::string_body>& resp) {
-    co_await boost::beast::http::async_write(m_stream, resp,
-                                             boost::asio::use_awaitable);
-}
-
 std::optional<std::string> http_request::query(const std::string& name) const {
     if (auto it = m_params.find(name); it != m_params.end()) {
         return it->second;

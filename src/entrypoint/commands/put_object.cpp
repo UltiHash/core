@@ -82,11 +82,10 @@ coro<void> put_object::handle(http_request& req) const {
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
-            boost::beast::http::response<http::string_body> res{
-                http::response<http::string_body>{http::status::continue_, 11}};
             LOG_INFO() << req.socket().remote_endpoint()
                        << ": sending 100 CONTINUE";
-            co_await req.respond(res);
+            co_await async_write(req.socket(),
+                                 http_response(http::status::continue_));
         }
 
         md5 hash;
