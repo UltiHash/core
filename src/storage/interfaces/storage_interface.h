@@ -15,7 +15,6 @@ struct storage_interface {
                                     const std::vector<size_t>& offsets) = 0;
     virtual coro<void> sync(const address& addr) = 0;
     virtual coro<size_t> get_used_space() = 0;
-    virtual coro<size_t> get_free_space() = 0;
     virtual ~storage_interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;
 };

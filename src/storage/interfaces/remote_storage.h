@@ -68,13 +68,6 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
-    coro<size_t> get_free_space() override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send(STORAGE_AVAILABLE_REQ, {});
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_primitive<size_t>(message_header);
-    }
-
 private:
     client m_storage_service;
 };

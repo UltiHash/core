@@ -6,6 +6,8 @@
 #include "etcd/KeepAlive.hpp"
 #include "etcd/SyncClient.hpp"
 #include <string>
+#include "namespace.h"
+
 
 namespace uh::cluster {
 
@@ -15,13 +17,15 @@ public:
     service_registry(uh::cluster::role role, std::size_t index,
                      etcd::SyncClient& etcd_client);
 
-    [[nodiscard]] const std::string& get_service_name() const;
+    [[nodiscard]] std::string get_service_name() const;
 
     class registration {
     public:
-        registration(etcd::SyncClient& client,
+        registration(etcd::SyncClient& client, role role, std::size_t index,
                      const std::map<std::string, std::string>& kv_pairs,
                      std::size_t ttl);
+
+        void publish(etcd_service_attributes key, const std::function<std::string()>& func);
 
         ~registration();
 
@@ -29,6 +33,13 @@ public:
         etcd::SyncClient& m_client;
         int64_t m_lease;
         etcd::KeepAlive m_keepalive;
+
+        const role m_service_role;
+        const size_t m_id;
+        std::atomic_bool m_stop = false;
+        std::map<std::string, std::function<std::string()>> m_published_attributes;
+        std::mutex m_attributes_mutex;
+        std::thread m_publish_thread;
     };
 
     std::unique_ptr<registration> register_service(const server_config& config);
@@ -36,7 +47,8 @@ public:
 private:
     static constexpr std::size_t m_etcd_default_ttl = 30;
 
-    const std::string m_service_name;
+    const role m_service_role;
+    const size_t m_id;
     etcd::SyncClient& m_etcd_client;
 };
 

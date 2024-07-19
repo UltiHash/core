@@ -60,6 +60,30 @@ std::ostream& operator<<(std::ostream& out, const basic_timer<clock>& t) {
 
 using timer = basic_timer<std::chrono::steady_clock>;
 
+class stop_watch {
+public:
+
+    inline void start () noexcept {
+        m_start = std::chrono::steady_clock::now();
+    }
+
+    inline void stop () noexcept {
+        auto now = std::chrono::steady_clock::now ();
+        m_duration += now - m_start;
+    }
+
+    inline constexpr double duration () const {
+        return m_duration.count();
+    }
+
+    inline constexpr void reset() {
+        m_duration = {};
+    }
+
+private:
+    std::chrono::steady_clock::time_point m_start;
+    std::chrono::duration <double> m_duration;
+};
 } // namespace uh::cluster
 
 #endif // UH_CLUSTER_TIMEOUT_H
