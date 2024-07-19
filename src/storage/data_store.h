@@ -2,8 +2,11 @@
 #define CORE_DATA_STORE_H
 
 #include "common/types/scoped_buffer.h"
+#include "reference_counter.h"
 
 #include "common/types/address.h"
+#include "common/utils/common.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
@@ -23,6 +26,7 @@ struct data_store_config {
     std::filesystem::path working_dir;
     size_t file_size;
     size_t max_data_store_size;
+    size_t page_size;
 };
 
 class data_store {
@@ -146,6 +150,8 @@ private:
     std::condition_variable m_async_cv;
     std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
         m_ongoing_async_writes;
+    reference_counter m_refcounter;
+
 };
 
 } // end namespace uh::cluster

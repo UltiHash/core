@@ -103,7 +103,8 @@ coro<void> put_object::handle(http_request& req) const {
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
                    .addr = std::move(resp.addr),
-                   .etag = tag};
+                   .etag = tag,
+                   .mime = req.header("Content-Type")};
         co_await m_collection.directory.put_object(req.bucket(), obj);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
