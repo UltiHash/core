@@ -67,10 +67,6 @@ void http_response::set(const std::string& header,
     }
 }
 
-void http_response::set_etag(const std::string& etag) {
-    m_res.set(http::field::etag, etag);
-}
-
 http_response& operator<<(http_response& res,
                           const boost::property_tree::ptree& pt) {
     std::ostringstream ss;

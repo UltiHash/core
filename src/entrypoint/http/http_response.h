@@ -42,7 +42,6 @@ public:
 
     void set_body(std::unique_ptr<uh::cluster::body>&& body) noexcept;
 
-    void set_etag(const std::string& etag);
     void set_effective_size(std::size_t effective_size);
     void set_original_size(std::size_t original_size);
 

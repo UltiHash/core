@@ -46,7 +46,7 @@ coro<void> multipart::handle(http_request& req) const {
 
     auto md5 = calculate_md5(buffer.span());
     http_response res;
-    res.set_etag(md5);
+    res.set("ETag", md5);
 
     co_await m_collection.uploads.append_upload_part_info(
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,

@@ -111,7 +111,7 @@ coro<void> put_object::handle(http_request& req) const {
             static_cast<double>(content_length) / MEBI_BYTE);
 
         http_response res;
-        res.set_etag(tag);
+        res.set("ETag", tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 

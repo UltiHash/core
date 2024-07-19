@@ -90,7 +90,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
     http_response res;
-    res.set_etag(etag);
+    res.set("ETag", etag);
     res.set_original_size(info.data_size);
     res.set_effective_size(info.effective_size);
 
