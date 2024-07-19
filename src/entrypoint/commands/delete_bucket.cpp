@@ -23,8 +23,7 @@ coro<void> delete_bucket::handle(http_request& req) const {
         throw_from_error(e.error());
     }
 
-    http_response res;
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), http_response{});
 }
 
 } // namespace uh::cluster

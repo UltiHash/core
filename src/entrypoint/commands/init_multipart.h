@@ -34,8 +34,7 @@ public:
         const auto upload_id = co_await m_collection.uploads.insert_upload(
             req.bucket(), req.object_key(), req.header("Content-Type"));
 
-        auto res = get_response(req, upload_id);
-        co_await req.respond(res.get_prepared_response());
+        co_await async_write(req.socket(), get_response(req, upload_id));
     }
 
 private:

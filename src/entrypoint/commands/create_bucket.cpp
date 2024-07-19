@@ -18,8 +18,7 @@ coro<void> create_bucket::handle(http_request& req) const {
     try {
         co_await m_collection.directory.put_bucket(bucket_id);
 
-        http_response res;
-        co_await req.respond(res.get_prepared_response());
+        co_await async_write(req.socket(), http_response{});
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;

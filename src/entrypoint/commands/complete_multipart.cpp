@@ -101,7 +101,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     res << pt;
 
     co_await m_collection.uploads.remove_upload(upload_id);
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

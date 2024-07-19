@@ -54,7 +54,7 @@ coro<void> multipart::handle(http_request& req) const {
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer.size(), std::move(md5));
 
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

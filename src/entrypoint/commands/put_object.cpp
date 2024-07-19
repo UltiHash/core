@@ -116,7 +116,7 @@ coro<void> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
-        co_await req.respond(res.get_prepared_response());
+        co_await async_write(req.socket(), std::move(res));
 
     } catch (const error_exception& e) {
         LOG_ERROR() << req.socket().remote_endpoint()

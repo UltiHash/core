@@ -35,7 +35,7 @@ coro<void> get_metrics::handle(http_request& req) const {
                  "\n"
                  "}");
 
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

@@ -47,8 +47,7 @@ coro<void> list_multipart::handle(http_request& req) const {
                                 "no multipart uploads");
     }
 
-    auto res = get_response(bucket_name, ongoing);
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), get_response(bucket_name, ongoing));
 }
 
 } // namespace uh::cluster

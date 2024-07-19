@@ -22,10 +22,7 @@ coro<void> delete_object::handle(http_request& req) const {
                                                       req.object_key());
 
         m_collection.limits.free_storage_size(object.size);
-        http_response res;
-
-        LOG_DEBUG() << "delete_object response: " << res;
-        co_await req.respond(res.get_prepared_response());
+        co_await async_write(req.socket(), http_response{});
     } catch (const error_exception& e) {
         throw_from_error(e.error());
     }

@@ -3,6 +3,7 @@
 
 #include <boost/beast.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <common/types/common_types.h>
 
 namespace uh::cluster {
 
@@ -36,6 +37,11 @@ http_response& operator<<(http_response& res,
                           const boost::property_tree::ptree& pt);
 
 std::ostream& operator<<(std::ostream& out, const http_response& res);
+
+void write(boost::asio::ip::tcp::socket& out, http_response&& res);
+
+coro<void> async_write(boost::asio::ip::tcp::socket& out, http_response&& res);
+
 } // namespace uh::cluster
 
 #endif

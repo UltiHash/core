@@ -193,7 +193,7 @@ coro<void> list_objects_v2::handle(http_request& req) const {
 
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << " list_objects_v2 response: " << res;
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

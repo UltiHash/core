@@ -155,8 +155,7 @@ coro<void> list_objects::handle(http_request& req) const {
                                 "The specified bucket does not exist.");
     }
 
-    auto res = get_response(obj_list, req);
-    co_await req.respond(res.get_prepared_response());
+    co_await async_write(req.socket(), get_response(obj_list, req));
 }
 
 } // namespace uh::cluster

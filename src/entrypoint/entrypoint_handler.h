@@ -62,7 +62,7 @@ public:
                     LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
                     LOG_DEBUG() << s.remote_endpoint() << ": " << response;
 
-                    http::write(s, response.get_prepared_response());
+                    write(s, std::move(response));
                 }
 
                 if (!req->keep_alive()) {
@@ -78,7 +78,7 @@ public:
                 LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
                 LOG_DEBUG() << s.remote_endpoint() << ": " << response;
 
-                http::write(s, response.get_prepared_response());
+                write(s, std::move(response));
                 s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                 s.close();
                 throw;
@@ -91,7 +91,7 @@ public:
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             LOG_DEBUG() << s.remote_endpoint() << ": " << response;
 
-            http::write(s, response.get_prepared_response());
+            write(s, std::move(response));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
@@ -101,7 +101,7 @@ public:
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             LOG_DEBUG() << s.remote_endpoint() << ": " << response;
 
-            http::write(s, response.get_prepared_response());
+            write(s, std::move(response));
             s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             s.close();
             throw;
