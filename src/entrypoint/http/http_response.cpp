@@ -84,11 +84,7 @@ std::ostream& operator<<(std::ostream& out, const http_response& res) {
     return out;
 }
 
-void write(asio::ip::tcp::socket& out, http_response&& res) {
-    boost::beast::http::write(out, res.get_prepared_response());
-}
-
-coro<void> async_write(asio::ip::tcp::socket& out, http_response&& res) {
+coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
     co_await boost::beast::http::async_write(out, res.get_prepared_response(),
                                              asio::use_awaitable);
 }

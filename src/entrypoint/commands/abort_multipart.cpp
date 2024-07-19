@@ -28,7 +28,7 @@ coro<void> abort_multipart::handle(http_request& req) const {
             "aborted or completed.");
     }
 
-    co_await async_write(req.socket(), http_response{});
+    co_await write(req.socket(), http_response{});
 }
 
 } // namespace uh::cluster

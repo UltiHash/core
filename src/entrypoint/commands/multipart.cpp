@@ -32,8 +32,7 @@ coro<void> multipart::handle(http_request& req) const {
         expect && *expect == "100-continue") {
         LOG_INFO() << req.socket().remote_endpoint()
                    << ": sending 100 CONTINUE";
-        co_await async_write(req.socket(),
-                             http_response(http::status::continue_));
+        co_await write(req.socket(), http_response(http::status::continue_));
     }
 
     auto size = co_await req.read_body(buffer.span());
@@ -53,7 +52,7 @@ coro<void> multipart::handle(http_request& req) const {
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer.size(), std::move(md5));
 
-    co_await async_write(req.socket(), std::move(res));
+    co_await write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

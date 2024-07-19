@@ -48,7 +48,7 @@ coro<void> copy_object::handle(http_request& req) const {
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": copy_object response: " << res;
 
-    co_await async_write(req.socket(), std::move(res));
+    co_await write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

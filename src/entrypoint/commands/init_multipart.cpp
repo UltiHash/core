@@ -46,7 +46,7 @@ coro<void> init_multipart::handle(http_request& req) {
     const auto upload_id = co_await m_collection.uploads.insert_upload(
         req.bucket(), req.object_key(), req.header("Content-Type"));
 
-    co_await async_write(req.socket(), get_response(req, upload_id));
+    co_await write(req.socket(), get_response(req, upload_id));
 }
 
 } // namespace uh::cluster

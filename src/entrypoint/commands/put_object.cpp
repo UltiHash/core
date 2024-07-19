@@ -84,8 +84,8 @@ coro<void> put_object::handle(http_request& req) const {
             expect && *expect == "100-continue") {
             LOG_INFO() << req.socket().remote_endpoint()
                        << ": sending 100 CONTINUE";
-            co_await async_write(req.socket(),
-                                 http_response(http::status::continue_));
+            co_await write(req.socket(),
+                           http_response(http::status::continue_));
         }
 
         md5 hash;
@@ -115,7 +115,7 @@ coro<void> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
 
-        co_await async_write(req.socket(), std::move(res));
+        co_await write(req.socket(), std::move(res));
 
     } catch (const error_exception& e) {
         LOG_ERROR() << req.socket().remote_endpoint()

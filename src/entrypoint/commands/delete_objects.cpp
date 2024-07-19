@@ -107,7 +107,7 @@ coro<void> delete_objects::handle(http_request& req) const {
     auto res = get_response(success, failure);
     LOG_DEBUG() << req.socket().remote_endpoint()
                 << ": delete_objects: " << res;
-    co_await async_write(req.socket(), std::move(res));
+    co_await write(req.socket(), std::move(res));
 }
 
 } // namespace uh::cluster

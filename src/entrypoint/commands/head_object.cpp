@@ -30,7 +30,7 @@ coro<void> head_object::handle(const http_request& req) const {
         LOG_DEBUG() << req.socket().remote_endpoint()
                     << ": head_object response: " << res;
 
-        co_await async_write(req.socket(), std::move(res));
+        co_await write(req.socket(), std::move(res));
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");

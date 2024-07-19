@@ -36,7 +36,7 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 coro<void> list_buckets::handle(http_request& req) const {
     metric<entrypoint_list_buckets_req>::increase(1);
     auto buckets = co_await m_collection.directory.list_buckets();
-    co_await async_write(req.socket(), get_response(buckets));
+    co_await write(req.socket(), get_response(buckets));
 }
 
 } // namespace uh::cluster

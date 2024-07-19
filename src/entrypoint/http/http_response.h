@@ -44,9 +44,7 @@ http_response& operator<<(http_response& res,
 
 std::ostream& operator<<(std::ostream& out, const http_response& res);
 
-void write(boost::asio::ip::tcp::socket& out, http_response&& res);
-
-coro<void> async_write(boost::asio::ip::tcp::socket& out, http_response&& res);
+coro<void> write(boost::asio::ip::tcp::socket& out, http_response&& res);
 
 } // namespace uh::cluster
 
