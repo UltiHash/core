@@ -67,6 +67,11 @@ static constexpr int ETCD_RETRY_INTERVAL = 1;
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
+#ifdef DISABLE_STORAGE_REFCOUNT
+static constexpr bool enable_storage_refcount = false;
+#else
+static constexpr bool enable_storage_refcount = true;
+#endif
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
 

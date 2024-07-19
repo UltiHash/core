@@ -221,7 +221,9 @@ void data_store::perform_write(const address& addr) {
                   static_cast<long>(alloc.seek) + written))
         ;
 
-    m_refcounter.increment(pointer, data.size());
+    if(enable_storage_refcount) {
+        m_refcounter.increment(pointer, data.size());
+    }
 
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
