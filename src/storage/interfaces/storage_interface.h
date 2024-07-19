@@ -13,6 +13,8 @@ struct storage_interface {
                                        size_t size) = 0;
     virtual coro<void> read_address(char* buffer, const address& addr,
                                     const std::vector<size_t>& offsets) = 0;
+    virtual coro<void> link(const address& addr) = 0;
+    virtual coro<void> unlink(const address& addr) = 0;
     virtual coro<void> sync(const address& addr) = 0;
     virtual coro<size_t> get_used_space() = 0;
     virtual coro<size_t> get_free_space() = 0;

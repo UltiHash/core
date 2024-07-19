@@ -26,6 +26,8 @@ enum message_type : uint8_t {
     STORAGE_READ_REQ = 8,
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
+    STORAGE_LINK_REQ = 9,
+    STORAGE_UNLINK_REQ = 4,
     STORAGE_USED_REQ = 5,
     STORAGE_AVAILABLE_REQ = 7,
 
