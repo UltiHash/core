@@ -82,30 +82,34 @@ void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
 
 BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
     temp_directory tmp_dir;
+    context ctx;
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     auto gdv = get_global_data_view();
     fragment_set frag_set(frag_set_log_path, 1000, *gdv);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_a.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_a =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_a.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_b(4 * KIBI_BYTE);
     memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_b.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_b =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_b.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_c(2 * KIBI_BYTE);
     memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_c.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_c =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_c.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     insert_a(fragment_a, addr_a, frag_set);
     insert_a_again(fragment_a, addr_a, frag_set);
@@ -116,29 +120,34 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     temp_directory tmp_dir;
+    context ctx;
+
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     auto gdv = get_global_data_view();
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_a.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_a =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_a.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_b(4 * KIBI_BYTE);
     memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_b.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_b =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_b.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_c(2 * KIBI_BYTE);
     memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_c.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_c =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_c.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     {
         fragment_set frag_set(frag_set_log_path, 1000, *gdv);
@@ -162,16 +171,19 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
+    context ctx;
+
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     auto gdv = get_global_data_view();
     fragment_set frag_set(frag_set_log_path, 1000, *gdv);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_a.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_a =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_a.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_b(8 * KIBI_BYTE);
     memset(fragment_b.data(), 'a', 2 * KIBI_BYTE);
@@ -179,20 +191,22 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
 
-    auto addr_b = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_b.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_b =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_b.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     shared_buffer<char> fragment_c(8 * KIBI_BYTE);
     memset(fragment_c.data(), 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 2 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
-    auto addr_c = boost::asio::co_spawn(gdv->get_executor(),
-                                        gdv->write(fragment_c.string_view()),
-                                        boost::asio::use_future)
-                      .get();
+    auto addr_c =
+        boost::asio::co_spawn(gdv->get_executor(),
+                              gdv->write(ctx, fragment_c.string_view()),
+                              boost::asio::use_future)
+            .get();
 
     // This will create fragment_elements which ONLY contain the prefix
     auto prefix_a = fragment_a.string_view().substr(

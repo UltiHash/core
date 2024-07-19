@@ -232,7 +232,7 @@ make_decoder(const http::request_parser<http::empty_body>::value_type& req,
 } // namespace
 
 coro<std::unique_ptr<http_request>>
-http_request::create(asio::ip::tcp::socket& s) {
+http_request::create(context& ctx, asio::ip::tcp::socket& s) {
 
     http::request_parser<http::empty_body> req;
     boost::beast::flat_buffer buffer;
@@ -242,14 +242,15 @@ http_request::create(asio::ip::tcp::socket& s) {
                                             asio::use_awaitable);
 
     co_return std::unique_ptr<http_request>(
-        new http_request(s, std::move(req.get()), std::move(buffer)));
+        new http_request(ctx, s, std::move(req.get()), std::move(buffer)));
 }
 
 http_request::http_request(
-    boost::asio::ip::tcp::socket& stream,
+    context& ctx, boost::asio::ip::tcp::socket& stream,
     http::request_parser<http::empty_body>::value_type&& req,
     beast::flat_buffer&& initial)
-    : m_stream(stream),
+    : m_ctx(ctx),
+      m_stream(stream),
       m_req(std::move(req)),
       m_decoder(make_decoder(m_req, m_stream, std::move(initial))) {
 

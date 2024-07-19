@@ -13,28 +13,24 @@
 - Improved compatibility level with S3 API
 - Fixed handling of XML-reserved characters in object keys
 - Added REST API for querying raw and effective size of data in the cluster
-- A new read command in storage that returns data if available, otherwise no errors
+- Fixed incorrect XML in S3 API responses
+- Fixed occasional application hangs, resulting in bad performance
+- Improved deduplication algorithm
 - More efficient storage usage by truncating unused spaces in files
-- Better pursuing of perfect matches in deduplicator
-- Fixed a bug in awaitable promise
-- More coroutines and less worker threads in deduplicator
-- Fixes in XML responses (generated XML)
 
 ## [0.5.0] 2024-06-06
-- Removed get bucket command
+- Removed support for S3 Outpost's GetBucket
 - Deduplication statistic collection
-- PySpark fixes (copy object, head object, etc.)
-- Removal of cold fragments
-- Better caching mechanism for deduplication set log
-- Pursuing perfect matches without looking into the set
-- Avoid removing first fragments of files as cold fragment from set.
-- Use postgresql database instead of directory service
+- Improve API support for PySpark (copy object, head object, etc.)
+- Replace directory service with PostgreSQL
+- Stablize memory requirements for deduplication
+- Performance improvements for deduplication
 
 ## [0.4.2] 2024-05-22
 - Fixed two bugs that result in poor deduplication
-- Interfaces for different services, providing merging ability of services together
-- A few bug fixes in entrypoint
-- Improved performance by removing extra memory initialisations
+- Support running as monolith
+- A few bug fixes in S3 API
+- Performance improvements
 
 ## [0.4.1] 2024-04-26
 - Fixed a bug where data corruption could occur when using multiple deduplicator instances
@@ -50,10 +46,10 @@
 ## [0.4.0] 2024-03-26
 - Refactored data store, mostly lockless writes and completely lockless reads
 - Fixed a bug in the free spot manager
-- Fixed the shared lock concurrency issue in directory service
+- Fixed concurrency issue in directory service
 - Fix hanging server when requesting empty files
-- Use buffered file I/O to improve performance of fragment-set log.
-- WARNING: New layout of fragment-set logfile breaks compatibility with old logfile format.
+- Use buffered file I/O to improve performance of deduplicator
+  WARNING: this breaks compatibility with instances
 - Caching fragments before writing them to storage
 
 ## [0.3.4] - 2024-03-15

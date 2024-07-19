@@ -20,12 +20,13 @@ public:
 
     template <typename Func>
     requires(!std::is_void_v<std::invoke_result_t<Func>>)
-    coro<std::invoke_result_t<Func>> post_in_workers(Func func) {
+    coro<std::invoke_result_t<Func>> post_in_workers(context& ctx, Func func) {
         auto pr =
             std::make_shared<awaitable_promise<std::invoke_result_t<Func>>>(
                 m_ioc);
 
-        auto f = [](auto& f, auto promise) {
+        auto f = [ctx](auto& f, auto promise) {
+            CURRENT_CONTEXT = ctx;
             try {
                 promise->set(f());
             } catch (const std::exception&) {
@@ -40,11 +41,12 @@ public:
 
     template <typename Func>
     requires(std::is_void_v<std::invoke_result_t<Func>>)
-    coro<void> post_in_workers(Func func) {
+    coro<void> post_in_workers(context& ctx, Func func) {
         auto pr = std::make_shared<awaitable_promise<void>>(m_ioc);
 
-        auto f = [](auto& f, auto promise) {
+        auto f = [ctx](auto& f, auto promise) {
             try {
+                CURRENT_CONTEXT = ctx;
                 f();
                 promise->set();
             } catch (const std::exception&) {
@@ -55,51 +57,6 @@ public:
         boost::asio::post(m_threads, std::bind(f, std::ref(func), pr));
 
         co_await pr->get();
-    }
-
-    template <typename Func, typename In,
-              typename R = std::invoke_result_t<Func, In>>
-    coro<std::vector<R>>
-    broadcast_from_io_thread_in_workers(Func func,
-                                        const std::vector<In>& inputs) {
-        std::vector<R> results(inputs.size());
-
-        std::vector<std::shared_ptr<awaitable_promise<void>>> promises(
-            inputs.size());
-        for (auto& pr : promises)
-            pr = std::make_shared<awaitable_promise<void>>(m_ioc);
-
-        size_t i = 0;
-        for (const auto& in : inputs) {
-            auto f = [&results, &in, size = inputs.size(), &promises, &func,
-                      i]() {
-                try {
-                    results[i] = func(in);
-                    promises[i]->set();
-                } catch (const std::exception&) {
-                    promises[i]->set_exception(std::current_exception());
-                }
-            };
-
-            boost::asio::post(m_threads, f);
-            i++;
-        }
-
-        std::exception_ptr eptr;
-        for (auto& pr : promises) {
-            try {
-                co_await pr->get();
-            } catch (const std::exception& e) {
-                LOG_ERROR() << e.what();
-                eptr = std::current_exception();
-            }
-        }
-
-        if (eptr) {
-            std::rethrow_exception(eptr);
-        }
-
-        co_return results;
     }
 
     ~worker_pool() {

@@ -25,6 +25,7 @@
 #include "commands/list_objects_v2.h"
 #include "commands/multipart.h"
 #include "commands/put_object.h"
+#include "common/coroutines/context.h"
 #include "http/command_exception.h"
 
 namespace uh::cluster {
@@ -43,11 +44,12 @@ public:
     }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
+
         try {
 
             for (;;) {
-
-                auto req = co_await http_request::create(s);
+                auto ctx = std::make_unique<context>();
+                auto req = co_await http_request::create(*ctx, s);
                 LOG_DEBUG()
                     << s.remote_endpoint() << ": read request: " << *req;
 
