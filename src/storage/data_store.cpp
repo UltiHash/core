@@ -221,7 +221,9 @@ void data_store::perform_write(const address& addr) {
                   static_cast<long>(alloc.seek) + written))
         ;
 
-    m_refcounter.increment(pointer, data.size());
+    if (enable_storage_refcount) {
+        m_refcounter.increment(pointer, data.size());
+    }
 
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
@@ -237,6 +239,26 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
         m_async_cv.wait(lk, [this, pointer, size = frag.size]() {
             return find_async_data(pointer, size).first == 0;
         });
+    }
+}
+
+void data_store::link(const address& addr) {
+    if (enable_storage_refcount) {
+        for (size_t i = 0; i < addr.size(); ++i) {
+            const auto frag = addr.get(i);
+            const auto pointer = pointer_traits::get_pointer(frag.pointer);
+            m_refcounter.increment(pointer, frag.size);
+        }
+    }
+}
+
+void data_store::unlink(const address& addr) {
+    if (enable_storage_refcount) {
+        for (size_t i = 0; i < addr.size(); ++i) {
+            const auto frag = addr.get(i);
+            const auto pointer = pointer_traits::get_pointer(frag.pointer);
+            m_refcounter.decrement(pointer, frag.size);
+        }
     }
 }
 

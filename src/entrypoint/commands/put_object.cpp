@@ -11,11 +11,12 @@ namespace {
 
 class double_buffer {
 public:
-    double_buffer(context& ctx, const reference_collection& collection, std::size_t size)
+    double_buffer(context& ctx, const reference_collection& collection,
+                  std::size_t size)
         : m_collection(collection),
           m_buffers(),
           m_index(0),
-          m_ctx(ctx){
+          m_ctx(ctx) {
         m_buffers[0].reserve(size);
         m_buffers[1].reserve(size);
     }
@@ -41,8 +42,8 @@ public:
 
         if (!b.empty()) {
             asio::co_spawn(m_collection.ioc,
-                           m_collection.dedupe_services.get()->deduplicate(m_ctx,
-                               {b.data(), b.size()}),
+                           m_collection.dedupe_services.get()->deduplicate(
+                               m_ctx, {b.data(), b.size()}),
                            use_awaitable_promise_cospawn(pr));
         } else {
             pr->set(dedupe_response());
@@ -168,8 +169,8 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
         co_return dedupe_response();
     }
 
-    co_return co_await m_collection.dedupe_services.get()->deduplicate(req.m_ctx,
-                                                                       {buffer.data(), buffer.size()});
+    co_return co_await m_collection.dedupe_services.get()->deduplicate(
+        req.m_ctx, {buffer.data(), buffer.size()});
 }
 
 } // namespace uh::cluster

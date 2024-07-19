@@ -58,6 +58,18 @@ struct remote_storage : public storage_interface {
         co_await m->recv_buffers(h);
     }
 
+    coro<void> link(context& ctx, const address& addr) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        co_await m->send_address(ctx, STORAGE_LINK_REQ, addr);
+        co_await m->recv_header();
+    }
+
+    coro<void> unlink(context& ctx, const address& addr) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        co_await m->send_address(ctx, STORAGE_UNLINK_REQ, addr);
+        co_await m->recv_header();
+    }
+
     coro<void> sync(context& ctx, const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_address(ctx, STORAGE_SYNC_REQ, addr);

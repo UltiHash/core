@@ -17,7 +17,8 @@ coro<void> get_metrics::handle(http_request& req) const {
     metric<entrypoint_get_metrics_req>::increase(1);
     http_response res;
     auto raw_data_size = co_await m_collection.directory.data_size();
-    auto effective_data_size = co_await m_collection.gdv.get_used_space(req.m_ctx);
+    auto effective_data_size =
+        co_await m_collection.gdv.get_used_space(req.m_ctx);
 
     res.set_body("{\n"
                  "  \"version\": \"" +

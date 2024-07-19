@@ -72,6 +72,66 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
+    coro<void> link(context& ctx, const address& addr) override {
+
+        std::vector<address> ds_addresses(m_data_stores.size());
+        for (size_t i = 0; i < addr.size(); i++) {
+            const auto f = addr.get(i);
+            const auto id = pointer_traits::get_data_store_id(f.pointer);
+            ds_addresses.at(id).push(f);
+        }
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+
+            auto p = std::make_shared<std::promise<void>>();
+            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
+                try {
+                    m_data_stores[i]->link(ds_addresses[i]);
+                    p->set_value();
+                } catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+        }
+        for (auto& f : futures) {
+            f.get();
+        }
+        co_return;
+    }
+
+    coro<void> unlink(context& ctx, const address& addr) override {
+
+        std::vector<address> ds_addresses(m_data_stores.size());
+        for (size_t i = 0; i < addr.size(); i++) {
+            const auto f = addr.get(i);
+            const auto id = pointer_traits::get_data_store_id(f.pointer);
+            ds_addresses.at(id).push(f);
+        }
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+
+            auto p = std::make_shared<std::promise<void>>();
+            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
+                try {
+                    m_data_stores[i]->unlink(ds_addresses[i]);
+                    p->set_value();
+                } catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+        }
+        for (auto& f : futures) {
+            f.get();
+        }
+        co_return;
+    }
+
     coro<void> sync(context& ctx, const address& addr) override {
 
         std::vector<address> ds_addresses(m_data_stores.size());

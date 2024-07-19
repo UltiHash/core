@@ -26,6 +26,8 @@ enum message_type : uint8_t {
     STORAGE_READ_REQ = 8,
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
+    STORAGE_LINK_REQ = 9,
+    STORAGE_UNLINK_REQ = 4,
     STORAGE_USED_REQ = 5,
     STORAGE_AVAILABLE_REQ = 7,
 
@@ -54,8 +56,10 @@ static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 static constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
 static constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
-static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS = "UH_DB_DIRECTORY_CONNECTIONS";
-static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS = "UH_DB_MULTIPART_CONNECTIONS";
+static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
+    "UH_DB_DIRECTORY_CONNECTIONS";
+static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
+    "UH_DB_MULTIPART_CONNECTIONS";
 static constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
@@ -67,6 +71,11 @@ static constexpr int ETCD_RETRY_INTERVAL = 1;
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
+#ifdef DISABLE_STORAGE_REFCOUNT
+static constexpr bool enable_storage_refcount = false;
+#else
+static constexpr bool enable_storage_refcount = true;
+#endif
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
 

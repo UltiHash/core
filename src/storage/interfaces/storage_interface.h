@@ -16,6 +16,8 @@ struct storage_interface {
                                     const address& addr,
 
                                     const std::vector<size_t>& offsets) = 0;
+    virtual coro<void> link(context& ctx, const address& addr) = 0;
+    virtual coro<void> unlink(context& ctx, const address& addr) = 0;
     virtual coro<void> sync(context& ctx, const address& addr) = 0;
     virtual coro<size_t> get_used_space(context& ctx) = 0;
     virtual coro<size_t> get_free_space(context& ctx) = 0;
