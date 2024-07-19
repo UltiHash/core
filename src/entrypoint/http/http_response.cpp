@@ -75,7 +75,7 @@ http_response& operator<<(http_response& res,
                           const boost::property_tree::ptree& pt) {
     std::ostringstream ss;
 
-    res.base().set("Content-Type", "application/xml");
+    res.set("Content-Type", "application/xml");
     boost::property_tree::write_xml(ss, pt);
 
     /**
