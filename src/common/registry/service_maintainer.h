@@ -169,6 +169,7 @@ protected:
             } catch (...) {
             }
             m_detected_service_endpoints.erase(id);
+            m_clients.erase(it);
         }
     }
 
