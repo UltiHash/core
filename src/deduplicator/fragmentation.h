@@ -49,7 +49,7 @@ public:
      * downstream storage.
      */
     void flush_set(fragment_set& set);
-    coro<void> flush_data(global_data_view& gdv);
+    coro<void> flush_data(context& ctx, global_data_view& gdv);
 
     std::size_t effective_size() const;
     std::size_t unstored_size() const;

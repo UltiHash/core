@@ -2,8 +2,11 @@
 #define CORE_DATA_STORE_H
 
 #include "common/types/scoped_buffer.h"
+#include "reference_counter.h"
 
 #include "common/types/address.h"
+#include "common/utils/common.h"
+
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
@@ -23,6 +26,7 @@ struct data_store_config {
     std::filesystem::path working_dir;
     size_t file_size;
     size_t max_data_store_size;
+    size_t page_size;
 };
 
 class data_store {
@@ -86,6 +90,20 @@ public:
     std::size_t read_up_to(char* buffer, const uint128_t& pointer, size_t size);
 
     /**
+     * @brief Creates a reference to one or multiple storage locations.
+     * @param address: storage locations that are to be referenced.
+     */
+    void link(const address& addr);
+
+    /**
+     * @brief Removes a reference to one or multiple storage locations.
+     * If a storage location is no longer referenced, it is deleted and the
+     * space it was using is made available for reuse.
+     * @param address: storage locations that are to be unreferenced.
+     */
+    void unlink(const address& addr);
+
+    /**
      * @brief Flushes modified files to disk.
      * @throws std::exception corrupted storage
      */
@@ -146,6 +164,7 @@ private:
     std::condition_variable m_async_cv;
     std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
         m_ongoing_async_writes;
+    reference_counter m_refcounter;
 };
 
 } // end namespace uh::cluster

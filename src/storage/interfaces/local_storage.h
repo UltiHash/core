@@ -23,8 +23,9 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(const std::string_view& data) override {
-        m_write_load_monitor.start();
+
+    coro<address> write(context& ctx, const std::string_view& data) override {
+      
         const size_t part =
             std::ceil((double)data.size() / (double)m_data_stores.size());
 
@@ -42,12 +43,14 @@ struct local_storage : public storage_interface {
         co_return total_addr;
     }
 
-    coro<void> read_fragment(char* buffer, const fragment& f) override {
+    coro<void> read_fragment(context& ctx, char* buffer,
+                             const fragment& f) override {
         get_data_store(f.pointer).read(buffer, f.pointer, f.size);
         co_return;
     }
 
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
+    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
+                               size_t size) override {
         shared_buffer<> buf(size);
         const auto read_size =
             get_data_store(pointer).read_up_to(buf.data(), pointer, size);
@@ -55,7 +58,7 @@ struct local_storage : public storage_interface {
         co_return buf;
     }
 
-    coro<void> read_address(char* buffer, const address& addr,
+    coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
 
         for (size_t i = 0; i < addr.size(); i++) {
@@ -71,7 +74,67 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<void> sync(const address& addr) override {
+    coro<void> link(context& ctx, const address& addr) override {
+
+        std::vector<address> ds_addresses(m_data_stores.size());
+        for (size_t i = 0; i < addr.size(); i++) {
+            const auto f = addr.get(i);
+            const auto id = pointer_traits::get_data_store_id(f.pointer);
+            ds_addresses.at(id).push(f);
+        }
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+
+            auto p = std::make_shared<std::promise<void>>();
+            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
+                try {
+                    m_data_stores[i]->link(ds_addresses[i]);
+                    p->set_value();
+                } catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+        }
+        for (auto& f : futures) {
+            f.get();
+        }
+        co_return;
+    }
+
+    coro<void> unlink(context& ctx, const address& addr) override {
+
+        std::vector<address> ds_addresses(m_data_stores.size());
+        for (size_t i = 0; i < addr.size(); i++) {
+            const auto f = addr.get(i);
+            const auto id = pointer_traits::get_data_store_id(f.pointer);
+            ds_addresses.at(id).push(f);
+        }
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(m_data_stores.size());
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+
+            auto p = std::make_shared<std::promise<void>>();
+            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
+                try {
+                    m_data_stores[i]->unlink(ds_addresses[i]);
+                    p->set_value();
+                } catch (const std::exception&) {
+                    p->set_exception(std::current_exception());
+                }
+            });
+            futures.emplace_back(p->get_future());
+        }
+        for (auto& f : futures) {
+            f.get();
+        }
+        co_return;
+    }
+
+    coro<void> sync(context& ctx, const address& addr) override {
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -102,7 +165,7 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<size_t> get_used_space() override {
+    coro<size_t> get_used_space(context& ctx) override {
         size_t used = 0;
         for (const auto& ds : m_data_stores) {
             used += ds->get_used_space();

@@ -12,10 +12,12 @@ struct local_read_handle {
     global_data_view& m_storage;
     const address m_addr;
     size_t m_addr_index = 0;
+    context& m_ctx;
 
-    local_read_handle(global_data_view& storage, address&& addr)
+    local_read_handle(context& ctx, global_data_view& storage, address&& addr)
         : m_storage(storage),
-          m_addr(std::move(addr)) {}
+          m_addr(std::move(addr)),
+          m_ctx(ctx) {}
 
     bool has_next() { return m_addr_index != m_addr.size(); }
 
@@ -33,7 +35,7 @@ struct local_read_handle {
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(buffer.data(), partial_addr);
+        co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
 
         buffer.resize(buffer_size);
     }
@@ -100,12 +102,17 @@ coro<void> get_object::handle(http_request& req) const {
             res.base().set("ETag", *obj.etag);
         }
 
+        if (obj.mime) {
+            res.base().set("Content-Type", *obj.mime);
+        }
+
         http::response_serializer<http::empty_body> sr(res);
         co_await http::async_write_header(
             req.socket(), sr,
             boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        local_read_handle reader(m_collection.gdv, std::move(*obj.addr));
+        local_read_handle reader(req.m_ctx, m_collection.gdv,
+                                 std::move(*obj.addr));
         size_t total_size = co_await upload(reader, req, m_collection.ioc);
         const std::chrono::duration<double> duration = tt.passed();
         const auto size = static_cast<double>(total_size) / MEBI_BYTE;

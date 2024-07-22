@@ -10,7 +10,8 @@ data_store::data_store(data_store_config conf, uint32_t service_id,
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
       m_root(conf.working_dir / std::to_string(data_store_id)),
-      m_conf(std::move(conf)) {
+      m_conf(std::move(conf)),
+      m_refcounter(m_root, m_conf.page_size) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
 
@@ -219,6 +220,11 @@ void data_store::perform_write(const address& addr) {
          ::pwrite(alloc.fd, data.data() + written, data.size() - written,
                   static_cast<long>(alloc.seek) + written))
         ;
+
+    if (enable_storage_refcount) {
+        m_refcounter.increment(pointer, data.size());
+    }
+
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
     m_async_cv.notify_all();
@@ -233,6 +239,26 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
         m_async_cv.wait(lk, [this, pointer, size = frag.size]() {
             return find_async_data(pointer, size).first == 0;
         });
+    }
+}
+
+void data_store::link(const address& addr) {
+    if (enable_storage_refcount) {
+        for (size_t i = 0; i < addr.size(); ++i) {
+            const auto frag = addr.get(i);
+            const auto pointer = pointer_traits::get_pointer(frag.pointer);
+            m_refcounter.increment(pointer, frag.size);
+        }
+    }
+}
+
+void data_store::unlink(const address& addr) {
+    if (enable_storage_refcount) {
+        for (size_t i = 0; i < addr.size(); ++i) {
+            const auto frag = addr.get(i);
+            const auto pointer = pointer_traits::get_pointer(frag.pointer);
+            m_refcounter.decrement(pointer, frag.size);
+        }
     }
 }
 

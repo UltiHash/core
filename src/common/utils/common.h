@@ -26,6 +26,8 @@ enum message_type : uint8_t {
     STORAGE_READ_REQ = 8,
     STORAGE_WRITE_REQ = 2,
     STORAGE_SYNC_REQ = 3,
+    STORAGE_LINK_REQ = 9,
+    STORAGE_UNLINK_REQ = 4,
     STORAGE_USED_REQ = 5,
     DEDUPLICATOR_REQ = 6,
 
@@ -53,6 +55,13 @@ static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
 static constexpr size_t EP_BUFFER = 64ul * MEBI_BYTE;
+
+constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
+#ifdef DISABLE_STORAGE_REFCOUNT
+static constexpr bool enable_storage_refcount = false;
+#else
+static constexpr bool enable_storage_refcount = true;
+#endif
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
 

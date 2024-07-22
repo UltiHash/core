@@ -11,10 +11,12 @@ namespace {
 
 class double_buffer {
 public:
-    double_buffer(const reference_collection& collection, std::size_t size)
+    double_buffer(context& ctx, const reference_collection& collection,
+                  std::size_t size)
         : m_collection(collection),
           m_buffers(),
-          m_index(0) {
+          m_index(0),
+          m_ctx(ctx) {
         m_buffers[0].reserve(size);
         m_buffers[1].reserve(size);
     }
@@ -41,7 +43,7 @@ public:
         if (!b.empty()) {
             asio::co_spawn(m_collection.ioc,
                            m_collection.dedupe_services.get()->deduplicate(
-                               {b.data(), b.size()}),
+                               m_ctx, {b.data(), b.size()}),
                            use_awaitable_promise_cospawn(pr));
         } else {
             pr->set(dedupe_response());
@@ -54,6 +56,7 @@ private:
     const reference_collection& m_collection;
     std::array<unique_buffer<char>, 2> m_buffers;
     unsigned m_index;
+    context& m_ctx;
 };
 
 } // namespace
@@ -101,7 +104,8 @@ coro<void> put_object::handle(http_request& req) const {
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
                    .addr = std::move(resp.addr),
-                   .etag = tag};
+                   .etag = tag,
+                   .mime = req.header("Content-Type")};
         co_await m_collection.directory.put_object(req.bucket(), obj);
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
@@ -124,7 +128,7 @@ coro<void> put_object::handle(http_request& req) const {
 coro<dedupe_response> put_object::put_large_object(http_request& req,
                                                    md5& hash) const {
     const auto buffer_size = m_collection.config.buffer_size;
-    double_buffer b(m_collection, buffer_size);
+    double_buffer b(req.m_ctx, m_collection, buffer_size);
 
     auto content_length = req.content_length();
     std::size_t transferred = 0;
@@ -166,7 +170,7 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
     }
 
     co_return co_await m_collection.dedupe_services.get()->deduplicate(
-        {buffer.data(), buffer.size()});
+        req.m_ctx, {buffer.data(), buffer.size()});
 }
 
 } // namespace uh::cluster

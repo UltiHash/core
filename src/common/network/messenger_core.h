@@ -1,8 +1,10 @@
 #ifndef CORE_MESSENGER_CORE_H
 #define CORE_MESSENGER_CORE_H
 
+#include "common/coroutines/context.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
+#include "common/telemetry/traces.h"
 #include "common/types/common_types.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
@@ -21,6 +23,7 @@ public:
     struct header {
         message_type type;
         size_type size;
+        uint32_t ctx_size;
     };
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
@@ -105,7 +108,9 @@ public:
     coro<header> recv_header() {
         header h;
         std::vector<boost::asio::mutable_buffer> buffers{
-            {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
+            {&h.type, sizeof h.type},
+            {&h.size, sizeof h.size},
+            {&h.ctx_size, sizeof h.ctx_size}};
 
         co_await boost::asio::async_read(m_socket, buffers,
                                          boost::asio::use_awaitable);
@@ -135,7 +140,7 @@ public:
     }
 
     void reserve_write_buffers(size_t capacity) {
-        m_write_buffers.reserve(capacity + 2);
+        m_write_buffers.reserve(capacity + 4);
     }
 
     void reserve_read_buffers(size_t capacity) {
@@ -147,6 +152,8 @@ public:
         m_write_size = 0;
         m_write_buffers.emplace_back();
         m_write_buffers.emplace_back();
+        m_write_buffers.emplace_back();
+        m_write_buffers.emplace_back();
     }
 
     void reset_read_buffers() {
@@ -154,13 +161,18 @@ public:
         m_read_size = 0;
     }
 
-    coro<void> send_buffers(const message_type type) {
+    coro<void> send_buffers(context& ctx, const message_type type) {
 
         if (type == SUCCESS)
             metric<success>::increase(1);
 
+        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
+        decltype(header::ctx_size) ctx_size = ctx_buf.size();
+
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
+        m_write_buffers[2] = {&ctx_size, sizeof ctx_size};
+        m_write_buffers[3] = boost::asio::buffer(ctx_buf);
 
         co_await boost::asio::async_write(m_socket, m_write_buffers,
                                           boost::asio::use_awaitable);
@@ -168,13 +180,13 @@ public:
         reset_write_buffers();
     }
 
-    coro<void> send_error(const error& e) {
+    coro<void> send_error(context& ctx, const error& e) {
         const auto ec = e.code();
         register_write_buffer(ec);
         register_write_buffer(e.message());
         metric<failure>::increase(1);
 
-        co_await send_buffers(FAILURE);
+        co_await send_buffers(ctx, FAILURE);
     }
 
     coro<error> recv_error(const header& h) {
@@ -186,16 +198,33 @@ public:
         co_return error(ec, msg);
     }
 
-    coro<void> send(const message_type type, std::span<const char> data) {
+    coro<context> recv_context(const header& h) {
+        context c;
+        if (h.ctx_size) {
+            std::vector<char> otel_buf(h.ctx_size);
+            register_read_buffer(otel_buf);
+            co_await recv_buffers(h);
+            c.set_otel_context(trace::deserialize_context(std::move(otel_buf)));
+        }
+        co_return c;
+    }
+
+    coro<void> send(context& ctx, const message_type type,
+                    std::span<const char> data) {
 
         if (type == SUCCESS)
             metric<success>::increase(1);
+
+        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
+        decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
         const auto size = static_cast<size_type>(data.size());
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},
             {&size, sizeof(size)},
+            {&ctx_size, sizeof ctx_size},
+            {ctx_buf.data(), ctx_buf.size()},
             {data.data(), data.size()}};
 
         co_await boost::asio::async_write(m_socket, buffers,

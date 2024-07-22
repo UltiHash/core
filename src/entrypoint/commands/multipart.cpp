@@ -43,7 +43,7 @@ coro<void> multipart::handle(http_request& req) const {
     dedupe_response resp = {};
     if (!buffer.empty()) {
         resp = co_await m_collection.dedupe_services.get()->deduplicate(
-            {buffer.data(), buffer.size()});
+            req.m_ctx, {buffer.data(), buffer.size()});
     }
 
     auto md5 = calculate_md5(buffer.span());
