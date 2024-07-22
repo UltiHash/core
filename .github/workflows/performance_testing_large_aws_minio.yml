@@ -1,0 +1,136 @@
+name: Large-Sized Performance Testing AWS (MinIO)
+
+on:
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT_NAME: performance-testing-large-minio-amd64
+
+jobs:
+
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+      
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Delete the testing environment if exists
+        run: |
+          helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+        continue-on-error: true
+      
+      - name: Provision the testing environment
+        run: |
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl apply -f performance-testing/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
+
+      - name: Generate the manifest for the S3 data downloder
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          S3_SOURCE_BUCKET: ultihash-performance-test-large-scale
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        with:
+          input: performance-testing/large/s3-data-downloader.yaml
+          output: s3-data-downloader.yaml
+
+      - name: Generate the performance tester manifest for Minio
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          TEST_TYPE: UH
+          S3_ENDPOINT_URL: "http://minio:9000"
+          S3_SOURCE_BUCKET: test
+          S3_DESTINATION_BUCKET: test
+          AWS_ACCESS_KEY_ID: admin
+          AWS_SECRET_ACCESS_KEY: testpassword
+          MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
+          READ_TIMEOUT: "600"
+          JOBS: "10"
+        with:
+          input: performance-testing/large/performance-tester.yaml
+          output: performance-tester-minio.yaml
+      
+      - name: Download the data corpora to the tester machine
+        run: |
+          bash performance-testing/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
+
+      - name: Install the MinIO cluster
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update bitnami
+          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values performance-testing/large/minio-helm-values.yaml --version 14.6.22 --wait --timeout 15m
+
+      - name: Execute the performance test against MinIO
+        run: |
+          bash performance-testing/execute_job.sh performance-tester-minio.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+ 
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+        continue-on-error: true
+      

@@ -104,7 +104,6 @@ jobs:
       - name: Delete the testing environment if exists
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
-          helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
@@ -201,7 +200,6 @@ jobs:
       - name: Environment cleanup
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
-          helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
