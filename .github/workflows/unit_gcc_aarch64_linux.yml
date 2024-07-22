@@ -26,7 +26,7 @@ jobs:
         run: | 
           aws ec2 run-instances \
             --count 1 \
-            --image-id ami-021d77d177a60cd19 \
+            --image-id ami-0f11f76cb73f3e836 \
             --instance-type c7g.2xlarge \
             --key-name aarch64-github-runner \
             --security-group-ids sg-050ac7da1ac46a7c8 \
