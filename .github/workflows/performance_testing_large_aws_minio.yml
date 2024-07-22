@@ -47,12 +47,14 @@ jobs:
           helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
       
       - name: Provision the testing environment
         run: |
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl apply -f performance-testing/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
 
       - name: Generate the manifest for the S3 data downloder
@@ -131,6 +133,7 @@ jobs:
           helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
       

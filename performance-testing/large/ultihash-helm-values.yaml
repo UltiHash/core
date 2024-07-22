@@ -126,7 +126,7 @@ databaseInit:
 
 collector:
   nodeSelector:
-    purpose: performance-testing-small
+    purpose: performance-testing-large
   tolerations:
     - key: "purpose"
       operator: "Equal"
