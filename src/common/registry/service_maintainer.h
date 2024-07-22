@@ -5,6 +5,7 @@
 #include "common/global_data/service_load_balancer.h"
 #include "common/registry/service_id.h"
 #include "common/utils/service_factory.h"
+#include "common/utils/time_utils.h"
 #include "namespace.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
