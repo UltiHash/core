@@ -31,11 +31,11 @@ public:
     void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
-        m_registration->publish(STORAGE_FREE_SPACE, [this] {
+        m_registration->monitor(STORAGE_FREE_SPACE, [this] {
             return std::to_string(m_storage->get_free_space());
         });
 
-        m_registration->publish(STORAGE_WRITE_DURATION, [this] {
+        m_registration->monitor(STORAGE_WRITE_DURATION, [this] {
             return std::to_string(m_storage->catch_write_duration());
         });
 

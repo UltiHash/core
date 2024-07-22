@@ -4,6 +4,7 @@
 #define NAMESPACE "uh"
 
 #include "common/utils/common.h"
+#include <filesystem>
 
 namespace uh::cluster {
 
@@ -25,7 +26,6 @@ static constexpr const char* etcd_initialized_key =
 static constexpr const char* etcd_current_id_prefix_key =
     "/" NAMESPACE "/config/class/cluster/current_id/";
 
-
 enum etcd_service_attributes {
     ENDPOINT_HOST,
     ENDPOINT_PORT,
@@ -34,7 +34,8 @@ enum etcd_service_attributes {
     STORAGE_WRITE_DURATION,
 };
 
-constexpr std::array<std::pair<uh::cluster::etcd_service_attributes, const char*>, 5>
+constexpr std::array<
+    std::pair<uh::cluster::etcd_service_attributes, const char*>, 5>
     string_by_config_parameter = {{
         {uh::cluster::ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::ENDPOINT_PORT, "endpoint_port"},
@@ -44,8 +45,7 @@ constexpr std::array<std::pair<uh::cluster::etcd_service_attributes, const char*
     }};
 
 inline static std::string get_service_root_path(role r) {
-    return etcd_services_key_prefix +
-           get_service_string(r);
+    return etcd_services_key_prefix + get_service_string(r);
 }
 
 inline static std::string get_announced_root(role r) {
@@ -64,13 +64,16 @@ inline static std::string get_attribute_key(const std::string& path) {
     return std::filesystem::path(path).filename();
 }
 
-inline static unsigned long get_announced_id(const std::string& announced_path) {
+inline static unsigned long
+get_announced_id(const std::string& announced_path) {
     const auto id = std::filesystem::path(announced_path).filename().string();
     return std::stoul(id);
 }
 
-inline static unsigned long get_attribute_id(const std::string& announced_path) {
-    const auto id = std::filesystem::path(announced_path).parent_path().filename().string();
+inline static unsigned long
+get_attribute_id(const std::string& announced_path) {
+    const auto id =
+        std::filesystem::path(announced_path).parent_path().filename().string();
     return std::stoul(id);
 }
 
@@ -79,18 +82,16 @@ inline static bool service_announced_path(const std::string& path) {
 }
 
 inline static bool service_attributes_path(const std::string& path) {
-    return std::filesystem::path(path).parent_path().parent_path().filename() == "attributes";
+    return std::filesystem::path(path).parent_path().parent_path().filename() ==
+           "attributes";
 }
 
-
-inline static unsigned long get_id (const std::string& path) {
+inline static unsigned long get_id(const std::string& path) {
     if (service_announced_path(path)) {
         return get_announced_id(path);
-    }
-    else if (service_attributes_path(path)) {
+    } else if (service_attributes_path(path)) {
         return get_attribute_id(path);
-    }
-    else {
+    } else {
         throw std::invalid_argument("Invalid path " + path);
     }
 }

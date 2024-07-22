@@ -24,42 +24,46 @@ service_registry::registration::registration(
     : m_client(client),
       m_lease(m_client.leasegrant(ttl).value().lease()),
       m_keepalive(m_client, ttl, m_lease),
-      m_service_role (r),
+      m_service_role(r),
       m_id(id),
-      m_publish_thread([this]{
+      m_monitor_thread([this] {
           while (!m_stop) {
+
               std::unique_lock<std::mutex> lock(m_attributes_mutex);
-              for (auto& kv: m_published_attributes) {
+              m_cv.wait_for(lock, std::chrono::seconds(m_etcd_default_ttl));
+
+              for (auto& kv : m_monitored_attributes) {
                   m_client.put(kv.first, kv.second(), m_lease);
               }
-              lock.unlock();
-              std::this_thread::sleep_for(std::chrono::seconds(m_etcd_default_ttl));
           }
       }) {
     for (const auto& pair : kv_pairs)
         m_client.add(pair.first, pair.second, m_lease);
 }
 
-void service_registry::registration::publish(
+void service_registry::registration::monitor(
     etcd_service_attributes key, const std::function<std::string()>& func) {
-    auto key_base = get_attributes_path(m_service_role, m_id) + get_etcd_key_string(key);
+    auto key_base =
+        get_attributes_path(m_service_role, m_id) + get_etcd_key_string(key);
     std::lock_guard<std::mutex> lock(m_attributes_mutex);
-    m_published_attributes.emplace(key_base, func);
-
+    m_monitored_attributes.emplace(key_base, func);
+    m_cv.notify_one();
 }
 
 service_registry::registration::~registration() {
     m_stop = true;
-    m_publish_thread.join();
+    m_monitor_thread.join();
     m_client.leaserevoke(m_lease);
 }
 
 std::unique_ptr<service_registry::registration>
 service_registry::register_service(const server_config& config) {
 
-    const std::string announced_key_base = get_announced_path(m_service_role, m_id);
+    const std::string announced_key_base =
+        get_announced_path(m_service_role, m_id);
 
-    const std::string attribute_key_base = get_attributes_path(m_service_role, m_id);
+    const std::string attribute_key_base =
+        get_attributes_path(m_service_role, m_id);
 
     const std::map<std::string, std::string> kv_pairs = {
         {attribute_key_base + get_etcd_key_string(uh::cluster::ENDPOINT_HOST),
@@ -71,8 +75,8 @@ service_registry::register_service(const server_config& config) {
         {announced_key_base, {}},
     };
 
-    return std::make_unique<registration>(m_etcd_client, m_service_role, m_id, kv_pairs,
-                                          m_etcd_default_ttl);
+    return std::make_unique<registration>(m_etcd_client, m_service_role, m_id,
+                                          kv_pairs, m_etcd_default_ttl);
 }
 
 } // namespace uh::cluster

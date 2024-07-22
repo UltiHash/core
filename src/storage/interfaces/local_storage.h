@@ -3,9 +3,9 @@
 #define UH_CLUSTER_LOCAL_STORAGE_H
 
 #include "common/utils/pointer_traits.h"
+#include "common/utils/time_utils.h"
 #include "storage/data_store.h"
 #include "storage_interface.h"
-#include <boost/asio/thread_pool.hpp>
 #include <string_view>
 #include <utility>
 
@@ -118,7 +118,7 @@ struct local_storage : public storage_interface {
         return free;
     }
 
-    double catch_write_duration () {
+    double catch_write_duration() {
         const auto dur = m_write_duration_monitor.duration();
         m_write_duration_monitor.reset();
         return dur;

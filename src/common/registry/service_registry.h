@@ -5,9 +5,8 @@
 #include "common/utils/common.h"
 #include "etcd/KeepAlive.hpp"
 #include "etcd/SyncClient.hpp"
-#include <string>
 #include "namespace.h"
-
+#include <string>
 
 namespace uh::cluster {
 
@@ -25,7 +24,8 @@ public:
                      const std::map<std::string, std::string>& kv_pairs,
                      std::size_t ttl);
 
-        void publish(etcd_service_attributes key, const std::function<std::string()>& func);
+        void monitor(etcd_service_attributes key,
+                     const std::function<std::string()>& func);
 
         ~registration();
 
@@ -37,9 +37,11 @@ public:
         const role m_service_role;
         const size_t m_id;
         std::atomic_bool m_stop = false;
-        std::map<std::string, std::function<std::string()>> m_published_attributes;
+        std::map<std::string, std::function<std::string()>>
+            m_monitored_attributes;
         std::mutex m_attributes_mutex;
-        std::thread m_publish_thread;
+        std::thread m_monitor_thread;
+        std::condition_variable m_cv;
     };
 
     std::unique_ptr<registration> register_service(const server_config& config);

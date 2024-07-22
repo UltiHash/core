@@ -33,15 +33,16 @@ enum message_type : uint8_t {
     FAILURE = 16
 };
 
-
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 static constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
 static constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
-static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS = "UH_DB_DIRECTORY_CONNECTIONS";
-static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS = "UH_DB_MULTIPART_CONNECTIONS";
+static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
+    "UH_DB_DIRECTORY_CONNECTIONS";
+static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
+    "UH_DB_MULTIPART_CONNECTIONS";
 static constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
@@ -51,10 +52,9 @@ static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
+static constexpr size_t EP_BUFFER = 64ul * MEBI_BYTE;
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
-
-
 
 } // end namespace uh::cluster
 
