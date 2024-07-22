@@ -35,8 +35,6 @@ spec:
           value: "$AWS_ACCESS_KEY_ID"
         - name: AWS_SECRET_ACCESS_KEY
           value: "$AWS_SECRET_ACCESS_KEY"
-        - name: MULTIPART_CHUNK_SIZE
-          value: "$MULTIPART_CHUNK_SIZE"
       volumeMounts:
         - mountPath: /input
           name: input

@@ -131,9 +131,8 @@ jobs:
           S3_DESTINATION_BUCKET: ultihash-performance-test-upload
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          MULTIPART_CHUNK_SIZE: "67108864"  # 64 MB
           READ_TIMEOUT: "600"
-          JOBS: "10"
+          JOBS: "4"
         with:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-s3.yaml
