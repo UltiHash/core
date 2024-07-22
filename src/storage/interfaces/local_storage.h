@@ -24,7 +24,7 @@ struct local_storage : public storage_interface {
     }
 
     coro<address> write(const std::string_view& data) override {
-        m_write_duration_monitor.start();
+        m_write_load_monitor.start();
         const size_t part =
             std::ceil((double)data.size() / (double)m_data_stores.size());
 
@@ -38,7 +38,7 @@ struct local_storage : public storage_interface {
                 m_data_stores[i]->perform_write(addr);
             });
         }
-        m_write_duration_monitor.stop();
+        m_write_load_monitor.stop();
         co_return total_addr;
     }
 
@@ -118,16 +118,16 @@ struct local_storage : public storage_interface {
         return free;
     }
 
-    double catch_write_duration() {
-        const auto dur = m_write_duration_monitor.duration();
-        m_write_duration_monitor.reset();
+    double catch_write_load() {
+        const auto dur = m_write_load_monitor.duration();
+        m_write_load_monitor.reset();
         return dur;
     }
 
 private:
     std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
-    stop_watch m_write_duration_monitor;
+    stop_watch m_write_load_monitor;
     data_store& get_data_store(const uint128_t& pointer) {
         return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
     }

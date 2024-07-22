@@ -61,8 +61,8 @@ template <> struct service_load_balancer<storage_interface> {
         switch (attr) {
         case STORAGE_FREE_SPACE:
             m_free_spaces.add(std::stoul(value), client);
-        case STORAGE_WRITE_DURATION:
-            m_write_durations.add(std::stof(value), client);
+        case STORAGE_WRITE_LOAD:
+            m_write_loads.add(std::stof(value), client);
         default:
             break;
         }
@@ -74,8 +74,8 @@ template <> struct service_load_balancer<storage_interface> {
         case STORAGE_FREE_SPACE:
             m_free_spaces.remove(client);
             break;
-        case STORAGE_WRITE_DURATION:
-            m_write_durations.remove(client);
+        case STORAGE_WRITE_LOAD:
+            m_write_loads.remove(client);
             break;
         default:
             break;
@@ -84,11 +84,11 @@ template <> struct service_load_balancer<storage_interface> {
 
     void remove_client(const std::shared_ptr<storage_interface>& client) {
         m_free_spaces.remove(client);
-        m_write_durations.remove(client);
+        m_write_loads.remove(client);
     }
 
     [[nodiscard]] inline bool empty() const noexcept {
-        return m_free_spaces.size() == 0 or m_write_durations.size() == 0;
+        return m_free_spaces.size() == 0 or m_write_loads.size() == 0;
     }
 
     [[nodiscard]] std::shared_ptr<storage_interface> get() const {
@@ -98,7 +98,7 @@ template <> struct service_load_balancer<storage_interface> {
         }
 
         auto candidate_dn = m_free_spaces.max();
-        if (candidate_dn->second == m_write_durations.max()->second) {
+        if (candidate_dn->second == m_write_loads.max()->second) {
             if (auto next_free_space = std::prev(candidate_dn)->first;
                 next_free_space > EP_BUFFER) {
                 candidate_dn--;
@@ -109,7 +109,7 @@ template <> struct service_load_balancer<storage_interface> {
     }
 
     map_index<size_t, std::shared_ptr<storage_interface>> m_free_spaces;
-    map_index<double, std::shared_ptr<storage_interface>> m_write_durations;
+    map_index<double, std::shared_ptr<storage_interface>> m_write_loads;
 };
 } // namespace uh::cluster
 
