@@ -31,7 +31,7 @@ enum etcd_service_attributes {
     ENDPOINT_PORT,
     ENDPOINT_PID,
     STORAGE_FREE_SPACE,
-    STORAGE_WRITE_LOAD,
+    STORAGE_LOAD,
 };
 
 constexpr std::array<
@@ -41,7 +41,7 @@ constexpr std::array<
         {uh::cluster::ENDPOINT_PORT, "endpoint_port"},
         {uh::cluster::ENDPOINT_PID, "endpoint_pid"},
         {uh::cluster::STORAGE_FREE_SPACE, "storage_free_space"},
-        {uh::cluster::STORAGE_WRITE_LOAD, "storage_write_load"},
+        {uh::cluster::STORAGE_LOAD, "storage_load"},
     }};
 
 inline static std::string get_service_root_path(role r) {

@@ -35,8 +35,8 @@ public:
             return std::to_string(m_storage->get_free_space());
         });
 
-        m_registration->monitor(STORAGE_WRITE_LOAD, [this] {
-            return std::to_string(m_storage->catch_write_load());
+        m_registration->monitor(STORAGE_LOAD, [this] {
+            return std::to_string(m_storage->catch_load());
         });
 
         m_server.run();
