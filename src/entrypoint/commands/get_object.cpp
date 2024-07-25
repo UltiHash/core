@@ -53,7 +53,7 @@ coro<std::size_t> upload(local_read_handle& reader, http_request& req,
 
     std::shared_ptr<awaitable_promise<std::size_t>> promise;
 
-    double_buffer buffers(EP_BUFFER);
+    double_buffer buffers(INPUT_CHUNK_SIZE);
     while (reader.has_next()) {
         auto& buffer = buffers.current();
         buffer.resize(buffer.capacity());

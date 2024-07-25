@@ -14,7 +14,7 @@ struct entrypoint_config {
 
     std::size_t dedupe_node_connection_count = 16ul;
     std::size_t worker_thread_count = 16ul;
-    std::size_t buffer_size = EP_BUFFER;
+    std::size_t buffer_size = INPUT_CHUNK_SIZE;
     std::optional<deduplicator_config> m_attached_deduplicator;
     std::optional<storage_config> m_attached_storage;
     db::config database;

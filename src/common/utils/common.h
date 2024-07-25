@@ -54,7 +54,7 @@ static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
-static constexpr size_t EP_BUFFER = 64ul * MEBI_BYTE;
+static constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
 #ifdef DISABLE_STORAGE_REFCOUNT

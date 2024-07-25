@@ -94,18 +94,21 @@ template <> struct service_load_balancer<storage_interface> {
 
     [[nodiscard]] std::shared_ptr<storage_interface> get() const {
 
-        if (m_free_spaces.size() == 1) {
-            return m_free_spaces.begin()->second;
-        }
-
         auto candidate_dn = m_free_spaces.max();
-        if (candidate_dn->second == m_loads.max()->second) {
-            if (auto next_free_space = std::prev(candidate_dn)->first;
-                next_free_space > EP_BUFFER) {
-                --candidate_dn;
+
+        if (m_free_spaces.size() > 1) {
+
+            if (candidate_dn->second == m_loads.max()->second) {
+                if (const auto next_free_space = std::prev(candidate_dn)->first;
+                    next_free_space >= INPUT_CHUNK_SIZE) {
+                    --candidate_dn;
+                }
             }
         }
 
+        if (candidate_dn->first < INPUT_CHUNK_SIZE) {
+            throw std::runtime_error("Load-balancer: Insufficient capacity");
+        }
         return candidate_dn->second;
     }
 
