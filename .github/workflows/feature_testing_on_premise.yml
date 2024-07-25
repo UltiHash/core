@@ -44,6 +44,16 @@ jobs:
       - name: Test service startup with invalid licenses
         run: bash feature-testing/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
 
+      - name: Scan the Docker image for vulnerabilitites
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
   build-database-init:
     runs-on: lightweight-generic-jobs
     steps:
