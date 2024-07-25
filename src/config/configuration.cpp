@@ -62,7 +62,8 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->add_option("--workdir,-w", cfg.working_dir,
                      "path to working directory ")
         ->default_val(cfg.working_dir)
-        ->check(CLI::ExistingDirectory);
+        ->check(CLI::ExistingDirectory)
+        ->envname(ENV_CFG_STORAGE_WORKING_DIRS);
 
     app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
                    "URL to opentelemetry endpoint")

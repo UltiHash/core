@@ -51,6 +51,8 @@ constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 3>
     }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+static constexpr const char* ENV_CFG_STORAGE_WORKING_DIRS =
+    "ENV_CFG_STORAGE_WORKING_DIRS";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
