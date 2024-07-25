@@ -5,11 +5,12 @@
 
 namespace uh::cluster {
 
-data_store::data_store(data_store_config conf, uint32_t service_id,
-                       uint32_t data_store_id)
+data_store::data_store(data_store_config conf,
+                       const std::filesystem::path& working_dir,
+                       uint32_t service_id, uint32_t data_store_id)
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
-      m_root(conf.working_dir / std::to_string(data_store_id)),
+      m_root(working_dir / std::to_string(data_store_id)),
       m_conf(std::move(conf)),
       m_refcounter(m_root, m_conf.page_size) {
 

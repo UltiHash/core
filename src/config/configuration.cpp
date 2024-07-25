@@ -237,8 +237,11 @@ std::optional<config> read_config(int argc, char** argv) {
         rv.entrypoint.m_attached_deduplicator.reset();
     }
 
-    rv.deduplicator.working_dir = rv.service.working_dir / "deduplicator";
-    rv.storage.data_store.working_dir = rv.service.working_dir / "storage";
+    rv.deduplicator.working_dir =
+        std::filesystem::path(rv.service.working_dir) / "deduplicator";
+    if (rv.service.working_dir.find(CONFIG_PATH_DELIMETER) != std::string::npos)
+        rv.storage.working_dir =
+            std::filesystem::path(rv.service.working_dir) / "storage";
 
     return rv;
 }

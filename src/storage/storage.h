@@ -14,6 +14,18 @@
 
 namespace uh::cluster {
 
+static std::list<std::filesystem::path> split_paths(std::string str) {
+    size_t pos = 0;
+    std::list<std::filesystem::path> paths;
+    do {
+        pos = str.find(CONFIG_PATH_DELIMETER);
+        paths.emplace_back(str.substr(0, pos));
+        std::cout << paths.back() << std::endl;
+        str.erase(0, pos + CONFIG_PATH_DELIMETER.length());
+    } while (pos != std::string::npos);
+    return paths;
+}
+
 class storage {
 public:
     explicit storage(const service_config& service, const storage_config& sc)
@@ -22,8 +34,8 @@ public:
                                       get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
           m_ioc(sc.server.threads),
-          m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
-                                                    sc.data_store_count)),
+          m_storage(std::make_shared<local_storage>(
+              m_service_id, sc.data_store, split_paths(sc.working_dir))),
           m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd_client),
           m_server(sc.server, std::make_unique<storage_handler>(*m_storage),
                    m_ioc) {}

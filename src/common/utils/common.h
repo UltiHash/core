@@ -67,6 +67,7 @@ static constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
+static constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
 
