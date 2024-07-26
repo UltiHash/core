@@ -19,7 +19,7 @@ struct service_config {
     std::string etcd_url = "http://127.0.0.1:2379";
     std::string working_dir = "/var/lib/uh";
     std::string telemetry_url;
-    license license;
+    uh::cluster::license license;
     unsigned telemetry_interval = 1000;
 };
 
