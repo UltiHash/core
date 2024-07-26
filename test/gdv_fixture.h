@@ -27,9 +27,6 @@ public:
             service_cfg.working_dir = m_temp_dirs.emplace_back().path();
             storage_config storage_cfg;
             storage_cfg.server.port = 10000 + i;
-            storage_cfg.data_store.working_dir =
-                service_cfg.working_dir / "storage";
-            storage_cfg.data_store_count = m_data_store_count;
             m_storage_instances.emplace_back(
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
