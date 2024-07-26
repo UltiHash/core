@@ -1,7 +1,6 @@
 #include "configuration.h"
 #include "config.h"
 #include <CLI/CLI.hpp>
-#include <system_error>
 
 namespace uh::cluster {
 
@@ -178,6 +177,18 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     return rv;
 }
 
+static std::list<std::filesystem::path> split_paths(std::string str) {
+    size_t pos = 0;
+    std::list<std::filesystem::path> paths;
+    do {
+        pos = str.find(CONFIG_PATH_DELIMETER);
+        paths.emplace_back(str.substr(0, pos));
+        std::cout << paths.back() << std::endl;
+        str.erase(0, pos + CONFIG_PATH_DELIMETER.length());
+    } while (pos != std::string::npos);
+    return paths;
+}
+
 } // namespace
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -221,10 +232,22 @@ std::optional<config> read_config(int argc, char** argv) {
 
     if (sub_str->parsed()) {
         rv.role = STORAGE_SERVICE;
+
+        rv.storage.m_data_store_roots = split_paths(rv.service.working_dir);
+        for (auto& p : rv.storage.m_data_store_roots) {
+            p /= "storage";
+        }
+
+        rv.service.working_dir = rv.storage.m_data_store_roots.front();
+
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
     } else if (sub_dd->parsed()) {
         rv.role = DEDUPLICATOR_SERVICE;
+
+        rv.deduplicator.working_dir =
+            std::filesystem::path(rv.service.working_dir) / "deduplicator";
+
     } else {
         throw std::runtime_error("unsupported sub command given");
     }
@@ -237,12 +260,6 @@ std::optional<config> read_config(int argc, char** argv) {
     if (!sub_en_dd->parsed()) {
         rv.entrypoint.m_attached_deduplicator.reset();
     }
-
-    rv.deduplicator.working_dir =
-        std::filesystem::path(rv.service.working_dir) / "deduplicator";
-    if (rv.service.working_dir.find(CONFIG_PATH_DELIMETER) != std::string::npos)
-        rv.storage.working_dir =
-            std::filesystem::path(rv.service.working_dir) / "storage";
 
     return rv;
 }

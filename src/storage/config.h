@@ -2,9 +2,7 @@
 #define CORE_STORAGE_CONFIG_H
 
 #include "common/network/server.h"
-#include "common/types/big_int.h"
 #include "data_store.h"
-#include <filesystem>
 
 namespace uh::cluster {
 
@@ -15,8 +13,7 @@ struct storage_config {
         .bind_address = "0.0.0.0",
     };
 
-    std::string working_dir = "/var/lib/uh/storage";
-
+    std::list<std::filesystem::path> m_data_store_roots;
     data_store_config data_store = {
         .file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,

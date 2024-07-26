@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
 namespace uh::cluster {
 
@@ -15,7 +14,7 @@ enum role : uint8_t {
     ENTRYPOINT_SERVICE,
 };
 
-const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+const std::map<std::string, role> role_by_abbreviation = {
     {"storage", STORAGE_SERVICE},
     {"deduplicator", DEDUPLICATOR_SERVICE},
     {"entrypoint", ENTRYPOINT_SERVICE}};
@@ -43,11 +42,11 @@ enum config_parameter {
     CFG_ENDPOINT_PID,
 };
 
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 3>
+constexpr std::array<std::pair<config_parameter, const char*>, 3>
     string_by_config_parameter = {{
-        {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
-        {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-        {uh::cluster::CFG_ENDPOINT_PID, "endpoint_pid"},
+        {CFG_ENDPOINT_HOST, "endpoint_host"},
+        {CFG_ENDPOINT_PORT, "endpoint_port"},
+        {CFG_ENDPOINT_PID, "endpoint_pid"},
     }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
@@ -80,10 +79,9 @@ static constexpr bool enable_storage_refcount = false;
 static constexpr bool enable_storage_refcount = true;
 #endif
 
-const std::string& get_service_string(const uh::cluster::role& service_role);
+const std::string& get_service_string(const role& service_role);
 
-constexpr const char*
-get_config_string(const uh::cluster::config_parameter& cfg_param) {
+constexpr const char* get_config_string(const config_parameter& cfg_param) {
     for (const auto& entry : string_by_config_parameter) {
         if (entry.first == cfg_param)
             return entry.second;

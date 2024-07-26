@@ -11,7 +11,7 @@ data_store::data_store(data_store_config conf,
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
       m_root(working_dir / std::to_string(data_store_id)),
-      m_conf(std::move(conf)),
+      m_conf(conf),
       m_refcounter(m_root, m_conf.page_size) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
