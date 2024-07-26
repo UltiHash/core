@@ -24,7 +24,7 @@ struct service_config {
 };
 
 struct config {
-    role role;
+    cluster::role role;
     service_config service;
     uh::log::config log;
 
