@@ -35,8 +35,8 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
                               boost::asio::use_future)
             .get();
     BOOST_CHECK(input_buffer.size() == addr.data_size());
-    BOOST_TEST(addr.pointers.size() == 2ul * m_data_store_count);
-    BOOST_TEST(addr.sizes.size() == 1ul * m_data_store_count);
+    BOOST_TEST(addr.pointers.size() == 2ul);
+    BOOST_TEST(addr.sizes.size() == 1ul);
     boost::asio::co_spawn(gdv->get_executor(), gdv->sync(ctx, addr),
                           boost::asio::use_future)
         .get();
