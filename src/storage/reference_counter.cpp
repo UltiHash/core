@@ -23,8 +23,9 @@ void reference_counter::decrement(const std::size_t offset,
     for (std::size_t page_pointer = offset; page_pointer < offset + size;
          page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
-        lmdb::val key(&page_id, sizeof(page_id));
-        lmdb::val value;
+        std::string_view key(reinterpret_cast<const char*>(&page_id),
+                             sizeof(page_id));
+        std::string_view value;
 
         if (!dbi.get(txn, key, value)) {
             txn.abort();
@@ -40,7 +41,8 @@ void reference_counter::decrement(const std::size_t offset,
         }
 
         --current_value;
-        value = lmdb::val(&current_value, sizeof(current_value));
+        value = std::string_view(reinterpret_cast<const char*>(&current_value),
+                                 sizeof(current_value));
         dbi.put(txn, key, value);
     }
 
@@ -55,16 +57,20 @@ void reference_counter::increment(const std::size_t offset,
     for (std::size_t page_pointer = offset; page_pointer < offset + size;
          page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
-        lmdb::val key(&page_id, sizeof(page_id));
-        lmdb::val value;
+        std::string_view key(reinterpret_cast<const char*>(&page_id),
+                             sizeof(page_id));
+        std::string_view value;
 
         std::size_t current_value = 0;
         if (dbi.get(txn, key, value)) {
             std::memcpy(&current_value, value.data(), sizeof(current_value));
+            // std::from_chars(value.data(), value.data() + value.size(),
+            // current_value);
         }
 
         ++current_value;
-        value = lmdb::val(&current_value, sizeof(current_value));
+        value = std::string_view(reinterpret_cast<const char*>(&current_value),
+                                 sizeof(current_value));
         dbi.put(txn, key, value);
     }
 
