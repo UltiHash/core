@@ -31,6 +31,14 @@ public:
     void run() {
         m_registration =
             m_service_registry.register_service(m_server.get_server_config());
+        m_registration->monitor(STORAGE_FREE_SPACE, [this] {
+            return std::to_string(m_storage->get_free_space());
+        });
+
+        m_registration->monitor(STORAGE_LOAD, [this] {
+            return std::to_string(m_storage->catch_load());
+        });
+
         m_server.run();
     }
 

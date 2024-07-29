@@ -343,8 +343,15 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
 uint64_t data_store::get_used_space() const noexcept { return m_used; }
 
 size_t data_store::get_available_space() const noexcept {
-    auto space = std::filesystem::space(m_root);
-    return std::min(space.available, m_conf.max_data_store_size - m_used);
+    auto capacity = m_conf.max_data_store_size - m_used;
+    try {
+        auto space = std::filesystem::space(m_root);
+        capacity =
+            std::min(space.available, m_conf.max_data_store_size - m_used);
+    } catch (...) {
+    }
+
+    return capacity;
 }
 
 data_store::alloc_t data_store::internal_allocate(size_t size) {

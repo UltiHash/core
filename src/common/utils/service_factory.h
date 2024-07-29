@@ -9,12 +9,6 @@
 
 namespace uh::cluster {
 
-struct service_endpoint {
-    std::size_t id{};
-    std::string host{};
-    std::uint16_t port{};
-    int pid{};
-};
 
 template <typename service_interface> struct service_factory {
 
@@ -26,10 +20,10 @@ public:
           m_local_service(std::move(local_service)) {}
 
     std::shared_ptr<service_interface>
-    make_service(const service_endpoint& service) {
-        if (!m_local_service or service.host != get_host() or
-            service.pid != getpid()) {
-            return make_remote_service(service);
+    make_service(const std::string& hostname, uint16_t port, int pid) {
+        if (!m_local_service or hostname != get_host() or
+            pid != getpid()) {
+            return make_remote_service(hostname, port);
         }
         return m_local_service;
     }
@@ -42,7 +36,7 @@ public:
 
 private:
     std::shared_ptr<service_interface>
-    make_remote_service(const service_endpoint& service);
+    make_remote_service(const std::string& hostname, uint16_t port);
 
     boost::asio::io_context& m_ioc;
     const int m_connections;
