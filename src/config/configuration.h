@@ -4,7 +4,6 @@
 #include "common/db/config.h"
 #include "common/license/license.h"
 #include "common/telemetry/log.h"
-#include "common/types/big_int.h"
 #include "common/utils/common.h"
 #include "deduplicator/config.h"
 #include "entrypoint/config.h"

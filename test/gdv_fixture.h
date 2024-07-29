@@ -27,8 +27,8 @@ public:
             service_cfg.working_dir = m_temp_dirs.emplace_back().path();
             storage_config storage_cfg;
             storage_cfg.server.port = 10000 + i;
-            storage_cfg.working_dir =
-                std::filesystem::path(service_cfg.working_dir) / "storage";
+            storage_cfg.m_data_store_roots = {
+                std::filesystem::path(service_cfg.working_dir) / "storage"};
             m_storage_instances.emplace_back(
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }

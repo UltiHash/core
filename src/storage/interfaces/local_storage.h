@@ -12,7 +12,7 @@
 namespace uh::cluster {
 
 struct load_monitor {
-    load_monitor(std::atomic<double>& load)
+    explicit load_monitor(std::atomic<double>& load)
         : m_load(load) {}
     ~load_monitor() { m_load += m_timer.passed().count(); }
     std::atomic<double>& m_load;

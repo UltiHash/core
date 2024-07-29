@@ -62,7 +62,7 @@ void register_service(CLI::App& app, service_config& cfg) {
                      "path to working directory ")
         ->default_val(cfg.working_dir)
         ->check(CLI::ExistingDirectory)
-        ->envname(ENV_CFG_STORAGE_WORKING_DIRS);
+        ->envname(ENV_CFG_WORKING_DIRS);
 
     app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
                    "URL to opentelemetry endpoint")
@@ -177,7 +177,7 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     return rv;
 }
 
-static std::list<std::filesystem::path> split_paths(std::string str) {
+std::list<std::filesystem::path> split_paths(std::string str) {
     size_t pos = 0;
     std::list<std::filesystem::path> paths;
     do {
@@ -230,10 +230,12 @@ std::optional<config> read_config(int argc, char** argv) {
         return {};
     }
 
+    auto working_dirs = split_paths(rv.service.working_dir);
+
     if (sub_str->parsed()) {
         rv.role = STORAGE_SERVICE;
 
-        rv.storage.m_data_store_roots = split_paths(rv.service.working_dir);
+        rv.storage.m_data_store_roots = working_dirs;
         for (auto& p : rv.storage.m_data_store_roots) {
             p /= "storage";
         }
@@ -243,8 +245,12 @@ std::optional<config> read_config(int argc, char** argv) {
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
     } else if (sub_dd->parsed()) {
-        rv.role = DEDUPLICATOR_SERVICE;
 
+        rv.role = DEDUPLICATOR_SERVICE;
+        if (working_dirs.size() != 1) {
+            throw std::invalid_argument(
+                "Deduplicator does not support multiple working directories");
+        }
         rv.deduplicator.working_dir =
             std::filesystem::path(rv.service.working_dir) / "deduplicator";
 
