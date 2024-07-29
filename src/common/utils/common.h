@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
 namespace uh::cluster {
 
@@ -15,7 +14,7 @@ enum role : uint8_t {
     ENTRYPOINT_SERVICE,
 };
 
-const std::map<std::string, uh::cluster::role> role_by_abbreviation = {
+const std::map<std::string, role> role_by_abbreviation = {
     {"storage", STORAGE_SERVICE},
     {"deduplicator", DEDUPLICATOR_SERVICE},
     {"entrypoint", ENTRYPOINT_SERVICE}};
@@ -36,6 +35,7 @@ enum message_type : uint8_t {
 };
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+static constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
@@ -52,6 +52,7 @@ static constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
+static constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
 static constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
@@ -63,7 +64,7 @@ static constexpr bool enable_storage_refcount = false;
 static constexpr bool enable_storage_refcount = true;
 #endif
 
-const std::string& get_service_string(const uh::cluster::role& service_role);
+const std::string& get_service_string(const role& service_role);
 
 } // end namespace uh::cluster
 

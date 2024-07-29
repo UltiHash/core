@@ -1,7 +1,6 @@
 #ifndef CORE_DATA_NODE_H
 #define CORE_DATA_NODE_H
 
-#include <atomic>
 #include <functional>
 #include <utility>
 
@@ -9,7 +8,6 @@
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
 #include "config.h"
-#include "data_store.h"
 #include "storage_handler.h"
 
 namespace uh::cluster {
@@ -23,7 +21,7 @@ public:
                                       service.working_dir)),
           m_ioc(sc.server.threads),
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
-                                                    sc.data_store_count)),
+                                                    sc.m_data_store_roots)),
           m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd_client),
           m_server(sc.server, std::make_unique<storage_handler>(*m_storage),
                    m_ioc) {}

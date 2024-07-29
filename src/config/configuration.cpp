@@ -1,7 +1,6 @@
 #include "configuration.h"
 #include "config.h"
 #include <CLI/CLI.hpp>
-#include <system_error>
 
 namespace uh::cluster {
 
@@ -62,7 +61,8 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->add_option("--workdir,-w", cfg.working_dir,
                      "path to working directory ")
         ->default_val(cfg.working_dir)
-        ->check(CLI::ExistingDirectory);
+        ->check(CLI::ExistingDirectory)
+        ->envname(UH_WORKING_DIR);
 
     app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
                    "URL to opentelemetry endpoint")
@@ -177,6 +177,17 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     return rv;
 }
 
+std::list<std::filesystem::path> split_paths(std::string str) {
+    size_t pos;
+    std::list<std::filesystem::path> paths;
+    do {
+        pos = str.find(CONFIG_PATH_DELIMETER);
+        paths.emplace_back(str.substr(0, pos));
+        str.erase(0, pos + CONFIG_PATH_DELIMETER.length());
+    } while (pos != std::string::npos);
+    return paths;
+}
+
 } // namespace
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -218,12 +229,30 @@ std::optional<config> read_config(int argc, char** argv) {
         return {};
     }
 
+    auto working_dirs = split_paths(rv.service.working_dir);
+
     if (sub_str->parsed()) {
         rv.role = STORAGE_SERVICE;
+
+        rv.storage.m_data_store_roots = working_dirs;
+        for (auto& p : rv.storage.m_data_store_roots) {
+            p /= "storage";
+        }
+
+        rv.service.working_dir = rv.storage.m_data_store_roots.front();
+
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
     } else if (sub_dd->parsed()) {
+
         rv.role = DEDUPLICATOR_SERVICE;
+        if (working_dirs.size() != 1) {
+            throw std::invalid_argument(
+                "Deduplicator does not support multiple working directories");
+        }
+        rv.deduplicator.working_dir =
+            std::filesystem::path(rv.service.working_dir) / "deduplicator";
+
     } else {
         throw std::runtime_error("unsupported sub command given");
     }
@@ -236,9 +265,6 @@ std::optional<config> read_config(int argc, char** argv) {
     if (!sub_en_dd->parsed()) {
         rv.entrypoint.m_attached_deduplicator.reset();
     }
-
-    rv.deduplicator.working_dir = rv.service.working_dir / "deduplicator";
-    rv.storage.data_store.working_dir = rv.service.working_dir / "storage";
 
     return rv;
 }

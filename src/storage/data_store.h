@@ -10,20 +10,14 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstring>
-#include <fcntl.h>
 #include <filesystem>
-#include <list>
 #include <map>
 #include <memory_resource>
-#include <span>
-#include <unistd.h>
-#include <unordered_map>
 #include <unordered_set>
 
 namespace uh::cluster {
 
 struct data_store_config {
-    std::filesystem::path working_dir;
     size_t file_size;
     size_t max_data_store_size;
     size_t page_size;
@@ -32,8 +26,8 @@ struct data_store_config {
 class data_store {
 
 public:
-    data_store(data_store_config conf, uint32_t service_id,
-               uint32_t data_store_id);
+    data_store(data_store_config conf, const std::filesystem::path& working_dir,
+               uint32_t service_id, uint32_t data_store_id);
 
     /**
      * Allocates for the given data size and stores the

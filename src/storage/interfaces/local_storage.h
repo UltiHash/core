@@ -12,7 +12,7 @@
 namespace uh::cluster {
 
 struct load_monitor {
-    load_monitor(std::atomic<double>& load)
+    explicit load_monitor(std::atomic<double>& load)
         : m_load(load) {}
     ~load_monitor() { m_load += m_timer.passed().count(); }
     std::atomic<double>& m_load;
@@ -22,12 +22,14 @@ struct load_monitor {
 struct local_storage : public storage_interface {
 
     local_storage(uint32_t index, const data_store_config& config,
-                  int data_store_count)
-        : m_threads(16 * data_store_count) {
-        m_data_stores.reserve(data_store_count);
-        for (int i = 0; i < data_store_count; i++) {
+                  const std::list<std::filesystem::path>& paths)
+        : m_threads(16 * paths.size()) {
+
+        m_data_stores.reserve(paths.size());
+        size_t i = 0;
+        for (const auto& path : paths) {
             m_data_stores.emplace_back(
-                std::make_unique<data_store>(config, index, i));
+                std::make_unique<data_store>(config, path, index, i++));
         }
     }
 
@@ -35,7 +37,8 @@ struct local_storage : public storage_interface {
 
         load_monitor load(m_load);
         const size_t part =
-            std::ceil((double)data.size() / (double)m_data_stores.size());
+            std::ceil(static_cast<double>(data.size()) /
+                      static_cast<double>(m_data_stores.size()));
 
         address total_addr;
         for (size_t i = 0; i < m_data_stores.size(); ++i) {

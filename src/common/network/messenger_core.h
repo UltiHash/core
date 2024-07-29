@@ -6,6 +6,7 @@
 #include "common/telemetry/metrics.h"
 #include "common/telemetry/traces.h"
 #include "common/types/common_types.h"
+#include "common/types/scoped_buffer.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
 
