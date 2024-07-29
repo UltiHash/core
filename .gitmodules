@@ -13,3 +13,6 @@
 [submodule "lib/third-party/magic_enum"]
 	path = lib/third-party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
+[submodule "lib/third-party/lmdbxx"]
+	path = lib/third-party/lmdbxx
+	url = https://github.com/hoytech/lmdbxx.git
