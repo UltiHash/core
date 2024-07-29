@@ -2,7 +2,8 @@
 #define UH_CLUSTER_REFERENCE_COUNTER_H
 
 #include <filesystem>
-#include <lmdb++.h>
+
+#include <lmdbxx/lmdb++.h>
 
 namespace uh::cluster {
 class reference_counter {
