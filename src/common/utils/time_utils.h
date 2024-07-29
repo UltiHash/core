@@ -49,7 +49,7 @@ private:
     friend std::ostream& operator<< <clock>(std::ostream&,
                                             const basic_timer<clock>&);
 
-    clock::time_point m_start;
+    typename clock::time_point m_start;
 };
 
 template <typename clock>

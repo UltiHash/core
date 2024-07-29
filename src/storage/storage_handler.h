@@ -67,9 +67,6 @@ public:
                 case STORAGE_USED_REQ:
                     co_await handle_get_used(ctx, m, message_header);
                     break;
-                case STORAGE_AVAILABLE_REQ:
-                    co_await handle_get_available(ctx, m, message_header);
-                    break;
                 default:
                     throw std::invalid_argument("Invalid message type!");
                 }
@@ -171,12 +168,6 @@ private:
                                const messenger::header&) {
         const auto used = co_await m_storage.get_used_space(ctx);
         co_await m.send_primitive<size_t>(ctx, SUCCESS, used);
-    }
-
-    coro<void> handle_get_available(context& ctx, messenger& m,
-                                    const messenger::header&) {
-        const auto available = co_await m_storage.get_free_space(ctx);
-        co_await m.send_primitive<size_t>(ctx, SUCCESS, available);
     }
 
     local_storage& m_storage;

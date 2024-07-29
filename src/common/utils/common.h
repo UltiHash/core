@@ -29,26 +29,11 @@ enum message_type : uint8_t {
     STORAGE_LINK_REQ = 9,
     STORAGE_UNLINK_REQ = 4,
     STORAGE_USED_REQ = 5,
-    STORAGE_AVAILABLE_REQ = 7,
-
     DEDUPLICATOR_REQ = 6,
 
     SUCCESS = 15,
     FAILURE = 16
 };
-
-enum config_parameter {
-    CFG_ENDPOINT_HOST,
-    CFG_ENDPOINT_PORT,
-    CFG_ENDPOINT_PID,
-};
-
-constexpr std::array<std::pair<uh::cluster::config_parameter, const char*>, 3>
-    string_by_config_parameter = {{
-        {uh::cluster::CFG_ENDPOINT_HOST, "endpoint_host"},
-        {uh::cluster::CFG_ENDPOINT_PORT, "endpoint_port"},
-        {uh::cluster::CFG_ENDPOINT_PID, "endpoint_pid"},
-    }};
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
@@ -69,6 +54,7 @@ static constexpr int ETCD_TIMEOUT = 300;
 static constexpr int ETCD_RETRY_INTERVAL = 1;
 
 static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
+static constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
 #ifdef DISABLE_STORAGE_REFCOUNT
@@ -78,16 +64,6 @@ static constexpr bool enable_storage_refcount = true;
 #endif
 
 const std::string& get_service_string(const uh::cluster::role& service_role);
-
-constexpr const char*
-get_config_string(const uh::cluster::config_parameter& cfg_param) {
-    for (const auto& entry : string_by_config_parameter) {
-        if (entry.first == cfg_param)
-            return entry.second;
-    }
-
-    throw std::invalid_argument("invalid configuration parameter");
-}
 
 } // end namespace uh::cluster
 
