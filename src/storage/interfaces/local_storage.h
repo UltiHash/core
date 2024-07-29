@@ -3,13 +3,21 @@
 #define UH_CLUSTER_LOCAL_STORAGE_H
 
 #include "common/utils/pointer_traits.h"
+#include "common/utils/time_utils.h"
 #include "storage/data_store.h"
 #include "storage_interface.h"
-#include <boost/asio/thread_pool.hpp>
 #include <string_view>
 #include <utility>
 
 namespace uh::cluster {
+
+struct load_monitor {
+    load_monitor(std::atomic<double>& load)
+        : m_load(load) {}
+    ~load_monitor() { m_load += m_timer.passed().count(); }
+    std::atomic<double>& m_load;
+    timer m_timer;
+};
 
 struct local_storage : public storage_interface {
 
@@ -26,6 +34,8 @@ struct local_storage : public storage_interface {
     }
 
     coro<address> write(context& ctx, const std::string_view& data) override {
+
+        load_monitor load(m_load);
         const size_t part =
             std::ceil(static_cast<double>(data.size()) /
                       static_cast<double>(m_data_stores.size()));
@@ -40,18 +50,19 @@ struct local_storage : public storage_interface {
                 m_data_stores[i]->perform_write(addr);
             });
         }
-
         co_return total_addr;
     }
 
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
+        load_monitor load(m_load);
         get_data_store(f.pointer).read(buffer, f.pointer, f.size);
         co_return;
     }
 
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override {
+        load_monitor load(m_load);
         shared_buffer<> buf(size);
         const auto read_size =
             get_data_store(pointer).read_up_to(buf.data(), pointer, size);
@@ -61,7 +72,7 @@ struct local_storage : public storage_interface {
 
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
-
+        load_monitor load(m_load);
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
@@ -71,11 +82,11 @@ struct local_storage : public storage_interface {
                     "Could not read the data with the given size");
             }
         }
-
         co_return;
     }
 
     coro<void> link(context& ctx, const address& addr) override {
+        load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -102,10 +113,12 @@ struct local_storage : public storage_interface {
         for (auto& f : futures) {
             f.get();
         }
+
         co_return;
     }
 
     coro<void> unlink(context& ctx, const address& addr) override {
+        load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -132,10 +145,12 @@ struct local_storage : public storage_interface {
         for (auto& f : futures) {
             f.get();
         }
+
         co_return;
     }
 
     coro<void> sync(context& ctx, const address& addr) override {
+        load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -163,10 +178,13 @@ struct local_storage : public storage_interface {
         for (auto& f : futures) {
             f.get();
         }
+
         co_return;
     }
 
     coro<size_t> get_used_space(context& ctx) override {
+        load_monitor load(m_load);
+
         size_t used = 0;
         for (const auto& ds : m_data_stores) {
             used += ds->get_used_space();
@@ -174,18 +192,22 @@ struct local_storage : public storage_interface {
         co_return used;
     }
 
-    coro<size_t> get_free_space(context& ctx) override {
+    size_t get_free_space() {
+        load_monitor load(m_load);
+
         size_t free = 0;
         for (const auto& ds : m_data_stores) {
             free += ds->get_available_space();
         }
-        co_return free;
+        return free;
     }
+
+    double catch_load() { return m_load.exchange(0); }
 
 private:
     std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
-
+    std::atomic<double> m_load;
     data_store& get_data_store(const uint128_t& pointer) {
         return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
     }
