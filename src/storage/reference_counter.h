@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <lmdb++.h>
+#include <lmdbxx/lmdb++.h>
 #include <vector>
 
 namespace uh::cluster {
