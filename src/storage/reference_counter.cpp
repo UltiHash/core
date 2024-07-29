@@ -64,8 +64,6 @@ void reference_counter::increment(const std::size_t offset,
         std::size_t current_value = 0;
         if (dbi.get(txn, key, value)) {
             std::memcpy(&current_value, value.data(), sizeof(current_value));
-            // std::from_chars(value.data(), value.data() + value.size(),
-            // current_value);
         }
 
         ++current_value;
