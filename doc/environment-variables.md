@@ -13,7 +13,7 @@ components and describes their purpose.
 - `UH_LICENSE` - (required) must be filled with a valid UH license (use sample
     licenses under `ROOT/data/licenses` for testing)
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified endpoint using OTLP via gRPC (format: "hostname:port")
-
+- `UH_WORKING_DIR` - configures the working directory for different services. In specific case of storage service, when multiple working directories are desired, they can be listed and separated by ":".
 # Database Connection
 
 - `UH_DB_HOSTPORT` - configure host and port of the DBMS (format: "hostname:port")

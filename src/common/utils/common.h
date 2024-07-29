@@ -35,7 +35,7 @@ enum message_type : uint8_t {
 };
 
 static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
-static constexpr const char* ENV_CFG_WORKING_DIRS = "ENV_CFG_WORKING_DIRS";
+static constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
 static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";

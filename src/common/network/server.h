@@ -3,7 +3,6 @@
 
 #include "common/telemetry/log.h"
 #include "common/utils/protocol_handler.h"
-#include "messenger.h"
 #include <algorithm>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -12,7 +11,6 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/config.hpp>
 #include <cstdlib>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <thread>

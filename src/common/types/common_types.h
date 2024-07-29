@@ -3,12 +3,8 @@
 
 #include "address.h"
 #include "big_int.h"
-#include "scoped_buffer.h"
-
 #include <boost/asio.hpp>
 #include <chrono>
-#include <span>
-#include <vector>
 #include <zpp_bits.h>
 
 namespace uh::cluster {
