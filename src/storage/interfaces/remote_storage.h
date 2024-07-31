@@ -2,8 +2,8 @@
 #ifndef UH_CLUSTER_REMOTE_STORAGE_H
 #define UH_CLUSTER_REMOTE_STORAGE_H
 
+#include "../../common/global_data/storage_interface.h"
 #include "common/network/client.h"
-#include "storage_interface.h"
 
 namespace uh::cluster {
 
@@ -82,7 +82,6 @@ struct remote_storage : public storage_interface {
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
-
 
 private:
     client m_storage_service;

@@ -3,7 +3,7 @@
 #define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 
 #include "common/utils/map_index.h"
-#include "storage/interfaces/storage_interface.h"
+#include "storage_interface.h"
 #include <set>
 
 namespace uh::cluster {

@@ -6,7 +6,7 @@
 #include "common/registry/services.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "storage/interfaces/storage_interface.h"
+#include "storage_interface.h"
 #include <map>
 
 namespace uh::cluster {

@@ -1,12 +1,14 @@
+//
+// Created by massi on 7/31/24.
+//
 
-#ifndef UH_CLUSTER_STORAGE_INTERFACE_H
-#define UH_CLUSTER_STORAGE_INTERFACE_H
-
-#include "common/network/messenger_core.h"
-#include "common/types/address.h"
+#ifndef STORAGE_SYSTEM_H
+#define STORAGE_SYSTEM_H
+#include "storage_interface.h"
 
 namespace uh::cluster {
-struct storage_interface {
+
+class storage_system : public storage_interface {
     virtual coro<address> write(context& ctx, const std::string_view&) = 0;
     virtual coro<void> read_fragment(context& ctx, char* buffer,
                                      const fragment& f) = 0;
@@ -21,11 +23,8 @@ struct storage_interface {
     virtual coro<void> unlink(context& ctx, const address& addr) = 0;
     virtual coro<void> sync(context& ctx, const address& addr) = 0;
     virtual coro<size_t> get_used_space(context& ctx) = 0;
-
-    virtual ~storage_interface() = default;
-    static constexpr role service_role = STORAGE_SERVICE;
 };
 
 } // namespace uh::cluster
 
-#endif // UH_CLUSTER_STORAGE_INTERFACE_H
+#endif // STORAGE_SYSTEM_H
