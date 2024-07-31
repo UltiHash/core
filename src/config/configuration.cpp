@@ -13,6 +13,26 @@ void print_vcsid() {
     exit(0);
 }
 
+std::list<std::filesystem::path> split_paths(std::string str) {
+    size_t pos;
+    std::list<std::filesystem::path> paths;
+    do {
+        pos = str.find(CONFIG_PATH_DELIMETER);
+        paths.emplace_back(str.substr(0, pos));
+        str.erase(0, pos + CONFIG_PATH_DELIMETER.length());
+    } while (pos != std::string::npos);
+    return paths;
+}
+
+std::string working_dir_validator(const std::string& arg) {
+    for (const auto& p : split_paths(arg)) {
+        if (!std::filesystem::exists(p)) {
+            return "Non-existing working dir path";
+        }
+    }
+    return "";
+}
+
 log::config
 make_log_config(const service_config& cfg,
                 const boost::log::trivial::severity_level& log_level,
@@ -61,7 +81,7 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->add_option("--workdir,-w", cfg.working_dir,
                      "path to working directory ")
         ->default_val(cfg.working_dir)
-        ->check(CLI::ExistingDirectory)
+        ->check(working_dir_validator)
         ->envname(UH_WORKING_DIR);
 
     app.add_option("--telemetry-endpoint,-e", cfg.telemetry_url,
@@ -175,17 +195,6 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
         ->default_val(cfg.set_capacity);
 
     return rv;
-}
-
-std::list<std::filesystem::path> split_paths(std::string str) {
-    size_t pos;
-    std::list<std::filesystem::path> paths;
-    do {
-        pos = str.find(CONFIG_PATH_DELIMETER);
-        paths.emplace_back(str.substr(0, pos));
-        str.erase(0, pos + CONFIG_PATH_DELIMETER.length());
-    } while (pos != std::string::npos);
-    return paths;
 }
 
 } // namespace
