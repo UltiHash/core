@@ -4,7 +4,7 @@
 
 #ifndef STORAGE_SYSTEM_H
 #define STORAGE_SYSTEM_H
-#include "storage_interface.h"
+#include "common/service_interfaces/storage_interface.h"
 
 namespace uh::cluster {
 

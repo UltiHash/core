@@ -1,10 +1,10 @@
 #ifndef ENTRYPOINT_COMMON_H
 #define ENTRYPOINT_COMMON_H
 
+#include "../common/service_interfaces/deduplicator_interface.h"
 #include "common/global_data/global_data_view.h"
 #include "common/registry/services.h"
 #include "config.h"
-#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"

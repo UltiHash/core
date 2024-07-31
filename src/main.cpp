@@ -35,6 +35,20 @@ void execute_role(const config& c) {
 }
 
 int main(int argc, char** argv) {
+
+    const int fd =
+        open("tyesttest", O_RDWR | O_CREAT | O_TRUNC, S_IWUSR | S_IRUSR);
+    char bytes[32 * KIBI_BYTE];
+    write(fd, bytes, sizeof(bytes));
+    close(fd);
+
+    const int fd2 =
+        open("tyesttest2", O_RDWR | O_CREAT | O_TRUNC, S_IWUSR | S_IRUSR);
+    write(fd2, bytes, sizeof(bytes));
+    fallocate(fd2, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, 8 * KIBI_BYTE,
+              8 * KIBI_BYTE);
+    close(fd2);
+
     try {
         auto config = read_config(argc, argv);
         if (!config) {

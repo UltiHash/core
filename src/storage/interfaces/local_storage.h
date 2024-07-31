@@ -2,7 +2,6 @@
 #ifndef UH_CLUSTER_LOCAL_STORAGE_H
 #define UH_CLUSTER_LOCAL_STORAGE_H
 
-#include "../../common/global_data/storage_interface.h"
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "storage/data_store.h"

@@ -1,6 +1,7 @@
 #ifndef CORE_DEDUPE_NODE_H
 #define CORE_DEDUPE_NODE_H
 
+#include "../common/service_interfaces/deduplicator_interface.h"
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
 #include "common/registry/attached_service.h"
@@ -9,7 +10,6 @@
 #include "common/registry/services.h"
 #include "common/telemetry/log.h"
 #include "config.h"
-#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "deduplicator_handler.h"
 #include "storage/storage.h"
 #include <functional>
