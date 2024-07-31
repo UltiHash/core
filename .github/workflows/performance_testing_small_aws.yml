@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 2'
+  push:
 
 env:
   ENVIRONMENT_NAME: performance-testing-small-aarch64
