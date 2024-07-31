@@ -2,7 +2,6 @@ name: Large-Sized Performance Testing AWS
 
 on:
   workflow_dispatch:
-  push:
 
 env:
   ENVIRONMENT_NAME: performance-testing-large-amd64
