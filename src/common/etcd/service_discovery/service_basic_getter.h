@@ -2,19 +2,16 @@
 #ifndef UH_CLUSTER_SERVICES_H
 #define UH_CLUSTER_SERVICES_H
 
-#include "common/registry/maintainer_monitor.h"
-#include "common/registry/namespace.h"
+#include "common/etcd/service_discovery/maintainer_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/map_index.h"
 #include "common/utils/pointer_traits.h"
-
 #include <ranges>
 
 namespace uh::cluster {
 
 template <typename service_interface>
 class service_basic_getter : public maintainer_monitor<service_interface> {
-public:
     void add_client(size_t id,
                     const std::shared_ptr<service_interface>& client) override {
         m_clients.add(id, client);
@@ -24,6 +21,7 @@ public:
         m_clients.remove(client);
     }
 
+public:
     template <
         typename T = service_interface,
         typename = std::enable_if_t<std::is_same_v<T, storage_interface>, T>>

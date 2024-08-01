@@ -2,7 +2,7 @@
 #ifndef UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 #define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 
-#include "common/registry/maintainer_monitor.h"
+#include "common/etcd/service_discovery/maintainer_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/map_index.h"
 #include <set>
@@ -10,7 +10,7 @@
 namespace uh::cluster {
 
 template <typename service_interface>
-struct service_load_balancer : public maintainer_monitor<service_interface> {
+class service_load_balancer : public maintainer_monitor<service_interface> {
 
     void add_client(size_t,
                     const std::shared_ptr<service_interface>& client) override {
@@ -30,6 +30,7 @@ struct service_load_balancer : public maintainer_monitor<service_interface> {
         }
     }
 
+public:
     [[nodiscard]] std::shared_ptr<service_interface> get() const {
 
         if (this->m_local_service) {
@@ -64,7 +65,7 @@ private:
 };
 
 template <>
-struct service_load_balancer<storage_interface>
+class service_load_balancer<storage_interface>
     : public maintainer_monitor<storage_interface> {
 
     void add_attribute(const std::shared_ptr<storage_interface>& client,
@@ -104,6 +105,7 @@ struct service_load_balancer<storage_interface>
         return m_free_spaces.size() == 0 or m_loads.size() == 0;
     }
 
+public:
     std::shared_ptr<storage_interface> get() const {
 
         std::unique_lock<std::mutex> lk(*this->m_mutex);

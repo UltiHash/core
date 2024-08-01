@@ -4,10 +4,17 @@
 
 #ifndef MAINTAINER_MONITOR_H
 #define MAINTAINER_MONITOR_H
-#include "namespace.h"
+#include "../namespace.h"
 
 namespace uh::cluster {
+
+template <typename service_interface> class service_maintainer;
+
 template <typename service_interface> struct maintainer_monitor {
+
+    friend service_maintainer<service_interface>;
+
+private:
     virtual void add_attribute(const std::shared_ptr<service_interface>&,
                                etcd_service_attributes, const std::string&) {}
     virtual void remove_attribute(const std::shared_ptr<service_interface>&,
@@ -25,9 +32,10 @@ template <typename service_interface> struct maintainer_monitor {
         m_mutex.emplace(m);
         m_cv.emplace(cv);
     }
-    virtual ~maintainer_monitor() = default;
 
 protected:
+    virtual ~maintainer_monitor() = default;
+
     optref<std::mutex> m_mutex;
     optref<std::condition_variable> m_cv;
     std::shared_ptr<service_interface> m_local_service;

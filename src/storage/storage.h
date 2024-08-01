@@ -4,9 +4,9 @@
 #include <functional>
 #include <utility>
 
+#include "common/etcd/registry/service_id.h"
+#include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
-#include "common/registry/service_id.h"
-#include "common/registry/service_registry.h"
 #include "config.h"
 #include "storage_handler.h"
 

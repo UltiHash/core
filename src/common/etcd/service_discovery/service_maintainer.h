@@ -2,11 +2,11 @@
 #ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
-#include "common/global_data/service_load_balancer.h"
-#include "common/registry/service_id.h"
+#include "../namespace.h"
+#include "common/etcd/registry/service_id.h"
 #include "common/utils/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "namespace.h"
+#include "service_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 
@@ -18,17 +18,17 @@ enum class etcd_action : uint8_t {
     erase,
 };
 
-inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
+inline etcd_action get_etcd_action_enum(const std::string& action_str) {
     static const std::map<std::string, etcd_action> etcd_action = {
         {"create", etcd_action::create},
         {"set", etcd_action::set},
         {"delete", etcd_action::erase},
     };
 
-    if (etcd_action.contains(action_str))
-        return etcd_action.at(action_str);
-    else
-        throw std::invalid_argument("invalid etcd action");
+    if (const auto f = etcd_action.find(action_str); f != etcd_action.cend())
+        return f->second;
+
+    throw std::invalid_argument("invalid etcd action");
 }
 
 struct service_endpoint {
@@ -43,7 +43,7 @@ template <typename service_interface> struct service_maintainer {
           m_watcher(
               m_etcd_client,
               get_service_root_path(service_interface::service_role),
-              [this](etcd::Response response) {
+              [this](const etcd::Response& response) {
                   return handle_state_changes(response);
               },
               true),

@@ -1,19 +1,17 @@
 #ifndef CORE_DEDUPE_NODE_H
 #define CORE_DEDUPE_NODE_H
 
+#include "../common/service_interfaces/attached_service.h"
 #include "../common/service_interfaces/deduplicator_interface.h"
+#include "common/etcd/registry/service_id.h"
+#include "common/etcd/registry/service_registry.h"
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
-#include "common/registry/attached_service.h"
-#include "common/registry/service_basic_getter.h"
-#include "common/registry/service_id.h"
-#include "common/registry/service_registry.h"
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "deduplicator_handler.h"
 #include "storage/storage.h"
 #include <functional>
-#include <iostream>
 #include <utility>
 
 namespace uh::cluster {

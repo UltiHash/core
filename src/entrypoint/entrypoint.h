@@ -4,8 +4,8 @@
 #include <functional>
 
 #include "common/db/db.h"
-#include "common/registry/service_id.h"
-#include "common/registry/service_registry.h"
+#include "common/etcd/registry/service_id.h"
+#include "common/etcd/registry/service_registry.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
@@ -16,9 +16,8 @@ namespace uh::cluster {
 
 class entrypoint {
 public:
-    explicit entrypoint(const service_config& sc,
-                        const entrypoint_config& config)
-        : m_config(config),
+    explicit entrypoint(const service_config& sc, entrypoint_config config)
+        : m_config(std::move(config)),
           m_ioc(boost::asio::io_context(m_config.server.threads)),
 
           m_etcd_client(sc.etcd_url),
