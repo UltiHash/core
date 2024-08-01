@@ -63,6 +63,23 @@ template <typename service_interface> struct service_maintainer {
     }
     ~service_maintainer() { m_watcher.Cancel(); }
 
+    void add_monitor(maintainer_monitor<service_interface>& monitor) {
+        monitor.set_sync_vars(m_mutex, m_cv);
+        if (m_local_service) {
+            monitor.add_local_client(m_local_service);
+        }
+        std::lock_guard l(m_mutex);
+        for (const auto& [id, cl] : m_clients) {
+            monitor.add_client(id, cl);
+            for (const auto& se = m_detected_service_endpoints.at(id);
+                 const auto& [attr_name, attr_val] : se.attributes) {
+                monitor.add_attribute(cl, attr_name, attr_val);
+            }
+        }
+
+        m_monitors.emplace_back(monitor);
+    }
+
 protected:
     void handle_state_changes(const etcd::Response& response) {
 
@@ -75,8 +92,8 @@ protected:
 
             std::lock_guard<std::mutex> lk(m_mutex);
 
-            const auto etcd_action = get_etcd_action_enum(response.action());
-            switch (etcd_action) {
+            switch (const auto etcd_action =
+                        get_etcd_action_enum(response.action())) {
             case etcd_action::create:
                 add(etcd_path, value);
                 break;
@@ -110,7 +127,9 @@ protected:
 
         if (auto cl = m_clients.find(id);
             cl != m_clients.cend() and attribute.has_value()) {
-            m_load_balancer.add_attribute(cl->second, *attribute, value);
+            for (auto& m : m_monitors) {
+                m.get().add_attribute(cl->second, *attribute, value);
+            }
         } else if (cl == m_clients.cend() and
                    itr->second.attributes.contains(ENDPOINT_HOST) and
                    itr->second.attributes.contains(ENDPOINT_PORT) and
@@ -124,10 +143,14 @@ protected:
                     itr->second.attributes.at(ENDPOINT_HOST),
                     std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
-            m_load_balancer.add_client(client_itr->second);
-            for (auto& attr : itr->second.attributes) {
-                m_load_balancer.add_attribute(client_itr->second, attr.first,
-                                              attr.second);
+
+            for (auto& m : m_monitors) {
+                m.get().add_client(client_itr->first, client_itr->second);
+                for (const auto& [attr_name, attr_val] :
+                     itr->second.attributes) {
+                    m.get().add_attribute(client_itr->second, attr_name,
+                                          attr_val);
+                }
             }
         }
 
@@ -155,7 +178,9 @@ protected:
             } catch (...) {
             }
             try {
-                m_load_balancer.remove_attribute(it->second, attr);
+                for (auto& m : m_monitors) {
+                    m.get().remove_attribute(it->second, attr);
+                }
             } catch (...) {
             }
         } else {
@@ -165,7 +190,9 @@ protected:
                         << ": " << id << " called. ";
 
             try {
-                m_load_balancer.remove_client(it->second);
+                for (auto& m : m_monitors) {
+                    m.get().remove_client(it->second);
+                }
             } catch (...) {
             }
             m_detected_service_endpoints.erase(id);
@@ -177,13 +204,14 @@ protected:
     etcd::Watcher m_watcher;
 
     mutable std::mutex m_mutex;
-    mutable std::condition_variable_any m_cv;
+    mutable std::condition_variable m_cv;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
     std::shared_ptr<service_interface> m_local_service;
-    service_load_balancer<service_interface> m_load_balancer;
+    std::list<std::reference_wrapper<maintainer_monitor<service_interface>>>
+        m_monitors;
 };
 
 } // namespace uh::cluster

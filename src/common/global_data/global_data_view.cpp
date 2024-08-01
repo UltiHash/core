@@ -3,17 +3,19 @@
 namespace uh::cluster {
 global_data_view::global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
-    services<storage_interface>& storage_services)
+    service_maintainer<storage_interface>& storage_maintainer)
     : m_io_service(ioc),
-      m_storage_services(storage_services),
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2) {
-    m_storage_services.get();
+
+    storage_maintainer.add_monitor(m_load_balancer);
+    storage_maintainer.add_monitor(m_basic_getter);
+    m_load_balancer.get();
 }
 
 coro<address> global_data_view::write(context& ctx,
                                       const std::string_view& data) {
-    const auto client = m_storage_services.get();
+    const auto client = m_load_balancer.get();
     co_return co_await client->write(ctx, data);
 }
 
@@ -36,7 +38,7 @@ shared_buffer<char> global_data_view::read_fragment(context& ctx,
 
     shared_buffer<char> buffer(size);
     const fragment frag{pointer, size};
-    auto storage = m_storage_services.get(pointer);
+    auto storage = m_basic_getter.get(pointer);
     boost::asio::co_spawn(m_io_service,
                           storage->read_fragment(ctx, buffer.data(), frag),
                           boost::asio::use_future)
@@ -62,7 +64,7 @@ global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
-    auto storage = m_storage_services.get(pointer);
+    auto storage = m_basic_getter.get(pointer);
     auto buffer = co_await storage->read(ctx, pointer, size);
     m_cache_l2.put(pointer, buffer);
     co_return buffer;
@@ -81,7 +83,7 @@ coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
     for (size_t i = 0; i < addr.size(); ++i) {
 
         const auto frag = addr.get(i);
-        auto n = m_storage_services.get(frag.pointer);
+        auto n = m_basic_getter.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(n);
@@ -124,7 +126,7 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
 
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto n = m_storage_services.get(frag.pointer);
+        auto n = m_basic_getter.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(std::move(n));
@@ -147,8 +149,8 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
     }
 }
 
-coro<std::size_t> global_data_view::get_used_space(context& ctx) {
-    auto nodes = m_storage_services.get_services();
+coro<std::size_t> global_data_view::get_used_space(context& ctx) const {
+    auto nodes = m_basic_getter.get_services();
 
     size_t used = 0;
     for (const auto& dn : nodes) {

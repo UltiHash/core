@@ -2,14 +2,14 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "../src/common/service_interfaces/deduplicator_interface.h"
+#include "common/registry/service_basic_getter.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
-#include "common/registry/services.h"
 #include "common/test/checks.h"
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
-#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "storage/data_store.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"

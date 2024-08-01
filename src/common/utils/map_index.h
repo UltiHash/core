@@ -19,13 +19,14 @@ template <typename K, typename V> struct map_index {
         }
     }
 
-    void remove(const V& v) {
+    auto remove(const V& v) {
         auto itr = m_v_to_k.find(v);
         if (itr == m_v_to_k.cend()) {
             throw std::runtime_error("non-existing value in map index");
         }
-        m_k_to_v.erase(itr->second);
+        auto r = m_k_to_v.erase(itr->second);
         m_v_to_k.erase(itr);
+        return r;
     }
 
     [[nodiscard]] auto max() const { return std::prev(m_k_to_v.cend()); }
@@ -34,7 +35,9 @@ template <typename K, typename V> struct map_index {
 
     [[nodiscard]] auto begin() const noexcept { return m_k_to_v.cbegin(); }
 
-    [[nodiscard]] const V& at(const K& k) const { return m_k_to_v.at(k); }
+    [[nodiscard]] const V& at(const K& k) const {
+        return m_k_to_v.find(k)->second;
+    }
 
     [[nodiscard]] const K& get_key(const V& v) const {
         auto itr = m_v_to_k.find(v);

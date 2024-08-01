@@ -18,32 +18,38 @@ class entrypoint {
 public:
     explicit entrypoint(const service_config& sc,
                         const entrypoint_config& config)
-        : m_etcd_client(sc.etcd_url),
+        : m_config(config),
+          m_ioc(boost::asio::io_context(m_config.server.threads)),
+
+          m_etcd_client(sc.etcd_url),
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(ENTRYPOINT_SERVICE),
                                       sc.working_dir)),
-          m_ioc(boost::asio::io_context(config.server.threads)),
-          m_attached_storage(sc, config.m_attached_storage),
-          m_storage_services(
+          m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+
+          m_attached_storage(sc, m_config.m_attached_storage),
+          m_attached_dedupe(sc, m_config.m_attached_deduplicator),
+          m_storage_maintainer(
               m_etcd_client,
               service_factory<storage_interface>(
                   m_ioc,
-                  config.global_data_view.storage_service_connection_count,
+                  m_config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
-          m_data_view(config.global_data_view, m_ioc, m_storage_services),
-          m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
-          m_config(config),
-          m_attached_dedupe(sc, config.m_attached_deduplicator),
-          m_dedupe_services(
+          m_dedupe_maintainer(
               m_etcd_client,
               service_factory<deduplicator_interface>(
-                  m_ioc, config.dedupe_node_connection_count,
+                  m_ioc, m_config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_directory(m_ioc, config.database),
-          m_uploads(m_ioc, config.database),
-          m_collection(get_reference_collection()),
-          m_server(config.server, make_entrypoint_handler(m_collection), m_ioc),
-          m_limits(sc.license.max_data_store_size) {}
+          m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer),
+
+          m_directory(m_ioc, m_config.database),
+          m_uploads(m_ioc, m_config.database),
+          m_server(m_config.server, make_entrypoint_handler(m_collection),
+                   m_ioc),
+          m_limits(sc.license.max_data_store_size),
+          m_collection(get_reference_collection()) {
+        m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
+    }
 
     void run() {
         m_registration =
@@ -59,7 +65,7 @@ public:
 private:
     reference_collection get_reference_collection() {
         return {.ioc = m_ioc,
-                .dedupe_services = m_dedupe_services,
+                .dedupe_services = m_dedupe_load_balancer,
                 .directory = m_directory,
                 .uploads = m_uploads,
                 .config = m_config,
@@ -67,30 +73,28 @@ private:
                 .limits = m_limits};
     }
 
-    etcd::SyncClient m_etcd_client;
-    std::size_t m_service_id;
-    boost::asio::io_context m_ioc;
-    attached_service<storage> m_attached_storage;
-    services<storage_interface> m_storage_services;
-    global_data_view m_data_view;
-    std::atomic<std::size_t> m_data_storage_size = 0ull;
-
-    service_registry m_service_registry;
-
     entrypoint_config m_config;
 
+    boost::asio::io_context m_ioc;
+    etcd::SyncClient m_etcd_client;
+    std::size_t m_service_id;
+    service_registry m_service_registry;
+    std::unique_ptr<service_registry::registration> m_registration;
+
+    attached_service<storage> m_attached_storage;
     attached_service<deduplicator> m_attached_dedupe;
 
-    services<deduplicator_interface> m_dedupe_services;
+    service_maintainer<storage_interface> m_storage_maintainer;
+    service_maintainer<deduplicator_interface> m_dedupe_maintainer;
+    service_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
+
+    global_data_view m_data_view;
     directory m_directory;
 
     multipart_state m_uploads;
-
-    reference_collection m_collection;
     server m_server;
     limits m_limits;
-
-    std::unique_ptr<service_registry::registration> m_registration;
+    reference_collection m_collection;
 };
 
 } // end namespace uh::cluster

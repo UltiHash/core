@@ -5,9 +5,9 @@
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
 #include "common/registry/attached_service.h"
+#include "common/registry/service_basic_getter.h"
 #include "common/registry/service_id.h"
 #include "common/registry/service_registry.h"
-#include "common/registry/services.h"
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "deduplicator_handler.h"
@@ -29,14 +29,14 @@ public:
           m_ioc(boost::asio::io_context(config.server.threads)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd_client),
           m_attached_storage(sc, config.m_attached_storage),
-          m_storage_services(
+          m_storage_maintainer(
               m_etcd_client,
               service_factory<storage_interface>(
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
           m_dedupe_workers(m_ioc, config.worker_thread_count),
-          m_data_view(config.global_data_view, m_ioc, m_storage_services),
+          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server,
@@ -69,7 +69,7 @@ private:
     service_registry m_service_registry;
 
     attached_service<storage> m_attached_storage;
-    services<storage_interface> m_storage_services;
+    service_maintainer<storage_interface> m_storage_maintainer;
 
     worker_pool m_dedupe_workers;
 

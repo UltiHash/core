@@ -2,23 +2,22 @@
 #ifndef UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 #define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 
+#include "common/registry/maintainer_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/map_index.h"
 #include <set>
 
 namespace uh::cluster {
 
-template <typename service_interface> struct service_load_balancer {
+template <typename service_interface>
+struct service_load_balancer : public maintainer_monitor<service_interface> {
 
-    void add_attribute(const std::shared_ptr<service_interface>& client,
-                       etcd_service_attributes attr, const std::string& value) {
-    }
-    void remove_attribute(const std::shared_ptr<service_interface>& client,
-                          etcd_service_attributes attr) {}
-    void add_client(const std::shared_ptr<service_interface>& client) {
+    void add_client(size_t,
+                    const std::shared_ptr<service_interface>& client) override {
         m_services.emplace(client);
     }
-    void remove_client(const std::shared_ptr<service_interface>& client) {
+    void
+    remove_client(const std::shared_ptr<service_interface>& client) override {
 
         auto it = m_services.find(client);
         if (it == m_services.end()) {
@@ -33,6 +32,20 @@ template <typename service_interface> struct service_load_balancer {
 
     [[nodiscard]] std::shared_ptr<service_interface> get() const {
 
+        if (this->m_local_service) {
+            return this->m_local_service;
+        }
+
+        std::unique_lock<std::mutex> lk(*this->m_mutex);
+        if (this->m_cv->get().wait_for(lk,
+                                       std::chrono::seconds(this->m_timeout_s),
+                                       [this]() { return !empty(); })) {
+        } else
+            throw std::runtime_error(
+                "timeout waiting for any " +
+                get_service_string(service_interface::service_role) +
+                " client");
+
         if (m_robin_index == m_services.cend()) {
             m_robin_index = m_services.cbegin();
         }
@@ -43,22 +56,20 @@ template <typename service_interface> struct service_load_balancer {
         return rv;
     }
 
-    [[nodiscard]] inline bool empty() const noexcept {
-        return m_services.size() == 0;
-    }
+    [[nodiscard]] bool empty() const noexcept { return m_services.size() == 0; }
 
 private:
     std::set<std::shared_ptr<service_interface>> m_services;
-    mutable
-        typename std::set<std::shared_ptr<service_interface>>::const_iterator
-            m_robin_index = m_services.cend();
+    mutable decltype(m_services.end()) m_robin_index = m_services.cend();
 };
 
-template <> struct service_load_balancer<storage_interface> {
-    void add_client(const std::shared_ptr<storage_interface>&) {}
+template <>
+struct service_load_balancer<storage_interface>
+    : public maintainer_monitor<storage_interface> {
 
     void add_attribute(const std::shared_ptr<storage_interface>& client,
-                       etcd_service_attributes attr, const std::string& value) {
+                       etcd_service_attributes attr,
+                       const std::string& value) override {
         switch (attr) {
         case STORAGE_FREE_SPACE:
             m_free_spaces.add(std::stoul(value), client);
@@ -70,7 +81,7 @@ template <> struct service_load_balancer<storage_interface> {
     }
 
     void remove_attribute(const std::shared_ptr<storage_interface>& client,
-                          etcd_service_attributes attr) {
+                          etcd_service_attributes attr) override {
         switch (attr) {
         case STORAGE_FREE_SPACE:
             m_free_spaces.remove(client);
@@ -83,7 +94,8 @@ template <> struct service_load_balancer<storage_interface> {
         }
     }
 
-    void remove_client(const std::shared_ptr<storage_interface>& client) {
+    void
+    remove_client(const std::shared_ptr<storage_interface>& client) override {
         m_free_spaces.remove(client);
         m_loads.remove(client);
     }
@@ -92,7 +104,13 @@ template <> struct service_load_balancer<storage_interface> {
         return m_free_spaces.size() == 0 or m_loads.size() == 0;
     }
 
-    [[nodiscard]] std::shared_ptr<storage_interface> get() const {
+    std::shared_ptr<storage_interface> get() const {
+
+        std::unique_lock<std::mutex> lk(*this->m_mutex);
+        if (this->m_cv->get().wait_for(lk, std::chrono::seconds(m_timeout_s),
+                                       [this]() { return !empty(); })) {
+        } else
+            throw std::runtime_error("timeout waiting for any storages");
 
         auto candidate_dn = m_free_spaces.max();
 
