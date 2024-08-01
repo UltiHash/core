@@ -408,10 +408,9 @@ void data_store::internal_delete(std::size_t offset, std::size_t size) {
 
     const auto [fd, seek] = get_file_offset_pair(offset);
 
-    const auto ret =
-        fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size);
-    if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
-        throw std::system_error(std::error_code(ret, std::system_category()),
+    if (!fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size))
+        [[unlikely]] {
+        throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not deallocate the data.");
     }
 }
