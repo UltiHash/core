@@ -393,7 +393,27 @@ data_store::find_async_data(size_t pointer, size_t size) {
 }
 
 void data_store::internal_delete(std::size_t offset, std::size_t size) {
-    std::cout << "internal_delete triggered" << std::endl;
+    if (offset + size > m_used.load()) {
+        throw std::out_of_range("pointer is out of range");
+    }
+
+    std::unique_lock<std::mutex> lk(m_async_mutex);
+    if (const auto [async_offset, data] = find_async_data(offset, size);
+        data.data() != nullptr) {
+        const auto data_offset = offset - async_offset;
+        std::memset(data.data() + data_offset, 0, size);
+        return;
+    }
+    lk.unlock();
+
+    const auto [fd, seek] = get_file_offset_pair(offset);
+
+    const auto ret =
+        fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size);
+    if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
+        throw std::system_error(std::error_code(ret, std::system_category()),
+                                "Could not deallocate the data.");
+    }
 }
 
 } // end namespace uh::cluster
