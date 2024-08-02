@@ -29,8 +29,7 @@ void reference_counter::decrement(const std::size_t offset,
     for (std::size_t page_pointer = offset; page_pointer < offset + size;
          page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
-        std::string_view key(reinterpret_cast<const char*>(&page_id),
-                             sizeof(page_id));
+        std::string key(std::to_string(page_id));
         std::string_view value;
 
         if (!dbi.get(txn, key, value)) {
@@ -38,8 +37,7 @@ void reference_counter::decrement(const std::size_t offset,
             throw std::runtime_error("key does not exist");
         }
 
-        std::size_t current_value;
-        std::memcpy(&current_value, value.data(), sizeof(current_value));
+        std::size_t current_value = std::stoull(std::string(value));
 
         if (current_value == 0) {
             txn.abort();
@@ -61,9 +59,8 @@ void reference_counter::decrement(const std::size_t offset,
             }
         }
 
-        value = std::string_view(reinterpret_cast<const char*>(&current_value),
-                                 sizeof(current_value));
-        dbi.put(txn, key, value);
+        std::string value_str = std::to_string(current_value);
+        dbi.put(txn, key, value_str);
     }
 
     if (deleteRangeStart.has_value() && deleteRangeEnd.has_value()) {
@@ -89,19 +86,17 @@ void reference_counter::increment(const std::size_t offset,
     for (std::size_t page_pointer = offset; page_pointer < offset + size;
          page_pointer += m_page_size) {
         std::size_t page_id = page_pointer / m_page_size;
-        std::string_view key(reinterpret_cast<const char*>(&page_id),
-                             sizeof(page_id));
+        std::string key(std::to_string(page_id));
         std::string_view value;
 
         std::size_t current_value = 0;
         if (dbi.get(txn, key, value)) {
-            std::memcpy(&current_value, value.data(), sizeof(current_value));
+            current_value = std::stoull(std::string(value));
         }
 
         ++current_value;
-        value = std::string_view(reinterpret_cast<const char*>(&current_value),
-                                 sizeof(current_value));
-        dbi.put(txn, key, value);
+        std::string value_str(std::to_string(current_value));
+        dbi.put(txn, key, value_str);
     }
 
     txn.commit();
