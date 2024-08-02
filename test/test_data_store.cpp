@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "data_store tests"
 
+#include "common/types/common_types.h"
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "storage/data_store.h"
@@ -9,8 +10,8 @@
 
 // ------------- Tests Suites Follow --------------
 
-#define MAX_DATA_STORE_SIZE_BYTES (4 * 1024ul * 1024ul)
-#define MAX_FILE_SIZE_BYTES (8 * 1024ul)
+#define MAX_DATA_STORE_SIZE_BYTES (4 * MEBI_BYTE)
+#define MAX_FILE_SIZE_BYTES (128 * KIBI_BYTE)
 #define DATA_STORE_ID 1
 
 namespace uh::cluster {
@@ -53,8 +54,9 @@ struct data_store_fixture {
 
     inline size_t get_expected_used(size_t t_written) {
         if (t_written > m_expected_last_file_space) {
-            m_expected_used += sizeof(size_t);
-            m_expected_last_file_space = MAX_FILE_SIZE_BYTES - sizeof(size_t);
+            m_expected_used += DEFAULT_PAGE_SIZE;
+            m_expected_last_file_space =
+                MAX_FILE_SIZE_BYTES - DEFAULT_PAGE_SIZE;
         }
         m_expected_used += t_written;
         m_expected_last_file_space -= t_written;
@@ -256,6 +258,63 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
 
     BOOST_TEST(failures == 0);
 }
+
+BOOST_AUTO_TEST_CASE(test_unlink_page_aligned_single_file) {
+    const std::size_t BUFFER_SIZE = 32 * KIBI_BYTE;
+    auto aligned_buffer = random_buffer(BUFFER_SIZE);
+    auto address = ds->register_write(aligned_buffer);
+    ds->perform_write(address);
+    ds->sync();
+    ds.reset();
+
+    ds = make_data_store();
+
+    {
+        shared_buffer<char> read_buffer(BUFFER_SIZE);
+        size_t t_read = 0;
+        for (size_t i = 0; i < address.size(); ++i) {
+            const auto p = address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == aligned_buffer.size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), aligned_buffer.data(),
+                                t_read) == 0);
+    }
+
+    auto unlink_address = address;
+    unlink_address.pointers[1] += DEFAULT_PAGE_SIZE;
+    unlink_address.sizes[0] = DEFAULT_PAGE_SIZE;
+    ds->unlink(unlink_address);
+
+    {
+        shared_buffer<char> read_buffer(BUFFER_SIZE);
+        shared_buffer<char> expected_buffer(BUFFER_SIZE);
+        memcpy(expected_buffer.data(), aligned_buffer.data(), BUFFER_SIZE);
+        memset(expected_buffer.data() + DEFAULT_PAGE_SIZE, 0,
+               DEFAULT_PAGE_SIZE);
+        size_t t_read = 0;
+
+        for (size_t i = 0; i < address.size(); ++i) {
+            const auto p = address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == aligned_buffer.size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), expected_buffer.data(),
+                                BUFFER_SIZE) == 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned_single_file) {
+    BOOST_CHECK(false);
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_multi_file) { BOOST_CHECK(false); }
 
 BOOST_AUTO_TEST_SUITE_END()
 
