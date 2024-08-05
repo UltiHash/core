@@ -57,7 +57,7 @@ data_store::data_store(data_store_config conf,
     } else {
         const auto ret =
             ::pread(m_open_files.back().first, &m_last_file_data_end,
-                    sizeof(m_last_file_data_end), 0);
+                    sizeof(m_last_file_data_end), m_conf.file_size);
         if (ret != sizeof(m_last_file_data_end)) {
             throw std::system_error(
                 std::error_code(errno, std::system_category()),
@@ -162,7 +162,7 @@ void data_store::sync() {
     std::unique_lock<std::mutex> lock(m_sync_end_offset_mutex);
 
     const auto ret = ::pwrite(m_open_files.back().first, &m_last_file_data_end,
-                              sizeof(m_last_file_data_end), 0);
+                              sizeof(m_last_file_data_end), m_conf.file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -313,9 +313,9 @@ std::filesystem::path data_store::add_new_file(size_t offset,
         }
     }
 
-    m_last_file_data_end = m_conf.page_size;
-    const auto ret =
-        ::write(fd, &m_last_file_data_end, sizeof(m_last_file_data_end));
+    m_last_file_data_end = 0;
+    const auto ret = ::pwrite(fd, &m_last_file_data_end,
+                              sizeof(m_last_file_data_end), m_conf.file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -363,7 +363,6 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
 
     if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
         sync();
-        m_used += m_conf.page_size;
         const auto offset = m_open_files.back().second + m_last_file_data_end;
         add_new_file(offset, m_conf.file_size);
     }
