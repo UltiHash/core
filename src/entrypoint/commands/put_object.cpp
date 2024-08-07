@@ -74,6 +74,8 @@ bool put_object::can_handle(const http_request& req) {
 coro<http_response> put_object::handle(http_request& req) const {
 
     metric<entrypoint_put_object_req>::increase(1);
+    http_response res;
+
     try {
         auto content_length = req.content_length();
 
@@ -110,18 +112,16 @@ coro<http_response> put_object::handle(http_request& req) const {
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
 
-        http_response res;
         res.set("ETag", tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
-
-        co_return res;
-
     } catch (const error_exception& e) {
         LOG_ERROR() << req.socket().remote_endpoint()
                     << " failed to get bucket `" << req.bucket() << "`: " << e;
         throw_from_error(e.error());
     }
+
+    co_return res;
 }
 
 coro<dedupe_response> put_object::put_large_object(http_request& req,

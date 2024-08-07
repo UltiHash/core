@@ -79,21 +79,23 @@ bool get_object::can_handle(const http_request& req) {
 
 coro<http_response> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
-    try {
 
+    http_response res;
+
+    try {
         auto obj = co_await m_collection.directory.get_object(req.bucket(),
                                                               req.object_key());
 
-        http_response res;
         res.set("ETag", obj.etag);
         res.set("Content-Type", obj.mime);
         res.set_body(std::make_unique<local_read_handle>(
             m_collection.gdv, std::move(*obj.addr), req.m_ctx));
-        co_return res;
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");
     }
+
+    co_return res;
 }
 
 } // namespace uh::cluster

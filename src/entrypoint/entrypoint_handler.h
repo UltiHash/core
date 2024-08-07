@@ -46,7 +46,8 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
-            auto req = co_await http_request::create(s);
+            auto ctx = std::make_unique<context>();
+            auto req = co_await http_request::create(*ctx, s);
             LOG_DEBUG() << s.remote_endpoint() << ": read request: " << *req;
 
             std::optional<http_response> resp;
