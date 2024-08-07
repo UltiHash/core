@@ -1,5 +1,4 @@
 #include "get_metrics.h"
-#include "common/coroutines/awaitable_promise.h"
 #include "config.h"
 
 namespace uh::cluster {

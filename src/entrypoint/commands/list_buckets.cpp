@@ -1,5 +1,4 @@
 #include "list_buckets.h"
-#include "entrypoint/http/command_exception.h"
 
 #include <boost/property_tree/ptree.hpp>
 

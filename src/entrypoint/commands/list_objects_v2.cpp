@@ -4,7 +4,6 @@
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
-#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 

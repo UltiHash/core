@@ -1,5 +1,4 @@
 #include "delete_objects.h"
-#include "common/utils/strings.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 

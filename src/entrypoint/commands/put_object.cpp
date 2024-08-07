@@ -1,8 +1,5 @@
 #include "put_object.h"
 
-#include "common/coroutines/awaitable_promise.h"
-#include "common/types/common_types.h"
-
 using namespace boost;
 
 namespace uh::cluster {
