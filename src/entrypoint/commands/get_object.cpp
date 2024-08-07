@@ -8,10 +8,11 @@ namespace {
 
 class local_read_handle : public uh::cluster::body {
 public:
-    local_read_handle(global_data_view& storage, address&& addr)
+    local_read_handle(global_data_view& storage, address&& addr, context& ctx)
         : m_storage(storage),
           m_addr(std::move(addr)),
-          m_size(m_addr.data_size()) {}
+          m_size(m_addr.data_size()),
+          m_ctx(ctx) {}
 
     ~local_read_handle() {
         try {
@@ -36,7 +37,7 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(buffer.data(), partial_addr);
+        co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
         m_total += buffer_size;
         m_size -= buffer_size;
         co_return buffer_size;
@@ -59,6 +60,7 @@ private:
     size_t m_addr_index = 0;
 
     std::size_t m_size;
+    context& m_ctx;
 
     std::size_t m_total = 0;
     timer m_timer;
@@ -85,8 +87,8 @@ coro<http_response> get_object::handle(http_request& req) const {
         http_response res;
         res.set("ETag", obj.etag);
         res.set("Content-Type", obj.mime);
-        res.set_body(std::make_unique<local_read_handle>(m_collection.gdv,
-                                                         std::move(*obj.addr)));
+        res.set_body(std::make_unique<local_read_handle>(
+            m_collection.gdv, std::move(*obj.addr), req.m_ctx));
         co_return res;
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
