@@ -30,8 +30,6 @@ public:
 
     coro<std::size_t> read_body(std::span<char> buffer);
 
-    coro<void> respond(const http::response<http::string_body>& resp);
-
     [[nodiscard]] boost::asio::ip::tcp::socket& socket() const {
         return m_stream;
     }

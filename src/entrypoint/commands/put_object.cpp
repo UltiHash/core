@@ -1,7 +1,6 @@
 #include "put_object.h"
 
-#include "common/coroutines/awaitable_promise.h"
-#include "common/types/common_types.h"
+#include "common/utils/double_buffer.h"
 
 using namespace boost;
 
@@ -9,55 +8,31 @@ namespace uh::cluster {
 
 namespace {
 
-class double_buffer {
-public:
-    double_buffer(context& ctx, const reference_collection& collection,
-                  std::size_t size)
-        : m_collection(collection),
-          m_buffers(),
-          m_index(0),
-          m_ctx(ctx) {
-        m_buffers[0].reserve(size);
-        m_buffers[1].reserve(size);
+coro<std::size_t> fill(http_request& req, std::vector<char>& buffer) {
+    buffer.resize(buffer.capacity());
+
+    auto read = co_await req.read_body(buffer);
+    buffer.resize(read);
+
+    co_return read;
+}
+
+std::shared_ptr<awaitable_promise<dedupe_response>>
+upload(context& ctx, const reference_collection& coll,
+       const std::vector<char>& buffer) {
+    auto pr = std::make_shared<awaitable_promise<dedupe_response>>(coll.ioc);
+
+    if (!buffer.empty()) {
+        asio::co_spawn(coll.ioc,
+                       coll.dedupe_services.get()->deduplicate(
+                           ctx, {buffer.data(), buffer.size()}),
+                       use_awaitable_promise_cospawn(pr));
+    } else {
+        pr->set(dedupe_response());
     }
 
-    void flip() { m_index = m_index == 0 ? 1 : 0; }
-
-    auto& current() { return m_buffers[m_index]; }
-
-    coro<std::size_t> fill(http_request& req) {
-        current().resize(current().capacity());
-
-        auto read = co_await req.read_body(current().span());
-        current().resize(read);
-
-        co_return read;
-    }
-
-    std::shared_ptr<awaitable_promise<dedupe_response>> upload() {
-        auto pr = std::make_shared<awaitable_promise<dedupe_response>>(
-            m_collection.ioc);
-
-        auto& b = current();
-
-        if (!b.empty()) {
-            asio::co_spawn(m_collection.ioc,
-                           m_collection.dedupe_services.get()->deduplicate(
-                               m_ctx, {b.data(), b.size()}),
-                           use_awaitable_promise_cospawn(pr));
-        } else {
-            pr->set(dedupe_response());
-        }
-
-        return pr;
-    }
-
-private:
-    const reference_collection& m_collection;
-    std::array<unique_buffer<char>, 2> m_buffers;
-    unsigned m_index;
-    context& m_ctx;
-};
+    return pr;
+}
 
 } // namespace
 
@@ -71,9 +46,11 @@ bool put_object::can_handle(const http_request& req) {
            !req.header("x-amz-copy-source");
 }
 
-coro<void> put_object::handle(http_request& req) const {
+coro<http_response> put_object::handle(http_request& req) const {
 
     metric<entrypoint_put_object_req>::increase(1);
+    http_response res;
+
     try {
         auto content_length = req.content_length();
 
@@ -82,11 +59,10 @@ coro<void> put_object::handle(http_request& req) const {
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
-            boost::beast::http::response<http::string_body> res{
-                http::response<http::string_body>{http::status::continue_, 11}};
             LOG_INFO() << req.socket().remote_endpoint()
                        << ": sending 100 CONTINUE";
-            co_await req.respond(res);
+            co_await write(req.socket(),
+                           http_response(http::status::continue_));
         }
 
         md5 hash;
@@ -111,46 +87,44 @@ coro<void> put_object::handle(http_request& req) const {
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
 
-        http_response res;
-        res.set_etag(tag);
+        res.set("ETag", tag);
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
-
-        co_await req.respond(res.get_prepared_response());
-
     } catch (const error_exception& e) {
         LOG_ERROR() << req.socket().remote_endpoint()
                     << " failed to get bucket `" << req.bucket() << "`: " << e;
         throw_from_error(e.error());
     }
+
+    co_return res;
 }
 
 coro<dedupe_response> put_object::put_large_object(http_request& req,
                                                    md5& hash) const {
     const auto buffer_size = m_collection.config.buffer_size;
-    double_buffer b(req.m_ctx, m_collection, buffer_size);
+    double_buffer b(buffer_size);
 
     auto content_length = req.content_length();
     std::size_t transferred = 0;
 
-    auto read = co_await b.fill(req);
-    hash.consume(b.current().span());
+    auto read = co_await fill(req, b.current());
+    hash.consume(b.current());
     transferred += read;
 
     dedupe_response rv;
 
     do {
-        auto promise = b.upload();
+        auto promise = upload(req.m_ctx, m_collection, b.current());
         b.flip();
 
-        read = co_await b.fill(req);
-        hash.consume(b.current().span());
+        read = co_await fill(req, b.current());
+        hash.consume(b.current());
         transferred += read;
 
         rv.append(co_await promise->get());
     } while (transferred < content_length);
 
-    auto promise = b.upload();
+    auto promise = upload(req.m_ctx, m_collection, b.current());
     rv.append(co_await promise->get());
 
     co_return rv;

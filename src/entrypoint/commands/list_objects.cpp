@@ -4,22 +4,14 @@
 #include "entrypoint/http/command_exception.h"
 #include <boost/property_tree/ptree.hpp>
 
-namespace uh::cluster {
-
 namespace http = boost::beast::http;
 
-list_objects::list_objects(const reference_collection& collection)
-    : m_collection(collection) {}
+namespace uh::cluster {
 
-bool list_objects::can_handle(const http_request& req) {
-    return req.method() == method::get &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && !req.query("uploads") &&
-           !req.query("list-type");
-}
+namespace {
 
-static http_response get_response(const std::vector<object>& objects,
-                                  const http_request& req) {
+http_response get_response(const std::vector<object>& objects,
+                           const http_request& req) {
 
     const auto marker = req.query("marker");
     const auto prefix = req.query("prefix");
@@ -143,7 +135,19 @@ static http_response get_response(const std::vector<object>& objects,
     return res;
 }
 
-coro<void> list_objects::handle(http_request& req) const {
+} // namespace
+
+list_objects::list_objects(const reference_collection& collection)
+    : m_collection(collection) {}
+
+bool list_objects::can_handle(const http_request& req) {
+    return req.method() == method::get &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+           req.object_key().empty() && !req.query("uploads") &&
+           !req.query("list-type");
+}
+
+coro<http_response> list_objects::handle(http_request& req) const {
     metric<entrypoint_list_objects_req>::increase(1);
 
     std::vector<object> obj_list;
@@ -155,8 +159,7 @@ coro<void> list_objects::handle(http_request& req) const {
                                 "The specified bucket does not exist.");
     }
 
-    auto res = get_response(obj_list, req);
-    co_await req.respond(res.get_prepared_response());
+    co_return get_response(obj_list, req);
 }
 
 } // namespace uh::cluster

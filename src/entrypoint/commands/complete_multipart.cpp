@@ -1,10 +1,7 @@
 #include "complete_multipart.h"
-#include "common/types/common_types.h"
 #include "common/utils/md5.h"
-#include "common/utils/strings.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
-#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 
@@ -63,7 +60,7 @@ void complete_multipart::validate(const upload_info& info,
     }
 }
 
-coro<void> complete_multipart::handle(http_request& req) const {
+coro<http_response> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -90,7 +87,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
     http_response res;
-    res.set_etag(etag);
+    res.set("ETag", etag);
     res.set_original_size(info.data_size);
     res.set_effective_size(info.effective_size);
 
@@ -101,7 +98,7 @@ coro<void> complete_multipart::handle(http_request& req) const {
     res << pt;
 
     co_await m_collection.uploads.remove_upload(upload_id);
-    co_await req.respond(res.get_prepared_response());
+    co_return res;
 }
 
 } // namespace uh::cluster

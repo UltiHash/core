@@ -1,6 +1,4 @@
 #include "get_object.h"
-#include "common/coroutines/awaitable_promise.h"
-#include "common/utils/double_buffer.h"
 #include "common/utils/time_utils.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -8,20 +6,24 @@ namespace uh::cluster {
 
 namespace {
 
-struct local_read_handle {
-    global_data_view& m_storage;
-    const address m_addr;
-    size_t m_addr_index = 0;
-    context& m_ctx;
-
-    local_read_handle(context& ctx, global_data_view& storage, address&& addr)
+class local_read_handle : public uh::cluster::body {
+public:
+    local_read_handle(global_data_view& storage, address&& addr, context& ctx)
         : m_storage(storage),
           m_addr(std::move(addr)),
+          m_size(m_addr.data_size()),
           m_ctx(ctx) {}
 
-    bool has_next() { return m_addr_index != m_addr.size(); }
+    ~local_read_handle() {
+        try {
+            report_stats();
+        } catch (...) {
+        }
+    }
 
-    coro<void> next(std::vector<char>& buffer) {
+    std::optional<std::size_t> length() const override { return m_size; }
+
+    coro<std::size_t> read(std::span<char> buffer) override {
         std::size_t buffer_size = 0;
 
         address partial_addr;
@@ -36,46 +38,33 @@ struct local_read_handle {
         }
 
         co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
-
-        buffer.resize(buffer_size);
+        m_total += buffer_size;
+        m_size -= buffer_size;
+        co_return buffer_size;
     }
+
+private:
+    void report_stats() {
+        const std::chrono::duration<double> duration = m_timer.passed();
+        const auto size = static_cast<double>(m_total) / MEBI_BYTE;
+        const auto bandwidth = size / duration.count();
+
+        metric<entrypoint_egressed_data_counter, byte>::increase(m_total);
+
+        LOG_INFO() << "retrieval duration " << duration.count() << " s";
+        LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
+    }
+
+    global_data_view& m_storage;
+    const address m_addr;
+    size_t m_addr_index = 0;
+
+    std::size_t m_size;
+    context& m_ctx;
+
+    std::size_t m_total = 0;
+    timer m_timer;
 };
-
-/*
- * Extracted the following code into a function, as GCC will complain with
- * 'called on pointer returned from a mismatched allocation function'
- * otherwise (when number of co_awaits in get_object::handle() would be
- * greater than 5).
- */
-coro<std::size_t> upload(local_read_handle& reader, http_request& req,
-                         boost::asio::io_context& context) {
-    size_t total_size = 0;
-
-    std::shared_ptr<awaitable_promise<std::size_t>> promise;
-
-    double_buffer buffers(INPUT_CHUNK_SIZE);
-    while (reader.has_next()) {
-        auto& buffer = buffers.current();
-        buffer.resize(buffer.capacity());
-
-        co_await reader.next(buffer);
-
-        if (promise) {
-            total_size += co_await promise->get();
-        }
-        promise = std::make_shared<awaitable_promise<std::size_t>>(context);
-        boost::asio::async_write(req.socket(), boost::asio::buffer(buffer),
-                                 use_awaitable_promise(promise));
-
-        buffers.flip();
-    }
-
-    if (promise) {
-        co_await promise->get();
-        promise.reset();
-    }
-    co_return total_size;
-}
 
 } // namespace
 
@@ -88,45 +77,25 @@ bool get_object::can_handle(const http_request& req) {
            !req.object_key().empty() && !req.query("attributes");
 }
 
-coro<void> get_object::handle(http_request& req) const {
+coro<http_response> get_object::handle(http_request& req) const {
     metric<entrypoint_get_object_req>::increase(1);
-    try {
-        timer tt;
 
+    http_response res;
+
+    try {
         auto obj = co_await m_collection.directory.get_object(req.bucket(),
                                                               req.object_key());
 
-        http::response<http::empty_body> res{http::status::ok, 11};
-        res.base().set("Content-Length", std::to_string(obj.size));
-        if (obj.etag) {
-            res.base().set("ETag", *obj.etag);
-        }
-
-        if (obj.mime) {
-            res.base().set("Content-Type", *obj.mime);
-        }
-
-        http::response_serializer<http::empty_body> sr(res);
-        co_await http::async_write_header(
-            req.socket(), sr,
-            boost::asio::as_tuple(boost::asio::use_awaitable));
-
-        local_read_handle reader(req.m_ctx, m_collection.gdv,
-                                 std::move(*obj.addr));
-        size_t total_size = co_await upload(reader, req, m_collection.ioc);
-        const std::chrono::duration<double> duration = tt.passed();
-        const auto size = static_cast<double>(total_size) / MEBI_BYTE;
-        const auto bandwidth = size / duration.count();
-
-        metric<entrypoint_egressed_data_counter, byte>::increase(total_size);
-
-        LOG_INFO() << "retrieval duration " << duration.count() << " s";
-        LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
-
+        res.set("ETag", obj.etag);
+        res.set("Content-Type", obj.mime);
+        res.set_body(std::make_unique<local_read_handle>(
+            m_collection.gdv, std::move(*obj.addr), req.m_ctx));
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");
     }
+
+    co_return res;
 }
 
 } // namespace uh::cluster

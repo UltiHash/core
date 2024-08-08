@@ -22,7 +22,7 @@ static void validate(const http_request& req) {
     }
 }
 
-coro<void> multipart::handle(http_request& req) const {
+coro<http_response> multipart::handle(http_request& req) const {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);
@@ -30,11 +30,9 @@ coro<void> multipart::handle(http_request& req) const {
 
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
-        boost::beast::http::response<http::string_body> res{
-            http::response<http::string_body>{http::status::continue_, 11}};
         LOG_INFO() << req.socket().remote_endpoint()
                    << ": sending 100 CONTINUE";
-        co_await req.respond(res);
+        co_await write(req.socket(), http_response(http::status::continue_));
     }
 
     auto size = co_await req.read_body(buffer.span());
@@ -47,14 +45,15 @@ coro<void> multipart::handle(http_request& req) const {
     }
 
     auto md5 = calculate_md5(buffer.span());
+
     http_response res;
-    res.set_etag(md5);
+    res.set("ETag", md5);
 
     co_await m_collection.uploads.append_upload_part_info(
         *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
         buffer.size(), std::move(md5));
 
-    co_await req.respond(res.get_prepared_response());
+    co_return res;
 }
 
 } // namespace uh::cluster
