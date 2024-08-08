@@ -54,7 +54,7 @@ entrypoint:
 
 storage:
   replicas: 4
-  storageClass: local-path          
+  storageClass: local-path             
   storageSize: 800Gi
   affinity:
     podAntiAffinity:
@@ -74,6 +74,19 @@ storage:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  localVolumes:                      
+    - name: storage0
+      hostPath: "/storage0"
+      containerPath: "/var/lib/uh/storage0"
+    - name: storage1
+      hostPath: "/storage1"
+      containerPath: "/var/lib/uh/storage1"
+    - name: storage2
+      hostPath: "/storage2"
+      containerPath: "/var/lib/uh/storage2"
+    - name: storage3
+      hostPath: "/storage3"
+      containerPath: "/var/lib/uh/storage3"
 
 deduplicator:
   replicas: 4
