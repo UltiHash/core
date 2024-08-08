@@ -145,6 +145,8 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
+    void internal_delete(std::size_t offset, std::size_t size);
+
     size_t m_last_file_data_end{};
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;

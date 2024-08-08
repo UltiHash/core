@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "data_store tests"
 
+#include "common/types/common_types.h"
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "storage/data_store.h"
@@ -9,8 +10,8 @@
 
 // ------------- Tests Suites Follow --------------
 
-#define MAX_DATA_STORE_SIZE_BYTES (4 * 1024ul * 1024ul)
-#define MAX_FILE_SIZE_BYTES (8 * 1024ul)
+#define MAX_DATA_STORE_SIZE_BYTES (4 * MEBI_BYTE)
+#define MAX_FILE_SIZE_BYTES (128 * KIBI_BYTE)
 #define DATA_STORE_ID 1
 
 namespace uh::cluster {
@@ -53,8 +54,7 @@ struct data_store_fixture {
 
     inline size_t get_expected_used(size_t t_written) {
         if (t_written > m_expected_last_file_space) {
-            m_expected_used += sizeof(size_t);
-            m_expected_last_file_space = MAX_FILE_SIZE_BYTES - sizeof(size_t);
+            m_expected_last_file_space = MAX_FILE_SIZE_BYTES;
         }
         m_expected_used += t_written;
         m_expected_last_file_space -= t_written;
@@ -255,6 +255,208 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
         t.join();
 
     BOOST_TEST(failures == 0);
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
+    auto buffer1 = random_buffer(DEFAULT_PAGE_SIZE);
+    auto buffer2 = random_buffer(DEFAULT_PAGE_SIZE);
+    auto buffer3 = random_buffer(2 * DEFAULT_PAGE_SIZE);
+
+    address full_address;
+    auto buffer1_address = ds->register_write(buffer1);
+    auto buffer2_address = ds->register_write(buffer2);
+    auto buffer3_address = ds->register_write(buffer3);
+    full_address.append(buffer1_address);
+    full_address.append(buffer2_address);
+    full_address.append(buffer3_address);
+    ds->perform_write(buffer1_address);
+    ds->perform_write(buffer2_address);
+    ds->perform_write(buffer3_address);
+    ds->sync();
+    ds.reset();
+
+    ds = make_data_store();
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+        BOOST_CHECK(
+            std::memcmp(read_buffer.data() + buffer1.size() + buffer2.size(),
+                        buffer3.data(), buffer3.size()) == 0);
+    }
+
+    ds->unlink(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        shared_buffer<char> zero_buffer(buffer2.size());
+        memset(zero_buffer.data(), 0, buffer2.size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                zero_buffer.data(), zero_buffer.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size() +
+                                    zero_buffer.size(),
+                                buffer3.data(), buffer3.size()) == 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
+    const std::size_t ALIGNMENT_OFFSET = 1337;
+    auto buffer1 = random_buffer(DEFAULT_PAGE_SIZE + ALIGNMENT_OFFSET);
+    auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
+    auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET);
+
+    address full_address;
+    auto buffer1_address = ds->register_write(buffer1);
+    auto buffer2_address = ds->register_write(buffer2);
+    auto buffer3_address = ds->register_write(buffer3);
+    full_address.append(buffer1_address);
+    full_address.append(buffer2_address);
+    full_address.append(buffer3_address);
+    ds->perform_write(buffer1_address);
+    ds->perform_write(buffer2_address);
+    ds->perform_write(buffer3_address);
+    ds->sync();
+    ds.reset();
+
+    ds = make_data_store();
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+        BOOST_CHECK(
+            std::memcmp(read_buffer.data() + buffer1.size() + buffer2.size(),
+                        buffer3.data(), buffer3.size()) == 0);
+    }
+
+    ds->unlink(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        shared_buffer<char> zero_buffer(DEFAULT_PAGE_SIZE);
+        memset(zero_buffer.data(), 0, DEFAULT_PAGE_SIZE);
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(),
+                                DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + 2 * DEFAULT_PAGE_SIZE,
+                                zero_buffer.data(), DEFAULT_PAGE_SIZE) == 0);
+        BOOST_CHECK(
+            std::memcmp(read_buffer.data() + 3 * DEFAULT_PAGE_SIZE,
+                        buffer2.data() + buffer2.size() - ALIGNMENT_OFFSET,
+                        ALIGNMENT_OFFSET) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + 3 * DEFAULT_PAGE_SIZE +
+                                    ALIGNMENT_OFFSET,
+                                buffer3.data(),
+                                DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET) == 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
+    // const std::size_t FILE_ALIGNMENT_OFFSET = 1337;
+    auto buffer1 = random_buffer(MAX_FILE_SIZE_BYTES - 1337);
+    auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
+
+    address full_address;
+    auto buffer1_address = ds->register_write(buffer1);
+    auto buffer2_address = ds->register_write(buffer2);
+    full_address.append(buffer1_address);
+    full_address.append(buffer2_address);
+    ds->perform_write(buffer1_address);
+    ds->perform_write(buffer2_address);
+    ds->sync();
+    ds.reset();
+
+    ds = make_data_store();
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+    }
+
+    ds->unlink(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        shared_buffer<char> zero_buffer(DEFAULT_PAGE_SIZE);
+        memset(zero_buffer.data(), 0, DEFAULT_PAGE_SIZE);
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), 1337) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
+                                zero_buffer.data(), zero_buffer.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES +
+                                    zero_buffer.size(),
+                                buffer2.data() + DEFAULT_PAGE_SIZE + 1337,
+                                buffer2.size() - DEFAULT_PAGE_SIZE - 1337) ==
+                    0);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

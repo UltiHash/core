@@ -12,7 +12,8 @@ data_store::data_store(data_store_config conf,
       m_data_store_id(data_store_id),
       m_root(working_dir / std::to_string(data_store_id)),
       m_conf(conf),
-      m_refcounter(m_root, m_conf.page_size) {
+      m_refcounter(m_root, m_conf.page_size,
+                   std::bind_front(&data_store::internal_delete, this)) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
 
@@ -55,7 +56,7 @@ data_store::data_store(data_store_config conf,
     } else {
         const auto ret =
             ::pread(m_open_files.back().first, &m_last_file_data_end,
-                    sizeof(m_last_file_data_end), 0);
+                    sizeof(m_last_file_data_end), m_conf.file_size);
         if (ret != sizeof(m_last_file_data_end)) {
             throw std::system_error(
                 std::error_code(errno, std::system_category()),
@@ -160,7 +161,7 @@ void data_store::sync() {
     std::unique_lock<std::mutex> lock(m_sync_end_offset_mutex);
 
     const auto ret = ::pwrite(m_open_files.back().first, &m_last_file_data_end,
-                              sizeof(m_last_file_data_end), 0);
+                              sizeof(m_last_file_data_end), m_conf.file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -311,9 +312,9 @@ std::filesystem::path data_store::add_new_file(size_t offset,
         }
     }
 
-    m_last_file_data_end = sizeof(m_last_file_data_end);
-    const auto ret =
-        ::write(fd, &m_last_file_data_end, sizeof(m_last_file_data_end));
+    m_last_file_data_end = 0;
+    const auto ret = ::pwrite(fd, &m_last_file_data_end,
+                              sizeof(m_last_file_data_end), m_conf.file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -361,7 +362,6 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
 
     if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
         sync();
-        m_used += sizeof(m_last_file_data_end);
         const auto offset = m_open_files.back().second + m_last_file_data_end;
         add_new_file(offset, m_conf.file_size);
     }
@@ -388,6 +388,29 @@ data_store::find_async_data(size_t pointer, size_t size) {
         }
     }
     return {0, nullptr};
+}
+
+void data_store::internal_delete(std::size_t offset, std::size_t size) {
+    if (offset + size > m_used.load()) {
+        throw std::out_of_range("pointer is out of range");
+    }
+
+    std::unique_lock<std::mutex> lk(m_async_mutex);
+    if (const auto [async_offset, data] = find_async_data(offset, size);
+        data.data() != nullptr) {
+        const auto data_offset = offset - async_offset;
+        std::memset(data.data() + data_offset, 0, size);
+        return;
+    }
+    lk.unlock();
+
+    const auto [fd, seek] = get_file_offset_pair(offset);
+
+    if (fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size))
+        [[unlikely]] {
+        throw std::system_error(std::error_code(errno, std::system_category()),
+                                "Could not deallocate the data.");
+    }
 }
 
 } // end namespace uh::cluster
