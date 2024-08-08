@@ -78,6 +78,14 @@ storage:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  localVolumes:                      
+    - name: storage0
+      hostPath: "/storage0"
+      containerPath: "/var/lib/uh/storage0"
+    - name: storage1
+      hostPath: "/storage1"
+      containerPath: "/var/lib/uh/storage1"
+
 
 deduplicator:
   replicas: 2
