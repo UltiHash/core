@@ -14,7 +14,7 @@ shared_buffer<char> random_buffer(std::size_t length,
 
     shared_buffer<char> s(length);
     size_t i = 0;
-    while (s.size() < length) {
+    while (i < length) {
         s.data()[i++] = 97 + chars[pick(rg)] % 25;
     }
 
