@@ -114,7 +114,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
     dedupe_response rv;
 
     do {
-        auto promise = upload(req.m_ctx, m_collection, b.current());
+        auto promise = upload(req.context(), m_collection, b.current());
         b.flip();
 
         read = co_await fill(req, b.current());
@@ -124,7 +124,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
         rv.append(co_await promise->get());
     } while (transferred < content_length);
 
-    auto promise = upload(req.m_ctx, m_collection, b.current());
+    auto promise = upload(req.context(), m_collection, b.current());
     rv.append(co_await promise->get());
 
     co_return rv;
@@ -144,7 +144,7 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
     }
 
     co_return co_await m_collection.dedupe_services.get()->deduplicate(
-        req.m_ctx, {buffer.data(), buffer.size()});
+        req.context(), {buffer.data(), buffer.size()});
 }
 
 } // namespace uh::cluster

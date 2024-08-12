@@ -232,7 +232,7 @@ make_decoder(const http::request_parser<http::empty_body>::value_type& req,
 } // namespace
 
 coro<std::unique_ptr<http_request>>
-http_request::create(context& ctx, asio::ip::tcp::socket& s) {
+http_request::create(asio::ip::tcp::socket& s) {
 
     http::request_parser<http::empty_body> req;
     boost::beast::flat_buffer buffer;
@@ -242,17 +242,17 @@ http_request::create(context& ctx, asio::ip::tcp::socket& s) {
                                             asio::use_awaitable);
 
     co_return std::unique_ptr<http_request>(
-        new http_request(ctx, s, std::move(req.get()), std::move(buffer)));
+        new http_request(s, std::move(req.get()), std::move(buffer)));
 }
 
 http_request::http_request(
-    context& ctx, boost::asio::ip::tcp::socket& stream,
+    boost::asio::ip::tcp::socket& stream,
     http::request_parser<http::empty_body>::value_type&& req,
     beast::flat_buffer&& initial)
-    : m_ctx(ctx),
-      m_stream(stream),
+    : m_stream(stream),
       m_req(std::move(req)),
-      m_decoder(make_decoder(m_req, m_stream, std::move(initial))) {
+      m_decoder(make_decoder(m_req, m_stream, std::move(initial))),
+      m_ctx() {
 
     if (req.base().version() != 11) {
         throw std::runtime_error(
@@ -298,6 +298,10 @@ std::optional<std::string> http_request::header(const std::string& name) const {
 
     return it->value();
 }
+
+const uh::cluster::context& http_request::context() const { return m_ctx; }
+
+uh::cluster::context& http_request::context() { return m_ctx; }
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {
     out << req.m_req.base().method_string() << " " << req.m_req.base().target()

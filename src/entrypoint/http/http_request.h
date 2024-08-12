@@ -21,7 +21,7 @@ public:
 class http_request {
 public:
     static coro<std::unique_ptr<http_request>>
-    create(context& ctx, boost::asio::ip::tcp::socket& s);
+    create(boost::asio::ip::tcp::socket& s);
 
     [[nodiscard]] http::verb method() const;
 
@@ -52,12 +52,13 @@ public:
 
     bool keep_alive() const { return m_req.keep_alive(); }
 
-    context& m_ctx;
+    const uh::cluster::context& context() const;
+    uh::cluster::context& context();
 
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
-    http_request(context& ctx, boost::asio::ip::tcp::socket& stream,
+    http_request(boost::asio::ip::tcp::socket& stream,
                  http::request_parser<http::empty_body>::value_type&& req,
                  boost::beast::flat_buffer&& initial);
 
@@ -68,6 +69,8 @@ private:
     std::string m_bucket_id{};
     std::string m_object_key{};
     std::map<std::string, std::string> m_params;
+
+    uh::cluster::context m_ctx;
 };
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);
