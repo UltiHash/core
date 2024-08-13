@@ -89,7 +89,7 @@ coro<http_response> get_object::handle(http_request& req) const {
         res.set("ETag", obj.etag);
         res.set("Content-Type", obj.mime);
         res.set_body(std::make_unique<local_read_handle>(
-            m_collection.gdv, std::move(*obj.addr), req.m_ctx));
+            m_collection.gdv, std::move(*obj.addr), req.context()));
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchKey",
                                 "object not found");
