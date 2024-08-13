@@ -8,14 +8,14 @@ global_data_view::global_data_view(
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2) {
 
-    storage_maintainer.add_monitor(m_load_balancer);
+    storage_maintainer.add_monitor(*m_load_balancer);
     storage_maintainer.add_monitor(m_basic_getter);
-    m_load_balancer.get();
+    m_load_balancer->get();
 }
 
 coro<address> global_data_view::write(context& ctx,
                                       const std::string_view& data) {
-    const auto client = m_load_balancer.get();
+    const auto client = m_load_balancer->get();
     co_return co_await client->write(ctx, data);
 }
 

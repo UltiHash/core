@@ -85,7 +85,7 @@ private:
 
     service_maintainer<storage_interface> m_storage_maintainer;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
-    service_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
+    roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
     global_data_view m_data_view;
     directory m_directory;

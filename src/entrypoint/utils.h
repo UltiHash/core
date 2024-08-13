@@ -16,7 +16,7 @@ namespace uh::cluster {
 
 struct reference_collection {
     boost::asio::io_context& ioc;
-    const service_load_balancer<deduplicator_interface>& dedupe_services;
+    const roundrobin_load_balancer<deduplicator_interface>& dedupe_services;
     uh::cluster::directory& directory;
     multipart_state& uploads;
     entrypoint_config& config;

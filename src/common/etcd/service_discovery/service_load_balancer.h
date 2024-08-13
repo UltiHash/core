@@ -2,22 +2,38 @@
 #ifndef UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 #define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 
-#include "common/etcd/service_discovery/maintainer_monitor.h"
+#include "common/ec/ec_group.h"
+#include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/map_index.h"
+#include "storage/interfaces/storage_system.h"
+
 #include <set>
 
 namespace uh::cluster {
 
 template <typename service_interface>
-class service_load_balancer : public maintainer_monitor<service_interface> {
+struct load_balancer : service_monitor<service_interface> {
+    [[nodiscard]] virtual std::shared_ptr<service_interface> get() const = 0;
+    [[nodiscard]] virtual bool empty() const noexcept = 0;
+};
 
+class ec_load_balancer;
+
+template <typename service_interface>
+class roundrobin_load_balancer : public load_balancer<service_interface> {
+
+    friend ec_load_balancer;
     void add_client(size_t,
                     const std::shared_ptr<service_interface>& client) override {
+        std::lock_guard l(m_mutex);
+
         m_services.emplace(client);
     }
     void
-    remove_client(const std::shared_ptr<service_interface>& client) override {
+    remove_client(size_t,
+                  const std::shared_ptr<service_interface>& client) override {
+        std::lock_guard l(m_mutex);
 
         auto it = m_services.find(client);
         if (it == m_services.end()) {
@@ -31,16 +47,15 @@ class service_load_balancer : public maintainer_monitor<service_interface> {
     }
 
 public:
-    [[nodiscard]] std::shared_ptr<service_interface> get() const {
+    [[nodiscard]] std::shared_ptr<service_interface> get() const override {
 
         if (this->m_local_service) {
             return this->m_local_service;
         }
 
-        std::unique_lock<std::mutex> lk(*this->m_mutex);
-        if (this->m_cv->get().wait_for(lk,
-                                       std::chrono::seconds(this->m_timeout_s),
-                                       [this]() { return !empty(); })) {
+        std::unique_lock lk(m_mutex);
+        if (m_cv.wait_for(lk, std::chrono::seconds(this->m_timeout_s),
+                          [this]() { return !empty(); })) {
         } else
             throw std::runtime_error(
                 "timeout waiting for any " +
@@ -57,20 +72,25 @@ public:
         return rv;
     }
 
-    [[nodiscard]] bool empty() const noexcept { return m_services.size() == 0; }
+    [[nodiscard]] bool empty() const noexcept override {
+        return m_services.size() == 0;
+    }
 
 private:
+    mutable std::mutex m_mutex;
+    mutable std::condition_variable m_cv;
+
     std::set<std::shared_ptr<service_interface>> m_services;
     mutable decltype(m_services.end()) m_robin_index = m_services.cend();
 };
 
-template <>
-class service_load_balancer<storage_interface>
-    : public maintainer_monitor<storage_interface> {
+class capacity_load_balancer : public load_balancer<storage_interface> {
 
     void add_attribute(const std::shared_ptr<storage_interface>& client,
                        etcd_service_attributes attr,
                        const std::string& value) override {
+        std::lock_guard l(m_mutex);
+
         switch (attr) {
         case STORAGE_FREE_SPACE:
             m_free_spaces.add(std::stoul(value), client);
@@ -83,6 +103,7 @@ class service_load_balancer<storage_interface>
 
     void remove_attribute(const std::shared_ptr<storage_interface>& client,
                           etcd_service_attributes attr) override {
+        std::lock_guard l(m_mutex);
         switch (attr) {
         case STORAGE_FREE_SPACE:
             m_free_spaces.remove(client);
@@ -96,21 +117,24 @@ class service_load_balancer<storage_interface>
     }
 
     void
-    remove_client(const std::shared_ptr<storage_interface>& client) override {
+    remove_client(size_t,
+                  const std::shared_ptr<storage_interface>& client) override {
         m_free_spaces.remove(client);
         m_loads.remove(client);
     }
 
-    [[nodiscard]] inline bool empty() const noexcept {
-        return m_free_spaces.size() == 0 or m_loads.size() == 0;
-    }
+    mutable std::mutex m_mutex;
+    mutable std::condition_variable m_cv;
+
+    map_index<size_t, std::shared_ptr<storage_interface>> m_free_spaces;
+    map_index<double, std::shared_ptr<storage_interface>> m_loads;
 
 public:
-    std::shared_ptr<storage_interface> get() const {
+    [[nodiscard]] std::shared_ptr<storage_interface> get() const override {
 
-        std::unique_lock<std::mutex> lk(*this->m_mutex);
-        if (this->m_cv->get().wait_for(lk, std::chrono::seconds(m_timeout_s),
-                                       [this]() { return !empty(); })) {
+        std::unique_lock lk(m_mutex);
+        if (m_cv.wait_for(lk, std::chrono::seconds(m_timeout_s),
+                          [this]() { return !empty(); })) {
         } else
             throw std::runtime_error("timeout waiting for any storages");
 
@@ -132,9 +156,69 @@ public:
         return candidate_dn->second;
     }
 
-    map_index<size_t, std::shared_ptr<storage_interface>> m_free_spaces;
-    map_index<double, std::shared_ptr<storage_interface>> m_loads;
+    [[nodiscard]] bool empty() const noexcept override {
+        return m_free_spaces.size() == 0 or m_loads.size() == 0;
+    }
 };
+
+class ec_load_balancer : public load_balancer<storage_interface> {
+
+    void add_client(size_t id,
+                    const std::shared_ptr<storage_interface>& cl) override {
+        const auto gid = get_group_id(id);
+        const auto nid = get_node_id(id);
+
+        auto it = m_ec_groups.find(gid);
+        if (it == m_ec_groups.cend()) {
+            it = m_ec_groups.emplace_hint(it, gid,
+                                          std::make_shared<storage_system>(
+                                              gid, m_data_nodes, m_ec_nodes));
+        }
+        it->second->get_group().insert(nid, cl);
+        if (it->second->get_group().is_healthy()) {
+            m_load_balancer.add_client(gid, it->second);
+        }
+    }
+
+    void remove_client(size_t id,
+                       const std::shared_ptr<storage_interface>& cl) override {
+        const auto gid = get_group_id(id);
+        const auto nid = get_node_id(id);
+
+        if (const auto it = m_ec_groups.find(gid); it != m_ec_groups.cend()) {
+            m_load_balancer.remove_client(gid, it->second);
+            it->second->get_group().remove(nid);
+        }
+    }
+
+    [[nodiscard]] size_t get_group_id(size_t node_id) const {
+        return node_id / (m_data_nodes + m_ec_nodes);
+    }
+
+    [[nodiscard]] size_t get_node_id(size_t node_id) const {
+        return node_id % (m_data_nodes + m_ec_nodes);
+    }
+
+    const size_t m_data_nodes;
+    const size_t m_ec_nodes;
+
+    std::map<size_t, std::shared_ptr<storage_system>> m_ec_groups;
+    roundrobin_load_balancer<storage_system> m_load_balancer;
+
+public:
+    explicit ec_load_balancer(size_t data_nodes, size_t ec_nodes)
+        : m_data_nodes(data_nodes),
+          m_ec_nodes(ec_nodes) {}
+
+    [[nodiscard]] std::shared_ptr<storage_interface> get() const override {
+        return m_load_balancer.get();
+    }
+
+    [[nodiscard]] bool empty() const noexcept override {
+        return m_load_balancer.empty();
+    }
+};
+
 } // namespace uh::cluster
 
 #endif // UH_CLUSTER_STORAGE_LOAD_BALANCER_H

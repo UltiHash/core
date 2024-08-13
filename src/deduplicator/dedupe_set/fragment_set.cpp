@@ -74,7 +74,7 @@ void fragment_set::mark_deduplication(const fragment& frag) {
 
 void fragment_set::flush() { m_set_log.flush(); }
 
-size_t fragment_set::size() { return m_set.size(); }
+size_t fragment_set::size() const { return m_set.size(); }
 
 std::lock_guard<std::shared_mutex> fragment_set::lock() {
     return std::lock_guard<std::shared_mutex>(m_mutex);

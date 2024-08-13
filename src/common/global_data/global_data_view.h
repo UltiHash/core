@@ -5,9 +5,9 @@
 #include "common/etcd/service_discovery/service_basic_getter.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/network/client.h"
-#include "common/storage_system/storage_system.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
+#include "storage/interfaces/storage_system.h"
 
 namespace uh::cluster {
 
@@ -142,9 +142,8 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    service_load_balancer<storage_interface> m_load_balancer;
+    std::unique_ptr<load_balancer<storage_interface>> m_load_balancer;
     service_basic_getter<storage_interface> m_basic_getter;
-    storage_system m_storage_system;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 };

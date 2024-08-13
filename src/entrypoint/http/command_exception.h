@@ -3,7 +3,6 @@
 
 #include "common/utils/error.h"
 #include "http_response.h"
-#include <boost/beast/core.hpp>
 
 namespace uh::cluster {
 

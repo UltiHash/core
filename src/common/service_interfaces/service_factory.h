@@ -2,8 +2,8 @@
 #ifndef UH_CLUSTER_SERVICE_FACTORY_H
 #define UH_CLUSTER_SERVICE_FACTORY_H
 
-#include "../service_interfaces/attached_service.h"
-#include "common/utils/host_utils.h"
+#include "../utils/host_utils.h"
+#include "attached_service.h"
 #include <boost/asio/io_context.hpp>
 #include <memory>
 

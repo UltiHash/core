@@ -122,7 +122,7 @@ public:
      * Returns the size of the dedupe set (count of fragments)
      * @return
      */
-    size_t size();
+    size_t size() const;
 
     /**
      * Locks the set inclusively

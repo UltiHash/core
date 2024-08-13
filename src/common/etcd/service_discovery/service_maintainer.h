@@ -2,9 +2,9 @@
 #ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
+#include "../../service_interfaces/service_factory.h"
 #include "../namespace.h"
 #include "common/etcd/registry/service_id.h"
-#include "common/utils/service_factory.h"
 #include "common/utils/time_utils.h"
 #include "service_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
@@ -36,7 +36,8 @@ struct service_endpoint {
     std::map<etcd_service_attributes, std::string> attributes;
 };
 
-template <typename service_interface> struct service_maintainer {
+template <typename service_interface> class service_maintainer {
+public:
     service_maintainer(etcd::SyncClient& etcd_client,
                        service_factory<service_interface> service_factory)
         : m_etcd_client(etcd_client),
@@ -63,8 +64,7 @@ template <typename service_interface> struct service_maintainer {
     }
     ~service_maintainer() { m_watcher.Cancel(); }
 
-    void add_monitor(maintainer_monitor<service_interface>& monitor) {
-        monitor.set_sync_vars(m_mutex, m_cv);
+    void add_monitor(service_monitor<service_interface>& monitor) {
         if (m_local_service) {
             monitor.add_local_client(m_local_service);
         }
@@ -153,8 +153,6 @@ protected:
                 }
             }
         }
-
-        m_cv.notify_one();
     }
 
     void set(const std::string& path, const std::string& value) {
@@ -191,7 +189,7 @@ protected:
 
             try {
                 for (auto& m : m_monitors) {
-                    m.get().remove_client(it->second);
+                    m.get().remove_client(id, it->second);
                 }
             } catch (...) {
             }
@@ -204,13 +202,12 @@ protected:
     etcd::Watcher m_watcher;
 
     mutable std::mutex m_mutex;
-    mutable std::condition_variable m_cv;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
     std::shared_ptr<service_interface> m_local_service;
-    std::list<std::reference_wrapper<maintainer_monitor<service_interface>>>
+    std::list<std::reference_wrapper<service_monitor<service_interface>>>
         m_monitors;
 };
 
