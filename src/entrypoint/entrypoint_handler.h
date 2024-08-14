@@ -26,15 +26,19 @@
 #include "commands/multipart.h"
 #include "commands/put_object.h"
 #include "http/command_exception.h"
+#include "http/request_factory.h"
 
 namespace uh::cluster {
 
 template <typename... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(reference_collection& collection,
-                                RequestTypes&&... request_types)
+    explicit entrypoint_handler(
+        reference_collection& collection,
+        std::unique_ptr<ep::http::request_factory> factory,
+        RequestTypes&&... request_types)
         : m_collection(collection),
+          m_factory(std::move(factory)),
           m_req_types(request_types...) {}
 
     coro<void> on_startup() override {
@@ -45,7 +49,7 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
-            auto req = co_await http_request::create(s);
+            auto req = co_await m_factory->create(s);
             LOG_DEBUG() << s.remote_endpoint() << ": read request: " << *req;
 
             std::optional<http_response> resp;
@@ -133,21 +137,28 @@ public:
 
 private:
     reference_collection& m_collection;
+    std::unique_ptr<ep::http::request_factory> m_factory;
     std::tuple<RequestTypes...> m_req_types;
 };
 
 template <typename... RequestTypes>
-auto define_entrypoint_handler(reference_collection& collection,
-                               RequestTypes&&... request_types) {
+auto define_entrypoint_handler(
+    reference_collection& collection,
+    std::unique_ptr<ep::http::request_factory> factory,
+    RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        collection, std::forward<RequestTypes>(request_types)...);
+        collection, std::move(factory),
+        std::forward<RequestTypes>(request_types)...);
 }
 
-auto make_entrypoint_handler(reference_collection& collection) {
+auto make_entrypoint_handler(
+    reference_collection& collection,
+    std::unique_ptr<ep::http::request_factory> factory) {
     return define_entrypoint_handler(
-        collection, copy_object(collection), create_bucket(collection),
-        list_buckets(collection), delete_bucket(collection),
-        put_object(collection), get_object(collection), get_metrics(collection),
+        collection, std::move(factory), copy_object(collection),
+        create_bucket(collection), list_buckets(collection),
+        delete_bucket(collection), put_object(collection),
+        get_object(collection), get_metrics(collection),
         head_object(collection), list_objects(collection),
         list_objects_v2(collection), delete_object(collection),
         delete_objects(collection), init_multipart(collection),
