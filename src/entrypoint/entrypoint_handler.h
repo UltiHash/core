@@ -30,7 +30,13 @@
 
 namespace uh::cluster {
 
-template <typename... RequestTypes>
+template <typename handler>
+concept request_handler = requires(handler h, http_request r) {
+    { handler::can_handle(r) } -> std::same_as<bool>;
+    { h.handle(r) } -> std::same_as<coro<http_response>>;
+};
+
+template <request_handler... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
     explicit entrypoint_handler(
@@ -139,7 +145,7 @@ private:
     std::tuple<RequestTypes...> m_req_types;
 };
 
-template <typename... RequestTypes>
+template <request_handler... RequestTypes>
 auto define_entrypoint_handler(
     reference_collection& collection,
     std::unique_ptr<ep::http::request_factory> factory,
