@@ -41,10 +41,13 @@ std::string url_encode(const std::string& str_to_encode) noexcept {
     return encoded_string;
 }
 
+std::string& lowercase(std::string& s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
+
 bool to_bool(std::string str_to_eval) {
-    std::transform(str_to_eval.begin(), str_to_eval.end(), str_to_eval.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    std::istringstream is(str_to_eval);
+    std::istringstream is(lowercase(str_to_eval));
     bool b;
     is >> std::boolalpha >> b;
     return b;

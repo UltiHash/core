@@ -28,11 +28,7 @@ http_response get_response(const std::vector<object>& objects,
                                 "encountered unexpected query parameter");
     }
 
-    size_t max_keys = 1000;
-    const auto max_keys_val = req.query("max-keys");
-    if (max_keys_val) {
-        max_keys = std::stoul(*max_keys_val);
-    }
+    std::size_t max_keys = query<std::size_t>(req, "max-keys").value_or(1000);
 
     std::string is_truncated = "false";
     boost::property_tree::ptree pt;

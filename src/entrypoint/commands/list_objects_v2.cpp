@@ -27,20 +27,9 @@ http_response get_response(const std::vector<object>& objects,
                                 "encountered unexpected query parameter");
     }
 
-    const auto continuation_token = req.query("continuation-token");
-
-    size_t max_keys = 1000;
-    if (const auto max_keys_str = req.query("max-keys");
-        max_keys_str.has_value()) {
-        max_keys = std::stoul(*max_keys_str);
-    }
-
-    bool fetch_owner_set = false;
-    if (const auto fetch_owner = req.query("fetch-owner");
-        fetch_owner.has_value()) {
-        if (to_bool(*fetch_owner))
-            fetch_owner_set = true;
-    }
+    auto continuation_token = query(req, "continuation-token");
+    auto max_keys = query<std::size_t>(req, "max-keys").value_or(1000);
+    auto fetch_owner_set = query<bool>(req, "fetch-owner").value_or(false);
 
     std::string is_truncated = "false";
     boost::property_tree::ptree pt;

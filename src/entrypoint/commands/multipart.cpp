@@ -15,14 +15,7 @@ bool multipart::can_handle(const http_request& req) {
 }
 
 coro<void> multipart::validate(const http_request& req) {
-    std::size_t part_num = 0;
-
-    try {
-        part_num = std::stoul(*req.query("partNumber"));
-    } catch (const std::exception&) {
-        throw command_exception(http::status::bad_request, "InvalidArgument",
-                                "part number is invalid");
-    }
+    std::size_t part_num = *query<std::size_t>(req, "partNumber");
 
     if (part_num < 1 || part_num > 10000) {
         throw command_exception(http::status::bad_request, "BadPartNumber",
@@ -51,7 +44,7 @@ coro<http_response> multipart::handle(http_request& req) const {
     res.set("ETag", md5);
 
     co_await m_collection.uploads.append_upload_part_info(
-        *req.query("uploadId"), std::stoul(*req.query("partNumber")), resp,
+        *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         buffer.size(), std::move(md5));
 
     co_return res;

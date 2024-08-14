@@ -1,8 +1,11 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
+#include "command_exception.h"
 #include "common/coroutines/context.h"
 #include "common/types/common_types.h"
+#include "common/utils/strings.h"
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <map>
@@ -76,6 +79,52 @@ private:
 
     uh::cluster::context m_ctx;
 };
+
+/**
+ * query string access interface: The following functions allow type-safe
+ * access to query parameters, giving the following guarantees:
+ *
+ * - if (and only in this case) the query parameter is undefined, std::nullopt
+ *   is returned
+ * - the query string is converted to the target type unless it cannot be
+ *   converted in which case an InvalidArgument command_exception is thrown
+ */
+template <typename return_type = std::string>
+std::optional<return_type> query(const http_request& req,
+                                 const std::string& name);
+
+template <>
+inline std::optional<std::string> query<std::string>(const http_request& req,
+                                                     const std::string& name) {
+    return req.query(name);
+}
+
+template <>
+inline std::optional<std::size_t> query<std::size_t>(const http_request& req,
+                                                     const std::string& name) {
+    auto value = req.query(name);
+    if (!value) {
+        return std::nullopt;
+    }
+
+    try {
+        return std::stoul(*value);
+    } catch (const std::exception&) {
+        throw command_exception(http::status::bad_request, "InvalidArgument",
+                                "invalid " + name);
+    }
+}
+
+template <>
+inline std::optional<bool> query<bool>(const http_request& req,
+                                       const std::string& name) {
+    auto value = req.query(name);
+    if (!value) {
+        return std::nullopt;
+    }
+
+    return to_bool(*value);
+}
 
 std::ostream& operator<<(std::ostream& out, const http_request& req);
 
