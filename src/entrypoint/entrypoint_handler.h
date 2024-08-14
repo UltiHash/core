@@ -78,13 +78,6 @@ public:
                 resp = make_response(command_exception(
                     http::status::bad_request, "BadRequest", "bad request"));
                 stay_alive = false;
-            } catch (const std::invalid_argument& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-                resp = make_response(command_exception(
-                    http::status::bad_request, "InvalidArgument",
-                    "encountered invalid argument")),
-                stay_alive = false;
             } catch (const std::exception& e) {
                 LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
 
