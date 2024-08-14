@@ -85,7 +85,7 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<void> link(context& ctx, const address& addr) override {
+    coro<address> link(context& ctx, const address& addr) override {
         load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
@@ -110,11 +110,19 @@ struct local_storage : public storage_interface {
             });
             futures.emplace_back(p->get_future());
         }
-        for (auto& f : futures) {
-            f.get();
+
+        address rv;
+
+        for (size_t i = 0; i < m_data_stores.size(); ++i) {
+            auto& f = futures.at(i);
+            try {
+                f.get();
+            } catch (const std::out_of_range& e) {
+                rv.append(ds_addresses[i]);
+            }
         }
 
-        co_return;
+        co_return rv;
     }
 
     coro<void> unlink(context& ctx, const address& addr) override {
