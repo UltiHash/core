@@ -47,7 +47,13 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<void> put_object::validate(const http_request& req) const {
-    co_await m_collection.directory.bucket_exists(req.bucket());
+    try {
+        co_await m_collection.directory.bucket_exists(req.bucket());
+    } catch (const error_exception& e) {
+        LOG_INFO() << req.peer() << " failed to get bucket `" << req.bucket()
+                   << "`: " << e;
+        throw_from_error(e.error());
+    }
 }
 
 coro<http_response> put_object::handle(http_request& req) const {
