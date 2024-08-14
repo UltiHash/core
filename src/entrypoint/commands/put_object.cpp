@@ -47,7 +47,6 @@ bool put_object::can_handle(const http_request& req) {
 }
 
 coro<void> put_object::validate(const http_request& req) const {
-    m_collection.limits.check_storage_size(req.content_length());
     co_await m_collection.directory.bucket_exists(req.bucket());
 }
 
@@ -56,8 +55,9 @@ coro<http_response> put_object::handle(http_request& req) const {
     metric<entrypoint_put_object_req>::increase(1);
     http_response res;
 
+    auto content_length = req.content_length();
     try {
-        auto content_length = req.content_length();
+        m_collection.limits.check_storage_size(content_length);
 
         md5 hash;
 
@@ -85,6 +85,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
+        m_collection.limits.free_storage_size(content_length);
         LOG_ERROR() << req.peer() << " failed to get bucket `" << req.bucket()
                     << "`: " << e;
         throw_from_error(e.error());
