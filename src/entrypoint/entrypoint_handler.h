@@ -106,17 +106,9 @@ public:
     }
 
     coro<http_response> handle_request(http_request& req) {
-        return dispatch_unpack_tuple(
-            req, m_req_types,
-            std::make_index_sequence<
-                std::tuple_size_v<decltype(m_req_types)>>());
-    }
-
-    template <std::size_t... Is>
-    coro<http_response> dispatch_unpack_tuple(http_request& req,
-                                              auto&& req_types,
-                                              std::index_sequence<Is...>) {
-        return dispatch_front(req, std::get<Is>(req_types)...);
+        return std::apply(
+            [&req, this](auto&&... args) { return dispatch(req, args...); },
+            m_req_types);
     }
 
     template <typename command>
@@ -127,16 +119,16 @@ public:
     }
 
     template <typename command, typename... commands>
-    coro<http_response> dispatch_front(http_request& req, command&& head,
-                                       commands&&... tail) {
+    coro<http_response> dispatch(http_request& req, command&& head,
+                                 commands&&... tail) {
         if (head.can_handle(req)) {
             return handle_request(req, head);
         }
 
-        return dispatch_front(req, std::forward<commands>(tail)...);
+        return dispatch(req, std::forward<commands>(tail)...);
     }
 
-    coro<http_response> dispatch_front(const http_request& req) {
+    coro<http_response> dispatch(const http_request& req) {
         throw command_exception(http::status::bad_request, "CommandNotFound",
                                 "no such command found");
     }
