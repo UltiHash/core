@@ -56,46 +56,42 @@ public:
         for (;;) {
 
             auto req = co_await m_factory->create(s);
-            LOG_DEBUG() << s.remote_endpoint() << ": read request: " << *req;
+            LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
             std::optional<http_response> resp;
-            bool stay_alive = req->keep_alive();
+            bool keep_alive = false;
 
             try {
                 resp = co_await handle_request(*req);
                 metric<success>::increase(1);
+                keep_alive = req->keep_alive();
             } catch (const command_exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_ERROR() << req->peer() << ": " << e.what();
                 resp = make_response(e);
             } catch (const boost::system::system_error& se) {
                 if (se.code() != http::error::end_of_stream) {
-                    LOG_ERROR() << s.remote_endpoint() << ": closed connection";
+                    LOG_ERROR() << req->peer() << ": peer closed connection";
                     break;
                 }
 
-                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-
+                LOG_ERROR() << req->peer() << ": " << se.what();
                 resp = make_response(command_exception(
                     http::status::bad_request, "BadRequest", "bad request"));
-                stay_alive = false;
             } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_ERROR() << req->peer() << ": " << e.what();
 
                 resp = make_response(command_exception());
-                stay_alive = false;
             }
 
             if (resp) {
-                LOG_DEBUG()
-                    << s.remote_endpoint() << ", sending response: " << *resp;
+                LOG_DEBUG() << req->peer() << ", sending response: " << *resp;
                 co_await write(s, std::move(*resp));
             } else {
-                LOG_INFO() << s.remote_endpoint()
-                           << ", no response, closing connection";
+                LOG_INFO() << req->peer() << ", no response: disconnecting";
                 break;
             }
 
-            if (!stay_alive) {
+            if (!keep_alive) {
                 break;
             }
         }
@@ -112,7 +108,7 @@ public:
 
     template <typename command>
     coro<http_response> handle_request(http_request& req, command&& cmd) {
-        LOG_DEBUG() << req.socket().remote_endpoint() << ": handling request "
+        LOG_DEBUG() << req.peer() << ": handling request "
                     << class_name<command>();
 
         if constexpr (requires { co_await command::validate(req); }) {
@@ -121,8 +117,7 @@ public:
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
-            LOG_INFO() << req.socket().remote_endpoint()
-                       << ": sending 100 CONTINUE";
+            LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
             co_await write(req.socket(),
                            http_response(http::status::continue_));
         }

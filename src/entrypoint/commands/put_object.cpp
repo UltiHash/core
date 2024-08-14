@@ -69,7 +69,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         }
 
         auto tag = hash.finalize();
-        LOG_DEBUG() << req.socket().remote_endpoint() << ": etag: " << tag;
+        LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
@@ -85,8 +85,8 @@ coro<http_response> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
-        LOG_ERROR() << req.socket().remote_endpoint()
-                    << " failed to get bucket `" << req.bucket() << "`: " << e;
+        LOG_ERROR() << req.peer() << " failed to get bucket `" << req.bucket()
+                    << "`: " << e;
         throw_from_error(e.error());
     }
 

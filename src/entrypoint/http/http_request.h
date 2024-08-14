@@ -34,6 +34,10 @@ public:
         return m_stream;
     }
 
+    boost::asio::ip::tcp::endpoint peer() const {
+        return m_stream.remote_endpoint();
+    }
+
     /** Payload that was read while reading the request headers.
      */
     std::size_t content_length() const {
