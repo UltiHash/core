@@ -46,6 +46,11 @@ bool put_object::can_handle(const http_request& req) {
            !req.header("x-amz-copy-source");
 }
 
+coro<void> put_object::validate(const http_request& req) const {
+    m_collection.limits.check_storage_size(req.content_length());
+    co_await m_collection.directory.bucket_exists(req.bucket());
+}
+
 coro<http_response> put_object::handle(http_request& req) const {
 
     metric<entrypoint_put_object_req>::increase(1);
@@ -53,17 +58,6 @@ coro<http_response> put_object::handle(http_request& req) const {
 
     try {
         auto content_length = req.content_length();
-
-        m_collection.limits.check_storage_size(content_length);
-        co_await m_collection.directory.bucket_exists(req.bucket());
-
-        if (auto expect = req.header("expect");
-            expect && *expect == "100-continue") {
-            LOG_INFO() << req.socket().remote_endpoint()
-                       << ": sending 100 CONTINUE";
-            co_await write(req.socket(),
-                           http_response(http::status::continue_));
-        }
 
         md5 hash;
 

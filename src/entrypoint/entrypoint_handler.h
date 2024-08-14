@@ -121,7 +121,20 @@ public:
     coro<http_response> handle_request(http_request& req, command&& cmd) {
         LOG_DEBUG() << req.socket().remote_endpoint() << ": handling request "
                     << class_name<command>();
-        return cmd.handle(req);
+
+        if constexpr (requires { co_await command::validate(req); }) {
+            co_await command::validate(req);
+        }
+
+        if (auto expect = req.header("expect");
+            expect && *expect == "100-continue") {
+            LOG_INFO() << req.socket().remote_endpoint()
+                       << ": sending 100 CONTINUE";
+            co_await write(req.socket(),
+                           http_response(http::status::continue_));
+        }
+
+        co_return co_await cmd.handle(req);
     }
 
     template <typename command, typename... commands>

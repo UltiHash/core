@@ -15,6 +15,8 @@ public:
 
     static bool can_handle(const http_request& req);
 
+    coro<void> validate(const http_request& req) const;
+
     coro<http_response> handle(http_request& req) const;
 
 private:
