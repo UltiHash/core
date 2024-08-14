@@ -15,7 +15,7 @@ public:
 
     static bool can_handle(const http_request& req);
 
-    coro<void> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) const;
 
 private:
     coro<dedupe_response> put_large_object(http_request& req, md5& hash) const;

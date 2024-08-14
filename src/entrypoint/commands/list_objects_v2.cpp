@@ -4,7 +4,6 @@
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
-#include "entrypoint/http/http_response.h"
 
 namespace uh::cluster {
 
@@ -169,7 +168,7 @@ bool list_objects_v2::can_handle(const http_request& req) {
            *req.query("list-type") == "2";
 }
 
-coro<void> list_objects_v2::handle(http_request& req) const {
+coro<http_response> list_objects_v2::handle(http_request& req) const {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     std::optional<std::string> prefix = req.query("prefix");
     std::optional<std::string> lowerbound = req.query("start-after");
@@ -189,11 +188,7 @@ coro<void> list_objects_v2::handle(http_request& req) const {
                                 "The specified bucket does not exist.");
     }
 
-    auto res = get_response(obj_list, req);
-
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << " list_objects_v2 response: " << res;
-    co_await req.respond(res.get_prepared_response());
+    co_return get_response(obj_list, req);
 }
 
 } // namespace uh::cluster

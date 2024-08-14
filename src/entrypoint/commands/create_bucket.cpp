@@ -12,19 +12,18 @@ bool create_bucket::can_handle(const http_request& req) {
            req.object_key().empty() && !req.has_query();
 }
 
-coro<void> create_bucket::handle(http_request& req) const {
+coro<http_response> create_bucket::handle(http_request& req) const {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.bucket();
     try {
         co_await m_collection.directory.put_bucket(bucket_id);
-
-        http_response res;
-        co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;
         throw_from_error(e.error());
     }
+
+    co_return http_response{};
 }
 
 } // namespace uh::cluster
