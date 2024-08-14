@@ -27,7 +27,7 @@ class ec_group_maintainer : public service_monitor<storage_interface> {
                 std::make_shared<storage_system>(m_ioc, m_scheme.data_nodes(),
                                                  m_scheme.ec_nodes()));
         }
-        it->second->insert(nid, cl);
+        it->second->insert(id, nid, cl);
 
         for (auto& m : m_monitors) {
             m.get().add_client(gid, it->second);
@@ -42,7 +42,7 @@ class ec_group_maintainer : public service_monitor<storage_interface> {
         std::lock_guard l(m_mutex);
 
         if (const auto it = m_ec_groups.find(gid); it != m_ec_groups.cend()) {
-            it->second->remove(nid);
+            it->second->remove(id, nid);
 
             for (auto& m : m_monitors) {
                 m.get().remove_client(gid, it->second);

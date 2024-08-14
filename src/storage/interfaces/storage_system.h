@@ -16,8 +16,13 @@ class ec_calculator {
     const size_t m_ec_nodes;
 
     struct encoded {
-        [[nodiscard]] std::vector<std::string_view> get() const noexcept {
+        [[nodiscard]] const std::vector<std::string_view>&
+        get() const noexcept {
             return m_encoded;
+        }
+
+        void set(std::vector<std::string_view>&& enc) {
+            m_encoded = std::move(enc);
         }
 
     private:
@@ -32,7 +37,11 @@ public:
         : m_data_nodes(data_nodes),
           m_ec_nodes(ec_nodes) {}
 
-    [[nodiscard]] encoded encode(const std::string_view&) const { return {}; }
+    [[nodiscard]] encoded encode(const std::string_view& data) const {
+        encoded enc;
+        enc.set({data});
+        return enc;
+    }
 };
 
 struct storage_system_config {
@@ -73,15 +82,16 @@ private:
     }
 
 public:
-    void insert(size_t i, const std::shared_ptr<storage_interface>& node) {
-        m_nodes.at(i) = node;
-        m_getter.add_client(i, node);
+    void insert(size_t id, size_t group_nid,
+                const std::shared_ptr<storage_interface>& node) {
+        m_nodes.at(group_nid) = node;
+        m_getter.add_client(id, node);
         update_status();
     }
 
-    void remove(size_t i) {
-        m_getter.remove_client(i, m_nodes.at(i));
-        m_nodes.at(i) = nullptr;
+    void remove(size_t id, size_t group_nid) {
+        m_getter.remove_client(id, m_nodes.at(group_nid));
+        m_nodes.at(group_nid) = nullptr;
         m_status = degraded;
     }
 
@@ -98,15 +108,15 @@ public:
 
     coro<address> write(context& ctx, const std::string_view& data) override {
 
-        if (is_healthy()) {
+        if (!is_healthy()) {
             throw std::runtime_error("unhealthy storage system");
         }
         auto encoded = m_ec_calc.encode(data);
         auto res =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
-                [&ctx, &encoded](size_t i, auto n) {
-                    return n->write(ctx, encoded.get().at(i));
+                [&ctx, &encoded](size_t i, auto n) -> coro<address> {
+                    co_return co_await n->write(ctx, encoded.get().at(i));
                 },
                 m_getter.get_services());
 
@@ -119,15 +129,52 @@ public:
     }
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
-        co_return;
+        co_await m_getter.get(f.pointer)->read_fragment(ctx, buffer, f);
     }
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override {
-        co_return shared_buffer{};
+        co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);
     }
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
-        co_return;
+        std::unordered_map<std::shared_ptr<storage_interface>, address>
+            node_address_map;
+        std::unordered_map<std::shared_ptr<storage_interface>,
+                           std::vector<size_t>>
+            node_data_offsets_map;
+        std::vector<std::shared_ptr<storage_interface>> nodes;
+
+        size_t offset = 0;
+        for (size_t i = 0; i < addr.size(); ++i) {
+
+            const auto frag = addr.get(i);
+            auto n = m_getter.get(frag.pointer);
+            auto& node_address = node_address_map[n];
+            if (node_address.empty()) {
+                nodes.emplace_back(n);
+            }
+            node_address.push(frag);
+            node_data_offsets_map[n].emplace_back(offset);
+            offset += frag.size;
+        }
+
+        std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
+        promises.reserve(nodes.size());
+
+        for (auto& dn : nodes) {
+            promises.emplace_back(
+                std::make_shared<awaitable_promise<void>>(m_ioc));
+
+            boost::asio::co_spawn(
+                m_ioc,
+                dn->read_address(ctx, buffer, node_address_map[dn],
+                                 node_data_offsets_map[dn]),
+                use_awaitable_promise_cospawn(promises.back()));
+        }
+
+        for (auto& p : promises) {
+            co_await p->get();
+        }
     }
 
     coro<void> link(context& ctx, const address& addr) override { co_return; }
