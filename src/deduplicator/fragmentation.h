@@ -32,12 +32,18 @@ public:
         address addr;
     };
 
+    struct stored {
+        uint128_t pointer;
+        size_t size{};
+        std::string_view data;
+    };
+
     fragmentation(dedupe_logger& dd_logger);
 
     /**
      * Push a new fragment that was uploaded before.
      */
-    void push(const fragment& f);
+    void push(stored&& st);
 
     /**
      * Push a new unstored fragment.
@@ -60,6 +66,8 @@ public:
      */
     address make_address() const;
 
+    address get_stored_fragments() const;
+
 private:
     void flush_fragments(fragment_set& set);
     void mark_as_uploaded();
@@ -69,7 +77,7 @@ private:
     unique_buffer<char> unstored_to_buffer();
 
     dedupe_logger& m_dedupe_logger;
-    std::list<std::variant<fragment, unstored>> m_frags;
+    std::list<std::variant<stored, unstored>> m_frags;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
 };
