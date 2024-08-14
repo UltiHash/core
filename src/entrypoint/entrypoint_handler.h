@@ -119,14 +119,20 @@ public:
         return dispatch_front(req, std::get<Is>(req_types)...);
     }
 
+    template <typename command>
+    coro<http_response> handle_request(http_request& req, command&& cmd) {
+        LOG_DEBUG() << req.socket().remote_endpoint() << ": handling request "
+                    << class_name<command>();
+        return cmd.handle(req);
+    }
+
     template <typename command, typename... commands>
     coro<http_response> dispatch_front(http_request& req, command&& head,
                                        commands&&... tail) {
         if (head.can_handle(req)) {
-            LOG_DEBUG() << req.socket().remote_endpoint()
-                        << ": handling request " << class_name<command>();
-            return head.handle(req);
+            return handle_request(req, head);
         }
+
         return dispatch_front(req, std::forward<commands>(tail)...);
     }
 
