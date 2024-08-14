@@ -84,11 +84,13 @@ struct local_deduplicator : public deduplicator_interface {
 
 private:
     coro<size_t> pursue_pointer(context& ctx, std::string_view& data,
-                                uint128_t pointer, fragmentation& fragments) {
+                                uint128_t pointer, bool header,
+                                fragmentation& fragments) {
         size_t common_size;
         fragmentation::stored frag{.pointer = pointer -
                                               m_dedupe_conf.max_fragment_size,
-                                   .size = m_dedupe_conf.max_fragment_size};
+                                   .size = m_dedupe_conf.max_fragment_size,
+                                   .header = header};
         do {
             auto stored_data =
                 co_await m_storage.read(ctx, pointer, pursue_size);
@@ -132,9 +134,12 @@ private:
                     offset += co_await pursue_pointer(
                         ctx, data,
                         frag.pointer + m_dedupe_conf.max_fragment_size,
-                        fragments);
+                        (offset == 0), fragments);
                 } else {
-                    fragments.push({frag.pointer, size, data.substr(0, size)});
+                    fragments.push({.pointer = frag.pointer,
+                                    .size = size,
+                                    .data = data.substr(0, size),
+                                    .header = (offset == 0)});
                     data = data.substr(size);
                     m_dedupe_logger.log_deduplication(size, prefix,
                                                       frag.pointer, offset);
@@ -154,10 +159,12 @@ private:
             offset += frag_size;
             non_dedupe_count++;
         }
-        auto invalidated_fragments =
+        auto rejected_fragments =
             co_await m_storage.link(ctx, fragments.get_stored_fragments());
-        if (!invalidated_fragments.empty()) [[unlikely]] {
+        if (!rejected_fragments.empty()) [[unlikely]] {
+            fragments.convert_rejected_addr_to_unstored(rejected_fragments);
         }
+
         co_await fragments.flush_data(ctx, m_storage);
         co_await m_dedupe_workers.post_in_workers(
             ctx, [this, &fragments] { fragments.flush_set(m_fragment_set); });

@@ -36,6 +36,7 @@ public:
         uint128_t pointer;
         size_t size{};
         std::string_view data;
+        bool header = false;
     };
 
     fragmentation(dedupe_logger& dd_logger);
@@ -67,6 +68,8 @@ public:
     address make_address() const;
 
     address get_stored_fragments() const;
+
+    void convert_rejected_addr_to_unstored(const address& addr);
 
 private:
     void flush_fragments(fragment_set& set);

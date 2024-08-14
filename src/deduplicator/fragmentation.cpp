@@ -176,5 +176,26 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
     return buffer;
 }
+void fragmentation::convert_rejected_addr_to_unstored(const address& addr) {
+    for (auto it = m_frags.begin(); it != m_frags.end(); it++) {
+        if (!std::holds_alternative<stored>(*it)) {
+            continue;
+        }
+
+        auto& stored_frag = std::get<stored>(*it);
+
+        for (std::size_t i = 0; i < addr.size(); i++) {
+            auto rejected_frag = addr.get(i);
+            if (rejected_frag.pointer >= stored_frag.pointer and
+                (rejected_frag.pointer + rejected_frag.size) <=
+                    (stored_frag.pointer + stored_frag.size)) {
+                it->emplace<1>(unstored{.data = stored_frag.data,
+                                        .header = stored_frag.header,
+                                        .hint = std::nullopt});
+                break;
+            }
+        }
+    }
+}
 
 } // namespace uh::cluster
