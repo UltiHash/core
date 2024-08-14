@@ -102,7 +102,9 @@ public:
 
     coro<http_response> handle_request(http_request& req) {
         return std::apply(
-            [&req, this](auto&&... args) { return dispatch(req, args...); },
+            [&req, this](auto&&... args) {
+                return this->dispatch(req, args...);
+            },
             m_req_types);
     }
 
@@ -111,8 +113,8 @@ public:
         LOG_DEBUG() << req.peer() << ": handling request "
                     << class_name<command>();
 
-        if constexpr (requires { co_await command::validate(req); }) {
-            co_await command::validate(req);
+        if constexpr (requires { cmd.validate(req); }) {
+            co_await cmd.validate(req);
         }
 
         if (auto expect = req.header("expect");
