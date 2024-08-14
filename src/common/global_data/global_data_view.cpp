@@ -166,4 +166,13 @@ global_data_view::get_storage_service_connection_count() const noexcept {
     return m_config.storage_service_connection_count;
 }
 
+[[nodiscard]] coro<address> global_data_view::link(context& ctx,
+                                                   const address& addr) {
+    co_return address();
+}
+
+coro<void> global_data_view::unlink(context& ctx, const address& addr) {
+    co_return;
+}
+
 } // namespace uh::cluster
