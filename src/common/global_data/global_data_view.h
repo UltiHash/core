@@ -2,6 +2,8 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/caches/lru_cache.h"
+#include "common/etcd/service_discovery/ec_getter.h"
+#include "common/etcd/service_discovery/ec_group_maintainer.h"
 #include "common/etcd/service_discovery/service_basic_getter.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/network/client.h"
@@ -142,10 +144,12 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    std::unique_ptr<load_balancer<storage_interface>> m_load_balancer;
-    service_basic_getter<storage_interface> m_basic_getter;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
+
+    ec_group_maintainer m_ec_maintainer;
+    ec_load_balancer m_load_balancer;
+    ec_getter m_basic_getter;
 };
 
 } // end namespace uh::cluster

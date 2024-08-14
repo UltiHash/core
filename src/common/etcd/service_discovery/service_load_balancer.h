@@ -161,56 +161,24 @@ public:
     }
 };
 
-class ec_load_balancer : public load_balancer<storage_interface> {
+class ec_load_balancer : public load_balancer<storage_system> {
 
     void add_client(size_t id,
-                    const std::shared_ptr<storage_interface>& cl) override {
-        const auto gid = get_group_id(id);
-        const auto nid = get_node_id(id);
-
-        auto it = m_ec_groups.find(gid);
-        if (it == m_ec_groups.cend()) {
-            it = m_ec_groups.emplace_hint(it, gid,
-                                          std::make_shared<storage_system>(
-                                              gid, m_data_nodes, m_ec_nodes));
-        }
-        it->second->get_group().insert(nid, cl);
-        if (it->second->get_group().is_healthy()) {
-            m_load_balancer.add_client(gid, it->second);
+                    const std::shared_ptr<storage_system>& cl) override {
+        if (cl->is_healthy()) {
+            m_load_balancer.add_client(id, cl);
         }
     }
 
     void remove_client(size_t id,
-                       const std::shared_ptr<storage_interface>& cl) override {
-        const auto gid = get_group_id(id);
-        const auto nid = get_node_id(id);
-
-        if (const auto it = m_ec_groups.find(gid); it != m_ec_groups.cend()) {
-            m_load_balancer.remove_client(gid, it->second);
-            it->second->get_group().remove(nid);
-        }
+                       const std::shared_ptr<storage_system>& cl) override {
+        m_load_balancer.remove_client(id, cl);
     }
 
-    [[nodiscard]] size_t get_group_id(size_t node_id) const {
-        return node_id / (m_data_nodes + m_ec_nodes);
-    }
-
-    [[nodiscard]] size_t get_node_id(size_t node_id) const {
-        return node_id % (m_data_nodes + m_ec_nodes);
-    }
-
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
-
-    std::map<size_t, std::shared_ptr<storage_system>> m_ec_groups;
     roundrobin_load_balancer<storage_system> m_load_balancer;
 
 public:
-    explicit ec_load_balancer(size_t data_nodes, size_t ec_nodes)
-        : m_data_nodes(data_nodes),
-          m_ec_nodes(ec_nodes) {}
-
-    [[nodiscard]] std::shared_ptr<storage_interface> get() const override {
+    [[nodiscard]] std::shared_ptr<storage_system> get() const override {
         return m_load_balancer.get();
     }
 

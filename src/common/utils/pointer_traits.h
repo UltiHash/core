@@ -37,16 +37,6 @@ struct pointer_traits {
     }
 
     /**
-     * The ec group id of a given pointer
-     * @param global_pointer
-     * @return storage service id
-     */
-    inline static uint32_t get_ec_group_id(const uint128_t& global_pointer,
-                                           size_t group_size) {
-        return get_service_id(global_pointer) / group_size;
-    }
-
-    /**
      * The global pointer is consisted of:
      *  1. 32 bits for storage id
      *  2. 32 bits for data store id

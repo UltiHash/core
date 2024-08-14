@@ -4,6 +4,7 @@
 
 #ifndef STORAGE_SYSTEM_H
 #define STORAGE_SYSTEM_H
+
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_group.h"
 #include "common/etcd/service_discovery/service_basic_getter.h"
@@ -39,28 +40,80 @@ struct storage_system_config {
     size_t ec_nodes;
 };
 
+enum ec_status {
+    degraded,
+    healthy,
+    recovering,
+    empty,
+};
+
 struct storage_system : public storage_interface {
 
-    storage_system(size_t gid, size_t data_nodes, size_t ec_nodes)
-        : m_ec_group(gid, data_nodes, ec_nodes) {}
+private:
+    ec_status m_status = empty;
+    std::vector<std::shared_ptr<storage_interface>> m_nodes;
+    service_basic_getter<storage_interface> m_getter;
+
+    void update_status() {
+
+        size_t count = 0;
+        for (const auto& n : m_nodes) {
+            if (n == nullptr) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            m_status = healthy;
+        } else if (count == m_nodes.size()) {
+            m_status = empty;
+        } else {
+            m_status = degraded;
+        }
+    }
+
+public:
+    void insert(size_t i, const std::shared_ptr<storage_interface>& node) {
+        m_nodes.at(i) = node;
+        m_getter.add_client(i, node);
+        update_status();
+    }
+
+    void remove(size_t i) {
+        m_getter.remove_client(i, m_nodes.at(i));
+        m_nodes.at(i) = nullptr;
+        m_status = degraded;
+    }
+
+    [[nodiscard]] bool is_healthy() const noexcept {
+        return m_status == healthy;
+    }
+
+    [[nodiscard]] bool is_empty() const noexcept { return m_status == empty; }
+    storage_system(boost::asio::io_context& ioc, size_t data_nodes,
+                   size_t ec_nodes)
+        : m_nodes(data_nodes + ec_nodes),
+          m_ec_calc(data_nodes, ec_nodes),
+          m_ioc(ioc) {}
 
     coro<address> write(context& ctx, const std::string_view& data) override {
-        /*
-        auto lock = m_ec_group.lock();
-        if (m_ec_group.status() != healthy) {
+
+        if (is_healthy()) {
             throw std::runtime_error("unhealthy storage system");
         }
         auto encoded = m_ec_calc.encode(data);
+        auto res =
+            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&ctx, &encoded](size_t i, auto n) {
+                    return n->write(ctx, encoded.get().at(i));
+                },
+                m_getter.get_services());
 
-        auto res = co_await run_for_all <address,
-        std::shared_ptr<storage_interface>> (m_ioc, [&ctx, &encoded] (size_t i,
-        auto n){return n->write(ctx, encoded.get().at(i));},
-        m_ec_group.nodes());
-*/
         address addr;
-        //      for(const auto& a: res) {
-        //        addr.append(a);
-        //  }
+        for (const auto& a : res) {
+            addr.append(a);
+        }
 
         co_return addr;
     }
@@ -82,13 +135,9 @@ struct storage_system : public storage_interface {
     coro<void> sync(context& ctx, const address& addr) override { co_return; }
     coro<size_t> get_used_space(context& ctx) override { co_return 0; }
 
-    ec_group& get_group() { return m_ec_group; }
-
 private:
-    ec_group m_ec_group;
-    // service_basic_getter<storage_interface> m_nodes;
-    // ec_calculator m_ec_calc;
-    // boost::asio::io_context& m_ioc;
+    ec_calculator m_ec_calc;
+    boost::asio::io_context& m_ioc;
 };
 
 } // namespace uh::cluster

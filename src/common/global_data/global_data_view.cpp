@@ -6,16 +6,19 @@ global_data_view::global_data_view(
     service_maintainer<storage_interface>& storage_maintainer)
     : m_io_service(ioc),
       m_config(config),
-      m_cache_l2(m_config.read_cache_capacity_l2) {
+      m_cache_l2(m_config.read_cache_capacity_l2),
+      m_ec_maintainer(m_io_service, 1, 0),
+      m_basic_getter(1, 0) {
 
-    storage_maintainer.add_monitor(*m_load_balancer);
-    storage_maintainer.add_monitor(m_basic_getter);
-    m_load_balancer->get();
+    storage_maintainer.add_monitor(m_ec_maintainer);
+    m_ec_maintainer.add_monitor(m_load_balancer);
+    m_ec_maintainer.add_monitor(m_basic_getter);
+    auto cl = m_load_balancer.get();
 }
 
 coro<address> global_data_view::write(context& ctx,
                                       const std::string_view& data) {
-    const auto client = m_load_balancer->get();
+    const auto client = m_load_balancer.get();
     co_return co_await client->write(ctx, data);
 }
 

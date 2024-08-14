@@ -35,8 +35,11 @@ template <typename K, typename V> struct map_index {
 
     [[nodiscard]] auto begin() const noexcept { return m_k_to_v.cbegin(); }
 
-    [[nodiscard]] const V& at(const K& k) const {
-        return m_k_to_v.find(k)->second;
+    [[nodiscard]] optref<const V> at(const K& k) const {
+        if (auto it = m_k_to_v.find(k); it != m_k_to_v.cend()) {
+            return it->second;
+        }
+        return std::nullopt;
     }
 
     [[nodiscard]] const K& get_key(const V& v) const {

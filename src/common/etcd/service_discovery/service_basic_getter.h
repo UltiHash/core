@@ -6,12 +6,15 @@
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/map_index.h"
 #include "common/utils/pointer_traits.h"
+
 #include <ranges>
 
 namespace uh::cluster {
 
 template <typename service_interface>
 class service_basic_getter : public service_monitor<service_interface> {
+
+public:
     void add_client(size_t id,
                     const std::shared_ptr<service_interface>& client) override {
         std::lock_guard l(m_mutex);
@@ -25,14 +28,11 @@ class service_basic_getter : public service_monitor<service_interface> {
         m_clients.remove(client);
     }
 
-public:
-    explicit service_basic_getter(size_t group_size = 1)
-        : m_group_size(group_size) {}
     template <
         typename T = service_interface,
         typename = std::enable_if_t<std::is_same_v<T, storage_interface>, T>>
     std::shared_ptr<service_interface> get(const uint128_t& pointer) const {
-        const auto id = pointer_traits::get_ec_group_id(pointer, m_group_size);
+        const auto id = pointer_traits::get_service_id(pointer);
         return get(id);
     }
 
@@ -42,12 +42,12 @@ public:
         std::unique_lock lk(m_mutex);
         if (m_cv.wait_for(lk, std::chrono::seconds(this->m_timeout_s),
                           [this, &id, &cl]() {
-                              try {
-                                  cl = m_clients.at(id);
-                              } catch (...) {
-                                  return false;
+                              auto v = m_clients.at(id);
+                              if (v.has_value()) {
+                                  cl = *v;
+                                  return true;
                               }
-                              return true;
+                              return false;
                           })) {
         } else
             throw std::runtime_error(
@@ -57,6 +57,12 @@ public:
 
         return cl;
     }
+
+    optref<std::shared_ptr<service_interface>> at(std::size_t id) const {
+        return m_clients.at(id);
+    }
+
+    bool contains(std::size_t id) const { return m_clients.at(id).has_value(); }
 
     std::vector<std::shared_ptr<service_interface>> get_services() const {
 
@@ -70,8 +76,6 @@ public:
     }
 
 private:
-    const size_t m_group_size;
-
     mutable std::mutex m_mutex;
     mutable std::condition_variable m_cv;
     map_index<std::size_t, std::shared_ptr<service_interface>> m_clients;

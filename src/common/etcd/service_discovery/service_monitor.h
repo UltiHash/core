@@ -8,13 +8,8 @@
 
 namespace uh::cluster {
 
-template <typename service_interface> class service_maintainer;
-
 template <typename service_interface> struct service_monitor {
 
-    friend service_maintainer<service_interface>;
-
-private:
     virtual void add_attribute(const std::shared_ptr<service_interface>&,
                                etcd_service_attributes, const std::string&) {}
     virtual void remove_attribute(const std::shared_ptr<service_interface>&,
@@ -29,7 +24,6 @@ private:
         m_local_service = client;
     }
 
-protected:
     virtual ~service_monitor() = default;
 
     std::shared_ptr<service_interface> m_local_service;
