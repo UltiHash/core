@@ -2,6 +2,7 @@
 #define COMMON_UTILS_STRINGS_H
 
 #include <ranges>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,19 @@ namespace uh::cluster {
  */
 std::vector<std::string_view> split(std::string_view data,
                                     char delimiter = ' ');
+
+std::set<std::string_view> split_set(std::string_view data,
+                                     char delimiter = ' ');
+
+/**
+ * Remove all characters specified in `chars` from the begin and end of `in`.
+ */
+std::string_view trim(std::string_view in,
+                      std::string_view chars = " \n\r\t\f\v");
+std::string_view ltrim(std::string_view in,
+                       std::string_view chars = " \n\r\t\f\v");
+std::string_view rtrim(std::string_view in,
+                       std::string_view chars = " \n\r\t\f\v");
 
 /**
  * Decode a base64 encoded string to a buffer.
@@ -27,6 +41,7 @@ std::string url_encode(const std::string&) noexcept;
  * Return lower case version of the string.
  */
 std::string& lowercase(std::string& s);
+std::string lowercase(std::string_view s);
 
 /**
  * Convert give string to bool.
