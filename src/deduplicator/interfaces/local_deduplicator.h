@@ -162,7 +162,7 @@ private:
         auto rejected_fragments =
             co_await m_storage.link(ctx, fragments.get_stored_fragments());
         if (!rejected_fragments.empty()) [[unlikely]] {
-            fragments.convert_rejected_addr_to_unstored(rejected_fragments);
+            fragments.handle_rejected_fragments(rejected_fragments);
         }
 
         co_await fragments.flush_data(ctx, m_storage);
