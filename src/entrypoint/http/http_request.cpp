@@ -272,6 +272,8 @@ http_request::http_request(
 
 http::verb http_request::method() const { return m_req.method(); }
 
+std::string_view http_request::target() const { return m_req.target(); }
+
 const std::string& http_request::bucket() const { return m_bucket_id; }
 
 const std::string& http_request::object_key() const { return m_object_key; }
@@ -287,6 +289,12 @@ std::optional<std::string> http_request::query(const std::string& name) const {
 
     return std::nullopt;
 }
+
+const std::map<std::string, std::string>& http_request::query_map() const {
+    return m_params;
+}
+
+const beast::http::fields& http_request::header() const { return m_req.base(); }
 
 bool http_request::has_query() const { return !m_params.empty(); }
 
