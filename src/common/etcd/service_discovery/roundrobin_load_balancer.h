@@ -17,6 +17,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
         std::lock_guard l(m_mutex);
 
         m_services.emplace(client);
+        m_cv.notify_one();
     }
     void
     remove_client(size_t,
