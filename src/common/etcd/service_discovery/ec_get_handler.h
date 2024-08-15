@@ -4,13 +4,13 @@
 
 #ifndef EC_GETTER_H
 #define EC_GETTER_H
-#include "common/ec/ec_scheme.h"
+#include "../../utils/ec_scheme.h"
 #include "storage/interfaces/storage_system.h"
 
 namespace uh::cluster {
 
-struct ec_getter : public service_monitor<storage_system> {
-    explicit ec_getter(size_t data_nodes, size_t ec_nodes)
+struct ec_get_handler : public service_monitor<storage_system> {
+    explicit ec_get_handler(size_t data_nodes, size_t ec_nodes)
         : m_scheme(data_nodes, ec_nodes) {}
 
     std::shared_ptr<storage_system> get(std::size_t id) const {
@@ -29,7 +29,7 @@ private:
     void add_client(size_t id,
                     const std::shared_ptr<storage_system>& client) override {
         const auto gid = m_scheme.get_group_id(id);
-        if (!m_getter.contains(gid))
+        if (!m_getter.at(gid).has_value())
             m_getter.add_client(gid, client);
     }
 
@@ -40,7 +40,7 @@ private:
     }
 
     ec_scheme m_scheme;
-    service_basic_getter<storage_system> m_getter;
+    service_get_handler<storage_system> m_getter;
 };
 } // namespace uh::cluster
 

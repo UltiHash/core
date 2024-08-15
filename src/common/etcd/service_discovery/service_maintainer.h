@@ -6,7 +6,7 @@
 #include "../namespace.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/utils/time_utils.h"
-#include "service_load_balancer.h"
+#include "roundrobin_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 

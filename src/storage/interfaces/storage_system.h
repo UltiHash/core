@@ -6,8 +6,7 @@
 #define STORAGE_SYSTEM_H
 
 #include "common/coroutines/coro_util.h"
-#include "common/ec/ec_group.h"
-#include "common/etcd/service_discovery/service_basic_getter.h"
+#include "common/etcd/service_discovery/service_get_handler.h"
 
 namespace uh::cluster {
 
@@ -61,7 +60,7 @@ struct storage_system : public storage_interface {
 private:
     ec_status m_status = empty;
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    service_basic_getter<storage_interface> m_getter;
+    service_get_handler<storage_interface> m_getter;
 
     void update_status() {
 

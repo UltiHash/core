@@ -12,7 +12,7 @@
 namespace uh::cluster {
 
 template <typename service_interface>
-class service_basic_getter : public service_monitor<service_interface> {
+class service_get_handler : public service_monitor<service_interface> {
 
 public:
     void add_client(size_t id,
@@ -58,11 +58,9 @@ public:
         return cl;
     }
 
-    optref<std::shared_ptr<service_interface>> at(std::size_t id) const {
+    optref<const std::shared_ptr<service_interface>> at(std::size_t id) const {
         return m_clients.at(id);
     }
-
-    bool contains(std::size_t id) const { return m_clients.at(id).has_value(); }
 
     std::vector<std::shared_ptr<service_interface>> get_services() const {
 

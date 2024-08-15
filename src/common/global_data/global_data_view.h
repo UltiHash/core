@@ -2,9 +2,10 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/caches/lru_cache.h"
-#include "common/etcd/service_discovery/ec_getter.h"
+#include "common/etcd/service_discovery/ec_get_handler.h"
 #include "common/etcd/service_discovery/ec_group_maintainer.h"
-#include "common/etcd/service_discovery/service_basic_getter.h"
+#include "common/etcd/service_discovery/ec_load_balancer.h"
+#include "common/etcd/service_discovery/service_get_handler.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/network/client.h"
 #include "common/types/scoped_buffer.h"
@@ -149,7 +150,7 @@ private:
 
     ec_group_maintainer m_ec_maintainer;
     ec_load_balancer m_load_balancer;
-    ec_getter m_basic_getter;
+    ec_get_handler m_basic_getter;
 };
 
 } // end namespace uh::cluster
