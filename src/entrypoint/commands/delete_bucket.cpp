@@ -12,7 +12,7 @@ bool delete_bucket::can_handle(const http_request& req) {
            req.object_key().empty() && !req.has_query();
 }
 
-coro<void> delete_bucket::handle(http_request& req) const {
+coro<http_response> delete_bucket::handle(http_request& req) const {
     metric<entrypoint_delete_bucket_req>::increase(1);
 
     try {
@@ -23,8 +23,7 @@ coro<void> delete_bucket::handle(http_request& req) const {
         throw_from_error(e.error());
     }
 
-    http_response res;
-    co_await req.respond(res.get_prepared_response());
+    co_return http_response{};
 }
 
 } // namespace uh::cluster

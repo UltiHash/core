@@ -1,5 +1,4 @@
 #include "delete_objects.h"
-#include "common/utils/strings.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -46,7 +45,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<void> delete_objects::handle(http_request& req) const {
+coro<http_response> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.socket().remote_endpoint()
@@ -104,10 +103,7 @@ coro<void> delete_objects::handle(http_request& req) const {
         }
     }
 
-    auto res = get_response(success, failure);
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << ": delete_objects: " << res;
-    co_await req.respond(res.get_prepared_response());
+    co_return get_response(success, failure);
 }
 
 } // namespace uh::cluster

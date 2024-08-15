@@ -1,7 +1,10 @@
 # Changelog
 
-## UNRELEASED
+## [0.5.4] 2024-08-08
 - Support for object mime types
+- Improved handling of multipart uploads
+- Added support for using multiple working directories/storage devices to storage service
+- Added link/unlink interface to storage service, enabling deletion of unused data
 
 ## [0.5.3] 2024-07-01
 - Several S3A compatibility fixes

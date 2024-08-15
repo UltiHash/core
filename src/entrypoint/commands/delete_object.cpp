@@ -12,7 +12,7 @@ bool delete_object::can_handle(const http_request& req) {
            !req.object_key().empty() && !req.query("uploadId");
 }
 
-coro<void> delete_object::handle(http_request& req) const {
+coro<http_response> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         auto object = co_await m_collection.directory.head_object(
@@ -22,13 +22,11 @@ coro<void> delete_object::handle(http_request& req) const {
                                                       req.object_key());
 
         m_collection.limits.free_storage_size(object.size);
-        http_response res;
-
-        LOG_DEBUG() << "delete_object response: " << res;
-        co_await req.respond(res.get_prepared_response());
     } catch (const error_exception& e) {
         throw_from_error(e.error());
     }
+
+    co_return http_response{};
 }
 
 } // namespace uh::cluster
