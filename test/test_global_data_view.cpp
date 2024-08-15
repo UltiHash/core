@@ -132,19 +132,6 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
                           gdv->read_address(ctx, result_buffer.data(), addr),
                           boost::asio::use_future)
         .get();
-    std::cout << "compare data size\n"
-              << input_buffer.size() << "  " << result_buffer.size()
-              << std::endl;
-    std::cout << "compare data prefix\n"
-              << to_hex(input_buffer.string_view().substr(0, 64))
-              << "\n======================\n"
-              << to_hex(result_buffer.string_view().substr(0, 64)) << std::endl;
-    std::cout
-        << "compare data suffix\n"
-        << to_hex(input_buffer.string_view().substr(input_buffer.size() - 64))
-        << "\n======================\n"
-        << to_hex(result_buffer.string_view().substr(result_buffer.size() - 64))
-        << std::endl;
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());
 }
 

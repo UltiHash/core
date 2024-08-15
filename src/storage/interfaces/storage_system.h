@@ -136,44 +136,8 @@ public:
     }
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
-        std::unordered_map<std::shared_ptr<storage_interface>, address>
-            node_address_map;
-        std::unordered_map<std::shared_ptr<storage_interface>,
-                           std::vector<size_t>>
-            node_data_offsets_map;
-        std::vector<std::shared_ptr<storage_interface>> nodes;
-
-        size_t offset = 0;
-        for (size_t i = 0; i < addr.size(); ++i) {
-
-            const auto frag = addr.get(i);
-            auto n = m_getter.get(frag.pointer);
-            auto& node_address = node_address_map[n];
-            if (node_address.empty()) {
-                nodes.emplace_back(n);
-            }
-            node_address.push(frag);
-            node_data_offsets_map[n].emplace_back(offset);
-            offset += frag.size;
-        }
-
-        std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
-        promises.reserve(nodes.size());
-
-        for (auto& dn : nodes) {
-            promises.emplace_back(
-                std::make_shared<awaitable_promise<void>>(m_ioc));
-
-            boost::asio::co_spawn(
-                m_ioc,
-                dn->read_address(ctx, buffer, node_address_map[dn],
-                                 node_data_offsets_map[dn]),
-                use_awaitable_promise_cospawn(promises.back()));
-        }
-
-        for (auto& p : promises) {
-            co_await p->get();
-        }
+        co_await m_getter.get(addr.get(0).pointer)
+            ->read_address(ctx, buffer, addr, offsets);
     }
 
     coro<void> link(context& ctx, const address& addr) override { co_return; }
