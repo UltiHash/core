@@ -69,7 +69,7 @@ public:
 
     address get_stored_fragments() const;
 
-    void convert_rejected_addr_to_unstored(const address& addr);
+    void handle_rejected_fragments(const address& addr, fragment_set& set);
 
 private:
     void flush_fragments(fragment_set& set);

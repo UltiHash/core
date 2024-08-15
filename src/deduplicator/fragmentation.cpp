@@ -176,7 +176,8 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
     return buffer;
 }
-void fragmentation::convert_rejected_addr_to_unstored(const address& addr) {
+void fragmentation::handle_rejected_fragments(const address& addr,
+                                              fragment_set& set) {
     for (auto it = m_frags.begin(); it != m_frags.end(); it++) {
         if (!std::holds_alternative<stored>(*it)) {
             continue;
@@ -189,6 +190,8 @@ void fragmentation::convert_rejected_addr_to_unstored(const address& addr) {
             if (rejected_frag.pointer >= stored_frag.pointer and
                 (rejected_frag.pointer + rejected_frag.size) <=
                     (stored_frag.pointer + stored_frag.size)) {
+                set.erase({rejected_frag.pointer, rejected_frag.size},
+                          stored_frag.data);
                 it->emplace<1>(unstored{.data = stored_frag.data,
                                         .header = stored_frag.header,
                                         .hint = std::nullopt});

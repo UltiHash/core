@@ -110,6 +110,14 @@ public:
     void mark_deduplication(const fragment& set_element);
 
     /**
+     * Erases a fragment from the fragment set
+     *
+     * @param set_element set element to be evicted
+     * @param data data held by the fragment
+     */
+    void erase(const fragment& set_element, const std::string_view& data);
+
+    /**
      * @brief synchronizes the fragment_set log file with the underlying storage
      * device
      *

@@ -87,6 +87,8 @@ public:
         return {};
     }
 
+    inline void erase(const Key& key) { m_key_data.erase(key); }
+
 private:
     inline void increment(auto& itr) {
 
