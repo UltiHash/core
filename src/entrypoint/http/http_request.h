@@ -28,6 +28,8 @@ public:
 
     [[nodiscard]] http::verb method() const;
 
+    std::string_view target() const;
+
     const std::string& bucket() const;
     const std::string& object_key() const;
 
@@ -52,6 +54,9 @@ public:
      * `std::nullopt` if parameter is not set.
      */
     std::optional<std::string> query(const std::string& name) const;
+    const std::map<std::string, std::string>& query_map() const;
+
+    const boost::beast::http::fields& header() const;
 
     bool has_query() const;
 
