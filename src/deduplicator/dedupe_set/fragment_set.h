@@ -110,6 +110,13 @@ public:
     void mark_deduplication(const fragment& set_element);
 
     /**
+     * Erases a fragment from the fragment set
+     *
+     * @param set_element set element to be evicted
+     */
+    void erase(const fragment& set_element);
+
+    /**
      * @brief synchronizes the fragment_set log file with the underlying storage
      * device
      *

@@ -57,10 +57,12 @@ void reference_counter::decrement(const std::size_t offset,
                 deleteRangeStart = page_id;
                 deleteRangeEnd = page_id;
             }
-        }
 
-        std::string value_str = std::to_string(current_value);
-        dbi.put(txn, key, value_str);
+            dbi.del(txn, key);
+        } else {
+            std::string value_str = std::to_string(current_value);
+            dbi.put(txn, key, value_str);
+        }
     }
 
     if (deleteRangeStart.has_value() && deleteRangeEnd.has_value()) {
@@ -68,18 +70,17 @@ void reference_counter::decrement(const std::size_t offset,
                                          deleteRangeEnd.value());
     }
 
-    txn.commit();
-
     for (auto range : marked_for_deletion) {
         std::size_t del_offset = range.first * m_page_size;
         std::size_t del_size =
             (range.second - range.first) * m_page_size + m_page_size;
         m_cb(del_offset, del_size);
     }
+    txn.commit();
 }
 
-void reference_counter::increment(const std::size_t offset,
-                                  const std::size_t size) {
+bool reference_counter::increment(const std::size_t offset,
+                                  const std::size_t size, const bool init) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -89,9 +90,14 @@ void reference_counter::increment(const std::size_t offset,
         std::string key(std::to_string(page_id));
         std::string_view value;
 
-        std::size_t current_value = 0;
+        std::size_t current_value;
         if (dbi.get(txn, key, value)) {
             current_value = std::stoull(std::string(value));
+        } else if (init) {
+            current_value = 0;
+        } else {
+            txn.abort();
+            return false;
         }
 
         ++current_value;
@@ -100,6 +106,7 @@ void reference_counter::increment(const std::size_t offset,
     }
 
     txn.commit();
+    return true;
 }
 
 } // namespace uh::cluster

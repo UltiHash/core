@@ -85,7 +85,7 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<void> link(context& ctx, const address& addr) override {
+    coro<address> link(context& ctx, const address& addr) override {
         load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
@@ -95,26 +95,27 @@ struct local_storage : public storage_interface {
             ds_addresses.at(id).push(f);
         }
 
-        std::vector<std::future<void>> futures;
+        std::vector<std::future<address>> futures;
         futures.reserve(m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
 
-            auto p = std::make_shared<std::promise<void>>();
+            auto p = std::make_shared<std::promise<address>>();
             boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
                 try {
-                    m_data_stores[i]->link(ds_addresses[i]);
-                    p->set_value();
+                    p->set_value(m_data_stores[i]->link(ds_addresses[i]));
                 } catch (const std::exception&) {
                     p->set_exception(std::current_exception());
                 }
             });
             futures.emplace_back(p->get_future());
         }
+
+        address rv;
         for (auto& f : futures) {
-            f.get();
+            rv.append(f.get());
         }
 
-        co_return;
+        co_return rv;
     }
 
     coro<void> unlink(context& ctx, const address& addr) override {

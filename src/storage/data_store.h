@@ -85,9 +85,12 @@ public:
 
     /**
      * @brief Creates a reference to one or multiple storage locations.
+     * Invalid/non-existing fragments will be reported as rejected fragments
+     * in a returned address.
      * @param address: storage locations that are to be referenced.
+     * @return an address containing rejected fragments.
      */
-    void link(const address& addr);
+    address link(const address& addr);
 
     /**
      * @brief Removes a reference to one or multiple storage locations.
@@ -161,6 +164,11 @@ private:
     std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
         m_ongoing_async_writes;
     reference_counter m_refcounter;
+#ifdef DISABLE_STORAGE_REFCOUNT
+    static constexpr bool m_enable_refcount = false;
+#else
+    static constexpr bool m_enable_refcount = true;
+#endif
 };
 
 } // end namespace uh::cluster

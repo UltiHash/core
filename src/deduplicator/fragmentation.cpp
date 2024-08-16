@@ -10,7 +10,7 @@ fragmentation::fragmentation(dedupe_logger& dd_logger)
       m_effective_size(0ull),
       m_unstored_size(0ull) {}
 
-void fragmentation::push(const fragment& f) { m_frags.emplace_back(f); }
+void fragmentation::push(stored&& st) { m_frags.emplace_back(std::move(st)); }
 
 void fragmentation::push(unstored&& un) {
     m_frags.emplace_back(std::move(un));
@@ -44,8 +44,23 @@ address fragmentation::make_address() const {
             continue;
         }
 
-        if (std::holds_alternative<fragment>(frag)) {
-            rv.push(std::get<fragment>(frag));
+        if (std::holds_alternative<stored>(frag)) {
+            auto stored_frag = std::get<stored>(frag);
+            rv.push({stored_frag.pointer, stored_frag.size});
+            continue;
+        }
+    }
+
+    return rv;
+}
+
+address fragmentation::get_stored_fragments() const {
+    address rv;
+
+    for (const auto& frag : m_frags) {
+        if (std::holds_alternative<stored>(frag)) {
+            auto stored_frag = std::get<stored>(frag);
+            rv.push({stored_frag.pointer, stored_frag.size});
             continue;
         }
     }
@@ -72,7 +87,8 @@ void fragmentation::flush_fragments(fragment_set& set) {
 
     for (auto& frag : m_frags) {
         if (!std::holds_alternative<unstored>(frag)) {
-            set.mark_deduplication(std::get<fragment>(frag));
+            auto stored_frag = std::get<stored>(frag);
+            set.mark_deduplication({stored_frag.pointer, stored_frag.size});
             continue;
         }
 
@@ -159,6 +175,27 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
     }
 
     return buffer;
+}
+void fragmentation::handle_rejected_fragments(const address& addr,
+                                              fragment_set& set) {
+    for (auto it = m_frags.begin(); it != m_frags.end(); it++) {
+        if (!std::holds_alternative<stored>(*it)) {
+            continue;
+        }
+
+        auto& stored_frag = std::get<stored>(*it);
+
+        for (std::size_t i = 0; i < addr.size(); i++) {
+            auto rejected_frag = addr.get(i);
+            if (rejected_frag.pointer == stored_frag.pointer) {
+                set.erase({rejected_frag.pointer, rejected_frag.size});
+                it->emplace<1>(unstored{.data = stored_frag.data,
+                                        .header = stored_frag.header,
+                                        .hint = std::nullopt});
+                break;
+            }
+        }
+    }
 }
 
 } // namespace uh::cluster

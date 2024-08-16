@@ -115,6 +115,35 @@ public:
     coro<void> sync(context& ctx, const address& addr);
 
     /**
+     * @brief registers a reference to a storage region to claim co-ownership
+     * of data.
+     *
+     * In the sense of optimistic concurrency control, this call
+     * tries to increase the reference count of a storage region. If due to
+     * a data race, data in the specified region has already been deleted,
+     * an address with the affected regions is returned to enable upstream
+     * handling of the issue.
+     *
+     * @param ctx traces context
+     * @param addr The address specifying the storage regions to be referenced.
+     * @return An address specifying all storage regions within #addr that have
+     *
+     * already been deleted and therefore can no longer be referenced.
+     */
+    [[nodiscard]] coro<address> link(context& ctx, const address& addr);
+
+    /**
+     * @brief un-registers a reference to a storage region to release
+     * co-ownership of data.
+     *
+     * @param ctx traces context
+     * @param addr The address specifying the storage regions to be
+     * un-referenced.
+     * @return
+     */
+    coro<void> unlink(context& ctx, const address& addr);
+
+    /**
      * @brief Computes used space across all available storage service
      * instances.
      * @param ctx open telemetry context

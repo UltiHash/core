@@ -84,23 +84,28 @@ struct local_deduplicator : public deduplicator_interface {
 
 private:
     coro<size_t> pursue_pointer(context& ctx, std::string_view& data,
-                                uint128_t pointer, fragmentation& fragments) {
+                                uint128_t pointer, bool header,
+                                fragmentation& fragments) {
         size_t common_size;
-        fragment frag{pointer - m_dedupe_conf.max_fragment_size,
-                      m_dedupe_conf.max_fragment_size};
+        fragmentation::stored frag{.pointer = pointer -
+                                              m_dedupe_conf.max_fragment_size,
+                                   .size = m_dedupe_conf.max_fragment_size,
+                                   .header = header};
         do {
             auto stored_data =
                 co_await m_storage.read(ctx, pointer, pursue_size);
 
-            common_size =
-                largest_common_prefix(stored_data.string_view(), data);
-            data = data.substr(common_size);
+            common_size = largest_common_prefix(stored_data.string_view(),
+                                                data.substr(frag.size));
+
             frag.size += common_size;
             pointer += common_size;
         } while (common_size == pursue_size);
+        frag.data = data.substr(0, frag.size);
+        data = data.substr(frag.size);
 
         m_dedupe_logger.log_pursue_deduplication(frag.size, frag.pointer);
-        fragments.push(frag);
+        fragments.push(std::move(frag));
         co_return frag.size;
     }
 
@@ -125,14 +130,17 @@ private:
                 const auto& [frag, prefix] =
                     match_low > match_high ? *f.low : *f.high;
 
-                data = data.substr(size);
                 if (size == m_dedupe_conf.max_fragment_size) {
                     offset += co_await pursue_pointer(
                         ctx, data,
                         frag.pointer + m_dedupe_conf.max_fragment_size,
-                        fragments);
+                        (offset == 0), fragments);
                 } else {
-                    fragments.push(fragment{frag.pointer, size});
+                    fragments.push({.pointer = frag.pointer,
+                                    .size = size,
+                                    .data = data.substr(0, size),
+                                    .header = (offset == 0)});
+                    data = data.substr(size);
                     m_dedupe_logger.log_deduplication(size, prefix,
                                                       frag.pointer, offset);
                     offset += size;
@@ -151,6 +159,13 @@ private:
             offset += frag_size;
             non_dedupe_count++;
         }
+        auto rejected_fragments =
+            co_await m_storage.link(ctx, fragments.get_stored_fragments());
+        if (!rejected_fragments.empty()) [[unlikely]] {
+            fragments.handle_rejected_fragments(rejected_fragments,
+                                                m_fragment_set);
+        }
+
         co_await fragments.flush_data(ctx, m_storage);
         co_await m_dedupe_workers.post_in_workers(
             ctx, [this, &fragments] { fragments.flush_set(m_fragment_set); });
