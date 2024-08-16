@@ -102,7 +102,8 @@ struct storage_group : public storage_interface {
 
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
-        co_await m_getter.get(f.pointer)->read_fragment(ctx, buffer, f);
+        auto cl = m_getter.get(f.pointer);
+        co_await cl->read_fragment(ctx, buffer, f);
     }
 
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
