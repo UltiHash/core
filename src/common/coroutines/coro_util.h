@@ -1,7 +1,3 @@
-//
-// Created by massi on 8/8/24.
-//
-
 #ifndef CORO_UTIL_H
 #define CORO_UTIL_H
 

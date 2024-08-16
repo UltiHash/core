@@ -5,12 +5,10 @@
 #include "common/etcd/service_discovery/ec_get_handler.h"
 #include "common/etcd/service_discovery/ec_group_maintainer.h"
 #include "common/etcd/service_discovery/ec_load_balancer.h"
-#include "common/etcd/service_discovery/service_get_handler.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/network/client.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "storage/interfaces/storage_system.h"
+#include "storage/interfaces/storage_group.h"
 
 namespace uh::cluster {
 
@@ -123,7 +121,7 @@ public:
      * @param ctx open telemetry context
      * @return The used space across all available storage service instances.
      */
-    coro<std::size_t> get_used_space(context& ctx) const;
+    coro<std::size_t> get_used_space(context& ctx);
 
     /**
      * @brief Provides access to the I/O context used by the global_data_view

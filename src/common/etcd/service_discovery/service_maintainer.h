@@ -2,9 +2,9 @@
 #ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
-#include "../../service_interfaces/service_factory.h"
-#include "../namespace.h"
+#include "common/etcd/namespace.h"
 #include "common/etcd/registry/service_id.h"
+#include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
 #include "roundrobin_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
@@ -36,8 +36,8 @@ struct service_endpoint {
     std::map<etcd_service_attributes, std::string> attributes;
 };
 
-template <typename service_interface> class service_maintainer {
-public:
+template <typename service_interface> struct service_maintainer {
+
     service_maintainer(etcd::SyncClient& etcd_client,
                        service_factory<service_interface> service_factory)
         : m_etcd_client(etcd_client),
@@ -48,8 +48,7 @@ public:
                   return handle_state_changes(response);
               },
               true),
-          m_service_factory(std::move(service_factory)),
-          m_local_service(m_service_factory.get_local_service()) {
+          m_service_factory(std::move(service_factory)) {
 
         auto resp =
             wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this]() {
@@ -65,9 +64,7 @@ public:
     ~service_maintainer() { m_watcher.Cancel(); }
 
     void add_monitor(service_monitor<service_interface>& monitor) {
-        if (m_local_service) {
-            monitor.add_local_client(m_local_service);
-        }
+
         std::lock_guard l(m_mutex);
         for (const auto& [id, cl] : m_clients) {
             monitor.add_client(id, cl);
@@ -80,7 +77,7 @@ public:
         m_monitors.emplace_back(monitor);
     }
 
-protected:
+private:
     void handle_state_changes(const etcd::Response& response) {
 
         try {
@@ -92,8 +89,7 @@ protected:
 
             std::lock_guard<std::mutex> lk(m_mutex);
 
-            switch (const auto etcd_action =
-                        get_etcd_action_enum(response.action())) {
+            switch (get_etcd_action_enum(response.action())) {
             case etcd_action::create:
                 add(etcd_path, value);
                 break;
@@ -160,7 +156,7 @@ protected:
         add(path, value);
     }
 
-    void remove(const std::string& path, const std::string& value) {
+    void remove(const std::string& path, const std::string&) {
 
         const auto id = get_id(path);
 
@@ -201,12 +197,11 @@ protected:
     etcd::SyncClient& m_etcd_client;
     etcd::Watcher m_watcher;
 
-    mutable std::mutex m_mutex;
+    std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
-    std::shared_ptr<service_interface> m_local_service;
     std::list<std::reference_wrapper<service_monitor<service_interface>>>
         m_monitors;
 };

@@ -1,6 +1,6 @@
 #include "service_id.h"
 
-#include "../namespace.h"
+#include "common/etcd/namespace.h"
 #include "common/utils/common.h"
 #include "common/utils/time_utils.h"
 #include <fstream>

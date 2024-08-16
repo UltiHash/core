@@ -2,7 +2,6 @@
 
 #include "common/utils/common.h"
 #include "common/utils/host_utils.h"
-#include "etcd/v3/Transaction.hpp"
 
 using namespace boost::asio;
 

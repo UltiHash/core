@@ -2,9 +2,8 @@
 #ifndef UH_CLUSTER_SERVICE_FACTORY_H
 #define UH_CLUSTER_SERVICE_FACTORY_H
 
-#include "../utils/host_utils.h"
 #include "attached_service.h"
-#include <boost/asio/io_context.hpp>
+#include "common/utils/host_utils.h"
 #include <memory>
 
 namespace uh::cluster {
@@ -23,10 +22,6 @@ public:
         if (!m_local_service or hostname != get_host() or pid != getpid()) {
             return make_remote_service(hostname, port);
         }
-        return m_local_service;
-    }
-
-    std::shared_ptr<service_interface> get_local_service() const {
         return m_local_service;
     }
 

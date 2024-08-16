@@ -3,7 +3,7 @@
 #define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
 
 #include "common/etcd/service_discovery/service_monitor.h"
-#include "storage/interfaces/storage_system.h"
+#include "storage/interfaces/storage_group.h"
 
 #include <set>
 
@@ -19,6 +19,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
         m_services.emplace(client);
         m_cv.notify_one();
     }
+
     void
     remove_client(size_t,
                   const std::shared_ptr<service_interface>& client) override {
@@ -35,20 +36,16 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
         }
     }
 
-    std::shared_ptr<service_interface> get() const {
-
-        if (this->m_local_service) {
-            return this->m_local_service;
-        }
+    std::shared_ptr<service_interface> get() {
 
         std::unique_lock lk(m_mutex);
-        if (m_cv.wait_for(lk, std::chrono::seconds(this->m_timeout_s),
-                          [this]() { return !empty(); })) {
-        } else
+        if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT,
+                           [this]() { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +
                 get_service_string(service_interface::service_role) +
                 " client");
+        }
 
         if (m_robin_index == m_services.cend()) {
             m_robin_index = m_services.cbegin();
@@ -63,11 +60,12 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
     [[nodiscard]] bool empty() const noexcept { return m_services.size() == 0; }
 
 private:
-    mutable std::mutex m_mutex;
-    mutable std::condition_variable m_cv;
+    std::mutex m_mutex;
+    std::condition_variable m_cv;
 
     std::set<std::shared_ptr<service_interface>> m_services;
-    mutable decltype(m_services.end()) m_robin_index = m_services.cend();
+    typename std::set<std::shared_ptr<service_interface>>::const_iterator
+        m_robin_index = m_services.cend();
 };
 
 } // namespace uh::cluster

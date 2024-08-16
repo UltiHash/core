@@ -2,9 +2,7 @@
 #define CORE_COMMON_TYPES_H
 
 #include "address.h"
-#include "big_int.h"
 #include <boost/asio.hpp>
-#include <boost/bind/bind.hpp>
 #include <chrono>
 #include <zpp_bits.h>
 

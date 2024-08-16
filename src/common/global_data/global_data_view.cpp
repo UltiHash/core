@@ -13,7 +13,7 @@ global_data_view::global_data_view(
     storage_maintainer.add_monitor(m_ec_maintainer);
     m_ec_maintainer.add_monitor(m_load_balancer);
     m_ec_maintainer.add_monitor(m_basic_getter);
-    auto cl = m_load_balancer.get();
+    m_load_balancer.get();
 }
 
 coro<address> global_data_view::write(context& ctx,
@@ -152,7 +152,7 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
     }
 }
 
-coro<std::size_t> global_data_view::get_used_space(context& ctx) const {
+coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     auto nodes = m_basic_getter.get_services();
 
     size_t used = 0;

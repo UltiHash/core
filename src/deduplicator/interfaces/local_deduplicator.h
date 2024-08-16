@@ -4,7 +4,7 @@
 #include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
 
-#include "../../common/service_interfaces/deduplicator_interface.h"
+#include "common/service_interfaces/deduplicator_interface.h"
 #include "deduplicator/dedupe_logger.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/fragmentation.h"

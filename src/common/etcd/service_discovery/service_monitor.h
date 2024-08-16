@@ -1,10 +1,7 @@
-//
-// Created by massi on 8/1/24.
-//
 
 #ifndef MAINTAINER_MONITOR_H
 #define MAINTAINER_MONITOR_H
-#include "../namespace.h"
+#include "common/etcd/namespace.h"
 
 namespace uh::cluster {
 
@@ -19,16 +16,7 @@ template <typename service_interface> struct service_monitor {
     virtual void remove_client(size_t,
                                const std::shared_ptr<service_interface>&) {}
 
-    virtual void
-    add_local_client(const std::shared_ptr<service_interface>& client) {
-        m_local_service = client;
-    }
-
     virtual ~service_monitor() = default;
-
-    std::shared_ptr<service_interface> m_local_service;
-
-    static constexpr std::size_t m_timeout_s = 10;
 };
 } // namespace uh::cluster
 

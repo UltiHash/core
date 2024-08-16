@@ -1,6 +1,3 @@
-//
-// Created by massi on 7/31/24.
-//
 
 #ifndef STORAGE_SYSTEM_H
 #define STORAGE_SYSTEM_H
@@ -10,10 +7,7 @@
 
 namespace uh::cluster {
 
-class ec_calculator {
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
-
+struct ec_calculator {
     struct encoded {
         [[nodiscard]] const std::vector<std::string_view>&
         get() const noexcept {
@@ -31,7 +25,6 @@ class ec_calculator {
         std::vector<std::string_view> m_encoded;
     };
 
-public:
     ec_calculator(size_t data_nodes, size_t ec_nodes)
         : m_data_nodes(data_nodes),
           m_ec_nodes(ec_nodes) {}
@@ -41,6 +34,10 @@ public:
         enc.set({data});
         return enc;
     }
+
+private:
+    const size_t m_data_nodes;
+    const size_t m_ec_nodes;
 };
 
 struct storage_system_config {
@@ -55,32 +52,8 @@ enum ec_status {
     empty,
 };
 
-struct storage_system : public storage_interface {
+struct storage_group : public storage_interface {
 
-private:
-    ec_status m_status = empty;
-    std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    service_get_handler<storage_interface> m_getter;
-
-    void update_status() {
-
-        size_t count = 0;
-        for (const auto& n : m_nodes) {
-            if (n == nullptr) {
-                count++;
-            }
-        }
-
-        if (count == 0) {
-            m_status = healthy;
-        } else if (count == m_nodes.size()) {
-            m_status = empty;
-        } else {
-            m_status = degraded;
-        }
-    }
-
-public:
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {
         m_nodes.at(group_nid) = node;
@@ -99,8 +72,8 @@ public:
     }
 
     [[nodiscard]] bool is_empty() const noexcept { return m_status == empty; }
-    storage_system(boost::asio::io_context& ioc, size_t data_nodes,
-                   size_t ec_nodes)
+    storage_group(boost::asio::io_context& ioc, size_t data_nodes,
+                  size_t ec_nodes)
         : m_nodes(data_nodes + ec_nodes),
           m_ec_calc(data_nodes, ec_nodes),
           m_ioc(ioc) {}
@@ -146,8 +119,29 @@ public:
     coro<size_t> get_used_space(context& ctx) override { co_return 0; }
 
 private:
+    std::vector<std::shared_ptr<storage_interface>> m_nodes;
+    service_get_handler<storage_interface> m_getter;
     ec_calculator m_ec_calc;
     boost::asio::io_context& m_ioc;
+    ec_status m_status = empty;
+
+    void update_status() {
+
+        size_t count = 0;
+        for (const auto& n : m_nodes) {
+            if (n == nullptr) {
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            m_status = healthy;
+        } else if (count == m_nodes.size()) {
+            m_status = empty;
+        } else {
+            m_status = degraded;
+        }
+    }
 };
 
 } // namespace uh::cluster

@@ -2,8 +2,8 @@
 #ifndef UH_CLUSTER_STORAGE_INTERFACE_H
 #define UH_CLUSTER_STORAGE_INTERFACE_H
 
-#include "../network/messenger_core.h"
-#include "../types/address.h"
+#include "common/network/messenger_core.h"
+#include "common/types/address.h"
 
 namespace uh::cluster {
 struct storage_interface {

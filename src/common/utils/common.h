@@ -34,34 +34,37 @@ enum message_type : uint8_t {
     FAILURE = 16
 };
 
-static constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
-static constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
-static constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
-static constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
-static constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
-static constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
-static constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
-static constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
+constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
+constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
+constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
+constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
+constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
+constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
+constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
+constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
     "UH_DB_DIRECTORY_CONNECTIONS";
-static constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
+constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
     "UH_DB_MULTIPART_CONNECTIONS";
-static constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
-static constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
+constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
+constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
-static constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
+constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
-static constexpr int ETCD_TIMEOUT = 300;
-static constexpr int ETCD_RETRY_INTERVAL = 1;
-static constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
+constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
-static constexpr size_t SET_LOG_CACHE_SIZE = 10000;
-static constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
+constexpr int ETCD_TIMEOUT = 300;
+constexpr int ETCD_RETRY_INTERVAL = 1;
+constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
+
+constexpr size_t SET_LOG_CACHE_SIZE = 10000;
+constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
+
 #ifdef DISABLE_STORAGE_REFCOUNT
 static constexpr bool enable_storage_refcount = false;
 #else
-static constexpr bool enable_storage_refcount = true;
+constexpr bool enable_storage_refcount = true;
 #endif
 
 const std::string& get_service_string(const role& service_role);

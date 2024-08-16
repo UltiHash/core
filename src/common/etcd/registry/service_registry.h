@@ -1,7 +1,7 @@
 #ifndef UH_CLUSTER_SERVICE_REGISTRY_H
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
-#include "../namespace.h"
+#include "common/etcd/namespace.h"
 #include "common/network/server.h"
 #include "etcd/KeepAlive.hpp"
 #include "etcd/SyncClient.hpp"

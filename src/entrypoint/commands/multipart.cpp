@@ -22,7 +22,7 @@ static void validate(const http_request& req) {
     }
 }
 
-coro<http_response> multipart::handle(http_request& req) const {
+coro<http_response> multipart::handle(http_request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     validate(req);

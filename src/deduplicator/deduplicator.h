@@ -1,12 +1,12 @@
 #ifndef CORE_DEDUPE_NODE_H
 #define CORE_DEDUPE_NODE_H
 
-#include "../common/service_interfaces/attached_service.h"
-#include "../common/service_interfaces/deduplicator_interface.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
 #include "common/global_data/global_data_view.h"
 #include "common/network/server.h"
+#include "common/service_interfaces/attached_service.h"
+#include "common/service_interfaces/deduplicator_interface.h"
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "deduplicator_handler.h"
@@ -53,6 +53,8 @@ public:
     std::shared_ptr<local_deduplicator> get_local_interface() {
         return m_deduplicator;
     }
+
+    size_t id() const noexcept { return m_service_id; }
 
     ~deduplicator() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
