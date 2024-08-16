@@ -77,7 +77,7 @@ coro<http_response> complete_multipart::handle(http_request& req) {
 
     m_limits.check_storage_size(info.data_size);
 
-    auto etag = calculate_md5(buffer.span());
+    auto etag = md5::from_buffer(buffer.span());
 
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),

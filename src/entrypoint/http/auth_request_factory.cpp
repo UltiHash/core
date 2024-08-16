@@ -1,6 +1,7 @@
 #include "auth_request_factory.h"
 
 #include "command_exception.h"
+#include "common/utils/hash.h"
 
 #include <boost/algorithm/string.hpp>
 #include <set>
@@ -120,7 +121,7 @@ coro<std::string> make_canonical_request(http_request& req,
     auto size = co_await req.read_body(payload);
     payload.resize(size);
 
-    std::string hashed_payload = "";
+    std::string hashed_payload = sha256::from_buffer(payload);
 
     co_return method + "\n" + canonical_uri + "\n" + canonical_query + "\n" +
         canonical_headers + "\n" + signed_header_names + "\n" + hashed_payload;
