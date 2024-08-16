@@ -1,5 +1,5 @@
-#ifndef COMMON_UTILS_MD5_H
-#define COMMON_UTILS_MD5_H
+#ifndef COMMON_UTILS_HASH_H
+#define COMMON_UTILS_HASH_H
 
 #include <memory>
 #include <openssl/evp.h>
@@ -8,9 +8,11 @@
 
 namespace uh::cluster {
 
-class md5 {
+enum class hash_algorithm { md5, sha256 };
+
+class hash_base {
 public:
-    md5();
+    hash_base(hash_algorithm algo);
 
     void consume(std::span<const char> data);
 
@@ -20,12 +22,29 @@ private:
     std::unique_ptr<EVP_MD_CTX, void (*)(EVP_MD_CTX*)> m_ctx;
 };
 
-/**
- * Compute MD5 checksum of provided string and return it as hexadecimal string.
- * @throws on error
- */
-std::string calculate_md5(std::span<const char> input);
-std::string calculate_md5(const std::string& s);
+template <hash_algorithm algo> struct hash : public hash_base {
+    hash()
+        : hash_base(algo) {}
+
+    /**
+     * Compute checksum of provided string and return it as hexadecimal string.
+     * @throws on error
+     */
+    static std::string from_buffer(std::span<const char> input) {
+        hash h;
+
+        h.consume(input);
+
+        return h.finalize();
+    }
+
+    static std::string from_string(const std::string& s) {
+        return from_buffer({s.begin(), s.size()});
+    }
+};
+
+using md5 = hash<hash_algorithm::md5>;
+using sha256 = hash<hash_algorithm::sha256>;
 
 } // namespace uh::cluster
 
