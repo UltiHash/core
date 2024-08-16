@@ -87,4 +87,18 @@ BOOST_AUTO_TEST_CASE(lfu_single_capacity) {
     BOOST_CHECK_EQUAL(cache.get(2).value(), 2);
 }
 
+BOOST_AUTO_TEST_CASE(lfu_erase) {
+    lfu_cache<int, int> cache(5);
+    cache.put_non_existing(0, 0);
+    cache.put_non_existing(1, 1);
+    cache.put_non_existing(2, 2);
+    cache.put_non_existing(3, 3);
+    cache.put_non_existing(4, 4);
+    cache.erase(4);
+    BOOST_CHECK(!cache.get(4).has_value());
+    cache.put_non_existing(5, 5);
+
+    BOOST_CHECK(cache.get(0).has_value());
+}
+
 } // namespace uh::cluster
