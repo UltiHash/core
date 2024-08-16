@@ -52,9 +52,9 @@ struct service_get_handler : public service_monitor<service_interface> {
         return cl;
     }
 
-    optref<const std::shared_ptr<service_interface>> at(std::size_t id) {
+    bool contains(std::size_t id) {
         std::lock_guard l(m_mutex);
-        return m_clients.at(id);
+        return m_clients.contains(id);
     }
 
     std::vector<std::shared_ptr<service_interface>> get_services() {

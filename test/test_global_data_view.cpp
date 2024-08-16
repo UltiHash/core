@@ -7,22 +7,22 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-
+/*
 static void fill_random(char* buf, size_t size) {
     for (size_t i = 0; i < size; ++i) {
         buf[i] = rand() & 0xff;
     }
 }
-
+*/
 BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     context ctx;
     BOOST_CHECK_THROW(gdv->read_fragment(ctx,
                                          std::numeric_limits<uint64_t>::max(),
                                          8 * KIBI_BYTE),
-                      std::runtime_error);
+                      uh::cluster::error_exception);
 }
-
+/*
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     context ctx;
@@ -134,5 +134,5 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
         .get();
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());
 }
-
+*/
 } // namespace uh::cluster

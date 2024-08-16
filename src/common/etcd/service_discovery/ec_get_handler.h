@@ -26,7 +26,7 @@ private:
     void add_client(size_t id,
                     const std::shared_ptr<storage_group>& client) override {
         const auto gid = m_scheme.calc_group_id(id);
-        if (!m_getter.at(gid).has_value())
+        if (!m_getter.contains(gid))
             m_getter.add_client(gid, client);
     }
 
