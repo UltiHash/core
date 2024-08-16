@@ -10,10 +10,25 @@ namespace uh::cluster {
 
 namespace {
 
+std::string ident(const std::string& s) noexcept { return s; }
+
+auto get_encoder(std::optional<std::string> encoding_type) {
+    if (!encoding_type) {
+        return ident;
+    }
+
+    if (*encoding_type != "url") {
+        throw command_exception(http::status::bad_request,
+                                "InvalidQueryParameters",
+                                "encountered unexpected query parameter");
+    }
+
+    return url_encode;
+}
+
 http_response get_response(const std::vector<object>& objects,
                            const http_request& req) {
 
-    const auto marker = req.query("marker");
     const auto prefix = req.query("prefix");
 
     std::optional<std::string> delimiter = req.query("delimiter");
@@ -21,22 +36,14 @@ http_response get_response(const std::vector<object>& objects,
         delimiter = std::nullopt;
     }
 
-    const auto encoding_type = req.query("encoding-type");
-    if (encoding_type && *encoding_type != "url") {
-        throw command_exception(http::status::bad_request,
-                                "InvalidQueryParameters",
-                                "encountered unexpected query parameter");
-    }
+    auto encoding_type = req.query("encoding-type");
+    auto encode = get_encoder(encoding_type);
 
-    size_t max_keys = 1000;
-    const auto max_keys_val = req.query("max-keys");
-    if (max_keys_val) {
-        max_keys = std::stoul(*max_keys_val);
-    }
+    std::size_t max_keys = query<std::size_t>(req, "max-keys").value_or(1000);
 
     std::string is_truncated = "false";
     boost::property_tree::ptree pt;
-    boost::property_tree::ptree list_bucket_result_node;
+    boost::property_tree::ptree result_node;
     std::vector<boost::property_tree::ptree> contents_nodes;
     std::vector<boost::property_tree::ptree> common_prefixes_nodes;
     std::optional<std::string> next_marker;
@@ -51,34 +58,19 @@ http_response get_response(const std::vector<object>& objects,
 
         for (const auto& object : collapsed_objs) {
             if (object._prefix) {
-                boost::property_tree::ptree& common_prefixes_node =
-                    common_prefixes_nodes.emplace_back();
-                if (encoding_type) {
-                    common_prefixes_node.put("Prefix",
-                                             url_encode(*object._prefix));
-                } else {
-                    common_prefixes_node.put("Prefix", *object._prefix);
-                }
+                auto& node = common_prefixes_nodes.emplace_back();
+                put(node, "Prefix", encode(*object._prefix));
                 common_prefix_last = true;
                 ++common_prefixes_counter;
             } else if (object._object) {
-                boost::property_tree::ptree& contents_node =
+                boost::property_tree::ptree& node =
                     contents_nodes.emplace_back();
-                if (object._object->get().etag) {
-                    contents_node.put("ETag", *object._object->get().etag);
-                }
 
-                if (encoding_type) {
-                    contents_node.put("Key",
-                                      url_encode(object._object->get().name));
-                } else {
-                    contents_node.put("Key", object._object->get().name);
-                }
-
-                contents_node.put(
-                    "LastModified",
+                put(node, "ETag", object._object->get().etag);
+                put(node, "Key", encode(object._object->get().name));
+                put(node, "Size", object._object->get().size);
+                put(node, "LastModified",
                     iso8601_date(object._object->get().last_modified));
-                contents_node.put("Size", object._object->get().size);
 
                 common_prefix_last = false;
                 ++contents_counter;
@@ -98,36 +90,24 @@ http_response get_response(const std::vector<object>& objects,
         }
     }
 
-    list_bucket_result_node.put("IsTruncated", is_truncated);
-
-    if (marker)
-        list_bucket_result_node.put("Marker", *marker);
-
-    if (next_marker)
-        list_bucket_result_node.put("NextMarker", *next_marker);
+    put(result_node, "IsTruncated", is_truncated);
+    put(result_node, "Marker", req.query("marker"));
+    put(result_node, "NextMarker", next_marker);
+    put(result_node, "Name", req.bucket());
+    put(result_node, "Prefix", prefix);
+    put(result_node, "Delimiter", delimiter);
+    put(result_node, "MaxKeys", max_keys);
+    put(result_node, "EncodingType", encoding_type);
 
     for (const auto& contents : contents_nodes) {
-        list_bucket_result_node.add_child("Contents", contents);
+        result_node.add_child("Contents", contents);
     }
-
-    list_bucket_result_node.put("Name", req.bucket());
-
-    if (prefix)
-        list_bucket_result_node.put("Prefix", *prefix);
-
-    if (delimiter)
-        list_bucket_result_node.put("Delimiter", *delimiter);
-
-    list_bucket_result_node.put("MaxKeys", max_keys);
 
     for (const auto& common_prefixes : common_prefixes_nodes) {
-        list_bucket_result_node.add_child("CommonPrefixes", common_prefixes);
+        result_node.add_child("CommonPrefixes", common_prefixes);
     }
 
-    if (encoding_type)
-        list_bucket_result_node.put("EncodingType", *encoding_type);
-
-    pt.add_child("ListBucketResult", list_bucket_result_node);
+    pt.add_child("ListBucketResult", result_node);
 
     http_response res;
     res << pt;
