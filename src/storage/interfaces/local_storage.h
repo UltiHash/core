@@ -111,7 +111,6 @@ struct local_storage : public storage_interface {
         }
 
         address rv;
-
         for (auto& f : futures) {
             rv.append(f.get());
         }
