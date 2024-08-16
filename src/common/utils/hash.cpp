@@ -1,4 +1,4 @@
-#include "md5.h"
+#include "hash.h"
 #include "common/utils/strings.h"
 
 #include <openssl/err.h>

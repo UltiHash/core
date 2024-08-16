@@ -1,5 +1,5 @@
 #include "complete_multipart.h"
-#include "common/utils/md5.h"
+#include "common/utils/hash.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
