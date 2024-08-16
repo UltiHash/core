@@ -61,9 +61,11 @@ public:
             auto& front_list = m_freq_buckets.front().items;
             const auto& rem_key = front_list.front();
             const auto rem_itr = m_key_data.find(rem_key);
-            m_removal_callback(rem_itr->second.val);
+            if (rem_itr != m_key_data.end()) {
+                m_removal_callback(rem_itr->second.val);
+                m_key_data.erase(rem_itr);
+            }
 
-            m_key_data.erase(rem_itr);
             front_list.pop_front();
             if (front_list.empty()) {
                 m_freq_buckets.pop_front();
@@ -90,6 +92,8 @@ public:
     inline void erase(const Key& key) {
         if (auto itr = m_key_data.find(key); itr != m_key_data.cend()) {
             m_removal_callback(itr->second.val);
+            m_key_data.erase(key);
+            m_capacity--;
         }
     }
 
