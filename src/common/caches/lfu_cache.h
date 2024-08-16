@@ -87,7 +87,11 @@ public:
         return {};
     }
 
-    inline void erase(const Key& key) { m_key_data.erase(key); }
+    inline void erase(const Key& key) {
+        if (auto itr = m_key_data.find(key); itr != m_key_data.cend()) {
+            m_removal_callback(itr->second.val);
+        }
+    }
 
 private:
     inline void increment(auto& itr) {

@@ -99,30 +99,10 @@ void fragment_set::remove(
     });
 }
 
-void fragment_set::erase(const fragment& set_element,
-                         const std::string_view& data) {
+void fragment_set::erase(const fragment& set_element) {
     std::lock_guard<std::shared_mutex> guard(m_mutex);
-    auto lfu_entry = m_lfu.get(set_element.pointer);
-    if (lfu_entry.has_value()) {
-        m_set.erase(lfu_entry.value());
-        m_lfu.erase(set_element.pointer);
-        return;
-    }
-
-    lfu_entry = m_lfu_headers.get(set_element.pointer);
-    if (lfu_entry.has_value()) {
-        m_set.erase(lfu_entry.value());
-        m_lfu_headers.erase(set_element.pointer);
-        return;
-    }
-
-    auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
-    fragment_set_element f{data, set_element.pointer, std::string(prefix),
-                           m_storage};
-    auto it = m_set.find(f);
-    if (it != m_set.end()) {
-        m_set.erase(it);
-    }
+    m_lfu.erase(set_element.pointer);
+    m_lfu_headers.erase(set_element.pointer);
 }
 
 } // namespace uh::cluster
