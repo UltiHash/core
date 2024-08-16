@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "md5 hash tests"
 
-#include "common/utils/md5.h"
+#include "common/utils/hash.h"
 #include <boost/test/unit_test.hpp>
 
 using namespace uh::cluster;
