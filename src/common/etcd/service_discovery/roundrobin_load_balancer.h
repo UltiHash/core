@@ -57,7 +57,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
         return rv;
     }
 
-    [[nodiscard]] bool empty() const noexcept { return m_services.size() == 0; }
+    [[nodiscard]] bool empty() const noexcept { return m_services.empty(); }
 
 private:
     std::mutex m_mutex;

@@ -137,7 +137,15 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
 
 using dedup_fixture = base_fixture<storage_interface>;
 BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
-
+    /* Note: we are checking implementation details here. The following
+     * assumptions must hold true for this test to succeed. If they are not
+     * true anymore, you should refactor/delete this test.
+     *
+     * - each storage service owns the same amount of space which is defined
+     *   by max_data_store_size in global_data_view_config
+     * - each nodes storage offset is determined by product of the node's id
+     *   and max_data_store_size
+     */
     auto node_addr_range = pointer_traits::get_global_pointer(
         data_store_config().max_data_store_size, 1, 0);
 
