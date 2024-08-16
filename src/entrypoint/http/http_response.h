@@ -72,6 +72,20 @@ std::ostream& operator<<(std::ostream& out, const http_response& res);
 
 coro<void> write(boost::asio::ip::tcp::socket& out, http_response&& res);
 
+template <typename value_type>
+void put(boost::property_tree::ptree& tree, const std::string& key,
+         value_type value) {
+    tree.put(key, std::move(value));
+}
+
+template <typename value_type>
+void put(boost::property_tree::ptree& tree, const std::string& key,
+         std::optional<value_type> value) {
+    if (value) {
+        tree.put(key, *value);
+    }
+}
+
 } // namespace uh::cluster
 
 #endif

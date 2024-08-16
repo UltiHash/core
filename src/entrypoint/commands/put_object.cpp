@@ -46,24 +46,24 @@ bool put_object::can_handle(const http_request& req) {
            !req.header("x-amz-copy-source");
 }
 
+coro<void> put_object::validate(const http_request& req) const {
+    try {
+        co_await m_collection.directory.bucket_exists(req.bucket());
+    } catch (const error_exception& e) {
+        LOG_INFO() << req.peer() << " failed to get bucket `" << req.bucket()
+                   << "`: " << e;
+        throw_from_error(e.error());
+    }
+}
+
 coro<http_response> put_object::handle(http_request& req) const {
 
     metric<entrypoint_put_object_req>::increase(1);
     http_response res;
 
+    auto content_length = req.content_length();
     try {
-        auto content_length = req.content_length();
-
         m_collection.limits.check_storage_size(content_length);
-        co_await m_collection.directory.bucket_exists(req.bucket());
-
-        if (auto expect = req.header("expect");
-            expect && *expect == "100-continue") {
-            LOG_INFO() << req.socket().remote_endpoint()
-                       << ": sending 100 CONTINUE";
-            co_await write(req.socket(),
-                           http_response(http::status::continue_));
-        }
 
         md5 hash;
 
@@ -75,7 +75,7 @@ coro<http_response> put_object::handle(http_request& req) const {
         }
 
         auto tag = hash.finalize();
-        LOG_DEBUG() << req.socket().remote_endpoint() << ": etag: " << tag;
+        LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
         object obj{.name = req.object_key(),
                    .size = resp.addr.data_size(),
@@ -91,8 +91,9 @@ coro<http_response> put_object::handle(http_request& req) const {
         res.set_original_size(content_length);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
-        LOG_ERROR() << req.socket().remote_endpoint()
-                    << " failed to get bucket `" << req.bucket() << "`: " << e;
+        m_collection.limits.free_storage_size(content_length);
+        LOG_ERROR() << req.peer() << " failed to get bucket `" << req.bucket()
+                    << "`: " << e;
         throw_from_error(e.error());
     }
 
