@@ -95,15 +95,14 @@ struct local_storage : public storage_interface {
             ds_addresses.at(id).push(f);
         }
 
-        std::vector<std::future<void>> futures;
+        std::vector<std::future<address>> futures;
         futures.reserve(m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
 
-            auto p = std::make_shared<std::promise<void>>();
+            auto p = std::make_shared<std::promise<address>>();
             boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
                 try {
-                    m_data_stores[i]->link(ds_addresses[i]);
-                    p->set_value();
+                    p->set_value(m_data_stores[i]->link(ds_addresses[i]));
                 } catch (const std::exception&) {
                     p->set_exception(std::current_exception());
                 }
@@ -113,13 +112,8 @@ struct local_storage : public storage_interface {
 
         address rv;
 
-        for (size_t i = 0; i < m_data_stores.size(); ++i) {
-            auto& f = futures.at(i);
-            try {
-                f.get();
-            } catch (const std::out_of_range& e) {
-                rv.append(ds_addresses[i]);
-            }
+        for (auto& f : futures) {
+            rv.append(f.get());
         }
 
         co_return rv;

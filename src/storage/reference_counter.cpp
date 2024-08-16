@@ -79,7 +79,7 @@ void reference_counter::decrement(const std::size_t offset,
     txn.commit();
 }
 
-void reference_counter::increment(const std::size_t offset,
+bool reference_counter::increment(const std::size_t offset,
                                   const std::size_t size, const bool init) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
@@ -97,8 +97,7 @@ void reference_counter::increment(const std::size_t offset,
             current_value = 0;
         } else {
             txn.abort();
-            throw std::out_of_range("attempted to increment an uninitialized "
-                                    "page reference counter");
+            return false;
         }
 
         ++current_value;
@@ -107,6 +106,7 @@ void reference_counter::increment(const std::size_t offset,
     }
 
     txn.commit();
+    return true;
 }
 
 } // namespace uh::cluster

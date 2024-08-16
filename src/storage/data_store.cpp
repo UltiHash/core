@@ -244,14 +244,18 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
     }
 }
 
-void data_store::link(const address& addr) {
+address data_store::link(const address& addr) {
+    address rv;
     if constexpr (m_enable_refcount) {
         for (size_t i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get(i);
             const auto pointer = pointer_traits::get_pointer(frag.pointer);
-            m_refcounter.increment(pointer, frag.size);
+            if (!m_refcounter.increment(pointer, frag.size)) {
+                rv.push(frag);
+            }
         }
     }
+    return rv;
 }
 
 void data_store::unlink(const address& addr) {

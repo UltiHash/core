@@ -85,9 +85,12 @@ public:
 
     /**
      * @brief Creates a reference to one or multiple storage locations.
+     * Invalid/non-existing fragments will be reported as rejected fragments
+     * in a returned address.
      * @param address: storage locations that are to be referenced.
+     * @return an address containing rejected fragments.
      */
-    void link(const address& addr);
+    address link(const address& addr);
 
     /**
      * @brief Removes a reference to one or multiple storage locations.
