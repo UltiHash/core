@@ -48,16 +48,14 @@ http_response get_response(const std::vector<std::string>& success,
 coro<http_response> delete_objects::handle(http_request& req) const {
     metric<entrypoint_delete_objects_req>::increase(1);
 
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << ": delete_objects::handle(): content-length: "
+    LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
                 << req.content_length();
 
     std::vector<char> buffer(req.content_length());
     auto count = co_await req.read_body(buffer);
     buffer.resize(count);
 
-    LOG_DEBUG() << req.socket().remote_endpoint()
-                << ": delete_objects::handle(): request XML: "
+    LOG_DEBUG() << req.peer() << ": delete_objects::handle(): request XML: "
                 << std::string(buffer.data(), buffer.data() + buffer.size());
 
     xml_parser xml_parser;
@@ -80,16 +78,15 @@ coro<http_response> delete_objects::handle(http_request& req) const {
         }
 
         try {
-            LOG_DEBUG() << req.socket().remote_endpoint()
-                        << ": delete_objects::handle(): deleting " << *key;
+            LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
+                        << *key;
 
             co_await m_collection.directory.delete_object(req.bucket(), *key);
             success.emplace_back(*key);
 
         } catch (const error_exception& e) {
-            LOG_ERROR() << req.socket().remote_endpoint()
-                        << ": Failed to delete the bucket " << bucket_id
-                        << " to the directory: " << e;
+            LOG_ERROR() << req.peer() << ": Failed to delete the bucket "
+                        << bucket_id << " to the directory: " << e;
             switch (*e.error()) {
             case error::object_not_found:
                 failure.emplace_back(*key, "NoSuchKey");
