@@ -19,18 +19,21 @@ BOOST_AUTO_TEST_CASE(test_increment_decrement) {
         [&delete_triggered](std::size_t offset, std::size_t size) {
             delete_triggered = true;
         });
-    BOOST_CHECK_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE),
-                      std::out_of_range);
+    bool success = true;
+    BOOST_CHECK_NO_THROW(success = refcounter.increment(0, DEFAULT_PAGE_SIZE));
+    BOOST_CHECK(!success);
     BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE),
                       std::runtime_error);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE, true));
+    BOOST_CHECK_NO_THROW(success =
+                             refcounter.increment(0, DEFAULT_PAGE_SIZE, true));
+    BOOST_CHECK(success);
     BOOST_CHECK(!delete_triggered);
     BOOST_CHECK_NO_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE));
     BOOST_CHECK(delete_triggered);
     BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE),
                       std::runtime_error);
-    BOOST_CHECK_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE),
-                      std::out_of_range);
+    BOOST_CHECK_NO_THROW(success = refcounter.increment(0, DEFAULT_PAGE_SIZE));
+    BOOST_CHECK(!success);
 }
 
 BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
@@ -38,11 +41,15 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
     {
         reference_counter refcounter(testdir.path(), DEFAULT_PAGE_SIZE,
                                      dummy_delete);
-        BOOST_CHECK_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE),
-                          std::out_of_range);
+        bool success = true;
+        BOOST_CHECK_NO_THROW(success =
+                                 refcounter.increment(0, DEFAULT_PAGE_SIZE));
+        BOOST_CHECK(!success);
         BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE),
                           std::runtime_error);
-        BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE, true));
+        BOOST_CHECK_NO_THROW(
+            success = refcounter.increment(0, DEFAULT_PAGE_SIZE, true));
+        BOOST_CHECK(success);
     }
     {
         bool delete_triggered = false;
@@ -56,8 +63,10 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
         BOOST_CHECK(delete_triggered);
         BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE),
                           std::runtime_error);
-        BOOST_CHECK_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE),
-                          std::out_of_range);
+        bool success = true;
+        BOOST_CHECK_NO_THROW(success =
+                                 refcounter.increment(0, DEFAULT_PAGE_SIZE));
+        BOOST_CHECK(!success);
     }
 }
 
@@ -69,13 +78,17 @@ BOOST_AUTO_TEST_CASE(test_bulk_increment_decrement) {
         [&delete_triggered](std::size_t offset, std::size_t size) {
             delete_triggered++;
         });
-    BOOST_CHECK_THROW(refcounter.increment(0, GIBI_BYTE), std::out_of_range);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, GIBI_BYTE, true));
+    bool success = true;
+    BOOST_CHECK_NO_THROW(success = refcounter.increment(0, GIBI_BYTE));
+    BOOST_CHECK(!success);
+    BOOST_CHECK_NO_THROW(success = refcounter.increment(0, GIBI_BYTE, true));
+    BOOST_CHECK(success);
     BOOST_CHECK(delete_triggered == 0);
     BOOST_CHECK_NO_THROW(refcounter.decrement(0, GIBI_BYTE));
     BOOST_CHECK(delete_triggered == 1);
     BOOST_CHECK_THROW(refcounter.decrement(0, GIBI_BYTE), std::runtime_error);
-    BOOST_CHECK_THROW(refcounter.increment(0, GIBI_BYTE), std::out_of_range);
+    BOOST_CHECK_NO_THROW(success = refcounter.increment(0, GIBI_BYTE));
+    BOOST_CHECK(!success);
 }
 
 } // end namespace uh::cluster
