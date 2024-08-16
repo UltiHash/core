@@ -187,11 +187,8 @@ void fragmentation::handle_rejected_fragments(const address& addr,
 
         for (std::size_t i = 0; i < addr.size(); i++) {
             auto rejected_frag = addr.get(i);
-            if (rejected_frag.pointer >= stored_frag.pointer and
-                (rejected_frag.pointer + rejected_frag.size) <=
-                    (stored_frag.pointer + stored_frag.size)) {
-                set.erase({rejected_frag.pointer, rejected_frag.size},
-                          stored_frag.data);
+            if (rejected_frag.pointer == stored_frag.pointer) {
+                set.erase({rejected_frag.pointer, rejected_frag.size});
                 it->emplace<1>(unstored{.data = stored_frag.data,
                                         .header = stored_frag.header,
                                         .hint = std::nullopt});
