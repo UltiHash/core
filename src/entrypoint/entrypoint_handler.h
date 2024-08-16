@@ -30,39 +30,42 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
-            auto req = co_await m_factory->create(s);
-            LOG_DEBUG() << req->peer() << ": read request: " << *req;
-
             std::optional<http_response> resp;
             bool keep_alive = false;
 
             try {
+                auto req = co_await m_factory->create(s);
+                LOG_DEBUG() << req->peer() << ": read request: " << *req;
+
                 resp = co_await handle_request(*req);
                 metric<success>::increase(1);
-                keep_alive = req->keep_alive();
+                keep_alive = true;
             } catch (const command_exception& e) {
-                LOG_ERROR() << req->peer() << ": " << e.what();
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
                 resp = make_response(e);
             } catch (const boost::system::system_error& se) {
                 if (se.code() != http::error::end_of_stream) {
-                    LOG_ERROR() << req->peer() << ": peer closed connection";
+                    LOG_ERROR()
+                        << s.remote_endpoint() << ": peer closed connection";
                     break;
                 }
 
-                LOG_ERROR() << req->peer() << ": " << se.what();
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
                 resp = make_response(command_exception(
                     http::status::bad_request, "BadRequest", "bad request"));
             } catch (const std::exception& e) {
-                LOG_ERROR() << req->peer() << ": " << e.what();
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
 
                 resp = make_response(command_exception());
             }
 
             if (resp) {
-                LOG_DEBUG() << req->peer() << ", sending response: " << *resp;
+                LOG_DEBUG()
+                    << s.remote_endpoint() << ", sending response: " << *resp;
                 co_await write(s, std::move(*resp));
             } else {
-                LOG_INFO() << req->peer() << ", no response: disconnecting";
+                LOG_INFO() << s.remote_endpoint()
+                           << ", no response: disconnecting";
                 break;
             }
 

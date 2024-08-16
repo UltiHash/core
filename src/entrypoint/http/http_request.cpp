@@ -14,23 +14,6 @@ namespace uh::cluster {
 
 namespace {
 
-boost::urls::url
-load_url(const http::request_parser<http::empty_body>::value_type& req) {
-    boost::urls::url url;
-
-    auto target = req.target();
-    auto query_index = target.find('?');
-
-    if (query_index != std::string::npos) {
-        url.set_encoded_query(target.substr(query_index + 1));
-        url.set_encoded_path(target.substr(0, query_index));
-    } else {
-        url.set_encoded_path(target);
-    }
-
-    return url;
-}
-
 class raw_decoder : public transport_decoder {
 public:
     raw_decoder(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
@@ -259,7 +242,19 @@ http_request::http_request(
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    auto url = load_url(m_req);
+    auto target = m_req.target();
+    auto query_index = target.find('?');
+
+    boost::urls::url url;
+    if (query_index != std::string::npos) {
+        m_path = target.substr(0, query_index);
+        url.set_encoded_path(m_path);
+        m_query = target.substr(query_index + 1);
+        url.set_encoded_query(m_query);
+    } else {
+        m_path = target;
+        url.set_encoded_path(m_path);
+    }
 
     for (const auto& param : url.params()) {
         m_params[param.key] = param.value;
@@ -273,6 +268,8 @@ http_request::http_request(
 http::verb http_request::method() const { return m_req.method(); }
 
 std::string_view http_request::target() const { return m_req.target(); }
+const std::string& http_request::query() const { return m_query; }
+const std::string& http_request::path() const { return m_path; }
 
 const std::string& http_request::bucket() const { return m_bucket_id; }
 

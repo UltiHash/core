@@ -57,7 +57,7 @@ std::string to_hex(T value) {
     static constexpr auto hexChars = "0123456789abcdef";
 
     std::string result;
-    result.push_back(hexChars[value >> 4]);
+    result.push_back(hexChars[(value >> 4) & 0xf]);
     result.push_back(hexChars[value & 0xf]);
 
     return result;
