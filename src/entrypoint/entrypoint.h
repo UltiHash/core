@@ -9,6 +9,7 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/http/auth_request_factory.h"
 #include "entrypoint/http/default_request_factory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint_handler.h"

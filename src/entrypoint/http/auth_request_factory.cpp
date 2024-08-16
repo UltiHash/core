@@ -1,7 +1,9 @@
 #include "auth_request_factory.h"
 
 #include "command_exception.h"
+#include "common/telemetry/log.h"
 #include "common/crypto/hash.h"
+#include "common/crypto/hmac.h"
 
 #include <boost/algorithm/string.hpp>
 #include <set>
@@ -13,6 +15,11 @@ namespace uh::cluster::ep::http {
 namespace {
 
 struct auth_info {
+    auth_info(std::string&& header)
+        : m_header(std::move(header)) {
+        parse();
+    }
+
     std::string_view algorithm;
     std::string_view access_key_id;
     std::string_view date;
@@ -20,60 +27,53 @@ struct auth_info {
     std::string_view service;
     std::set<std::string_view> signed_headers;
     std::string_view signature;
-};
 
-auth_info parse_auth_header(std::optional<std::string> header) {
-    if (!header) {
-        throw command_exception(beast::http::status::forbidden, "AccessDenied",
-                                "Access Denied");
-    }
-
-    const auto& h = *header;
-    std::size_t pos = h.find(' ');
-    if (pos == std::string::npos) {
+    [[noreturn]] void parse_error() {
         throw command_exception(
             beast::http::status::forbidden, "AuthorizationHeaderMalformed",
             "The authorization header that you provided is not valid.");
     }
 
-    std::string_view algorithm(h.begin(), h.begin() + pos - 1);
-    auto fields = split(std::string_view(h.begin() + pos + 1, h.end()), ',');
-
-    std::map<std::string_view, std::string_view> parsed;
-
-    for (auto& field : fields) {
-        auto parts = split(field, '=');
-        if (parts.size() != 2) {
-            throw command_exception(
-                beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-                "The authorization header that you provided is not valid.");
+    void parse() {
+        std::size_t pos = m_header.find(' ');
+        if (pos == std::string::npos) {
+            parse_error();
         }
 
-        parsed[parts[0]] = parts[1];
+        algorithm =
+            std::string_view(m_header.begin(), m_header.begin() + pos - 1);
+        auto fields = split(
+            std::string_view(m_header.begin() + pos + 1, m_header.end()), ',');
+
+        std::map<std::string_view, std::string_view> parsed;
+        for (auto& field : fields) {
+            auto parts = split(field, '=');
+            if (parts.size() != 2) {
+                parse_error();
+            }
+
+            parsed[trim(parts[0])] = trim(parts[1]);
+        }
+
+        if (!parsed.contains("Credential") ||
+            !parsed.contains("SignedHeaders") ||
+            !parsed.contains("Signature")) {
+            parse_error();
+        }
+
+        auto split_credentials = split(parsed["Credential"], '/');
+        if (split_credentials.size() != 5) {
+            parse_error();
+        }
+
+        access_key_id = split_credentials[0], date = split_credentials[1],
+        region = split_credentials[2], service = split_credentials[3],
+        signed_headers = split_set(parsed["SignedHeaders"], ';'),
+        signature = parsed["Signature"];
     }
 
-    if (!parsed.contains("Credential") || !parsed.contains("SignedHeaders") ||
-        !parsed.contains("Signature")) {
-        throw command_exception(
-            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-            "The authorization header that you provided is not valid.");
-    }
-
-    auto split_crendentials = split(parsed["Credential"], '/');
-    if (split_crendentials.size() != 5) {
-        throw command_exception(
-            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-            "The authorization header that you provided is not valid.");
-    }
-
-    return auth_info{.algorithm = algorithm,
-                     .access_key_id = split_crendentials[0],
-                     .date = split_crendentials[1],
-                     .region = split_crendentials[2],
-                     .service = split_crendentials[3],
-                     .signed_headers = split_set(parsed["SignedHeaders"], ';'),
-                     .signature = parsed["Signature"]};
-}
+    std::string m_header;
+};
 
 bool include_header(const std::string& name,
                     const std::set<std::string_view>& included) {
@@ -81,14 +81,10 @@ bool include_header(const std::string& name,
            name.starts_with("x-amz-") || included.contains(name);
 }
 
-coro<std::string> make_canonical_request(http_request& req,
-                                         const auth_info& info) {
-    // see
+std::string make_canonical_request(http_request& req, const auth_info& info) {
+    // for details, see
     // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-    // for details
     std::string method = beast::http::to_string(req.method());
-    std::string canonical_uri =
-        std::string(req.target()); // TODO still includes query?
 
     std::set<std::string> canonical_query_set;
     for (const auto& field : req.query_map()) {
@@ -112,19 +108,12 @@ coro<std::string> make_canonical_request(http_request& req,
         signed_headers.insert(name);
     }
 
-    std::string canonical_headers =
-        algorithm::join(canonical_header_set, "\n") + "\n";
-    std::string signed_header_names = algorithm::join(signed_headers, ";");
+    auto canonical_headers = algorithm::join(canonical_header_set, "\n") + "\n";
+    auto signed_header_names = algorithm::join(signed_headers, ";");
 
-    std::vector<char> payload;
-    payload.reserve(req.content_length());
-    auto size = co_await req.read_body(payload);
-    payload.resize(size);
-
-    std::string hashed_payload = sha256::from_buffer(payload);
-
-    co_return method + "\n" + canonical_uri + "\n" + canonical_query + "\n" +
-        canonical_headers + "\n" + signed_header_names + "\n" + hashed_payload;
+    return method + "\n" + req.path() + "\n" + canonical_query + "\n" +
+           canonical_headers + "\n" + signed_header_names + "\n" +
+           req.header("x-amz-content-sha256").value_or("");
 }
 
 } // namespace
@@ -133,9 +122,17 @@ auth_request_factory::auth_request_factory(
     std::unique_ptr<request_factory> base)
     : m_base(std::move(base)) {}
 
+constexpr std::string_view SECRET_ACCESS_KEY = "secret";
+
+std::string operator+(std::string fst, std::string_view snd) {
+    return fst + std::string(snd);
+}
+
 coro<std::unique_ptr<http_request>>
 auth_request_factory::create(boost::asio::ip::tcp::socket& s) {
     auto request = co_await m_base->create(s);
+
+    LOG_DEBUG() << request->peer() << " pre-auth request: " << *request;
 
     auto auth_header = request->header("Authorization");
     if (!auth_header) {
