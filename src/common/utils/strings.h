@@ -24,6 +24,11 @@ std::vector<char> base64_decode(std::string_view b64);
 std::string url_encode(const std::string&) noexcept;
 
 /**
+ * Return lower case version of the string.
+ */
+std::string& lowercase(std::string& s);
+
+/**
  * Convert give string to bool.
  */
 bool to_bool(std::string str_to_eval);

@@ -26,15 +26,25 @@
 #include "commands/multipart.h"
 #include "commands/put_object.h"
 #include "http/command_exception.h"
+#include "http/request_factory.h"
 
 namespace uh::cluster {
 
-template <typename... RequestTypes>
+template <typename handler>
+concept request_handler = requires(handler h, http_request r) {
+    { handler::can_handle(r) } -> std::same_as<bool>;
+    { h.handle(r) } -> std::same_as<coro<http_response>>;
+};
+
+template <request_handler... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(reference_collection& collection,
-                                RequestTypes&&... request_types)
+    explicit entrypoint_handler(
+        reference_collection& collection,
+        std::unique_ptr<ep::http::request_factory> factory,
+        RequestTypes&&... request_types)
         : m_collection(collection),
+          m_factory(std::move(factory)),
           m_req_types(request_types...) {}
 
     coro<void> on_startup() override {
@@ -45,54 +55,43 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
-            auto req = co_await http_request::create(s);
-            LOG_DEBUG() << s.remote_endpoint() << ": read request: " << *req;
+            auto req = co_await m_factory->create(s);
+            LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
             std::optional<http_response> resp;
-            bool stay_alive = req->keep_alive();
+            bool keep_alive = false;
 
             try {
                 resp = co_await handle_request(*req);
                 metric<success>::increase(1);
+                keep_alive = req->keep_alive();
             } catch (const command_exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_ERROR() << req->peer() << ": " << e.what();
                 resp = make_response(e);
             } catch (const boost::system::system_error& se) {
                 if (se.code() != http::error::end_of_stream) {
-                    LOG_ERROR() << s.remote_endpoint() << ": closed connection";
+                    LOG_ERROR() << req->peer() << ": peer closed connection";
                     break;
                 }
 
-                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-
+                LOG_ERROR() << req->peer() << ": " << se.what();
                 resp = make_response(command_exception(
                     http::status::bad_request, "BadRequest", "bad request"));
-                stay_alive = false;
-            } catch (const std::invalid_argument& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-                resp = make_response(command_exception(
-                    http::status::bad_request, "InvalidArgument",
-                    "encountered invalid argument")),
-                stay_alive = false;
             } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_ERROR() << req->peer() << ": " << e.what();
 
                 resp = make_response(command_exception());
-                stay_alive = false;
             }
 
             if (resp) {
-                LOG_DEBUG()
-                    << s.remote_endpoint() << ", sending response: " << *resp;
+                LOG_DEBUG() << req->peer() << ", sending response: " << *resp;
                 co_await write(s, std::move(*resp));
             } else {
-                LOG_INFO() << s.remote_endpoint()
-                           << ", no response, closing connection";
+                LOG_INFO() << req->peer() << ", no response: disconnecting";
                 break;
             }
 
-            if (!stay_alive) {
+            if (!keep_alive) {
                 break;
             }
         }
@@ -102,52 +101,71 @@ public:
     }
 
     coro<http_response> handle_request(http_request& req) {
-        return dispatch_unpack_tuple(
-            req, m_req_types,
-            std::make_index_sequence<
-                std::tuple_size_v<decltype(m_req_types)>>());
+        return std::apply(
+            [&req, this](auto&&... args) {
+                return this->dispatch(req, args...);
+            },
+            m_req_types);
     }
 
-    template <std::size_t... Is>
-    coro<http_response> dispatch_unpack_tuple(http_request& req,
-                                              auto&& req_types,
-                                              std::index_sequence<Is...>) {
-        return dispatch_front(req, std::get<Is>(req_types)...);
+    template <typename command>
+    coro<http_response> handle_request(http_request& req, command&& cmd) {
+        LOG_DEBUG() << req.peer() << ": handling request "
+                    << class_name<command>();
+
+        if constexpr (requires { cmd.validate(req); }) {
+            co_await cmd.validate(req);
+        }
+
+        if (auto expect = req.header("expect");
+            expect && *expect == "100-continue") {
+            LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
+            co_await write(req.socket(),
+                           http_response(http::status::continue_));
+        }
+
+        co_return co_await cmd.handle(req);
     }
 
     template <typename command, typename... commands>
-    coro<http_response> dispatch_front(http_request& req, command&& head,
-                                       commands&&... tail) {
+    coro<http_response> dispatch(http_request& req, command&& head,
+                                 commands&&... tail) {
         if (head.can_handle(req)) {
-            LOG_DEBUG() << req.socket().remote_endpoint()
-                        << ": handling request " << class_name<command>();
-            return head.handle(req);
+            return handle_request(req, head);
         }
-        return dispatch_front(req, std::forward<commands>(tail)...);
+
+        return dispatch(req, std::forward<commands>(tail)...);
     }
 
-    coro<http_response> dispatch_front(const http_request& req) {
+    coro<http_response> dispatch(const http_request& req) {
         throw command_exception(http::status::bad_request, "CommandNotFound",
                                 "no such command found");
     }
 
 private:
     reference_collection& m_collection;
+    std::unique_ptr<ep::http::request_factory> m_factory;
     std::tuple<RequestTypes...> m_req_types;
 };
 
-template <typename... RequestTypes>
-auto define_entrypoint_handler(reference_collection& collection,
-                               RequestTypes&&... request_types) {
+template <request_handler... RequestTypes>
+auto define_entrypoint_handler(
+    reference_collection& collection,
+    std::unique_ptr<ep::http::request_factory> factory,
+    RequestTypes&&... request_types) {
     return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        collection, std::forward<RequestTypes>(request_types)...);
+        collection, std::move(factory),
+        std::forward<RequestTypes>(request_types)...);
 }
 
-auto make_entrypoint_handler(reference_collection& collection) {
+auto make_entrypoint_handler(
+    reference_collection& collection,
+    std::unique_ptr<ep::http::request_factory> factory) {
     return define_entrypoint_handler(
-        collection, copy_object(collection), create_bucket(collection),
-        list_buckets(collection), delete_bucket(collection),
-        put_object(collection), get_object(collection), get_metrics(collection),
+        collection, std::move(factory), copy_object(collection),
+        create_bucket(collection), list_buckets(collection),
+        delete_bucket(collection), put_object(collection),
+        get_object(collection), get_metrics(collection),
         head_object(collection), list_objects(collection),
         list_objects_v2(collection), delete_object(collection),
         delete_objects(collection), init_multipart(collection),

@@ -99,24 +99,38 @@ struct storage_group : public storage_interface {
 
         co_return addr;
     }
+
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
         co_await m_getter.get(f.pointer)->read_fragment(ctx, buffer, f);
     }
+
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override {
         co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);
     }
+
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
         co_await m_getter.get(addr.get(0).pointer)
             ->read_address(ctx, buffer, addr, offsets);
     }
 
-    coro<void> link(context& ctx, const address& addr) override { co_return; }
-    coro<void> unlink(context& ctx, const address& addr) override { co_return; }
-    coro<void> sync(context& ctx, const address& addr) override { co_return; }
-    coro<size_t> get_used_space(context& ctx) override { co_return 0; }
+    coro<address> link(context& ctx, const address& addr) override {
+        co_return co_await m_getter.get(addr.get(0).pointer)->link(ctx, addr);
+    }
+
+    coro<void> unlink(context& ctx, const address& addr) override {
+        co_return co_await m_getter.get(addr.get(0).pointer)->unlink(ctx, addr);
+    }
+
+    coro<void> sync(context& ctx, const address& addr) override {
+        co_return co_await m_getter.get(addr.get(0).pointer)->sync(ctx, addr);
+    }
+
+    coro<size_t> get_used_space(context& ctx) override {
+        co_return co_await m_getter.get_services().back()->get_used_space(ctx);
+    }
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;

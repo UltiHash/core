@@ -14,27 +14,21 @@ bool multipart::can_handle(const http_request& req) {
            req.query("uploadId");
 }
 
-static void validate(const http_request& req) {
-    auto part_num = std::stoi(*req.query("partNumber"));
+coro<void> multipart::validate(const http_request& req) {
+    std::size_t part_num = *query<std::size_t>(req, "partNumber");
+
     if (part_num < 1 || part_num > 10000) {
         throw command_exception(http::status::bad_request, "BadPartNumber",
                                 "part number is invalid");
     }
+
+    co_return;
 }
 
 coro<http_response> multipart::handle(http_request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
-    validate(req);
     unique_buffer<char> buffer(req.content_length());
-
-    if (auto expect = req.header("expect");
-        expect && *expect == "100-continue") {
-        LOG_INFO() << req.socket().remote_endpoint()
-                   << ": sending 100 CONTINUE";
-        co_await write(req.socket(), http_response(http::status::continue_));
-    }
-
     auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
@@ -50,7 +44,7 @@ coro<http_response> multipart::handle(http_request& req) {
     res.set("ETag", md5);
 
     co_await m_collection.uploads.append_upload_part_info(
-        *req.query("uploadId"), std::stoi(*req.query("partNumber")), resp,
+        *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         buffer.size(), std::move(md5));
 
     co_return res;

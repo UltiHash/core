@@ -9,6 +9,7 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/http/default_request_factory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint_handler.h"
 
@@ -43,7 +44,10 @@ public:
 
           m_directory(m_ioc, m_config.database),
           m_uploads(m_ioc, m_config.database),
-          m_server(m_config.server, make_entrypoint_handler(m_collection),
+          m_server(config.server,
+                   make_entrypoint_handler(
+                       m_collection,
+                       std::make_unique<ep::http::default_request_factory>()),
                    m_ioc),
           m_limits(sc.license.max_data_store_size),
           m_collection(get_reference_collection()) {
