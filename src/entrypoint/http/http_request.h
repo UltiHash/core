@@ -29,6 +29,8 @@ public:
     [[nodiscard]] http::verb method() const;
 
     std::string_view target() const;
+    const std::string& path() const;
+    const std::string& query() const;
 
     const std::string& bucket() const;
     const std::string& object_key() const;
@@ -81,6 +83,8 @@ private:
     std::string m_bucket_id{};
     std::string m_object_key{};
     std::map<std::string, std::string> m_params;
+    std::string m_path;
+    std::string m_query;
 
     uh::cluster::context m_ctx;
 };
