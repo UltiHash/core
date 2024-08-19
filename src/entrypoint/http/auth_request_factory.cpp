@@ -1,9 +1,9 @@
 #include "auth_request_factory.h"
 
 #include "command_exception.h"
-#include "common/telemetry/log.h"
 #include "common/crypto/hash.h"
 #include "common/crypto/hmac.h"
+#include "common/telemetry/log.h"
 
 #include <boost/algorithm/string.hpp>
 #include <set>
@@ -68,7 +68,8 @@ struct auth_info {
 
         access_key_id = split_credentials[0], date = split_credentials[1],
         region = split_credentials[2], service = split_credentials[3],
-        signed_headers = split_set(parsed["SignedHeaders"], ';'),
+        signed_headers =
+            split<std::set<std::string_view>>(parsed["SignedHeaders"], ';'),
         signature = parsed["Signature"];
     }
 
