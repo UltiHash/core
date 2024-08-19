@@ -29,11 +29,11 @@ BOOST_AUTO_TEST_CASE(string_split) {
 }
 
 BOOST_AUTO_TEST_CASE(string_split_set) {
-    BOOST_CHECK(split_set("").empty());
-    BOOST_CHECK(split_set("abc").size() == 1);
+    BOOST_CHECK(split<std::set<std::string_view>>("").empty());
+    BOOST_CHECK(split<std::set<std::string_view>>("abc").size() == 1);
 
     {
-        auto v = split_set("abc gih def");
+        auto v = split<std::set<std::string_view>>("abc gih def");
         BOOST_CHECK(v.size() == 3);
         BOOST_CHECK(v.contains("abc"));
         BOOST_CHECK(v.contains("def"));
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(string_split_set) {
     }
 
     {
-        auto v = split_set("def-abc-gih", '-');
+        auto v = split<std::set<std::string_view>>("def-abc-gih", '-');
         BOOST_CHECK(v.size() == 3);
         BOOST_CHECK(v.contains("abc"));
         BOOST_CHECK(v.contains("def"));

@@ -9,26 +9,6 @@ using namespace boost;
 
 namespace uh::cluster {
 
-std::vector<std::string_view> split(std::string_view data, char delimiter) {
-    auto split =
-        data | std::ranges::views::split(delimiter) |
-        std::ranges::views::transform([](auto&& str) {
-            return std::string_view(&*str.begin(), std::ranges::distance(str));
-        });
-
-    return {split.begin(), split.end()};
-}
-
-std::set<std::string_view> split_set(std::string_view data, char delimiter) {
-    auto split =
-        data | std::ranges::views::split(delimiter) |
-        std::ranges::views::transform([](auto&& str) {
-            return std::string_view(&*str.begin(), std::ranges::distance(str));
-        });
-
-    return {split.begin(), split.end()};
-}
-
 std::string_view trim(std::string_view in, std::string_view chars) {
     return ltrim(rtrim(in, chars), chars);
 }
