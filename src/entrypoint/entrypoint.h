@@ -44,7 +44,7 @@ public:
 
           m_directory(m_ioc, m_config.database),
           m_uploads(m_ioc, m_config.database),
-          m_server(config.server,
+          m_server(m_config.server,
                    make_entrypoint_handler(
                        m_collection,
                        std::make_unique<ep::http::default_request_factory>()),
