@@ -15,11 +15,12 @@ bool delete_object::can_handle(const http_request& req) {
 coro<http_response> delete_object::handle(http_request& req) const {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
-        auto object = co_await m_collection.directory.head_object(
+        auto object = co_await m_collection.directory.get_object(
             req.bucket(), req.object_key());
 
         co_await m_collection.directory.delete_object(req.bucket(),
                                                       req.object_key());
+        co_await m_collection.gdv.unlink(req.context(), object.addr.value());
 
         m_collection.limits.free_storage_size(object.size);
     } catch (const error_exception& e) {
