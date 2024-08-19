@@ -38,7 +38,7 @@ template <hash_algorithm algo> struct hash : public hash_base {
         return h.finalize();
     }
 
-    static std::string from_string(const std::string& s) {
+    static std::string from_string(std::string_view s) {
         return from_buffer({s.begin(), s.size()});
     }
 };
