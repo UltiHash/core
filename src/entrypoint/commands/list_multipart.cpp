@@ -30,8 +30,8 @@ get_response(const std::string& bucket_name,
 
 } // namespace
 
-list_multipart::list_multipart(const reference_collection& collection)
-    : m_collection(collection) {}
+list_multipart::list_multipart(multipart_state& uploads)
+    : m_uploads(uploads) {}
 
 bool list_multipart::can_handle(const http_request& req) {
     return req.method() == method::get &&
@@ -39,12 +39,11 @@ bool list_multipart::can_handle(const http_request& req) {
            req.object_key().empty() && req.query("uploads");
 }
 
-coro<http_response> list_multipart::handle(http_request& req) const {
+coro<http_response> list_multipart::handle(http_request& req) {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.bucket();
 
-    auto ongoing =
-        co_await m_collection.uploads.list_multipart_uploads(bucket_name);
+    auto ongoing = co_await m_uploads.list_multipart_uploads(bucket_name);
     if (ongoing.empty()) {
         throw command_exception(http::status::not_found, "NoMultiPartUploads",
                                 "no multipart uploads");

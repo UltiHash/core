@@ -1,22 +1,23 @@
 #ifndef ENTRYPOINT_HTTP_DELETE_OBJECT_H
 #define ENTRYPOINT_HTTP_DELETE_OBJECT_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
 
 namespace uh::cluster {
 
-class delete_object {
-public:
-    explicit delete_object(const reference_collection&);
+struct delete_object : public command {
+
+    delete_object(directory&, limits&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
+    limits& m_limits;
 };
 
 } // namespace uh::cluster

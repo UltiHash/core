@@ -1,22 +1,21 @@
 #ifndef ENTRYPOINT_HTTP_ABORT_MULTIPART_H
 #define ENTRYPOINT_HTTP_ABORT_MULTIPART_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/multipart_state.h"
 
 namespace uh::cluster {
 
-class abort_multipart {
-public:
-    explicit abort_multipart(reference_collection&);
+struct abort_multipart : public command {
+
+    explicit abort_multipart(multipart_state&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    reference_collection& m_collection;
+    multipart_state& m_uploads;
 };
 
 } // namespace uh::cluster

@@ -1,24 +1,27 @@
 #ifndef ENTRYPOINT_HTTP_MULTIPART_H
 #define ENTRYPOINT_HTTP_MULTIPART_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
+#include "common/service_interfaces/deduplicator_interface.h"
+#include "entrypoint/multipart_state.h"
 
 namespace uh::cluster {
 
-class multipart {
+class multipart : public command {
 public:
-    explicit multipart(reference_collection& collection);
+    explicit multipart(roundrobin_load_balancer<deduplicator_interface>&,
+                       multipart_state&);
 
     static bool can_handle(const http_request& req);
 
-    coro<void> validate(const http_request& req);
+    coro<void> validate(const http_request& req) override;
 
-    coro<http_response> handle(http_request& req);
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    reference_collection& m_collection;
+    roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
+    multipart_state& m_uploads;
 };
 
 } // namespace uh::cluster

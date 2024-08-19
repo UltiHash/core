@@ -1,22 +1,23 @@
 #ifndef ENTRYPOINT_HTTP_GET_OBJECT_H
 #define ENTRYPOINT_HTTP_GET_OBJECT_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "common/global_data/global_data_view.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class get_object {
-public:
-    explicit get_object(const reference_collection&);
+struct get_object : public command {
+
+    get_object(directory&, global_data_view&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_dir;
+    global_data_view& m_storage;
 };
 
 } // namespace uh::cluster

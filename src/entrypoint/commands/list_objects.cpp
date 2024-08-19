@@ -2,6 +2,7 @@
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
+#include "entrypoint/utils.h"
 #include <boost/property_tree/ptree.hpp>
 
 namespace http = boost::beast::http;
@@ -117,8 +118,8 @@ http_response get_response(const std::vector<object>& objects,
 
 } // namespace
 
-list_objects::list_objects(const reference_collection& collection)
-    : m_collection(collection) {}
+list_objects::list_objects(directory& dir)
+    : m_directory(dir) {}
 
 bool list_objects::can_handle(const http_request& req) {
     return req.method() == method::get &&
@@ -127,12 +128,12 @@ bool list_objects::can_handle(const http_request& req) {
            !req.query("list-type");
 }
 
-coro<http_response> list_objects::handle(http_request& req) const {
+coro<http_response> list_objects::handle(http_request& req) {
     metric<entrypoint_list_objects_req>::increase(1);
 
     std::vector<object> obj_list;
     try {
-        obj_list = co_await m_collection.directory.list_objects(
+        obj_list = co_await m_directory.list_objects(
             req.bucket(), req.query("prefix"), req.query("marker"));
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",

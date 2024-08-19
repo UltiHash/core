@@ -1,22 +1,23 @@
 #ifndef ENTRYPOINT_HTTP_GET_STATISTICS_H
 #define ENTRYPOINT_HTTP_GET_STATISTICS_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "common/global_data/global_data_view.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class get_metrics {
-public:
-    explicit get_metrics(const reference_collection&);
+struct get_metrics : public command {
+
+    get_metrics(directory&, global_data_view&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
+    global_data_view& m_gdv;
 };
 
 } // namespace uh::cluster

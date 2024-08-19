@@ -1,30 +1,8 @@
 #ifndef ENTRYPOINT_HANDLER_H
 #define ENTRYPOINT_HANDLER_H
 
+#include "command_factory.h"
 #include "common/debug/class_name.h"
-#include "common/utils/protocol_handler.h"
-#include <boost/beast/core/flat_buffer.hpp>
-#include <boost/beast/http/empty_body.hpp>
-#include <boost/beast/http/parser.hpp>
-#include <boost/beast/http/read.hpp>
-
-#include "commands/abort_multipart.h"
-#include "commands/complete_multipart.h"
-#include "commands/copy_object.h"
-#include "commands/create_bucket.h"
-#include "commands/delete_bucket.h"
-#include "commands/delete_object.h"
-#include "commands/delete_objects.h"
-#include "commands/get_metrics.h"
-#include "commands/get_object.h"
-#include "commands/head_object.h"
-#include "commands/init_multipart.h"
-#include "commands/list_buckets.h"
-#include "commands/list_multipart.h"
-#include "commands/list_objects.h"
-#include "commands/list_objects_v2.h"
-#include "commands/multipart.h"
-#include "commands/put_object.h"
 #include "http/command_exception.h"
 #include "http/request_factory.h"
 
@@ -36,20 +14,17 @@ concept request_handler = requires(handler h, http_request r) {
     { h.handle(r) } -> std::same_as<coro<http_response>>;
 };
 
-template <request_handler... RequestTypes>
 class entrypoint_handler : public protocol_handler {
 public:
     explicit entrypoint_handler(
-        reference_collection& collection,
-        std::unique_ptr<ep::http::request_factory> factory,
-        RequestTypes&&... request_types)
-        : m_collection(collection),
-          m_factory(std::move(factory)),
-          m_req_types(request_types...) {}
+        command_factory&& comm_factory,
+        std::unique_ptr<ep::http::request_factory> factory)
+        : m_command_factory(comm_factory),
+          m_factory(std::move(factory)) {}
 
     coro<void> on_startup() override {
-        m_collection.limits.storage_size(
-            co_await m_collection.directory.data_size());
+        m_command_factory.get_limits().storage_size(
+            co_await m_command_factory.get_directory().data_size());
     }
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
@@ -101,21 +76,10 @@ public:
     }
 
     coro<http_response> handle_request(http_request& req) {
-        return std::apply(
-            [&req, this](auto&&... args) {
-                return this->dispatch(req, args...);
-            },
-            m_req_types);
-    }
 
-    template <typename command>
-    coro<http_response> handle_request(http_request& req, command&& cmd) {
-        LOG_DEBUG() << req.peer() << ": handling request "
-                    << class_name<command>();
+        auto cmd = m_command_factory.create(req);
 
-        if constexpr (requires { cmd.validate(req); }) {
-            co_await cmd.validate(req);
-        }
+        co_await cmd->validate(req);
 
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
@@ -124,54 +88,13 @@ public:
                            http_response(http::status::continue_));
         }
 
-        co_return co_await cmd.handle(req);
-    }
-
-    template <typename command, typename... commands>
-    coro<http_response> dispatch(http_request& req, command&& head,
-                                 commands&&... tail) {
-        if (head.can_handle(req)) {
-            return handle_request(req, head);
-        }
-
-        return dispatch(req, std::forward<commands>(tail)...);
-    }
-
-    coro<http_response> dispatch(const http_request& req) {
-        throw command_exception(http::status::bad_request, "CommandNotFound",
-                                "no such command found");
+        co_return co_await cmd->handle(req);
     }
 
 private:
-    reference_collection& m_collection;
+    command_factory m_command_factory;
     std::unique_ptr<ep::http::request_factory> m_factory;
-    std::tuple<RequestTypes...> m_req_types;
 };
-
-template <request_handler... RequestTypes>
-auto define_entrypoint_handler(
-    reference_collection& collection,
-    std::unique_ptr<ep::http::request_factory> factory,
-    RequestTypes&&... request_types) {
-    return std::make_unique<entrypoint_handler<RequestTypes...>>(
-        collection, std::move(factory),
-        std::forward<RequestTypes>(request_types)...);
-}
-
-auto make_entrypoint_handler(
-    reference_collection& collection,
-    std::unique_ptr<ep::http::request_factory> factory) {
-    return define_entrypoint_handler(
-        collection, std::move(factory), copy_object(collection),
-        create_bucket(collection), list_buckets(collection),
-        delete_bucket(collection), put_object(collection),
-        get_object(collection), get_metrics(collection),
-        head_object(collection), list_objects(collection),
-        list_objects_v2(collection), delete_object(collection),
-        delete_objects(collection), init_multipart(collection),
-        multipart(collection), complete_multipart(collection),
-        abort_multipart(collection), list_multipart(collection));
-}
 
 } // end namespace uh::cluster
 
