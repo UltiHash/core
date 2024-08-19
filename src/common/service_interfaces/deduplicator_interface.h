@@ -2,7 +2,8 @@
 #ifndef UH_CLUSTER_DEDUPLICATOR_INTERFACE_H
 #define UH_CLUSTER_DEDUPLICATOR_INTERFACE_H
 
-#include "common/types/address.h"
+#include "common/coroutines/context.h"
+#include "common/utils/common.h"
 
 namespace uh::cluster {
 

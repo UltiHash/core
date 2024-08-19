@@ -1,11 +1,10 @@
 #ifndef UH_CLUSTER_SERVICE_REGISTRY_H
 #define UH_CLUSTER_SERVICE_REGISTRY_H
 
+#include "common/etcd/namespace.h"
 #include "common/network/server.h"
-#include "common/utils/common.h"
 #include "etcd/KeepAlive.hpp"
 #include "etcd/SyncClient.hpp"
-#include "namespace.h"
 #include <string>
 
 namespace uh::cluster {

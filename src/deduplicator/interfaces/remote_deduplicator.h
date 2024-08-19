@@ -4,7 +4,7 @@
 
 #include "common/network/client.h"
 #include "common/network/messenger_core.h"
-#include "deduplicator_interface.h"
+#include "common/service_interfaces/deduplicator_interface.h"
 
 namespace uh::cluster {
 

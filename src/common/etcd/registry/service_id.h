@@ -3,7 +3,6 @@
 
 #include <etcd/SyncClient.hpp>
 #include <filesystem>
-#include <string>
 
 namespace uh::cluster {
 

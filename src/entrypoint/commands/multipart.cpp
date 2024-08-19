@@ -25,7 +25,7 @@ coro<void> multipart::validate(const http_request& req) {
     co_return;
 }
 
-coro<http_response> multipart::handle(http_request& req) const {
+coro<http_response> multipart::handle(http_request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());

@@ -3,6 +3,7 @@
 #define UH_CLUSTER_ATTACHED_SERVICE_H
 
 #include "config/configuration.h"
+
 namespace uh::cluster {
 
 template <typename service> class attached_service {

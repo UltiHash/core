@@ -2,7 +2,6 @@
 
 #include "common/utils/common.h"
 #include "common/utils/host_utils.h"
-#include "etcd/v3/Transaction.hpp"
 
 using namespace boost::asio;
 
@@ -52,6 +51,7 @@ void service_registry::registration::monitor(
 
 service_registry::registration::~registration() {
     m_stop = true;
+    m_cv.notify_all();
     m_monitor_thread.join();
     m_client.leaserevoke(m_lease);
 }
