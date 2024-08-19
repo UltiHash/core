@@ -11,11 +11,16 @@ namespace uh::cluster {
 /**
  * Split the provided string into a vector of `string_view`
  */
-std::vector<std::string_view> split(std::string_view data,
-                                    char delimiter = ' ');
+template <typename container = std::vector<std::string_view>>
+container split(std::string_view data, char delimiter = ' ') {
+    auto split =
+        data | std::ranges::views::split(delimiter) |
+        std::ranges::views::transform([](auto&& str) {
+            return std::string_view(&*str.begin(), std::ranges::distance(str));
+        });
 
-std::set<std::string_view> split_set(std::string_view data,
-                                     char delimiter = ' ');
+    return {split.begin(), split.end()};
+}
 
 /**
  * Remove all characters specified in `chars` from the begin and end of `in`.
