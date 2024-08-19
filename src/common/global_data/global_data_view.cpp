@@ -177,7 +177,7 @@ global_data_view::get_storage_service_connection_count() const noexcept {
 
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto n = m_storage_services.get(frag.pointer);
+        auto n = m_basic_getter.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(std::move(n));
@@ -210,7 +210,7 @@ coro<void> global_data_view::unlink(context& ctx, const address& addr) {
 
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto n = m_storage_services.get(frag.pointer);
+        auto n = m_basic_getter.get(frag.pointer);
         auto& node_address = node_address_map[n];
         if (node_address.empty()) {
             nodes.emplace_back(std::move(n));
