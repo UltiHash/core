@@ -45,8 +45,7 @@ std::string url_encode(const std::string&) noexcept;
 /**
  * Return lower case version of the string.
  */
-std::string& lowercase(std::string& s);
-std::string lowercase(std::string_view s);
+std::string lowercase(std::string s);
 
 /**
  * Convert give string to bool.
