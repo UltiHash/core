@@ -103,7 +103,7 @@ private:
     etcd::SyncClient m_etcd_client;
     std::vector<temp_directory> m_temp_dirs;
     service_config m_service_cfg;
-    services<storage_interface> m_storage_services;
+    service_maintainer<storage_interface> m_storage_services;
 
     std::vector<std::unique_ptr<storage>> m_storage_instances;
     std::vector<std::thread> m_threads;

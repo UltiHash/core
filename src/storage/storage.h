@@ -4,9 +4,9 @@
 #include <functional>
 #include <utility>
 
+#include "common/etcd/registry/service_id.h"
+#include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
-#include "common/registry/service_id.h"
-#include "common/registry/service_registry.h"
 #include "config.h"
 #include "storage_handler.h"
 
@@ -45,6 +45,8 @@ public:
     ~storage() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
     }
+
+    size_t id() const noexcept { return m_service_id; }
 
     std::shared_ptr<local_storage> get_local_interface() { return m_storage; }
 

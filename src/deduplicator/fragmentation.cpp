@@ -1,6 +1,8 @@
 #include "fragmentation.h"
 
+#include "common/debug/debug.h"
 #include "config.h"
+
 #include <optional>
 
 namespace uh::cluster {

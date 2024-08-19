@@ -1,6 +1,6 @@
 #include "service_id.h"
 
-#include "common/registry/namespace.h"
+#include "common/etcd/namespace.h"
 #include "common/utils/common.h"
 #include "common/utils/time_utils.h"
 #include <fstream>
@@ -9,7 +9,7 @@ namespace uh::cluster {
 
 namespace {
 
-static constexpr const char* IDENTITY_FILE_NAME = "identity";
+constexpr const char* IDENTITY_FILE_NAME = "identity";
 
 std::pair<bool, std::size_t>
 read_id_from_disk(const std::filesystem::path& id_file) {

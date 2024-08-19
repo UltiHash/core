@@ -5,7 +5,6 @@
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "storage/data_store.h"
-#include "storage_interface.h"
 #include <string_view>
 #include <utility>
 

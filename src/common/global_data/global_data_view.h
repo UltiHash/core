@@ -2,12 +2,13 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/caches/lru_cache.h"
-#include "common/network/client.h"
-#include "common/registry/services.h"
+#include "common/etcd/service_discovery/ec_get_handler.h"
+#include "common/etcd/service_discovery/ec_group_maintainer.h"
+#include "common/etcd/service_discovery/ec_load_balancer.h"
+#include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "storage/interfaces/storage_interface.h"
-#include <map>
+#include "storage/interfaces/storage_group.h"
 
 namespace uh::cluster {
 
@@ -25,12 +26,12 @@ public:
      * global_data_view_config, providing all tunable configuration parameters.
      * @param ioc A reference to an instance of boost::asio::io_context used for
      * spawning co-routines.
-     * @param storage_services A reference to an instance of
-     * services<STORAGE_SERVICE> used for service discovery.
+     * @param storage_maintainer A reference to an instance of
+     * service maintainer used for service discovery.
      */
-    explicit global_data_view(const global_data_view_config& config,
-                              boost::asio::io_context& ioc,
-                              services<storage_interface>& storage_services);
+    explicit global_data_view(
+        const global_data_view_config& config, boost::asio::io_context& ioc,
+        service_maintainer<storage_interface>& storage_maintainer);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -171,9 +172,12 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    services<storage_interface>& m_storage_services;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
+
+    ec_group_maintainer m_ec_maintainer;
+    ec_load_balancer m_load_balancer;
+    ec_get_handler m_basic_getter;
 };
 
 } // end namespace uh::cluster

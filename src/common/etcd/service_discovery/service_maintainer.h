@@ -2,11 +2,11 @@
 #ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
-#include "common/global_data/service_load_balancer.h"
-#include "common/registry/service_id.h"
-#include "common/utils/service_factory.h"
+#include "common/etcd/namespace.h"
+#include "common/etcd/registry/service_id.h"
+#include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "namespace.h"
+#include "roundrobin_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 
@@ -18,17 +18,17 @@ enum class etcd_action : uint8_t {
     erase,
 };
 
-inline static etcd_action get_etcd_action_enum(const std::string& action_str) {
+inline etcd_action get_etcd_action_enum(const std::string& action_str) {
     static const std::map<std::string, etcd_action> etcd_action = {
         {"create", etcd_action::create},
         {"set", etcd_action::set},
         {"delete", etcd_action::erase},
     };
 
-    if (etcd_action.contains(action_str))
-        return etcd_action.at(action_str);
-    else
-        throw std::invalid_argument("invalid etcd action");
+    if (const auto f = etcd_action.find(action_str); f != etcd_action.cend())
+        return f->second;
+
+    throw std::invalid_argument("invalid etcd action");
 }
 
 struct service_endpoint {
@@ -37,18 +37,18 @@ struct service_endpoint {
 };
 
 template <typename service_interface> struct service_maintainer {
+
     service_maintainer(etcd::SyncClient& etcd_client,
                        service_factory<service_interface> service_factory)
         : m_etcd_client(etcd_client),
           m_watcher(
               m_etcd_client,
               get_service_root_path(service_interface::service_role),
-              [this](etcd::Response response) {
+              [this](const etcd::Response& response) {
                   return handle_state_changes(response);
               },
               true),
-          m_service_factory(std::move(service_factory)),
-          m_local_service(m_service_factory.get_local_service()) {
+          m_service_factory(std::move(service_factory)) {
 
         auto resp =
             wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this]() {
@@ -63,7 +63,21 @@ template <typename service_interface> struct service_maintainer {
     }
     ~service_maintainer() { m_watcher.Cancel(); }
 
-protected:
+    void add_monitor(service_monitor<service_interface>& monitor) {
+
+        std::lock_guard l(m_mutex);
+        for (const auto& [id, cl] : m_clients) {
+            monitor.add_client(id, cl);
+            for (const auto& se = m_detected_service_endpoints.at(id);
+                 const auto& [attr_name, attr_val] : se.attributes) {
+                monitor.add_attribute(cl, attr_name, attr_val);
+            }
+        }
+
+        m_monitors.emplace_back(monitor);
+    }
+
+private:
     void handle_state_changes(const etcd::Response& response) {
 
         try {
@@ -75,8 +89,7 @@ protected:
 
             std::lock_guard<std::mutex> lk(m_mutex);
 
-            const auto etcd_action = get_etcd_action_enum(response.action());
-            switch (etcd_action) {
+            switch (get_etcd_action_enum(response.action())) {
             case etcd_action::create:
                 add(etcd_path, value);
                 break;
@@ -110,7 +123,9 @@ protected:
 
         if (auto cl = m_clients.find(id);
             cl != m_clients.cend() and attribute.has_value()) {
-            m_load_balancer.add_attribute(cl->second, *attribute, value);
+            for (auto& m : m_monitors) {
+                m.get().add_attribute(cl->second, *attribute, value);
+            }
         } else if (cl == m_clients.cend() and
                    itr->second.attributes.contains(ENDPOINT_HOST) and
                    itr->second.attributes.contains(ENDPOINT_PORT) and
@@ -124,14 +139,16 @@ protected:
                     itr->second.attributes.at(ENDPOINT_HOST),
                     std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
-            m_load_balancer.add_client(client_itr->second);
-            for (auto& attr : itr->second.attributes) {
-                m_load_balancer.add_attribute(client_itr->second, attr.first,
-                                              attr.second);
+
+            for (auto& m : m_monitors) {
+                m.get().add_client(client_itr->first, client_itr->second);
+                for (const auto& [attr_name, attr_val] :
+                     itr->second.attributes) {
+                    m.get().add_attribute(client_itr->second, attr_name,
+                                          attr_val);
+                }
             }
         }
-
-        m_cv.notify_one();
     }
 
     void set(const std::string& path, const std::string& value) {
@@ -139,7 +156,7 @@ protected:
         add(path, value);
     }
 
-    void remove(const std::string& path, const std::string& value) {
+    void remove(const std::string& path, const std::string&) {
 
         const auto id = get_id(path);
 
@@ -155,7 +172,9 @@ protected:
             } catch (...) {
             }
             try {
-                m_load_balancer.remove_attribute(it->second, attr);
+                for (auto& m : m_monitors) {
+                    m.get().remove_attribute(it->second, attr);
+                }
             } catch (...) {
             }
         } else {
@@ -165,7 +184,9 @@ protected:
                         << ": " << id << " called. ";
 
             try {
-                m_load_balancer.remove_client(it->second);
+                for (auto& m : m_monitors) {
+                    m.get().remove_client(id, it->second);
+                }
             } catch (...) {
             }
             m_detected_service_endpoints.erase(id);
@@ -176,14 +197,13 @@ protected:
     etcd::SyncClient& m_etcd_client;
     etcd::Watcher m_watcher;
 
-    mutable std::mutex m_mutex;
-    mutable std::condition_variable_any m_cv;
+    std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
-    std::shared_ptr<service_interface> m_local_service;
-    service_load_balancer<service_interface> m_load_balancer;
+    std::list<std::reference_wrapper<service_monitor<service_interface>>>
+        m_monitors;
 };
 
 } // namespace uh::cluster

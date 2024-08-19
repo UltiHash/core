@@ -1,10 +1,10 @@
 #ifndef ENTRYPOINT_COMMON_H
 #define ENTRYPOINT_COMMON_H
 
+#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/global_data/global_data_view.h"
-#include "common/registry/services.h"
+#include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
-#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
@@ -16,7 +16,7 @@ namespace uh::cluster {
 
 struct reference_collection {
     boost::asio::io_context& ioc;
-    const services<deduplicator_interface>& dedupe_services;
+    roundrobin_load_balancer<deduplicator_interface>& dedupe_services;
     uh::cluster::directory& directory;
     multipart_state& uploads;
     entrypoint_config& config;

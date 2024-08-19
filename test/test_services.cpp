@@ -2,14 +2,15 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "common/registry/service_id.h"
-#include "common/registry/service_registry.h"
-#include "common/registry/services.h"
+#include "../src/common/service_interfaces/deduplicator_interface.h"
+#include "common/etcd/registry/service_id.h"
+#include "common/etcd/registry/service_registry.h"
+#include "common/etcd/service_discovery/service_get_handler.h"
+#include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/test/checks.h"
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
-#include "deduplicator/interfaces/deduplicator_interface.h"
 #include "storage/data_store.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
@@ -23,10 +24,13 @@ template <typename service_interface> struct base_fixture {
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
     std::size_t service_id;
-    uh::cluster::services<service_interface> services;
+    uh::cluster::service_maintainer<service_interface> service_maintainer;
+    service_get_handler<service_interface> services;
+    roundrobin_load_balancer<service_interface> load_balancer;
 
-    constexpr uh::cluster::services<service_interface> make_services() {
-        return uh::cluster::services<service_interface>(
+    constexpr uh::cluster::service_maintainer<service_interface>
+    make_services() {
+        return uh::cluster::service_maintainer<service_interface>(
             etcd_client, service_factory<service_interface>(ioc, 2, nullptr));
     }
 
@@ -35,14 +39,17 @@ template <typename service_interface> struct base_fixture {
           service_id(get_service_id(
               etcd_client, get_service_string(service_interface::service_role),
               tmp.path())),
-          services(make_services()) {}
+          service_maintainer(make_services()) {
+        service_maintainer.add_monitor(services);
+        service_maintainer.add_monitor(load_balancer);
+    }
 };
 
 using fixture = base_fixture<deduplicator_interface>;
 
 BOOST_FIXTURE_TEST_CASE(Empty, fixture) {
     BOOST_CHECK(services.get_services().empty());
-    BOOST_CHECK_THROW(services.get(), std::exception);
+    BOOST_CHECK_THROW(load_balancer.get(), std::exception);
     BOOST_CHECK_THROW(services.get(static_cast<std::size_t>(0u)),
                       std::exception);
 }
@@ -69,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
         service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        { WAIT_UNTIL_NO_THROW(1000, services.get()); }
+        { WAIT_UNTIL_NO_THROW(1000, load_balancer.get()); }
     }
 }
 
@@ -79,7 +86,7 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
     {
         std::atomic<bool> has_result = false;
         std::thread waiter([&] {
-            services.get();
+            load_balancer.get();
             has_result = true;
         });
 
@@ -194,4 +201,5 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture) {
         WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
     }
 }
+
 } // namespace uh::cluster

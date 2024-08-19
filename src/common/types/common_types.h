@@ -2,7 +2,6 @@
 #define CORE_COMMON_TYPES_H
 
 #include "address.h"
-#include "big_int.h"
 #include <boost/asio.hpp>
 #include <chrono>
 #include <zpp_bits.h>
@@ -51,6 +50,8 @@ struct object {
 };
 
 template <typename T> using coro = boost::asio::awaitable<T>;
+
+template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 
 } // end namespace uh::cluster
 
