@@ -106,7 +106,7 @@ std::string make_canonical_request(http_request& req, const auth_info& info) {
 
         canonical_header_set.insert(name + ":" +
                                     std::string(trim(header.value())));
-        signed_headers.insert(name);
+        signed_headers.emplace(std::move(name));
     }
 
     auto canonical_headers = algorithm::join(canonical_header_set, "\n") + "\n";
