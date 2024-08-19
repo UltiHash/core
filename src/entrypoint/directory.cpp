@@ -197,7 +197,7 @@ coro<std::size_t> directory::data_size() {
     auto buckets = co_await list_buckets();
     for (const auto& bucket : buckets) {
         auto row = co_await dir->execv("SELECT uh_bucket_size($1)", bucket);
-        rv += *row->number(0);
+        rv += row->number(0).value_or(0);
     }
 
     LOG_DEBUG() << "read directory data_size: done";
