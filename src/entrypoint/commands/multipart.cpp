@@ -1,5 +1,5 @@
 #include "multipart.h"
-#include "common/utils/hash.h"
+#include "common/crypto/hash.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
