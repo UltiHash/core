@@ -1,7 +1,7 @@
 #include "auth_request_factory.h"
 
 #include "command_exception.h"
-#include "common/utils/hash.h"
+#include "common/crypto/hash.h"
 
 #include <boost/algorithm/string.hpp>
 #include <set>

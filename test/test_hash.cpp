@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "hash unit tests"
 
-#include "common/utils/hash.h"
+#include "common/crypto/hash.h"
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
