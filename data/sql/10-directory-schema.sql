@@ -175,25 +175,6 @@ END;
 $$;
 
 --
--- uh_copy_object_ifmatch(bucket_src, key_src, bucket_dest, key_dest, etag):
---
-CREATE OR REPLACE PROCEDURE uh_copy_object_ifmatch(bucket_src regclass, key_src text,
-    bucket_dst regclass, key_dst text, etag text)
-LANGUAGE plpgsql AS $$
-BEGIN
-    CALL uh_check_bucket(bucket_src);
-    CALL uh_check_bucket(bucket_dst);
-
-    EXECUTE format('
-        INSERT INTO %s (name, small, size, last_modified, etag, mime)
-        SELECT %L, small, size, last_modified, etag, mime FROM %s WHERE name = %L AND etag = %L
-        ON CONFLICT("name") DO UPDATE SET small = EXCLUDED.small, size = EXCLUDED.size,
-        last_modified = EXCLUDED.last_modified, etag = EXCLUDED.etag, mime = EXCLUDED.mime',
-        bucket_dst, key_dst, bucket_src, key_src, etag);
-END;
-$$;
-
---
 -- uh_list_buckets(): list all buckets
 --
 CREATE OR REPLACE FUNCTION uh_list_buckets() RETURNS TABLE(name text)

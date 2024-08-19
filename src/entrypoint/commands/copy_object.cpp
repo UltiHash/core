@@ -24,11 +24,17 @@ coro<http_response> copy_object::handle(http_request& req) const {
     url.set_encoded_path(*copy_source);
 
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
+    auto src_obj =
+        co_await m_collection.directory.get_object(src_bucket, src_key);
 
     if (auto ifmatch = req.header("x-amz-copy-source-if-match"); ifmatch) {
-        co_await m_collection.directory.copy_object_ifmatch(
-            src_bucket, src_key, req.bucket(), req.object_key(), *ifmatch);
+        if (src_obj.etag == *ifmatch) {
+            co_await m_collection.gdv.link(req.context(), src_obj.addr.value());
+            co_await m_collection.directory.copy_object(
+                src_bucket, src_key, req.bucket(), req.object_key());
+        }
     } else {
+        co_await m_collection.gdv.link(req.context(), src_obj.addr.value());
         co_await m_collection.directory.copy_object(
             src_bucket, src_key, req.bucket(), req.object_key());
     }
