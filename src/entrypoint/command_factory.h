@@ -26,7 +26,8 @@ struct command_factory {
           m_gdv(gdv),
           m_limits(uhlimits) {}
 
-    std::unique_ptr<command> create(const http_request& req) const;
+    [[nodiscard]] std::unique_ptr<command>
+    create(const http_request& req) const;
 
     [[nodiscard]] limits& get_limits() const;
     [[nodiscard]] directory& get_directory() const;
