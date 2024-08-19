@@ -1,7 +1,7 @@
 #ifndef COMMON_UTILS_HMAC_H
 #define COMMON_UTILS_HMAC_H
 
-#include "common/utils/hash.h"
+#include "common/crypto/hash.h"
 
 namespace uh::cluster {
 
