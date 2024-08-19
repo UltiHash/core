@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE "service_registry tests"
 
-#include "common/registry/namespace.h"
-#include "common/registry/service_registry.h"
+#include "common/etcd/namespace.h"
+#include "common/etcd/registry/service_registry.h"
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/test/unit_test.hpp>
 

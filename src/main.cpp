@@ -35,6 +35,7 @@ void execute_role(const config& c) {
 }
 
 int main(int argc, char** argv) {
+
     try {
         auto config = read_config(argc, argv);
         if (!config) {

@@ -15,7 +15,7 @@ public:
 
     coro<void> validate(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req);
 
 private:
     reference_collection& m_collection;

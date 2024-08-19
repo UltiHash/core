@@ -3,7 +3,7 @@
 #define UH_CLUSTER_REMOTE_STORAGE_H
 
 #include "common/network/client.h"
-#include "storage_interface.h"
+#include "common/service_interfaces/storage_interface.h"
 
 namespace uh::cluster {
 
