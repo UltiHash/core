@@ -6,8 +6,8 @@
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/pointer_traits.h"
 
+#include <iostream>
 #include <ranges>
-
 namespace uh::cluster {
 
 template <typename service_interface>

@@ -29,7 +29,6 @@ shared_buffer<char> global_data_view::read_fragment(context& ctx,
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
-
     if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
         if (cp->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
@@ -47,7 +46,6 @@ shared_buffer<char> global_data_view::read_fragment(context& ctx,
                           boost::asio::use_future)
         .get();
     m_cache_l2.put(pointer, buffer);
-
     return buffer;
 }
 

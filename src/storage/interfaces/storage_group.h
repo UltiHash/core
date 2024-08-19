@@ -64,7 +64,7 @@ struct storage_group : public storage_interface {
     void remove(size_t id, size_t group_nid) {
         m_getter.remove_client(id, m_nodes.at(group_nid));
         m_nodes.at(group_nid) = nullptr;
-        m_status = degraded;
+        update_status();
     }
 
     [[nodiscard]] bool is_healthy() const noexcept {

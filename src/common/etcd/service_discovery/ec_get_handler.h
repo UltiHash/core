@@ -32,6 +32,7 @@ private:
 
     void remove_client(size_t id,
                        const std::shared_ptr<storage_group>& client) override {
+
         if (client->is_empty())
             m_getter.remove_client(id, client);
     }
