@@ -9,7 +9,7 @@ namespace uh::cluster {
 
 class copy_object : public command {
 public:
-    explicit copy_object(directory&, global_data_view&);
+    copy_object(directory&, global_data_view&);
 
     static bool can_handle(const http_request& req);
 

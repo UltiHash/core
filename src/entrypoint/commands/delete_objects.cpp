@@ -84,10 +84,10 @@ coro<http_response> delete_objects::handle(http_request& req) {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
             try {
-                auto del_object =
-                    co_await m_directory.get_object(req.bucket(), *key);
+                auto obj = co_await m_directory.get_object(req.bucket(), *key);
                 co_await m_directory.delete_object(req.bucket(), *key);
-                co_await m_gdv.unlink(req.context(), del_object.addr.value());
+                co_await m_gdv.unlink(req.context(), obj.addr.value());
+                m_limits.free_storage_size(obj.size);
             } catch (command_exception&) {
             }
 
