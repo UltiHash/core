@@ -82,17 +82,12 @@ coro<http_response> delete_objects::handle(http_request& req) {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
 
-            std::optional<object> obj;
             try {
-                obj.emplace(
-                    co_await m_directory.head_object(req.bucket(), *key));
-            } catch (...) {
-                obj = std::nullopt;
+                auto obj = co_await m_directory.head_object(req.bucket(), *key);
+                co_await m_directory.delete_object(req.bucket(), *key);
+                m_limits.free_storage_size(obj.size);
+            } catch (command_exception&) {
             }
-            co_await m_directory.delete_object(req.bucket(), *key);
-
-            if (obj)
-                m_limits.free_storage_size(obj->size);
 
             success.emplace_back(*key);
 
