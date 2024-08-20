@@ -1,22 +1,21 @@
 #ifndef ENTRYPOINT_HTTP_LIST_BUCKETS_H
 #define ENTRYPOINT_HTTP_LIST_BUCKETS_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class list_buckets {
+class list_buckets : public command {
 public:
-    explicit list_buckets(const reference_collection&);
+    explicit list_buckets(directory&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster

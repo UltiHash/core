@@ -1,23 +1,21 @@
 #ifndef UH_CLUSTER_LIST_OBJECTSV2_H
 #define UH_CLUSTER_LIST_OBJECTSV2_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class list_objects_v2 {
-
+class list_objects_v2 : public command {
 public:
-    explicit list_objects_v2(const reference_collection& collection);
+    explicit list_objects_v2(directory& dir);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster

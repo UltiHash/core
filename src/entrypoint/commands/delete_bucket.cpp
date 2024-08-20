@@ -3,8 +3,8 @@
 
 namespace uh::cluster {
 
-delete_bucket::delete_bucket(const reference_collection& collection)
-    : m_collection(collection) {}
+delete_bucket::delete_bucket(directory& dir)
+    : m_directory(dir) {}
 
 bool delete_bucket::can_handle(const http_request& req) {
     return req.method() == method::delete_ &&
@@ -12,11 +12,11 @@ bool delete_bucket::can_handle(const http_request& req) {
            req.object_key().empty() && !req.has_query();
 }
 
-coro<http_response> delete_bucket::handle(http_request& req) const {
+coro<http_response> delete_bucket::handle(http_request& req) {
     metric<entrypoint_delete_bucket_req>::increase(1);
 
     try {
-        co_await m_collection.directory.delete_bucket(req.bucket());
+        co_await m_directory.delete_bucket(req.bucket());
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to delete the bucket " << req.bucket() << ":"
                     << e;

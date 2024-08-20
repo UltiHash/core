@@ -4,6 +4,7 @@
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/http/command_exception.h"
+#include "entrypoint/utils.h"
 
 namespace uh::cluster {
 
@@ -120,8 +121,8 @@ http_response get_response(const std::vector<object>& objects,
 
 } // namespace
 
-list_objects_v2::list_objects_v2(const reference_collection& collection)
-    : m_collection(collection) {}
+list_objects_v2::list_objects_v2(directory& dir)
+    : m_directory(dir) {}
 
 bool list_objects_v2::can_handle(const http_request& req) {
     return req.method() == method::get &&
@@ -130,7 +131,7 @@ bool list_objects_v2::can_handle(const http_request& req) {
            *req.query("list-type") == "2";
 }
 
-coro<http_response> list_objects_v2::handle(http_request& req) const {
+coro<http_response> list_objects_v2::handle(http_request& req) {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     std::optional<std::string> prefix = req.query("prefix");
     std::optional<std::string> lowerbound = req.query("start-after");
@@ -143,8 +144,8 @@ coro<http_response> list_objects_v2::handle(http_request& req) const {
 
     std::vector<object> obj_list;
     try {
-        obj_list = co_await m_collection.directory.list_objects(
-            req.bucket(), prefix, lowerbound);
+        obj_list =
+            co_await m_directory.list_objects(req.bucket(), prefix, lowerbound);
     } catch (const std::exception& e) {
         throw command_exception(http::status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");

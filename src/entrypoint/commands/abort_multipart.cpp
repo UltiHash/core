@@ -3,8 +3,8 @@
 
 namespace uh::cluster {
 
-abort_multipart::abort_multipart(reference_collection& collection)
-    : m_collection(collection) {}
+abort_multipart::abort_multipart(multipart_state& uploads)
+    : m_uploads(uploads) {}
 
 bool abort_multipart::can_handle(const http_request& req) {
     return req.method() == method::delete_ &&
@@ -12,13 +12,13 @@ bool abort_multipart::can_handle(const http_request& req) {
            !req.object_key().empty() && req.query("uploadId");
 }
 
-coro<http_response> abort_multipart::handle(http_request& req) const {
+coro<http_response> abort_multipart::handle(http_request& req) {
     metric<entrypoint_abort_multipart_req>::increase(1);
 
     auto upload_id = *req.query("uploadId");
 
     try {
-        co_await m_collection.uploads.remove_upload(upload_id);
+        co_await m_uploads.remove_upload(upload_id);
     } catch (const std::exception& e) {
         throw command_exception(
             http::status::not_found, "NoSuchUpload",

@@ -4,8 +4,11 @@
 
 namespace uh::cluster {
 
-delete_objects::delete_objects(const reference_collection& collection)
-    : m_collection(collection) {}
+delete_objects::delete_objects(directory& dir, global_data_view& gdv,
+                               limits& uhlimits)
+    : m_directory(dir),
+      m_gdv(gdv),
+      m_limits(uhlimits) {}
 
 bool delete_objects::can_handle(const http_request& req) {
     return req.method() == method::post &&
@@ -45,7 +48,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<http_response> delete_objects::handle(http_request& req) const {
+coro<http_response> delete_objects::handle(http_request& req) {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
@@ -70,8 +73,8 @@ coro<http_response> delete_objects::handle(http_request& req) const {
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& object : object_nodes) {
-        auto key = object.get().get_optional<std::string>("Key");
+    for (const auto& objct : object_nodes) {
+        auto key = objct.get().get_optional<std::string>("Key");
         if (!key) {
             throw command_exception(http::status::bad_request, "MalformedXML",
                                     "xml is invalid");
@@ -80,17 +83,16 @@ coro<http_response> delete_objects::handle(http_request& req) const {
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
-            auto del_object =
-                co_await m_collection.directory.get_object(req.bucket(), *key);
-            co_await m_collection.directory.delete_object(req.bucket(), *key);
-            co_await m_collection.gdv.unlink(req.context(),
-                                             del_object.addr.value());
+            try {
+                auto del_object =
+                    co_await m_directory.get_object(req.bucket(), *key);
+                co_await m_directory.delete_object(req.bucket(), *key);
+                co_await m_gdv.unlink(req.context(), del_object.addr.value());
+            } catch (command_exception&) {
+            }
+
             success.emplace_back(*key);
 
-        } catch (const command_exception& e) {
-            // get_object failed as the object does not exist
-            // this is behaviour expected by the ceph test suite
-            success.emplace_back(*key);
         } catch (const error_exception& e) {
             LOG_ERROR() << req.peer() << ": Failed to delete the bucket "
                         << bucket_id << " to the directory: " << e;
