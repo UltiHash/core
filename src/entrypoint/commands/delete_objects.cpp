@@ -71,8 +71,8 @@ coro<http_response> delete_objects::handle(http_request& req) {
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& object : object_nodes) {
-        auto key = object.get().get_optional<std::string>("Key");
+    for (const auto& objct : object_nodes) {
+        auto key = objct.get().get_optional<std::string>("Key");
         if (!key) {
             throw command_exception(http::status::bad_request, "MalformedXML",
                                     "xml is invalid");
@@ -81,11 +81,18 @@ coro<http_response> delete_objects::handle(http_request& req) {
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
-            auto obj = co_await m_directory.head_object(req.bucket(),
-                                                        req.object_key());
+
+            std::optional<object> obj;
+            try {
+                obj.emplace(
+                    co_await m_directory.head_object(req.bucket(), *key));
+            } catch (...) {
+                obj = std::nullopt;
+            }
             co_await m_directory.delete_object(req.bucket(), *key);
 
-            m_limits.free_storage_size(obj.size);
+            if (obj)
+                m_limits.free_storage_size(obj->size);
 
             success.emplace_back(*key);
 

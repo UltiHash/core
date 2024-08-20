@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct create_bucket : public command {
-
+class create_bucket : public command {
+public:
     explicit create_bucket(directory&);
 
     static bool can_handle(const http_request& req);

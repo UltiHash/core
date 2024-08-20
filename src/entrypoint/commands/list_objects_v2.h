@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct list_objects_v2 : public command {
-
+class list_objects_v2 : public command {
+public:
     explicit list_objects_v2(directory& dir);
 
     static bool can_handle(const http_request& req);

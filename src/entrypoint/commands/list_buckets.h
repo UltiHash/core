@@ -6,7 +6,8 @@
 
 namespace uh::cluster {
 
-struct list_buckets : public command {
+class list_buckets : public command {
+public:
     explicit list_buckets(directory&);
 
     static bool can_handle(const http_request& req);

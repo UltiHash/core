@@ -8,9 +8,9 @@
 
 namespace uh::cluster {
 
-struct complete_multipart : public command {
-
-    explicit complete_multipart(directory&, multipart_state&, limits&);
+class complete_multipart : public command {
+public:
+    complete_multipart(directory&, multipart_state&, limits&);
 
     static bool can_handle(const http_request& req);
 

@@ -7,8 +7,8 @@
 
 namespace uh::cluster {
 
-struct get_metrics : public command {
-
+class get_metrics : public command {
+public:
     get_metrics(directory&, global_data_view&);
 
     static bool can_handle(const http_request& req);

@@ -6,7 +6,8 @@
 
 namespace uh::cluster {
 
-struct list_multipart : public command {
+class list_multipart : public command {
+public:
     explicit list_multipart(multipart_state&);
 
     static bool can_handle(const http_request& req);

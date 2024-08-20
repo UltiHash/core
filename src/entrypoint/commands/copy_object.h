@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct copy_object : public command {
-
+class copy_object : public command {
+public:
     explicit copy_object(directory&);
 
     static bool can_handle(const http_request& req);

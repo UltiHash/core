@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct abort_multipart : public command {
-
+class abort_multipart : public command {
+public:
     explicit abort_multipart(multipart_state&);
 
     static bool can_handle(const http_request& req);

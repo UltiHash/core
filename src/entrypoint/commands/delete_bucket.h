@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct delete_bucket : public command {
-
+class delete_bucket : public command {
+public:
     explicit delete_bucket(directory&);
 
     static bool can_handle(const http_request& req);

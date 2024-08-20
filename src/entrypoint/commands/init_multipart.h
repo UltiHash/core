@@ -7,7 +7,8 @@
 
 namespace uh::cluster {
 
-struct init_multipart : public command {
+class init_multipart : public command {
+public:
     explicit init_multipart(directory&, multipart_state&);
 
     static bool can_handle(const http_request& req);

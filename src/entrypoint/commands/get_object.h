@@ -7,8 +7,8 @@
 
 namespace uh::cluster {
 
-struct get_object : public command {
-
+class get_object : public command {
+public:
     get_object(directory&, global_data_view&);
 
     static bool can_handle(const http_request& req);

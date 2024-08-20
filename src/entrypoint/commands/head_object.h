@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-struct head_object : public command {
-
+class head_object : public command {
+public:
     explicit head_object(directory&);
 
     static bool can_handle(const http_request& req);
