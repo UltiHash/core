@@ -77,26 +77,20 @@ coro<http_response> delete_objects::handle(http_request& req) const {
                                     "xml is invalid");
         }
 
-        bool object_exists;
-        struct object del_object;
-        try {
-            del_object =
-                co_await m_collection.directory.get_object(req.bucket(), *key);
-            object_exists = true;
-        } catch (const command_exception& e) {
-            object_exists = false;
-        }
-
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
+            auto del_object =
+                co_await m_collection.directory.get_object(req.bucket(), *key);
             co_await m_collection.directory.delete_object(req.bucket(), *key);
-            if (object_exists) {
-                co_await m_collection.gdv.unlink(req.context(),
-                                                 del_object.addr.value());
-            }
+            co_await m_collection.gdv.unlink(req.context(),
+                                             del_object.addr.value());
             success.emplace_back(*key);
 
+        } catch (const command_exception& e) {
+            // get_object failed as the object does not exist
+            // this is behaviour expected by the ceph test suite
+            success.emplace_back(*key);
         } catch (const error_exception& e) {
             LOG_ERROR() << req.peer() << ": Failed to delete the bucket "
                         << bucket_id << " to the directory: " << e;
