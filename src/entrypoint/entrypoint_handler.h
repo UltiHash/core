@@ -75,7 +75,7 @@ public:
         s.close();
     }
 
-    coro<http_response> handle_request(http_request& req) {
+    coro<http_response> handle_request(http_request& req) const {
 
         auto cmd = m_command_factory.create(req);
 
