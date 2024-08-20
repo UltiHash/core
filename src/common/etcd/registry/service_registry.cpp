@@ -30,7 +30,8 @@ service_registry::registration::registration(
 
               std::unique_lock<std::mutex> lock(m_attributes_mutex);
               m_cv.wait_for(lock, std::chrono::seconds(m_etcd_default_ttl));
-
+              if (m_stop)
+                  return;
               for (auto& kv : m_monitored_attributes) {
                   m_client.put(kv.first, kv.second(), m_lease);
               }

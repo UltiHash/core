@@ -146,6 +146,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
      * - each nodes storage offset is determined by product of the node's id
      *   and max_data_store_size
      */
+
     auto node_addr_range = pointer_traits::get_global_pointer(
         data_store_config().max_data_store_size, 1, 0);
 
