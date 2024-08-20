@@ -5,8 +5,8 @@
 
 namespace uh::cluster {
 
-head_object::head_object(const reference_collection& coll)
-    : m_coll(coll) {}
+head_object::head_object(directory& dir)
+    : m_directory(dir) {}
 
 bool head_object::can_handle(const http_request& req) {
     return req.method() == method::head &&
@@ -14,12 +14,12 @@ bool head_object::can_handle(const http_request& req) {
            !req.object_key().empty() && !req.query("attributes");
 }
 
-coro<http_response> head_object::handle(const http_request& req) const {
+coro<http_response> head_object::handle(http_request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto obj = co_await m_coll.directory.head_object(req.bucket(),
-                                                         req.object_key());
+        auto obj =
+            co_await m_directory.head_object(req.bucket(), req.object_key());
 
         http_response res;
         res.set("Content-Length", std::to_string(obj.size));

@@ -1,22 +1,21 @@
 #ifndef ENTRYPOINT_HTTP_CREATE_BUCKET_H
 #define ENTRYPOINT_HTTP_CREATE_BUCKET_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class create_bucket {
+class create_bucket : public command {
 public:
-    explicit create_bucket(const reference_collection&);
+    explicit create_bucket(directory&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster

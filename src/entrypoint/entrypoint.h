@@ -44,13 +44,14 @@ public:
 
           m_directory(m_ioc, m_config.database),
           m_uploads(m_ioc, m_config.database),
-          m_server(m_config.server,
-                   make_entrypoint_handler(
-                       m_collection,
-                       std::make_unique<ep::http::default_request_factory>()),
-                   m_ioc),
           m_limits(sc.license.max_data_store_size),
-          m_collection(get_reference_collection()) {
+          m_server(
+              m_config.server,
+              std::make_unique<entrypoint_handler>(
+                  command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
+                                  m_uploads, m_config, m_data_view, m_limits),
+                  std::make_unique<ep::http::default_request_factory>()),
+              m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
 
@@ -66,16 +67,6 @@ public:
     }
 
 private:
-    reference_collection get_reference_collection() {
-        return {.ioc = m_ioc,
-                .dedupe_services = m_dedupe_load_balancer,
-                .directory = m_directory,
-                .uploads = m_uploads,
-                .config = m_config,
-                .gdv = m_data_view,
-                .limits = m_limits};
-    }
-
     entrypoint_config m_config;
 
     boost::asio::io_context m_ioc;
@@ -95,9 +86,8 @@ private:
     directory m_directory;
 
     multipart_state m_uploads;
-    server m_server;
     limits m_limits;
-    reference_collection m_collection;
+    server m_server;
 };
 
 } // end namespace uh::cluster
