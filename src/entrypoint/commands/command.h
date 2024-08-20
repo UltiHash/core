@@ -5,7 +5,8 @@
 
 namespace uh::cluster {
 
-struct command {
+class command {
+public:
     virtual coro<http_response> handle(http_request&) = 0;
     virtual coro<void> validate(const http_request& req) { co_return; }
 
