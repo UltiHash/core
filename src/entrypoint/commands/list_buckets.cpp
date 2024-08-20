@@ -28,17 +28,17 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 
 } // namespace
 
-list_buckets::list_buckets(const reference_collection& collection)
-    : m_collection(collection) {}
+list_buckets::list_buckets(directory& dir)
+    : m_directory(dir) {}
 
 bool list_buckets::can_handle(const http_request& req) {
     return req.method() == method::get && req.bucket().empty() &&
            req.object_key().empty() && !req.has_query();
 }
 
-coro<http_response> list_buckets::handle(http_request& req) const {
+coro<http_response> list_buckets::handle(http_request& req) {
     metric<entrypoint_list_buckets_req>::increase(1);
-    auto buckets = co_await m_collection.directory.list_buckets();
+    auto buckets = co_await m_directory.list_buckets();
     co_return get_response(buckets);
 }
 

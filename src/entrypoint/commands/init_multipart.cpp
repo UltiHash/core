@@ -24,8 +24,9 @@ http_response get_response(const http_request& req,
 
 } // namespace
 
-init_multipart::init_multipart(reference_collection& collection)
-    : m_collection(collection) {}
+init_multipart::init_multipart(directory& dir, multipart_state& uploads)
+    : m_directory(dir),
+      m_uploads(uploads) {}
 
 bool init_multipart::can_handle(const http_request& req) {
     return req.method() == method::post &&
@@ -36,12 +37,12 @@ bool init_multipart::can_handle(const http_request& req) {
 coro<http_response> init_multipart::handle(http_request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
     try {
-        co_await m_collection.directory.bucket_exists(req.bucket());
+        co_await m_directory.bucket_exists(req.bucket());
     } catch (const error_exception& e) {
         throw_from_error(e.error());
     }
 
-    const auto upload_id = co_await m_collection.uploads.insert_upload(
+    const auto upload_id = co_await m_uploads.insert_upload(
         req.bucket(), req.object_key(), req.header("Content-Type"));
 
     co_return get_response(req, upload_id);

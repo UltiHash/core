@@ -4,8 +4,9 @@
 
 namespace uh::cluster {
 
-delete_objects::delete_objects(const reference_collection& collection)
-    : m_collection(collection) {}
+delete_objects::delete_objects(directory& dir, limits& uhlimits)
+    : m_directory(dir),
+      m_limits(uhlimits) {}
 
 bool delete_objects::can_handle(const http_request& req) {
     return req.method() == method::post &&
@@ -45,7 +46,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<http_response> delete_objects::handle(http_request& req) const {
+coro<http_response> delete_objects::handle(http_request& req) {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
@@ -70,8 +71,8 @@ coro<http_response> delete_objects::handle(http_request& req) const {
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& object : object_nodes) {
-        auto key = object.get().get_optional<std::string>("Key");
+    for (const auto& objct : object_nodes) {
+        auto key = objct.get().get_optional<std::string>("Key");
         if (!key) {
             throw command_exception(http::status::bad_request, "MalformedXML",
                                     "xml is invalid");
@@ -81,7 +82,13 @@ coro<http_response> delete_objects::handle(http_request& req) const {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
 
-            co_await m_collection.directory.delete_object(req.bucket(), *key);
+            try {
+                auto obj = co_await m_directory.head_object(req.bucket(), *key);
+                co_await m_directory.delete_object(req.bucket(), *key);
+                m_limits.free_storage_size(obj.size);
+            } catch (command_exception&) {
+            }
+
             success.emplace_back(*key);
 
         } catch (const error_exception& e) {

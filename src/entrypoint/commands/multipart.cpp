@@ -4,8 +4,11 @@
 
 namespace uh::cluster {
 
-multipart::multipart(reference_collection& collection)
-    : m_collection(collection) {}
+multipart::multipart(
+    roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
+    multipart_state& uploads)
+    : m_dedupe_services(dedupe_services),
+      m_uploads(uploads) {}
 
 bool multipart::can_handle(const http_request& req) {
     return req.method() == method::put &&
@@ -34,7 +37,7 @@ coro<http_response> multipart::handle(http_request& req) {
 
     dedupe_response resp = {};
     if (!buffer.empty()) {
-        resp = co_await m_collection.dedupe_services.get()->deduplicate(
+        resp = co_await m_dedupe_services.get()->deduplicate(
             req.context(), {buffer.data(), buffer.size()});
     }
 
@@ -43,7 +46,7 @@ coro<http_response> multipart::handle(http_request& req) {
     http_response res;
     res.set("ETag", md5);
 
-    co_await m_collection.uploads.append_upload_part_info(
+    co_await m_uploads.append_upload_part_info(
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         buffer.size(), std::move(md5));
 

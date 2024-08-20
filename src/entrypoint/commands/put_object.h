@@ -1,29 +1,36 @@
 #ifndef ENTRYPOINT_HTTP_PUT_OBJECT_H
 #define ENTRYPOINT_HTTP_PUT_OBJECT_H
 
+#include "command.h"
+#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
+#include "common/service_interfaces/deduplicator_interface.h"
 #include "common/utils/md5.h"
-#include "entrypoint/http/command_exception.h"
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "entrypoint/config.h"
+#include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
 
 namespace uh::cluster {
 
-class put_object {
+class put_object : public command {
 public:
-    explicit put_object(const reference_collection&);
+    put_object(boost::asio::io_context&, const entrypoint_config&, limits&,
+               directory&, roundrobin_load_balancer<deduplicator_interface>&);
 
     static bool can_handle(const http_request& req);
 
-    coro<void> validate(const http_request& req) const;
+    coro<void> validate(const http_request& req) override;
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
     coro<dedupe_response> put_large_object(http_request& req, md5& hash) const;
     coro<dedupe_response> put_small_object(http_request& req, md5& hash) const;
 
-    const reference_collection& m_collection;
+    boost::asio::io_context& m_ioc;
+    const entrypoint_config& m_config;
+    directory& m_dir;
+    limits& m_limits;
+    roundrobin_load_balancer<deduplicator_interface>& m_dedup;
 };
 
 } // namespace uh::cluster

@@ -5,8 +5,11 @@
 
 namespace uh::cluster {
 
-complete_multipart::complete_multipart(reference_collection& collection)
-    : m_collection(collection) {}
+complete_multipart::complete_multipart(directory& dir, multipart_state& uploads,
+                                       limits& uhlimits)
+    : m_directory(dir),
+      m_uploads(uploads),
+      m_limits(uhlimits) {}
 
 bool complete_multipart::can_handle(const http_request& req) {
     return req.method() == method::post &&
@@ -15,7 +18,7 @@ bool complete_multipart::can_handle(const http_request& req) {
 }
 
 void complete_multipart::validate(const upload_info& info,
-                                  std::span<char> body) const {
+                                  std::span<char> body) {
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
@@ -60,7 +63,7 @@ void complete_multipart::validate(const upload_info& info,
     }
 }
 
-coro<http_response> complete_multipart::handle(http_request& req) const {
+coro<http_response> complete_multipart::handle(http_request& req) {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -68,11 +71,11 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     buffer.resize(size);
 
     auto upload_id = *req.query("uploadId");
-    const auto info = co_await m_collection.uploads.details(upload_id);
+    const auto info = co_await m_uploads.details(upload_id);
 
     validate(info, buffer.span());
 
-    m_collection.limits.check_storage_size(info.data_size);
+    m_limits.check_storage_size(info.data_size);
 
     auto etag = calculate_md5(buffer.span());
 
@@ -82,7 +85,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
                .addr = std::move(addr),
                .etag = etag,
                .mime = info.mime};
-    co_await m_collection.directory.put_object(req.bucket(), obj);
+    co_await m_directory.put_object(req.bucket(), obj);
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
@@ -97,7 +100,7 @@ coro<http_response> complete_multipart::handle(http_request& req) const {
     pt.put("CompleteMultipartUploadResult.ETag", etag);
     res << pt;
 
-    co_await m_collection.uploads.remove_upload(upload_id);
+    co_await m_uploads.remove_upload(upload_id);
     co_return res;
 }
 

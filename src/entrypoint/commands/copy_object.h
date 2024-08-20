@@ -1,22 +1,21 @@
 #ifndef ENTRYPOINT_HTTP_COPY_OBJECT_H
 #define ENTRYPOINT_HTTP_COPY_OBJECT_H
 
-#include "entrypoint/http/http_request.h"
-#include "entrypoint/http/http_response.h"
-#include "entrypoint/utils.h"
+#include "command.h"
+#include "entrypoint/directory.h"
 
 namespace uh::cluster {
 
-class copy_object {
+class copy_object : public command {
 public:
-    explicit copy_object(const reference_collection& collection);
+    explicit copy_object(directory&);
 
     static bool can_handle(const http_request& req);
 
-    coro<http_response> handle(http_request& req) const;
+    coro<http_response> handle(http_request& req) override;
 
 private:
-    const reference_collection& m_collection;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster
