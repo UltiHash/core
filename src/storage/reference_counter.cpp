@@ -35,14 +35,17 @@ void reference_counter::decrement(const std::size_t offset,
 
         if (!dbi.get(txn, key, value)) {
             txn.abort();
-            throw std::runtime_error("key does not exist");
+            throw std::runtime_error(
+                "attempted to to decrease refcount of an un-tracked page");
         }
 
         std::size_t current_value = std::stoull(std::string(value));
 
         if (current_value == 0) {
             txn.abort();
-            throw std::runtime_error("reference counter is already at zero");
+            throw std::runtime_error(
+                "encountered page with refcount zero, even though such entries "
+                "should not exist");
         }
 
         if (--current_value == 0) {
