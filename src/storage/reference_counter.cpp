@@ -1,5 +1,6 @@
 #include "reference_counter.h"
 #include "common/utils/common.h"
+#include "common/utils/pointer_traits.h"
 
 namespace uh::cluster {
 
@@ -79,8 +80,8 @@ void reference_counter::decrement(const std::size_t offset,
     txn.commit();
 }
 
-bool reference_counter::increment(const std::size_t offset,
-                                  const std::size_t size, const bool init) {
+void reference_counter::increment(const std::size_t offset,
+                                  const std::size_t size) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -90,23 +91,44 @@ bool reference_counter::increment(const std::size_t offset,
         std::string key(std::to_string(page_id));
         std::string_view value;
 
-        std::size_t current_value;
+        std::size_t current_value = 0;
         if (dbi.get(txn, key, value)) {
             current_value = std::stoull(std::string(value));
-        } else if (init) {
-            current_value = 0;
-        } else {
-            txn.abort();
-            return false;
         }
 
-        ++current_value;
-        std::string value_str(std::to_string(current_value));
+        std::string value_str(std::to_string(++current_value));
         dbi.put(txn, key, value_str);
     }
 
     txn.commit();
-    return true;
+}
+
+address reference_counter::increment(const address& addr) {
+    lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
+    lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
+    address rv;
+
+    for (size_t i = 0; i < addr.size(); ++i) {
+        const auto frag = addr.get(i);
+        const auto offset = pointer_traits::get_pointer(frag.pointer);
+        for (std::size_t page_pointer = offset;
+             page_pointer < offset + frag.size; page_pointer += m_page_size) {
+            std::size_t page_id = page_pointer / m_page_size;
+            std::string key(std::to_string(page_id));
+            std::string_view value;
+
+            if (dbi.get(txn, key, value)) {
+                std::size_t current_value = std::stoull(std::string(value));
+                std::string value_str(std::to_string(++current_value));
+                dbi.put(txn, key, value_str);
+            } else {
+                rv.push(frag);
+            }
+        }
+    }
+
+    txn.commit();
+    return rv;
 }
 
 } // namespace uh::cluster

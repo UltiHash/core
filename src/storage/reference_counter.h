@@ -3,6 +3,7 @@
 
 #include <filesystem>
 
+#include "common/types/address.h"
 #include <functional>
 #include <lmdbxx/lmdb++.h>
 
@@ -13,7 +14,8 @@ public:
         const std::filesystem::path& root, std::size_t page_size,
         const std::function<void(std::size_t offset, std::size_t size)>& cb);
     void decrement(std::size_t offset, std::size_t size);
-    bool increment(std::size_t offset, std::size_t size, bool init = false);
+    void increment(std::size_t offset, std::size_t size);
+    address increment(const address& addr);
 
 private:
     lmdb::env m_env;
