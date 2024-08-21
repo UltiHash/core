@@ -1,182 +1,21 @@
 #include "http_request.h"
 
+#include "chunked_body.h"
+#include "raw_body.h"
+
 #include "boost/url/url.hpp"
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/command_exception.h"
 #include "entrypoint/utils.h"
-#include <charconv>
 #include <regex>
 
 using namespace boost;
+using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
 namespace {
-
-class raw_decoder : public ep::http::body {
-public:
-    raw_decoder(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
-                std::size_t length)
-        : m_socket(s),
-          m_buffer(std::move(initial)),
-          m_length(length) {}
-
-    coro<std::size_t> read(std::span<char> dest) override {
-        auto rv = 0ull;
-
-        if (m_buffer.size() > 0ull) {
-            auto count = asio::buffer_copy(asio::buffer(&dest[0], dest.size()),
-                                           m_buffer.data());
-            m_buffer.consume(count);
-            rv += count;
-            m_length -= count;
-        }
-
-        auto count = std::min(dest.size(), m_length);
-        auto read = co_await asio::async_read(
-            m_socket, asio::buffer(&dest[rv], count), asio::use_awaitable);
-
-        rv += read;
-        m_length -= read;
-        co_return rv;
-    }
-
-private:
-    asio::ip::tcp::socket& m_socket;
-    beast::flat_buffer m_buffer;
-    std::size_t m_length;
-};
-
-class chunked_body : public ep::http::body {
-public:
-    chunked_body(asio::ip::tcp::socket& s, const beast::flat_buffer& initial)
-        : m_socket(s),
-          m_buffer() {
-        m_buffer.reserve(BUFFER_SIZE);
-        m_buffer.resize(initial.size());
-        asio::buffer_copy(asio::buffer(m_buffer),
-                          asio::buffer(initial.data(), initial.size()));
-    }
-
-    coro<std::size_t> read(std::span<char> dest) override {
-        if (m_end) {
-            throw std::runtime_error("trying to read past end of data");
-        }
-
-        std::size_t rv = 0ull;
-
-        while (rv < dest.size()) {
-            if (m_chunk_size == 0ull) {
-                m_chunk_size = co_await read_chunk_header();
-            }
-
-            if (m_chunk_size == 0ull) {
-                m_end = true;
-                break;
-            }
-
-            auto count = std::min(m_chunk_size, dest.size() - rv);
-            auto read = co_await read_data(dest.subspan(rv, count));
-
-            rv += read;
-            m_chunk_size -= read;
-
-            co_await read_nl();
-        }
-
-        co_return rv;
-    }
-
-private:
-    coro<void> read_nl() {
-        char nl[2];
-        std::size_t offset = 0;
-
-        if (!m_buffer.empty()) {
-            auto count = std::min(m_buffer.size(), sizeof(nl) - offset);
-            memcpy(nl, &m_buffer[0], count);
-            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
-            offset += count;
-        }
-
-        if (offset < sizeof(nl)) {
-            co_await asio::async_read(
-                m_socket, asio::buffer(&nl[offset], sizeof(nl) - offset),
-                asio::use_awaitable);
-        }
-
-        if (nl[0] != '\r' || nl[1] != '\n') {
-            throw std::runtime_error("newline required");
-        }
-    }
-
-    std::size_t find_nl() const {
-        bool has_cr = false;
-
-        for (auto index = 0ull; index < m_buffer.size(); ++index) {
-            if (m_buffer[index] == '\r') {
-                has_cr = true;
-                continue;
-            }
-
-            if (m_buffer[index] == '\n' && has_cr) {
-                return index + 1;
-            }
-
-            has_cr = false;
-        }
-
-        throw std::runtime_error("newline required");
-    }
-
-    coro<std::size_t> read_chunk_header() {
-        co_await asio::async_read_until(m_socket,
-                                        asio::dynamic_buffer(m_buffer), "\r\n",
-                                        asio::use_awaitable);
-
-        auto pos = find_nl();
-
-        std::size_t size = 0ull;
-        auto [_, ec] = std::from_chars(&m_buffer[0], &m_buffer[pos], size, 16);
-
-        if (ec != std::errc()) {
-            throw std::runtime_error("from_chars failed: " +
-                                     make_error_condition(ec).message());
-        }
-
-        m_buffer.erase(m_buffer.begin(), m_buffer.begin() + pos);
-        co_return size;
-    }
-
-    coro<std::size_t> read_data(std::span<char> buffer) {
-        std::size_t offs = 0ull;
-
-        if (m_buffer.size() > 0) {
-            auto count = std::min(m_buffer.size(), buffer.size());
-            memcpy(buffer.data(), m_buffer.data(), count);
-
-            m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
-            offs += count;
-        }
-
-        if (offs < buffer.size()) {
-            offs += co_await asio::async_read(
-                m_socket,
-                asio::buffer(buffer.data() + offs, buffer.size() - offs),
-                asio::use_awaitable);
-        }
-
-        co_return offs;
-    }
-
-    static constexpr std::size_t BUFFER_SIZE = MEBI_BYTE;
-
-    asio::ip::tcp::socket& m_socket;
-    std::vector<char> m_buffer;
-    std::size_t m_chunk_size = 0ull;
-    bool m_end = false;
-};
 
 std::unique_ptr<ep::http::body>
 make_body(const http::request_parser<http::empty_body>::value_type& req,
@@ -207,7 +46,7 @@ make_body(const http::request_parser<http::empty_body>::value_type& req,
         length = std::stoul(content_length->value());
     }
 
-    return std::make_unique<raw_decoder>(stream, std::move(initial), length);
+    return std::make_unique<raw_body>(stream, std::move(initial), length);
 }
 
 } // namespace

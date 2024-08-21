@@ -1,6 +1,9 @@
 #ifndef CORE_ENTRYPOINT_HTTP_BODY_H
 #define CORE_ENTRYPOINT_HTTP_BODY_H
 
+#include <common/types/common_types.h>
+#include <span>
+
 namespace uh::cluster::ep::http {
 
 class body {
