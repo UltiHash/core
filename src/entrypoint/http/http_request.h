@@ -18,8 +18,9 @@ typedef http::verb method;
 
 class http_request {
 public:
-    static coro<std::unique_ptr<http_request>>
-    create(boost::asio::ip::tcp::socket& s);
+    http_request(boost::beast::http::request<http::empty_body>&& req,
+                 std::unique_ptr<ep::http::body> body,
+                 boost::asio::ip::tcp::endpoint peer);
 
     [[nodiscard]] http::verb method() const;
 
@@ -60,10 +61,6 @@ public:
 
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
-
-    http_request(boost::beast::http::request<http::empty_body>&& req,
-                 std::unique_ptr<ep::http::body> body,
-                 boost::asio::ip::tcp::endpoint peer);
 
     boost::beast::http::request<http::empty_body> m_req;
     std::unique_ptr<ep::http::body> m_body;

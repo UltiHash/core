@@ -1,77 +1,12 @@
 #include "http_request.h"
 
-#include "chunked_body.h"
-#include "raw_body.h"
-
 #include "boost/url/url.hpp"
-#include "common/telemetry/log.h"
-#include "common/utils/strings.h"
-#include "entrypoint/http/command_exception.h"
 #include "entrypoint/utils.h"
-#include <regex>
 
 using namespace boost;
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
-
-namespace {
-
-std::unique_ptr<ep::http::body>
-make_body(const beast::http::request<http::empty_body>& req,
-          asio::ip::tcp::socket& stream, beast::flat_buffer&& initial) {
-
-    /* Amazon will upload data using chunked transfer without explicitly setting
-     * the `Transfer-Encoding` header for signed data. This also prevents us
-     * from using beasts HTTP parser for decoding the transfer encoding.
-     *
-     * (see
-     * https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html#sigv4-auth-header-overview)
-     */
-    auto content_sha = req.base().find("x-amz-content-sha256");
-    if (content_sha != req.base().end() &&
-        (content_sha->value() == "STREAMING-UNSIGNED-PAYLOAD-TRAILER" ||
-         content_sha->value() == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" ||
-         content_sha->value() == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER" ||
-         content_sha->value() == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD" ||
-         content_sha->value() ==
-             "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD-TRAILER")) {
-        return std::make_unique<chunked_body>(stream, std::move(initial));
-    }
-
-    std::size_t length = 0ull;
-
-    auto content_length = req.base().find("content-length");
-    if (content_length != req.base().end()) {
-        length = std::stoul(content_length->value());
-    }
-
-    return std::make_unique<raw_body>(stream, std::move(initial), length);
-}
-
-} // namespace
-
-coro<std::unique_ptr<http_request>>
-http_request::create(asio::ip::tcp::socket& s) {
-
-    http::request_parser<http::empty_body> parser;
-    boost::beast::flat_buffer buffer;
-    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-
-    co_await beast::http::async_read_header(s, buffer, parser,
-                                            asio::use_awaitable);
-
-    auto req = std::move(parser.get());
-    if (req.base().version() != 11) {
-        throw std::runtime_error(
-            "bad http version. support exists only for HTTP 1.1.\n");
-    }
-
-    auto body = make_body(req, s, std::move(buffer));
-
-    co_return std::unique_ptr<http_request>(
-        new http_request(std::move(req), std::move(body), s.remote_endpoint()));
-}
 
 http_request::http_request(beast::http::request<http::empty_body>&& req,
                            std::unique_ptr<ep::http::body> body,
