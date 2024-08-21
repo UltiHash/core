@@ -1,5 +1,6 @@
 #include "auth_request_factory.h"
 
+#include "auth_utils.h"
 #include "command_exception.h"
 #include "common/crypto/hash.h"
 #include "common/crypto/hmac.h"
@@ -13,68 +14,6 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 namespace {
-
-struct auth_info {
-    auth_info(std::string&& header)
-        : m_header(std::move(header)) {
-        parse();
-    }
-
-    std::string_view algorithm;
-    std::string_view access_key_id;
-    std::string_view date;
-    std::string_view region;
-    std::string_view service;
-    std::set<std::string_view> signed_headers;
-    std::string_view signature;
-
-    [[noreturn]] void parse_error() {
-        throw command_exception(
-            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-            "The authorization header that you provided is not valid.");
-    }
-
-    void parse() {
-        std::size_t pos = m_header.find(' ');
-        if (pos == std::string::npos) {
-            parse_error();
-        }
-
-        algorithm =
-            std::string_view(m_header.begin(), m_header.begin() + pos - 1);
-        auto fields = split(
-            std::string_view(m_header.begin() + pos + 1, m_header.end()), ',');
-
-        std::map<std::string_view, std::string_view> parsed;
-        for (auto& field : fields) {
-            auto parts = split(field, '=');
-            if (parts.size() != 2) {
-                parse_error();
-            }
-
-            parsed[trim(parts[0])] = trim(parts[1]);
-        }
-
-        if (!parsed.contains("Credential") ||
-            !parsed.contains("SignedHeaders") ||
-            !parsed.contains("Signature")) {
-            parse_error();
-        }
-
-        auto split_credentials = split(parsed["Credential"], '/');
-        if (split_credentials.size() != 5) {
-            parse_error();
-        }
-
-        access_key_id = split_credentials[0], date = split_credentials[1],
-        region = split_credentials[2], service = split_credentials[3],
-        signed_headers =
-            split<std::set<std::string_view>>(parsed["SignedHeaders"], ';'),
-        signature = parsed["Signature"];
-    }
-
-    std::string m_header;
-};
 
 bool include_header(const std::string& name,
                     const std::set<std::string_view>& included) {
@@ -123,63 +62,144 @@ auth_request_factory::auth_request_factory(
     std::unique_ptr<request_factory> base)
     : m_base(std::move(base)) {}
 
-constexpr std::string_view SECRET_ACCESS_KEY = "secret";
+constexpr const char* SECRET_ACCESS_KEY = "secret";
 
 std::string operator+(std::string fst, std::string_view snd) {
     return fst + std::string(snd);
 }
 
-coro<std::unique_ptr<http_request>>
-auth_request_factory::create(boost::asio::ip::tcp::socket& s) {
-    auto request = co_await m_base->create(s);
+std::unique_ptr<http_request>
+raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
+                    std::unique_ptr<http_request>& req) {
 
-    LOG_DEBUG() << request->peer() << " pre-auth request: " << *request;
-
-    auto auth_header = request->header("Authorization");
+    auto auth_header = req->header("Authorization");
     if (!auth_header) {
-        LOG_DEBUG() << "no Authorization header provided";
+        LOG_DEBUG() << req->peer() << " no Authorization header provided";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
-    auth_info info((std::string(*auth_header)));
-    auto canonical_request = make_canonical_request(*request, info);
+    auth_info info;
+    try {
+        info = parse_auth_header(std::move(*auth_header));
+    } catch (const std::exception&) {
+        throw command_exception(
+            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
+            "The authorization header that you provided is not valid.");
+    }
 
-    LOG_DEBUG() << request->peer()
-                << " canonical request: " << canonical_request;
+    if (!info.signed_headers.contains("content-encoding") ||
+        !info.signed_headers.contains("content-length")) {
+        throw std::runtime_error(
+            "content headers are required for chunked transfer");
+    }
 
-    // TODO support for UNSIGNED-PAYLOAD & header based authentication
+    auto canonical_request = make_canonical_request(*req, info);
+
+    LOG_DEBUG() << req->peer() << " canonical request: " << canonical_request;
 
     auto string_to_sign =
         std::string("AWS4-HMAC-SHA256\n") +
-        request->header("x-amz-date").value_or(std::string(info.date)) + "\n" +
+        req->header("x-amz-date").value_or(std::string(info.date)) + "\n" +
         info.date + "/" + info.region + "/" + info.service + "/aws4_request\n" +
         sha256::from_string(canonical_request);
 
-    LOG_DEBUG() << request->peer() << " string to sign: " << string_to_sign;
+    LOG_DEBUG() << req->peer() << " string to sign: " << string_to_sign;
 
     // TODO request user information here and use user's secret key
 
-    auto date_key =
-        hmac_sha256::from_string("AWS4" + SECRET_ACCESS_KEY, info.date);
-    auto date_region_key = hmac_sha256::from_string(date_key, info.region);
-    auto date_region_service_key =
-        hmac_sha256::from_string(date_region_key, info.service);
-    auto signing_key =
-        hmac_sha256::from_string(date_region_service_key, "aws4_request");
-
-    LOG_DEBUG() << request->peer() << " signing key: " << to_hex(signing_key);
+    auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
+    LOG_DEBUG() << req->peer() << " signing key: " << to_hex(signing_key);
 
     auto signature =
         to_hex(hmac_sha256::from_string(signing_key, string_to_sign));
     if (signature != info.signature) {
-        LOG_DEBUG() << request->peer() << " access denied: signature mismatch";
+        LOG_DEBUG() << req->peer() << " access denied: signature mismatch";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
     // TODO insert check for payload signature
-    co_return std::move(request);
+    return std::move(req);
+}
+
+std::unique_ptr<http_request>
+chunked_auth_body(boost::asio::ip::tcp::socket& sock,
+                  std::unique_ptr<http_request>& req) {
+
+    auto auth_header = req->header("Authorization");
+    if (!auth_header) {
+        LOG_DEBUG() << req->peer() << " no Authorization header provided";
+        throw command_exception(beast::http::status::forbidden, "AccessDenied",
+                                "Access Denied");
+    }
+
+    auth_info info;
+    try {
+        info = parse_auth_header(std::move(*auth_header));
+    } catch (const std::exception&) {
+        throw command_exception(
+            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
+            "The authorization header that you provided is not valid.");
+    }
+
+    auto canonical_request = make_canonical_request(*req, info);
+
+    LOG_DEBUG() << req->peer() << " canonical request: " << canonical_request;
+
+    auto string_to_sign =
+        std::string("AWS4-HMAC-SHA256\n") +
+        req->header("x-amz-date").value_or(std::string(info.date)) + "\n" +
+        info.date + "/" + info.region + "/" + info.service + "/aws4_request\n" +
+        sha256::from_string(canonical_request);
+
+    LOG_DEBUG() << req->peer() << " string to sign: " << string_to_sign;
+
+    // TODO request user information here and use user's secret key
+
+    auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
+
+    LOG_DEBUG() << req->peer() << " signing key: " << to_hex(signing_key);
+
+    auto signature =
+        to_hex(hmac_sha256::from_string(signing_key, string_to_sign));
+    if (signature != info.signature) {
+        LOG_DEBUG() << req->peer() << " access denied: signature mismatch";
+        throw command_exception(beast::http::status::forbidden, "AccessDenied",
+                                "Access Denied");
+    }
+
+    return std::move(req);
+}
+
+coro<std::unique_ptr<http_request>>
+auth_request_factory::create(boost::asio::ip::tcp::socket& sock) {
+    auto request = co_await m_base->create(sock);
+
+    LOG_DEBUG() << request->peer() << " pre-auth request: " << *request;
+
+    auto content_sha = request->header("x-amz-content-sha256");
+    if (!content_sha) {
+        throw std::runtime_error(
+            "X-AMZ-Content-SHA256 is required but was not provided");
+    }
+
+    if (*content_sha == "UNSIGNED-PAYLOAD") {
+        co_return std::move(request);
+    }
+
+    if (*content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
+        co_return std::move(request);
+    }
+
+    if (*content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" ||
+        *content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER" ||
+        *content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD" ||
+        *content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD-TRAILER") {
+        co_return chunked_auth_body(sock, request);
+    }
+
+    co_return raw_chunk_auth_body(sock, request);
 }
 
 } // namespace uh::cluster::ep::http

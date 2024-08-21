@@ -1,22 +1,31 @@
-#include "chunked_body.h"
+#include "auth_chunked_body.h"
 
+#include "auth_utils.h"
+#include "common/crypto/hmac.h"
 #include <charconv>
 
 using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-chunked_body::chunked_body(asio::ip::tcp::socket& s,
-                           const beast::flat_buffer& initial)
+auth_chunked_body::auth_chunked_body(asio::ip::tcp::socket& s,
+                                     const beast::flat_buffer& initial,
+                                     const std::string& prelude,
+                                     const std::string& seed,
+                                     const std::string& signing_key)
     : m_socket(s),
-      m_buffer() {
+      m_buffer(),
+      m_signature_prelude(prelude),
+      m_signing_key(signing_key),
+      m_string_to_sign(m_signature_prelude + seed + "\n" + SHA256_EMPTY_STRING +
+                       "\n") {
     m_buffer.reserve(BUFFER_SIZE);
     m_buffer.resize(initial.size());
     asio::buffer_copy(asio::buffer(m_buffer),
                       asio::buffer(initial.data(), initial.size()));
 }
 
-coro<std::size_t> chunked_body::read(std::span<char> dest) {
+coro<std::size_t> auth_chunked_body::read(std::span<char> dest) {
     if (m_end) {
         throw std::runtime_error("trying to read past end of data");
     }
@@ -35,9 +44,24 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
 
         auto count = std::min(m_chunk_size, dest.size() - rv);
         auto read = co_await read_data(dest.subspan(rv, count));
+        m_hash.consume(dest.subspan(rv, read));
 
         rv += read;
         m_chunk_size -= read;
+
+        if (m_chunk_size == 0ull) {
+            m_string_to_sign += m_hash.finalize();
+            m_hash.reset();
+
+            auto signature =
+                hmac_sha256::from_string(m_signing_key, m_string_to_sign);
+            if (signature != m_chunk_signature) {
+                throw std::runtime_error("error in chunk signature");
+            }
+
+            m_string_to_sign = m_signature_prelude + signature + "\n" +
+                               SHA256_EMPTY_STRING + "\n";
+        }
 
         co_await read_nl();
     }
@@ -45,7 +69,7 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
     co_return rv;
 }
 
-coro<void> chunked_body::read_nl() {
+coro<void> auth_chunked_body::read_nl() {
     char nl[2];
     std::size_t offset = 0;
 
@@ -67,7 +91,7 @@ coro<void> chunked_body::read_nl() {
     }
 }
 
-std::size_t chunked_body::find_nl() const {
+std::size_t auth_chunked_body::find_nl() const {
     bool has_cr = false;
 
     for (auto index = 0ull; index < m_buffer.size(); ++index) {
@@ -86,25 +110,39 @@ std::size_t chunked_body::find_nl() const {
     throw std::runtime_error("newline required");
 }
 
-coro<std::size_t> chunked_body::read_chunk_header() {
+coro<std::size_t> auth_chunked_body::read_chunk_header() {
     co_await asio::async_read_until(m_socket, asio::dynamic_buffer(m_buffer),
                                     "\r\n", asio::use_awaitable);
 
     auto pos = find_nl();
 
     std::size_t size = 0ull;
-    auto [_, ec] = std::from_chars(&m_buffer[0], &m_buffer[pos], size, 16);
+    auto [next, ec] = std::from_chars(&m_buffer[0], &m_buffer[pos], size, 16);
 
     if (ec != std::errc()) {
         throw std::runtime_error("from_chars failed: " +
                                  make_error_condition(ec).message());
     }
 
+    // next points to ';'
+    if (next == &m_buffer[pos] || *next != ';') {
+        throw std::runtime_error("chunk header flags missing");
+    }
+
+    ++next;
+    std::string extensions(next, &*(m_buffer.cbegin() + pos));
+    auto parsed = parse_values_string(extensions, ';');
+    if (!parsed.contains("chunk-signature")) {
+        throw std::runtime_error("chunk signature is missing");
+    }
+
+    m_chunk_signature = parsed["chunk-signature"];
+
     m_buffer.erase(m_buffer.begin(), m_buffer.begin() + pos);
     co_return size;
 }
 
-coro<std::size_t> chunked_body::read_data(std::span<char> buffer) {
+coro<std::size_t> auth_chunked_body::read_data(std::span<char> buffer) {
     std::size_t offs = 0ull;
 
     if (m_buffer.size() > 0) {
