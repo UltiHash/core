@@ -40,9 +40,6 @@ public:
               service_factory<deduplicator_interface>(
                   m_ioc, m_config.dedupe_node_connection_count,
                   m_attached_dedupe.get_local_service_interface())),
-          m_dedupe_load_balancer(
-              std::make_shared<
-                  roundrobin_load_balancer<deduplicator_interface>>()),
           m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer),
 
           m_directory(m_ioc, m_config.database),
@@ -51,7 +48,7 @@ public:
           m_server(
               m_config.server,
               std::make_unique<entrypoint_handler>(
-                  command_factory(m_ioc, *m_dedupe_load_balancer, m_directory,
+                  command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
                   std::make_unique<ep::http::default_request_factory>()),
               m_ioc) {
@@ -69,6 +66,10 @@ public:
         m_server.stop();
     }
 
+    ~entrypoint() noexcept {
+        m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
+    }
+
 private:
     entrypoint_config m_config;
 
@@ -83,8 +84,7 @@ private:
 
     service_maintainer<storage_interface> m_storage_maintainer;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
-    std::shared_ptr<roundrobin_load_balancer<deduplicator_interface>>
-        m_dedupe_load_balancer;
+    roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
     global_data_view m_data_view;
     directory m_directory;

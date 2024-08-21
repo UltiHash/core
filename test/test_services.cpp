@@ -24,8 +24,8 @@ template <typename service_interface> struct base_fixture {
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
     std::size_t service_id;
-    std::shared_ptr<service_get_handler<service_interface>> services;
-    std::shared_ptr<roundrobin_load_balancer<service_interface>> load_balancer;
+    service_get_handler<service_interface> services;
+    roundrobin_load_balancer<service_interface> load_balancer;
     uh::cluster::service_maintainer<service_interface> service_maintainer;
 
     constexpr uh::cluster::service_maintainer<service_interface>
@@ -39,9 +39,6 @@ template <typename service_interface> struct base_fixture {
           service_id(get_service_id(
               etcd_client, get_service_string(service_interface::service_role),
               tmp.path())),
-          services(std::make_shared<service_get_handler<service_interface>>()),
-          load_balancer(
-              std::make_shared<roundrobin_load_balancer<service_interface>>()),
           service_maintainer(make_services()) {
         service_maintainer.add_monitor(services);
         service_maintainer.add_monitor(load_balancer);
@@ -51,45 +48,45 @@ template <typename service_interface> struct base_fixture {
 using fixture = base_fixture<deduplicator_interface>;
 
 BOOST_FIXTURE_TEST_CASE(Empty, fixture) {
-    BOOST_CHECK(services->get_services().empty());
-    BOOST_CHECK_THROW(load_balancer->get(), std::exception);
-    BOOST_CHECK_THROW(services->get(static_cast<std::size_t>(0u)),
+    BOOST_CHECK(services.get_services().empty());
+    BOOST_CHECK_THROW(load_balancer.get(), std::exception);
+    BOOST_CHECK_THROW(services.get(static_cast<std::size_t>(0u)),
                       std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
-    BOOST_CHECK(services->get_services().empty());
+    BOOST_CHECK(services.get_services().empty());
 
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        { WAIT_UNTIL_CHECK(1000, services->get_services().size() == 1u); }
+        { WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u); }
     }
 
-    WAIT_UNTIL_CHECK(1000, services->get_services().empty());
+    WAIT_UNTIL_CHECK(1000, services.get_services().empty());
 }
 
 BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
-    BOOST_CHECK(services->get_services().empty());
+    BOOST_CHECK(services.get_services().empty());
 
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        { WAIT_UNTIL_NO_THROW(1000, load_balancer->get()); }
+        { WAIT_UNTIL_NO_THROW(1000, load_balancer.get()); }
     }
 }
 
 BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
-    BOOST_CHECK(services->get_services().empty());
+    BOOST_CHECK(services.get_services().empty());
 
     {
         std::atomic<bool> has_result = false;
         std::thread waiter([&] {
-            load_balancer->get();
+            load_balancer.get();
             has_result = true;
         });
 
@@ -108,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
 BOOST_AUTO_TEST_CASE(FindInitial) {
     {
         fixture f;
-        BOOST_CHECK(f.services->get_services().empty());
+        BOOST_CHECK(f.services.get_services().empty());
     }
 
     {
@@ -118,12 +115,12 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
         auto reg = sr.register_service({.port = 8081});
 
         fixture f;
-        BOOST_CHECK(!f.services->get_services().empty());
+        BOOST_CHECK(!f.services.get_services().empty());
     }
 }
 
 BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
-    BOOST_CHECK(services->get_services().empty());
+    BOOST_CHECK(services.get_services().empty());
 
     std::size_t test_id = 0xdeadbeef;
 
@@ -132,9 +129,9 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
         service_registry sr(DEDUPLICATOR_SERVICE, test_id, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        WAIT_UNTIL_CHECK(1000, services->get_services().size() == 1u);
-        BOOST_CHECK_THROW(services->get(std::size_t{}), std::exception);
-        BOOST_CHECK_NO_THROW(services->get(test_id));
+        WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
+        BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
+        BOOST_CHECK_NO_THROW(services.get(test_id));
     }
 }
 
@@ -153,16 +150,16 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
     auto node_addr_range = pointer_traits::get_global_pointer(
         data_store_config().max_data_store_size, 1, 0);
 
-    BOOST_CHECK(services->get_services().empty());
-    BOOST_CHECK_THROW(services->get(uint128_t()), std::exception);
+    BOOST_CHECK(services.get_services().empty());
+    BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
 
     {
         test::server srv("0.0.0.0", 8081);
         service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        WAIT_UNTIL_CHECK(3000, services->get_services().size() == 1u);
-        BOOST_CHECK_NO_THROW(services->get(uint128_t()));
+        WAIT_UNTIL_CHECK(3000, services.get_services().size() == 1u);
+        BOOST_CHECK_NO_THROW(services.get(uint128_t()));
     }
 
     {
@@ -170,10 +167,10 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
         service_registry sr(STORAGE_SERVICE, 1, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        WAIT_UNTIL_CHECK(3000, services->get_services().size() == 1u);
-        BOOST_CHECK_THROW(services->get(uint128_t()), std::exception);
-        BOOST_CHECK_NO_THROW(services->get(uint128_t(node_addr_range)));
-        BOOST_CHECK_THROW(services->get(uint128_t(node_addr_range * 2)),
+        WAIT_UNTIL_CHECK(3000, services.get_services().size() == 1u);
+        BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
+        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
+        BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)),
                           std::exception);
     }
 
@@ -184,25 +181,25 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
         service_registry sr2(STORAGE_SERVICE, 3, etcd_client);
         auto reg2 = sr2.register_service({.port = 8081});
 
-        WAIT_UNTIL_CHECK(3000, services->get_services().size() == 2u);
-        BOOST_CHECK_THROW(services->get(uint128_t()), std::exception);
-        BOOST_CHECK_NO_THROW(services->get(uint128_t(node_addr_range)));
-        BOOST_CHECK_THROW(services->get(uint128_t(node_addr_range * 2)),
+        WAIT_UNTIL_CHECK(3000, services.get_services().size() == 2u);
+        BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
+        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
+        BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)),
                           std::exception);
-        BOOST_CHECK_NO_THROW(services->get(uint128_t(node_addr_range * 3)));
+        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range * 3)));
     }
 }
 
 BOOST_FIXTURE_TEST_CASE(WaitForDependency, dedup_fixture) {
-    BOOST_CHECK(services->get_services().empty());
-    BOOST_CHECK_THROW(services->get(uint128_t()), std::runtime_error);
+    BOOST_CHECK(services.get_services().empty());
+    BOOST_CHECK_THROW(services.get(uint128_t()), std::runtime_error);
 
     {
         test::server svr("0.0.0.0", 8081);
         service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
-        WAIT_UNTIL_NO_THROW(1000, services->get(uint128_t()));
+        WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
     }
 }
 

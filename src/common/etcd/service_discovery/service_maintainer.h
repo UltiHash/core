@@ -63,19 +63,25 @@ template <typename service_interface> struct service_maintainer {
     }
     ~service_maintainer() { m_watcher.Cancel(); }
 
-    void
-    add_monitor(std::shared_ptr<service_monitor<service_interface>> monitor) {
+    void add_monitor(service_monitor<service_interface>& monitor) {
 
         std::lock_guard l(m_mutex);
         for (const auto& [id, cl] : m_clients) {
-            monitor->add_client(id, cl);
+            monitor.add_client(id, cl);
             for (const auto& se = m_detected_service_endpoints.at(id);
                  const auto& [attr_name, attr_val] : se.attributes) {
-                monitor->add_attribute(cl, attr_name, attr_val);
+                monitor.add_attribute(cl, attr_name, attr_val);
             }
         }
 
-        m_monitors.emplace_back(std::move(monitor));
+        m_monitors.emplace_back(monitor);
+    }
+
+    void remove_monitor(service_monitor<service_interface>& monitor) {
+        m_monitors.remove_if(
+            [&monitor](const service_monitor<service_interface>& m) {
+                return &monitor == &m;
+            });
     }
 
 private:
@@ -125,7 +131,7 @@ private:
         if (auto cl = m_clients.find(id);
             cl != m_clients.cend() and attribute.has_value()) {
             for (auto& m : m_monitors) {
-                m->add_attribute(cl->second, *attribute, value);
+                m.get().add_attribute(cl->second, *attribute, value);
             }
         } else if (cl == m_clients.cend() and
                    itr->second.attributes.contains(ENDPOINT_HOST) and
@@ -142,10 +148,11 @@ private:
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
 
             for (auto& m : m_monitors) {
-                m->add_client(client_itr->first, client_itr->second);
+                m.get().add_client(client_itr->first, client_itr->second);
                 for (const auto& [attr_name, attr_val] :
                      itr->second.attributes) {
-                    m->add_attribute(client_itr->second, attr_name, attr_val);
+                    m.get().add_attribute(client_itr->second, attr_name,
+                                          attr_val);
                 }
             }
         }
@@ -173,7 +180,7 @@ private:
             }
             try {
                 for (auto& m : m_monitors) {
-                    m->remove_attribute(it->second, attr);
+                    m.get().remove_attribute(it->second, attr);
                 }
             } catch (...) {
             }
@@ -185,7 +192,7 @@ private:
 
             try {
                 for (auto& m : m_monitors) {
-                    m->remove_client(id, it->second);
+                    m.get().remove_client(id, it->second);
                 }
             } catch (...) {
             }
@@ -202,7 +209,8 @@ private:
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
-    std::list<std::shared_ptr<service_monitor<service_interface>>> m_monitors;
+    std::list<std::reference_wrapper<service_monitor<service_interface>>>
+        m_monitors;
 };
 
 } // namespace uh::cluster
