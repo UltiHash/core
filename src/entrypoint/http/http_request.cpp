@@ -8,6 +8,24 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
+coro<read_request_result> read_beast_request(asio::ip::tcp::socket& sock) {
+
+    beast::http::request_parser<beast::http::empty_body> parser;
+    beast::flat_buffer buffer;
+    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
+
+    co_await beast::http::async_read_header(sock, buffer, parser,
+                                            asio::use_awaitable);
+
+    auto req = std::move(parser.get());
+    if (req.base().version() != 11) {
+        throw std::runtime_error(
+            "bad http version. support exists only for HTTP 1.1.\n");
+    }
+
+    co_return read_request_result{req, buffer};
+}
+
 http_request::http_request(beast::http::request<http::empty_body>&& req,
                            std::unique_ptr<ep::http::body> body,
                            boost::asio::ip::tcp::endpoint peer)
