@@ -5,6 +5,7 @@
 #include "common/coroutines/context.h"
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
+#include "entrypoint/http/body.h"
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -14,12 +15,6 @@
 namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 typedef http::verb method;
-
-class transport_decoder {
-public:
-    virtual ~transport_decoder() = default;
-    virtual coro<std::size_t> read(std::span<char> dest) = 0;
-};
 
 class http_request {
 public:
@@ -78,7 +73,7 @@ private:
 
     boost::asio::ip::tcp::socket& m_stream;
     http::request_parser<http::empty_body>::value_type m_req;
-    std::unique_ptr<transport_decoder> m_decoder;
+    std::unique_ptr<ep::http::body> m_body;
 
     std::string m_bucket_id{};
     std::string m_object_key{};
