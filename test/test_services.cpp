@@ -24,9 +24,9 @@ template <typename service_interface> struct base_fixture {
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
     std::size_t service_id;
-    uh::cluster::service_maintainer<service_interface> service_maintainer;
     service_get_handler<service_interface> services;
     roundrobin_load_balancer<service_interface> load_balancer;
+    uh::cluster::service_maintainer<service_interface> service_maintainer;
 
     constexpr uh::cluster::service_maintainer<service_interface>
     make_services() {
@@ -146,6 +146,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, dedup_fixture) {
      * - each nodes storage offset is determined by product of the node's id
      *   and max_data_store_size
      */
+
     auto node_addr_range = pointer_traits::get_global_pointer(
         data_store_config().max_data_store_size, 1, 0);
 

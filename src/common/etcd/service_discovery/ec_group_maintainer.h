@@ -24,6 +24,13 @@ struct ec_group_maintainer : public service_monitor<storage_interface> {
         m_monitors.emplace_back(monitor);
     }
 
+    void remove_monitor(service_monitor<storage_group>& monitor) {
+        m_monitors.remove_if(
+            [&monitor](const service_monitor<storage_group>& m) {
+                return &monitor == &m;
+            });
+    }
+
 private:
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& cl) override {

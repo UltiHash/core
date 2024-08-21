@@ -75,6 +75,7 @@ public:
     }
 
     void teardown() {
+
         for (const auto& node : m_storage_instances) {
             node->stop();
         }
@@ -86,6 +87,9 @@ public:
         m_threads.clear();
         m_storage_instances.clear();
         m_temp_dirs.clear();
+        std::string current_id_key =
+            etcd_current_id_prefix_key + get_service_string(STORAGE_SERVICE);
+        m_etcd_client.rm(current_id_key);
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
@@ -97,17 +101,14 @@ private:
         return service_cfg;
     }
 
-    global_data_view_config m_gdv_config;
-    boost::asio::io_context m_ioc;
-
-    etcd::SyncClient m_etcd_client;
     std::vector<temp_directory> m_temp_dirs;
+    etcd::SyncClient m_etcd_client;
+    global_data_view_config m_gdv_config;
     service_config m_service_cfg;
-    service_maintainer<storage_interface> m_storage_services;
-
-    std::vector<std::unique_ptr<storage>> m_storage_instances;
+    boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
-
+    std::vector<std::unique_ptr<storage>> m_storage_instances;
+    service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;
 
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
