@@ -54,30 +54,32 @@ make_body(const http::request_parser<http::empty_body>::value_type& req,
 coro<std::unique_ptr<http_request>>
 http_request::create(asio::ip::tcp::socket& s) {
 
-    http::request_parser<http::empty_body> req;
+    http::request_parser<http::empty_body> parser;
     boost::beast::flat_buffer buffer;
-    req.body_limit((std::numeric_limits<std::uint64_t>::max)());
+    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
-    co_await beast::http::async_read_header(s, buffer, req,
+    co_await beast::http::async_read_header(s, buffer, parser,
                                             asio::use_awaitable);
 
-    co_return std::unique_ptr<http_request>(
-        new http_request(s, std::move(req.get()), std::move(buffer)));
-}
-
-http_request::http_request(
-    boost::asio::ip::tcp::socket& sock,
-    http::request_parser<http::empty_body>::value_type&& req,
-    beast::flat_buffer&& initial)
-    : m_req(std::move(req)),
-      m_body(make_body(m_req, sock, std::move(initial))),
-      m_peer(sock.remote_endpoint()),
-      m_ctx() {
-
+    auto req = std::move(parser.get());
     if (req.base().version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
     }
+
+    auto body = make_body(req, s, std::move(buffer));
+
+    co_return std::unique_ptr<http_request>(
+        new http_request(std::move(req), std::move(body), s.remote_endpoint()));
+}
+
+http_request::http_request(
+    http::request_parser<http::empty_body>::value_type&& req,
+    std::unique_ptr<ep::http::body> body, boost::asio::ip::tcp::endpoint peer)
+    : m_req(std::move(req)),
+      m_body(std::move(body)),
+      m_peer(peer),
+      m_ctx() {
 
     auto target = m_req.target();
     auto query_index = target.find('?');
