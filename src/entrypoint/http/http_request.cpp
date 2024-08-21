@@ -18,7 +18,7 @@ namespace uh::cluster {
 namespace {
 
 std::unique_ptr<ep::http::body>
-make_body(const http::request_parser<http::empty_body>::value_type& req,
+make_body(const beast::http::request<http::empty_body>& req,
           asio::ip::tcp::socket& stream, beast::flat_buffer&& initial) {
 
     /* Amazon will upload data using chunked transfer without explicitly setting
@@ -73,9 +73,9 @@ http_request::create(asio::ip::tcp::socket& s) {
         new http_request(std::move(req), std::move(body), s.remote_endpoint()));
 }
 
-http_request::http_request(
-    http::request_parser<http::empty_body>::value_type&& req,
-    std::unique_ptr<ep::http::body> body, boost::asio::ip::tcp::endpoint peer)
+http_request::http_request(beast::http::request<http::empty_body>&& req,
+                           std::unique_ptr<ep::http::body> body,
+                           boost::asio::ip::tcp::endpoint peer)
     : m_req(std::move(req)),
       m_body(std::move(body)),
       m_peer(peer),

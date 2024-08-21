@@ -61,11 +61,11 @@ public:
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
-    http_request(http::request_parser<http::empty_body>::value_type&& req,
+    http_request(boost::beast::http::request<http::empty_body>&& req,
                  std::unique_ptr<ep::http::body> body,
                  boost::asio::ip::tcp::endpoint peer);
 
-    http::request_parser<http::empty_body>::value_type m_req;
+    boost::beast::http::request<http::empty_body> m_req;
     std::unique_ptr<ep::http::body> m_body;
     boost::asio::ip::tcp::endpoint m_peer;
 
