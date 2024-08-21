@@ -7,10 +7,11 @@ global_data_view::global_data_view(
     : m_io_service(ioc),
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2),
+      m_service_maintainer(storage_maintainer),
       m_ec_maintainer(m_io_service, 1, 0),
       m_basic_getter(1, 0) {
 
-    storage_maintainer.add_monitor(m_ec_maintainer);
+    m_service_maintainer.add_monitor(m_ec_maintainer);
     m_ec_maintainer.add_monitor(m_load_balancer);
     m_ec_maintainer.add_monitor(m_basic_getter);
     m_load_balancer.get();
@@ -167,6 +168,11 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
 [[nodiscard]] std::size_t
 global_data_view::get_storage_service_connection_count() const noexcept {
     return m_config.storage_service_connection_count;
+}
+global_data_view::~global_data_view() noexcept {
+    m_ec_maintainer.remove_monitor(m_load_balancer);
+    m_ec_maintainer.remove_monitor(m_basic_getter);
+    m_service_maintainer.remove_monitor(m_ec_maintainer);
 }
 
 [[nodiscard]] coro<address> global_data_view::link(context& ctx,

@@ -170,11 +170,14 @@ public:
     [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 
+    ~global_data_view() noexcept;
+
 private:
     boost::asio::io_context& m_io_service;
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
+    service_maintainer<storage_interface>& m_service_maintainer;
     ec_group_maintainer m_ec_maintainer;
     ec_load_balancer m_load_balancer;
     ec_get_handler m_basic_getter;

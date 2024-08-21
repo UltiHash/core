@@ -20,7 +20,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     BOOST_CHECK_THROW(gdv->read_fragment(ctx,
                                          std::numeric_limits<uint64_t>::max(),
                                          8 * KIBI_BYTE),
-                      std::runtime_error);
+                      uh::cluster::error_exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
@@ -62,7 +62,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
                           gdv->read_address(ctx, result_buffer.data(), addr),
                           boost::asio::use_future)
                           .get(),
-                      std::runtime_error);
+                      uh::cluster::error_exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
