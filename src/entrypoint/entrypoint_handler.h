@@ -37,7 +37,7 @@ public:
                 auto req = co_await m_factory->create(s);
                 LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
-                resp = co_await handle_request(*req);
+                resp = co_await handle_request(s, *req);
                 metric<success>::increase(1);
                 keep_alive = true;
             } catch (const command_exception& e) {
@@ -78,7 +78,8 @@ public:
         s.close();
     }
 
-    coro<http_response> handle_request(http_request& req) const {
+    coro<http_response> handle_request(boost::asio::ip::tcp::socket& s,
+                                       http_request& req) const {
 
         auto cmd = m_command_factory.create(req);
 
@@ -87,8 +88,7 @@ public:
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
             LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
-            co_await write(req.socket(),
-                           http_response(http::status::continue_));
+            co_await write(s, http_response(http::status::continue_));
         }
 
         co_return co_await cmd->handle(req);
