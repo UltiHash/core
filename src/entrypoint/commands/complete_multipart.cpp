@@ -88,17 +88,16 @@ coro<http_response> complete_multipart::handle(http_request& req) {
                .etag = etag,
                .mime = info.mime};
 
-    object old_obj;
-    bool old_obj_exists;
+    std::optional<object> old_obj;
     if constexpr (m_enable_refcount) {
-        old_obj_exists = co_await get_old_object(req, old_obj);
+        old_obj = co_await get_old_object(req);
     }
 
     co_await m_directory.put_object(req.bucket(), obj);
 
     if constexpr (m_enable_refcount) {
-        if (old_obj_exists) {
-            co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+        if (old_obj.has_value()) {
+            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
         }
     }
 
@@ -118,14 +117,14 @@ coro<http_response> complete_multipart::handle(http_request& req) {
     co_await m_uploads.remove_upload(upload_id);
     co_return res;
 }
-coro<bool> complete_multipart::get_old_object(http_request& req,
-                                              object& old_obj) {
+coro<std::optional<object>>
+complete_multipart::get_old_object(http_request& req) {
+
     try {
-        old_obj =
-            co_await m_directory.get_object(req.bucket(), req.object_key());
-        co_return true;
+        co_return co_await m_directory.get_object(req.bucket(),
+                                                  req.object_key());
     } catch (command_exception&) {
-        co_return false;
+        co_return std::nullopt;
     }
 }
 

@@ -21,7 +21,7 @@ public:
 private:
     static void validate_internal(const upload_info& info,
                                   std::span<char> body);
-    coro<bool> get_old_object(http_request& req, object& old_obj);
+    coro<std::optional<object>> get_old_object(http_request& req);
 
     directory& m_directory;
     global_data_view& m_gdv;

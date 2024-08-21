@@ -91,23 +91,21 @@ coro<http_response> put_object::handle(http_request& req) {
                    .etag = tag,
                    .mime = req.header("Content-Type")};
 
-        object old_obj;
-        bool old_obj_exists;
+        std::optional<object> old_obj;
         if constexpr (m_enable_refcount) {
             try {
                 old_obj =
                     co_await m_dir.get_object(req.bucket(), req.object_key());
-                old_obj_exists = true;
             } catch (command_exception&) {
-                old_obj_exists = false;
             }
         }
 
         co_await m_dir.put_object(req.bucket(), obj);
 
         if constexpr (m_enable_refcount) {
-            if (old_obj_exists) {
-                co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+            if (old_obj.has_value()) {
+                co_await m_gdv.unlink(req.context(),
+                                      old_obj.value().addr.value());
             }
         }
 
