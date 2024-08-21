@@ -14,7 +14,7 @@ namespace uh::cluster {
 
 namespace {
 
-class raw_decoder : public transport_decoder {
+class raw_decoder : public ep::http::body {
 public:
     raw_decoder(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
                 std::size_t length)
@@ -48,10 +48,9 @@ private:
     std::size_t m_length;
 };
 
-class chunked_transport_decoder : public transport_decoder {
+class chunked_body : public ep::http::body {
 public:
-    chunked_transport_decoder(asio::ip::tcp::socket& s,
-                              const beast::flat_buffer& initial)
+    chunked_body(asio::ip::tcp::socket& s, const beast::flat_buffer& initial)
         : m_socket(s),
           m_buffer() {
         m_buffer.reserve(BUFFER_SIZE);
@@ -179,9 +178,9 @@ private:
     bool m_end = false;
 };
 
-std::unique_ptr<transport_decoder>
-make_decoder(const http::request_parser<http::empty_body>::value_type& req,
-             asio::ip::tcp::socket& stream, beast::flat_buffer&& initial) {
+std::unique_ptr<ep::http::body>
+make_body(const http::request_parser<http::empty_body>::value_type& req,
+          asio::ip::tcp::socket& stream, beast::flat_buffer&& initial) {
 
     /* Amazon will upload data using chunked transfer without explicitly setting
      * the `Transfer-Encoding` header for signed data. This also prevents us
@@ -198,8 +197,7 @@ make_decoder(const http::request_parser<http::empty_body>::value_type& req,
          content_sha->value() == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD" ||
          content_sha->value() ==
              "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD-TRAILER")) {
-        return std::make_unique<chunked_transport_decoder>(stream,
-                                                           std::move(initial));
+        return std::make_unique<chunked_body>(stream, std::move(initial));
     }
 
     std::size_t length = 0ull;
@@ -234,7 +232,7 @@ http_request::http_request(
     beast::flat_buffer&& initial)
     : m_stream(stream),
       m_req(std::move(req)),
-      m_decoder(make_decoder(m_req, m_stream, std::move(initial))),
+      m_body(make_body(m_req, m_stream, std::move(initial))),
       m_ctx() {
 
     if (req.base().version() != 11) {
@@ -276,7 +274,7 @@ const std::string& http_request::bucket() const { return m_bucket_id; }
 const std::string& http_request::object_key() const { return m_object_key; }
 
 coro<std::size_t> http_request::read_body(std::span<char> buffer) {
-    return m_decoder->read(buffer);
+    return m_body->read(buffer);
 }
 
 std::optional<std::string> http_request::query(const std::string& name) const {
