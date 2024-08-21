@@ -29,8 +29,20 @@ const EVP_MD* evp_algorithm(hash_algorithm algo) {
 } // namespace
 
 hash_base::hash_base(hash_algorithm algo)
-    : m_ctx(EVP_MD_CTX_create(), EVP_MD_CTX_free) {
+    : m_algo(algo),
+      m_ctx(EVP_MD_CTX_create(), EVP_MD_CTX_free) {
     if (!EVP_DigestInit_ex(m_ctx.get(), evp_algorithm(algo), nullptr)) {
+        throw_from_error("error on digest initialization");
+    }
+}
+
+void hash_base::reset() {
+
+    if (!EVP_MD_CTX_reset(m_ctx.get())) {
+        throw_from_error("reset failed");
+    }
+
+    if (!EVP_DigestInit_ex(m_ctx.get(), evp_algorithm(m_algo), nullptr)) {
         throw_from_error("error on digest initialization");
     }
 }
