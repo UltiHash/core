@@ -16,6 +16,14 @@ namespace uh::cluster {
 namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 typedef http::verb method;
 
+struct read_request_result {
+    boost::beast::http::request<boost::beast::http::empty_body> body;
+    boost::beast::flat_buffer buffer;
+};
+
+coro<read_request_result>
+read_beast_request(boost::asio::ip::tcp::socket& sock);
+
 class http_request {
 public:
     http_request(boost::beast::http::request<http::empty_body>&& req,

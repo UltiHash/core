@@ -11,12 +11,10 @@ using namespace boost::asio;
 
 namespace uh::cluster::ep::http {
 
-namespace http = boost::beast::http; // from <boost/beast/http.hpp>
-
 namespace {
 
 std::unique_ptr<ep::http::body>
-make_body(const beast::http::request<http::empty_body>& req,
+make_body(const beast::http::request<beast::http::empty_body>& req,
           asio::ip::tcp::socket& sock, beast::flat_buffer&& initial) {
 
     /* Amazon will upload data using chunked transfer without explicitly setting
@@ -52,19 +50,7 @@ make_body(const beast::http::request<http::empty_body>& req,
 coro<std::unique_ptr<http_request>>
 default_request_factory::create(ip::tcp::socket& sock) {
 
-    http::request_parser<http::empty_body> parser;
-    boost::beast::flat_buffer buffer;
-    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-
-    co_await beast::http::async_read_header(sock, buffer, parser,
-                                            asio::use_awaitable);
-
-    auto req = std::move(parser.get());
-    if (req.base().version() != 11) {
-        throw std::runtime_error(
-            "bad http version. support exists only for HTTP 1.1.\n");
-    }
-
+    auto [req, buffer] = co_await read_beast_request(sock);
     auto body = make_body(req, sock, std::move(buffer));
 
     co_return std::unique_ptr<http_request>(new http_request(
