@@ -66,6 +66,10 @@ public:
         m_server.stop();
     }
 
+    ~entrypoint() noexcept {
+        m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
+    }
+
 private:
     entrypoint_config m_config;
 

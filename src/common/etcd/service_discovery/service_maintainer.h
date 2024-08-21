@@ -77,6 +77,13 @@ template <typename service_interface> struct service_maintainer {
         m_monitors.emplace_back(monitor);
     }
 
+    void remove_monitor(service_monitor<service_interface>& monitor) {
+        m_monitors.remove_if(
+            [&monitor](const service_monitor<service_interface>& m) {
+                return &monitor == &m;
+            });
+    }
+
 private:
     void handle_state_changes(const etcd::Response& response) {
 
