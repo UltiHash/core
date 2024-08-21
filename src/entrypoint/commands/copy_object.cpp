@@ -56,12 +56,16 @@ coro<void> copy_object::copy_internal(http_request& req,
 
     if (auto ifmatch = req.header("x-amz-copy-source-if-match"); ifmatch) {
         if (src_obj.etag == *ifmatch) {
-            co_await m_gdv.link(req.context(), src_obj.addr.value());
+            if constexpr (m_enable_refcount) {
+                co_await m_gdv.link(req.context(), src_obj.addr.value());
+            }
             co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
                                              req.object_key());
         }
     } else {
-        co_await m_gdv.link(req.context(), src_obj.addr.value());
+        if constexpr (m_enable_refcount) {
+            co_await m_gdv.link(req.context(), src_obj.addr.value());
+        }
         co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
                                          req.object_key());
     }

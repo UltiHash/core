@@ -89,12 +89,17 @@ coro<http_response> complete_multipart::handle(http_request& req) {
                .mime = info.mime};
 
     object old_obj;
-    bool old_obj_exists = co_await get_old_object(req, old_obj);
+    bool old_obj_exists;
+    if constexpr (m_enable_refcount) {
+        old_obj_exists = co_await get_old_object(req, old_obj);
+    }
 
     co_await m_directory.put_object(req.bucket(), obj);
 
-    if (old_obj_exists) {
-        co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+    if constexpr (m_enable_refcount) {
+        if (old_obj_exists) {
+            co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+        }
     }
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);

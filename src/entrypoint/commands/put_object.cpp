@@ -93,17 +93,22 @@ coro<http_response> put_object::handle(http_request& req) {
 
         object old_obj;
         bool old_obj_exists;
-        try {
-            old_obj = co_await m_dir.get_object(req.bucket(), req.object_key());
-            old_obj_exists = true;
-        } catch (command_exception&) {
-            old_obj_exists = false;
+        if constexpr (m_enable_refcount) {
+            try {
+                old_obj =
+                    co_await m_dir.get_object(req.bucket(), req.object_key());
+                old_obj_exists = true;
+            } catch (command_exception&) {
+                old_obj_exists = false;
+            }
         }
 
         co_await m_dir.put_object(req.bucket(), obj);
 
-        if (old_obj_exists) {
-            co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+        if constexpr (m_enable_refcount) {
+            if (old_obj_exists) {
+                co_await m_gdv.unlink(req.context(), old_obj.addr.value());
+            }
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
