@@ -32,13 +32,7 @@ public:
 
     coro<std::size_t> read_body(std::span<char> buffer);
 
-    [[nodiscard]] boost::asio::ip::tcp::socket& socket() const {
-        return m_stream;
-    }
-
-    boost::asio::ip::tcp::endpoint peer() const {
-        return m_stream.remote_endpoint();
-    }
+    boost::asio::ip::tcp::endpoint peer() const { return m_peer; }
 
     /** Payload that was read while reading the request headers.
      */
@@ -71,9 +65,9 @@ private:
                  http::request_parser<http::empty_body>::value_type&& req,
                  boost::beast::flat_buffer&& initial);
 
-    boost::asio::ip::tcp::socket& m_stream;
     http::request_parser<http::empty_body>::value_type m_req;
     std::unique_ptr<ep::http::body> m_body;
+    boost::asio::ip::tcp::endpoint m_peer;
 
     std::string m_bucket_id{};
     std::string m_object_key{};

@@ -66,12 +66,12 @@ http_request::create(asio::ip::tcp::socket& s) {
 }
 
 http_request::http_request(
-    boost::asio::ip::tcp::socket& stream,
+    boost::asio::ip::tcp::socket& sock,
     http::request_parser<http::empty_body>::value_type&& req,
     beast::flat_buffer&& initial)
-    : m_stream(stream),
-      m_req(std::move(req)),
-      m_body(make_body(m_req, m_stream, std::move(initial))),
+    : m_req(std::move(req)),
+      m_body(make_body(m_req, sock, std::move(initial))),
+      m_peer(sock.remote_endpoint()),
       m_ctx() {
 
     if (req.base().version() != 11) {
