@@ -14,14 +14,14 @@ struct ec_group_maintainer : public service_monitor<storage_interface> {
         : m_scheme(data_nodes, ec_nodes),
           m_ioc(ioc) {}
 
-    void add_monitor(service_monitor<storage_group>& monitor) {
+    void add_monitor(std::shared_ptr<service_monitor<storage_group>> monitor) {
 
         std::lock_guard l(m_mutex);
         for (const auto& [id, cl] : m_ec_groups) {
-            monitor.add_client(id, cl);
+            monitor->add_client(id, cl);
         }
 
-        m_monitors.emplace_back(monitor);
+        m_monitors.emplace_back(std::move(monitor));
     }
 
 private:
@@ -42,7 +42,7 @@ private:
         it->second->insert(id, nid, cl);
 
         for (auto& m : m_monitors) {
-            m.get().add_client(gid, it->second);
+            m->add_client(gid, it->second);
         }
     }
 
@@ -57,7 +57,7 @@ private:
             it->second->remove(id, nid);
 
             for (auto& m : m_monitors) {
-                m.get().remove_client(gid, it->second);
+                m->remove_client(gid, it->second);
             }
         }
     }
@@ -66,8 +66,7 @@ private:
 
     ec_scheme m_scheme;
     std::map<size_t, std::shared_ptr<storage_group>> m_ec_groups;
-    std::list<std::reference_wrapper<service_monitor<storage_group>>>
-        m_monitors;
+    std::list<std::shared_ptr<service_monitor<storage_group>>> m_monitors;
     boost::asio::io_context& m_ioc;
 };
 } // namespace uh::cluster

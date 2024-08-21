@@ -175,9 +175,9 @@ private:
     global_data_view_config m_config;
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
-    ec_group_maintainer m_ec_maintainer;
-    ec_load_balancer m_load_balancer;
-    ec_get_handler m_basic_getter;
+    std::shared_ptr<ec_group_maintainer> m_ec_maintainer;
+    std::shared_ptr<ec_load_balancer> m_load_balancer;
+    std::shared_ptr<ec_get_handler> m_basic_getter;
 };
 
 } // end namespace uh::cluster

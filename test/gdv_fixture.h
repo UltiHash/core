@@ -108,8 +108,8 @@ private:
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
     std::vector<std::unique_ptr<storage>> m_storage_instances;
-    std::shared_ptr<global_data_view> m_gdv;
     service_maintainer<storage_interface> m_storage_services;
+    std::shared_ptr<global_data_view> m_gdv;
 
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 };
