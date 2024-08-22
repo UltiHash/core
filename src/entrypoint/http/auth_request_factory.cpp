@@ -88,7 +88,7 @@ read_auth_info(boost::asio::ip::tcp::socket& sock,
     auto auth_header = headers.find("Authorization");
     if (auth_header == headers.end()) {
         LOG_DEBUG() << sock.remote_endpoint()
-                    << " no Authorization header provided";
+                    << ": no Authorization header provided";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
@@ -97,7 +97,7 @@ read_auth_info(boost::asio::ip::tcp::socket& sock,
         return parse_auth_header(auth_header->value());
     } catch (const std::exception& e) {
         LOG_DEBUG() << sock.remote_endpoint()
-                    << "error parsing authorization header: " << e.what();
+                    << ": error parsing authorization header: " << e.what();
         throw command_exception(
             beast::http::status::forbidden, "AuthorizationHeaderMalformed",
             "The authorization header that you provided is not valid.");
@@ -112,31 +112,34 @@ raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
 
     auto canonical_request = make_canonical_request(req.headers, info);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " canonical request: " << canonical_request;
+                << ": canonical request: " << canonical_request;
 
     auto string_to_sign =
         std::string("AWS4-HMAC-SHA256\n") + require(req.headers, "x-amz-date") +
         "\n" + info.date + "/" + info.region + "/" + info.service +
         "/aws4_request\n" + sha256::from_string(canonical_request);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " string to sign: " << string_to_sign;
+                << ": string to sign: " << string_to_sign;
 
     // TODO request user information here and use user's secret key
 
     auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " signing key: " << to_hex(signing_key);
+                << ": signing key: " << to_hex(signing_key);
 
     auto signature =
         to_hex(hmac_sha256::from_string(signing_key, string_to_sign));
     if (signature != info.signature) {
         LOG_DEBUG() << sock.remote_endpoint()
-                    << " access denied: signature mismatch";
+                    << ": access denied: signature mismatch";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
-    auto content_length = std::stoul(req.headers.at("Content-Length"));
+    std::size_t content_length = 0ull;
+    if (auto cl = req.headers.find("Content-Length"); cl != req.headers.end()) {
+        content_length = std::stoul(cl->value());
+    }
 
     // TODO insert check for payload signature
     return std::make_unique<http_request>(
@@ -158,34 +161,38 @@ chunked_auth_body(boost::asio::ip::tcp::socket& sock,
 
     auto canonical_request = make_canonical_request(req.headers, info);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " canonical request: " << canonical_request;
+                << ": canonical request: " << canonical_request;
 
-    auto string_to_sign =
-        std::string("AWS4-HMAC-SHA256\n") + require(req.headers, "x-amz-date") +
-        "\n" + info.date + "/" + info.region + "/" + info.service +
-        "/aws4_request\n" + sha256::from_string(canonical_request);
+    auto prelude = std::string("AWS4-HMAC-SHA256\n") +
+                   require(req.headers, "x-amz-date") + "\n" + info.date + "/" +
+                   info.region + "/" + info.service + "/aws4_request\n";
+
+    auto string_to_sign = prelude + sha256::from_string(canonical_request);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " string to sign: " << string_to_sign;
+                << ": string to sign: " << string_to_sign;
 
     // TODO request user information here and use user's secret key
 
+    prelude = std::string("AWS4-HMAC-SHA256-PAYLOAD\n") +
+              require(req.headers, "x-amz-date") + "\n" + info.date + "/" +
+              info.region + "/" + info.service + "/aws4_request\n";
     auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
     LOG_DEBUG() << sock.remote_endpoint()
-                << " signing key: " << to_hex(signing_key);
+                << ": signing key: " << to_hex(signing_key);
 
     auto signature =
         to_hex(hmac_sha256::from_string(signing_key, string_to_sign));
     if (signature != info.signature) {
         LOG_DEBUG() << sock.remote_endpoint()
-                    << " access denied: signature mismatch";
+                    << ": access denied: signature mismatch";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
     return std::make_unique<http_request>(
         std::move(req.headers),
-        std::make_unique<auth_chunked_body>(sock, std::move(req.buffer), "", "",
-                                            signing_key),
+        std::make_unique<auth_chunked_body>(sock, std::move(req.buffer),
+                                            prelude, signature, signing_key),
         sock.remote_endpoint());
 }
 
@@ -193,12 +200,12 @@ coro<std::unique_ptr<http_request>>
 auth_request_factory::create(boost::asio::ip::tcp::socket& sock) {
     auto req = co_await read_beast_request(sock);
 
-    // TODO LOG_DEBUG() << sock.remote_endpoint() << " pre-auth request: " <<
-    // *request;
+    LOG_DEBUG() << sock.remote_endpoint()
+                << ": pre-auth request: " << req.headers;
 
     auto content_sha = require(req.headers, "x-amz-content-sha256");
     if (content_sha == "UNSIGNED-PAYLOAD") {
-        // TODO co_return std::move(request);
+        co_return raw_chunk_auth_body(sock, req);
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {

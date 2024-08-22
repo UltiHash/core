@@ -2,6 +2,8 @@
 
 #include "auth_utils.h"
 #include "common/crypto/hmac.h"
+#include "common/telemetry/log.h"
+#include "common/utils/strings.h"
 #include <charconv>
 
 using namespace boost;
@@ -23,6 +25,8 @@ auth_chunked_body::auth_chunked_body(asio::ip::tcp::socket& s,
     m_buffer.resize(initial.size());
     asio::buffer_copy(asio::buffer(m_buffer),
                       asio::buffer(initial.data(), initial.size()));
+
+    LOG_DEBUG() << "seed: " << seed;
 }
 
 coro<std::size_t> auth_chunked_body::read(std::span<char> dest) {
@@ -39,6 +43,17 @@ coro<std::size_t> auth_chunked_body::read(std::span<char> dest) {
 
         if (m_chunk_size == 0ull) {
             m_end = true;
+
+            m_string_to_sign += SHA256_EMPTY_STRING;
+            LOG_DEBUG() << "final chunked string to sign: " << m_string_to_sign;
+            auto signature = to_hex(
+                hmac_sha256::from_string(m_signing_key, m_string_to_sign));
+            if (signature != m_chunk_signature) {
+                throw std::runtime_error("chunk signature mismatch: '" +
+                                         signature + "' != '" +
+                                         m_chunk_signature + "'");
+            }
+
             break;
         }
 
@@ -52,11 +67,14 @@ coro<std::size_t> auth_chunked_body::read(std::span<char> dest) {
         if (m_chunk_size == 0ull) {
             m_string_to_sign += m_hash.finalize();
             m_hash.reset();
+            LOG_DEBUG() << "chunked string to sign: " << m_string_to_sign;
 
-            auto signature =
-                hmac_sha256::from_string(m_signing_key, m_string_to_sign);
+            auto signature = to_hex(
+                hmac_sha256::from_string(m_signing_key, m_string_to_sign));
             if (signature != m_chunk_signature) {
-                throw std::runtime_error("error in chunk signature");
+                throw std::runtime_error("chunk signature mismatch: '" +
+                                         signature + "' != '" +
+                                         m_chunk_signature + "'");
             }
 
             m_string_to_sign = m_signature_prelude + signature + "\n" +
@@ -130,6 +148,7 @@ coro<std::size_t> auth_chunked_body::read_chunk_header() {
     }
 
     ++next;
+    // TODO return all parts of chunk header (or at least signature)
     std::string extensions(next, &*(m_buffer.cbegin() + pos));
     auto parsed = parse_values_string(extensions, ';');
     if (!parsed.contains("chunk-signature")) {
