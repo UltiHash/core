@@ -68,10 +68,7 @@ std::string operator+(std::string fst, std::string_view snd) {
     return fst + std::string(snd);
 }
 
-std::unique_ptr<http_request>
-raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
-                    std::unique_ptr<http_request>& req) {
-
+auth_info read_auth_info(const http_request& req) {
     auto auth_header = req->header("Authorization");
     if (!auth_header) {
         LOG_DEBUG() << req->peer() << " no Authorization header provided";
@@ -79,15 +76,20 @@ raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
                                 "Access Denied");
     }
 
-    auth_info info;
     try {
-        info = parse_auth_header(std::move(*auth_header));
+        return parse_auth_header(std::move(*auth_header));
     } catch (const std::exception&) {
         throw command_exception(
             beast::http::status::forbidden, "AuthorizationHeaderMalformed",
             "The authorization header that you provided is not valid.");
     }
+}
 
+std::unique_ptr<http_request>
+raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
+                    std::unique_ptr<http_request>& req) {
+
+    auto info = read_auth_info(*req);
     auto canonical_request = make_canonical_request(*req, info);
     LOG_DEBUG() << req->peer() << " canonical request: " << canonical_request;
 
@@ -119,22 +121,7 @@ std::unique_ptr<http_request>
 chunked_auth_body(boost::asio::ip::tcp::socket& sock,
                   std::unique_ptr<http_request>& req) {
 
-    auto auth_header = req->header("Authorization");
-    if (!auth_header) {
-        LOG_DEBUG() << req->peer() << " no Authorization header provided";
-        throw command_exception(beast::http::status::forbidden, "AccessDenied",
-                                "Access Denied");
-    }
-
-    auth_info info;
-    try {
-        info = parse_auth_header(std::move(*auth_header));
-    } catch (const std::exception&) {
-        throw command_exception(
-            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-            "The authorization header that you provided is not valid.");
-    }
-
+    auto info = read_auth_info(*req);
     if (!info.signed_headers.contains("content-encoding") ||
         !info.signed_headers.contains("content-length")) {
         throw std::runtime_error(
@@ -187,6 +174,7 @@ auth_request_factory::create(boost::asio::ip::tcp::socket& sock) {
         co_return std::move(request);
     }
 
+    // TODO content-encoding: aws-chunked
     if (*content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" ||
         *content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER" ||
         *content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD" ||
