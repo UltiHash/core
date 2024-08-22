@@ -111,8 +111,9 @@ public:
      * Erases a fragment from the fragment set
      *
      * @param set_element set element to be evicted
+     * @param header indicate if the erased fragment is a header fragment
      */
-    void erase(const fragment& set_element);
+    void erase(const fragment& set_element, bool header);
 
     /**
      * @brief synchronizes the fragment_set log file with the underlying storage

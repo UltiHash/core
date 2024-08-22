@@ -224,7 +224,7 @@ void data_store::perform_write(const address& addr) {
         ;
 
     if (m_enable_refcount) {
-        m_refcounter.increment(pointer, data.size(), true);
+        m_refcounter.increment(pointer, data.size());
     }
 
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
@@ -245,26 +245,16 @@ void data_store::wait_for_ongoing_writes(const address& addr) {
 }
 
 address data_store::link(const address& addr) {
-    address rv;
     if constexpr (m_enable_refcount) {
-        for (size_t i = 0; i < addr.size(); ++i) {
-            const auto frag = addr.get(i);
-            const auto pointer = pointer_traits::get_pointer(frag.pointer);
-            if (!m_refcounter.increment(pointer, frag.size)) {
-                rv.push(frag);
-            }
-        }
+        return m_refcounter.increment(addr);
+    } else {
+        return address{};
     }
-    return rv;
 }
 
 void data_store::unlink(const address& addr) {
     if constexpr (m_enable_refcount) {
-        for (size_t i = 0; i < addr.size(); ++i) {
-            const auto frag = addr.get(i);
-            const auto pointer = pointer_traits::get_pointer(frag.pointer);
-            m_refcounter.decrement(pointer, frag.size);
-        }
+        m_refcounter.decrement(addr);
     }
 }
 
