@@ -41,7 +41,7 @@ public:
                 metric<success>::increase(1);
                 keep_alive = true;
             } catch (const command_exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                LOG_INFO() << s.remote_endpoint() << ": " << e.what();
                 resp = make_response(e);
             } catch (const boost::system::system_error& se) {
                 if (se.code() != http::error::end_of_stream) {
