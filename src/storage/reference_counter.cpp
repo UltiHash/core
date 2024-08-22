@@ -35,8 +35,9 @@ void reference_counter::decrement(const std::size_t offset,
 
         if (!dbi.get(txn, key, value)) {
             txn.abort();
-            throw std::runtime_error(
-                "attempted to to decrease refcount of an un-tracked page");
+            throw std::runtime_error("attempted to to decrease refcount of an "
+                                     "un-tracked page at page " +
+                                     std::to_string(page_id));
         }
 
         std::size_t current_value = std::stoull(std::string(value));
