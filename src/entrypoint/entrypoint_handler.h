@@ -43,6 +43,7 @@ public:
             } catch (const command_exception& e) {
                 LOG_INFO() << s.remote_endpoint() << ": " << e.what();
                 resp = make_response(e);
+                keep_alive = true;
             } catch (const boost::system::system_error& se) {
                 if (se.code() != http::error::end_of_stream) {
                     LOG_ERROR()
