@@ -17,12 +17,21 @@ namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 typedef http::verb method;
 
 struct read_request_result {
-    boost::beast::http::request<boost::beast::http::empty_body> body;
+    boost::beast::http::request<boost::beast::http::empty_body> headers;
     boost::beast::flat_buffer buffer;
 };
 
 coro<read_request_result>
 read_beast_request(boost::asio::ip::tcp::socket& sock);
+
+struct url_parsing_result {
+    std::map<std::string, std::string> params;
+    std::string path;
+    std::string bucket;
+    std::string object;
+};
+
+url_parsing_result parse_request_target(const std::string& target);
 
 class http_request {
 public:
@@ -34,7 +43,6 @@ public:
 
     std::string_view target() const;
     const std::string& path() const;
-    const std::string& query() const;
 
     const std::string& bucket() const;
     const std::string& object_key() const;

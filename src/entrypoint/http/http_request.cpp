@@ -26,6 +26,30 @@ coro<read_request_result> read_beast_request(asio::ip::tcp::socket& sock) {
     co_return read_request_result{req, buffer};
 }
 
+url_parsing_result parse_request_target(const std::string& target) {
+    auto query_index = target.find('?');
+
+    boost::urls::url url;
+    if (query_index != std::string::npos) {
+        url.set_encoded_path(target.substr(0, query_index));
+        url.set_encoded_query(target.substr(query_index + 1));
+    } else {
+        url.set_encoded_path(target);
+    }
+
+    auto keys = extract_bucket_and_object(url);
+
+    url_parsing_result rv;
+    rv.path = url.path();
+    for (const auto& param : url.params()) {
+        rv.params[param.key] = param.value;
+    }
+
+    rv.bucket = std::move(std::get<0>(keys));
+    rv.object = std::move(std::get<1>(keys));
+    return rv;
+}
+
 http_request::http_request(beast::http::request<http::empty_body>&& req,
                            std::unique_ptr<ep::http::body> body,
                            boost::asio::ip::tcp::endpoint peer)
@@ -34,33 +58,16 @@ http_request::http_request(beast::http::request<http::empty_body>&& req,
       m_peer(peer),
       m_ctx() {
 
-    auto target = m_req.target();
-    auto query_index = target.find('?');
-
-    boost::urls::url url;
-    if (query_index != std::string::npos) {
-        m_path = target.substr(0, query_index);
-        url.set_encoded_path(m_path);
-        m_query = target.substr(query_index + 1);
-        url.set_encoded_query(m_query);
-    } else {
-        m_path = target;
-        url.set_encoded_path(m_path);
-    }
-
-    for (const auto& param : url.params()) {
-        m_params[param.key] = param.value;
-    }
-
-    auto keys = extract_bucket_and_object(url);
-    m_bucket_id = std::get<0>(keys);
-    m_object_key = std::get<1>(keys);
+    auto [params, path, bucket, object] = parse_request_target(m_req.target());
+    m_params = std::move(params);
+    m_path = std::move(path);
+    m_bucket_id = std::move(bucket);
+    m_object_key = std::move(object);
 }
 
 http::verb http_request::method() const { return m_req.method(); }
 
 std::string_view http_request::target() const { return m_req.target(); }
-const std::string& http_request::query() const { return m_query; }
 const std::string& http_request::path() const { return m_path; }
 
 const std::string& http_request::bucket() const { return m_bucket_id; }

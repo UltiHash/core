@@ -7,13 +7,8 @@ namespace uh::cluster::ep::http {
 
 class auth_request_factory : public request_factory {
 public:
-    auth_request_factory(std::unique_ptr<request_factory> base);
-
     coro<std::unique_ptr<http_request>>
     create(boost::asio::ip::tcp::socket&) override;
-
-private:
-    std::unique_ptr<request_factory> m_base;
 };
 
 } // namespace uh::cluster::ep::http
