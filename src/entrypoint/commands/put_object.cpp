@@ -38,12 +38,11 @@ upload(context& ctx, boost::asio::io_context& ioc,
 
 put_object::put_object(boost::asio::io_context& ioc,
                        const entrypoint_config& conf, limits& uhlimits,
-                       directory& dir, global_data_view& gdv,
+                       directory& dir,
                        roundrobin_load_balancer<deduplicator_interface>& dedup)
     : m_ioc(ioc),
       m_config(conf),
       m_dir(dir),
-      m_gdv(gdv),
       m_limits(uhlimits),
       m_dedup(dedup) {}
 
@@ -90,24 +89,7 @@ coro<http_response> put_object::handle(http_request& req) {
                    .addr = std::move(resp.addr),
                    .etag = tag,
                    .mime = req.header("Content-Type")};
-
-        std::optional<object> old_obj;
-        if constexpr (m_enable_refcount) {
-            try {
-                old_obj =
-                    co_await m_dir.get_object(req.bucket(), req.object_key());
-            } catch (command_exception&) {
-            }
-        }
-
         co_await m_dir.put_object(req.bucket(), obj);
-
-        if constexpr (m_enable_refcount) {
-            if (old_obj.has_value()) {
-                co_await m_gdv.unlink(req.context(),
-                                      old_obj.value().addr.value());
-            }
-        }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);

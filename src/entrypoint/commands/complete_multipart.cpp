@@ -5,11 +5,9 @@
 
 namespace uh::cluster {
 
-complete_multipart::complete_multipart(directory& dir, global_data_view& gdv,
-                                       multipart_state& uploads,
+complete_multipart::complete_multipart(directory& dir, multipart_state& uploads,
                                        limits& uhlimits)
     : m_directory(dir),
-      m_gdv(gdv),
       m_uploads(uploads),
       m_limits(uhlimits) {}
 
@@ -87,19 +85,7 @@ coro<http_response> complete_multipart::handle(http_request& req) {
                .addr = std::move(addr),
                .etag = etag,
                .mime = info.mime};
-
-    std::optional<object> old_obj;
-    if constexpr (m_enable_refcount) {
-        old_obj = co_await get_old_object(req);
-    }
-
     co_await m_directory.put_object(req.bucket(), obj);
-
-    if constexpr (m_enable_refcount) {
-        if (old_obj.has_value()) {
-            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
-        }
-    }
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
@@ -116,16 +102,6 @@ coro<http_response> complete_multipart::handle(http_request& req) {
 
     co_await m_uploads.remove_upload(upload_id);
     co_return res;
-}
-coro<std::optional<object>>
-complete_multipart::get_old_object(http_request& req) {
-
-    try {
-        co_return co_await m_directory.get_object(req.bucket(),
-                                                  req.object_key());
-    } catch (command_exception&) {
-        co_return std::nullopt;
-    }
 }
 
 } // namespace uh::cluster
