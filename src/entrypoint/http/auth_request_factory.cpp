@@ -51,8 +51,7 @@ std::string make_canonical_request(
 
     std::string canonical_query = algorithm::join(canonical_query_set, "&");
 
-    std::set<std::string> canonical_header_set;
-    std::set<std::string> signed_headers;
+    std::map<std::string, std::string> canonical_headers_map;
     for (const auto& header : headers) {
         auto name = lowercase(header.name_string());
 
@@ -60,13 +59,23 @@ std::string make_canonical_request(
             continue;
         }
 
-        canonical_header_set.insert(name + ":" +
-                                    std::string(trim(header.value())));
-        signed_headers.emplace(std::move(name));
+        canonical_headers_map[std::move(name)] =
+            std::string(trim(header.value()));
     }
 
-    auto canonical_headers = algorithm::join(canonical_header_set, "\n") + "\n";
-    auto signed_header_names = algorithm::join(signed_headers, ";");
+    std::string canonical_headers;
+    std::string signed_header_names;
+    bool first = true;
+
+    for (const auto& header : canonical_headers_map) {
+        if (!first) {
+            signed_header_names += ";";
+        }
+
+        canonical_headers += header.first + ":" + header.second + "\n";
+        signed_header_names += header.first;
+        first = false;
+    }
 
     return std::string(headers.method_string()) + "\n" + url.path + "\n" +
            canonical_query + "\n" + canonical_headers + "\n" +
