@@ -106,7 +106,10 @@ coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
 
     res.set("Server", "UltiHash");
     res.set("x-amz-request-id", generate_unique_id());
-    res.set("Content-Length", body.length());
+    if (body.length() != 0) {
+        // TODO this misuses the body-length, fix it
+        res.set("Content-Length", body.length());
+    }
 
     http::response_serializer<http::empty_body> sr(res.base());
     http::write_header(out, sr);
