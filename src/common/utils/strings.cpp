@@ -44,7 +44,7 @@ constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789"
-    "-._~/";
+    "-._~";
 
 std::string url_encode(const std::string& str_to_encode) noexcept {
     auto encoded_string =
