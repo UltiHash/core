@@ -254,11 +254,7 @@ address data_store::link(const address& addr) {
 
 void data_store::unlink(const address& addr) {
     if constexpr (m_enable_refcount) {
-        for (size_t i = 0; i < addr.size(); ++i) {
-            const auto frag = addr.get(i);
-            const auto pointer = pointer_traits::get_pointer(frag.pointer);
-            m_refcounter.decrement(pointer, frag.size);
-        }
+        m_refcounter.decrement(addr);
     }
 }
 
