@@ -88,14 +88,7 @@ raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
             "The authorization header that you provided is not valid.");
     }
 
-    if (!info.signed_headers.contains("content-encoding") ||
-        !info.signed_headers.contains("content-length")) {
-        throw std::runtime_error(
-            "content headers are required for chunked transfer");
-    }
-
     auto canonical_request = make_canonical_request(*req, info);
-
     LOG_DEBUG() << req->peer() << " canonical request: " << canonical_request;
 
     auto string_to_sign =
@@ -103,7 +96,6 @@ raw_chunk_auth_body(boost::asio::ip::tcp::socket& sock,
         req->header("x-amz-date").value_or(std::string(info.date)) + "\n" +
         info.date + "/" + info.region + "/" + info.service + "/aws4_request\n" +
         sha256::from_string(canonical_request);
-
     LOG_DEBUG() << req->peer() << " string to sign: " << string_to_sign;
 
     // TODO request user information here and use user's secret key
@@ -143,8 +135,13 @@ chunked_auth_body(boost::asio::ip::tcp::socket& sock,
             "The authorization header that you provided is not valid.");
     }
 
-    auto canonical_request = make_canonical_request(*req, info);
+    if (!info.signed_headers.contains("content-encoding") ||
+        !info.signed_headers.contains("content-length")) {
+        throw std::runtime_error(
+            "content headers are required for chunked transfer");
+    }
 
+    auto canonical_request = make_canonical_request(*req, info);
     LOG_DEBUG() << req->peer() << " canonical request: " << canonical_request;
 
     auto string_to_sign =
@@ -152,13 +149,11 @@ chunked_auth_body(boost::asio::ip::tcp::socket& sock,
         req->header("x-amz-date").value_or(std::string(info.date)) + "\n" +
         info.date + "/" + info.region + "/" + info.service + "/aws4_request\n" +
         sha256::from_string(canonical_request);
-
     LOG_DEBUG() << req->peer() << " string to sign: " << string_to_sign;
 
     // TODO request user information here and use user's secret key
 
     auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
-
     LOG_DEBUG() << req->peer() << " signing key: " << to_hex(signing_key);
 
     auto signature =
