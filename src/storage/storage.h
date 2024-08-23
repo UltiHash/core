@@ -40,7 +40,10 @@ public:
         m_server.run();
     }
 
-    void stop() { m_server.stop(); }
+    void stop() {
+        LOG_INFO() << "stopping " << m_service_registry.get_service_name();
+        m_server.stop();
+    }
 
     ~storage() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
