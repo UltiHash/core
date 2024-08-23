@@ -39,6 +39,8 @@ service_registry::registration::registration(
       }) {
     for (const auto& pair : kv_pairs)
         m_client.add(pair.first, pair.second, m_lease);
+
+    LOG_INFO() << "published all attr " << m_id;
 }
 
 void service_registry::registration::monitor(
