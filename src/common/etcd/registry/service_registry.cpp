@@ -56,6 +56,7 @@ service_registry::registration::~registration() {
     m_cv.notify_all();
     m_monitor_thread.join();
     m_client.leaserevoke(m_lease);
+    LOG_INFO() << "registration dst finish" << m_id;
 }
 
 std::unique_ptr<service_registry::registration>
