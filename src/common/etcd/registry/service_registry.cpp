@@ -51,6 +51,7 @@ void service_registry::registration::monitor(
 }
 
 service_registry::registration::~registration() {
+    LOG_INFO() << "registration dst" << m_id;
     m_stop = true;
     m_cv.notify_all();
     m_monitor_thread.join();
