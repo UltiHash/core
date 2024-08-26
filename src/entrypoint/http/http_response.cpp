@@ -68,6 +68,15 @@ void http_response::set(const std::string& header,
     }
 }
 
+std::optional<std::string> http_response::header(const std::string& name) {
+    auto it = m_res.find(name);
+    if (it == m_res.end()) {
+        return {};
+    }
+
+    return it->value();
+}
+
 http_response& operator<<(http_response& res,
                           const boost::property_tree::ptree& pt) {
     std::ostringstream ss;
@@ -106,8 +115,8 @@ coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
 
     res.set("Server", "UltiHash");
     res.set("x-amz-request-id", generate_unique_id());
-    if (body.length() != 0) {
-        // TODO this misuses the body-length, fix it
+
+    if (!res.header("Content-Length")) {
         res.set("Content-Length", body.length());
     }
 

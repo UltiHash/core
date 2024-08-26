@@ -55,6 +55,8 @@ public:
     void set(const std::string& header, std::optional<std::string> value);
     void set(const std::string& header, std::optional<std::size_t> value);
 
+    std::optional<std::string> header(const std::string& name);
+
     uh::cluster::body& body() { return *m_body; }
 
 private:
