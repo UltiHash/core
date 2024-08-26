@@ -33,6 +33,7 @@ std::string make_signing_key(const auth_info& info, const std::string& secret);
 std::map<std::string_view, std::string_view>
 parse_values_string(std::string_view values, char pair_separator = ',',
                     char field_separator = '=');
+
 } // namespace uh::cluster::ep::http
 
 #endif
