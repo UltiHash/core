@@ -138,36 +138,6 @@ std::string request_signature(boost::asio::ip::tcp::socket& sock,
 }
 
 std::unique_ptr<http_request>
-chunked_hmac_sha256(boost::asio::ip::tcp::socket& sock,
-                    read_request_result& req, const auth_info& info) {
-
-    LOG_DEBUG() << sock.remote_endpoint() << ": using chunked HMAC-SHA256";
-
-    // TODO request user information here and use user's secret key
-    auto signing_key = make_signing_key(info, SECRET_ACCESS_KEY);
-    LOG_DEBUG() << sock.remote_endpoint()
-                << ": signing key: " << to_hex(signing_key);
-
-    auto signature = request_signature(sock, req, info, signing_key);
-    if (signature != info.signature) {
-        LOG_DEBUG() << sock.remote_endpoint()
-                    << ": access denied: signature mismatch";
-        throw command_exception(beast::http::status::forbidden, "AccessDenied",
-                                "Access Denied");
-    }
-
-    auto prelude = require(req.headers, "x-amz-date") + "\n" + info.date + "/" +
-                   info.region + "/" + info.service + "/aws4_request\n";
-
-    return std::make_unique<http_request>(
-        std::move(req.headers),
-        std::make_unique<chunk_body_sha256>(sock, std::move(req.buffer),
-                                            "AWS4-HMAC-SHA256", prelude,
-                                            signature, signing_key),
-        sock.remote_endpoint());
-}
-
-std::unique_ptr<http_request>
 multi_chunk_request(boost::asio::ip::tcp::socket& sock,
                     read_request_result req) {
     auto content_length = std::stoul(require(req.headers, "content-length"));
@@ -182,18 +152,46 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
             sock.remote_endpoint());
     }
 
+    auto signing_key = make_signing_key(*info, SECRET_ACCESS_KEY);
+    LOG_DEBUG() << sock.remote_endpoint()
+                << ": signing key: " << to_hex(signing_key);
+
+    auto signature = request_signature(sock, req, *info, signing_key);
+    if (signature != info->signature) {
+        LOG_DEBUG() << sock.remote_endpoint()
+                    << ": access denied: signature mismatch";
+        throw command_exception(beast::http::status::forbidden, "AccessDenied",
+                                "Access Denied");
+    }
+
     auto content_sha = require(req.headers, "x-amz-content-sha256");
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
-        return chunked_hmac_sha256(sock, req, *info);
+        LOG_DEBUG() << sock.remote_endpoint() << ": using chunked HMAC-SHA256";
+
+        auto prelude = require(req.headers, "x-amz-date") + "\n" + info->date +
+                       "/" + info->region + "/" + info->service +
+                       "/aws4_request\n";
+
+        return std::make_unique<http_request>(
+            std::move(req.headers),
+            std::make_unique<chunk_body_sha256>(sock, std::move(req.buffer),
+                                                "AWS4-HMAC-SHA256", prelude,
+                                                signature, signing_key),
+            sock.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
-        return chunked_hmac_sha256(sock, req, *info);
+        LOG_DEBUG() << sock.remote_endpoint()
+                    << ": using chunked unsigned payload";
+
+        return std::make_unique<http_request>(
+            std::move(req.headers),
+            std::make_unique<chunked_body>(sock, std::move(req.buffer)),
+            sock.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
-        return chunked_hmac_sha256(sock, req, *info);
     }
 
     throw std::runtime_error("unsupported aws-chunked authentication: " +
