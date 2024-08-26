@@ -195,6 +195,17 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
     }
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
+        auto prelude = require(req.headers, "x-amz-date") + "\n" + info->date +
+                       "/" + info->region + "/" + info->service +
+                       "/aws4_request\n";
+
+        return std::make_unique<http_request>(
+            std::move(req.headers),
+            std::make_unique<chunk_body_sha256>(
+                sock, std::move(req.buffer),
+                chunked_body::trailing_headers::read, "AWS4-HMAC-SHA256",
+                prelude, signature, signing_key),
+            sock.remote_endpoint());
     }
 
     throw std::runtime_error("unsupported aws-chunked authentication: " +
