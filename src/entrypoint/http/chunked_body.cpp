@@ -1,5 +1,7 @@
 #include "chunked_body.h"
 
+#include "auth_utils.h"
+
 #include <charconv>
 
 using namespace boost;
@@ -25,10 +27,14 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
 
     while (rv < dest.size()) {
         if (m_chunk_size == 0ull) {
-            m_chunk_size = co_await read_chunk_header();
+            auto hdr = co_await read_chunk_header();
+            m_chunk_size = hdr.size;
+
+            on_chunk_header(hdr);
         }
 
         if (m_chunk_size == 0ull) {
+            on_body_done();
             m_end = true;
             break;
         }
@@ -36,14 +42,28 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
         auto count = std::min(m_chunk_size, dest.size() - rv);
         auto read = co_await read_data(dest.subspan(rv, count));
 
+        on_chunk_data(dest.subspan(rv, read));
+
         rv += read;
         m_chunk_size -= read;
+
+        if (m_chunk_size == 0ull) {
+            on_chunk_done();
+        }
 
         co_await read_nl();
     }
 
     co_return rv;
 }
+
+void chunked_body::on_chunk_header(const chunk_header&) {}
+
+void chunked_body::on_chunk_data(std::span<char>) {}
+
+void chunked_body::on_chunk_done() {}
+
+void chunked_body::on_body_done() {}
 
 coro<void> chunked_body::read_nl() {
     char nl[2];
@@ -86,22 +106,29 @@ std::size_t chunked_body::find_nl() const {
     throw std::runtime_error("newline required");
 }
 
-coro<std::size_t> chunked_body::read_chunk_header() {
+coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
     co_await asio::async_read_until(m_socket, asio::dynamic_buffer(m_buffer),
                                     "\r\n", asio::use_awaitable);
 
     auto pos = find_nl();
 
-    std::size_t size = 0ull;
-    auto [_, ec] = std::from_chars(&m_buffer[0], &m_buffer[pos], size, 16);
+    chunk_header hdr;
 
+    auto [next, ec] =
+        std::from_chars(&m_buffer[0], &m_buffer[pos], hdr.size, 16);
     if (ec != std::errc()) {
         throw std::runtime_error("from_chars failed: " +
                                  make_error_condition(ec).message());
     }
 
+    if (next != &m_buffer[pos] && *next == ';') {
+        ++next;
+        hdr.extensions_string = std::string(next, &*(m_buffer.cbegin() + pos));
+        hdr.extensions = parse_values_string(hdr.extensions_string, ';');
+    }
+
     m_buffer.erase(m_buffer.begin(), m_buffer.begin() + pos);
-    co_return size;
+    co_return hdr;
 }
 
 coro<std::size_t> chunked_body::read_data(std::span<char> buffer) {

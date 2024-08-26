@@ -1,7 +1,7 @@
 #include "auth_request_factory.h"
 
-#include "auth_chunked_body.h"
 #include "auth_utils.h"
+#include "chunk_body_sha256.h"
 #include "command_exception.h"
 #include "common/crypto/hash.h"
 #include "common/crypto/hmac.h"
@@ -156,14 +156,14 @@ chunked_hmac_sha256(boost::asio::ip::tcp::socket& sock,
                                 "Access Denied");
     }
 
-    auto prelude = std::string("AWS4-HMAC-SHA256-PAYLOAD\n") + // TODO algorithm
-                   require(req.headers, "x-amz-date") + "\n" + info.date + "/" +
+    auto prelude = require(req.headers, "x-amz-date") + "\n" + info.date + "/" +
                    info.region + "/" + info.service + "/aws4_request\n";
 
     return std::make_unique<http_request>(
         std::move(req.headers),
-        std::make_unique<auth_chunked_body>(sock, std::move(req.buffer),
-                                            prelude, signature, signing_key),
+        std::make_unique<chunk_body_sha256>(sock, std::move(req.buffer),
+                                            "AWS4-HMAC-SHA256", prelude,
+                                            signature, signing_key),
         sock.remote_endpoint());
 }
 
@@ -185,6 +185,14 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
     auto content_sha = require(req.headers, "x-amz-content-sha256");
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
+        return chunked_hmac_sha256(sock, req, *info);
+    }
+
+    if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
+        return chunked_hmac_sha256(sock, req, *info);
+    }
+
+    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         return chunked_hmac_sha256(sock, req, *info);
     }
 
