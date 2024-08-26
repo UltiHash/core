@@ -19,6 +19,7 @@ public:
      */
     chunk_body_sha256(boost::asio::ip::tcp::socket& s,
                       const boost::beast::flat_buffer& initial,
+                      chunked_body::trailing_headers trailing,
                       std::string algorithm, std::string prelude,
                       std::string seed, std::string signing_key);
 

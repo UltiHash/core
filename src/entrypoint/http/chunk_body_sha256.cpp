@@ -12,9 +12,10 @@ namespace uh::cluster::ep::http {
 
 chunk_body_sha256::chunk_body_sha256(asio::ip::tcp::socket& s,
                                      const beast::flat_buffer& initial,
+                                     chunked_body::trailing_headers trailing,
                                      std::string algorithm, std::string prelude,
                                      std::string seed, std::string signing_key)
-    : chunked_body(s, initial),
+    : chunked_body(s, initial, trailing),
       m_algorithm(algorithm),
       m_signature_prelude(std::move(prelude)),
       m_signing_key(std::move(signing_key)),
