@@ -175,19 +175,22 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
 
         return std::make_unique<http_request>(
             std::move(req.headers),
-            std::make_unique<chunk_body_sha256>(sock, std::move(req.buffer),
-                                                "AWS4-HMAC-SHA256", prelude,
-                                                signature, signing_key),
+            std::make_unique<chunk_body_sha256>(
+                sock, std::move(req.buffer),
+                chunked_body::trailing_headers::none, "AWS4-HMAC-SHA256",
+                prelude, signature, signing_key),
             sock.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
         LOG_DEBUG() << sock.remote_endpoint()
-                    << ": using chunked unsigned payload";
+                    << ": using chunked unsigned payload with trailer";
 
         return std::make_unique<http_request>(
             std::move(req.headers),
-            std::make_unique<chunked_body>(sock, std::move(req.buffer)),
+            std::make_unique<chunked_body>(
+                sock, std::move(req.buffer),
+                chunked_body::trailing_headers::read),
             sock.remote_endpoint());
     }
 

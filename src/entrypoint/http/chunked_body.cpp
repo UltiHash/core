@@ -1,6 +1,8 @@
 #include "chunked_body.h"
 
 #include "auth_utils.h"
+#include "common/telemetry/log.h"
+#include "common/utils/strings.h"
 
 #include <charconv>
 
@@ -9,9 +11,11 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 chunked_body::chunked_body(asio::ip::tcp::socket& s,
-                           const beast::flat_buffer& initial)
+                           const beast::flat_buffer& initial,
+                           trailing_headers trailing)
     : m_socket(s),
-      m_buffer() {
+      m_buffer(),
+      m_trailing(trailing) {
     m_buffer.reserve(BUFFER_SIZE);
     m_buffer.resize(initial.size());
     asio::buffer_copy(asio::buffer(m_buffer),
@@ -36,6 +40,38 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
         if (m_chunk_size == 0ull) {
             on_body_done();
             m_end = true;
+
+            if (m_trailing == trailing_headers::read) {
+                LOG_DEBUG()
+                    << m_socket.remote_endpoint()
+                    << " reading trailing headers, bytes in buffer: "
+                    << m_buffer.size()
+                    << to_hex(std::string(&m_buffer[0], m_buffer.size()));
+
+                co_await asio::async_read_until(
+                    m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n",
+                    asio::use_awaitable);
+
+                std::string header(&m_buffer[0], m_buffer.size());
+                auto trimmed = trim(header, "\r\n");
+                auto hdrs = split(trimmed, '\n');
+
+                std::map<std::string, std::string> headers;
+                for (const auto& h : hdrs) {
+                    auto parts = split(h, ':');
+                    if (parts.size() != 2) {
+                        continue;
+                    }
+
+                    headers[std::string(trim(parts[0]))] =
+                        std::string(trim(parts[1]));
+                }
+
+                LOG_DEBUG() << m_socket.remote_endpoint()
+                            << "done reading trailing headers";
+                on_trailing_headers(headers);
+            }
+
             break;
         }
 
@@ -58,12 +94,11 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
 }
 
 void chunked_body::on_chunk_header(const chunk_header&) {}
-
 void chunked_body::on_chunk_data(std::span<char>) {}
-
 void chunked_body::on_chunk_done() {}
-
 void chunked_body::on_body_done() {}
+void chunked_body::on_trailing_headers(
+    const std::map<std::string, std::string>&) {}
 
 coro<void> chunked_body::read_nl() {
     char nl[2];

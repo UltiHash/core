@@ -14,8 +14,11 @@ namespace uh::cluster::ep::http {
 
 class chunked_body : public ep::http::body {
 public:
+    enum class trailing_headers { none, read };
+
     chunked_body(boost::asio::ip::tcp::socket& s,
-                 const boost::beast::flat_buffer& initial);
+                 const boost::beast::flat_buffer& initial,
+                 trailing_headers trailing = trailing_headers::none);
 
     struct chunk_header {
         std::size_t size;
@@ -31,6 +34,7 @@ public:
     virtual void on_chunk_data(std::span<char>);
     virtual void on_chunk_done();
     virtual void on_body_done();
+    virtual void on_trailing_headers(const std::map<std::string, std::string>&);
 
 private:
     coro<void> read_nl();
@@ -42,6 +46,7 @@ private:
 
     boost::asio::ip::tcp::socket& m_socket;
     std::vector<char> m_buffer;
+    trailing_headers m_trailing;
     std::size_t m_chunk_size = 0ull;
     bool m_end = false;
 };
