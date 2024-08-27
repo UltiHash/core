@@ -33,7 +33,8 @@ template <hash_algorithm algo> struct hash : public hash_base {
         : hash_base(algo) {}
 
     /**
-     * Compute checksum of provided string and return it as hexadecimal string.
+     * Compute checksum of provided string.
+     * @return string containing the checksum, as characters, ie. non-hexed.
      * @throws on error
      */
     static std::string from_buffer(std::span<const char> input) {

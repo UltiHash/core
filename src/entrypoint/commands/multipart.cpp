@@ -41,7 +41,7 @@ coro<http_response> multipart::handle(http_request& req) {
             req.context(), {buffer.data(), buffer.size()});
     }
 
-    auto md5 = md5::from_buffer(buffer.span());
+    auto md5 = to_hex(md5::from_buffer(buffer.span()));
 
     http_response res;
     res.set("ETag", md5);

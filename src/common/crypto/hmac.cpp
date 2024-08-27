@@ -62,10 +62,10 @@ std::string hmac_base::finalize() {
     if (!EVP_DigestSignFinal(
             m_ctx.get(), reinterpret_cast<unsigned char*>(hmac_value.data()),
             &length)) {
-        throw_from_error("error on digest finalization");
+        throw_from_error("error on hmac finalization");
     }
-    hmac_value.resize(length);
 
+    hmac_value.resize(length);
     return hmac_value;
 }
 
