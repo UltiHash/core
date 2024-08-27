@@ -30,6 +30,8 @@ public:
     std::optional<std::size_t> length() const override;
     coro<std::size_t> read(std::span<char>) override;
 
+    const std::string& get_body() const { return m_body; }
+
 private:
     std::string m_body;
 };
@@ -55,9 +57,10 @@ public:
     void set(const std::string& header, std::optional<std::string> value);
     void set(const std::string& header, std::optional<std::size_t> value);
 
-    std::optional<std::string> header(const std::string& name);
+    std::optional<std::string> header(const std::string& name) const;
 
     uh::cluster::body& body() { return *m_body; }
+    const uh::cluster::body& body() const { return *m_body; }
 
 private:
     http::response<http::empty_body> m_res;

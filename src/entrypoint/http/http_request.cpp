@@ -41,6 +41,8 @@ url_parsing_result parse_request_target(const std::string& target) {
 
     url_parsing_result rv;
     rv.path = url.path();
+    rv.encoded_path = url.encoded_path();
+
     for (const auto& param : url.params()) {
         rv.params[param.key] = param.value;
     }
@@ -58,11 +60,11 @@ http_request::http_request(beast::http::request<http::empty_body>&& req,
       m_peer(peer),
       m_ctx() {
 
-    auto [params, path, bucket, object] = parse_request_target(m_req.target());
-    m_params = std::move(params);
-    m_path = std::move(path);
-    m_bucket_id = std::move(bucket);
-    m_object_key = std::move(object);
+    auto target = parse_request_target(m_req.target());
+    m_params = std::move(target.params);
+    m_path = std::move(target.path);
+    m_bucket_id = std::move(target.bucket);
+    m_object_key = std::move(target.object);
 }
 
 http::verb http_request::method() const { return m_req.method(); }
