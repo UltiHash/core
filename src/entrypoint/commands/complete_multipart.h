@@ -17,7 +17,8 @@ public:
     coro<http_response> handle(http_request& req) override;
 
 private:
-    static void validate(const upload_info& info, std::span<char> body);
+    static void validate_internal(const upload_info& info,
+                                  std::span<char> body);
 
     directory& m_directory;
     multipart_state& m_uploads;
