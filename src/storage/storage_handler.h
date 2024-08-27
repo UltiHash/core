@@ -141,9 +141,9 @@ private:
                            const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
-        co_await m_storage.link(ctx, addr);
+        auto rejected_addr = co_await m_storage.link(ctx, addr);
 
-        co_await m.send(ctx, SUCCESS, {});
+        co_await m.send_address(ctx, SUCCESS, rejected_addr);
     }
 
     coro<void> handle_unlink(context& ctx, messenger& m,

@@ -185,15 +185,18 @@ void fragmentation::handle_rejected_fragments(const address& addr,
             continue;
         }
 
-        auto& stored_frag = std::get<stored>(*it);
+        auto stored_frag = std::get<stored>(*it);
 
         for (std::size_t i = 0; i < addr.size(); i++) {
             auto rejected_frag = addr.get(i);
             if (rejected_frag.pointer == stored_frag.pointer) {
-                set.erase({rejected_frag.pointer, rejected_frag.size});
+                set.erase({rejected_frag.pointer, rejected_frag.size},
+                          stored_frag.header);
                 it->emplace<1>(unstored{.data = stored_frag.data,
                                         .header = stored_frag.header,
                                         .hint = std::nullopt});
+                m_effective_size += stored_frag.data.size();
+                m_unstored_size += stored_frag.data.size();
                 break;
             }
         }

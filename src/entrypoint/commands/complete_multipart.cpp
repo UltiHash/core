@@ -17,8 +17,8 @@ bool complete_multipart::can_handle(const http_request& req) {
            !req.object_key().empty() && req.query("uploadId");
 }
 
-void complete_multipart::validate(const upload_info& info,
-                                  std::span<char> body) {
+void complete_multipart::validate_internal(const upload_info& info,
+                                           std::span<char> body) {
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
@@ -73,7 +73,7 @@ coro<http_response> complete_multipart::handle(http_request& req) {
     auto upload_id = *req.query("uploadId");
     const auto info = co_await m_uploads.details(upload_id);
 
-    validate(info, buffer.span());
+    validate_internal(info, buffer.span());
 
     m_limits.check_storage_size(info.data_size);
 

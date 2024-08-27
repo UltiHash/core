@@ -138,17 +138,6 @@ coro<void> directory::copy_object(const std::string& bucket_src,
                         key_src, bucket_dst, key_dst);
 }
 
-coro<void> directory::copy_object_ifmatch(const std::string& bucket_src,
-                                          const std::string& key_src,
-                                          const std::string& bucket_dst,
-                                          const std::string& key_dst,
-                                          const std::string& etag) {
-
-    auto dir = co_await m_db.get();
-    co_await dir->execv("CALL uh_copy_object_ifmatch($1, $2, $3, $4, $5)",
-                        bucket_src, key_src, bucket_dst, key_dst, etag);
-}
-
 coro<std::vector<std::string>> directory::list_buckets() {
     std::vector<std::string> rv;
 

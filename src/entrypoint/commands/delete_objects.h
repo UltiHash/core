@@ -2,6 +2,7 @@
 #define ENTRYPOINT_HTTP_DELETE_OBJECTS_H
 
 #include "command.h"
+#include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 
@@ -9,7 +10,7 @@ namespace uh::cluster {
 
 class delete_objects : public command {
 public:
-    delete_objects(directory&, limits&);
+    delete_objects(directory&, global_data_view&, limits&);
 
     static bool can_handle(const http_request& req);
 
@@ -17,6 +18,7 @@ public:
 
 private:
     directory& m_directory;
+    global_data_view& m_gdv;
     limits& m_limits;
     static constexpr std::size_t MAXIMUM_DELETE_KEYS = 1000;
 };

@@ -3,8 +3,10 @@
 
 namespace uh::cluster {
 
-delete_object::delete_object(directory& dir, limits& uhlimits)
+delete_object::delete_object(directory& dir, global_data_view& gdv,
+                             limits& uhlimits)
     : m_directory(dir),
+      m_gdv(gdv),
       m_limits(uhlimits) {}
 
 bool delete_object::can_handle(const http_request& req) {
@@ -16,12 +18,22 @@ bool delete_object::can_handle(const http_request& req) {
 coro<http_response> delete_object::handle(http_request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
-        auto object =
-            co_await m_directory.head_object(req.bucket(), req.object_key());
+        object obj;
+        if constexpr (m_enable_refcount) {
+            obj =
+                co_await m_directory.get_object(req.bucket(), req.object_key());
+        } else {
+            obj = co_await m_directory.head_object(req.bucket(),
+                                                   req.object_key());
+        }
 
         co_await m_directory.delete_object(req.bucket(), req.object_key());
 
-        m_limits.free_storage_size(object.size);
+        if constexpr (m_enable_refcount) {
+            co_await m_gdv.unlink(req.context(), obj.addr.value());
+        }
+
+        m_limits.free_storage_size(obj.size);
     } catch (const error_exception& e) {
         throw_from_error(e.error());
     }

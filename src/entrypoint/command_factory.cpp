@@ -55,7 +55,7 @@ command_factory::create(const http_request& req) const {
         return std::make_unique<create_bucket>(m_directory);
     }
     if (copy_object::can_handle(req)) {
-        return std::make_unique<copy_object>(m_directory);
+        return std::make_unique<copy_object>(m_directory, m_gdv);
     }
     if (list_multipart::can_handle(req)) {
         return std::make_unique<list_multipart>(m_uploads);
@@ -64,10 +64,10 @@ command_factory::create(const http_request& req) const {
         return std::make_unique<get_metrics>(m_directory, m_gdv);
     }
     if (delete_object::can_handle(req)) {
-        return std::make_unique<delete_object>(m_directory, m_limits);
+        return std::make_unique<delete_object>(m_directory, m_gdv, m_limits);
     }
     if (delete_objects::can_handle(req)) {
-        return std::make_unique<delete_objects>(m_directory, m_limits);
+        return std::make_unique<delete_objects>(m_directory, m_gdv, m_limits);
     }
     if (delete_bucket::can_handle(req)) {
         return std::make_unique<delete_bucket>(m_directory);
