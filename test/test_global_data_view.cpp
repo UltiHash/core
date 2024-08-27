@@ -50,6 +50,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
+
     auto gdv = get_global_data_view();
     context ctx;
 
@@ -66,6 +67,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
+
     auto gdv = get_global_data_view();
     context ctx;
 

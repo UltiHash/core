@@ -29,6 +29,23 @@ auto wait_for_success(auto timeout, auto retry_interval, auto&& op) {
     std::rethrow_exception(eptr);
 }
 
+auto wait_for_true(auto timeout, auto retry_interval, auto&& op) {
+    // unit of timeout and retry_interval = second
+
+    const auto start = std::chrono::steady_clock::now();
+
+    do {
+        if (op())
+            return;
+        std::this_thread::sleep_for(
+            std::chrono::duration<double>(retry_interval));
+    } while (
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
+            .count() < timeout);
+
+    throw std::runtime_error("waiting timeout");
+}
+
 template <typename clock> class basic_timer;
 
 template <typename clock>

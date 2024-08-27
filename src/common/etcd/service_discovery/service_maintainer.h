@@ -84,6 +84,8 @@ template <typename service_interface> struct service_maintainer {
             });
     }
 
+    [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
+
 private:
     void handle_state_changes(const etcd::Response& response) {
 
@@ -146,7 +148,6 @@ private:
                     itr->second.attributes.at(ENDPOINT_HOST),
                     std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
-
             for (auto& m : m_monitors) {
                 m.get().add_client(client_itr->first, client_itr->second);
                 for (const auto& [attr_name, attr_val] :
@@ -171,7 +172,6 @@ private:
         if (it == m_clients.end()) {
             return;
         }
-
         if (service_attributes_path(path)) {
             auto attr = get_etcd_key_enum(get_attribute_key(path));
             try {

@@ -40,14 +40,7 @@ public:
         m_server.run();
     }
 
-    void stop() {
-        LOG_INFO() << "stopping " << m_service_registry.get_service_name();
-        m_server.stop();
-    }
-
-    ~storage() {
-        LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
-    }
+    void stop() { m_server.stop(); }
 
     size_t id() const noexcept { return m_service_id; }
 
