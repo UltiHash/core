@@ -9,11 +9,6 @@
 
 namespace uh::cluster {
 
-template <size_t I> struct test_dest {
-    test_dest() = default;
-    ~test_dest() { LOG_INFO() << "test destructor " << I; }
-};
-
 class service_registry {
 
 public:
@@ -28,6 +23,10 @@ public:
                      const std::map<std::string, std::string>& kv_pairs,
                      std::size_t ttl);
 
+        registration(const registration&) = delete;
+        registration(registration&&) noexcept = delete;
+        registration& operator=(const registration&) = delete;
+        registration& operator=(registration&&) = delete;
         void monitor(etcd_service_attributes key,
                      const std::function<std::string()>& func);
 
@@ -41,15 +40,11 @@ public:
         const role m_service_role;
         const size_t m_id;
         bool m_stop = false;
-        test_dest<3> m_3;
         std::map<std::string, std::function<std::string()>>
             m_monitored_attributes;
-        std::mutex m_attributes_mutex;
-        test_dest<2> m_2;
-        std::thread m_monitor_thread;
-        test_dest<1> m_1;
         std::condition_variable m_cv;
-        test_dest<0> m_0;
+        std::mutex m_attributes_mutex;
+        std::thread m_monitor_thread;
     };
 
     std::unique_ptr<registration> register_service(const server_config& config);
