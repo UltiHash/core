@@ -45,7 +45,7 @@ public:
                 resp = make_response(e);
                 keep_alive = true;
             } catch (const boost::system::system_error& se) {
-                if (se.code() != http::error::end_of_stream) {
+                if (se.code() == http::error::end_of_stream) {
                     LOG_ERROR()
                         << s.remote_endpoint() << ": peer closed connection";
                     break;
