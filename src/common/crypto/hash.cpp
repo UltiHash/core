@@ -54,20 +54,18 @@ void hash_base::consume(std::span<const char> data) {
 }
 
 std::string hash_base::finalize() {
-    unsigned char unMdValue[EVP_MAX_MD_SIZE];
-    unsigned int uiMdLength;
-    if (!EVP_DigestFinal_ex(m_ctx.get(), unMdValue, &uiMdLength)) {
-        throw_from_error("error on digest finalization");
+    std::string hash_value;
+    hash_value.resize(EVP_MAX_MD_SIZE);
+    unsigned int length = EVP_MAX_MD_SIZE;
+
+    if (!EVP_DigestFinal_ex(m_ctx.get(),
+                            reinterpret_cast<unsigned char*>(hash_value.data()),
+                            &length)) {
+        throw_from_error("error on hash finalization");
     }
 
-    std::string hex_hash;
-    hex_hash.reserve(uiMdLength * 2 + 1);
-
-    for (unsigned int i = 0; i < uiMdLength; i++) {
-        hex_hash += to_hex(unMdValue[i]);
-    }
-
-    return hex_hash;
+    hash_value.resize(length);
+    return hash_value;
 }
 
 } // namespace uh::cluster
