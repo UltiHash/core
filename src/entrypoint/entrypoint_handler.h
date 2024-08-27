@@ -61,8 +61,6 @@ public:
             }
 
             if (resp) {
-                LOG_DEBUG()
-                    << s.remote_endpoint() << ", sending response: " << *resp;
                 co_await write(s, std::move(*resp));
             } else {
                 LOG_INFO() << s.remote_endpoint()
