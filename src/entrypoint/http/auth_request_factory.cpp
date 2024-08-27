@@ -67,8 +67,7 @@ std::string make_canonical_request(
             continue;
         }
 
-        canonical_headers_map[std::move(name)] =
-            std::string(trim(header.value()));
+        canonical_headers_map[std::move(name)] = trim(header.value());
     }
 
     std::string canonical_headers;
