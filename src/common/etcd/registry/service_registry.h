@@ -42,9 +42,10 @@ public:
         bool m_stop = false;
         std::map<std::string, std::function<std::string()>>
             m_monitored_attributes;
-        std::condition_variable m_cv;
         std::mutex m_attributes_mutex;
         std::thread m_monitor_thread;
+
+        std::condition_variable m_cv;
     };
 
     std::unique_ptr<registration> register_service(const server_config& config);

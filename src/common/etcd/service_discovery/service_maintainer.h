@@ -142,12 +142,14 @@ private:
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
+
             auto client_itr = m_clients.emplace_hint(
                 cl, itr->first,
                 m_service_factory.make_service(
                     itr->second.attributes.at(ENDPOINT_HOST),
                     std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
+
             for (auto& m : m_monitors) {
                 m.get().add_client(client_itr->first, client_itr->second);
                 for (const auto& [attr_name, attr_val] :
@@ -172,6 +174,7 @@ private:
         if (it == m_clients.end()) {
             return;
         }
+
         if (service_attributes_path(path)) {
             auto attr = get_etcd_key_enum(get_attribute_key(path));
             try {

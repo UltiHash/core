@@ -1,8 +1,8 @@
 
 #ifndef EC_SCHEME_H
 #define EC_SCHEME_H
-#include "../types/big_int.h"
-#include "../utils/pointer_traits.h"
+#include "common/types/big_int.h"
+#include "common/utils/pointer_traits.h"
 
 namespace uh::cluster {
 struct ec_scheme {

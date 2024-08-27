@@ -56,7 +56,7 @@ public:
             }
         });
 
-        wait_for_true(ETCD_TIMEOUT, 1, [this]() {
+        wait_for_true(ETCD_TIMEOUT, std::chrono::seconds(1), [this]() {
             return m_storage_services.size() == m_storage_instances.size();
         });
     }

@@ -7,6 +7,13 @@
 #include <vector>
 
 namespace uh::cluster {
+
+/**
+ * This class must be instatiated before creating any threads, otherwise there
+ * is a chance that one of the older created threads receive the signal rather
+ * than the signal handler thread
+ *
+ */
 class signal_handler {
 
     boost::asio::io_context m_ioc;
