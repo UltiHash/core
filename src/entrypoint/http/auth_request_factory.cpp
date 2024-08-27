@@ -85,8 +85,8 @@ std::string make_canonical_request(
         first = false;
     }
 
-    return std::string(headers.method_string()) + "\n" + url.path + "\n" +
-           canonical_query + "\n" + canonical_headers + "\n" +
+    return std::string(headers.method_string()) + "\n" + url.encoded_path +
+           "\n" + canonical_query + "\n" + canonical_headers + "\n" +
            signed_header_names + "\n" +
            require(headers, "x-amz-content-sha256");
 }

@@ -68,7 +68,8 @@ void http_response::set(const std::string& header,
     }
 }
 
-std::optional<std::string> http_response::header(const std::string& name) {
+std::optional<std::string>
+http_response::header(const std::string& name) const {
     auto it = m_res.find(name);
     if (it == m_res.end()) {
         return {};

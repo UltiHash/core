@@ -27,6 +27,7 @@ read_beast_request(boost::asio::ip::tcp::socket& sock);
 struct url_parsing_result {
     std::map<std::string, std::string> params;
     std::string path;
+    std::string encoded_path;
     std::string bucket;
     std::string object;
 };
