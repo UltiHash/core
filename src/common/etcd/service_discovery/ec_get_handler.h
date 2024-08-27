@@ -1,7 +1,7 @@
 
 #ifndef EC_GETTER_H
 #define EC_GETTER_H
-#include "common/utils/ec_scheme.h"
+#include "common/ec/ec_scheme.h"
 #include "storage/interfaces/storage_group.h"
 
 namespace uh::cluster {

@@ -1,7 +1,7 @@
 #ifndef EC_GROUP_MAINTAINER_H
 #define EC_GROUP_MAINTAINER_H
+#include "common/ec/ec_scheme.h"
 #include "common/service_interfaces/storage_interface.h"
-#include "common/utils/ec_scheme.h"
 #include "service_monitor.h"
 #include "storage/interfaces/storage_group.h"
 

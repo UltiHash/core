@@ -3,42 +3,10 @@
 #define STORAGE_SYSTEM_H
 
 #include "common/coroutines/coro_util.h"
+#include "common/ec/ec_calculator.h"
 #include "common/etcd/service_discovery/service_get_handler.h"
 
 namespace uh::cluster {
-
-struct ec_calculator {
-    struct encoded {
-        [[nodiscard]] const std::vector<std::string_view>&
-        get() const noexcept {
-            return m_encoded;
-        }
-
-        void set(std::vector<std::string_view>&& enc) {
-            m_encoded = std::move(enc);
-        }
-
-    private:
-        friend ec_calculator;
-        encoded() = default;
-        std::list<unique_buffer<>> m_parities{};
-        std::vector<std::string_view> m_encoded;
-    };
-
-    ec_calculator(size_t data_nodes, size_t ec_nodes)
-        : m_data_nodes(data_nodes),
-          m_ec_nodes(ec_nodes) {}
-
-    [[nodiscard]] encoded encode(const std::string_view& data) const {
-        encoded enc;
-        enc.set({data});
-        return enc;
-    }
-
-private:
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
-};
 
 struct storage_system_config {
     size_t data_nodes;

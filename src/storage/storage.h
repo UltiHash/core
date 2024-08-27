@@ -42,10 +42,6 @@ public:
 
     void stop() { m_server.stop(); }
 
-    ~storage() {
-        LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
-    }
-
     size_t id() const noexcept { return m_service_id; }
 
     std::shared_ptr<local_storage> get_local_interface() { return m_storage; }

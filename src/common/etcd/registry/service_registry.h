@@ -23,6 +23,10 @@ public:
                      const std::map<std::string, std::string>& kv_pairs,
                      std::size_t ttl);
 
+        registration(const registration&) = delete;
+        registration(registration&&) noexcept = delete;
+        registration& operator=(const registration&) = delete;
+        registration& operator=(registration&&) = delete;
         void monitor(etcd_service_attributes key,
                      const std::function<std::string()>& func);
 
@@ -35,11 +39,12 @@ public:
 
         const role m_service_role;
         const size_t m_id;
-        std::atomic_bool m_stop = false;
+        bool m_stop = false;
         std::map<std::string, std::function<std::string()>>
             m_monitored_attributes;
         std::mutex m_attributes_mutex;
         std::thread m_monitor_thread;
+
         std::condition_variable m_cv;
     };
 

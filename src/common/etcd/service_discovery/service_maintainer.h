@@ -84,6 +84,8 @@ template <typename service_interface> struct service_maintainer {
             });
     }
 
+    [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
+
 private:
     void handle_state_changes(const etcd::Response& response) {
 
@@ -140,6 +142,7 @@ private:
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
+
             auto client_itr = m_clients.emplace_hint(
                 cl, itr->first,
                 m_service_factory.make_service(

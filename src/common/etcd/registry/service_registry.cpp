@@ -26,12 +26,17 @@ service_registry::registration::registration(
       m_service_role(r),
       m_id(id),
       m_monitor_thread([this] {
-          while (!m_stop) {
+          while (true) {
 
               std::unique_lock<std::mutex> lock(m_attributes_mutex);
-              m_cv.wait_for(lock, std::chrono::seconds(m_etcd_default_ttl));
-              if (m_stop)
+              if (m_stop) {
                   return;
+              }
+              if (m_cv.wait_for(lock, std::chrono::seconds(m_etcd_default_ttl),
+                                [this] { return m_stop; })) {
+                  return;
+              }
+
               for (auto& kv : m_monitored_attributes) {
                   m_client.put(kv.first, kv.second(), m_lease);
               }
@@ -47,14 +52,19 @@ void service_registry::registration::monitor(
         get_attributes_path(m_service_role, m_id) + get_etcd_key_string(key);
     std::lock_guard<std::mutex> lock(m_attributes_mutex);
     m_monitored_attributes.emplace(key_base, func);
-    m_cv.notify_one();
+    m_cv.notify_all();
 }
 
 service_registry::registration::~registration() {
-    m_stop = true;
+    {
+        std::unique_lock lk(m_attributes_mutex);
+        m_stop = true;
+    }
     m_cv.notify_all();
+
     m_monitor_thread.join();
     m_client.leaserevoke(m_lease);
+    m_keepalive.Cancel();
 }
 
 std::unique_ptr<service_registry::registration>
