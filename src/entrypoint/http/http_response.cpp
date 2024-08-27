@@ -121,6 +121,8 @@ coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
         res.set("Content-Length", body.length());
     }
 
+    LOG_DEBUG() << out.remote_endpoint() << ", sending response: " << res;
+
     http::response_serializer<http::empty_body> sr(res.base());
     http::write_header(out, sr);
 
