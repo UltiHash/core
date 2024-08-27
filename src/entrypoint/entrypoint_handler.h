@@ -30,7 +30,7 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
-            std::optional<http_response> resp;
+            http_response resp;
             bool keep_alive = false;
 
             try {
@@ -60,14 +60,7 @@ public:
                 resp = make_response(command_exception());
             }
 
-            if (resp) {
-                co_await write(s, std::move(*resp));
-            } else {
-                LOG_INFO() << s.remote_endpoint()
-                           << ", no response: disconnecting";
-                break;
-            }
-
+            co_await write(s, std::move(resp));
             if (!keep_alive) {
                 break;
             }
