@@ -51,9 +51,11 @@ public:
     ec_calculator(size_t data_nodes, size_t ec_nodes)
         : m_data_nodes(data_nodes),
           m_ec_nodes(ec_nodes),
-          m_rs(reed_solomon_new(m_data_nodes, m_ec_nodes)) {}
+          m_rs(reed_solomon_new(m_data_nodes, m_ec_nodes)) {
+        fec_init();
+    }
 
-    void recover(const std::vector<std::span<char>>& shards,
+    void recover(const std::vector<std::string_view>& shards,
                  std::vector<data_stat>& stats) const {
         if (shards.size() != m_ec_nodes + m_data_nodes and
             stats.size() != shards.size()) {
@@ -73,7 +75,7 @@ public:
                 throw std::logic_error(
                     "All shards must have the same size in the recovery");
             }
-            ushards.emplace_back(reinterpret_cast<unsigned char*>(s.data()));
+            ushards.emplace_back((unsigned char*)(s.data()));
         }
         const auto block_count = shard_size / BLOCK_SIZE * shards.size();
         if (reed_solomon_reconstruct(
