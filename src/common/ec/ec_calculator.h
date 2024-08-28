@@ -51,9 +51,7 @@ public:
     ec_calculator(size_t data_nodes, size_t ec_nodes)
         : m_data_nodes(data_nodes),
           m_ec_nodes(ec_nodes),
-          m_rs(reed_solomon_new(m_data_nodes, m_ec_nodes)) {
-        fec_init();
-    }
+          m_rs(get_rs()) {}
 
     void recover(const std::vector<std::string_view>& shards,
                  std::vector<data_stat>& stats) const {
@@ -160,6 +158,11 @@ public:
     ~ec_calculator() { reed_solomon_release(m_rs); }
 
 private:
+    reed_solomon* get_rs() {
+        fec_init();
+        return reed_solomon_new(m_data_nodes, m_ec_nodes);
+    }
+
     const size_t m_data_nodes;
     const size_t m_ec_nodes;
     constexpr static int BLOCK_SIZE = 8 * KIBI_BYTE;
