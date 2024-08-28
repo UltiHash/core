@@ -3,8 +3,6 @@
 
 #include <boost/log/sinks/basic_sink_backend.hpp>
 
-#include <string>
-
 namespace uh::log {
 
 class otel_log_sink : public boost::log::sinks::basic_sink_backend<

@@ -16,3 +16,6 @@
 [submodule "lib/third-party/lmdbxx"]
 	path = lib/third-party/lmdbxx
 	url = https://github.com/hoytech/lmdbxx.git
+[submodule "lib/third-party/reedsolomon-c"]
+	path = lib/third-party/reedsolomon-c
+	url = https://github.com/jannson/reedsolomon-c
