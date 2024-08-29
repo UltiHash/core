@@ -14,8 +14,6 @@ auth_info parse_auth_header(std::string header) {
         throw std::runtime_error("no algorithm separator");
     }
 
-    std::string_view algorithm(h.begin(), h.begin() + pos - 1);
-
     auto parsed = parse_values_string({h.begin() + pos + 1, h.end()});
 
     if (!parsed.contains("Credential") || !parsed.contains("SignedHeaders") ||
@@ -28,6 +26,7 @@ auth_info parse_auth_header(std::string header) {
         throw std::runtime_error("wrong size of crendentials");
     }
 
+    rv.algorithm = std::string_view(h.begin(), h.begin() + pos - 1);
     rv.access_key_id = split_credentials[0];
     rv.date = split_credentials[1];
     rv.region = split_credentials[2];
