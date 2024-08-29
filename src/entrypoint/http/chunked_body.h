@@ -34,7 +34,6 @@ public:
     virtual void on_chunk_data(std::span<char>);
     virtual void on_chunk_done();
     virtual void on_body_done();
-    virtual void on_trailing_headers(const std::map<std::string, std::string>&);
 
 private:
     coro<void> read_nl();

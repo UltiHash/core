@@ -52,24 +52,14 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
                     m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n",
                     asio::use_awaitable);
 
-                std::string header(&m_buffer[0], m_buffer.size());
-                auto trimmed = trim(header, "\r\n");
-                auto hdrs = split(trimmed, '\n');
-
-                std::map<std::string, std::string> headers;
-                for (const auto& h : hdrs) {
-                    auto parts = split(h, ':');
-                    if (parts.size() != 2) {
-                        continue;
-                    }
-
-                    headers[std::string(trim(parts[0]))] =
-                        std::string(trim(parts[1]));
-                }
-
-                LOG_DEBUG() << m_socket.remote_endpoint()
-                            << "done reading trailing headers";
-                on_trailing_headers(headers);
+                /*
+                 * Note: here we should parse the headers and pass the result
+                 * to some callback `on_trailing_headers`.
+                 * However, there is no direct support from beast to partially
+                 * parse HTTP headers without a full request object and we do
+                 * not consider this functionality required at the moment, so
+                 * we leave only this note here.
+                 */
             }
 
             break;
@@ -97,8 +87,6 @@ void chunked_body::on_chunk_header(const chunk_header&) {}
 void chunked_body::on_chunk_data(std::span<char>) {}
 void chunked_body::on_chunk_done() {}
 void chunked_body::on_body_done() {}
-void chunked_body::on_trailing_headers(
-    const std::map<std::string, std::string>&) {}
 
 coro<void> chunked_body::read_nl() {
     char nl[2];
