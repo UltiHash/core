@@ -3,6 +3,7 @@
 
 #include "auth_utils.h"
 #include "common/types/common_types.h"
+#include "entrypoint/user/user.h"
 
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
@@ -30,6 +31,7 @@ struct partial_parse_result {
     std::optional<auth_info> auth;
     std::optional<std::string> signature;
     std::optional<std::string> signing_key;
+    std::optional<user::user> authenticated_user;
 
     boost::asio::ip::tcp::endpoint peer;
 };
