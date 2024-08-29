@@ -67,8 +67,7 @@ std::string make_canonical_request(partial_parse_result& req) {
 std::string request_signature(partial_parse_result& req) {
 
     auto canonical_request = make_canonical_request(req);
-    LOG_DEBUG() << req.socket.remote_endpoint()
-                << ": canonical request: " << canonical_request;
+    LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
     string_to_sign << "AWS4-HMAC-SHA256\n"
@@ -77,8 +76,7 @@ std::string request_signature(partial_parse_result& req) {
                    << req.auth->service << "/aws4_request\n"
                    << sha256::from_string(canonical_request);
 
-    LOG_DEBUG() << req.socket.remote_endpoint()
-                << ": string to sign: " << string_to_sign.str();
+    LOG_DEBUG() << req.peer << ": string to sign: " << string_to_sign.str();
 
     return to_hex(
         hmac_sha256::from_string(*req.signing_key, string_to_sign.str()));
@@ -103,15 +101,16 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
     }
 
     auto rv = partial_parse_result{sock, std::move(buffer), std::move(req)};
+    rv.peer = sock.remote_endpoint();
 
     if (auto authorization = rv.optional("authorization"); authorization) {
         try {
             rv.auth = auth_info(*authorization);
         } catch (const std::exception& e) {
-            LOG_DEBUG() << sock.remote_endpoint()
+            LOG_DEBUG() << rv.peer
                         << ": error parsing authorization header: " << e.what();
             throw command_exception(
-                beast::http::status::forbidden, "AuthorizationHeaderMalformed",
+                status::forbidden, "AuthorizationHeaderMalformed",
                 "The authorization header that you provided is not valid.");
         }
     }
@@ -124,9 +123,8 @@ void partial_parse_result::set_secret(const std::string& key) {
     signature = request_signature(*this);
 
     if (*signature != auth->signature) {
-        LOG_DEBUG() << socket.remote_endpoint()
-                    << ": access denied: signature mismatch";
-        throw command_exception(beast::http::status::forbidden, "AccessDenied",
+        LOG_DEBUG() << peer << ": access denied: signature mismatch";
+        throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 }
