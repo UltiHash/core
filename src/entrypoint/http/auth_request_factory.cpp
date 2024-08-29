@@ -3,6 +3,7 @@
 #include "beast_utils.h"
 #include "chunk_body_sha256.h"
 #include "raw_body.h"
+#include "raw_body_sha256.h"
 
 #include "common/telemetry/log.h"
 
@@ -71,10 +72,9 @@ auth_request_factory::single_chunk(partial_parse_result& req) {
             req, std::make_unique<raw_body>(req, length));
     }
 
-    // TODO insert check for payload signature
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
     return std::make_unique<http_request>(
-        req, std::make_unique<raw_body>(req, length));
+        req, std::make_unique<raw_body_sha256>(req, length));
 }
 
 auth_request_factory::auth_request_factory(
