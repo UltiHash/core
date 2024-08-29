@@ -10,12 +10,10 @@ namespace uh::cluster::ep::http {
 
 std::unique_ptr<http_request>
 auth_request_factory::multi_chunk(partial_parse_result& req) {
-    auto length = std::stoul(req.require("content-length"));
-
-    // TODO: can there be chunked transfer without auth?
     if (!req.auth) {
+        LOG_INFO() << req.peer << ": unauthenticated chunked transfer";
         return std::make_unique<http_request>(
-            req, std::make_unique<raw_body>(req, length));
+            req, std::make_unique<chunked_body>(req));
     }
 
     auto user = m_user_backend->find(req.auth->access_key_id);
