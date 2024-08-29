@@ -39,8 +39,8 @@ public:
     }
 
 private:
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
+    [[maybe_unused]] const size_t m_data_nodes;
+    [[maybe_unused]] const size_t m_ec_nodes;
 };
 
 } // end namespace uh::cluster
