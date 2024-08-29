@@ -1,6 +1,7 @@
 #include "auth_request_factory.h"
 
 #include "auth_utils.h"
+#include "beast_utils.h"
 #include "chunk_body_sha256.h"
 #include "command_exception.h"
 #include "common/crypto/hash.h"
@@ -16,26 +17,6 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 namespace {
-
-std::optional<std::string> optional(const auto& headers,
-                                    const std::string& name) {
-
-    if (auto header = headers.find(name); header != headers.end()) {
-        return header->value();
-    }
-
-    return {};
-}
-
-std::string require(const auto& headers, const std::string& name) {
-
-    auto header = headers.find(name);
-    if (header == headers.end()) {
-        throw std::runtime_error(name + " not found");
-    }
-
-    return header->value();
-}
 
 bool include_header(const std::string& name,
                     const std::set<std::string_view>& included) {
