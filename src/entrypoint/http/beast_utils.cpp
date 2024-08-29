@@ -107,8 +107,8 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
         try {
             rv.auth = auth_info(*authorization);
         } catch (const std::exception& e) {
-            LOG_DEBUG() << rv.peer
-                        << ": error parsing authorization header: " << e.what();
+            LOG_INFO() << rv.peer
+                       << ": error parsing authorization header: " << e.what();
             throw command_exception(
                 status::forbidden, "AuthorizationHeaderMalformed",
                 "The authorization header that you provided is not valid.");
@@ -123,7 +123,7 @@ void partial_parse_result::set_secret(const std::string& key) {
     signature = request_signature(*this);
 
     if (*signature != auth->signature) {
-        LOG_DEBUG() << peer << ": access denied: signature mismatch";
+        LOG_INFO() << peer << ": access denied: signature mismatch";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
     }

@@ -1,9 +1,5 @@
 #include "chunked_body.h"
 
-#include "auth_utils.h"
-#include "common/telemetry/log.h"
-#include "common/utils/strings.h"
-
 #include <charconv>
 
 using namespace boost;
@@ -40,12 +36,6 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
             m_end = true;
 
             if (m_trailing == trailing_headers::read) {
-                LOG_DEBUG()
-                    << m_socket.remote_endpoint()
-                    << " reading trailing headers, bytes in buffer: "
-                    << m_buffer.size()
-                    << to_hex(std::string(&m_buffer[0], m_buffer.size()));
-
                 co_await asio::async_read_until(
                     m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n",
                     asio::use_awaitable);
