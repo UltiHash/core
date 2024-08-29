@@ -14,6 +14,8 @@ struct auth_info {
      */
     auth_info(std::string header);
 
+    std::string signing_key(const std::string& secret) const;
+
     std::string auth_header;
 
     std::string_view algorithm;
@@ -28,7 +30,6 @@ struct auth_info {
 /**
  * Return the signing key for a given `auth_info` and a secret.
  */
-std::string make_signing_key(const auth_info& info, const std::string& secret);
 
 std::map<std::string_view, std::string_view>
 parse_values_string(std::string_view values, char pair_separator = ',',

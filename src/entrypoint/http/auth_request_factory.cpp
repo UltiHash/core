@@ -72,24 +72,6 @@ std::string make_canonical_request(partial_parse_result& req) {
 
 constexpr const char* SECRET_ACCESS_KEY = "secret";
 
-std::optional<auth_info> read_auth_info(partial_parse_result& req) {
-
-    auto auth_header = req.optional("Authorization");
-    if (!auth_header) {
-        return {};
-    }
-
-    try {
-        return auth_info(*auth_header);
-    } catch (const std::exception& e) {
-        LOG_DEBUG() << req.socket.remote_endpoint()
-                    << ": error parsing authorization header: " << e.what();
-        throw command_exception(
-            beast::http::status::forbidden, "AuthorizationHeaderMalformed",
-            "The authorization header that you provided is not valid.");
-    }
-}
-
 std::string request_signature(partial_parse_result& req) {
 
     auto canonical_request = make_canonical_request(req);
@@ -114,7 +96,6 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
     auto content_length = std::stoul(req.require("content-length"));
 
     // TODO: can there be chunked transfer without auth?
-    req.auth = read_auth_info(req);
     if (!req.auth) {
         return std::make_unique<http_request>(
             std::move(req.headers),
@@ -122,9 +103,7 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
             req.socket.remote_endpoint());
     }
 
-    req.signing_key = make_signing_key(*req.auth, SECRET_ACCESS_KEY);
-    LOG_DEBUG() << req.socket.remote_endpoint()
-                << ": signing key: " << to_hex(*req.signing_key);
+    req.signing_key = req.auth->signing_key(SECRET_ACCESS_KEY);
 
     req.signature = request_signature(req);
     if (*req.signature != req.auth->signature) {
@@ -177,7 +156,6 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
     auto content_length =
         std::stoul(req.optional("content-length").value_or("0"));
 
-    req.auth = read_auth_info(req);
     if (!req.auth) {
         LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using single-chunk unauthenticated body";
@@ -187,7 +165,7 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
             req.socket.remote_endpoint());
     }
 
-    req.signing_key = make_signing_key(*req.auth, SECRET_ACCESS_KEY);
+    req.signing_key = req.auth->signing_key(SECRET_ACCESS_KEY);
     req.signature = request_signature(req);
     if (*req.signature != req.auth->signature) {
         LOG_DEBUG() << req.socket.remote_endpoint()

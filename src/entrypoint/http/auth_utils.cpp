@@ -35,11 +35,13 @@ auth_info::auth_info(std::string header)
     signature = parsed["Signature"];
 }
 
-std::string make_signing_key(const auth_info& info, const std::string& secret) {
-    auto date_key = hmac_sha256::from_string("AWS4" + secret, info.date);
-    auto date_region_key = hmac_sha256::from_string(date_key, info.region);
+std::string auth_info::signing_key(const std::string& secret) const {
+
+    auto date_key = hmac_sha256::from_string("AWS4" + secret, date);
+    auto date_region_key = hmac_sha256::from_string(date_key, region);
     auto date_region_service_key =
-        hmac_sha256::from_string(date_region_key, info.service);
+        hmac_sha256::from_string(date_region_key, service);
+
     return hmac_sha256::from_string(date_region_service_key, "aws4_request");
 }
 
