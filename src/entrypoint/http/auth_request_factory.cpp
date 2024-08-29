@@ -75,10 +75,6 @@ std::string make_canonical_request(
 
 constexpr const char* SECRET_ACCESS_KEY = "secret";
 
-std::string operator+(std::string fst, std::string_view snd) {
-    return fst + std::string(snd);
-}
-
 std::optional<auth_info>
 read_auth_info(boost::asio::ip::tcp::socket& sock,
                const beast::http::request<beast::http::empty_body>& headers) {
@@ -152,17 +148,12 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
         LOG_DEBUG() << sock.remote_endpoint() << ": using chunked HMAC-SHA256";
 
-        auto prelude = require(req.headers, "x-amz-date") + "\n" + info->date +
-                       "/" + info->region + "/" + info->service +
-                       "/aws4_request\n";
+        auto body = std::make_unique<chunk_body_sha256>(
+            sock, std::move(req.buffer), chunked_body::trailing_headers::none,
+            req.headers, *info, signature, signing_key);
 
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<chunk_body_sha256>(
-                sock, std::move(req.buffer),
-                chunked_body::trailing_headers::none, "AWS4-HMAC-SHA256",
-                prelude, signature, signing_key),
-            sock.remote_endpoint());
+            std::move(req.headers), std::move(body), sock.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
@@ -178,17 +169,12 @@ multi_chunk_request(boost::asio::ip::tcp::socket& sock,
     }
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
-        auto prelude = require(req.headers, "x-amz-date") + "\n" + info->date +
-                       "/" + info->region + "/" + info->service +
-                       "/aws4_request\n";
+        auto body = std::make_unique<chunk_body_sha256>(
+            sock, std::move(req.buffer), chunked_body::trailing_headers::read,
+            req.headers, *info, signature, signing_key);
 
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<chunk_body_sha256>(
-                sock, std::move(req.buffer),
-                chunked_body::trailing_headers::read, "AWS4-HMAC-SHA256",
-                prelude, signature, signing_key),
-            sock.remote_endpoint());
+            std::move(req.headers), std::move(body), sock.remote_endpoint());
     }
 
     throw std::runtime_error("unsupported aws-chunked authentication: " +

@@ -82,6 +82,10 @@ std::string to_hex(const Array& buffer) {
     return rv;
 }
 
+inline std::string operator+(std::string fst, std::string_view snd) {
+    return fst + std::string(snd);
+}
+
 } // namespace uh::cluster
 
 #endif
