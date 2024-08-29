@@ -5,7 +5,7 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 raw_body::raw_body(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
-                         std::size_t length)
+                   std::size_t length)
     : m_socket(s),
       m_buffer(std::move(initial)),
       m_length(length) {}
