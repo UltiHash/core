@@ -6,22 +6,17 @@
 
 #include "common/telemetry/log.h"
 
-#include <boost/algorithm/string.hpp>
-#include <set>
-
-using namespace boost;
-
 namespace uh::cluster::ep::http {
 
 constexpr const char* SECRET_ACCESS_KEY = "secret";
 
 std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
-    auto content_length = std::stoul(req.require("content-length"));
+    auto length = std::stoul(req.require("content-length"));
 
     // TODO: can there be chunked transfer without auth?
     if (!req.auth) {
         return std::make_unique<http_request>(
-            req, std::make_unique<raw_body>(req, content_length));
+            req, std::make_unique<raw_body>(req, length));
     }
 
     req.set_secret(SECRET_ACCESS_KEY);
@@ -59,13 +54,12 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
 
 std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
 
-    auto content_length =
-        std::stoul(req.optional("content-length").value_or("0"));
+    auto length = std::stoul(req.optional("content-length").value_or("0"));
 
     if (!req.auth) {
         LOG_DEBUG() << req.peer << ": using single-chunk unauthenticated body";
         return std::make_unique<http_request>(
-            req, std::make_unique<raw_body>(req, content_length));
+            req, std::make_unique<raw_body>(req, length));
     }
 
     req.set_secret(SECRET_ACCESS_KEY);
@@ -74,13 +68,13 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
     if (content_sha == "UNSIGNED-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
         return std::make_unique<http_request>(
-            req, std::make_unique<raw_body>(req, content_length));
+            req, std::make_unique<raw_body>(req, length));
     }
 
     // TODO insert check for payload signature
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
     return std::make_unique<http_request>(
-        req, std::make_unique<raw_body>(req, content_length));
+        req, std::make_unique<raw_body>(req, length));
 }
 
 coro<std::unique_ptr<http_request>>
