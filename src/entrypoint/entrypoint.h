@@ -17,6 +17,19 @@
 
 namespace uh::cluster {
 
+std::unique_ptr<ep::http::request_factory>
+make_request_factory(const entrypoint_config& config) {
+    switch (config.authentication) {
+    case entrypoint_config::auth_backend::none:
+        return std::make_unique<ep::http::default_request_factory>();
+    case entrypoint_config::auth_backend::dummy:
+        return std::make_unique<ep::http::auth_request_factory>(
+            std::make_unique<ep::user::dummy_backend>());
+    }
+
+    throw std::runtime_error("unsupported authentication backend");
+}
+
 class entrypoint {
 public:
     explicit entrypoint(const service_config& sc, entrypoint_config config)
@@ -52,8 +65,7 @@ public:
               std::make_unique<entrypoint_handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  std::make_unique<ep::http::auth_request_factory>(
-                      std::make_unique<ep::user::dummy_backend>())),
+                  make_request_factory(config)),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
