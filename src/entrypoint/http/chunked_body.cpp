@@ -93,19 +93,10 @@ coro<void> chunked_body::read_nl() {
 }
 
 std::size_t chunked_body::find_nl() const {
-    bool has_cr = false;
+    std::string_view sv(&m_buffer[0], m_buffer.size());
 
-    for (auto index = 0ull; index < m_buffer.size(); ++index) {
-        if (m_buffer[index] == '\r') {
-            has_cr = true;
-            continue;
-        }
-
-        if (m_buffer[index] == '\n' && has_cr) {
-            return index + 1;
-        }
-
-        has_cr = false;
+    if (auto pos = sv.find("\r\n"); pos != std::string_view::npos) {
+        return pos + 2;
     }
 
     throw std::runtime_error("newline required");
@@ -126,7 +117,7 @@ coro<chunked_body::chunk_header> chunked_body::read_chunk_header() {
                                  make_error_condition(ec).message());
     }
 
-    if (next != &m_buffer[pos] && *next == ';') {
+    if (*next == ';') {
         ++next;
         hdr.extensions_string = std::string(next, &*(m_buffer.cbegin() + pos));
         hdr.extensions = parse_values_string(hdr.extensions_string, ';');
