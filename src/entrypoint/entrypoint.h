@@ -12,6 +12,7 @@
 #include "entrypoint/http/auth_request_factory.h"
 #include "entrypoint/http/default_request_factory.h"
 #include "entrypoint/limits.h"
+#include "entrypoint/user/dummy_backend.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
@@ -51,7 +52,8 @@ public:
               std::make_unique<entrypoint_handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  std::make_unique<ep::http::auth_request_factory>()),
+                  std::make_unique<ep::http::auth_request_factory>(
+                      std::make_unique<ep::user::dummy_backend>())),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }

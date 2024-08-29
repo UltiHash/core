@@ -7,6 +7,7 @@
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
+#include "entrypoint/user/user.h"
 
 #include <map>
 #include <span>
@@ -56,6 +57,8 @@ public:
     const uh::cluster::context& context() const;
     uh::cluster::context& context();
 
+    const std::optional<ep::user::user>& authenticated_user() const;
+
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
 
@@ -68,6 +71,7 @@ private:
     std::map<std::string, std::string> m_params;
     std::string m_path;
     std::string m_query;
+    std::optional<ep::user::user> m_authenticated_user;
 
     uh::cluster::context m_ctx;
 };
