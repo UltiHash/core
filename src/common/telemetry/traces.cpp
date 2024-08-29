@@ -70,14 +70,12 @@ trace::deserialize_context(std::vector<char>&& buf) {
     return new_context;
 }
 
-std::vector<char> trace::serialize_context(
-    const std::optional<opentelemetry::context::Context>& context) {
-    if (!context)
-        return {};
+std::vector<char>
+trace::serialize_context(const opentelemetry::context::Context& context) {
     carrier c;
     auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::
         GetGlobalPropagator();
-    prop->Inject(c, *context);
+    prop->Inject(c, context);
     return c.extract_buffer();
 }
 
