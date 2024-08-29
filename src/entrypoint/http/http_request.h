@@ -15,16 +15,6 @@ namespace uh::cluster {
 
 using ep::http::method;
 
-struct url_parsing_result {
-    std::map<std::string, std::string> params;
-    std::string path;
-    std::string encoded_path;
-    std::string bucket;
-    std::string object;
-};
-
-url_parsing_result parse_request_target(const std::string& target);
-
 class http_request {
 public:
     http_request(ep::http::partial_parse_result& req,

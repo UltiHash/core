@@ -7,6 +7,7 @@
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/url/url.hpp>
 
 namespace uh::cluster::ep::http {
 
@@ -15,6 +16,8 @@ using method = beast::http::verb;
 
 struct partial_parse_result {
     static coro<partial_parse_result> read(boost::asio::ip::tcp::socket& sock);
+
+    void set_secret(const std::string& key);
 
     std::optional<std::string> optional(const std::string& name);
     std::string require(const std::string& name);
@@ -27,6 +30,22 @@ struct partial_parse_result {
     std::optional<std::string> signature;
     std::optional<std::string> signing_key;
 };
+
+struct url_parsing_result {
+    std::map<std::string, std::string> params;
+    std::string path;
+    std::string encoded_path;
+    std::string bucket;
+    std::string object;
+};
+
+url_parsing_result parse_request_target(const std::string& target);
+
+/**
+ * Return bucket and object key.
+ */
+std::tuple<std::string, std::string>
+extract_bucket_and_object(boost::urls::url url);
 
 } // namespace uh::cluster::ep::http
 
