@@ -33,9 +33,6 @@ BOOST_AUTO_TEST_CASE(test_md5) {
 }
 
 BOOST_AUTO_TEST_CASE(test_sha256) {
-
-    BOOST_CHECK_EQUAL(
-        to_hex(sha256::from_string("")),
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    BOOST_CHECK_EQUAL(to_hex(sha256::from_string("")), SHA256_EMPTY_STRING);
 }
 } // namespace
