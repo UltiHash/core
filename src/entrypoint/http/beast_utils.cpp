@@ -1,5 +1,8 @@
 #include "beast_utils.h"
 
+#include "command_exception.h"
+#include "common/telemetry/log.h"
+
 using namespace boost;
 
 namespace uh::cluster::ep::http {
@@ -20,7 +23,21 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    co_return partial_parse_result{sock, std::move(buffer), std::move(req)};
+    auto rv = partial_parse_result{sock, std::move(buffer), std::move(req)};
+
+    if (auto authorization = rv.optional("authorization"); authorization) {
+        try {
+            rv.auth = auth_info(*authorization);
+        } catch (const std::exception& e) {
+            LOG_DEBUG() << sock.remote_endpoint()
+                        << ": error parsing authorization header: " << e.what();
+            throw command_exception(
+                beast::http::status::forbidden, "AuthorizationHeaderMalformed",
+                "The authorization header that you provided is not valid.");
+        }
+    }
+
+    co_return rv;
 }
 
 std::optional<std::string>
