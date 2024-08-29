@@ -1,11 +1,9 @@
 #ifndef CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_SHA256_H
 #define CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_SHA256_H
 
-#include "auth_utils.h"
+#include "beast_utils.h"
 #include "chunked_body.h"
 #include "common/crypto/hash.h"
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
 
 namespace uh::cluster::ep::http {
 
@@ -18,13 +16,8 @@ public:
      * @param seed seed signature derived from header
      * @param signing_key signing key
      */
-    chunk_body_sha256(
-        boost::asio::ip::tcp::socket& s,
-        const boost::beast::flat_buffer& initial,
-        chunked_body::trailing_headers trailing,
-        const boost::beast::http::request<boost::beast::http::empty_body>&
-            headers,
-        const auth_info& info, std::string seed, std::string signing_key);
+    chunk_body_sha256(partial_parse_result& req,
+                      chunked_body::trailing_headers trailing);
 
     void on_chunk_header(const chunk_header&) override;
     void on_chunk_data(std::span<char>) override;

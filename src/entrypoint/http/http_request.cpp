@@ -79,7 +79,11 @@ const beast::http::fields& http_request::header() const { return m_req.base(); }
 bool http_request::has_query() const { return !m_params.empty(); }
 
 std::optional<std::string> http_request::header(const std::string& name) const {
-    return ep::http::require(m_req, name);
+    if (auto it = m_req.base().find(name); it != m_req.base().end()) {
+        return it->value();
+    }
+
+    return {};
 }
 
 const uh::cluster::context& http_request::context() const { return m_ctx; }

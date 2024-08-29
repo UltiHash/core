@@ -13,26 +13,21 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
-std::string make_prelude(const auto& headers, const auto& info) {
-    return "AWS4-HMAC-SHA256-PAYLOAD\n" + require(headers, "x-amz-date") +
-           "\n" + info.date + "/" + info.region + "/" + info.service +
+std::string make_prelude(partial_parse_result& req) {
+    return "AWS4-HMAC-SHA256-PAYLOAD\n" + req.require("x-amz-date") + "\n" +
+           req.auth->date + "/" + req.auth->region + "/" + req.auth->service +
            "/aws4_request\n";
 }
 
 } // namespace
 
-chunk_body_sha256::chunk_body_sha256(
-    asio::ip::tcp::socket& s, const beast::flat_buffer& initial,
-    chunked_body::trailing_headers trailing,
-    const beast::http::request<beast::http::empty_body>& headers,
-    const auth_info& info, std::string seed, std::string signing_key)
-    : chunked_body(s, initial, trailing),
-      m_signature_prelude(make_prelude(headers, info)),
-      m_signing_key(std::move(signing_key)),
-      m_string_to_sign(m_signature_prelude + std::move(seed) + "\n" +
-                       SHA256_EMPTY_STRING + "\n") {
-    LOG_DEBUG() << "seed: " << seed;
-}
+chunk_body_sha256::chunk_body_sha256(partial_parse_result& req,
+                                     chunked_body::trailing_headers trailing)
+    : chunked_body(req, trailing),
+      m_signature_prelude(make_prelude(req)),
+      m_signing_key(std::move(*req.signing_key)),
+      m_string_to_sign(m_signature_prelude + std::move(*req.signature) + "\n" +
+                       SHA256_EMPTY_STRING + "\n") {}
 
 void chunk_body_sha256::on_chunk_header(const chunk_header& hdr) {
     if (auto it = hdr.extensions.find("chunk-signature");

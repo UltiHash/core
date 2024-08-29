@@ -10,16 +10,14 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-chunked_body::chunked_body(asio::ip::tcp::socket& s,
-                           const beast::flat_buffer& initial,
-                           trailing_headers trailing)
-    : m_socket(s),
+chunked_body::chunked_body(partial_parse_result& req, trailing_headers trailing)
+    : m_socket(req.socket),
       m_buffer(),
       m_trailing(trailing) {
     m_buffer.reserve(BUFFER_SIZE);
-    m_buffer.resize(initial.size());
+    m_buffer.resize(req.buffer.size());
     asio::buffer_copy(asio::buffer(m_buffer),
-                      asio::buffer(initial.data(), initial.size()));
+                      asio::buffer(req.buffer.data(), req.buffer.size()));
 }
 
 coro<std::size_t> chunked_body::read(std::span<char> dest) {
