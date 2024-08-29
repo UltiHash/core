@@ -5,9 +5,9 @@
 
 namespace uh::cluster::ep::http {
 
-auth_info parse_auth_header(std::string header) {
-    auth_info rv{.auth_header = std::move(header)};
-    std::string_view h(rv.auth_header);
+auth_info::auth_info(std::string header)
+    : auth_header(std::move(header)) {
+    std::string_view h(auth_header);
 
     std::size_t pos = h.find(' ');
     if (pos == std::string::npos) {
@@ -15,7 +15,6 @@ auth_info parse_auth_header(std::string header) {
     }
 
     auto parsed = parse_values_string({h.begin() + pos + 1, h.end()});
-
     if (!parsed.contains("Credential") || !parsed.contains("SignedHeaders") ||
         !parsed.contains("Signature")) {
         throw std::runtime_error("required fields are missing");
@@ -26,16 +25,14 @@ auth_info parse_auth_header(std::string header) {
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    rv.algorithm = std::string_view(h.begin(), h.begin() + pos - 1);
-    rv.access_key_id = split_credentials[0];
-    rv.date = split_credentials[1];
-    rv.region = split_credentials[2];
-    rv.service = split_credentials[3];
-    rv.signed_headers =
+    algorithm = std::string_view(h.begin(), h.begin() + pos - 1);
+    access_key_id = split_credentials[0];
+    date = split_credentials[1];
+    region = split_credentials[2];
+    service = split_credentials[3];
+    signed_headers =
         split<std::set<std::string_view>>(parsed["SignedHeaders"], ';');
-    rv.signature = parsed["Signature"];
-
-    return rv;
+    signature = parsed["Signature"];
 }
 
 std::string make_signing_key(const auth_info& info, const std::string& secret) {

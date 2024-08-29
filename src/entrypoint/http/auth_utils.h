@@ -8,6 +8,12 @@
 namespace uh::cluster::ep::http {
 
 struct auth_info {
+    /**
+     * Construct auth_info by parsing Authorization header
+     * Throws on parse error.
+     */
+    auth_info(std::string header);
+
     std::string auth_header;
 
     std::string_view algorithm;
@@ -18,12 +24,6 @@ struct auth_info {
     std::set<std::string_view> signed_headers;
     std::string_view signature;
 };
-
-/**
- * Parse Authorization header and return `auth_info` struct.
- * Throws on parse error.
- */
-auth_info parse_auth_header(std::string header);
 
 /**
  * Return the signing key for a given `auth_info` and a secret.
