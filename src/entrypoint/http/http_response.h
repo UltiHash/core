@@ -60,7 +60,6 @@ public:
     std::optional<std::string> header(const std::string& name) const;
 
     uh::cluster::body& body() { return *m_body; }
-    const uh::cluster::body& body() const { return *m_body; }
 
 private:
     http::response<http::empty_body> m_res;
