@@ -126,14 +126,17 @@ std::string request_signature(boost::asio::ip::tcp::socket& sock,
     LOG_DEBUG() << sock.remote_endpoint()
                 << ": canonical request: " << canonical_request;
 
-    auto string_to_sign =
-        std::string("AWS4-HMAC-SHA256\n") + require(req.headers, "x-amz-date") +
-        "\n" + info.date + "/" + info.region + "/" + info.service +
-        "/aws4_request\n" + sha256::from_string(canonical_request);
-    LOG_DEBUG() << sock.remote_endpoint()
-                << ": string to sign: " << string_to_sign;
+    std::stringstream string_to_sign;
+    string_to_sign << "AWS4-HMAC-SHA256\n"
+                   << require(req.headers, "x-amz-date") << "\n"
+                   << info.date << "/" << info.region << "/" << info.service
+                   << "/aws4_request\n"
+                   << sha256::from_string(canonical_request);
 
-    return to_hex(hmac_sha256::from_string(key, string_to_sign));
+    LOG_DEBUG() << sock.remote_endpoint()
+                << ": string to sign: " << string_to_sign.str();
+
+    return to_hex(hmac_sha256::from_string(key, string_to_sign.str()));
 }
 
 std::unique_ptr<http_request>
