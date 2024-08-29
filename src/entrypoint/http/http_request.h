@@ -27,9 +27,8 @@ url_parsing_result parse_request_target(const std::string& target);
 
 class http_request {
 public:
-    http_request(boost::beast::http::request<http::empty_body>&& req,
-                 std::unique_ptr<ep::http::body> body,
-                 boost::asio::ip::tcp::endpoint peer);
+    http_request(ep::http::partial_parse_result& req,
+                 std::unique_ptr<ep::http::body> body);
 
     [[nodiscard]] http::verb method() const;
 
