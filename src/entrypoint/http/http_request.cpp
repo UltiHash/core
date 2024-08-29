@@ -8,24 +8,6 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-coro<read_request_result> read_beast_request(asio::ip::tcp::socket& sock) {
-
-    beast::http::request_parser<beast::http::empty_body> parser;
-    beast::flat_buffer buffer;
-    parser.body_limit((std::numeric_limits<std::uint64_t>::max)());
-
-    co_await beast::http::async_read_header(sock, buffer, parser,
-                                            asio::use_awaitable);
-
-    auto req = std::move(parser.get());
-    if (req.base().version() != 11) {
-        throw std::runtime_error(
-            "bad http version. support exists only for HTTP 1.1.\n");
-    }
-
-    co_return read_request_result{req, buffer};
-}
-
 url_parsing_result parse_request_target(const std::string& target) {
     auto query_index = target.find('?');
 
@@ -97,12 +79,7 @@ const beast::http::fields& http_request::header() const { return m_req.base(); }
 bool http_request::has_query() const { return !m_params.empty(); }
 
 std::optional<std::string> http_request::header(const std::string& name) const {
-    auto it = m_req.base().find(name);
-    if (it == m_req.base().end()) {
-        return std::nullopt;
-    }
-
-    return it->value();
+    return ep::http::require(m_req, name);
 }
 
 const uh::cluster::context& http_request::context() const { return m_ctx; }

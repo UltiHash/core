@@ -1,28 +1,19 @@
 #ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
 #define ENTRYPOINT_HTTP_HTTP_REQUEST_H
 
+#include "beast_utils.h"
 #include "command_exception.h"
 #include "common/coroutines/context.h"
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
 #include <map>
 #include <span>
 
 namespace uh::cluster {
-namespace http = boost::beast::http; // from <boost/beast/http.hpp>
-typedef http::verb method;
 
-struct read_request_result {
-    boost::beast::http::request<boost::beast::http::empty_body> headers;
-    boost::beast::flat_buffer buffer;
-};
-
-coro<read_request_result>
-read_beast_request(boost::asio::ip::tcp::socket& sock);
+using ep::http::method;
 
 struct url_parsing_result {
     std::map<std::string, std::string> params;
