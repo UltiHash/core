@@ -98,9 +98,7 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
     // TODO: can there be chunked transfer without auth?
     if (!req.auth) {
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<raw_body>(req, content_length),
-            req.socket.remote_endpoint());
+            req, std::make_unique<raw_body>(req, content_length));
     }
 
     req.signing_key = req.auth->signing_key(SECRET_ACCESS_KEY);
@@ -122,9 +120,7 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
         auto body = std::make_unique<chunk_body_sha256>(
             req, chunked_body::trailing_headers::none);
 
-        return std::make_unique<http_request>(std::move(req.headers),
-                                              std::move(body),
-                                              req.socket.remote_endpoint());
+        return std::make_unique<http_request>(req, std::move(body));
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
@@ -132,19 +128,15 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
                     << ": using chunked unsigned payload with trailer";
 
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<chunked_body>(
-                req, chunked_body::trailing_headers::read),
-            req.socket.remote_endpoint());
+            req, std::make_unique<chunked_body>(
+                     req, chunked_body::trailing_headers::read));
     }
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         auto body = std::make_unique<chunk_body_sha256>(
             req, chunked_body::trailing_headers::read);
 
-        return std::make_unique<http_request>(std::move(req.headers),
-                                              std::move(body),
-                                              req.socket.remote_endpoint());
+        return std::make_unique<http_request>(req, std::move(body));
     }
 
     throw std::runtime_error("unsupported aws-chunked authentication: " +
@@ -160,9 +152,7 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
         LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using single-chunk unauthenticated body";
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<raw_body>(req, content_length),
-            req.socket.remote_endpoint());
+            req, std::make_unique<raw_body>(req, content_length));
     }
 
     req.signing_key = req.auth->signing_key(SECRET_ACCESS_KEY);
@@ -179,17 +169,14 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
         LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using single-chunk unsigned body";
         return std::make_unique<http_request>(
-            std::move(req.headers),
-            std::make_unique<raw_body>(req, content_length),
-            req.socket.remote_endpoint());
+            req, std::make_unique<raw_body>(req, content_length));
     }
 
     // TODO insert check for payload signature
     LOG_DEBUG() << req.socket.remote_endpoint()
                 << ": using single-chunk body with signed payload";
     return std::make_unique<http_request>(
-        std::move(req.headers), std::make_unique<raw_body>(req, content_length),
-        req.socket.remote_endpoint());
+        req, std::make_unique<raw_body>(req, content_length));
 }
 
 coro<std::unique_ptr<http_request>>

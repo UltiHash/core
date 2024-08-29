@@ -34,12 +34,11 @@ url_parsing_result parse_request_target(const std::string& target) {
     return rv;
 }
 
-http_request::http_request(beast::http::request<http::empty_body>&& req,
-                           std::unique_ptr<ep::http::body> body,
-                           boost::asio::ip::tcp::endpoint peer)
-    : m_req(std::move(req)),
+http_request::http_request(partial_parse_result& req,
+                           std::unique_ptr<ep::http::body> body)
+    : m_req(std::move(req.headers)),
       m_body(std::move(body)),
-      m_peer(peer),
+      m_peer(req.socket.remote_endpoint()),
       m_ctx() {
 
     auto target = parse_request_target(m_req.target());

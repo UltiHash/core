@@ -44,8 +44,7 @@ default_request_factory::create(ip::tcp::socket& sock) {
     auto req = co_await partial_parse_result::read(sock);
     auto body = make_body(req);
 
-    co_return std::unique_ptr<http_request>(new http_request(
-        std::move(req.headers), std::move(body), req.socket.remote_endpoint()));
+    co_return std::make_unique<http_request>(req, std::move(body));
 }
 
 } // namespace uh::cluster::ep::http
