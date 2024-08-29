@@ -137,7 +137,7 @@ public:
 
             if (reed_solomon_encode2(m_rs, shard_ptrs.data(),
                                      static_cast<int>(total_blocks),
-                                     shard_size) != 0) {
+                                     static_cast<int>(shard_size)) != 0) {
                 throw std::runtime_error("Error in EC calculation");
             }
 
@@ -150,9 +150,10 @@ public:
     ~ec_calculator() { reed_solomon_release(m_rs); }
 
 private:
-    reed_solomon* get_rs() {
+    [[nodiscard]] reed_solomon* get_rs() const {
         fec_init();
-        return reed_solomon_new(m_data_nodes, m_ec_nodes);
+        return reed_solomon_new(static_cast<int>(m_data_nodes),
+                                static_cast<int>(m_ec_nodes));
     }
 
     const size_t m_data_nodes;
