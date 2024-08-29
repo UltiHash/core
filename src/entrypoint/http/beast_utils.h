@@ -13,6 +13,7 @@ namespace uh::cluster::ep::http {
 
 namespace beast = boost::beast;
 using method = beast::http::verb;
+using status = beast::http::status;
 
 struct partial_parse_result {
     static coro<partial_parse_result> read(boost::asio::ip::tcp::socket& sock);
@@ -29,6 +30,8 @@ struct partial_parse_result {
     std::optional<auth_info> auth;
     std::optional<std::string> signature;
     std::optional<std::string> signing_key;
+
+    boost::asio::ip::tcp::endpoint peer;
 };
 
 struct url_parsing_result {

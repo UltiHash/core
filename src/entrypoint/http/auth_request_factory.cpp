@@ -29,8 +29,7 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
     auto content_sha = req.require("x-amz-content-sha256");
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
-        LOG_DEBUG() << req.socket.remote_endpoint()
-                    << ": using chunked HMAC-SHA256";
+        LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
 
         auto body = std::make_unique<chunk_body_sha256>(
             req, chunked_body::trailing_headers::none);
@@ -39,7 +38,7 @@ std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
-        LOG_DEBUG() << req.socket.remote_endpoint()
+        LOG_DEBUG() << req.peer
                     << ": using chunked unsigned payload with trailer";
 
         return std::make_unique<http_request>(
@@ -64,8 +63,7 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
         std::stoul(req.optional("content-length").value_or("0"));
 
     if (!req.auth) {
-        LOG_DEBUG() << req.socket.remote_endpoint()
-                    << ": using single-chunk unauthenticated body";
+        LOG_DEBUG() << req.peer << ": using single-chunk unauthenticated body";
         return std::make_unique<http_request>(
             req, std::make_unique<raw_body>(req, content_length));
     }
@@ -74,15 +72,13 @@ std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
 
     auto content_sha = req.require("x-amz-content-sha256");
     if (content_sha == "UNSIGNED-PAYLOAD") {
-        LOG_DEBUG() << req.socket.remote_endpoint()
-                    << ": using single-chunk unsigned body";
+        LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
         return std::make_unique<http_request>(
             req, std::make_unique<raw_body>(req, content_length));
     }
 
     // TODO insert check for payload signature
-    LOG_DEBUG() << req.socket.remote_endpoint()
-                << ": using single-chunk body with signed payload";
+    LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
     return std::make_unique<http_request>(
         req, std::make_unique<raw_body>(req, content_length));
 }
@@ -91,8 +87,7 @@ coro<std::unique_ptr<http_request>>
 auth_request_factory::create(boost::asio::ip::tcp::socket& sock) {
     auto req = co_await partial_parse_result::read(sock);
 
-    LOG_DEBUG() << sock.remote_endpoint()
-                << ": pre-auth request: " << req.headers;
+    LOG_DEBUG() << req.peer << ": pre-auth request: " << req.headers;
 
     auto transfer_encoding = req.optional("content-encoding");
     if (transfer_encoding && *transfer_encoding == "aws-chunked") {
