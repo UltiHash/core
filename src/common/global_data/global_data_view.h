@@ -182,11 +182,17 @@ private:
     ec_load_balancer m_load_balancer;
     ec_get_handler m_basic_getter;
 
-    void extract_node_address_map(
-        const address& addr,
-        std::unordered_map<std::shared_ptr<storage_interface>, address>&
-            node_address_map,
-        std::vector<std::shared_ptr<storage_interface>>& nodes);
+    struct address_node_info {
+        std::vector<std::shared_ptr<storage_interface>> nodes;
+        std::unordered_map<std::shared_ptr<storage_interface>, address>
+            node_address_map;
+        std::unordered_map<std::shared_ptr<storage_interface>,
+                           std::vector<size_t>>
+            node_data_offsets_map;
+        size_t data_size;
+    };
+
+    address_node_info extract_node_address_map(const address& addr);
 };
 
 } // end namespace uh::cluster

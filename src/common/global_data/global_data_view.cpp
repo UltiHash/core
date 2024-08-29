@@ -75,37 +75,19 @@ global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
 coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
                                                  const address& addr) {
 
-    std::unordered_map<std::shared_ptr<storage_interface>, address>
-        node_address_map;
-    std::unordered_map<std::shared_ptr<storage_interface>, std::vector<size_t>>
-        node_data_offsets_map;
-    std::vector<std::shared_ptr<storage_interface>> nodes;
-
-    size_t offset = 0;
-    for (size_t i = 0; i < addr.size(); ++i) {
-
-        const auto frag = addr.get(i);
-        auto n = m_basic_getter.get(frag.pointer);
-        auto& node_address = node_address_map[n];
-        if (node_address.empty()) {
-            nodes.emplace_back(n);
-        }
-        node_address.push(frag);
-        node_data_offsets_map[n].emplace_back(offset);
-        offset += frag.size;
-    }
+    auto info = extract_node_address_map(addr);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
-    promises.reserve(nodes.size());
+    promises.reserve(info.nodes.size());
 
-    for (auto& dn : nodes) {
+    for (auto& dn : info.nodes) {
         promises.emplace_back(
             std::make_shared<awaitable_promise<void>>(m_io_service));
 
         boost::asio::co_spawn(m_io_service,
                               dn->read_address(ctx, buffer,
-                                               node_address_map[dn],
-                                               node_data_offsets_map[dn]),
+                                               info.node_address_map[dn],
+                                               info.node_data_offsets_map[dn]),
                               use_awaitable_promise_cospawn(promises.back()));
     }
 
@@ -113,7 +95,7 @@ coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
         co_await p->get();
     }
 
-    co_return offset;
+    co_return info.data_size;
 }
 
 coro<void> global_data_view::sync(context& ctx, const address& addr) {
@@ -122,18 +104,16 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
         throw std::length_error("Empty address is not allowed for sync");
     }
 
-    std::unordered_map<std::shared_ptr<storage_interface>, address>
-        node_address_map;
-    std::vector<std::shared_ptr<storage_interface>> nodes;
-    extract_node_address_map(addr, node_address_map, nodes);
+    auto info = extract_node_address_map(addr);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(nodes.size());
+    proms.reserve(info.nodes.size());
 
-    for (auto& dn : nodes) {
+    for (auto& dn : info.nodes) {
         proms.emplace_back(
             std::make_shared<awaitable_promise<void>>(m_io_service));
-        boost::asio::co_spawn(m_io_service, dn->sync(ctx, node_address_map[dn]),
+        boost::asio::co_spawn(m_io_service,
+                              dn->sync(ctx, info.node_address_map[dn]),
                               use_awaitable_promise_cospawn(proms.back()));
     }
 
@@ -168,18 +148,17 @@ global_data_view::~global_data_view() noexcept {
 
 [[nodiscard]] coro<address> global_data_view::link(context& ctx,
                                                    const address& addr) {
-    std::unordered_map<std::shared_ptr<storage_interface>, address>
-        node_address_map;
-    std::vector<std::shared_ptr<storage_interface>> nodes;
-    extract_node_address_map(addr, node_address_map, nodes);
+
+    auto info = extract_node_address_map(addr);
 
     std::vector<std::shared_ptr<awaitable_promise<address>>> proms;
-    proms.reserve(nodes.size());
+    proms.reserve(info.nodes.size());
 
-    for (auto& dn : nodes) {
+    for (auto& dn : info.nodes) {
         proms.emplace_back(
             std::make_shared<awaitable_promise<address>>(m_io_service));
-        boost::asio::co_spawn(m_io_service, dn->link(ctx, node_address_map[dn]),
+        boost::asio::co_spawn(m_io_service,
+                              dn->link(ctx, info.node_address_map[dn]),
                               use_awaitable_promise_cospawn(proms.back()));
     }
 
@@ -192,19 +171,17 @@ global_data_view::~global_data_view() noexcept {
 }
 
 coro<void> global_data_view::unlink(context& ctx, const address& addr) {
-    std::unordered_map<std::shared_ptr<storage_interface>, address>
-        node_address_map;
-    std::vector<std::shared_ptr<storage_interface>> nodes;
-    extract_node_address_map(addr, node_address_map, nodes);
+
+    auto info = extract_node_address_map(addr);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(nodes.size());
+    proms.reserve(info.nodes.size());
 
-    for (auto& dn : nodes) {
+    for (auto& dn : info.nodes) {
         proms.emplace_back(
             std::make_shared<awaitable_promise<void>>(m_io_service));
         boost::asio::co_spawn(m_io_service,
-                              dn->unlink(ctx, node_address_map[dn]),
+                              dn->unlink(ctx, info.node_address_map[dn]),
                               use_awaitable_promise_cospawn(proms.back()));
     }
 
@@ -213,20 +190,24 @@ coro<void> global_data_view::unlink(context& ctx, const address& addr) {
     }
 }
 
-void global_data_view::extract_node_address_map(
-    const address& addr,
-    std::unordered_map<std::shared_ptr<storage_interface>, address>&
-        node_address_map,
-    std::vector<std::shared_ptr<storage_interface>>& nodes) {
+global_data_view::address_node_info
+global_data_view::extract_node_address_map(const address& addr) {
+    address_node_info info;
+    size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
         auto n = m_basic_getter.get(frag.pointer);
-        auto& node_address = node_address_map[n];
+        auto& node_address = info.node_address_map[n];
         if (node_address.empty()) {
-            nodes.emplace_back(std::move(n));
+            info.nodes.emplace_back(std::move(n));
         }
         node_address.push(frag);
+        info.node_data_offsets_map[n].emplace_back(offset);
+        offset += frag.size;
     }
+
+    info.data_size = offset;
+    return info;
 }
 
 } // namespace uh::cluster
