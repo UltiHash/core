@@ -34,7 +34,7 @@ public:
                 m_encoded.emplace_back(reinterpret_cast<char*>(ptr),
                                        shard_size);
             }
-            m_parities = std::move(new_shards);
+            m_shard_allocations = std::move(new_shards);
         }
 
         void set(std::vector<std::string_view> shard_ptrs) {
@@ -44,7 +44,7 @@ public:
     private:
         friend ec_calculator;
         encoded() = default;
-        std::vector<unique_buffer<unsigned char>> m_parities{};
+        std::vector<unique_buffer<unsigned char>> m_shard_allocations{};
         std::vector<std::string_view> m_encoded;
     };
 
@@ -62,9 +62,6 @@ public:
         }
 
         const auto shard_size = shards.front().size();
-        if (shard_size % BLOCK_SIZE != 0) {
-            throw std::logic_error("Invalid shard size for recovery");
-        }
 
         std::vector<unsigned char*> ushards;
         ushards.reserve(shards.size());
@@ -75,11 +72,11 @@ public:
             }
             ushards.emplace_back((unsigned char*)(s.data()));
         }
-        const auto block_count = shard_size / BLOCK_SIZE * shards.size();
         if (reed_solomon_reconstruct(
                 m_rs, ushards.data(),
                 reinterpret_cast<unsigned char*>(stats.data()),
-                static_cast<int>(block_count), BLOCK_SIZE) != 0) {
+                static_cast<int>(m_data_nodes + m_ec_nodes),
+                static_cast<int>(shard_size)) != 0) {
             throw std::runtime_error("Could not recover the data");
         }
     }
@@ -103,14 +100,9 @@ public:
 
             enc.set(shards);
         } else {
-            auto block_count =
-                data.size() + (data.size() - data.size() % BLOCK_SIZE);
-            block_count =
-                block_count + (block_count - block_count % m_data_nodes);
-            const auto shard_block_count = block_count / m_data_nodes;
-            const auto total_blocks =
-                shard_block_count * (m_data_nodes + m_ec_nodes);
-            const auto shard_size = shard_block_count * BLOCK_SIZE;
+            const auto shard_size =
+                (data.size() + m_data_nodes - 1) / m_data_nodes;
+            const auto total_blocks = m_data_nodes + m_ec_nodes;
 
             std::vector<unsigned char*> shard_ptrs;
             shard_ptrs.reserve(m_data_nodes + m_ec_nodes);
@@ -145,7 +137,7 @@ public:
 
             if (reed_solomon_encode2(m_rs, shard_ptrs.data(),
                                      static_cast<int>(total_blocks),
-                                     BLOCK_SIZE) != 0) {
+                                     shard_size) != 0) {
                 throw std::runtime_error("Error in EC calculation");
             }
 
@@ -165,7 +157,6 @@ private:
 
     const size_t m_data_nodes;
     const size_t m_ec_nodes;
-    constexpr static int BLOCK_SIZE = 8 * KIBI_BYTE;
     reed_solomon* m_rs;
 };
 
