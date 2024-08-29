@@ -1,6 +1,7 @@
 #include "chunk_body_sha256.h"
 
 #include "auth_utils.h"
+#include "beast_utils.h"
 #include "common/crypto/hmac.h"
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
@@ -10,17 +11,26 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-chunk_body_sha256::chunk_body_sha256(asio::ip::tcp::socket& s,
-                                     const beast::flat_buffer& initial,
-                                     chunked_body::trailing_headers trailing,
-                                     std::string algorithm, std::string prelude,
-                                     std::string seed, std::string signing_key)
+namespace {
+
+std::string make_prelude(const auto& headers, const auto& info) {
+    return "AWS4-HMAC-SHA256-PAYLOAD\n" + require(headers, "x-amz-date") +
+           "\n" + info.date + "/" + info.region + "/" + info.service +
+           "/aws4_request\n";
+}
+
+} // namespace
+
+chunk_body_sha256::chunk_body_sha256(
+    asio::ip::tcp::socket& s, const beast::flat_buffer& initial,
+    chunked_body::trailing_headers trailing,
+    const beast::http::request<beast::http::empty_body>& headers,
+    const auth_info& info, std::string seed, std::string signing_key)
     : chunked_body(s, initial, trailing),
-      m_algorithm(algorithm),
-      m_signature_prelude(std::move(prelude)),
+      m_signature_prelude(make_prelude(headers, info)),
       m_signing_key(std::move(signing_key)),
-      m_string_to_sign(m_algorithm + "-PAYLOAD\n" + m_signature_prelude +
-                       std::move(seed) + "\n" + SHA256_EMPTY_STRING + "\n") {
+      m_string_to_sign(m_signature_prelude + std::move(seed) + "\n" +
+                       SHA256_EMPTY_STRING + "\n") {
     LOG_DEBUG() << "seed: " << seed;
 }
 
@@ -47,8 +57,8 @@ void chunk_body_sha256::on_chunk_done() {
                                  "' != '" + m_chunk_signature + "'");
     }
 
-    m_string_to_sign = m_algorithm + "-PAYLOAD\n" + m_signature_prelude +
-                       signature + "\n" + SHA256_EMPTY_STRING + "\n";
+    m_string_to_sign =
+        m_signature_prelude + signature + "\n" + SHA256_EMPTY_STRING + "\n";
 }
 
 void chunk_body_sha256::on_body_done() {
