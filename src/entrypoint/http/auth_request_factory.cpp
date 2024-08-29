@@ -80,7 +80,7 @@ std::optional<auth_info> read_auth_info(partial_parse_result& req) {
     }
 
     try {
-        return parse_auth_header(*auth_header);
+        return auth_info(*auth_header);
     } catch (const std::exception& e) {
         LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": error parsing authorization header: " << e.what();
