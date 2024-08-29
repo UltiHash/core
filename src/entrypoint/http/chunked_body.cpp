@@ -35,19 +35,13 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
             on_body_done();
             m_end = true;
 
+            /*
+             * Note: processing of trailing headers is not implemented yet.
+             */
             if (m_trailing == trailing_headers::read) {
                 co_await asio::async_read_until(
                     m_socket, asio::dynamic_buffer(m_buffer), "\r\n\r\n",
                     asio::use_awaitable);
-
-                /*
-                 * Note: here we should parse the headers and pass the result
-                 * to some callback `on_trailing_headers`.
-                 * However, there is no direct support from beast to partially
-                 * parse HTTP headers without a full request object and we do
-                 * not consider this functionality required at the moment, so
-                 * we leave only this note here.
-                 */
             }
 
             break;
