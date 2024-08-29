@@ -15,6 +15,7 @@ namespace uh::cluster {
 
 class ec_calculator {
 public:
+  
     enum data_stat : uint8_t {
         valid = 0,
         lost = 1,
@@ -159,6 +160,7 @@ private:
     const size_t m_data_nodes;
     const size_t m_ec_nodes;
     reed_solomon* m_rs;
+
 };
 
 } // end namespace uh::cluster
