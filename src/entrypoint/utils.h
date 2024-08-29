@@ -26,12 +26,6 @@ struct retrieval {
              std::optional<std::string> prefix);
 };
 
-/**
- * Return bucket and object key.
- */
-std::tuple<std::string, std::string>
-extract_bucket_and_object(boost::urls::url url);
-
 } // namespace uh::cluster
 
 #endif

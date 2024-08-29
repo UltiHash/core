@@ -1,38 +1,11 @@
 #include "http_request.h"
 
-#include "boost/url/url.hpp"
 #include "entrypoint/utils.h"
 
 using namespace boost;
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
-
-url_parsing_result parse_request_target(const std::string& target) {
-    auto query_index = target.find('?');
-
-    boost::urls::url url;
-    if (query_index != std::string::npos) {
-        url.set_encoded_path(target.substr(0, query_index));
-        url.set_encoded_query(target.substr(query_index + 1));
-    } else {
-        url.set_encoded_path(target);
-    }
-
-    auto keys = extract_bucket_and_object(url);
-
-    url_parsing_result rv;
-    rv.path = url.path();
-    rv.encoded_path = url.encoded_path();
-
-    for (const auto& param : url.params()) {
-        rv.params[param.key] = param.value;
-    }
-
-    rv.bucket = std::move(std::get<0>(keys));
-    rv.object = std::move(std::get<1>(keys));
-    return rv;
-}
 
 http_request::http_request(partial_parse_result& req,
                            std::unique_ptr<ep::http::body> body)
