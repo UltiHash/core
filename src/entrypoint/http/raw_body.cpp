@@ -4,10 +4,9 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-raw_body::raw_body(asio::ip::tcp::socket& s, beast::flat_buffer&& initial,
-                   std::size_t length)
-    : m_socket(s),
-      m_buffer(std::move(initial)),
+raw_body::raw_body(partial_parse_result& req, std::size_t length)
+    : m_socket(req.socket),
+      m_buffer(std::move(req.buffer)),
       m_length(length) {}
 
 coro<std::size_t> raw_body::read(std::span<char> dest) {

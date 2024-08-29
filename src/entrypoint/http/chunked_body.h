@@ -1,9 +1,8 @@
 #ifndef CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_H
 #define CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_H
 
+#include "beast_utils.h"
 #include "body.h"
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
 
 #include <map>
 #include <span>
@@ -16,8 +15,7 @@ class chunked_body : public ep::http::body {
 public:
     enum class trailing_headers { none, read };
 
-    chunked_body(boost::asio::ip::tcp::socket& s,
-                 const boost::beast::flat_buffer& initial,
+    chunked_body(partial_parse_result& req,
                  trailing_headers trailing = trailing_headers::none);
 
     struct chunk_header {

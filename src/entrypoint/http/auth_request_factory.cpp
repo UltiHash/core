@@ -24,11 +24,9 @@ bool include_header(const std::string& name,
            name.starts_with("x-amz-") || included.contains(name);
 }
 
-std::string make_canonical_request(
-    const beast::http::request<beast::http::empty_body>& headers,
-    const auth_info& info) {
+std::string make_canonical_request(partial_parse_result& req) {
 
-    auto url = parse_request_target(headers.target());
+    auto url = parse_request_target(req.headers.target());
 
     // for details, see
     // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
@@ -41,10 +39,10 @@ std::string make_canonical_request(
     std::string canonical_query = algorithm::join(canonical_query_set, "&");
 
     std::map<std::string, std::string> canonical_headers_map;
-    for (const auto& header : headers) {
+    for (const auto& header : req.headers) {
         auto name = lowercase(header.name_string());
 
-        if (!include_header(name, info.signed_headers)) {
+        if (!include_header(name, req.auth->signed_headers)) {
             continue;
         }
 
@@ -65,21 +63,18 @@ std::string make_canonical_request(
         first = false;
     }
 
-    return std::string(headers.method_string()) + "\n" + url.encoded_path +
+    return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
-           signed_header_names + "\n" +
-           require(headers, "x-amz-content-sha256");
+           signed_header_names + "\n" + req.require("x-amz-content-sha256");
 }
 
 } // namespace
 
 constexpr const char* SECRET_ACCESS_KEY = "secret";
 
-std::optional<auth_info>
-read_auth_info(boost::asio::ip::tcp::socket& sock,
-               const beast::http::request<beast::http::empty_body>& headers) {
+std::optional<auth_info> read_auth_info(partial_parse_result& req) {
 
-    auto auth_header = optional(headers, "Authorization");
+    auto auth_header = req.optional("Authorization");
     if (!auth_header) {
         return {};
     }
@@ -87,7 +82,7 @@ read_auth_info(boost::asio::ip::tcp::socket& sock,
     try {
         return parse_auth_header(*auth_header);
     } catch (const std::exception& e) {
-        LOG_DEBUG() << sock.remote_endpoint()
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": error parsing authorization header: " << e.what();
         throw command_exception(
             beast::http::status::forbidden, "AuthorizationHeaderMalformed",
@@ -95,152 +90,143 @@ read_auth_info(boost::asio::ip::tcp::socket& sock,
     }
 }
 
-std::string request_signature(boost::asio::ip::tcp::socket& sock,
-                              const read_request_result& req,
-                              const auth_info& info, const std::string& key) {
+std::string request_signature(partial_parse_result& req) {
 
-    auto canonical_request = make_canonical_request(req.headers, info);
-    LOG_DEBUG() << sock.remote_endpoint()
+    auto canonical_request = make_canonical_request(req);
+    LOG_DEBUG() << req.socket.remote_endpoint()
                 << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
     string_to_sign << "AWS4-HMAC-SHA256\n"
-                   << require(req.headers, "x-amz-date") << "\n"
-                   << info.date << "/" << info.region << "/" << info.service
-                   << "/aws4_request\n"
+                   << req.require("x-amz-date") << "\n"
+                   << req.auth->date << "/" << req.auth->region << "/"
+                   << req.auth->service << "/aws4_request\n"
                    << sha256::from_string(canonical_request);
 
-    LOG_DEBUG() << sock.remote_endpoint()
+    LOG_DEBUG() << req.socket.remote_endpoint()
                 << ": string to sign: " << string_to_sign.str();
 
-    return to_hex(hmac_sha256::from_string(key, string_to_sign.str()));
+    return to_hex(
+        hmac_sha256::from_string(*req.signing_key, string_to_sign.str()));
 }
 
-std::unique_ptr<http_request>
-multi_chunk_request(boost::asio::ip::tcp::socket& sock,
-                    read_request_result req) {
-    auto content_length = std::stoul(require(req.headers, "content-length"));
+std::unique_ptr<http_request> multi_chunk_request(partial_parse_result& req) {
+    auto content_length = std::stoul(req.require("content-length"));
 
     // TODO: can there be chunked transfer without auth?
-    auto info = read_auth_info(sock, req.headers);
-    if (!info) {
+    req.auth = read_auth_info(req);
+    if (!req.auth) {
         return std::make_unique<http_request>(
             std::move(req.headers),
-            std::make_unique<raw_body>(sock, std::move(req.buffer),
-                                       content_length),
-            sock.remote_endpoint());
+            std::make_unique<raw_body>(req, content_length),
+            req.socket.remote_endpoint());
     }
 
-    auto signing_key = make_signing_key(*info, SECRET_ACCESS_KEY);
-    LOG_DEBUG() << sock.remote_endpoint()
-                << ": signing key: " << to_hex(signing_key);
+    req.signing_key = make_signing_key(*req.auth, SECRET_ACCESS_KEY);
+    LOG_DEBUG() << req.socket.remote_endpoint()
+                << ": signing key: " << to_hex(*req.signing_key);
 
-    auto signature = request_signature(sock, req, *info, signing_key);
-    if (signature != info->signature) {
-        LOG_DEBUG() << sock.remote_endpoint()
+    req.signature = request_signature(req);
+    if (*req.signature != req.auth->signature) {
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": access denied: signature mismatch";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
-    auto content_sha = require(req.headers, "x-amz-content-sha256");
+    auto content_sha = req.require("x-amz-content-sha256");
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
-        LOG_DEBUG() << sock.remote_endpoint() << ": using chunked HMAC-SHA256";
+        LOG_DEBUG() << req.socket.remote_endpoint()
+                    << ": using chunked HMAC-SHA256";
 
         auto body = std::make_unique<chunk_body_sha256>(
-            sock, std::move(req.buffer), chunked_body::trailing_headers::none,
-            req.headers, *info, signature, signing_key);
+            req, chunked_body::trailing_headers::none);
 
-        return std::make_unique<http_request>(
-            std::move(req.headers), std::move(body), sock.remote_endpoint());
+        return std::make_unique<http_request>(std::move(req.headers),
+                                              std::move(body),
+                                              req.socket.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
-        LOG_DEBUG() << sock.remote_endpoint()
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using chunked unsigned payload with trailer";
 
         return std::make_unique<http_request>(
             std::move(req.headers),
             std::make_unique<chunked_body>(
-                sock, std::move(req.buffer),
-                chunked_body::trailing_headers::read),
-            sock.remote_endpoint());
+                req, chunked_body::trailing_headers::read),
+            req.socket.remote_endpoint());
     }
 
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         auto body = std::make_unique<chunk_body_sha256>(
-            sock, std::move(req.buffer), chunked_body::trailing_headers::read,
-            req.headers, *info, signature, signing_key);
+            req, chunked_body::trailing_headers::read);
 
-        return std::make_unique<http_request>(
-            std::move(req.headers), std::move(body), sock.remote_endpoint());
+        return std::make_unique<http_request>(std::move(req.headers),
+                                              std::move(body),
+                                              req.socket.remote_endpoint());
     }
 
     throw std::runtime_error("unsupported aws-chunked authentication: " +
                              content_sha);
 }
 
-std::unique_ptr<http_request>
-single_chunk_request(boost::asio::ip::tcp::socket& sock,
-                     read_request_result req) {
+std::unique_ptr<http_request> single_chunk_request(partial_parse_result& req) {
 
     auto content_length =
-        std::stoul(optional(req.headers, "content-length").value_or("0"));
+        std::stoul(req.optional("content-length").value_or("0"));
 
-    auto info = read_auth_info(sock, req.headers);
-    if (!info) {
-        LOG_DEBUG() << sock.remote_endpoint()
+    req.auth = read_auth_info(req);
+    if (!req.auth) {
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using single-chunk unauthenticated body";
         return std::make_unique<http_request>(
             std::move(req.headers),
-            std::make_unique<raw_body>(sock, std::move(req.buffer),
-                                       content_length),
-            sock.remote_endpoint());
+            std::make_unique<raw_body>(req, content_length),
+            req.socket.remote_endpoint());
     }
 
-    auto signing_key = make_signing_key(*info, SECRET_ACCESS_KEY);
-    auto signature = request_signature(sock, req, *info, signing_key);
-    if (signature != info->signature) {
-        LOG_DEBUG() << sock.remote_endpoint()
+    req.signing_key = make_signing_key(*req.auth, SECRET_ACCESS_KEY);
+    req.signature = request_signature(req);
+    if (*req.signature != req.auth->signature) {
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": access denied: signature mismatch";
         throw command_exception(beast::http::status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
-    auto content_sha = require(req.headers, "x-amz-content-sha256");
+    auto content_sha = req.require("x-amz-content-sha256");
     if (content_sha == "UNSIGNED-PAYLOAD") {
-        LOG_DEBUG() << sock.remote_endpoint()
+        LOG_DEBUG() << req.socket.remote_endpoint()
                     << ": using single-chunk unsigned body";
         return std::make_unique<http_request>(
             std::move(req.headers),
-            std::make_unique<raw_body>(sock, std::move(req.buffer),
-                                       content_length),
-            sock.remote_endpoint());
+            std::make_unique<raw_body>(req, content_length),
+            req.socket.remote_endpoint());
     }
 
     // TODO insert check for payload signature
-    LOG_DEBUG() << sock.remote_endpoint()
+    LOG_DEBUG() << req.socket.remote_endpoint()
                 << ": using single-chunk body with signed payload";
     return std::make_unique<http_request>(
-        std::move(req.headers),
-        std::make_unique<raw_body>(sock, std::move(req.buffer), content_length),
-        sock.remote_endpoint());
+        std::move(req.headers), std::make_unique<raw_body>(req, content_length),
+        req.socket.remote_endpoint());
 }
 
 coro<std::unique_ptr<http_request>>
 auth_request_factory::create(boost::asio::ip::tcp::socket& sock) {
-    auto req = co_await read_beast_request(sock);
+    auto req = co_await partial_parse_result::read(sock);
 
     LOG_DEBUG() << sock.remote_endpoint()
                 << ": pre-auth request: " << req.headers;
 
-    auto transfer_encoding = optional(req.headers, "content-encoding");
+    auto transfer_encoding = req.optional("content-encoding");
     if (transfer_encoding && *transfer_encoding == "aws-chunked") {
-        co_return multi_chunk_request(sock, req);
+        co_return multi_chunk_request(req);
     }
 
-    co_return single_chunk_request(sock, std::move(req));
+    co_return single_chunk_request(req);
 }
 
 } // namespace uh::cluster::ep::http

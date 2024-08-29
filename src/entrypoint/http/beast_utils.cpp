@@ -4,7 +4,8 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-coro<read_request_result> read_beast_request(asio::ip::tcp::socket& sock) {
+coro<partial_parse_result>
+partial_parse_result::read(asio::ip::tcp::socket& sock) {
 
     beast::http::request_parser<beast::http::empty_body> parser;
     beast::flat_buffer buffer;
@@ -19,12 +20,11 @@ coro<read_request_result> read_beast_request(asio::ip::tcp::socket& sock) {
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    co_return read_request_result{req, buffer};
+    co_return partial_parse_result{sock, std::move(buffer), std::move(req)};
 }
 
 std::optional<std::string>
-optional(const beast::http::request<beast::http::empty_body>& headers,
-         const std::string& name) {
+partial_parse_result::optional(const std::string& name) {
 
     if (auto header = headers.find(name); header != headers.end()) {
         return header->value();
@@ -33,9 +33,7 @@ optional(const beast::http::request<beast::http::empty_body>& headers,
     return {};
 }
 
-std::string
-require(const beast::http::request<beast::http::empty_body>& headers,
-        const std::string& name) {
+std::string partial_parse_result::require(const std::string& name) {
 
     auto header = headers.find(name);
     if (header == headers.end()) {

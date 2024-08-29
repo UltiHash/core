@@ -1,16 +1,14 @@
 #ifndef CORE_ENTRYPOINT_HTTP_RAW_BODY_H
 #define CORE_ENTRYPOINT_HTTP_RAW_BODY_H
 
+#include "beast_utils.h"
 #include "body.h"
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
 
 namespace uh::cluster::ep::http {
 
 class raw_body : public body {
 public:
-    raw_body(boost::asio::ip::tcp::socket& s,
-             boost::beast::flat_buffer&& initial, std::size_t length);
+    raw_body(partial_parse_result& req, std::size_t length);
 
     coro<std::size_t> read(std::span<char> dest) override;
 
