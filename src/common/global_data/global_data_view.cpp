@@ -1,5 +1,7 @@
 #include "global_data_view.h"
 
+#include "common/utils/address_utils.h"
+
 namespace uh::cluster {
 global_data_view::global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
@@ -75,7 +77,7 @@ global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
 coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
                                                  const address& addr) {
 
-    auto info = extract_node_address_map(addr);
+    auto info = extract_node_address_map(addr, m_basic_getter);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
     promises.reserve(info.nodes.size());
@@ -104,7 +106,7 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
         throw std::length_error("Empty address is not allowed for sync");
     }
 
-    auto info = extract_node_address_map(addr);
+    auto info = extract_node_address_map(addr, m_basic_getter);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
     proms.reserve(info.nodes.size());
@@ -149,7 +151,7 @@ global_data_view::~global_data_view() noexcept {
 [[nodiscard]] coro<address> global_data_view::link(context& ctx,
                                                    const address& addr) {
 
-    auto info = extract_node_address_map(addr);
+    auto info = extract_node_address_map(addr, m_basic_getter);
 
     std::vector<std::shared_ptr<awaitable_promise<address>>> proms;
     proms.reserve(info.nodes.size());
@@ -172,7 +174,7 @@ global_data_view::~global_data_view() noexcept {
 
 coro<void> global_data_view::unlink(context& ctx, const address& addr) {
 
-    auto info = extract_node_address_map(addr);
+    auto info = extract_node_address_map(addr, m_basic_getter);
 
     std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
     proms.reserve(info.nodes.size());
@@ -188,26 +190,6 @@ coro<void> global_data_view::unlink(context& ctx, const address& addr) {
     for (auto& p : proms) {
         co_await p->get();
     }
-}
-
-global_data_view::address_node_info
-global_data_view::extract_node_address_map(const address& addr) {
-    address_node_info info;
-    size_t offset = 0;
-    for (size_t i = 0; i < addr.size(); ++i) {
-        const auto frag = addr.get(i);
-        auto n = m_basic_getter.get(frag.pointer);
-        auto& node_address = info.node_address_map[n];
-        if (node_address.empty()) {
-            info.nodes.emplace_back(std::move(n));
-        }
-        node_address.push(frag);
-        info.node_data_offsets_map[n].emplace_back(offset);
-        offset += frag.size;
-    }
-
-    info.data_size = offset;
-    return info;
 }
 
 } // namespace uh::cluster

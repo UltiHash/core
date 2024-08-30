@@ -103,7 +103,7 @@ struct storage_group : public storage_interface {
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    service_get_handler<storage_interface> m_getter;
+    service_get_handler m_getter;
     ec_calculator m_ec_calc;
     boost::asio::io_context& m_ioc;
     ec_status m_status = empty;

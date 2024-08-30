@@ -68,6 +68,22 @@ BOOST_AUTO_TEST_CASE(ec_basic_lost) {
     BOOST_CHECK_THROW(ec.recover(shards, stats), std::runtime_error);
 }
 
+BOOST_AUTO_TEST_CASE(no_ec) {
+    ec_calculator ec(4, 0);
+    std::string data(64 * KIBI_BYTE, '0');
+    fill_random(data.data(), data.size());
+    auto encoded = ec.encode(data);
+    auto shards = encoded.get();
+    const auto shard_size = shards.front().size();
+    size_t i = 0;
+    for (auto s : shards) {
+        BOOST_CHECK(s == data.substr(i * shard_size,
+                                     std::min(shard_size,
+                                              data.size() - i * shard_size)));
+        i++;
+    }
+}
+
 BOOST_AUTO_TEST_CASE(ec_non_divisable) {
     ec_calculator ec(7, 3);
     std::string data(64 * KIBI_BYTE, '0');

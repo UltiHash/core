@@ -39,6 +39,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
     std::shared_ptr<service_interface> get() {
 
         std::unique_lock lk(m_mutex);
+
         if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT,
                            [this]() { return !empty(); })) {
             throw std::runtime_error(

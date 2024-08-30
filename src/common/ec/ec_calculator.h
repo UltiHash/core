@@ -15,7 +15,6 @@ namespace uh::cluster {
 
 class ec_calculator {
 public:
-  
     enum data_stat : uint8_t {
         valid = 0,
         lost = 1,
@@ -148,19 +147,26 @@ public:
         return enc;
     }
 
-    ~ec_calculator() { reed_solomon_release(m_rs); }
+    ~ec_calculator() {
+        if (m_ec_nodes > 0) {
+            reed_solomon_release(m_rs);
+        }
+    }
 
 private:
     [[nodiscard]] reed_solomon* get_rs() const {
-        fec_init();
-        return reed_solomon_new(static_cast<int>(m_data_nodes),
-                                static_cast<int>(m_ec_nodes));
+        if (m_ec_nodes > 0) {
+            fec_init();
+            return reed_solomon_new(static_cast<int>(m_data_nodes),
+                                    static_cast<int>(m_ec_nodes));
+        } else {
+            return nullptr;
+        }
     }
 
     const size_t m_data_nodes;
     const size_t m_ec_nodes;
     reed_solomon* m_rs;
-
 };
 
 } // end namespace uh::cluster
