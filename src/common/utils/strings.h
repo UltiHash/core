@@ -43,6 +43,13 @@ std::vector<char> base64_decode(std::string_view b64);
 std::string url_encode(const std::string&) noexcept;
 
 /**
+ * URI encode as defined by
+ * https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
+ */
+std::string uri_encode(const std::string& str,
+                       const std::string& also_encode = "") noexcept;
+
+/**
  * Return lower case version of the string.
  */
 std::string lowercase(std::string s);
@@ -59,6 +66,18 @@ template <typename T>
 requires std::is_same_v<T, char> or std::is_same_v<T, unsigned char>
 std::string to_hex(T value) {
     static constexpr auto hexChars = "0123456789abcdef";
+
+    std::string result;
+    result.push_back(hexChars[(value >> 4) & 0xf]);
+    result.push_back(hexChars[value & 0xf]);
+
+    return result;
+}
+
+template <typename T>
+requires std::is_same_v<T, char> or std::is_same_v<T, unsigned char>
+std::string to_hexu(T value) {
+    static constexpr auto hexChars = "0123456789ABCDEF";
 
     std::string result;
     result.push_back(hexChars[(value >> 4) & 0xf]);

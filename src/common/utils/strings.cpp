@@ -44,13 +44,32 @@ constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "0123456789"
-    "-._~";
+    "-._~/";
 
 std::string url_encode(const std::string& str_to_encode) noexcept {
     auto encoded_string =
         boost::urls::encode(str_to_encode, custom_unreserved_chars);
 
     return encoded_string;
+}
+
+std::string uri_encode(const std::string& str,
+                       const std::string& also_encode) noexcept {
+    std::string rv;
+    for (auto it = str.begin(); it != str.end(); ++it) {
+        if ((*it >= 'A' && *it <= 'Z') || (*it >= 'a' && *it <= 'z') ||
+            (*it >= '0' && *it <= '9') || *it == '-' || *it == '.' ||
+            *it == '_' || *it == '~' ||
+            also_encode.find(*it) != std::string::npos) {
+
+            rv += *it;
+            continue;
+        }
+
+        rv += '%' + to_hexu(*it);
+    }
+
+    return rv;
 }
 
 std::string lowercase(std::string s) {

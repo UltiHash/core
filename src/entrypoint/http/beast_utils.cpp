@@ -28,8 +28,8 @@ std::string make_canonical_request(partial_parse_result& req) {
     // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
     std::set<std::string> canonical_query_set;
     for (const auto& field : url.params) {
-        canonical_query_set.emplace(url_encode(field.first) + "=" +
-                                    url_encode(field.second));
+        canonical_query_set.emplace(uri_encode(field.first) + "=" +
+                                    uri_encode(field.second));
     }
 
     std::string canonical_query = algorithm::join(canonical_query_set, "&");
