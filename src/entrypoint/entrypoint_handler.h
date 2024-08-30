@@ -30,11 +30,15 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override {
         for (;;) {
 
+            /*
+             * Note: livetime of response must not exceed livetime of request.
+             */
+            std::unique_ptr<http_request> req;
             http_response resp;
             bool keep_alive = false;
 
             try {
-                auto req = co_await m_factory->create(s);
+                req = co_await m_factory->create(s);
                 LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
                 resp = co_await handle_request(s, *req);
