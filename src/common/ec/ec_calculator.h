@@ -15,7 +15,6 @@ namespace uh::cluster {
 
 class ec_calculator {
 public:
-  
     enum data_stat : uint8_t {
         valid = 0,
         lost = 1,
@@ -28,12 +27,11 @@ public:
             return m_encoded;
         }
 
-        void set(const std::vector<unsigned char*>& shard_ptrs,
-                 std::vector<unique_buffer<unsigned char>> new_shards) {
+        void set(const std::vector<const char*>& shard_ptrs,
+                 std::vector<unique_buffer<char>> new_shards) {
             const auto shard_size = new_shards.front().size();
-            for (unsigned char* ptr : shard_ptrs) {
-                m_encoded.emplace_back(reinterpret_cast<char*>(ptr),
-                                       shard_size);
+            for (const char* ptr : shard_ptrs) {
+                m_encoded.emplace_back(ptr, shard_size);
             }
             m_shard_allocations = std::move(new_shards);
         }
@@ -45,7 +43,7 @@ public:
     private:
         friend ec_calculator;
         encoded() = default;
-        std::vector<unique_buffer<unsigned char>> m_shard_allocations{};
+        std::vector<unique_buffer<char>> m_shard_allocations{};
         std::vector<std::string_view> m_encoded;
     };
 
@@ -64,17 +62,17 @@ public:
 
         const auto shard_size = shards.front().size();
 
-        std::vector<unsigned char*> ushards;
+        std::vector<const char*> ushards;
         ushards.reserve(shards.size());
         for (const auto& s : shards) {
             if (s.size() != shard_size) {
                 throw std::logic_error(
                     "All shards must have the same size in the recovery");
             }
-            ushards.emplace_back((unsigned char*)(s.data()));
+            ushards.emplace_back(s.data());
         }
         if (reed_solomon_reconstruct(
-                m_rs, ushards.data(),
+                m_rs.get(), (unsigned char**)ushards.data(),
                 reinterpret_cast<unsigned char*>(stats.data()),
                 static_cast<int>(m_data_nodes + m_ec_nodes),
                 static_cast<int>(shard_size)) != 0) {
@@ -99,26 +97,26 @@ public:
                 size += shard_size;
             }
 
-            enc.set(shards);
+            enc.set(std::move(shards));
         } else {
             const auto shard_size =
                 (data.size() + m_data_nodes - 1) / m_data_nodes;
             const auto total_blocks = m_data_nodes + m_ec_nodes;
 
-            std::vector<unsigned char*> shard_ptrs;
+            std::vector<const char*> shard_ptrs;
             shard_ptrs.reserve(m_data_nodes + m_ec_nodes);
 
             size_t size = 0;
             // use existing allocation for shards as much as possible
             while (size + shard_size <= data.size()) {
-                shard_ptrs.emplace_back((unsigned char*)(data.data()) + size);
+                shard_ptrs.emplace_back(data.data() + size);
                 size += shard_size;
             }
 
             // if the last shard is not filled completely, allocate a new
             // shard and copy the remaining data into it
 
-            std::vector<unique_buffer<unsigned char>> new_shards;
+            std::vector<unique_buffer<char>> new_shards;
             new_shards.reserve(m_ec_nodes + 1);
 
             if (const auto rem_size = data.size() - size; rem_size > 0) {
@@ -136,7 +134,8 @@ public:
                 shard_ptrs.emplace_back(new_shards.back().data());
             }
 
-            if (reed_solomon_encode2(m_rs, shard_ptrs.data(),
+            if (reed_solomon_encode2(m_rs.get(),
+                                     (unsigned char**)shard_ptrs.data(),
                                      static_cast<int>(total_blocks),
                                      static_cast<int>(shard_size)) != 0) {
                 throw std::runtime_error("Error in EC calculation");
@@ -148,19 +147,21 @@ public:
         return enc;
     }
 
-    ~ec_calculator() { reed_solomon_release(m_rs); }
-
 private:
-    [[nodiscard]] reed_solomon* get_rs() const {
-        fec_init();
-        return reed_solomon_new(static_cast<int>(m_data_nodes),
-                                static_cast<int>(m_ec_nodes));
+    [[nodiscard]] std::unique_ptr<reed_solomon, void (*)(reed_solomon*)>
+    get_rs() const {
+        if (m_ec_nodes > 0) {
+            fec_init();
+            return {reed_solomon_new(static_cast<int>(m_data_nodes),
+                                     static_cast<int>(m_ec_nodes)),
+                    [](reed_solomon* rs) { reed_solomon_release(rs); }};
+        }
+        return {nullptr, [](reed_solomon*) {}};
     }
 
     const size_t m_data_nodes;
     const size_t m_ec_nodes;
-    reed_solomon* m_rs;
-
+    std::unique_ptr<reed_solomon, void (*)(reed_solomon*)> m_rs;
 };
 
 } // end namespace uh::cluster
