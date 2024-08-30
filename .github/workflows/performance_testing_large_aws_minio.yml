@@ -70,7 +70,9 @@ jobs:
       - name: Generate the performance tester manifest for Minio
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          TEST_TYPE: UH
+          TEST_NAME: "large_performance_test_minio"
+          PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+          TEST_TYPE: MINIO
           S3_ENDPOINT_URL: "http://minio:9000"
           S3_SOURCE_BUCKET: test
           S3_DESTINATION_BUCKET: test

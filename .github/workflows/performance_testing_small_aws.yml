@@ -1,10 +1,9 @@
 name: Small-Sized Performance Testing AWS
 
 on:
-  push:
   workflow_dispatch:
-  #schedule:
-  #  - cron: '0 0 * * 2'
+  schedule:
+    - cron: '0 0 * * 2'
 
 env:
   ENVIRONMENT_NAME: performance-testing-small-aarch64
