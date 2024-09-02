@@ -20,7 +20,6 @@ public:
     ~global_data_view_fixture() { teardown(); }
 
     void setup() {
-        std::exception_ptr excp_ptr;
 
         for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
             service_config service_cfg;
@@ -33,45 +32,33 @@ public:
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
 
+        int i = 0;
         for (const auto& node : m_storage_instances) {
             m_ioc.post([&node] { node->run(); });
-            m_threads.emplace_back([&] {
+            m_threads.emplace_back([this, i] {
                 try {
                     m_ioc.run();
                 } catch (std::exception& e) {
-                    excp_ptr = std::current_exception();
+                    m_excp_ptrs[i] = std::current_exception();
                 }
             });
-
-            if (excp_ptr) {
-                try {
-                    std::rethrow_exception(excp_ptr);
-                } catch (std::exception& e) {
-                    teardown();
-                    throw e;
-                }
-            }
+            i++;
         }
 
         m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc,
                                                    m_storage_services);
 
-        m_threads.emplace_back([&] {
+        m_threads.emplace_back([this, i] {
             try {
                 m_ioc.run();
             } catch (std::exception& e) {
-                excp_ptr = std::current_exception();
+                m_excp_ptrs[i] = std::current_exception();
             }
         });
 
-        if (excp_ptr) {
-            try {
-                std::rethrow_exception(excp_ptr);
-            } catch (std::exception& e) {
-                teardown();
-                throw e;
-            }
-        }
+        wait_for_true(ETCD_TIMEOUT, std::chrono::seconds(1), [this]() {
+            return m_storage_services.size() == m_storage_instances.size();
+        });
     }
 
     void teardown() {
@@ -80,12 +67,26 @@ public:
             node->stop();
         }
 
+        m_storage_instances.clear();
+
         for (auto& thread : m_threads) {
             thread.join();
         }
 
+        int i = 0;
+        for (auto& exp : m_excp_ptrs) {
+            if (exp) {
+                LOG_ERROR() << "Exception in thread " << i;
+                try {
+                    std::rethrow_exception(exp);
+                } catch (std::exception& e) {
+                    throw e;
+                }
+            }
+            i++;
+        }
+
         m_threads.clear();
-        m_storage_instances.clear();
         m_temp_dirs.clear();
         std::string current_id_key =
             etcd_current_id_prefix_key + get_service_string(STORAGE_SERVICE);
@@ -100,7 +101,9 @@ private:
         service_cfg.working_dir = m_temp_dirs.emplace_back().path();
         return service_cfg;
     }
+    static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
+    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
     std::vector<temp_directory> m_temp_dirs;
     etcd::SyncClient m_etcd_client;
     global_data_view_config m_gdv_config;
@@ -110,8 +113,6 @@ private:
     std::vector<std::unique_ptr<storage>> m_storage_instances;
     service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;
-
-    static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 };
 
 } // namespace uh::cluster

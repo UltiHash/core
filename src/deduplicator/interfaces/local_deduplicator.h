@@ -159,11 +159,17 @@ private:
             offset += frag_size;
             non_dedupe_count++;
         }
-        auto rejected_fragments =
-            co_await m_storage.link(ctx, fragments.get_stored_fragments());
-        if (!rejected_fragments.empty()) [[unlikely]] {
-            fragments.handle_rejected_fragments(rejected_fragments,
-                                                m_fragment_set);
+
+        if constexpr (m_enable_refcount) {
+            auto stored_fragments = fragments.get_stored_fragments();
+            if (!stored_fragments.empty()) {
+                auto rejected_fragments =
+                    co_await m_storage.link(ctx, stored_fragments);
+                if (!rejected_fragments.empty()) [[unlikely]] {
+                    fragments.handle_rejected_fragments(rejected_fragments,
+                                                        m_fragment_set);
+                }
+            }
         }
 
         co_await fragments.flush_data(ctx, m_storage);
@@ -189,6 +195,12 @@ private:
     dedupe_logger m_dedupe_logger;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
     constexpr static std::size_t pieces_count = 2;
+
+#ifdef DISABLE_STORAGE_REFCOUNT
+    static constexpr bool m_enable_refcount = false;
+#else
+    static constexpr bool m_enable_refcount = true;
+#endif
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_LOCAL_DEDUPLICATOR_H

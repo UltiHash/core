@@ -11,6 +11,13 @@ public:
     virtual coro<void> validate(const http_request& req) { co_return; }
 
     virtual ~command() = default;
+
+protected:
+#ifdef DISABLE_STORAGE_REFCOUNT
+    static constexpr bool m_enable_refcount = false;
+#else
+    static constexpr bool m_enable_refcount = true;
+#endif
 };
 
 } // end namespace uh::cluster

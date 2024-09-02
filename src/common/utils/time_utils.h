@@ -7,26 +7,39 @@
 namespace uh::cluster {
 template <typename T> using coro = boost::asio::awaitable<T>;
 
-auto wait_for_success(auto timeout, auto retry_interval, auto&& op) {
-    // unit of timeout and retry_interval = second
+template <typename T, typename R>
+auto wait_for_success(std::chrono::duration<T, R> timeout,
+                      std::chrono::duration<T, R> retry_interval, auto&& op) {
 
     const auto start = std::chrono::steady_clock::now();
 
     std::exception_ptr eptr;
-    while (
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - start)
-            .count() < timeout) {
+    do {
         try {
             return op();
         } catch (const std::exception& e) {
             eptr = std::current_exception();
         }
 
-        std::this_thread::sleep_for(
-            std::chrono::duration<double>(retry_interval));
-    }
+        std::this_thread::sleep_for(retry_interval);
+    } while ((std::chrono::steady_clock::now() - start) < timeout);
 
     std::rethrow_exception(eptr);
+}
+
+template <typename T, typename R>
+auto wait_for_true(std::chrono::duration<T, R> timeout,
+                   std::chrono::duration<T, R> retry_interval, auto&& op) {
+
+    const auto start = std::chrono::steady_clock::now();
+
+    do {
+        if (op())
+            return;
+        std::this_thread::sleep_for(retry_interval);
+    } while ((std::chrono::steady_clock::now() - start) < timeout);
+
+    throw std::runtime_error("waiting timeout");
 }
 
 template <typename clock> class basic_timer;

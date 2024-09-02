@@ -99,10 +99,13 @@ void fragment_set::remove(
     });
 }
 
-void fragment_set::erase(const fragment& set_element) {
+void fragment_set::erase(const fragment& set_element, bool header) {
     std::lock_guard<std::shared_mutex> guard(m_mutex);
-    m_lfu.erase(set_element.pointer);
-    m_lfu_headers.erase(set_element.pointer);
+    if (header) {
+        m_lfu_headers.erase(set_element.pointer);
+    } else {
+        m_lfu.erase(set_element.pointer);
+    }
 }
 
 } // namespace uh::cluster

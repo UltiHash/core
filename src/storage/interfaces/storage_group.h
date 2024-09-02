@@ -3,42 +3,11 @@
 #define STORAGE_SYSTEM_H
 
 #include "common/coroutines/coro_util.h"
+#include "common/ec/ec_factory.h"
+#include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/service_get_handler.h"
 
 namespace uh::cluster {
-
-struct ec_calculator {
-    struct encoded {
-        [[nodiscard]] const std::vector<std::string_view>&
-        get() const noexcept {
-            return m_encoded;
-        }
-
-        void set(std::vector<std::string_view>&& enc) {
-            m_encoded = std::move(enc);
-        }
-
-    private:
-        friend ec_calculator;
-        encoded() = default;
-        std::list<unique_buffer<>> m_parities{};
-        std::vector<std::string_view> m_encoded;
-    };
-
-    ec_calculator(size_t data_nodes, size_t ec_nodes)
-        : m_data_nodes(data_nodes),
-          m_ec_nodes(ec_nodes) {}
-
-    [[nodiscard]] encoded encode(const std::string_view& data) const {
-        encoded enc;
-        enc.set({data});
-        return enc;
-    }
-
-private:
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
-};
 
 struct storage_system_config {
     size_t data_nodes;
@@ -75,7 +44,7 @@ struct storage_group : public storage_interface {
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                   size_t ec_nodes)
         : m_nodes(data_nodes + ec_nodes),
-          m_ec_calc(data_nodes, ec_nodes),
+          m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
           m_ioc(ioc) {}
 
     coro<address> write(context& ctx, const std::string_view& data) override {
@@ -83,7 +52,7 @@ struct storage_group : public storage_interface {
         if (!is_healthy()) {
             throw std::runtime_error("unhealthy storage system");
         }
-        auto encoded = m_ec_calc.encode(data);
+        auto encoded = m_ec_calc->encode(data);
         auto res =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
@@ -136,7 +105,7 @@ struct storage_group : public storage_interface {
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
     service_get_handler<storage_interface> m_getter;
-    ec_calculator m_ec_calc;
+    std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     ec_status m_status = empty;
 
