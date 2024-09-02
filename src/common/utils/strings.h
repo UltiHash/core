@@ -1,6 +1,7 @@
 #ifndef COMMON_UTILS_STRINGS_H
 #define COMMON_UTILS_STRINGS_H
 
+#include <cstring>
 #include <ranges>
 #include <set>
 #include <string>
@@ -102,7 +103,9 @@ std::string to_hex(const Array& buffer) {
 }
 
 inline std::string operator+(std::string fst, std::string_view snd) {
-    return fst + std::string(snd);
+    fst.resize(fst.size() + snd.size());
+    std::memcpy(fst.data() + fst.size(), snd.data(), snd.size());
+    return fst;
 }
 
 } // namespace uh::cluster
