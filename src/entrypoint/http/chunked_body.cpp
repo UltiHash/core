@@ -24,14 +24,14 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
     std::size_t rv = 0ull;
 
     while (rv < dest.size()) {
-        if (m_chunk_size == 0ull) {
+        if (m_chunk_bytes_left == 0ull) {
             auto hdr = co_await read_chunk_header();
-            m_chunk_size = hdr.size;
+            m_chunk_bytes_left = hdr.size;
 
             on_chunk_header(hdr);
         }
 
-        if (m_chunk_size == 0ull) {
+        if (m_chunk_bytes_left == 0ull) {
             on_body_done();
             m_end = true;
 
@@ -47,15 +47,15 @@ coro<std::size_t> chunked_body::read(std::span<char> dest) {
             break;
         }
 
-        auto count = std::min(m_chunk_size, dest.size() - rv);
+        auto count = std::min(m_chunk_bytes_left, dest.size() - rv);
         auto read = co_await read_data(dest.subspan(rv, count));
 
         on_chunk_data(dest.subspan(rv, read));
 
         rv += read;
-        m_chunk_size -= read;
+        m_chunk_bytes_left -= read;
 
-        if (m_chunk_size == 0ull) {
+        if (m_chunk_bytes_left == 0ull) {
             on_chunk_done();
         }
 

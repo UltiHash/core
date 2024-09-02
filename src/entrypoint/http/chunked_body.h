@@ -44,7 +44,7 @@ private:
     boost::asio::ip::tcp::socket& m_socket;
     std::vector<char> m_buffer;
     trailing_headers m_trailing;
-    std::size_t m_chunk_size = 0ull;
+    std::size_t m_chunk_bytes_left = 0ull;
     bool m_end = false;
 };
 
