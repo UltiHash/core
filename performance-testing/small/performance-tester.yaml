@@ -35,6 +35,10 @@ spec:
           value: "$AWS_ACCESS_KEY_ID"
         - name: AWS_SECRET_ACCESS_KEY
           value: "$AWS_SECRET_ACCESS_KEY"
+        - name: TEST_NAME
+          value: "$TEST_NAME"
+        - name: PROM_URL
+          value: "$PROM_URL"
       volumeMounts:
         - mountPath: /input
           name: input

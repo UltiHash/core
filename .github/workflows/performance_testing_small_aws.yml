@@ -125,6 +125,8 @@ jobs:
       - name: Generate the performance tester manifest for S3
         uses: danielr1996/envsubst-action@1.0.0
         env:
+          TEST_NAME: "small_performance_test_s3"
+          PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
           TEST_TYPE: S3
           S3_ENDPOINT_URL: https://s3.eu-central-1.amazonaws.com
           S3_SOURCE_BUCKET: ultihash-performance-test-corpora-large-files
@@ -140,6 +142,8 @@ jobs:
       - name: Generate the performance tester manifest for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
+          TEST_NAME: "small_performance_test_ultihash"
+          PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
           TEST_TYPE: UH
           S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
           S3_SOURCE_BUCKET: test
