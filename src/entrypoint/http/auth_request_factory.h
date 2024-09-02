@@ -16,8 +16,8 @@ public:
     create(boost::asio::ip::tcp::socket&) override;
 
 private:
-    std::unique_ptr<http_request> multi_chunk(partial_parse_result& req);
-    std::unique_ptr<http_request> single_chunk(partial_parse_result& req);
+    std::unique_ptr<body> multi_chunk(partial_parse_result& req);
+    std::unique_ptr<body> single_chunk(partial_parse_result& req);
 
     std::unique_ptr<user::backend> m_user_backend;
 };

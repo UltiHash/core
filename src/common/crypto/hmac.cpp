@@ -55,18 +55,16 @@ void hmac_base::consume(std::span<const char> data) {
 }
 
 std::string hmac_base::finalize() {
-    std::string hmac_value;
-    hmac_value.resize(EVP_MAX_MD_SIZE);
+    char hmac_value[EVP_MAX_MD_SIZE];
     std::size_t length = EVP_MAX_MD_SIZE;
 
-    if (!EVP_DigestSignFinal(
-            m_ctx.get(), reinterpret_cast<unsigned char*>(hmac_value.data()),
-            &length)) {
+    if (!EVP_DigestSignFinal(m_ctx.get(),
+                             reinterpret_cast<unsigned char*>(hmac_value),
+                             &length)) {
         throw_from_error("error on hmac finalization");
     }
 
-    hmac_value.resize(length);
-    return hmac_value;
+    return {hmac_value, length};
 }
 
 } // namespace uh::cluster

@@ -54,18 +54,16 @@ void hash_base::consume(std::span<const char> data) {
 }
 
 std::string hash_base::finalize() {
-    std::string hash_value;
-    hash_value.resize(EVP_MAX_MD_SIZE);
+    char hash_value[EVP_MAX_MD_SIZE];
     unsigned int length = EVP_MAX_MD_SIZE;
 
     if (!EVP_DigestFinal_ex(m_ctx.get(),
-                            reinterpret_cast<unsigned char*>(hash_value.data()),
+                            reinterpret_cast<unsigned char*>(hash_value),
                             &length)) {
         throw_from_error("error on hash finalization");
     }
 
-    hash_value.resize(length);
-    return hash_value;
+    return {hash_value, length};
 }
 
 } // namespace uh::cluster
