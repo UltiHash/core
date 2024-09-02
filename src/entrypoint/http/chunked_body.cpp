@@ -75,7 +75,7 @@ coro<void> chunked_body::read_nl() {
     std::size_t offset = 0;
 
     if (!m_buffer.empty()) {
-        auto count = std::min(m_buffer.size(), sizeof(nl) - offset);
+        auto count = std::min(m_buffer.size(), sizeof(nl));
         memcpy(nl, &m_buffer[0], count);
         m_buffer.erase(m_buffer.begin(), m_buffer.begin() + count);
         offset += count;
