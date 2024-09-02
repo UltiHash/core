@@ -6,15 +6,13 @@
 namespace uh::cluster::ep::http {
 
 auth_info::auth_info(std::string header)
-    : auth_header(std::move(header)) {
-    std::string_view h(auth_header);
-
-    std::size_t pos = h.find(' ');
+    : header(std::move(header)) {
+    std::size_t pos = header.find(' ');
     if (pos == std::string::npos) {
         throw std::runtime_error("no algorithm separator");
     }
 
-    auto parsed = parse_values_string({h.begin() + pos + 1, h.end()});
+    auto parsed = parse_values_string({header.begin() + pos + 1, header.end()});
     if (!parsed.contains("Credential") || !parsed.contains("SignedHeaders") ||
         !parsed.contains("Signature")) {
         throw std::runtime_error("required fields are missing");
@@ -25,7 +23,7 @@ auth_info::auth_info(std::string header)
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    algorithm = std::string_view(h.begin(), h.begin() + pos - 1);
+    algorithm = std::string_view(header.begin(), header.begin() + pos - 1);
     access_key_id = split_credentials[0];
     date = split_credentials[1];
     region = split_credentials[2];

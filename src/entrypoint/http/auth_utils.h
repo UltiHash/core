@@ -16,7 +16,7 @@ struct auth_info {
 
     std::string signing_key(const std::string& secret) const;
 
-    std::string auth_header;
+    std::string header;
 
     std::string_view algorithm;
     std::string_view access_key_id;
