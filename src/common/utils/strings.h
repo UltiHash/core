@@ -105,6 +105,8 @@ inline std::string operator+(std::string fst, std::string_view snd) {
     return fst + std::string(snd);
 }
 
+std::string unhex(std::string in);
+
 } // namespace uh::cluster
 
 #endif

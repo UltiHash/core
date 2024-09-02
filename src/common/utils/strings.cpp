@@ -3,11 +3,24 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
+#include <cctype>
 #include <sstream>
 
 using namespace boost;
 
 namespace uh::cluster {
+
+namespace {
+
+int xvalue(char ch) {
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+
+    return ch - '0';
+}
+
+} // namespace
 
 std::string_view trim(std::string_view in, std::string_view chars) {
     return ltrim(rtrim(in, chars), chars);
@@ -82,6 +95,25 @@ bool to_bool(std::string str_to_eval) {
     bool b;
     is >> std::boolalpha >> b;
     return b;
+}
+
+std::string unhex(std::string in) {
+    if (in.size() % 2 != 0) {
+        throw std::invalid_argument("string size must be even");
+    }
+
+    std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+
+    std::string rv;
+    for (std::size_t pos = 0ull; pos < in.size(); pos += 2) {
+        if (!std::isxdigit(in[pos]) || !std::isxdigit(in[pos + 1])) {
+            throw std::invalid_argument("string contains non-hex characters");
+        }
+
+        rv += static_cast<char>(xvalue(in[pos]) << 8 | xvalue(in[pos + 1]));
+    }
+
+    return rv;
 }
 
 } // namespace uh::cluster
