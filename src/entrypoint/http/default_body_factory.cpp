@@ -1,24 +1,17 @@
-#include "default_request_factory.h"
+#include "default_body_factory.h"
 
 #include "chunked_body.h"
 #include "raw_body.h"
 
-#include "beast_utils.h"
-
-using namespace boost;
-using namespace boost::asio;
-
 namespace uh::cluster::ep::http {
 
-namespace {
+std::unique_ptr<body> default_body_factory::create(partial_parse_result& req) {
 
-std::unique_ptr<ep::http::body> make_body(partial_parse_result& req) {
+    auto length = std::stoul(req.optional("content-length").value_or("0"));
 
     auto transfer_encoding = req.optional("content-encoding");
     if (!transfer_encoding || *transfer_encoding != "aws-chunked") {
 
-        std::size_t length =
-            std::stoul(req.optional("content-length").value_or("0"));
         return std::make_unique<raw_body>(req, length);
     }
 
@@ -35,20 +28,7 @@ std::unique_ptr<ep::http::body> make_body(partial_parse_result& req) {
             req, chunked_body::trailing_headers::read);
     }
 
-    std::size_t length =
-        std::stoul(req.optional("content-length").value_or("0"));
     return std::make_unique<raw_body>(req, length);
-}
-
-} // namespace
-
-coro<std::unique_ptr<http_request>>
-default_request_factory::create(ip::tcp::socket& sock) {
-
-    auto req = co_await partial_parse_result::read(sock);
-    auto body = make_body(req);
-
-    co_return std::make_unique<http_request>(req, std::move(body));
 }
 
 } // namespace uh::cluster::ep::http

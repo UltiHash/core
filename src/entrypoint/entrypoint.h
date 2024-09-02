@@ -9,21 +9,22 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
-#include "entrypoint/http/auth_request_factory.h"
-#include "entrypoint/http/default_request_factory.h"
+#include "entrypoint/http/auth_body_factory.h"
+#include "entrypoint/http/default_body_factory.h"
+#include "entrypoint/http/request_factory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/user/dummy_backend.h"
 #include "entrypoint_handler.h"
 
 namespace uh::cluster {
 
-std::unique_ptr<ep::http::request_factory>
-make_request_factory(const entrypoint_config& config) {
+std::unique_ptr<ep::http::body_factory>
+make_body_factory(const entrypoint_config& config) {
     switch (config.authentication) {
     case entrypoint_config::auth_backend::none:
-        return std::make_unique<ep::http::default_request_factory>();
+        return std::make_unique<ep::http::default_body_factory>();
     case entrypoint_config::auth_backend::dummy:
-        return std::make_unique<ep::http::auth_request_factory>(
+        return std::make_unique<ep::http::auth_body_factory>(
             std::make_unique<ep::user::dummy_backend>());
     }
 
@@ -65,7 +66,8 @@ public:
               std::make_unique<entrypoint_handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  make_request_factory(config)),
+                  std::make_unique<ep::http::request_factory>(
+                      make_body_factory(config))),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
