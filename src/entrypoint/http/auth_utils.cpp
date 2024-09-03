@@ -6,8 +6,6 @@
 #include "common/utils/strings.h"
 #include "entrypoint/http/beast_utils.h"
 
-#include <boost/algorithm/string.hpp>
-
 using namespace boost;
 
 namespace uh::cluster::ep::http {
@@ -43,7 +41,7 @@ std::string make_canonical_request(partial_parse_result& req,
                                     uri_encode(field.second));
     }
 
-    std::string canonical_query = algorithm::join(canonical_query_set, "&");
+    std::string canonical_query = join(canonical_query_set, "&");
 
     std::map<std::string, std::string> canonical_headers_map;
     for (const auto& header : req.headers) {

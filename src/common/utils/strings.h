@@ -23,6 +23,20 @@ container split(std::string_view data, char delimiter = ' ') {
     return {split.begin(), split.end()};
 }
 
+template <typename container = std::vector<std::string>>
+std::string join(const container& c, const std::string& delimiter) {
+    std::string rv;
+
+    for (auto it = c.begin(); it != c.end(); ++it) {
+        if (it != c.begin()) {
+            rv += delimiter;
+        }
+        rv += *it;
+    }
+
+    return rv;
+}
+
 /**
  * Remove all characters specified in `chars` from the begin and end of `in`.
  */
