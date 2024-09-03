@@ -9,14 +9,26 @@ using namespace boost;
 
 namespace uh::cluster {
 
-std::vector<std::string_view> split(std::string_view data, char delimiter) {
-    auto split =
-        data | std::ranges::views::split(delimiter) |
-        std::ranges::views::transform([](auto&& str) {
-            return std::string_view(&*str.begin(), std::ranges::distance(str));
-        });
+std::string_view trim(std::string_view in, std::string_view chars) {
+    return ltrim(rtrim(in, chars), chars);
+}
 
-    return {split.begin(), split.end()};
+std::string_view ltrim(std::string_view in, std::string_view chars) {
+    auto start = in.find_first_not_of(chars);
+    if (start == std::string::npos) {
+        return {};
+    }
+
+    return in.substr(start);
+}
+
+std::string_view rtrim(std::string_view in, std::string_view chars) {
+    auto end = in.find_last_not_of(chars);
+    if (end == std::string::npos) {
+        return {};
+    }
+
+    return in.substr(0, end + 1);
 }
 
 std::vector<char> base64_decode(std::string_view b64) {
@@ -41,13 +53,32 @@ std::string url_encode(const std::string& str_to_encode) noexcept {
     return encoded_string;
 }
 
-std::string& lowercase(std::string& s) {
+std::string uri_encode(const std::string& str,
+                       const std::string& also_encode) noexcept {
+    std::string rv;
+    for (auto it = str.begin(); it != str.end(); ++it) {
+        if ((*it >= 'A' && *it <= 'Z') || (*it >= 'a' && *it <= 'z') ||
+            (*it >= '0' && *it <= '9') || *it == '-' || *it == '.' ||
+            *it == '_' || *it == '~' ||
+            also_encode.find(*it) != std::string::npos) {
+
+            rv += *it;
+            continue;
+        }
+
+        rv += '%' + to_hexu(*it);
+    }
+
+    return rv;
+}
+
+std::string lowercase(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
 
 bool to_bool(std::string str_to_eval) {
-    std::istringstream is(lowercase(str_to_eval));
+    std::istringstream is(lowercase(std::move(str_to_eval)));
     bool b;
     is >> std::boolalpha >> b;
     return b;

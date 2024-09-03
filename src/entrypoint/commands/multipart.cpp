@@ -1,5 +1,5 @@
 #include "multipart.h"
-#include "common/utils/md5.h"
+#include "common/crypto/hash.h"
 #include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
@@ -41,7 +41,7 @@ coro<http_response> multipart::handle(http_request& req) {
             req.context(), {buffer.data(), buffer.size()});
     }
 
-    auto md5 = calculate_md5(buffer.span());
+    auto md5 = to_hex(md5::from_buffer(buffer.span()));
 
     http_response res;
     res.set("ETag", md5);

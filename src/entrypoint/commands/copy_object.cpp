@@ -26,7 +26,7 @@ coro<http_response> copy_object::handle(http_request& req) {
     boost::urls::url url;
     url.set_encoded_path(*copy_source);
 
-    auto [src_bucket, src_key] = extract_bucket_and_object(url);
+    auto [src_bucket, src_key] = ep::http::extract_bucket_and_object(url);
     co_await copy_internal(req, src_bucket, src_key);
 
     auto obj = co_await m_directory.head_object(req.bucket(), req.object_key());
@@ -42,6 +42,7 @@ coro<http_response> copy_object::handle(http_request& req) {
 
     co_return res;
 }
+
 coro<void> copy_object::copy_internal(http_request& req,
                                       std::string& src_bucket,
                                       std::string& src_key) {

@@ -31,8 +31,8 @@ struct trace {
     static opentelemetry::context::Context
     deserialize_context(std::vector<char>&& buf);
 
-    static std::vector<char> serialize_context(
-        const std::optional<opentelemetry::context::Context>& context);
+    static std::vector<char>
+    serialize_context(const opentelemetry::context::Context& context);
 
     ~trace();
 

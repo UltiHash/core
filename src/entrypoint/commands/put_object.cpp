@@ -81,7 +81,7 @@ coro<http_response> put_object::handle(http_request& req) {
             resp = co_await put_small_object(req, hash);
         }
 
-        auto tag = hash.finalize();
+        auto tag = to_hex(hash.finalize());
         LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
         object obj{.name = req.object_key(),
