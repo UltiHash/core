@@ -1,5 +1,5 @@
 #include "complete_multipart.h"
-#include "common/utils/md5.h"
+#include "common/crypto/hash.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
@@ -77,7 +77,7 @@ coro<http_response> complete_multipart::handle(http_request& req) {
 
     m_limits.check_storage_size(info.data_size);
 
-    auto etag = calculate_md5(buffer.span());
+    auto etag = to_hex(md5::from_buffer(buffer.span()));
 
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),

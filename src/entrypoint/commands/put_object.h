@@ -4,7 +4,7 @@
 #include "command.h"
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/service_interfaces/deduplicator_interface.h"
-#include "common/utils/md5.h"
+#include "common/crypto/hash.h"
 #include "entrypoint/config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
