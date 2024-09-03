@@ -1,14 +1,18 @@
 #ifndef CORE_ENTRYPOINT_HTTP_BEAST_UTILS_H
 #define CORE_ENTRYPOINT_HTTP_BEAST_UTILS_H
 
-#include "auth_utils.h"
 #include "common/types/common_types.h"
-#include "entrypoint/user/user.h"
+#include "entrypoint/http/auth_utils.h"
 
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/url/url.hpp>
+
+#include <map>
+#include <optional>
+#include <string>
+#include <tuple>
 
 namespace uh::cluster::ep::http {
 
@@ -19,8 +23,6 @@ using status = beast::http::status;
 struct partial_parse_result {
     static coro<partial_parse_result> read(boost::asio::ip::tcp::socket& sock);
 
-    void set_secret(const std::string& key);
-
     std::optional<std::string> optional(const std::string& name);
     std::string require(const std::string& name);
 
@@ -28,8 +30,6 @@ struct partial_parse_result {
     beast::flat_buffer buffer;
 
     beast::http::request<beast::http::empty_body> headers;
-    std::optional<auth_info> auth;
-
     boost::asio::ip::tcp::endpoint peer;
 };
 
@@ -48,6 +48,10 @@ url_parsing_result parse_request_target(const std::string& target);
  */
 std::tuple<std::string, std::string>
 extract_bucket_and_object(boost::urls::url url);
+
+std::map<std::string_view, std::string_view>
+parse_values_string(std::string_view values, char pair_separator = ',',
+                    char field_separator = '=');
 
 } // namespace uh::cluster::ep::http
 

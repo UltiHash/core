@@ -58,6 +58,7 @@ public:
     uh::cluster::context& context();
 
     const std::optional<ep::user::user>& authenticated_user() const;
+    void authenticated_user(std::optional<ep::user::user> user);
 
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);

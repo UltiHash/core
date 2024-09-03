@@ -3,12 +3,13 @@
 
 #include "chunked_body.h"
 #include "common/crypto/hash.h"
+#include "entrypoint/http/auth_utils.h"
 
 namespace uh::cluster::ep::http {
 
 class chunk_body_sha256 : public chunked_body {
 public:
-    chunk_body_sha256(partial_parse_result& req,
+    chunk_body_sha256(partial_parse_result& req, const auth_info& auth,
                       chunked_body::trailing_headers trailing);
 
     void on_chunk_header(const chunk_header&) override;

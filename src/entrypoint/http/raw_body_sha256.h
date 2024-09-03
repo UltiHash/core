@@ -4,12 +4,14 @@
 #include "raw_body.h"
 
 #include "common/crypto/hash.h"
+#include "entrypoint/http/auth_utils.h"
 
 namespace uh::cluster::ep::http {
 
 class raw_body_sha256 : public raw_body {
 public:
-    raw_body_sha256(partial_parse_result& req, std::size_t length);
+    raw_body_sha256(partial_parse_result& req, const auth_info& auth,
+                    std::size_t length);
 
     coro<std::size_t> read(std::span<char> dest) override;
 

@@ -12,7 +12,6 @@ http_request::http_request(partial_parse_result& req,
     : m_req(std::move(req.headers)),
       m_body(std::move(body)),
       m_peer(req.socket.remote_endpoint()),
-      m_authenticated_user(std::move(req.auth->authenticated_user)),
       m_ctx() {
 
     auto target = parse_request_target(m_req.target());
@@ -65,6 +64,10 @@ uh::cluster::context& http_request::context() { return m_ctx; }
 
 const std::optional<ep::user::user>& http_request::authenticated_user() const {
     return m_authenticated_user;
+}
+
+void http_request::authenticated_user(std::optional<ep::user::user> user) {
+    m_authenticated_user = user;
 }
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {

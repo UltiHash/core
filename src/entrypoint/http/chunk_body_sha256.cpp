@@ -11,20 +11,21 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
-std::string make_prelude(partial_parse_result& req) {
+std::string make_prelude(partial_parse_result& req, const auth_info& auth) {
     return "AWS4-HMAC-SHA256-PAYLOAD\n" + req.require("x-amz-date") + "\n" +
-           req.auth->date + "/" + req.auth->region + "/" + req.auth->service +
-           "/aws4_request\n";
+           std::string(auth.date) + "/" + std::string(auth.region) + "/" +
+           std::string(auth.service) + "/aws4_request\n";
 }
 
 } // namespace
 
 chunk_body_sha256::chunk_body_sha256(partial_parse_result& req,
+                                     const auth_info& auth,
                                      chunked_body::trailing_headers trailing)
     : chunked_body(req, trailing),
-      m_prelude(make_prelude(req)),
-      m_signing_key(*req.auth->signing_key),
-      m_to_sign(m_prelude + *req.auth->signature + "\n" + SHA256_EMPTY_STRING +
+      m_prelude(make_prelude(req, auth)),
+      m_signing_key(*auth.signing_key),
+      m_to_sign(m_prelude + *auth.signature + "\n" + SHA256_EMPTY_STRING +
                 "\n") {}
 
 void chunk_body_sha256::on_chunk_header(const chunk_header& hdr) {
@@ -39,7 +40,7 @@ void chunk_body_sha256::on_chunk_data(std::span<char> data) {
 }
 
 void chunk_body_sha256::on_chunk_done() {
-    m_to_sign += m_hash.finalize();
+    m_to_sign += to_hex(m_hash.finalize());
     m_hash.reset();
 
     auto signature = to_hex(hmac_sha256::from_string(m_signing_key, m_to_sign));

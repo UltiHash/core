@@ -1,6 +1,7 @@
 #ifndef CORE_ENTRYPOINT_HTTP_AUTH_UTILS_H
 #define CORE_ENTRYPOINT_HTTP_AUTH_UTILS_H
 
+#include "entrypoint/user/backend.h"
 #include "entrypoint/user/user.h"
 #include <map>
 #include <optional>
@@ -9,14 +10,15 @@
 
 namespace uh::cluster::ep::http {
 
+struct partial_parse_result;
+
 struct auth_info {
     /**
      * Construct auth_info by parsing Authorization header
      * Throws on parse error.
      */
     auth_info(std::string header);
-
-    std::string make_signing_key(const std::string& secret) const;
+    auth_info() = default;
 
     std::string header;
 
@@ -41,15 +43,10 @@ struct auth_info {
     std::optional<std::string> signing_key;
     // authenticated user information
     std::optional<user::user> authenticated_user;
+
+    static std::optional<auth_info> create(partial_parse_result& req,
+                                           user::backend& users);
 };
-
-/**
- * Return the signing key for a given `auth_info` and a secret.
- */
-
-std::map<std::string_view, std::string_view>
-parse_values_string(std::string_view values, char pair_separator = ',',
-                    char field_separator = '=');
 
 } // namespace uh::cluster::ep::http
 

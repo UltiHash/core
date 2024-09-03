@@ -9,20 +9,11 @@
 
 namespace uh::cluster::ep::http {
 
-class body_factory {
-public:
-    virtual ~body_factory() = default;
-    virtual std::unique_ptr<body> create(partial_parse_result& body) = 0;
-};
-
 class request_factory {
 public:
-    request_factory(std::unique_ptr<body_factory> body);
-
-    coro<std::unique_ptr<http_request>> create(boost::asio::ip::tcp::socket&);
-
-private:
-    std::unique_ptr<body_factory> m_body;
+    virtual ~request_factory() = default;
+    virtual coro<std::unique_ptr<http_request>>
+    create(boost::asio::ip::tcp::socket&) = 0;
 };
 
 } // namespace uh::cluster::ep::http
