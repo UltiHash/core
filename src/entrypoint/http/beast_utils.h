@@ -29,9 +29,6 @@ struct partial_parse_result {
 
     beast::http::request<beast::http::empty_body> headers;
     std::optional<auth_info> auth;
-    std::optional<std::string> signature;
-    std::optional<std::string> signing_key;
-    std::optional<user::user> authenticated_user;
 
     boost::asio::ip::tcp::endpoint peer;
 };

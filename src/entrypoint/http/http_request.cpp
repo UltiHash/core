@@ -12,7 +12,7 @@ http_request::http_request(partial_parse_result& req,
     : m_req(std::move(req.headers)),
       m_body(std::move(body)),
       m_peer(req.socket.remote_endpoint()),
-      m_authenticated_user(std::move(req.authenticated_user)),
+      m_authenticated_user(std::move(req.auth->authenticated_user)),
       m_ctx() {
 
     auto target = parse_request_target(m_req.target());

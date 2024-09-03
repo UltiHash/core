@@ -6,7 +6,7 @@ namespace uh::cluster::ep::http {
 
 raw_body_sha256::raw_body_sha256(partial_parse_result& req, std::size_t length)
     : raw_body(req, length),
-      m_signature(req.signature.value_or("")) {}
+      m_signature(req.auth->signature.value_or("")) {}
 
 coro<std::size_t> raw_body_sha256::read(std::span<char> dest) {
 

@@ -79,7 +79,7 @@ std::string request_signature(partial_parse_result& req) {
     LOG_DEBUG() << req.peer << ": string to sign: " << string_to_sign.str();
 
     return to_hex(
-        hmac_sha256::from_string(*req.signing_key, string_to_sign.str()));
+        hmac_sha256::from_string(*req.auth->signing_key, string_to_sign.str()));
 }
 
 } // namespace
@@ -119,10 +119,10 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
 }
 
 void partial_parse_result::set_secret(const std::string& key) {
-    signing_key = auth->signing_key(key);
-    signature = request_signature(*this);
+    auth->signing_key = auth->make_signing_key(key);
+    auth->signature = request_signature(*this);
 
-    if (*signature != auth->signature) {
+    if (*auth->signature != auth->header_signature) {
         LOG_INFO() << peer << ": access denied: signature mismatch";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
