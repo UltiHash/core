@@ -5,6 +5,7 @@
 #include "common/debug/class_name.h"
 #include "http/command_exception.h"
 #include "http/request_factory.h"
+#include "policy/module.h"
 
 namespace uh::cluster {
 
@@ -81,6 +82,12 @@ public:
 
         co_await cmd->validate(req);
 
+        if (m_policy->check(req, *cmd) == ep::policy::action::deny) {
+            LOG_INFO() << req.peer() << ": command execution denied by policy";
+            throw command_exception(http::status::forbidden, "AccessDenied",
+                                    "Access Denied");
+        }
+
         if (auto expect = req.header("expect");
             expect && *expect == "100-continue") {
             LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
@@ -93,6 +100,7 @@ public:
 private:
     command_factory m_command_factory;
     std::unique_ptr<ep::http::request_factory> m_factory;
+    std::unique_ptr<ep::policy::module> m_policy;
 };
 
 } // end namespace uh::cluster
