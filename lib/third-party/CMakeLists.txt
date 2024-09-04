@@ -23,3 +23,7 @@ target_include_directories(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bi
 add_library(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include/lmdbxx/lmdb++.h)
 target_include_directories(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include)
 
+enable_language(C)
+set(ReedSolomonC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/reedsolomon-c)
+add_library(reedsolomon STATIC ${ReedSolomonC_DIR}/rs.c)
+target_include_directories(reedsolomon PUBLIC ${ReedSolomonC_DIR})
