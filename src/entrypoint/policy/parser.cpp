@@ -92,6 +92,7 @@ std::optional<matcher> principal_matchers(const json& stmt) {
 
 std::optional<matcher> condition_matchers(const json& stmt) {
     if (auto condition = optional(stmt, "Condition"); condition) {
+        throw std::runtime_error("policy Conditions are not supported");
     }
 
     return {};
