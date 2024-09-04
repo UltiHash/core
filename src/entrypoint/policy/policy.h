@@ -3,7 +3,9 @@
 
 #include "action.h"
 #include "matcher.h"
+
 #include <list>
+#include <optional>
 
 namespace uh::cluster::ep::policy {
 
@@ -13,6 +15,9 @@ public:
 
     std::optional<action> check(const http_request& req,
                                 const command& cmd) const;
+
+    const std::string& id() const { return m_id; }
+    action effect() const { return m_action; }
 
 private:
     std::string m_id;

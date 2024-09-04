@@ -17,7 +17,8 @@ namespace {
 const json& require(const json& j, std::string_view key) {
     auto it = j.find(key);
     if (it == j.end()) {
-        throw std::runtime_error("required key `" + key + "` not found");
+        throw std::runtime_error("required key `" + std::string(key) +
+                                 "` not found");
     }
 
     return *it;
@@ -55,11 +56,18 @@ action get_action(const json& stmt) {
 }
 
 matcher action_matchers(const json& stmt) {
-    if (auto action = optional(stmt, "Action"); action) {
+    auto action = optional(stmt, "Action");
+    auto not_action = optional(stmt, "NotAction");
+
+    if (action && not_action) {
+        throw std::runtime_error("Action and NotAction both are defined");
+    }
+
+    if (action) {
         return match_action(string_or_set(action->get()));
     }
 
-    if (auto not_action = optional(stmt, "NotAction"); not_action) {
+    if (not_action) {
         return match_not_action(string_or_set(not_action->get()));
     }
 
@@ -67,11 +75,18 @@ matcher action_matchers(const json& stmt) {
 }
 
 matcher resource_matchers(const json& stmt) {
-    if (auto resource = optional(stmt, "Resource"); resource) {
+    auto resource = optional(stmt, "Resource");
+    auto not_resource = optional(stmt, "NotResource");
+
+    if (resource && not_resource) {
+        throw std::runtime_error("Resource and NotResource both are defined");
+    }
+
+    if (resource) {
         return match_resource(string_or_set(resource->get()));
     }
 
-    if (auto not_resource = optional(stmt, "NotResource"); not_resource) {
+    if (not_resource) {
         return match_not_resource(string_or_set(not_resource->get()));
     }
 
@@ -92,7 +107,7 @@ std::optional<matcher> principal_matchers(const json& stmt) {
 
 std::optional<matcher> condition_matchers(const json& stmt) {
     if (auto condition = optional(stmt, "Condition"); condition) {
-        throw std::runtime_error("policy Conditions are not supported");
+        // TODO add condition support
     }
 
     return {};
@@ -137,8 +152,12 @@ std::list<policy> parser::parse(const std::string& code) {
     const auto& statements = require(js, "Statement");
     LOG_DEBUG() << "policy parser: " << statements.size()
                 << " policies in Statement";
-    for (const auto& stmt : statements) {
-        rv.emplace_back(parse_policy(stmt));
+    if (statements.is_array()) {
+        for (const auto& stmt : statements) {
+            rv.emplace_back(parse_policy(stmt));
+        }
+    } else {
+        rv.emplace_back(parse_policy(statements));
     }
 
     return rv;

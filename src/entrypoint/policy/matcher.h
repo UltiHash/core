@@ -1,10 +1,14 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MATCHER_H
 #define CORE_ENTRYPOINT_POLICY_MATCHER_H
 
-#include "entrypoint/commands/command.h"
-#include "entrypoint/http/http_request.h"
 #include <functional>
 #include <set>
+#include <string>
+
+namespace uh::cluster {
+class http_request;
+class command;
+} // namespace uh::cluster
 
 namespace uh::cluster::ep::policy {
 
