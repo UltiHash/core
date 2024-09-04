@@ -5,14 +5,13 @@
 #include "http/request_factory.h"
 #include "policy/module.h"
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
-class entrypoint_handler : public protocol_handler {
+class handler : public protocol_handler {
 public:
-    explicit entrypoint_handler(
-        command_factory&& comm_factory,
-        std::unique_ptr<ep::http::request_factory> factory,
-        std::unique_ptr<ep::policy::module> policy);
+    explicit handler(command_factory&& comm_factory,
+                     std::unique_ptr<http::request_factory> factory,
+                     std::unique_ptr<policy::module> policy);
 
     coro<void> on_startup() override;
 
@@ -23,10 +22,10 @@ public:
 
 private:
     command_factory m_command_factory;
-    std::unique_ptr<ep::http::request_factory> m_factory;
-    std::unique_ptr<ep::policy::module> m_policy;
+    std::unique_ptr<http::request_factory> m_factory;
+    std::unique_ptr<policy::module> m_policy;
 };
 
-} // end namespace uh::cluster
+} // end namespace uh::cluster::ep
 
 #endif // ENTRYPOINT_HANDLER_H
