@@ -13,7 +13,7 @@
 #include "entrypoint/http/default_request_factory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/user/dummy_backend.h"
-#include "entrypoint_handler.h"
+#include "handler.h"
 
 namespace uh::cluster {
 
@@ -62,7 +62,7 @@ public:
           m_limits(sc.license.max_data_store_size),
           m_server(
               m_config.server,
-              std::make_unique<entrypoint_handler>(
+              std::make_unique<ep::handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
                   make_request_factory(config),
