@@ -9,24 +9,26 @@ namespace uh::cluster::ep::policy {
  *  especially the flow chart)
  */
 action module::check(const http_request& request, const command& cmd) const {
-    // TODO set to deny when policies have been implemented completely
-    action rv = action::allow;
-
     for (const auto& policy : m_policies) {
-        if (auto result = policy.check(request, cmd); result) {
-            switch (*result) {
-            case action::deny:
-                return action::deny;
-            case action::allow:
-                rv = action::allow;
-                continue;
-            }
-
-            throw std::runtime_error("unsupported policy action");
+        auto result = policy.check(request, cmd);
+        if (result.value_or(action::allow) == action::deny) {
+            return action::deny;
         }
     }
 
-    return rv;
+    // TODO Does the requested resource have a resource-based policy?
+
+    if (const auto& user : request.authenticated_user(); user) {
+        for (const auto& policy : user->policies) {
+            auto result = policy.check(request, cmd);
+            if (result.value_or(action::deny) == action::allow) {
+                return action::allow;
+            }
+        }
+    }
+
+    // TODO set to deny when policies have been implemented completely
+    return action::allow;
 }
 
 } // namespace uh::cluster::ep::policy
