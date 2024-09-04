@@ -11,7 +11,8 @@ class entrypoint_handler : public protocol_handler {
 public:
     explicit entrypoint_handler(
         command_factory&& comm_factory,
-        std::unique_ptr<ep::http::request_factory> factory);
+        std::unique_ptr<ep::http::request_factory> factory,
+        std::unique_ptr<ep::policy::module> policy);
 
     coro<void> on_startup() override;
 

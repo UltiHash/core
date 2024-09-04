@@ -5,9 +5,11 @@ namespace uh::cluster {
 
 entrypoint_handler::entrypoint_handler(
     command_factory&& comm_factory,
-    std::unique_ptr<ep::http::request_factory> factory)
+    std::unique_ptr<ep::http::request_factory> factory,
+    std::unique_ptr<ep::policy::module> policy)
     : m_command_factory(comm_factory),
-      m_factory(std::move(factory)) {}
+      m_factory(std::move(factory)),
+      m_policy(std::move(policy)) {}
 
 coro<void> entrypoint_handler::on_startup() {
     m_command_factory.get_limits().storage_size(
