@@ -9,12 +9,6 @@
 
 namespace uh::cluster {
 
-template <typename handler>
-concept request_handler = requires(handler h, http_request r) {
-    { handler::can_handle(r) } -> std::same_as<bool>;
-    { h.handle(r) } -> std::same_as<coro<http_response>>;
-};
-
 class entrypoint_handler : public protocol_handler {
 public:
     explicit entrypoint_handler(
