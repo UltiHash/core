@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <iomanip>
 #include <iosfwd>
 #include <string>
 
@@ -135,7 +136,9 @@ constexpr big_int operator-(uint64_t a, const big_int& b) {
 typedef big_int uint128_t;
 
 inline std::ostream& operator<<(std::ostream& out, const big_int& bi) {
-    out << bi.to_string();
+    out << std::hex << std::setw(16) << std::setfill('0') << bi.get_high()
+        << ":" << std::hex << std::setw(16) << std::setfill('0')
+        << bi.get_low();
     return out;
 }
 

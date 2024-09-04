@@ -28,6 +28,75 @@ BOOST_AUTO_TEST_CASE(string_split) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(string_split_set) {
+    BOOST_CHECK(split<std::set<std::string_view>>("").empty());
+    BOOST_CHECK(split<std::set<std::string_view>>("abc").size() == 1);
+
+    {
+        auto v = split<std::set<std::string_view>>("abc gih def");
+        BOOST_CHECK(v.size() == 3);
+        BOOST_CHECK(v.contains("abc"));
+        BOOST_CHECK(v.contains("def"));
+        BOOST_CHECK(v.contains("gih"));
+    }
+
+    {
+        auto v = split<std::set<std::string_view>>("def-abc-gih", '-');
+        BOOST_CHECK(v.size() == 3);
+        BOOST_CHECK(v.contains("abc"));
+        BOOST_CHECK(v.contains("def"));
+        BOOST_CHECK(v.contains("gih"));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(string_ltrim) {
+    BOOST_CHECK_EQUAL(ltrim(""), "");
+    BOOST_CHECK_EQUAL(ltrim("   "), "");
+    BOOST_CHECK_EQUAL(ltrim("aaa"), "aaa");
+    BOOST_CHECK_EQUAL(ltrim("  aaa"), "aaa");
+    BOOST_CHECK_EQUAL(ltrim("  aaa  "), "aaa  ");
+    BOOST_CHECK_EQUAL(ltrim("aaa  "), "aaa  ");
+
+    BOOST_CHECK_EQUAL(ltrim("", "a"), "");
+    BOOST_CHECK_EQUAL(ltrim("   ", "a"), "   ");
+    BOOST_CHECK_EQUAL(ltrim("aaa", "a"), "");
+    BOOST_CHECK_EQUAL(ltrim("  aaa", "a"), "  aaa");
+    BOOST_CHECK_EQUAL(ltrim("  aaa  ", "a"), "  aaa  ");
+    BOOST_CHECK_EQUAL(ltrim("aaa  ", "a"), "  ");
+}
+
+BOOST_AUTO_TEST_CASE(string_rtrim) {
+    BOOST_CHECK_EQUAL(rtrim(""), "");
+    BOOST_CHECK_EQUAL(rtrim("   "), "");
+    BOOST_CHECK_EQUAL(rtrim("aaa"), "aaa");
+    BOOST_CHECK_EQUAL(rtrim("  aaa"), "  aaa");
+    BOOST_CHECK_EQUAL(rtrim("  aaa  "), "  aaa");
+    BOOST_CHECK_EQUAL(rtrim("aaa  "), "aaa");
+
+    BOOST_CHECK_EQUAL(rtrim("", "a"), "");
+    BOOST_CHECK_EQUAL(rtrim("   ", "a"), "   ");
+    BOOST_CHECK_EQUAL(rtrim("aaa", "a"), "");
+    BOOST_CHECK_EQUAL(rtrim("  aaa", "a"), "  ");
+    BOOST_CHECK_EQUAL(rtrim("  aaa  ", "a"), "  aaa  ");
+    BOOST_CHECK_EQUAL(rtrim("aaa  ", "a"), "aaa  ");
+}
+
+BOOST_AUTO_TEST_CASE(string_trim) {
+    BOOST_CHECK_EQUAL(trim(""), "");
+    BOOST_CHECK_EQUAL(trim("   "), "");
+    BOOST_CHECK_EQUAL(trim("aaa"), "aaa");
+    BOOST_CHECK_EQUAL(trim("  aaa"), "aaa");
+    BOOST_CHECK_EQUAL(trim("  aaa  "), "aaa");
+    BOOST_CHECK_EQUAL(trim("aaa  "), "aaa");
+
+    BOOST_CHECK_EQUAL(trim("", "a"), "");
+    BOOST_CHECK_EQUAL(trim("   ", "a"), "   ");
+    BOOST_CHECK_EQUAL(trim("aaa", "a"), "");
+    BOOST_CHECK_EQUAL(trim("  aaa", "a"), "  ");
+    BOOST_CHECK_EQUAL(trim("  aaa  ", "a"), "  aaa  ");
+    BOOST_CHECK_EQUAL(trim("aaa  ", "a"), "  ");
+}
+
 BOOST_AUTO_TEST_CASE(string_base64_decode) {
     constexpr const char* test_base64 =
         "Q29ycG9yaXMgZWEgc2FlcGUgdG90YW0gcmVwcmVoZW5kZXJpdCBuaWhpbCBmdWdpdCBhbG"

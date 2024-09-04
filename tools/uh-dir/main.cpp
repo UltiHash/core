@@ -11,7 +11,7 @@ using uh::cluster::imf_fixdate;
 using uh::cluster::object;
 
 struct config {
-    enum class command { ls, mkb, rmb };
+    enum class command { ls, mkb, rmb, info };
 
     uh::cluster::db::config database;
 
@@ -19,6 +19,8 @@ struct config {
     std::string target_ls;
     std::string target_mkb;
     std::string target_rmb;
+    std::string target_info;
+    std::string target_obj;
 };
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -38,6 +40,11 @@ std::optional<config> read_config(int argc, char** argv) {
     auto* sub_rmb = app.add_subcommand("rmb", "remove bucket");
     sub_rmb->add_option("bucket", rv.target_rmb, "name of bucket to remove");
 
+    auto* sub_info =
+        app.add_subcommand("info", "full information about an object");
+    sub_info->add_option("bucket", rv.target_info, "name of bucket");
+    sub_info->add_option("object", rv.target_obj, "name of object");
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::Success& e) {
@@ -51,6 +58,8 @@ std::optional<config> read_config(int argc, char** argv) {
         rv.cmd = config::command::mkb;
     } else if (sub_rmb->parsed()) {
         rv.cmd = config::command::rmb;
+    } else if (sub_info->parsed()) {
+        rv.cmd = config::command::info;
     }
 
     return rv;
@@ -87,6 +96,29 @@ uh::cluster::coro<void> remove_bucket(directory& dir,
     co_await dir.delete_bucket(target);
 }
 
+uh::cluster::coro<void> object_info(directory& dir, const std::string& bucket,
+                                    const std::string& key) {
+    auto object = co_await dir.get_object(bucket, key);
+
+    std::cout << "object: " << object.name << "\n"
+              << "last modified: " << imf_fixdate(object.last_modified) << "\n"
+              << "size: " << object.size << "\n"
+              << "mime: " << object.mime.value_or("N/A") << "\n"
+              << "etag: " << object.etag.value_or("N/A") << "\n";
+
+    if (object.addr) {
+        std::cout << "\naddress data (size: " << object.addr->size()
+                  << ", datasize: " << object.addr->data_size() << ")\n";
+        for (std::size_t i = 0; i < object.addr->size(); ++i) {
+            auto fragment = object.addr->get(i);
+            std::cout << "  - " << std::hex << std::setfill('0')
+                      << std::setw(16) << fragment.pointer.get_high() << ":"
+                      << std::setw(16) << fragment.pointer.get_low() << " w/ "
+                      << std::dec << fragment.size << " bytes\n";
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     try {
         auto cfg = read_config(argc, argv);
@@ -115,6 +147,11 @@ int main(int argc, char** argv) {
         case config::command::rmb:;
             boost::asio::co_spawn(executor, remove_bucket(dir, cfg->target_rmb),
                                   handler);
+            break;
+        case config::command::info:;
+            boost::asio::co_spawn(
+                executor, object_info(dir, cfg->target_info, cfg->target_obj),
+                handler);
             break;
 
         default:

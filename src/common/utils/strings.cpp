@@ -3,20 +3,45 @@
 #include <boost/beast/core/detail/base64.hpp>
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
+#include <cctype>
 #include <sstream>
 
 using namespace boost;
 
 namespace uh::cluster {
 
-std::vector<std::string_view> split(std::string_view data, char delimiter) {
-    auto split =
-        data | std::ranges::views::split(delimiter) |
-        std::ranges::views::transform([](auto&& str) {
-            return std::string_view(&*str.begin(), std::ranges::distance(str));
-        });
+namespace {
 
-    return {split.begin(), split.end()};
+int xvalue(char ch) {
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+
+    return ch - '0';
+}
+
+} // namespace
+
+std::string_view trim(std::string_view in, std::string_view chars) {
+    return ltrim(rtrim(in, chars), chars);
+}
+
+std::string_view ltrim(std::string_view in, std::string_view chars) {
+    auto start = in.find_first_not_of(chars);
+    if (start == std::string::npos) {
+        return {};
+    }
+
+    return in.substr(start);
+}
+
+std::string_view rtrim(std::string_view in, std::string_view chars) {
+    auto end = in.find_last_not_of(chars);
+    if (end == std::string::npos) {
+        return {};
+    }
+
+    return in.substr(0, end + 1);
 }
 
 std::vector<char> base64_decode(std::string_view b64) {
@@ -41,16 +66,54 @@ std::string url_encode(const std::string& str_to_encode) noexcept {
     return encoded_string;
 }
 
-std::string& lowercase(std::string& s) {
+std::string uri_encode(const std::string& str,
+                       const std::string& also_encode) noexcept {
+    std::string rv;
+    for (auto it = str.begin(); it != str.end(); ++it) {
+        if ((*it >= 'A' && *it <= 'Z') || (*it >= 'a' && *it <= 'z') ||
+            (*it >= '0' && *it <= '9') || *it == '-' || *it == '.' ||
+            *it == '_' || *it == '~' ||
+            also_encode.find(*it) != std::string::npos) {
+
+            rv += *it;
+            continue;
+        }
+
+        rv += '%' + to_hexu(*it);
+    }
+
+    return rv;
+}
+
+std::string lowercase(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
 
 bool to_bool(std::string str_to_eval) {
-    std::istringstream is(lowercase(str_to_eval));
+    std::istringstream is(lowercase(std::move(str_to_eval)));
     bool b;
     is >> std::boolalpha >> b;
     return b;
+}
+
+std::string unhex(std::string in) {
+    if (in.size() % 2 != 0) {
+        throw std::invalid_argument("string size must be even");
+    }
+
+    std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+
+    std::string rv;
+    for (std::size_t pos = 0ull; pos < in.size(); pos += 2) {
+        if (!std::isxdigit(in[pos]) || !std::isxdigit(in[pos + 1])) {
+            throw std::invalid_argument("string contains non-hex characters");
+        }
+
+        rv += static_cast<char>(xvalue(in[pos]) << 8 | xvalue(in[pos + 1]));
+    }
+
+    return rv;
 }
 
 } // namespace uh::cluster

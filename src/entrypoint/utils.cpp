@@ -35,22 +35,4 @@ retrieval::collapse(const std::vector<object>& objects,
     return collapsed_objs;
 }
 
-std::tuple<std::string, std::string>
-extract_bucket_and_object(boost::urls::url url) {
-    std::string bucket_id;
-    std::string object_key;
-
-    for (const auto& seg : url.segments()) {
-        if (bucket_id.empty())
-            bucket_id = seg;
-        else
-            object_key += seg + '/';
-    }
-
-    if (!object_key.empty())
-        object_key.pop_back();
-
-    return std::make_tuple(bucket_id, object_key);
-}
-
 } // namespace uh::cluster
