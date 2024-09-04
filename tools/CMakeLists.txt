@@ -21,3 +21,7 @@ target_include_directories(${PROJECT_NAME}-file-upload PRIVATE ${${PROJECT_NAME}
 add_executable(${PROJECT_NAME}-uh-dir uh-dir/main.cpp)
 target_link_libraries(${PROJECT_NAME}-uh-dir ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-uh-dir PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+add_executable(${PROJECT_NAME}-storage storage/main.cpp)
+target_link_libraries(${PROJECT_NAME}-storage ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME}-storage PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
