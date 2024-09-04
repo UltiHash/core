@@ -5,20 +5,12 @@
 
 namespace uh::cluster {
 
-complete_multipart::complete_multipart(directory& dir, multipart_state& uploads,
-                                       limits& uhlimits)
-    : m_directory(dir),
-      m_uploads(uploads),
-      m_limits(uhlimits) {}
+namespace {
 
-bool complete_multipart::can_handle(const http_request& req) {
-    return req.method() == method::post &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.query("uploadId");
-}
+constexpr std::size_t MAXIMUM_CHUNK_SIZE = 5ul * 1024ul * 1024ul;
+constexpr std::size_t MAXIMUM_PART_NUMBER = 10000;
 
-void complete_multipart::validate_internal(const upload_info& info,
-                                           std::span<char> body) {
+void validate_internal(const upload_info& info, std::span<char> body) {
     xml_parser xml_parser;
     bool parsed = xml_parser.parse({&*body.begin(), body.size()});
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
@@ -63,6 +55,31 @@ void complete_multipart::validate_internal(const upload_info& info,
     }
 }
 
+std::string multipart_etag(const upload_info& info) {
+    std::string buffer;
+
+    for (const auto& part : info.parts) {
+        buffer += unhex(part.second.etag);
+    }
+
+    return to_hex(md5::from_string(buffer)) + "-" +
+           std::to_string(info.parts.size());
+}
+
+} // namespace
+
+complete_multipart::complete_multipart(directory& dir, multipart_state& uploads,
+                                       limits& uhlimits)
+    : m_directory(dir),
+      m_uploads(uploads),
+      m_limits(uhlimits) {}
+
+bool complete_multipart::can_handle(const http_request& req) {
+    return req.method() == method::post &&
+           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
+           !req.object_key().empty() && req.query("uploadId");
+}
+
 coro<http_response> complete_multipart::handle(http_request& req) {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
@@ -74,10 +91,9 @@ coro<http_response> complete_multipart::handle(http_request& req) {
     const auto info = co_await m_uploads.details(upload_id);
 
     validate_internal(info, buffer.span());
-
     m_limits.check_storage_size(info.data_size);
 
-    auto etag = to_hex(md5::from_buffer(buffer.span()));
+    auto etag = multipart_etag(info);
 
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),
