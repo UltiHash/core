@@ -9,12 +9,13 @@ namespace uh::cluster::ep::policy {
 
 class policy {
 public:
-    policy(std::list<matcher> matchers, action action);
+    policy(std::string id, std::list<matcher> matchers, action action);
 
     std::optional<action> check(const http_request& req,
                                 const command& cmd) const;
 
 private:
+    std::string m_id;
     std::list<matcher> m_matchers;
     action m_action;
 };

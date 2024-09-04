@@ -2,8 +2,9 @@
 
 namespace uh::cluster::ep::policy {
 
-policy::policy(std::list<matcher> matchers, action action)
-    : m_matchers(std::move(matchers)),
+policy::policy(std::string id, std::list<matcher> matchers, action action)
+    : m_id(std::move(id)),
+      m_matchers(std::move(matchers)),
       m_action(action) {}
 
 std::optional<action> policy::check(const http_request& req,
