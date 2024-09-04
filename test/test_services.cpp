@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u); }
@@ -70,7 +70,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_NO_THROW(1000, load_balancer.get()); }
@@ -90,7 +90,7 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
         CHECK_STABLE(100, !has_result);
 
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(100, has_result);
@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
     {
         test::server srv("0.0.0.0", 8081);
         etcd::SyncClient etcd_client(REGISTRY_ENDPOINT);
-        service_registry sr(DEDUPLICATOR_SERVICE, 0, etcd_client);
+        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         fixture f;
@@ -123,7 +123,7 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(DEDUPLICATOR_SERVICE, test_id, etcd_client);
+        service_registry sr(STORAGE_SERVICE, test_id, etcd_client);
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
