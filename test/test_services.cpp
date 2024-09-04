@@ -5,8 +5,8 @@
 #include "../src/common/service_interfaces/deduplicator_interface.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/etcd/service_discovery/service_get_handler.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
+#include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/test/checks.h"
 #include "common/test/server.h"
 #include "common/utils/common.h"
@@ -24,7 +24,7 @@ template <typename service_interface> struct base_fixture {
     boost::asio::io_context ioc;
     etcd::SyncClient etcd_client;
     std::size_t service_id;
-    service_get_handler<service_interface> services;
+    storage_service_get_handler<service_interface> services;
     roundrobin_load_balancer<service_interface> load_balancer;
     uh::cluster::service_maintainer<service_interface> service_maintainer;
 

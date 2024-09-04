@@ -4,9 +4,14 @@
 #include "common/types/common_types.h"
 #include <map>
 #include <string>
-#include <unordered_set>
 
 namespace uh::cluster {
+
+static constexpr std::size_t KIBI_BYTE = 1024;
+static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
+static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
+static constexpr std::size_t TEBI_BYTE = 1024 * GIBI_BYTE;
+static constexpr std::size_t PEBI_BYTE = 1024 * TEBI_BYTE;
 
 enum role : uint8_t {
     STORAGE_SERVICE,
@@ -51,6 +56,7 @@ constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
+constexpr auto RECOVERY_WAIT_FOR_SERVICE_TIMEOUT = std::chrono::hours(1);
 
 constexpr auto ETCD_TIMEOUT = std::chrono::seconds(300);
 constexpr auto ETCD_RETRY_INTERVAL = std::chrono::seconds(1);

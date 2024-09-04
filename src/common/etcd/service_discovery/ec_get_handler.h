@@ -43,7 +43,7 @@ private:
     }
 
     ec_scheme m_scheme;
-    service_get_handler m_getter;
+    storage_service_get_handler m_getter;
 };
 } // namespace uh::cluster
 

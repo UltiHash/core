@@ -3,15 +3,13 @@
 
 #include "common/db/connstr.h"
 #include "common/telemetry/log.h"
-#include "common/types/scoped_buffer.h"
 #include "common/utils/templates.h"
 #include "row.h"
+#include <boost/asio/posix/stream_descriptor.hpp>
 #include <libpq-fe.h>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <signal.h>
 
 namespace uh::cluster::db {
 

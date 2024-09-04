@@ -11,8 +11,8 @@
 #include <ranges>
 namespace uh::cluster {
 
-struct service_get_handler : public service_monitor<storage_interface>,
-                             public storage_get_handler {
+struct storage_service_get_handler : public service_monitor<storage_interface>,
+                                     public storage_get_handler {
 
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& client) override {

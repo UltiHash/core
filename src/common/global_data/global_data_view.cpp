@@ -106,22 +106,11 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
         throw std::length_error("Empty address is not allowed for sync");
     }
 
-    auto info = extract_node_address_map(addr, m_basic_getter);
-
-    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(info.nodes.size());
-
-    for (auto& dn : info.nodes) {
-        proms.emplace_back(
-            std::make_shared<awaitable_promise<void>>(m_io_service));
-        boost::asio::co_spawn(m_io_service,
-                              dn->sync(ctx, info.node_address_map[dn]),
-                              use_awaitable_promise_cospawn(proms.back()));
-    }
-
-    for (auto& p : proms) {
-        co_await p->get();
-    }
+    co_await perform_for_address(
+        addr, m_basic_getter, m_io_service,
+        [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
+            co_await dn->sync(ctx, addr);
+        });
 }
 
 coro<std::size_t> global_data_view::get_used_space(context& ctx) {
@@ -132,6 +121,32 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
         used += co_await dn->get_used_space(ctx);
     }
     co_return used;
+}
+
+[[nodiscard]] coro<address> global_data_view::link(context& ctx,
+                                                   const address& addr) {
+    std::map<size_t, address> addresses;
+    co_await perform_for_address(
+        addr, m_basic_getter, m_io_service,
+        [&ctx, &addresses](auto id, auto dn, const auto& addr) -> coro<void> {
+            addresses.emplace(id, co_await dn->link(ctx, addr));
+        });
+
+    address rv;
+    for (const auto& a : addresses) {
+        rv.append(a.second);
+    }
+
+    co_return rv;
+}
+
+coro<void> global_data_view::unlink(context& ctx, const address& addr) {
+
+    co_await perform_for_address(
+        addr, m_basic_getter, m_io_service,
+        [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
+            co_await dn->unlink(ctx, addr);
+        });
 }
 
 [[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
@@ -146,50 +161,6 @@ global_data_view::~global_data_view() noexcept {
     m_ec_maintainer.remove_monitor(m_load_balancer);
     m_ec_maintainer.remove_monitor(m_basic_getter);
     m_service_maintainer.remove_monitor(m_ec_maintainer);
-}
-
-[[nodiscard]] coro<address> global_data_view::link(context& ctx,
-                                                   const address& addr) {
-
-    auto info = extract_node_address_map(addr, m_basic_getter);
-
-    std::vector<std::shared_ptr<awaitable_promise<address>>> proms;
-    proms.reserve(info.nodes.size());
-
-    for (auto& dn : info.nodes) {
-        proms.emplace_back(
-            std::make_shared<awaitable_promise<address>>(m_io_service));
-        boost::asio::co_spawn(m_io_service,
-                              dn->link(ctx, info.node_address_map[dn]),
-                              use_awaitable_promise_cospawn(proms.back()));
-    }
-
-    address rv;
-    for (auto& p : proms) {
-        rv.append(co_await p->get());
-    }
-
-    co_return rv;
-}
-
-coro<void> global_data_view::unlink(context& ctx, const address& addr) {
-
-    auto info = extract_node_address_map(addr, m_basic_getter);
-
-    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(info.nodes.size());
-
-    for (auto& dn : info.nodes) {
-        proms.emplace_back(
-            std::make_shared<awaitable_promise<void>>(m_io_service));
-        boost::asio::co_spawn(m_io_service,
-                              dn->unlink(ctx, info.node_address_map[dn]),
-                              use_awaitable_promise_cospawn(proms.back()));
-    }
-
-    for (auto& p : proms) {
-        co_await p->get();
-    }
 }
 
 } // namespace uh::cluster

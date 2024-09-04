@@ -16,7 +16,16 @@ struct address_node_info {
 
 address_node_info
 extract_node_address_map(const address& addr,
-                         storage_get_handler& storage_get_handler);
+                         storage_get_handler& storage_get_handler,
+                         const std::vector<size_t>& existing_offsets = {});
+
+coro<void> perform_for_address(
+    const address& addr, storage_get_handler& storage_get_handler,
+    boost::asio::io_context& ioc,
+    std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
+                             const address&)>
+        fn);
+
 } // end namespace uh::cluster
 
 #endif // ADDRESS_UTILS_H

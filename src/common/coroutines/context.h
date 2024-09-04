@@ -2,8 +2,7 @@
 #define UH_CLUSTER_CONTEXT_H
 
 #include "opentelemetry/context/context.h"
-#include <atomic>
-#include <optional>
+
 #include <utility>
 
 namespace uh::cluster {

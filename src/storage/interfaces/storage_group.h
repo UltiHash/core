@@ -5,7 +5,9 @@
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
-#include "common/etcd/service_discovery/service_get_handler.h"
+#include "common/etcd/service_discovery/storage_service_get_handler.h"
+#include "common/utils/address_utils.h"
+#include "common/utils/time_utils.h"
 
 namespace uh::cluster {
 
@@ -15,10 +17,11 @@ struct storage_system_config {
 };
 
 enum ec_status {
-    degraded,
-    healthy,
-    recovering,
     empty,
+    degraded,
+    lost_data,
+    recovering,
+    healthy,
 };
 
 struct storage_group : public storage_interface {
@@ -82,32 +85,99 @@ struct storage_group : public storage_interface {
 
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
-        co_await m_getter.get(addr.get(0).pointer)
-            ->read_address(ctx, buffer, addr, offsets);
+
+        auto info = extract_node_address_map(addr, m_getter, offsets);
+
+        std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
+        promises.reserve(info.nodes.size());
+
+        for (auto& dn : info.nodes) {
+            promises.emplace_back(
+                std::make_shared<awaitable_promise<void>>(m_ioc));
+
+            boost::asio::co_spawn(
+                m_ioc,
+                dn->read_address(ctx, buffer, info.node_address_map[dn],
+                                 info.node_data_offsets_map[dn]),
+                use_awaitable_promise_cospawn(promises.back()));
+        }
+
+        for (auto& p : promises) {
+            co_await p->get();
+        }
     }
 
     coro<address> link(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->link(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        std::map<size_t, address> addresses;
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx, &addresses](auto id, auto dn,
+                               const auto& addr) -> coro<void> {
+                addresses.emplace(id, co_await dn->link(ctx, addr));
+            });
+
+        address rv;
+        for (const auto& a : addresses) {
+            rv.append(a.second);
+        }
+
+        co_return rv;
     }
 
     coro<void> unlink(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->unlink(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
+                co_await dn->unlink(ctx, addr);
+            });
     }
 
     coro<void> sync(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->sync(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
+                co_await dn->sync(ctx, addr);
+            });
     }
 
     coro<size_t> get_used_space(context& ctx) override {
-        co_return co_await m_getter.get_services().back()->get_used_space(ctx);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        auto nodes = m_getter.get_services();
+
+        size_t used = 0;
+        for (const auto& dn : nodes) {
+            used += co_await dn->get_used_space(ctx);
+        }
+        co_return used;
     }
+
+    void recover(const address& addr) {}
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    service_get_handler m_getter;
+    storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
-    ec_status m_status = empty;
+    std::atomic<ec_status> m_status = empty;
 
     void update_status() {
 
