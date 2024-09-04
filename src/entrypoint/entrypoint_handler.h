@@ -2,8 +2,6 @@
 #define ENTRYPOINT_HANDLER_H
 
 #include "command_factory.h"
-#include "common/debug/class_name.h"
-#include "http/command_exception.h"
 #include "http/request_factory.h"
 #include "policy/module.h"
 
@@ -13,83 +11,14 @@ class entrypoint_handler : public protocol_handler {
 public:
     explicit entrypoint_handler(
         command_factory&& comm_factory,
-        std::unique_ptr<ep::http::request_factory> factory)
-        : m_command_factory(comm_factory),
-          m_factory(std::move(factory)) {}
+        std::unique_ptr<ep::http::request_factory> factory);
 
-    coro<void> on_startup() override {
-        m_command_factory.get_limits().storage_size(
-            co_await m_command_factory.get_directory().data_size());
-    }
+    coro<void> on_startup() override;
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override {
-        for (;;) {
-
-            /*
-             * Note: livetime of response must not exceed livetime of request.
-             */
-            std::unique_ptr<http_request> req;
-            http_response resp;
-            bool keep_alive = false;
-
-            try {
-                req = co_await m_factory->create(s);
-                LOG_DEBUG() << req->peer() << ": read request: " << *req;
-
-                resp = co_await handle_request(s, *req);
-                metric<success>::increase(1);
-                keep_alive = true;
-            } catch (const command_exception& e) {
-                LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-                resp = make_response(e);
-                keep_alive = true;
-            } catch (const boost::system::system_error& se) {
-                if (se.code() == http::error::end_of_stream) {
-                    LOG_ERROR()
-                        << s.remote_endpoint() << ": peer closed connection";
-                    break;
-                }
-
-                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-                resp = make_response(command_exception(
-                    http::status::bad_request, "BadRequest", "bad request"));
-            } catch (const std::exception& e) {
-                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-                resp = make_response(command_exception());
-            }
-
-            co_await write(s, std::move(resp));
-            if (!keep_alive) {
-                break;
-            }
-        }
-
-        s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-        s.close();
-    }
+    coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
     coro<http_response> handle_request(boost::asio::ip::tcp::socket& s,
-                                       http_request& req) const {
-
-        auto cmd = m_command_factory.create(req);
-
-        co_await cmd->validate(req);
-
-        if (m_policy->check(req, *cmd) == ep::policy::action::deny) {
-            LOG_INFO() << req.peer() << ": command execution denied by policy";
-            throw command_exception(http::status::forbidden, "AccessDenied",
-                                    "Access Denied");
-        }
-
-        if (auto expect = req.header("expect");
-            expect && *expect == "100-continue") {
-            LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
-            co_await write(s, http_response(http::status::continue_));
-        }
-
-        co_return co_await cmd->handle(req);
-    }
+                                       http_request& req) const;
 
 private:
     command_factory m_command_factory;
