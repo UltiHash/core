@@ -1,22 +1,21 @@
-#include "entrypoint_handler.h"
+#include "handler.h"
 #include "http/command_exception.h"
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
-entrypoint_handler::entrypoint_handler(
-    command_factory&& comm_factory,
-    std::unique_ptr<ep::http::request_factory> factory,
-    std::unique_ptr<ep::policy::module> policy)
+handler::handler(command_factory&& comm_factory,
+                 std::unique_ptr<ep::http::request_factory> factory,
+                 std::unique_ptr<ep::policy::module> policy)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
       m_policy(std::move(policy)) {}
 
-coro<void> entrypoint_handler::on_startup() {
+coro<void> handler::on_startup() {
     m_command_factory.get_limits().storage_size(
         co_await m_command_factory.get_directory().data_size());
 }
 
-coro<void> entrypoint_handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
 
         /*
@@ -38,7 +37,7 @@ coro<void> entrypoint_handler::handle(boost::asio::ip::tcp::socket s) {
             resp = make_response(e);
             keep_alive = true;
         } catch (const boost::system::system_error& se) {
-            if (se.code() == http::error::end_of_stream) {
+            if (se.code() == boost::beast::http::error::end_of_stream) {
                 LOG_ERROR()
                     << s.remote_endpoint() << ": peer closed connection";
                 break;
@@ -63,9 +62,8 @@ coro<void> entrypoint_handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<http_response>
-entrypoint_handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                   http_request& req) const {
+coro<http_response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                            http_request& req) const {
 
     auto cmd = m_command_factory.create(req);
 
@@ -86,4 +84,4 @@ entrypoint_handler::handle_request(boost::asio::ip::tcp::socket& s,
     co_return co_await cmd->handle(req);
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::ep
