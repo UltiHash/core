@@ -1,12 +1,11 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MODULE_H
 #define CORE_ENTRYPOINT_POLICY_MODULE_H
 
+#include "action.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/http/http_request.h"
 
 namespace uh::cluster::ep::policy {
-
-enum class action { allow, deny };
 
 class module {
 public:
