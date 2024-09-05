@@ -13,6 +13,7 @@ option(WITH_EXAMPLES "Whether to include examples in build" OFF)
 option(WITH_STL "Which version of the Standard Library for C++ to use" ON)
 
 add_subdirectory(opentelemetry-cpp)
+add_subdirectory(nlohmann_json)
 
 add_library(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/magic_enum/magic_enum_all.hpp)
 target_include_directories(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magic_enum/include/)

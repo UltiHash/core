@@ -1,7 +1,7 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MODULE_H
 #define CORE_ENTRYPOINT_POLICY_MODULE_H
 
-#include "action.h"
+#include "effect.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/http/http_request.h"
 #include "policy.h"
@@ -14,7 +14,7 @@ public:
      * Check configured policies to determine whether the provided
      * request is allowed to proceed.
      */
-    action check(const http_request& request, const command& cmd) const;
+    effect check(const http_request& request, const command& cmd) const;
 
 private:
     std::list<policy> m_policies;
