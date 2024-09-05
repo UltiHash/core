@@ -151,7 +151,9 @@ private:
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
 
             for (auto& m : m_monitors) {
+
                 m.get().add_client(client_itr->first, client_itr->second);
+
                 for (const auto& [attr_name, attr_val] :
                      itr->second.attributes) {
                     m.get().add_attribute(client_itr->second, attr_name,

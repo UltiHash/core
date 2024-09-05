@@ -14,7 +14,7 @@ public:
           m_size(m_addr.data_size()),
           m_ctx(ctx) {}
 
-    ~local_read_handle() {
+    ~local_read_handle() override {
         try {
             report_stats();
         } catch (...) {

@@ -5,20 +5,18 @@
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
-#include "common/etcd/service_discovery/service_get_handler.h"
+#include "common/etcd/service_discovery/storage_service_get_handler.h"
+#include "common/utils/address_utils.h"
 
 namespace uh::cluster {
 
-struct storage_system_config {
-    size_t data_nodes;
-    size_t ec_nodes;
-};
-
 enum ec_status {
-    degraded,
-    healthy,
-    recovering,
     empty,
+    degraded,
+    complete,
+    recovering,
+    healthy,
+    failed_recovery,
 };
 
 struct storage_group : public storage_interface {
@@ -82,32 +80,85 @@ struct storage_group : public storage_interface {
 
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
-        co_await m_getter.get(addr.get(0).pointer)
-            ->read_address(ctx, buffer, addr, offsets);
+
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->read_address(ctx, buffer, info.addr,
+                                          info.pointer_offsets);
+            },
+            offsets);
     }
 
     coro<address> link(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->link(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        std::map<size_t, address> addresses;
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx, &addresses](auto id, auto dn,
+                               const auto& info) -> coro<void> {
+                addresses.emplace(id, co_await dn->link(ctx, info.addr));
+            });
+
+        address rv;
+        for (const auto& a : addresses) {
+            rv.append(a.second);
+        }
+
+        co_return rv;
     }
 
     coro<void> unlink(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->unlink(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->unlink(ctx, info.addr);
+            });
     }
 
     coro<void> sync(context& ctx, const address& addr) override {
-        co_return co_await m_getter.get(addr.get(0).pointer)->sync(ctx, addr);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->sync(ctx, info.addr);
+            });
     }
 
     coro<size_t> get_used_space(context& ctx) override {
-        co_return co_await m_getter.get_services().back()->get_used_space(ctx);
+
+        if (!is_healthy()) {
+            throw std::runtime_error("unhealthy storage system");
+        }
+
+        auto nodes = m_getter.get_services();
+
+        size_t used = 0;
+        for (const auto& dn : nodes) {
+            used += co_await dn->get_used_space(ctx);
+        }
+        co_return used;
     }
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    service_get_handler<storage_interface> m_getter;
+    storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
-    ec_status m_status = empty;
+    std::atomic<ec_status> m_status = empty;
 
     void update_status() {
 

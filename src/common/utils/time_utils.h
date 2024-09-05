@@ -5,11 +5,10 @@
 #include <thread>
 
 namespace uh::cluster {
-template <typename T> using coro = boost::asio::awaitable<T>;
 
-template <typename T, typename R>
-auto wait_for_success(std::chrono::duration<T, R> timeout,
-                      std::chrono::duration<T, R> retry_interval, auto&& op) {
+template <typename T1, typename R1, typename T2, typename R2>
+auto wait_for_success(std::chrono::duration<T1, R1> timeout,
+                      std::chrono::duration<T2, R2> retry_interval, auto&& op) {
 
     const auto start = std::chrono::steady_clock::now();
 
@@ -27,9 +26,9 @@ auto wait_for_success(std::chrono::duration<T, R> timeout,
     std::rethrow_exception(eptr);
 }
 
-template <typename T, typename R>
-auto wait_for_true(std::chrono::duration<T, R> timeout,
-                   std::chrono::duration<T, R> retry_interval, auto&& op) {
+template <typename T1, typename R1, typename T2, typename R2>
+auto wait_for_true(std::chrono::duration<T1, R1> timeout,
+                   std::chrono::duration<T2, R2> retry_interval, auto&& op) {
 
     const auto start = std::chrono::steady_clock::now();
 
