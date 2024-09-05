@@ -1,6 +1,7 @@
 
 #ifndef EC_SCHEME_H
 #define EC_SCHEME_H
+
 #include "common/types/big_int.h"
 #include "common/utils/pointer_traits.h"
 

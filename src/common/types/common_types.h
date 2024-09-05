@@ -2,17 +2,10 @@
 #define CORE_COMMON_TYPES_H
 
 #include "address.h"
-#include <boost/asio.hpp>
+#include <boost/asio/awaitable.hpp>
 #include <chrono>
-#include <zpp_bits.h>
 
 namespace uh::cluster {
-
-static constexpr std::size_t KIBI_BYTE = 1024;
-static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
-static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
-static constexpr std::size_t TEBI_BYTE = 1024 * GIBI_BYTE;
-static constexpr std::size_t PEBI_BYTE = 1024 * TEBI_BYTE;
 
 struct dedupe_response {
     std::size_t effective_size{};

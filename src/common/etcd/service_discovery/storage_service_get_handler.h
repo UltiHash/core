@@ -5,36 +5,35 @@
 #include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/pointer_traits.h"
+#include "storage_get_handler.h"
 
 #include <iostream>
 #include <ranges>
 namespace uh::cluster {
 
-template <typename service_interface>
-struct service_get_handler : public service_monitor<service_interface> {
+struct storage_service_get_handler : public service_monitor<storage_interface>,
+                                     public storage_get_handler {
 
     void add_client(size_t id,
-                    const std::shared_ptr<service_interface>& client) override {
+                    const std::shared_ptr<storage_interface>& client) override {
         std::lock_guard l(m_mutex);
         m_clients.emplace(id, client);
         m_cv.notify_one();
     }
     void
     remove_client(size_t id,
-                  const std::shared_ptr<service_interface>& client) override {
+                  const std::shared_ptr<storage_interface>& client) override {
         std::lock_guard l(m_mutex);
         m_clients.erase(id);
     }
 
-    std::shared_ptr<service_interface> get(const uint128_t& pointer)
-    requires std::is_same_v<service_interface, storage_interface>
-    {
+    std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
         const auto id = pointer_traits::get_service_id(pointer);
         return get(id);
     }
 
-    std::shared_ptr<service_interface> get(std::size_t id) {
-        std::shared_ptr<service_interface> cl;
+    std::shared_ptr<storage_interface> get(std::size_t id) override {
+        std::shared_ptr<storage_interface> cl;
 
         std::unique_lock lk(m_mutex);
         if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT, [this, &id, &cl]() {
@@ -46,20 +45,20 @@ struct service_get_handler : public service_monitor<service_interface> {
             }))
             throw std::runtime_error(
                 "timeout waiting for " +
-                get_service_string(service_interface::service_role) +
+                get_service_string(storage_interface::service_role) +
                 " client: " + std::to_string(id));
 
         return cl;
     }
 
-    bool contains(std::size_t id) {
+    bool contains(std::size_t id) override {
         std::lock_guard l(m_mutex);
         return m_clients.contains(id);
     }
 
-    std::vector<std::shared_ptr<service_interface>> get_services() {
+    std::vector<std::shared_ptr<storage_interface>> get_services() override {
         std::lock_guard l(m_mutex);
-        std::vector<std::shared_ptr<service_interface>> clients_list;
+        std::vector<std::shared_ptr<storage_interface>> clients_list;
         clients_list.reserve(m_clients.size());
 
         std::ranges::copy(m_clients | std::views::values,
@@ -71,7 +70,7 @@ struct service_get_handler : public service_monitor<service_interface> {
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
+    std::map<std::size_t, std::shared_ptr<storage_interface>> m_clients;
 };
 
 } // namespace uh::cluster

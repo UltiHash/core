@@ -59,8 +59,8 @@ service_registry::registration::~registration() {
     {
         std::unique_lock lk(m_attributes_mutex);
         m_stop = true;
+        m_cv.notify_all();
     }
-    m_cv.notify_all();
 
     m_monitor_thread.join();
     m_client.leaserevoke(m_lease);

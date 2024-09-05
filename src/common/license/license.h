@@ -1,7 +1,7 @@
 #ifndef COMMON_LICENSE_LICENSE_H
 #define COMMON_LICENSE_LICENSE_H
 
-#include "common/types/common_types.h"
+#include "common/utils/common.h"
 
 #include <string>
 
