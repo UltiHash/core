@@ -2,19 +2,21 @@
 
 namespace uh::cluster::ep::policy {
 
-policy::policy(std::list<matcher> matchers, action action)
-    : m_matchers(std::move(matchers)),
-      m_action(action) {}
+policy::policy(std::string id, std::list<matcher> matchers,
+               ep::policy::effect effect)
+    : m_id(std::move(id)),
+      m_matchers(std::move(matchers)),
+      m_effect(effect) {}
 
-std::optional<action> policy::check(const http_request& req,
-                                    const command& cmd) const {
+std::optional<ep::policy::effect> policy::check(const http_request& req,
+                                                const command& cmd) const {
     for (const auto& matcher : m_matchers) {
         if (!matcher(req, cmd)) {
             return {};
         }
     }
 
-    return m_action;
+    return m_effect;
 }
 
 } // namespace uh::cluster::ep::policy
