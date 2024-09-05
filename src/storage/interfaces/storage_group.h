@@ -160,26 +160,6 @@ private:
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
 
-    struct recovery_info {
-        std::vector<data_stat> stats;
-        std::size_t recover_size;
-        bool healthy = false;
-    };
-
-    // address calculate_recovery_address (size_t offset, size_t size) {
-
-    ///}
-
-    void recover(const recovery_info& rinfo) {
-        m_status = recovering;
-        for (size_t offset = 0; offset < rinfo.recover_size;
-             offset += RECOVERY_CHUNK_SIZE) {
-            // address addr = recovery address;
-            // read_address(addr);
-            // m_ec_calc->recover();
-        }
-    }
-
     void update_status() {
 
         size_t count = 0;
@@ -190,25 +170,12 @@ private:
         }
 
         if (count == 0) {
-            auto rinfo = check_recovery();
-
-            if (rinfo.healthy) {
-                m_status = healthy;
-            } else {
-                m_status = complete;
-                recover(rinfo);
-            }
+            m_status = healthy;
         } else if (count == m_nodes.size()) {
             m_status = empty;
         } else {
             m_status = degraded;
         }
-    }
-
-    recovery_info check_recovery() {
-        return {.stats = {m_nodes.size(), valid},
-                .recover_size = 0,
-                .healthy = true};
     }
 };
 

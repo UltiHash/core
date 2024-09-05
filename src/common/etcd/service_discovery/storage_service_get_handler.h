@@ -29,6 +29,10 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
 
     std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
         const auto id = pointer_traits::get_service_id(pointer);
+        return get(id);
+    }
+
+    std::shared_ptr<storage_interface> get(std::size_t id) override {
         std::shared_ptr<storage_interface> cl;
 
         std::unique_lock lk(m_mutex);
