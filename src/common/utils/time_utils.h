@@ -5,7 +5,6 @@
 #include <thread>
 
 namespace uh::cluster {
-template <typename T> using coro = boost::asio::awaitable<T>;
 
 template <typename T1, typename R1, typename T2, typename R2>
 auto wait_for_success(std::chrono::duration<T1, R1> timeout,

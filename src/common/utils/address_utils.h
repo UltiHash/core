@@ -5,26 +5,29 @@
 
 namespace uh::cluster {
 
-struct address_node_info {
-    std::vector<std::shared_ptr<storage_interface>> nodes;
-    std::unordered_map<std::shared_ptr<storage_interface>, address>
-        node_address_map;
-    std::unordered_map<std::shared_ptr<storage_interface>, std::vector<size_t>>
-        node_data_offsets_map;
+struct address_info {
+    address addr;
+    std::vector<size_t> pointer_offsets;
+};
+
+struct node_address_info {
+    std::unordered_map<std::shared_ptr<storage_interface>, address_info>
+        node_info_map;
     size_t data_size;
 };
 
-address_node_info
+node_address_info
 extract_node_address_map(const address& addr,
                          storage_get_handler& storage_get_handler,
                          const std::vector<size_t>& existing_offsets = {});
 
-coro<void> perform_for_address(
+coro<size_t> perform_for_address(
     const address& addr, storage_get_handler& storage_get_handler,
     boost::asio::io_context& ioc,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
-                             const address&)>
-        fn);
+                             const address_info&)>
+        fn,
+    const std::vector<size_t>& existing_offsets = {});
 
 } // end namespace uh::cluster
 

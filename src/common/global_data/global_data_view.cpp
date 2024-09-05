@@ -76,28 +76,12 @@ global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
 
 coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
                                                  const address& addr) {
-
-    auto info = extract_node_address_map(addr, m_basic_getter);
-
-    std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
-    promises.reserve(info.nodes.size());
-
-    for (auto& dn : info.nodes) {
-        promises.emplace_back(
-            std::make_shared<awaitable_promise<void>>(m_io_service));
-
-        boost::asio::co_spawn(m_io_service,
-                              dn->read_address(ctx, buffer,
-                                               info.node_address_map[dn],
-                                               info.node_data_offsets_map[dn]),
-                              use_awaitable_promise_cospawn(promises.back()));
-    }
-
-    for (auto& p : promises) {
-        co_await p->get();
-    }
-
-    co_return info.data_size;
+    co_return co_await perform_for_address(
+        addr, m_basic_getter, m_io_service,
+        [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->read_address(ctx, buffer, info.addr,
+                                      info.pointer_offsets);
+        });
 }
 
 coro<void> global_data_view::sync(context& ctx, const address& addr) {
@@ -108,8 +92,8 @@ coro<void> global_data_view::sync(context& ctx, const address& addr) {
 
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
-            co_await dn->sync(ctx, addr);
+        [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->sync(ctx, info.addr);
         });
 }
 
@@ -128,8 +112,8 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](auto id, auto dn, const auto& addr) -> coro<void> {
-            addresses.emplace(id, co_await dn->link(ctx, addr));
+        [&ctx, &addresses](auto id, auto dn, const auto& info) -> coro<void> {
+            addresses.emplace(id, co_await dn->link(ctx, info.addr));
         });
 
     address rv;
@@ -144,8 +128,8 @@ coro<void> global_data_view::unlink(context& ctx, const address& addr) {
 
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
-            co_await dn->unlink(ctx, addr);
+        [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->unlink(ctx, info.addr);
         });
 }
 
