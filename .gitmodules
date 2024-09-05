@@ -19,3 +19,6 @@
 [submodule "lib/third-party/reedsolomon-c"]
 	path = lib/third-party/reedsolomon-c
 	url = https://github.com/jannson/reedsolomon-c
+[submodule "lib/third-party/nlohmann_json"]
+	path = lib/third-party/nlohmann_json
+	url = https://github.com/nlohmann/json
