@@ -68,7 +68,7 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
         std::string text = "";
 
         auto count = std::min(16ul, data.size() - index);
-        for (int x = 0; x < count; ++x, ++index) {
+        for (auto x = 0ul; x < count; ++x, ++index) {
             std::cout << std::hex << std::setw(2) << std::setfill('0')
                       << static_cast<int>(data[index]) << " ";
 
