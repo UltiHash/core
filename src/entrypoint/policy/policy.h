@@ -1,7 +1,7 @@
 #ifndef CORE_ENTRYPOINT_POLICY_POLICY_H
 #define CORE_ENTRYPOINT_POLICY_POLICY_H
 
-#include "action.h"
+#include "effect.h"
 #include "matcher.h"
 
 #include <list>
@@ -11,18 +11,19 @@ namespace uh::cluster::ep::policy {
 
 class policy {
 public:
-    policy(std::string id, std::list<matcher> matchers, action action);
+    policy(std::string id, std::list<matcher> matchers,
+           ep::policy::effect effect);
 
-    std::optional<action> check(const http_request& req,
-                                const command& cmd) const;
+    std::optional<ep::policy::effect> check(const http_request& req,
+                                            const command& cmd) const;
 
     const std::string& id() const { return m_id; }
-    action effect() const { return m_action; }
+    ep::policy::effect effect() const { return m_effect; }
 
 private:
     std::string m_id;
     std::list<matcher> m_matchers;
-    action m_action;
+    ep::policy::effect m_effect;
 };
 
 } // namespace uh::cluster::ep::policy

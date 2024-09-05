@@ -42,14 +42,14 @@ std::set<std::string> string_or_set(const json& element) {
     return {element.get<std::string>()};
 }
 
-action get_action(const json& stmt) {
+effect get_effect(const json& stmt) {
     auto effect = require(stmt, "Effect").get<std::string>();
     if (effect == "Allow") {
-        return action::allow;
+        return effect::allow;
     }
 
     if (effect == "Deny") {
-        return action::deny;
+        return effect::deny;
     }
 
     throw std::runtime_error("unsupported effect value");
@@ -134,7 +134,7 @@ policy parse_policy(const json& stmt) {
         id = sid->get().get<std::string>();
     }
 
-    return policy(id, std::move(matchers), get_action(stmt));
+    return policy(id, std::move(matchers), get_effect(stmt));
 }
 
 } // namespace

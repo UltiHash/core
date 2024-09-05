@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(parse_success) {
 
     const auto& policy = policies.front();
     BOOST_CHECK(policy.id() == "AllowRemoveMfaOnlyIfRecentMfa");
-    BOOST_CHECK(policy.effect() == action::allow);
+    BOOST_CHECK(policy.effect() == effect::allow);
 }
 
 BOOST_AUTO_TEST_CASE(parse_success_negation) {
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(parse_success_negation) {
 
     const auto& policy = policies.front();
     BOOST_CHECK(policy.id() == "AllowRemoveMfaOnlyIfRecentMfa");
-    BOOST_CHECK(policy.effect() == action::allow);
+    BOOST_CHECK(policy.effect() == effect::allow);
 }
 
 BOOST_AUTO_TEST_CASE(parse_single_statement) {
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(parse_single_statement) {
 
     const auto& policy = policies.front();
     BOOST_CHECK(policy.id() == "AllowRemoveMfaOnlyIfRecentMfa");
-    BOOST_CHECK(policy.effect() == action::allow);
+    BOOST_CHECK(policy.effect() == effect::allow);
 }
 
 BOOST_AUTO_TEST_CASE(parse_error_version) {
