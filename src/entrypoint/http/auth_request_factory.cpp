@@ -15,55 +15,51 @@ namespace {
 
 std::unique_ptr<ep::http::body> make_body(partial_parse_result& req,
                                           std::optional<auth_info> auth) {
-    if (req.optional("content-encoding").value_or("") == "aws-chunked") {
-        if (!auth) {
-            LOG_INFO() << req.peer << ": unauthenticated chunked transfer";
-            return std::make_unique<chunked_body>(req);
-        }
 
-        auto content_sha = req.require("x-amz-content-sha256");
+    bool chunked =
+        req.optional("content-encoding").value_or("none") == "aws-chunked" ||
+        req.optional("transfer-encoding").value_or("none") == "chunked";
 
-        if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
-            LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
-            return std::make_unique<chunk_body_sha256>(
-                req, *auth, chunked_body::trailing_headers::none);
-        }
-
-        if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
-            LOG_DEBUG() << req.peer
-                        << ": using chunked unsigned payload with trailer";
-            return std::make_unique<chunked_body>(
-                req, chunked_body::trailing_headers::read);
-        }
-
-        if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
-            LOG_DEBUG() << req.peer
-                        << ": using chunked HMAC-SHA256 with trailer";
-            return std::make_unique<chunk_body_sha256>(
-                req, *auth, chunked_body::trailing_headers::read);
-        }
-
-        throw std::runtime_error("unsupported aws-chunked authentication: " +
-                                 content_sha);
-    } else {
-        auto length = std::stoul(req.optional("content-length").value_or("0"));
-
-        if (!auth) {
-            LOG_DEBUG() << req.peer
-                        << ": using single-chunk unauthenticated body";
-            return std::make_unique<raw_body>(req, length);
-        }
-
-        auto content_sha = req.require("x-amz-content-sha256");
-        if (content_sha == "UNSIGNED-PAYLOAD") {
-            LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
-            return std::make_unique<raw_body>(req, length);
-        }
-
-        LOG_DEBUG() << req.peer
-                    << ": using single-chunk body with signed payload";
-        return std::make_unique<raw_body_sha256>(req, *auth, length);
+    if (chunked) {
+        LOG_INFO() << req.peer << ": unauthenticated chunked transfer";
+        return std::make_unique<chunked_body>(req);
     }
+
+    auto length = std::stoul(req.optional("content-length").value_or("0"));
+
+    if (!auth) {
+        LOG_DEBUG() << req.peer << ": using single-chunk unauthenticated body";
+        return std::make_unique<raw_body>(req, length);
+    }
+
+    auto content_sha = req.require("x-amz-content-sha256");
+
+    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
+        LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
+        return std::make_unique<chunk_body_sha256>(
+            req, *auth, chunked_body::trailing_headers::none);
+    }
+
+    if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
+        LOG_DEBUG() << req.peer
+                    << ": using chunked unsigned payload with trailer";
+        return std::make_unique<chunked_body>(
+            req, chunked_body::trailing_headers::read);
+    }
+
+    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
+        LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256 with trailer";
+        return std::make_unique<chunk_body_sha256>(
+            req, *auth, chunked_body::trailing_headers::read);
+    }
+
+    if (content_sha == "UNSIGNED-PAYLOAD") {
+        LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
+        return std::make_unique<raw_body>(req, length);
+    }
+
+    LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
+    return std::make_unique<raw_body_sha256>(req, *auth, length);
 }
 
 } // namespace
