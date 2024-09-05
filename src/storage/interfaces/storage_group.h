@@ -7,21 +7,16 @@
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
-#include "common/utils/time_utils.h"
 
 namespace uh::cluster {
-
-struct storage_system_config {
-    size_t data_nodes;
-    size_t ec_nodes;
-};
 
 enum ec_status {
     empty,
     degraded,
-    lost_data,
+    complete,
     recovering,
     healthy,
+    failed_recovery,
 };
 
 struct storage_group : public storage_interface {
@@ -86,25 +81,13 @@ struct storage_group : public storage_interface {
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
 
-        auto info = extract_node_address_map(addr, m_getter, offsets);
-
-        std::vector<std::shared_ptr<awaitable_promise<void>>> promises;
-        promises.reserve(info.nodes.size());
-
-        for (auto& dn : info.nodes) {
-            promises.emplace_back(
-                std::make_shared<awaitable_promise<void>>(m_ioc));
-
-            boost::asio::co_spawn(
-                m_ioc,
-                dn->read_address(ctx, buffer, info.node_address_map[dn],
-                                 info.node_data_offsets_map[dn]),
-                use_awaitable_promise_cospawn(promises.back()));
-        }
-
-        for (auto& p : promises) {
-            co_await p->get();
-        }
+        co_await perform_for_address(
+            addr, m_getter, m_ioc,
+            [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->read_address(ctx, buffer, info.addr,
+                                          info.pointer_offsets);
+            },
+            offsets);
     }
 
     coro<address> link(context& ctx, const address& addr) override {
@@ -117,8 +100,8 @@ struct storage_group : public storage_interface {
         co_await perform_for_address(
             addr, m_getter, m_ioc,
             [&ctx, &addresses](auto id, auto dn,
-                               const auto& addr) -> coro<void> {
-                addresses.emplace(id, co_await dn->link(ctx, addr));
+                               const auto& info) -> coro<void> {
+                addresses.emplace(id, co_await dn->link(ctx, info.addr));
             });
 
         address rv;
@@ -137,8 +120,8 @@ struct storage_group : public storage_interface {
 
         co_await perform_for_address(
             addr, m_getter, m_ioc,
-            [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
-                co_await dn->unlink(ctx, addr);
+            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->unlink(ctx, info.addr);
             });
     }
 
@@ -150,8 +133,8 @@ struct storage_group : public storage_interface {
 
         co_await perform_for_address(
             addr, m_getter, m_ioc,
-            [&ctx](auto, auto dn, const auto& addr) -> coro<void> {
-                co_await dn->sync(ctx, addr);
+            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
+                co_await dn->sync(ctx, info.addr);
             });
     }
 
@@ -170,14 +153,32 @@ struct storage_group : public storage_interface {
         co_return used;
     }
 
-    void recover(const address& addr) {}
-
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
     storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
+
+    struct recovery_info {
+        std::vector<data_stat> stats;
+        std::size_t recover_size;
+        bool healthy = false;
+    };
+
+    // address calculate_recovery_address (size_t offset, size_t size) {
+
+    ///}
+
+    void recover(const recovery_info& rinfo) {
+        m_status = recovering;
+        for (size_t offset = 0; offset < rinfo.recover_size;
+             offset += RECOVERY_CHUNK_SIZE) {
+            // address addr = recovery address;
+            // read_address(addr);
+            // m_ec_calc->recover();
+        }
+    }
 
     void update_status() {
 
@@ -189,12 +190,51 @@ private:
         }
 
         if (count == 0) {
-            m_status = healthy;
+            auto rinfo = check_recovery();
+
+            if (rinfo.healthy) {
+                m_status = healthy;
+            } else {
+                m_status = complete;
+                recover(rinfo);
+            }
         } else if (count == m_nodes.size()) {
             m_status = empty;
         } else {
             m_status = degraded;
         }
+    }
+
+    recovery_info check_recovery() {
+        auto nodes = m_getter.get_services();
+
+        std::map<size_t, std::vector<size_t>> sizes;
+        context ctx;
+        size_t i = 0;
+        for (const auto& dn : nodes) {
+            const auto size =
+                boost::asio::co_spawn(m_ioc, dn->get_used_space(ctx),
+                                      boost::asio::use_future)
+                    .get();
+            sizes[size].emplace_back(i++);
+        }
+
+        if (sizes.size() > 2 or
+            (sizes.size() == 2 and sizes.cbegin()->first != 0)) {
+            throw std::logic_error("Undefined state");
+        }
+
+        recovery_info rinfo{.stats = {nodes.size(), valid},
+                            .recover_size = sizes.crbegin()->first,
+                            .healthy = true};
+        if (sizes.size() == 2) {
+            for (const auto& fail_index : sizes[0]) {
+                rinfo.stats[fail_index] = lost;
+            }
+            rinfo.healthy = false;
+        }
+
+        return rinfo;
     }
 };
 
