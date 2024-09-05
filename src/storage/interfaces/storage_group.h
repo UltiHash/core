@@ -206,35 +206,9 @@ private:
     }
 
     recovery_info check_recovery() {
-        auto nodes = m_getter.get_services();
-
-        std::map<size_t, std::vector<size_t>> sizes;
-        context ctx;
-        size_t i = 0;
-        for (const auto& dn : nodes) {
-            const auto size =
-                boost::asio::co_spawn(m_ioc, dn->get_used_space(ctx),
-                                      boost::asio::use_future)
-                    .get();
-            sizes[size].emplace_back(i++);
-        }
-
-        if (sizes.size() > 2 or
-            (sizes.size() == 2 and sizes.cbegin()->first != 0)) {
-            throw std::logic_error("Undefined state");
-        }
-
-        recovery_info rinfo{.stats = {nodes.size(), valid},
-                            .recover_size = sizes.crbegin()->first,
-                            .healthy = true};
-        if (sizes.size() == 2) {
-            for (const auto& fail_index : sizes[0]) {
-                rinfo.stats[fail_index] = lost;
-            }
-            rinfo.healthy = false;
-        }
-
-        return rinfo;
+        return {.stats = {m_nodes.size(), valid},
+                .recover_size = 0,
+                .healthy = true};
     }
 };
 

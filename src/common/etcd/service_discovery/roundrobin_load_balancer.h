@@ -41,7 +41,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
         std::unique_lock lk(m_mutex);
 
         if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT,
-                           [this]() { return !empty(); })) {
+                           [this] { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +
                 get_service_string(service_interface::service_role) +
