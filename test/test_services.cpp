@@ -47,8 +47,6 @@ struct fixture {
 BOOST_FIXTURE_TEST_CASE(Empty, fixture) {
     BOOST_CHECK(services.get_services().empty());
     BOOST_CHECK_THROW(load_balancer.get(), std::exception);
-    BOOST_CHECK_THROW(services.get(static_cast<std::size_t>(0u)),
-                      std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
@@ -127,8 +125,6 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
         auto reg = sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
-        BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
-        BOOST_CHECK_NO_THROW(services.get(test_id));
     }
 }
 

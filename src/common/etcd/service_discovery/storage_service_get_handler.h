@@ -29,7 +29,22 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
 
     std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
         const auto id = pointer_traits::get_service_id(pointer);
-        return get(id);
+        std::shared_ptr<storage_interface> cl;
+
+        std::unique_lock lk(m_mutex);
+        if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT, [this, &id, &cl]() {
+                if (auto v = m_clients.find(id); v != m_clients.cend()) {
+                    cl = v->second;
+                    return true;
+                }
+                return false;
+            }))
+            throw std::runtime_error(
+                "timeout waiting for " +
+                get_service_string(storage_interface::service_role) +
+                " client: " + std::to_string(id));
+
+        return cl;
     }
 
     bool contains(std::size_t id) override {
