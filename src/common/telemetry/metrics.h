@@ -4,23 +4,16 @@
 #include "common/utils/common.h"
 
 #include <magic_enum/magic_enum.hpp>
-#include <magic_enum/magic_enum_switch.hpp>
-#include <magic_enum/magic_enum_utility.hpp>
 
-#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
-#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
 #include <opentelemetry/metrics/meter.h>
 #include <opentelemetry/metrics/provider.h>
 #include <opentelemetry/nostd/shared_ptr.h>
 #include <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h>
-#include <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_options.h>
-#include <opentelemetry/sdk/metrics/meter_context_factory.h>
+
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
 
 #include <condition_variable>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace uh::cluster {
 
@@ -87,7 +80,7 @@ constexpr std::string get_unit_string(metric_unit unit) {
     return "";
 }
 
-inline role service_role;
+inline role global_service_role;
 
 void measure_message_type(message_type type);
 void initialize_metrics_exporter(role service_role, const std::string& endpoint,
@@ -110,7 +103,7 @@ class metric {
     static otel_counter_type create_counter() {
         const auto name = std::string(magic_enum::enum_name(type));
         const auto service_name =
-            std::string(magic_enum::enum_name(service_role));
+            std::string(magic_enum::enum_name(global_service_role));
         auto meter =
             opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
                 service_name);
@@ -128,7 +121,7 @@ class metric {
     static otel_gauge_type create_gauge() {
         const auto name = std::string(magic_enum::enum_name(type));
         const auto service_name =
-            std::string(magic_enum::enum_name(service_role));
+            std::string(magic_enum::enum_name(global_service_role));
         auto meter =
             opentelemetry::metrics::Provider::GetMeterProvider()->GetMeter(
                 service_name);

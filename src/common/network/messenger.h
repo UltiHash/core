@@ -4,8 +4,6 @@
 #include "common/coroutines/context.h"
 #include "messenger_core.h"
 
-#include <zpp_bits.h>
-
 namespace uh::cluster {
 
 class messenger : public messenger_core {
@@ -42,6 +40,17 @@ public:
         register_read_buffer(val);
         co_await recv_buffers(message_header);
         co_return val;
+    }
+
+    template <typename K, typename V>
+    coro<std::map<K, V>> recv_map(context& ctx, const header& message_header) {
+        unique_buffer<> buf(message_header.size);
+        register_read_buffer(buf);
+        co_await recv_buffers(message_header);
+
+        std::map<K, V> res;
+        zpp::bits::in{buf.span(), zpp::bits::size2b{}}(res).or_throw();
+        co_return res;
     }
 
     coro<dedupe_response> recv_dedupe_response(const header& message_header) {
@@ -89,6 +98,15 @@ public:
         register_write_buffer(dedupe_resp.addr.pointers);
         register_write_buffer(dedupe_resp.addr.sizes);
         co_await send_buffers(ctx, SUCCESS);
+    }
+
+    template <typename K, typename V>
+    requires(std::is_arithmetic_v<K> and std::is_arithmetic_v<V>)
+    coro<void> send_map(context& ctx, const message_type type,
+                        const std::map<K, V>& map) {
+        std::vector<char> buf;
+        zpp::bits::out{buf, zpp::bits::size2b{}}(map).or_throw();
+        co_await send(ctx, type, buf);
     }
 };
 

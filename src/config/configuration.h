@@ -11,6 +11,7 @@
 #include <optional>
 
 #include <CLI/CLI.hpp>
+#include <recovery/config.h>
 
 namespace uh::cluster {
 
@@ -30,6 +31,7 @@ struct config {
     entrypoint_config entrypoint;
     storage_config storage;
     deduplicator_config deduplicator;
+    recovery_config recovery;
 };
 
 std::optional<config> read_config(int argc, char** argv);
