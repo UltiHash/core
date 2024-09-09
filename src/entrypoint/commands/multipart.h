@@ -19,6 +19,8 @@ public:
 
     coro<http_response> handle(http_request& req) override;
 
+    std::string action_id() const override;
+
 private:
     roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
     multipart_state& m_uploads;

@@ -52,4 +52,8 @@ coro<http_response> list_multipart::handle(http_request& req) {
     co_return get_response(bucket_name, ongoing);
 }
 
+std::string list_multipart::action_id() const {
+    return "s3:ListMultipartUploads";
+}
+
 } // namespace uh::cluster

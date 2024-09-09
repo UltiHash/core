@@ -155,4 +155,6 @@ coro<dedupe_response> put_object::put_small_object(http_request& req,
         req.context(), {buffer.data(), buffer.size()});
 }
 
+std::string put_object::action_id() const { return "s3:PutObject"; }
+
 } // namespace uh::cluster

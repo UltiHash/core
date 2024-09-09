@@ -30,4 +30,8 @@ coro<http_response> abort_multipart::handle(http_request& req) {
     co_return http_response{};
 }
 
+std::string abort_multipart::action_id() const {
+    return "s3:AbortMultipartUpload";
+}
+
 } // namespace uh::cluster

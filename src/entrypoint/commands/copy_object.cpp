@@ -72,4 +72,6 @@ coro<void> copy_object::copy_internal(http_request& req,
     }
 }
 
+std::string copy_object::action_id() const { return "s3:CopyObject"; }
+
 } // namespace uh::cluster

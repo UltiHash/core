@@ -2,9 +2,9 @@
 #define ENTRYPOINT_HTTP_PUT_OBJECT_H
 
 #include "command.h"
+#include "common/crypto/hash.h"
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/service_interfaces/deduplicator_interface.h"
-#include "common/crypto/hash.h"
 #include "entrypoint/config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
@@ -21,6 +21,8 @@ public:
     coro<void> validate(const http_request& req) override;
 
     coro<http_response> handle(http_request& req) override;
+
+    std::string action_id() const override;
 
 private:
     coro<dedupe_response> put_large_object(http_request& req, md5& hash) const;

@@ -122,4 +122,6 @@ coro<http_response> delete_objects::handle(http_request& req) {
     co_return get_response(success, failure);
 }
 
+std::string delete_objects::action_id() const { return "s3:DeleteObjects"; }
+
 } // namespace uh::cluster

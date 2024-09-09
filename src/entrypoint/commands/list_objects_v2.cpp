@@ -154,4 +154,6 @@ coro<http_response> list_objects_v2::handle(http_request& req) {
     co_return get_response(obj_list, req);
 }
 
+std::string list_objects_v2::action_id() const { return "s3:ListObjectsV2"; }
+
 } // namespace uh::cluster

@@ -53,4 +53,6 @@ coro<http_response> multipart::handle(http_request& req) {
     co_return res;
 }
 
+std::string multipart::action_id() const { return "s3:UploadPart"; }
+
 } // namespace uh::cluster
