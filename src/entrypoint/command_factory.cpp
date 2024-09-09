@@ -9,6 +9,7 @@
 #include "commands/delete_objects.h"
 #include "commands/get_metrics.h"
 #include "commands/get_object.h"
+#include "commands/head_bucket.h"
 #include "commands/head_object.h"
 #include "commands/init_multipart.h"
 #include "commands/list_buckets.h"
@@ -50,6 +51,9 @@ command_factory::create(const http_request& req) const {
     }
     if (head_object::can_handle(req)) {
         return std::make_unique<head_object>(m_directory);
+    }
+    if (head_bucket::can_handle(req)) {
+        return std::make_unique<head_bucket>(m_directory);
     }
     if (create_bucket::can_handle(req)) {
         return std::make_unique<create_bucket>(m_directory);

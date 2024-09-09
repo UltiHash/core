@@ -13,27 +13,28 @@ namespace uh::cluster::ep::http {
 namespace {
 
 std::unique_ptr<ep::http::body> make_body(partial_parse_result& req) {
-    auto length = std::stoul(req.optional("content-length").value_or("0"));
 
-    auto transfer_encoding = req.optional("content-encoding");
-    if (!transfer_encoding || *transfer_encoding != "aws-chunked") {
+    bool chunked =
+        req.optional("content-encoding").value_or("none") == "aws-chunked" ||
+        req.optional("transfer-encoding").value_or("none") == "chunked";
 
-        return std::make_unique<raw_body>(req, length);
-    }
-
-    auto content_sha = req.require("x-amz-content-sha256");
-    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" ||
-        content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD") {
+    auto content_sha = req.optional("x-amz-content-sha256");
+    if ((content_sha.has_value() &&
+         (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD" ||
+          content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD")) ||
+        chunked) {
         return std::make_unique<chunked_body>(req);
     }
 
-    if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER" ||
-        content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER" ||
-        content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD-TRAILER") {
+    if (content_sha &&
+        (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER" ||
+         content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER" ||
+         content_sha == "STREAMING-AWS4-ECDSA-P256-SHA256-PAYLOAD-TRAILER")) {
         return std::make_unique<chunked_body>(
             req, chunked_body::trailing_headers::read);
     }
 
+    auto length = std::stoul(req.optional("content-length").value_or("0"));
     return std::make_unique<raw_body>(req, length);
 }
 
