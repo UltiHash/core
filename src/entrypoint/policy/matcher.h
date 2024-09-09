@@ -40,12 +40,16 @@ inline matcher match_all(std::list<matcher> subs) {
 
 inline matcher match_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const http_request&,
-                                          const command& cmd) { return false; };
+                                          const command& cmd) {
+        return actions.find(cmd.action_id()) != actions.end();
+    };
 }
 
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const http_request&,
-                                          const command& cmd) { return false; };
+                                          const command& cmd) {
+        return actions.find(cmd.action_id()) == actions.end();
+    };
 }
 
 inline matcher match_resource(std::set<std::string> resources) {
