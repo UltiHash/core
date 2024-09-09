@@ -8,6 +8,7 @@
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
+#include "entrypoint/variables.h"
 
 #include <map>
 #include <span>
@@ -60,7 +61,7 @@ public:
     const std::optional<ep::user::user>& authenticated_user() const;
     void authenticated_user(std::optional<ep::user::user> user);
 
-    const variables& vars() const { return m_vars; }
+    const ep::variables& vars() const { return m_vars; }
 
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
@@ -75,7 +76,7 @@ private:
     std::string m_path;
     std::string m_query;
     std::optional<ep::user::user> m_authenticated_user;
-    variables m_vars;
+    ep::variables m_vars;
 
     uh::cluster::context m_ctx;
 };

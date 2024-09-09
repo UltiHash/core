@@ -2,6 +2,7 @@
 #define COMMON_UTILS_STRINGS_H
 
 #include <cstring>
+#include <map>
 #include <ranges>
 #include <set>
 #include <string>
