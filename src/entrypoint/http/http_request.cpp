@@ -62,12 +62,12 @@ const uh::cluster::context& http_request::context() const { return m_ctx; }
 
 uh::cluster::context& http_request::context() { return m_ctx; }
 
-const std::optional<ep::user::user>& http_request::authenticated_user() const {
+const ep::user::user& http_request::authenticated_user() const {
     return m_authenticated_user;
 }
 
-void http_request::authenticated_user(std::optional<ep::user::user> user) {
-    m_authenticated_user = user;
+void http_request::authenticated_user(ep::user::user user) {
+    m_authenticated_user = std::move(user);
 }
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {

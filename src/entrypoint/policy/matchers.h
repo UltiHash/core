@@ -45,13 +45,21 @@ inline matcher match_not_resource(std::set<std::string> resources) {
 }
 
 inline matcher match_principal(std::set<std::string> principals) {
-    return [actions = std::move(principals)](
-               const http_request&, const command& cmd) { return false; };
+    return [principals = std::move(principals)](const http_request& r,
+                                                const command& cmd) {
+        return match_any(principals, [&r](auto value) {
+            return value == r.authenticated_user().arn;
+        });
+    };
 }
 
 inline matcher match_not_principal(std::set<std::string> principals) {
-    return [actions = std::move(principals)](
-               const http_request&, const command& cmd) { return false; };
+    return [principals = std::move(principals)](const http_request& r,
+                                                const command& cmd) {
+        return match_all(principals, [&r](auto value) {
+            return value != r.authenticated_user().arn;
+        });
+    };
 }
 
 inline matcher var_matcher(std::map<std::string, std::list<std::string>> values,

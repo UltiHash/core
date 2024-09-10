@@ -18,12 +18,10 @@ effect module::check(const http_request& request, const command& cmd) const {
 
     // TODO Does the requested resource have a resource-based policy?
 
-    if (const auto& user = request.authenticated_user(); user) {
-        for (const auto& policy : user->policies) {
-            auto result = policy.check(request, cmd);
-            if (result.value_or(effect::deny) == effect::allow) {
-                return effect::allow;
-            }
+    for (const auto& policy : request.authenticated_user().policies) {
+        auto result = policy.check(request, cmd);
+        if (result.value_or(effect::deny) == effect::allow) {
+            return effect::allow;
         }
     }
 
