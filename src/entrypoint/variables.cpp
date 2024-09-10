@@ -1,6 +1,7 @@
 #include "variables.h"
 
-#include <iostream>
+#include <charconv>
+#include <stdexcept>
 
 namespace uh::cluster::ep {
 
@@ -74,4 +75,32 @@ std::string var_replace(std::string_view format, const variables& vars) {
     return rv;
 }
 
+bool equals_nocase(std::string_view a, std::string_view b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    for (auto i = 0ull; i < a.size(); ++i) {
+        if (tolower(a[i]) != tolower(b[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
+    throw std::runtime_error("wildcard string comparison not supported");
+}
+
+std::optional<int64_t> to_int(std::string_view s) {
+    int64_t rv;
+
+    auto result = std::from_chars(s.begin(), s.end(), rv);
+    if (result.ptr != s.end() || result.ec != std::errc()) {
+        return {};
+    }
+
+    return rv;
+}
 } // namespace uh::cluster::ep

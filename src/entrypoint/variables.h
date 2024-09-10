@@ -37,6 +37,19 @@ private:
  */
 std::string var_replace(std::string_view format, const variables& vars);
 
+/**
+ * Compare both strings ignoring character case.
+ */
+bool equals_nocase(std::string_view a, std::string_view b);
+
+/**
+ * Compare string `wildcarded` with string `b`, matching `*` against
+ * any particular substring and `?` against any character.
+ */
+bool equals_wildcard(std::string_view wildcarded, std::string_view b);
+
+std::optional<int64_t> to_int(std::string_view s);
+
 } // namespace uh::cluster::ep
 
 #endif

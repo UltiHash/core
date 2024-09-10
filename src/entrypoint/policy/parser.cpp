@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include "matcher.h"
+#include "matchers.h"
 
 #include "common/telemetry/log.h"
 #include <functional>
