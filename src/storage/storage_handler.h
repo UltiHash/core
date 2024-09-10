@@ -34,8 +34,8 @@ public:
             try {
                 const auto message_header = co_await m.recv_header();
                 ctx = co_await m.recv_context(message_header);
-                auto frag_span = trace::scoped_span("received fragment",
-                                                    ctx.get_otel_context());
+                auto span =
+                    trace::scoped_span("received req", ctx.get_otel_context());
 
                 LOG_CORO_CONTEXT();
 
@@ -68,7 +68,10 @@ public:
                     co_await handle_get_used(ctx, m, message_header);
                     break;
                 case STORAGE_DS_INFO_REQ:
-                    co_await handler_ds_info(ctx, m, message_header);
+                    co_await handle_ds_info(ctx, m, message_header);
+                    break;
+                case STORAGE_INIT_DD_REQ:
+                    co_await handle_init_dd(ctx, m, message_header);
                     break;
                 default:
                     throw std::invalid_argument("Invalid message type!");
@@ -173,10 +176,15 @@ private:
         co_await m.send_primitive<size_t>(ctx, SUCCESS, used);
     }
 
-    coro<void> handler_ds_info(context& ctx, messenger& m,
-                               const messenger::header&) {
+    coro<void> handle_ds_info(context& ctx, messenger& m,
+                              const messenger::header&) {
         const auto map = co_await m_storage.get_ds_size_map(ctx);
         co_await m.send_map(ctx, SUCCESS, map);
+    }
+
+    coro<void> handle_init_dd(context& ctx, messenger& m,
+                              const messenger::header&) {
+        co_await m.send(ctx, SUCCESS, {});
     }
 
     local_storage& m_storage;

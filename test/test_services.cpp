@@ -2,7 +2,6 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "../src/common/service_interfaces/deduplicator_interface.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
 #include "common/etcd/service_discovery/service_maintainer.h"

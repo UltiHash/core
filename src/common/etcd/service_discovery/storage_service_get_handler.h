@@ -77,6 +77,8 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         return ids;
     }
 
+    [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
+
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
