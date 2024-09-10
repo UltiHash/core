@@ -161,7 +161,7 @@ jobs:
       - name: Install the UltiHash cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
           sleep 180
 
       - name: Execute the performance test against UltiHash
