@@ -23,13 +23,25 @@ inline matcher match_not_action(std::set<std::string> actions) {
 }
 
 inline matcher match_resource(std::set<std::string> resources) {
-    return [actions = std::move(resources)](
-               const http_request&, const command& cmd) { return false; };
+    return [resources = std::move(resources)](const http_request& r,
+                                              const command& cmd) {
+        std::string arn = "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
+
+        return match_any(resources, [&arn](auto value) {
+            return equals_wildcard(value, arn);
+        });
+    };
 }
 
 inline matcher match_not_resource(std::set<std::string> resources) {
-    return [actions = std::move(resources)](
-               const http_request&, const command& cmd) { return false; };
+    return [resources = std::move(resources)](const http_request& r,
+                                              const command& cmd) {
+        std::string arn = "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
+
+        return match_all(resources, [&arn](auto value) {
+            return !equals_wildcard(value, arn);
+        });
+    };
 }
 
 inline matcher match_principal(std::set<std::string> principals) {
@@ -352,10 +364,10 @@ match_arnnotlike(std::map<std::string, std::list<std::string>> strings,
 
 inline matcher
 match_null(std::map<std::string, std::list<std::string>> strings) {
-    return
-        [strings = std::move(strings)](const http_request& r, const command&) {
-            throw std::runtime_error("Null not implemented");
-        };
+    return [strings = std::move(strings)](const http_request& r,
+                                          const command&) -> bool {
+        throw std::runtime_error("Null not implemented");
+    };
 }
 
 } // namespace uh::cluster::ep::policy

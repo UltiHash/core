@@ -28,7 +28,7 @@ inline matcher match_never() {
     return [](const http_request&, const command&) { return false; };
 }
 
-inline matcher match_all(std::list<matcher> subs) {
+inline matcher conjunction(std::list<matcher> subs) {
     return [subs = std::move(subs)](const http_request& r, const command& c) {
         for (const auto& m : subs) {
             if (!m(r, c)) {
@@ -49,6 +49,8 @@ bool match_any(const auto& list, auto pred) {
 
     return false;
 }
+
+bool match_all(const auto& list, auto pred) { return !match_any(list, pred); }
 
 } // namespace uh::cluster::ep::policy
 

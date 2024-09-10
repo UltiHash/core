@@ -242,7 +242,7 @@ std::optional<matcher> condition_matchers(const json& stmt) {
         subs.emplace_back(condition_matcher(elem.key(), elem.value()));
     }
 
-    return match_all(std::move(subs));
+    return conjunction(std::move(subs));
 }
 
 policy parse_policy(const json& stmt) {
