@@ -10,9 +10,10 @@ namespace uh::cluster {
 struct ec_group_maintainer : public service_monitor<storage_interface> {
 
     ec_group_maintainer(boost::asio::io_context& ioc, size_t data_nodes,
-                        size_t ec_nodes)
+                        size_t ec_nodes, etcd::SyncClient& etcd_client)
         : m_scheme(data_nodes, ec_nodes),
-          m_ioc(ioc) {}
+          m_ioc(ioc),
+          m_etcd_client(etcd_client) {}
 
     void add_monitor(service_monitor<storage_group>& monitor) {
 
@@ -44,7 +45,8 @@ private:
             it = m_ec_groups.emplace_hint(
                 it, gid,
                 std::make_shared<storage_group>(m_ioc, m_scheme.data_nodes(),
-                                                m_scheme.ec_nodes()));
+                                                m_scheme.ec_nodes(),
+                                                m_etcd_client));
         }
         it->second->insert(id, nid, cl);
 
@@ -76,6 +78,7 @@ private:
     std::list<std::reference_wrapper<service_monitor<storage_group>>>
         m_monitors;
     boost::asio::io_context& m_ioc;
+    etcd::SyncClient& m_etcd_client;
 };
 } // namespace uh::cluster
 
