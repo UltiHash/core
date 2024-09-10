@@ -55,4 +55,27 @@ BOOST_AUTO_TEST_CASE(variable_replace) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(wildcard_match) {
+    BOOST_CHECK(equals_wildcard("foo*", "foo"));
+    BOOST_CHECK(equals_wildcard("foo*", "foobar"));
+    BOOST_CHECK(equals_wildcard("fo*", "fo"));
+
+    BOOST_CHECK(equals_wildcard("ba?", "baz"));
+    BOOST_CHECK(equals_wildcard("ba?", "bar"));
+    BOOST_CHECK(equals_wildcard("ba?q", "barq"));
+
+    BOOST_CHECK(equals_wildcard("foo*bar", "foobar"));
+    BOOST_CHECK(equals_wildcard("foo*bar", "fooquuxbar"));
+
+    BOOST_CHECK(equals_wildcard("fo*ar*ux", "foobarquux"));
+    BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbar"));
+    BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbaz"));
+    BOOST_CHECK(equals_wildcard("foo*ba?", "foobaz"));
+
+    BOOST_CHECK(equals_wildcard("???", "foo"));
+    BOOST_CHECK(equals_wildcard("*", "foo"));
+    BOOST_CHECK(equals_wildcard("*?", "f"));
+    BOOST_CHECK(!equals_wildcard("*?", ""));
+}
+
 } // namespace

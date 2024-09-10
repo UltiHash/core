@@ -1,9 +1,39 @@
 #include "variables.h"
 
+#include "common/utils/strings.h"
+
 #include <charconv>
 #include <stdexcept>
 
 namespace uh::cluster::ep {
+
+namespace {
+
+std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
+    if (n.size() > h.size()) {
+        return std::string::npos;
+    }
+
+    for (auto pos = 0ull; pos <= h.size() - n.size(); ++pos) {
+        std::size_t n_idx = 0ull;
+        for (; n_idx < n.size(); ++n_idx) {
+            if (n[n.size() - n_idx] != h[pos - n_idx] &&
+                h[pos - n_idx] != '?') {
+                break;
+            }
+
+            --n_idx;
+        }
+
+        if (n_idx == 0) {
+            return pos;
+        }
+    }
+
+    return std::string::npos;
+}
+
+} // namespace
 
 variables::variables(std::initializer_list<variables::value_type> init)
     : m_vars(std::move(init)) {}
@@ -90,7 +120,20 @@ bool equals_nocase(std::string_view a, std::string_view b) {
 }
 
 bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
-    throw std::runtime_error("wildcard string comparison not supported");
+    auto groups = split(wildcarded, '*');
+
+    std::size_t pos = 0;
+    for (const auto& g : groups) {
+        pos = qfind(b, g, pos);
+
+        if (pos == std::string_view::npos) {
+            return false;
+        }
+
+        pos += g.size();
+    }
+
+    return true;
 }
 
 std::optional<int64_t> to_int(std::string_view s) {
