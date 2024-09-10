@@ -84,6 +84,13 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
+    coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        co_await m->send(ctx, STORAGE_DS_INFO_REQ, {});
+        const auto message_header = co_await m->recv_header();
+        co_return co_await m->recv_map<size_t, size_t>(ctx, message_header);
+    }
+
 private:
     client m_storage_service;
 };

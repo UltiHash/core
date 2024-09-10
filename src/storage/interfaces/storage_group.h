@@ -7,19 +7,19 @@
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
+#include "recovery/recovery_module_factory.h"
 
 namespace uh::cluster {
 
-enum ec_status {
-    empty,
-    degraded,
-    complete,
-    recovering,
-    healthy,
-    failed_recovery,
-};
-
 struct storage_group : public storage_interface {
+
+    storage_group(boost::asio::io_context& ioc, size_t data_nodes,
+                  size_t ec_nodes, etcd::SyncClient& etcd_client)
+        : m_nodes(data_nodes + ec_nodes),
+          m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
+          m_ioc(ioc),
+          m_rec_mod(recovery_module_factory::create(m_getter, m_ioc, *m_ec_calc,
+                                                    etcd_client)) {}
 
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {
@@ -39,11 +39,6 @@ struct storage_group : public storage_interface {
     }
 
     [[nodiscard]] bool is_empty() const noexcept { return m_status == empty; }
-    storage_group(boost::asio::io_context& ioc, size_t data_nodes,
-                  size_t ec_nodes)
-        : m_nodes(data_nodes + ec_nodes),
-          m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
-          m_ioc(ioc) {}
 
     coro<address> write(context& ctx, const std::string_view& data) override {
 
@@ -153,12 +148,18 @@ struct storage_group : public storage_interface {
         co_return used;
     }
 
+    coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
+        throw std::runtime_error(
+            "This operation is not allowed in storage group");
+    }
+
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
     storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
+    std::unique_ptr<recovery_module> m_rec_mod;
 
     void update_status() {
 
@@ -170,7 +171,7 @@ private:
         }
 
         if (count == 0) {
-            m_status = healthy;
+            m_rec_mod->async_check_recover(m_status);
         } else if (count == m_nodes.size()) {
             m_status = empty;
         } else {

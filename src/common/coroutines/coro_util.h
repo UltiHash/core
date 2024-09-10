@@ -17,8 +17,7 @@ coro<std::vector<R>> run_for_all(boost::asio::io_context& ioc,
 
     size_t i = 0;
     for (const auto& in : inputs) {
-        promises.emplace_back(
-            std::make_shared<awaitable_promise<address>>(ioc));
+        promises.emplace_back(std::make_shared<awaitable_promise<R>>(ioc));
         boost::asio::co_spawn(ioc, func(i++, in),
                               use_awaitable_promise_cospawn(promises.back()));
     }

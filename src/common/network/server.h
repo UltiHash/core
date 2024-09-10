@@ -4,7 +4,6 @@
 #include "common/telemetry/log.h"
 #include "common/utils/protocol_handler.h"
 #include <algorithm>
-#include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -38,17 +37,18 @@ public:
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
             boost::asio::ip::make_address(m_config.bind_address),
             m_config.port});
-        boost::asio::co_spawn(m_ioc, do_accept(std::move(acceptor)),
-                              [](const std::exception_ptr& e) {
-                                  if (e)
-                                      try {
-                                          std::rethrow_exception(e);
-                                      } catch (boost::system::system_error& e) {
-                                          LOG_INFO() << "stopped server ";
-                                      } catch (std::exception& e) {
-                                          LOG_ERROR() << "accept: " << e.what();
-                                      }
-                              });
+        boost::asio::co_spawn(
+            m_ioc, do_accept(std::move(acceptor)),
+            [](const std::exception_ptr& e) {
+                if (e)
+                    try {
+                        std::rethrow_exception(e);
+                    } catch (const boost::system::system_error& e) {
+                        LOG_INFO() << "stopped server ";
+                    } catch (const std::exception& e) {
+                        LOG_ERROR() << "accept: " << e.what();
+                    }
+            });
     }
 
     void run() {
@@ -60,7 +60,7 @@ public:
             m_thread_container.emplace_back([&] {
                 try {
                     m_ioc.run();
-                } catch (std::exception& e) {
+                } catch (const std::exception&) {
                     excp_ptr = std::current_exception();
                 }
             });
@@ -148,8 +148,8 @@ private:
     std::vector<std::thread> m_thread_container{};
     std::vector<boost::asio::basic_socket_acceptor<
         boost::asio::ip::tcp,
-        boost::asio::use_awaitable_t<boost::asio::any_io_executor>::
-            executor_with_default<boost::asio::any_io_executor>>>
+        boost::asio::use_awaitable_t<>::executor_with_default<
+            boost::asio::any_io_executor>>>
         m_acceptors;
     std::unique_ptr<protocol_handler> m_handler;
     std::atomic<bool> m_is_running;

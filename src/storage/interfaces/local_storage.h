@@ -192,6 +192,14 @@ struct local_storage : public storage_interface {
         co_return used;
     }
 
+    coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
+        std::map<size_t, size_t> res;
+        for (const auto& ds : m_data_stores) {
+            res.emplace(ds->id(), ds->get_used_space());
+        }
+        co_return res;
+    }
+
     size_t get_free_space() {
         load_monitor load(m_load);
 

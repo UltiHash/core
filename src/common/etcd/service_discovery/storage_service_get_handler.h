@@ -67,6 +67,18 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         return clients_list;
     }
 
+    std::vector<std::size_t> get_storage_ids() {
+        std::lock_guard l(m_mutex);
+        std::vector<size_t> ids;
+        ids.reserve(m_clients.size());
+
+        std::ranges::copy(m_clients | std::views::keys,
+                          std::back_inserter(ids));
+        return ids;
+    }
+
+    [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
+
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
