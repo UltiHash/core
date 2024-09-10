@@ -56,6 +56,11 @@ BOOST_AUTO_TEST_CASE(variable_replace) {
 }
 
 BOOST_AUTO_TEST_CASE(wildcard_match) {
+    BOOST_CHECK(equals_wildcard("", ""));
+    BOOST_CHECK(!equals_wildcard("", "bar"));
+    BOOST_CHECK(equals_wildcard("foo", "foo"));
+    BOOST_CHECK(!equals_wildcard("foo", "bar"));
+
     BOOST_CHECK(equals_wildcard("foo*", "foo"));
     BOOST_CHECK(equals_wildcard("foo*", "foobar"));
     BOOST_CHECK(equals_wildcard("fo*", "fo"));

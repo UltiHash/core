@@ -280,9 +280,6 @@ std::list<policy> parser::parse(const std::string& code) {
     }
 
     const auto& statements = require(js, "Statement");
-    LOG_DEBUG() << "policy parser: " << statements.size()
-                << " policies in Statement";
-
     return multi_element<std::list<policy>>(statements, parse_policy);
 }
 

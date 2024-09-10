@@ -5,6 +5,7 @@
 #include "entrypoint/http/http_request.h"
 #include "entrypoint/variables.h"
 #include "matcher.h"
+#include <iostream>
 
 namespace uh::cluster::ep::policy {
 
@@ -48,7 +49,7 @@ inline matcher match_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const http_request& r,
                                                 const command& cmd) {
         return match_any(principals, [&r](auto value) {
-            return value == r.authenticated_user().arn;
+            return equals_wildcard(value, r.authenticated_user().arn);
         });
     };
 }
@@ -57,7 +58,7 @@ inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const http_request& r,
                                                 const command& cmd) {
         return match_all(principals, [&r](auto value) {
-            return value != r.authenticated_user().arn;
+            return !equals_wildcard(value, r.authenticated_user().arn);
         });
     };
 }

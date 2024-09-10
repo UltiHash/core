@@ -3,6 +3,7 @@
 #include "common/utils/strings.h"
 
 #include <charconv>
+#include <iostream>
 #include <stdexcept>
 
 namespace uh::cluster::ep {
@@ -17,15 +18,12 @@ std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
     for (auto pos = 0ull; pos <= h.size() - n.size(); ++pos) {
         std::size_t n_idx = 0ull;
         for (; n_idx < n.size(); ++n_idx) {
-            if (n[n.size() - n_idx] != h[pos - n_idx] &&
-                h[pos - n_idx] != '?') {
+            if (n[n_idx] != h[pos + n_idx] && n[n_idx] != '?') {
                 break;
             }
-
-            --n_idx;
         }
 
-        if (n_idx == 0) {
+        if (n_idx == n.size()) {
             return pos;
         }
     }
@@ -120,6 +118,10 @@ bool equals_nocase(std::string_view a, std::string_view b) {
 }
 
 bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
+    if (wildcarded.empty()) {
+        return b.empty();
+    }
+
     auto groups = split(wildcarded, '*');
 
     std::size_t pos = 0;

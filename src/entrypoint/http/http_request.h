@@ -19,6 +19,11 @@ using ep::http::method;
 
 class http_request {
 public:
+    http_request(
+        boost::beast::http::request<boost::beast::http::empty_body> headers,
+        std::unique_ptr<ep::http::body> body,
+        boost::asio::ip::tcp::endpoint peer);
+
     http_request(ep::http::partial_parse_result& req,
                  std::unique_ptr<ep::http::body> body);
 
