@@ -10,7 +10,8 @@ global_data_view::global_data_view(
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2),
       m_service_maintainer(storage_maintainer),
-      m_ec_maintainer(m_io_service, 1, 0),
+      m_ec_maintainer(m_io_service, 1, 0,
+                      m_service_maintainer.get_etcd_client()),
       m_basic_getter(1, 0) {
 
     m_service_maintainer.add_monitor(m_ec_maintainer);

@@ -3,7 +3,6 @@
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
 #include "common/etcd/namespace.h"
-#include "common/etcd/registry/service_id.h"
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
 #include "roundrobin_load_balancer.h"
@@ -62,7 +61,9 @@ template <typename service_interface> struct service_maintainer {
         }
     }
 
-    etcd::SyncClient& get_etcd_client() const noexcept { return m_etcd_client; }
+    [[nodiscard]] etcd::SyncClient& get_etcd_client() const noexcept {
+        return m_etcd_client;
+    }
 
     ~service_maintainer() { m_watcher.Cancel(); }
 

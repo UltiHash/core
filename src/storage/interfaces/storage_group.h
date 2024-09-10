@@ -14,12 +14,12 @@ namespace uh::cluster {
 struct storage_group : public storage_interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
-                  size_t ec_nodes)
+                  size_t ec_nodes, etcd::SyncClient& etcd_client)
         : m_nodes(data_nodes + ec_nodes),
           m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
           m_ioc(ioc),
-          m_rec_mod(
-              recovery_module_factory::create(m_getter, m_ioc, *m_ec_calc)) {}
+          m_rec_mod(recovery_module_factory::create(m_getter, m_ioc, *m_ec_calc,
+                                                    etcd_client)) {}
 
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {

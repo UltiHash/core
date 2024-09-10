@@ -1,6 +1,7 @@
 #ifndef PERFORMER_RECOVERY_MODULE_H
 #define PERFORMER_RECOVERY_MODULE_H
 #include "recovery_module.h"
+#include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 
 namespace uh::cluster {
 
@@ -27,19 +28,6 @@ private:
         bool healthy = false;
         context ctx{};
     };
-
-    /*
-     * dn 0: 10gb  ds 0 -> 6gb, ds 1 -> 4gb
-     *       0 0 0 0 - 0 0 0 4gb
-     *       0 1 0 0 - 0 1 0 6gb
-     * dn 1: 10gb  ds 0 -> 6gb, ds 1 -> 4gb
-     *       1 0 0 0 - 0 0 0 4gb
-     *       1 1 0 0 - 0 1 0 6gb
-     * pointer: 32 -> dn id, 32 -> ds id, 64 -> internal offset in DATA STORE
-     * dn 2: 0gb
-     *
-     *
-     */
 
     coro<void> recover(std::atomic<ec_status>& status) {
         auto rinfo = co_await check_recovery();
@@ -176,14 +164,17 @@ private:
     }
 
     performer_recovery_module(storage_service_get_handler& getter,
-                              boost::asio::io_context& ioc, ec_interface& ec)
+                              boost::asio::io_context& ioc, ec_interface& ec,
+                              etcd::SyncClient& etcd_client)
         : m_getter(getter),
           m_ioc(ioc),
-          m_ec_calc(ec) {}
+          m_ec_calc(ec),
+          m_etcd_client(etcd_client) {}
 
     storage_service_get_handler& m_getter;
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
+    etcd::SyncClient& m_etcd_client;
     friend recovery_module_factory;
 };
 
