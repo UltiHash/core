@@ -28,6 +28,19 @@ private:
         context ctx{};
     };
 
+    /*
+     * dn 0: 10gb  ds 0 -> 6gb, ds 1 -> 4gb
+     *       0 0 0 0 - 0 0 0 4gb
+     *       0 1 0 0 - 0 1 0 6gb
+     * dn 1: 10gb  ds 0 -> 6gb, ds 1 -> 4gb
+     *       1 0 0 0 - 0 0 0 4gb
+     *       1 1 0 0 - 0 1 0 6gb
+     * pointer: 32 -> dn id, 32 -> ds id, 64 -> internal offset in DATA STORE
+     * dn 2: 0gb
+     *
+     *
+     */
+
     coro<void> recover(std::atomic<ec_status>& status) {
         auto rinfo = co_await check_recovery();
         if (rinfo.healthy) {
@@ -40,13 +53,13 @@ private:
         status = recovering;
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo.ctx);
         unique_buffer buf(RECOVERY_CHUNK_SIZE);
-        uint128_t offset = 0;
-        while (offset < rinfo.recover_size) {
+        uint128_t recovered_size = 0;
+        while (recovered_size < rinfo.recover_size) {
             auto size = std::min(uint128_t{RECOVERY_CHUNK_SIZE},
-                                 rinfo.recover_size - offset)
+                                 rinfo.recover_size - recovered_size)
                             .get_low();
-            auto addr =
-                calculate_recovery_address(offset, size, ds_id_used_map);
+            auto addr = calculate_recovery_address(recovered_size, size,
+                                                   ds_id_used_map);
             size = addr.sizes.front();
 
             std::vector<size_t> offsets;
@@ -75,9 +88,9 @@ private:
                     co_await nodes.at(i)->write(rinfo.ctx, shards.at(i));
                 }
             }
-            offset += size;
+            recovered_size += size;
         }
-
+        // TODO publish on etcd
         status = healthy;
     }
 
@@ -111,16 +124,18 @@ private:
     }
 
     address
-    calculate_recovery_address(const uint128_t& offset, size_t size,
+    calculate_recovery_address(const uint128_t& recovered_size, size_t size,
                                const std::map<size_t, size_t>& ds_id_used_map) {
         address addr;
 
         auto ds = ds_id_used_map.cbegin();
+        size_t internal_offset = pointer_traits::get_pointer(recovered_size);
         uint128_t upperbound_pointer = ds->second;
-        size_t internal_offset = offset.get_low();
-        while (upperbound_pointer <= offset) {
+
+        while (upperbound_pointer <= recovered_size) {
             ++ds;
-            internal_offset = (offset - upperbound_pointer).get_low();
+            internal_offset = pointer_traits::get_pointer(recovered_size -
+                                                          upperbound_pointer);
             upperbound_pointer += ds->second;
         }
         size_t ds_bounded_size = std::min(size, ds->second - internal_offset);

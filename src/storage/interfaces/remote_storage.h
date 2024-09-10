@@ -5,12 +5,6 @@
 #include "common/network/client.h"
 #include "common/service_interfaces/storage_interface.h"
 
-// recovery service
-// protocol for sending ds map
-// protocol for sending dd id + ds per dd
-
-// cli parameter (group id, ...)
-
 namespace uh::cluster {
 
 struct remote_storage : public storage_interface {

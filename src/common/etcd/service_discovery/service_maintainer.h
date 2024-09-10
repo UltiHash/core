@@ -61,6 +61,9 @@ template <typename service_interface> struct service_maintainer {
             add(keys[i], vals[i].as_string());
         }
     }
+
+    etcd::SyncClient& get_etcd_client() const noexcept { return m_etcd_client; }
+
     ~service_maintainer() { m_watcher.Cancel(); }
 
     void add_monitor(service_monitor<service_interface>& monitor) {
