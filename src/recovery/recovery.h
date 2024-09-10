@@ -16,7 +16,7 @@ public:
           m_storage_maintainer(
               m_etcd_client,
               service_factory<storage_interface>(m_ioc, 1, nullptr)),
-          m_ec_maintainer(m_ioc, 1, 0),
+          m_ec_maintainer(m_ioc, 1, 0, m_etcd_client),
           m_getter(1, 0) {
         m_storage_maintainer.add_monitor(m_ec_maintainer);
         m_ec_maintainer.add_monitor(m_getter);
