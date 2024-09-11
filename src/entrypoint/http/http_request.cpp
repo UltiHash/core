@@ -7,19 +7,23 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-http_request::http_request(partial_parse_result& req,
-                           std::unique_ptr<ep::http::body> body)
-    : m_req(std::move(req.headers)),
+http_request::http_request(
+    beast::http::request<beast::http::empty_body> headers,
+    std::unique_ptr<ep::http::body> body, asio::ip::tcp::endpoint peer)
+    : m_req(std::move(headers)),
       m_body(std::move(body)),
-      m_peer(req.socket.remote_endpoint()),
+      m_peer(peer),
       m_ctx() {
-
     auto target = parse_request_target(m_req.target());
     m_params = std::move(target.params);
     m_path = std::move(target.path);
     m_bucket_id = std::move(target.bucket);
     m_object_key = std::move(target.object);
 }
+
+http_request::http_request(partial_parse_result& req,
+                           std::unique_ptr<ep::http::body> body)
+    : http_request(std::move(req.headers), std::move(body), req.peer) {}
 
 http::verb http_request::method() const { return m_req.method(); }
 
@@ -62,12 +66,12 @@ const uh::cluster::context& http_request::context() const { return m_ctx; }
 
 uh::cluster::context& http_request::context() { return m_ctx; }
 
-const std::optional<ep::user::user>& http_request::authenticated_user() const {
+const ep::user::user& http_request::authenticated_user() const {
     return m_authenticated_user;
 }
 
-void http_request::authenticated_user(std::optional<ep::user::user> user) {
-    m_authenticated_user = user;
+void http_request::authenticated_user(ep::user::user user) {
+    m_authenticated_user = std::move(user);
 }
 
 std::ostream& operator<<(std::ostream& out, const http_request& req) {

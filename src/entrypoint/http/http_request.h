@@ -8,6 +8,7 @@
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
+#include "entrypoint/variables.h"
 
 #include <map>
 #include <span>
@@ -18,6 +19,11 @@ using ep::http::method;
 
 class http_request {
 public:
+    http_request(
+        boost::beast::http::request<boost::beast::http::empty_body> headers,
+        std::unique_ptr<ep::http::body> body,
+        boost::asio::ip::tcp::endpoint peer);
+
     http_request(ep::http::partial_parse_result& req,
                  std::unique_ptr<ep::http::body> body);
 
@@ -57,8 +63,10 @@ public:
     const uh::cluster::context& context() const;
     uh::cluster::context& context();
 
-    const std::optional<ep::user::user>& authenticated_user() const;
-    void authenticated_user(std::optional<ep::user::user> user);
+    const ep::user::user& authenticated_user() const;
+    void authenticated_user(ep::user::user user);
+
+    const ep::variables& vars() const { return m_vars; }
 
 private:
     friend std::ostream& operator<<(std::ostream& out, const http_request& req);
@@ -72,7 +80,8 @@ private:
     std::map<std::string, std::string> m_params;
     std::string m_path;
     std::string m_query;
-    std::optional<ep::user::user> m_authenticated_user;
+    ep::user::user m_authenticated_user;
+    ep::variables m_vars;
 
     uh::cluster::context m_ctx;
 };

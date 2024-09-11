@@ -120,4 +120,8 @@ coro<http_response> complete_multipart::handle(http_request& req) {
     co_return res;
 }
 
+std::string complete_multipart::action_id() const {
+    return "s3:CompleteMultipartUpload";
+}
+
 } // namespace uh::cluster

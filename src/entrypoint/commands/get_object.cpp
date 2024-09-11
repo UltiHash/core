@@ -98,4 +98,6 @@ coro<http_response> get_object::handle(http_request& req) {
     co_return res;
 }
 
+std::string get_object::action_id() const { return "s3:GetObject"; }
+
 } // namespace uh::cluster

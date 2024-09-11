@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include "matcher.h"
+#include "matchers.h"
 
 #include "common/telemetry/log.h"
 #include <functional>
@@ -241,7 +242,7 @@ std::optional<matcher> condition_matchers(const json& stmt) {
         subs.emplace_back(condition_matcher(elem.key(), elem.value()));
     }
 
-    return match_all(std::move(subs));
+    return conjunction(std::move(subs));
 }
 
 policy parse_policy(const json& stmt) {
@@ -279,9 +280,6 @@ std::list<policy> parser::parse(const std::string& code) {
     }
 
     const auto& statements = require(js, "Statement");
-    LOG_DEBUG() << "policy parser: " << statements.size()
-                << " policies in Statement";
-
     return multi_element<std::list<policy>>(statements, parse_policy);
 }
 

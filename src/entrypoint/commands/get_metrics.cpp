@@ -38,4 +38,6 @@ coro<http_response> get_metrics::handle(http_request& req) {
     co_return res;
 }
 
+std::string get_metrics::action_id() const { return "uh:GetMetrics"; }
+
 } // namespace uh::cluster

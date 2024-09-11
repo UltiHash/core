@@ -40,7 +40,7 @@ private:
         auto nodes = m_getter.get_services();
         status = recovering;
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo.ctx);
-        unique_buffer buf(RECOVERY_CHUNK_SIZE);
+        unique_buffer<char> buf(RECOVERY_CHUNK_SIZE);
         uint128_t recovered_size = 0;
         while (recovered_size < rinfo.recover_size) {
             auto size = std::min(uint128_t{RECOVERY_CHUNK_SIZE},
@@ -169,7 +169,10 @@ private:
         : m_getter(getter),
           m_ioc(ioc),
           m_ec_calc(ec),
-          m_etcd_client(etcd_client) {}
+          m_etcd_client(etcd_client) {
+        (void)m_etcd_client; // silence clang, please remove when m_etcd_client
+                             // is used
+    }
 
     storage_service_get_handler& m_getter;
     boost::asio::io_context& m_ioc;

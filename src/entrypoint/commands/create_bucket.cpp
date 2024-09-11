@@ -26,4 +26,6 @@ coro<http_response> create_bucket::handle(http_request& req) {
     co_return http_response{};
 }
 
+std::string create_bucket::action_id() const { return "s3:CreateBucket"; }
+
 } // namespace uh::cluster

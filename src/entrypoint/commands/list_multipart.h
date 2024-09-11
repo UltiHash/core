@@ -14,6 +14,8 @@ public:
 
     coro<http_response> handle(http_request& req) override;
 
+    std::string action_id() const override;
+
 private:
     multipart_state& m_uploads;
 };

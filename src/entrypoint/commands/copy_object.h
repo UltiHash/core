@@ -15,6 +15,8 @@ public:
 
     coro<http_response> handle(http_request& req) override;
 
+    std::string action_id() const override;
+
 private:
     coro<void> copy_internal(http_request& req, std::string& src_bucket,
                              std::string& src_key);

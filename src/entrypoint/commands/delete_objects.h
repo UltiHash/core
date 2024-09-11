@@ -16,6 +16,8 @@ public:
 
     coro<http_response> handle(http_request& req) override;
 
+    std::string action_id() const override;
+
 private:
     directory& m_directory;
     global_data_view& m_gdv;

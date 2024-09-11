@@ -26,4 +26,6 @@ coro<http_response> delete_bucket::handle(http_request& req) {
     co_return http_response{};
 }
 
+std::string delete_bucket::action_id() const { return "s3:DeleteBucket"; }
+
 } // namespace uh::cluster

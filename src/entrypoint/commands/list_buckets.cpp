@@ -42,4 +42,6 @@ coro<http_response> list_buckets::handle(http_request& req) {
     co_return get_response(buckets);
 }
 
+std::string list_buckets::action_id() const { return "s3:ListBuckets"; }
+
 } // namespace uh::cluster

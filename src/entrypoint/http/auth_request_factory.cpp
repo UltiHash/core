@@ -75,7 +75,11 @@ auth_request_factory::create(ip::tcp::socket& sock) {
 
     auto body = make_body(req, auth);
     auto rv = std::make_unique<http_request>(req, std::move(body));
-    rv->authenticated_user(std::move(auth->authenticated_user));
+
+    if (auth->authenticated_user) {
+        rv->authenticated_user(std::move(*auth->authenticated_user));
+    }
+
     co_return rv;
 }
 
