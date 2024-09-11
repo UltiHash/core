@@ -15,15 +15,15 @@ bool head_bucket::can_handle(const request& req) {
            !req.query("attributes");
 }
 
-coro<http_response> head_bucket::handle(request& req) {
+coro<response> head_bucket::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
         co_await m_directory.bucket_exists(req.bucket());
 
-        co_return http_response{};
+        co_return response{};
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
+        throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 }

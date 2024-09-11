@@ -8,7 +8,7 @@ namespace uh::cluster {
 
 namespace {
 
-class local_read_handle : public uh::cluster::body {
+class local_read_handle : public uh::cluster::ep::http::body {
 public:
     local_read_handle(global_data_view& storage, address&& addr, context& ctx)
         : m_storage(storage),
@@ -80,10 +80,10 @@ bool get_object::can_handle(const request& req) {
            !req.query("attributes");
 }
 
-coro<http_response> get_object::handle(request& req) {
+coro<response> get_object::handle(request& req) {
     metric<entrypoint_get_object_req>::increase(1);
 
-    http_response res;
+    response res;
 
     try {
         auto obj = co_await m_dir.get_object(req.bucket(), req.object_key());
@@ -93,7 +93,7 @@ coro<http_response> get_object::handle(request& req) {
         res.set_body(std::make_unique<local_read_handle>(
             m_storage, std::move(*obj.addr), req.context()));
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
+        throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 

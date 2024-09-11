@@ -1,5 +1,6 @@
 #include "get_metrics.h"
 #include "config.h"
+#include "entrypoint/http/string_body.h"
 
 using namespace uh::cluster::ep::http;
 
@@ -14,12 +15,12 @@ bool get_metrics::can_handle(const request& req) {
            req.object_key() == "v1/metrics/cluster";
 }
 
-coro<http_response> get_metrics::handle(request& req) {
+coro<response> get_metrics::handle(request& req) {
     metric<entrypoint_get_metrics_req>::increase(1);
     auto raw_data_size = co_await m_directory.data_size();
     auto effective_data_size = co_await m_gdv.get_used_space(req.context());
 
-    http_response res;
+    response res;
     res.set_body(
         std::make_unique<string_body>("{\n"
                                       "  \"version\": \"" +

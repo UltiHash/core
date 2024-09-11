@@ -17,7 +17,7 @@ public:
 
     coro<void> validate(const ep::http::request& req) override;
 
-    coro<http_response> handle(ep::http::request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 

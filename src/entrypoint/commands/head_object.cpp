@@ -16,14 +16,14 @@ bool head_object::can_handle(const request& req) {
            !req.query("attributes");
 }
 
-coro<http_response> head_object::handle(request& req) {
+coro<response> head_object::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
         auto obj =
             co_await m_directory.head_object(req.bucket(), req.object_key());
 
-        http_response res;
+        response res;
         res.set("Content-Length", std::to_string(obj.size));
         res.set("Last-Modified", imf_fixdate(obj.last_modified));
         res.set("ETag", obj.etag);
@@ -31,7 +31,7 @@ coro<http_response> head_object::handle(request& req) {
 
         co_return res;
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
+        throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 }

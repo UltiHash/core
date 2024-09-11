@@ -80,7 +80,7 @@ command_factory::create(const ep::http::request& req) const {
         return std::make_unique<abort_multipart>(m_uploads);
     }
 
-    throw command_exception(http::status::bad_request, "CommandNotFound",
+    throw command_exception(ep::http::status::bad_request, "CommandNotFound",
                             "no such command found");
 }
 limits& command_factory::get_limits() const { return m_limits; }

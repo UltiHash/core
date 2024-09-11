@@ -18,7 +18,7 @@ void validate_internal(const upload_info& info, std::span<char> body) {
     auto part_nodes = xml_parser.get_nodes("CompleteMultipartUpload.Part");
 
     if (!parsed || part_nodes.empty())
-        throw command_exception(http::status::bad_request, "MalformedXML",
+        throw command_exception(status::bad_request, "MalformedXML",
                                 "xml is invalid");
 
     for (uint16_t part_counter = 1; const auto& part : part_nodes) {
@@ -26,30 +26,29 @@ void validate_internal(const upload_info& info, std::span<char> body) {
         auto etag = part.get().get_optional<std::string>("ETag");
 
         if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
-            throw command_exception(http::status::bad_request, "MalformedXML",
+            throw command_exception(status::bad_request, "MalformedXML",
                                     "xml is invalid");
 
         auto it = info.parts.find(*part_num);
         if (it == info.parts.end()) {
-            throw command_exception(http::status::bad_request, "InvalidPart",
+            throw command_exception(status::bad_request, "InvalidPart",
                                     "part not found");
         }
 
         const upload_info::part& pt = it->second;
 
         if (pt.size < MAXIMUM_CHUNK_SIZE && *part_num != info.parts.size()) {
-            throw command_exception(http::status::bad_request, "EntityTooSmall",
+            throw command_exception(status::bad_request, "EntityTooSmall",
                                     "entity is too small");
         }
 
         if (pt.etag != etag) {
-            throw command_exception(http::status::bad_request, "InvalidPart",
+            throw command_exception(status::bad_request, "InvalidPart",
                                     "part etag does not match");
         }
 
         if (*part_num != part_counter) {
-            throw command_exception(http::status::bad_request,
-                                    "InvalidPartOrder",
+            throw command_exception(status::bad_request, "InvalidPartOrder",
                                     "part order is not ascending");
         }
 
@@ -82,7 +81,7 @@ bool complete_multipart::can_handle(const request& req) {
            req.query("uploadId");
 }
 
-coro<http_response> complete_multipart::handle(request& req) {
+coro<response> complete_multipart::handle(request& req) {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -107,7 +106,7 @@ coro<http_response> complete_multipart::handle(request& req) {
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
-    http_response res;
+    response res;
     res.set("ETag", etag);
     res.set_original_size(info.data_size);
     res.set_effective_size(info.effective_size);

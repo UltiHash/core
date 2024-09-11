@@ -17,7 +17,7 @@ class mock_command : public uh::cluster::command {
 public:
     mock_command(const std::string& id)
         : m_id(id) {}
-    coro<http_response> handle(request&) override { co_return http_response{}; }
+    coro<response> handle(request&) override { co_return response{}; }
     coro<void> validate(const request& req) override { co_return; }
     std::string action_id() const override { return m_id; }
 
@@ -28,6 +28,7 @@ private:
 class mock_body : public uh::cluster::ep::http::body {
 public:
     coro<std::size_t> read(std::span<char>) override { co_return 0ull; }
+    std::optional<std::size_t> length() const override { return {}; }
 };
 
 auto make_request(const std::string& code,

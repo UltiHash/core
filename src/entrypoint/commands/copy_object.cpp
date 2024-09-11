@@ -19,7 +19,7 @@ bool copy_object::can_handle(const request& req) {
            req.header("x-amz-copy-source");
 }
 
-coro<http_response> copy_object::handle(request& req) {
+coro<response> copy_object::handle(request& req) {
     auto copy_source = req.header("x-amz-copy-source");
     if (!copy_source) {
         throw std::runtime_error("x-amz-copy-source not defined");
@@ -39,7 +39,7 @@ coro<http_response> copy_object::handle(request& req) {
         pt.put("CopyObjectResult.ETag", *obj.etag);
     }
 
-    http_response res;
+    response res;
     res << pt;
 
     co_return res;

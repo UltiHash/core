@@ -24,8 +24,8 @@ struct fail {
     std::string code;
 };
 
-http_response get_response(const std::vector<std::string>& success,
-                           const std::vector<fail>& failure) noexcept {
+response get_response(const std::vector<std::string>& success,
+                      const std::vector<fail>& failure) noexcept {
     boost::property_tree::ptree pt;
     boost::property_tree::ptree deleteResult;
 
@@ -43,14 +43,14 @@ http_response get_response(const std::vector<std::string>& success,
 
     pt.add_child("DeleteResult", deleteResult);
 
-    http_response res;
+    response res;
     res << pt;
 
     return res;
 }
 } // namespace
 
-coro<http_response> delete_objects::handle(request& req) {
+coro<response> delete_objects::handle(request& req) {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
@@ -69,7 +69,7 @@ coro<http_response> delete_objects::handle(request& req) {
 
     if (!parsed || object_nodes.empty() ||
         object_nodes.size() > MAXIMUM_DELETE_KEYS)
-        throw command_exception(http::status::bad_request, "MalformedXML",
+        throw command_exception(status::bad_request, "MalformedXML",
                                 "xml is invalid");
 
     auto bucket_id = req.bucket();
@@ -78,7 +78,7 @@ coro<http_response> delete_objects::handle(request& req) {
     for (const auto& objct : object_nodes) {
         auto key = objct.get().get_optional<std::string>("Key");
         if (!key) {
-            throw command_exception(http::status::bad_request, "MalformedXML",
+            throw command_exception(status::bad_request, "MalformedXML",
                                     "xml is invalid");
         }
 

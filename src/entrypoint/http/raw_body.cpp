@@ -9,6 +9,8 @@ raw_body::raw_body(partial_parse_result& req, std::size_t length)
       m_buffer(std::move(req.buffer)),
       m_length(length) {}
 
+std::optional<std::size_t> raw_body::length() const { return m_length; }
+
 coro<std::size_t> raw_body::read(std::span<char> dest) {
     auto rv = 0ull;
 

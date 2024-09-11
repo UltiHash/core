@@ -10,9 +10,9 @@ namespace uh::cluster {
 
 namespace {
 
-http_response get_response(const request& req,
-                           const std::string& upload_id) noexcept {
-    http_response res;
+response get_response(const request& req,
+                      const std::string& upload_id) noexcept {
+    response res;
 
     boost::property_tree::ptree pt;
     pt.put("InitiateMultipartUploadResult.Bucket", req.bucket());
@@ -36,7 +36,7 @@ bool init_multipart::can_handle(const request& req) {
            req.query("uploads");
 }
 
-coro<http_response> init_multipart::handle(request& req) {
+coro<response> init_multipart::handle(request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
     try {
         co_await m_directory.bucket_exists(req.bucket());

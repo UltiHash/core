@@ -22,14 +22,14 @@ coro<void> multipart::validate(const request& req) {
     std::size_t part_num = *query<std::size_t>(req, "partNumber");
 
     if (part_num < 1 || part_num > 10000) {
-        throw command_exception(http::status::bad_request, "BadPartNumber",
+        throw command_exception(status::bad_request, "BadPartNumber",
                                 "part number is invalid");
     }
 
     co_return;
 }
 
-coro<http_response> multipart::handle(request& req) {
+coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -44,7 +44,7 @@ coro<http_response> multipart::handle(request& req) {
 
     auto md5 = to_hex(md5::from_buffer(buffer.span()));
 
-    http_response res;
+    response res;
     res.set("ETag", md5);
 
     co_await m_uploads.append_upload_part_info(

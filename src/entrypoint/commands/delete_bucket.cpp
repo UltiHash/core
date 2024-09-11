@@ -14,7 +14,7 @@ bool delete_bucket::can_handle(const request& req) {
            req.object_key().empty() && !req.has_query();
 }
 
-coro<http_response> delete_bucket::handle(request& req) {
+coro<response> delete_bucket::handle(request& req) {
     metric<entrypoint_delete_bucket_req>::increase(1);
 
     try {
@@ -25,7 +25,7 @@ coro<http_response> delete_bucket::handle(request& req) {
         throw_from_error(e.error());
     }
 
-    co_return http_response{};
+    co_return response{};
 }
 
 std::string delete_bucket::action_id() const { return "s3:DeleteBucket"; }

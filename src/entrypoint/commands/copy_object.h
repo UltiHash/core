@@ -13,7 +13,7 @@ public:
 
     static bool can_handle(const ep::http::request& req);
 
-    coro<http_response> handle(ep::http::request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 

@@ -63,10 +63,10 @@ coro<void> put_object::validate(const request& req) {
     }
 }
 
-coro<http_response> put_object::handle(request& req) {
+coro<response> put_object::handle(request& req) {
 
     metric<entrypoint_put_object_req>::increase(1);
-    http_response res;
+    response res;
 
     auto content_length = req.content_length();
     try {

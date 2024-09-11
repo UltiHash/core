@@ -14,7 +14,7 @@ bool create_bucket::can_handle(const request& req) {
            !req.has_query();
 }
 
-coro<http_response> create_bucket::handle(request& req) {
+coro<response> create_bucket::handle(request& req) {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.bucket();
     try {
@@ -25,7 +25,7 @@ coro<http_response> create_bucket::handle(request& req) {
         throw_from_error(e.error());
     }
 
-    co_return http_response{};
+    co_return response{};
 }
 
 std::string create_bucket::action_id() const { return "s3:CreateBucket"; }

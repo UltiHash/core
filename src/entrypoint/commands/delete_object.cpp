@@ -17,7 +17,7 @@ bool delete_object::can_handle(const request& req) {
            !req.object_key().empty() && !req.query("uploadId");
 }
 
-coro<http_response> delete_object::handle(request& req) {
+coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         object obj;
@@ -40,7 +40,7 @@ coro<http_response> delete_object::handle(request& req) {
         throw_from_error(e.error());
     }
 
-    co_return http_response{};
+    co_return response{};
 }
 
 std::string delete_object::action_id() const { return "s3:DeleteObject"; }

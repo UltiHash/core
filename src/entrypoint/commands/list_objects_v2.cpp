@@ -20,16 +20,14 @@ auto get_encoder(std::optional<std::string> encoding_type) {
     }
 
     if (*encoding_type != "url") {
-        throw command_exception(http::status::bad_request,
-                                "InvalidQueryParameters",
+        throw command_exception(status::bad_request, "InvalidQueryParameters",
                                 "encountered unexpected query parameter");
     }
 
     return url_encode;
 }
 
-http_response get_response(const std::vector<object>& objects,
-                           const request& req) {
+response get_response(const std::vector<object>& objects, const request& req) {
 
     const auto prefix = req.query("prefix");
 
@@ -115,7 +113,7 @@ http_response get_response(const std::vector<object>& objects,
 
     pt.add_child("ListBucketResult", result_node);
 
-    http_response res;
+    response res;
     res << pt;
 
     return res;
@@ -132,7 +130,7 @@ bool list_objects_v2::can_handle(const request& req) {
            req.query("list-type") && *req.query("list-type") == "2";
 }
 
-coro<http_response> list_objects_v2::handle(request& req) {
+coro<response> list_objects_v2::handle(request& req) {
     metric<entrypoint_list_objects_v2_req>::increase(1);
     std::optional<std::string> prefix = req.query("prefix");
     std::optional<std::string> lowerbound = req.query("start-after");
@@ -148,7 +146,7 @@ coro<http_response> list_objects_v2::handle(request& req) {
         obj_list =
             co_await m_directory.list_objects(req.bucket(), prefix, lowerbound);
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchBucket",
+        throw command_exception(status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");
     }
 
