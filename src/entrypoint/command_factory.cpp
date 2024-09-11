@@ -5,6 +5,7 @@
 #include "commands/copy_object.h"
 #include "commands/create_bucket.h"
 #include "commands/delete_bucket.h"
+#include "commands/delete_bucket_policy.h"
 #include "commands/delete_object.h"
 #include "commands/delete_objects.h"
 #include "commands/get_metrics.h"
@@ -82,6 +83,9 @@ command_factory::create(const ep::http::request& req) const {
     }
     if (put_bucket_policy::can_handle(req)) {
         return std::make_unique<put_bucket_policy>(m_directory);
+    }
+    if (delete_bucket_policy::can_handle(req)) {
+        return std::make_unique<delete_bucket_policy>(m_directory);
     }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",
