@@ -1,8 +1,6 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MATCHER_H
 #define CORE_ENTRYPOINT_POLICY_MATCHER_H
 
-#include "entrypoint/variables.h"
-
 #include <functional>
 #include <list>
 #include <map>
