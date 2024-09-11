@@ -17,6 +17,7 @@
 #include "commands/list_objects.h"
 #include "commands/list_objects_v2.h"
 #include "commands/multipart.h"
+#include "commands/put_bucket_policy.h"
 #include "commands/put_object.h"
 
 namespace uh::cluster {
@@ -78,6 +79,9 @@ command_factory::create(const http_request& req) const {
     }
     if (abort_multipart::can_handle(req)) {
         return std::make_unique<abort_multipart>(m_uploads);
+    }
+    if (put_bucket_policy::can_handle(req)) {
+        return std::make_unique<put_bucket_policy>(m_directory);
     }
 
     throw command_exception(http::status::bad_request, "CommandNotFound",
