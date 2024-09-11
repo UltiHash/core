@@ -8,6 +8,7 @@
 #include "commands/delete_bucket_policy.h"
 #include "commands/delete_object.h"
 #include "commands/delete_objects.h"
+#include "commands/get_bucket_policy.h"
 #include "commands/get_metrics.h"
 #include "commands/get_object.h"
 #include "commands/head_bucket.h"
@@ -80,6 +81,9 @@ command_factory::create(const http_request& req) const {
     }
     if (abort_multipart::can_handle(req)) {
         return std::make_unique<abort_multipart>(m_uploads);
+    }
+    if (get_bucket_policy::can_handle(req)) {
+        return std::make_unique<get_bucket_policy>(m_directory);
     }
     if (put_bucket_policy::can_handle(req)) {
         return std::make_unique<put_bucket_policy>(m_directory);
