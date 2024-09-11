@@ -67,14 +67,14 @@ std::unique_ptr<ep::http::body> make_body(partial_parse_result& req,
 auth_request_factory::auth_request_factory(std::unique_ptr<user::backend> users)
     : m_users(std::move(users)) {}
 
-coro<std::unique_ptr<http_request>>
+coro<std::unique_ptr<request>>
 auth_request_factory::create(ip::tcp::socket& sock) {
 
     auto req = co_await partial_parse_result::read(sock);
     auto auth = auth_info::create(req, *m_users);
 
     auto body = make_body(req, auth);
-    auto rv = std::make_unique<http_request>(req, std::move(body));
+    auto rv = std::make_unique<request>(req, std::move(body));
 
     if (auth->authenticated_user) {
         rv->authenticated_user(std::move(*auth->authenticated_user));

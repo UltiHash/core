@@ -2,18 +2,20 @@
 
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 head_bucket::head_bucket(directory& dir)
     : m_directory(dir) {}
 
-bool head_bucket::can_handle(const http_request& req) {
-    return req.method() == method::head &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && !req.query("attributes");
+bool head_bucket::can_handle(const request& req) {
+    return req.method() == verb::head && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && req.object_key().empty() &&
+           !req.query("attributes");
 }
 
-coro<http_response> head_bucket::handle(http_request& req) {
+coro<http_response> head_bucket::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {

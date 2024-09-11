@@ -2,6 +2,8 @@
 #include "common/utils/time_utils.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 namespace {
@@ -72,13 +74,13 @@ get_object::get_object(directory& dir, global_data_view& storage)
     : m_dir(dir),
       m_storage(storage) {}
 
-bool get_object::can_handle(const http_request& req) {
-    return req.method() == method::get &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && !req.query("attributes");
+bool get_object::can_handle(const request& req) {
+    return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           !req.query("attributes");
 }
 
-coro<http_response> get_object::handle(http_request& req) {
+coro<http_response> get_object::handle(request& req) {
     metric<entrypoint_get_object_req>::increase(1);
 
     http_response res;

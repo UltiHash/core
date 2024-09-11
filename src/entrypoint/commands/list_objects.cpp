@@ -6,6 +6,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace http = boost::beast::http;
+using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
@@ -28,7 +29,7 @@ auto get_encoder(std::optional<std::string> encoding_type) {
 }
 
 http_response get_response(const std::vector<object>& objects,
-                           const http_request& req) {
+                           const request& req) {
 
     const auto prefix = req.query("prefix");
 
@@ -121,14 +122,13 @@ http_response get_response(const std::vector<object>& objects,
 list_objects::list_objects(directory& dir)
     : m_directory(dir) {}
 
-bool list_objects::can_handle(const http_request& req) {
-    return req.method() == method::get &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && !req.query("uploads") &&
-           !req.query("list-type");
+bool list_objects::can_handle(const request& req) {
+    return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && req.object_key().empty() &&
+           !req.query("uploads") && !req.query("list-type");
 }
 
-coro<http_response> list_objects::handle(http_request& req) {
+coro<http_response> list_objects::handle(request& req) {
     metric<entrypoint_list_objects_req>::increase(1);
 
     std::vector<object> obj_list;

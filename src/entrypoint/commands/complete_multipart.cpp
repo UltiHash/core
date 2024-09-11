@@ -3,6 +3,8 @@
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 namespace {
@@ -74,13 +76,13 @@ complete_multipart::complete_multipart(directory& dir, multipart_state& uploads,
       m_uploads(uploads),
       m_limits(uhlimits) {}
 
-bool complete_multipart::can_handle(const http_request& req) {
-    return req.method() == method::post &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.query("uploadId");
+bool complete_multipart::can_handle(const request& req) {
+    return req.method() == verb::post && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           req.query("uploadId");
 }
 
-coro<http_response> complete_multipart::handle(http_request& req) {
+coro<http_response> complete_multipart::handle(request& req) {
     metric<entrypoint_complete_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());

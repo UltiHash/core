@@ -3,6 +3,8 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 namespace {
@@ -33,13 +35,13 @@ get_response(const std::string& bucket_name,
 list_multipart::list_multipart(multipart_state& uploads)
     : m_uploads(uploads) {}
 
-bool list_multipart::can_handle(const http_request& req) {
-    return req.method() == method::get &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && req.query("uploads");
+bool list_multipart::can_handle(const request& req) {
+    return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && req.object_key().empty() &&
+           req.query("uploads");
 }
 
-coro<http_response> list_multipart::handle(http_request& req) {
+coro<http_response> list_multipart::handle(request& req) {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.bucket();
 

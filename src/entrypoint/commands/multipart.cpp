@@ -2,6 +2,8 @@
 #include "common/crypto/hash.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 multipart::multipart(
@@ -10,14 +12,13 @@ multipart::multipart(
     : m_dedupe_services(dedupe_services),
       m_uploads(uploads) {}
 
-bool multipart::can_handle(const http_request& req) {
-    return req.method() == method::put &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.query("partNumber") &&
-           req.query("uploadId");
+bool multipart::can_handle(const request& req) {
+    return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           req.query("partNumber") && req.query("uploadId");
 }
 
-coro<void> multipart::validate(const http_request& req) {
+coro<void> multipart::validate(const request& req) {
     std::size_t part_num = *query<std::size_t>(req, "partNumber");
 
     if (part_num < 1 || part_num > 10000) {
@@ -28,7 +29,7 @@ coro<void> multipart::validate(const http_request& req) {
     co_return;
 }
 
-coro<http_response> multipart::handle(http_request& req) {
+coro<http_response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());

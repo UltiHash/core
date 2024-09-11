@@ -2,6 +2,8 @@
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 delete_objects::delete_objects(directory& dir, global_data_view& gdv,
@@ -10,10 +12,10 @@ delete_objects::delete_objects(directory& dir, global_data_view& gdv,
       m_gdv(gdv),
       m_limits(uhlimits) {}
 
-bool delete_objects::can_handle(const http_request& req) {
-    return req.method() == method::post &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && req.query("delete");
+bool delete_objects::can_handle(const request& req) {
+    return req.method() == verb::post && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && req.object_key().empty() &&
+           req.query("delete");
 }
 
 namespace {
@@ -48,7 +50,7 @@ http_response get_response(const std::vector<std::string>& success,
 }
 } // namespace
 
-coro<http_response> delete_objects::handle(http_request& req) {
+coro<http_response> delete_objects::handle(request& req) {
     metric<entrypoint_delete_objects_req>::increase(1);
 
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "

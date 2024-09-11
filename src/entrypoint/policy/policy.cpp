@@ -8,7 +8,7 @@ policy::policy(std::string id, std::list<matcher> matchers,
       m_matchers(std::move(matchers)),
       m_effect(effect) {}
 
-std::optional<ep::policy::effect> policy::check(const http_request& req,
+std::optional<ep::policy::effect> policy::check(const http::request& req,
                                                 const command& cmd) const {
     for (const auto& matcher : m_matchers) {
         if (!matcher(req, cmd)) {

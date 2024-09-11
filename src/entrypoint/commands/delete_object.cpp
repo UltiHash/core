@@ -1,6 +1,8 @@
 #include "delete_object.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 delete_object::delete_object(directory& dir, global_data_view& gdv,
@@ -9,13 +11,13 @@ delete_object::delete_object(directory& dir, global_data_view& gdv,
       m_gdv(gdv),
       m_limits(uhlimits) {}
 
-bool delete_object::can_handle(const http_request& req) {
-    return req.method() == method::delete_ &&
+bool delete_object::can_handle(const request& req) {
+    return req.method() == verb::delete_ &&
            req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
            !req.object_key().empty() && !req.query("uploadId");
 }
 
-coro<http_response> delete_object::handle(http_request& req) {
+coro<http_response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         object obj;

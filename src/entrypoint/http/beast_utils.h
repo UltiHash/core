@@ -17,7 +17,7 @@
 namespace uh::cluster::ep::http {
 
 namespace beast = boost::beast;
-using method = beast::http::verb;
+using verb = beast::http::verb;
 using status = beast::http::status;
 
 struct partial_parse_result {

@@ -21,7 +21,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         /*
          * Note: livetime of response must not exceed livetime of request.
          */
-        std::unique_ptr<http_request> req;
+        std::unique_ptr<http::request> req;
         http_response resp;
         bool keep_alive = false;
 
@@ -63,7 +63,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<http_response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                            http_request& req) const {
+                                            http::request& req) const {
 
     auto cmd = m_command_factory.create(req);
 

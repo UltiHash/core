@@ -3,7 +3,7 @@
 
 #include "beast_utils.h"
 #include "body.h"
-#include "http_request.h"
+#include "request.h"
 
 #include <memory>
 
@@ -12,7 +12,7 @@ namespace uh::cluster::ep::http {
 class request_factory {
 public:
     virtual ~request_factory() = default;
-    virtual coro<std::unique_ptr<http_request>>
+    virtual coro<std::unique_ptr<request>>
     create(boost::asio::ip::tcp::socket&) = 0;
 };
 
