@@ -36,6 +36,6 @@ coro<http_response> head_object::handle(request& req) {
     }
 }
 
-std::string head_object::action_id() const { return "s3:HeadBucket"; }
+std::string head_object::action_id() const { return "s3:HeadObject"; }
 
 } // namespace uh::cluster
