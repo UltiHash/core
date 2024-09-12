@@ -45,6 +45,10 @@ public:
                       std::string(magic_enum::enum_name(status)));
     }
 
+    void clear() {
+        m_etcd_client.rmdir(get_ec_group_path(m_gid));
+    }
+
     std::optional<ec_status> get_status() {
         auto resp = wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this] {
             return m_etcd_client.get(

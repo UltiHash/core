@@ -23,6 +23,10 @@ public:
           m_ec_calc(ec),
           m_attributes(attributes) {}
 
+    ~performer_recovery_module() {
+        m_attributes.clear();
+    }
+
     void async_check_recover(std::atomic<ec_status>& status,
                              size_t group_size) {
         if (m_getter.size() == 0) {
