@@ -13,9 +13,9 @@
 
 namespace uh::cluster {
 
-class performer_recovery_module {
+class recovery_module {
 public:
-    performer_recovery_module(storage_service_get_handler& getter,
+    recovery_module(storage_service_get_handler& getter,
                               boost::asio::io_context& ioc, ec_interface& ec,
                               ec_group_attributes& attributes)
         : m_getter(getter),
@@ -23,7 +23,7 @@ public:
           m_ec_calc(ec),
           m_attributes(attributes) {}
 
-    ~performer_recovery_module() {
+    ~recovery_module() {
         m_attributes.clear();
     }
 

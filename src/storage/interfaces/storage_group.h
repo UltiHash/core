@@ -7,7 +7,7 @@
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
-#include "recovery/performer_recovery_module.h"
+#include "recovery/recovery_module.h"
 
 namespace uh::cluster {
 
@@ -175,7 +175,7 @@ private:
     std::atomic<ec_status> m_status = empty;
     ec_group_attributes m_attributes;
     std::optional<status_watcher> m_status_watcher;
-    std::optional<performer_recovery_module> m_rec_mod;
+    std::optional<recovery_module> m_rec_mod;
 
 };
 
