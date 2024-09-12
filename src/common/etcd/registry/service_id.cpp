@@ -1,5 +1,6 @@
 #include "service_id.h"
 
+#include "common/etcd/etcd_lock.h"
 #include "common/etcd/namespace.h"
 #include "common/utils/common.h"
 #include "common/utils/time_utils.h"
@@ -73,19 +74,6 @@ std::string set(etcd::SyncClient& client, const std::string& key,
             " failed, details: " + response.error_message());
 }
 
-class registry_lock {
-public:
-    explicit registry_lock(etcd::SyncClient& client)
-        : m_client(client),
-          m_response(m_client.lock(etcd_global_lock_key)) {}
-
-    ~registry_lock() { m_client.unlock(m_response.lock_key()); }
-
-private:
-    etcd::SyncClient& m_client;
-    etcd::Response m_response;
-};
-
 } // namespace
 
 std::size_t get_service_id(etcd::SyncClient& client, const std::string& service,
@@ -101,8 +89,10 @@ std::size_t get_service_id(etcd::SyncClient& client, const std::string& service,
     std::string current_id_key = etcd_current_id_prefix_key + service;
     std::size_t current_id;
 
-    const auto lock = wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
-                                       [&]() { return registry_lock(client); });
+    const auto lock =
+        wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [&]() {
+            return etcd_lock(client, etcd_global_lock_key);
+        });
 
     try {
         current_id = std::stoull(get(client, current_id_key));

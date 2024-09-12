@@ -2,9 +2,9 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/caches/lru_cache.h"
-#include "common/etcd/service_discovery/ec_get_handler.h"
-#include "common/etcd/service_discovery/ec_group_maintainer.h"
-#include "common/etcd/service_discovery/ec_load_balancer.h"
+#include "common/etcd/ec_groups/ec_get_handler.h"
+#include "common/etcd/ec_groups/ec_group_maintainer.h"
+#include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"

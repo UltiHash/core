@@ -48,8 +48,8 @@ service_registry::registration::registration(
 
 void service_registry::registration::monitor(
     etcd_service_attributes key, const std::function<std::string()>& func) {
-    auto key_base =
-        get_attributes_path(m_service_role, m_id) + get_etcd_key_string(key);
+    auto key_base = get_attributes_path(m_service_role, m_id) +
+                    get_etcd_service_attribute_string(key);
     std::lock_guard<std::mutex> lock(m_attributes_mutex);
     m_monitored_attributes.emplace(key_base, func);
     m_cv.notify_all();
@@ -77,11 +77,14 @@ service_registry::register_service(const server_config& config) {
         get_attributes_path(m_service_role, m_id);
 
     const std::map<std::string, std::string> kv_pairs = {
-        {attribute_key_base + get_etcd_key_string(uh::cluster::ENDPOINT_HOST),
+        {attribute_key_base +
+             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST),
          get_host()},
-        {attribute_key_base + get_etcd_key_string(uh::cluster::ENDPOINT_PORT),
+        {attribute_key_base +
+             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT),
          std::to_string(config.port)},
-        {attribute_key_base + get_etcd_key_string(uh::cluster::ENDPOINT_PID),
+        {attribute_key_base +
+             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PID),
          std::to_string(getpid())},
         {announced_key_base, {}},
     };

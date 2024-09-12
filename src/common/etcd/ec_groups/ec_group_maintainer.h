@@ -2,7 +2,6 @@
 #define EC_GROUP_MAINTAINER_H
 #include "common/ec/ec_scheme.h"
 #include "common/service_interfaces/storage_interface.h"
-#include "service_monitor.h"
 #include "storage/interfaces/storage_group.h"
 
 namespace uh::cluster {
@@ -35,6 +34,7 @@ struct ec_group_maintainer : public service_monitor<storage_interface> {
 private:
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& cl) override {
+
         const auto gid = m_scheme.calc_group_id(id);
         const auto nid = m_scheme.calc_group_node_id(id);
 
@@ -45,7 +45,7 @@ private:
             it = m_ec_groups.emplace_hint(
                 it, gid,
                 std::make_shared<storage_group>(m_ioc, m_scheme.data_nodes(),
-                                                m_scheme.ec_nodes(),
+                                                m_scheme.ec_nodes(), gid,
                                                 m_etcd_client));
         }
         it->second->insert(id, nid, cl);

@@ -80,10 +80,8 @@ constexpr std::string get_unit_string(metric_unit unit) {
     return "";
 }
 
-inline role global_service_role;
-
 void measure_message_type(message_type type);
-void initialize_metrics_exporter(role service_role, const std::string& endpoint,
+void initialize_metrics_exporter(const std::string& endpoint,
                                  unsigned interval);
 
 template <metric_type type, metric_unit unit = count,

@@ -1,24 +1,45 @@
 #ifndef PERFORMER_RECOVERY_MODULE_H
 #define PERFORMER_RECOVERY_MODULE_H
-#include "recovery_module.h"
+#include "common/coroutines/coro_util.h"
+#include "common/ec/ec_interface.h"
+#include "common/etcd/ec_groups/ec_group_attributes.h"
+#include "common/etcd/service_discovery/storage_service_get_handler.h"
+#include "common/telemetry/log.h"
+#include "common/utils/address_utils.h"
+#include "common/utils/pointer_traits.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
+
+#include <boost/asio/co_spawn.hpp>
 
 namespace uh::cluster {
 
-struct recovery_module_factory;
-
-class performer_recovery_module : public recovery_module {
+class performer_recovery_module {
 public:
-    void async_check_recover(std::atomic<ec_status>& status) override {
-        boost::asio::co_spawn(
-            m_ioc, recover(status), [](const std::exception_ptr& e) {
-                if (e)
-                    try {
-                        std::rethrow_exception(e);
-                    } catch (const std::exception& ex) {
-                        LOG_ERROR() << "failure in recovery: " << ex.what();
-                    }
-            });
+    performer_recovery_module(storage_service_get_handler& getter,
+                              boost::asio::io_context& ioc, ec_interface& ec,
+                              ec_group_attributes& attributes)
+        : m_getter(getter),
+          m_ioc(ioc),
+          m_ec_calc(ec),
+          m_attributes(attributes) {}
+
+    void async_check_recover(std::atomic<ec_status>& status,
+                             size_t group_size) {
+        if (m_getter.size() == 0) {
+            set_status(status, empty);
+        } else if (m_getter.size() < group_size) {
+            set_status(status, degraded);
+        } else {
+            boost::asio::co_spawn(
+                m_ioc, recover(status), [](const std::exception_ptr& e) {
+                    if (e)
+                        try {
+                            std::rethrow_exception(e);
+                        } catch (const std::exception& ex) {
+                            LOG_ERROR() << "failure in recovery: " << ex.what();
+                        }
+                });
+        }
     }
 
 private:
@@ -30,16 +51,21 @@ private:
     };
 
     coro<void> recover(std::atomic<ec_status>& status) {
+        LOG_INFO() << "start check recovery";
         auto rinfo = co_await check_recovery();
         if (rinfo.healthy) {
-            status = healthy;
-            // TODO publish on etcd
+            LOG_INFO() << "status healthy for group "
+                       << m_attributes.group_id();
+            set_status(status, healthy);
             co_return;
         }
 
+        LOG_INFO() << "starting recovery for group " << m_attributes.group_id();
+
+        set_status(status, recovering);
+
         auto nodes = m_getter.get_services();
-        status = recovering;
-        const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo.ctx);
+        const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo);
         unique_buffer buf(RECOVERY_CHUNK_SIZE);
         uint128_t recovered_size = 0;
         while (recovered_size < rinfo.recover_size) {
@@ -78,8 +104,12 @@ private:
             }
             recovered_size += size;
         }
-        // TODO publish on etcd
-        status = healthy;
+        set_status(status, healthy);
+    }
+
+    void set_status(std::atomic<ec_status>& status, ec_status value) {
+        m_attributes.set_status(value);
+        status = value;
     }
 
     coro<recovery_info> check_recovery() {
@@ -136,24 +166,30 @@ private:
         return addr;
     }
 
-    coro<std::map<size_t, size_t>> get_ds_id_used_map(context& ctx) {
-        const auto maps =
-            co_await run_for_all<std::map<size_t, size_t>,
-                                 std::shared_ptr<storage_interface>>(
-                m_ioc,
-                [&ctx](size_t, std::shared_ptr<storage_interface> dn)
-                    -> coro<std::map<size_t, size_t>> {
-                    if (!dn) {
-                        throw std::runtime_error("inaccessible data service");
-                    }
-                    co_return co_await dn->get_ds_size_map(ctx);
-                },
-                m_getter.get_services());
+    coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {
+        const auto maps = co_await run_for_all<
+            std::map<size_t, size_t>, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&ctx = rinfo.ctx](size_t, std::shared_ptr<storage_interface> dn)
+                -> coro<std::map<size_t, size_t>> {
+                if (!dn) {
+                    throw std::runtime_error("inaccessible data service");
+                }
+                co_return co_await dn->get_ds_size_map(ctx);
+            },
+            m_getter.get_services());
 
-        const auto& map1 = maps.front();
-        for (size_t i = 1; i < maps.size(); i++) {
+        auto f = std::ranges::find(rinfo.stats, valid);
+        if (f == rinfo.stats.cend()) {
+            throw std::logic_error("no valid nodes are found");
+        }
+
+        const size_t index = std::distance(f, rinfo.stats.begin());
+        const auto& map1 = maps.at(index);
+        for (size_t i = index + 1; i < maps.size(); i++) {
             const auto& map2 = maps.at(i);
-            if (!std::ranges::equal(map1, map2)) {
+            if (rinfo.stats.at(i) == valid and
+                !std::ranges::equal(map1, map2)) {
                 throw std::runtime_error(
                     "inconsistent state of used spaces in different data "
                     "stores in storage services");
@@ -163,19 +199,10 @@ private:
         co_return maps.front();
     }
 
-    performer_recovery_module(storage_service_get_handler& getter,
-                              boost::asio::io_context& ioc, ec_interface& ec,
-                              etcd::SyncClient& etcd_client)
-        : m_getter(getter),
-          m_ioc(ioc),
-          m_ec_calc(ec),
-          m_etcd_client(etcd_client) {}
-
     storage_service_get_handler& m_getter;
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
-    etcd::SyncClient& m_etcd_client;
-    friend recovery_module_factory;
+    ec_group_attributes& m_attributes;
 };
 
 } // end namespace uh::cluster

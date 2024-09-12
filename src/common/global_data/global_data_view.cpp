@@ -17,6 +17,7 @@ global_data_view::global_data_view(
     m_service_maintainer.add_monitor(m_ec_maintainer);
     m_ec_maintainer.add_monitor(m_load_balancer);
     m_ec_maintainer.add_monitor(m_basic_getter);
+
     m_load_balancer.get();
 }
 
