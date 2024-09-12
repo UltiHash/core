@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_HTTP_HTTP_REQUEST_H
-#define ENTRYPOINT_HTTP_HTTP_REQUEST_H
+#ifndef CORE_ENTRYPOINT_HTTP_REQUEST_H
+#define CORE_ENTRYPOINT_HTTP_REQUEST_H
 
 #include "beast_utils.h"
 #include "command_exception.h"
@@ -8,20 +8,21 @@
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
+#include "entrypoint/variables.h"
 
 #include <map>
 #include <span>
 
-namespace uh::cluster {
+namespace uh::cluster::ep::http {
 
-using ep::http::method;
-
-class http_request {
+class request {
 public:
-    http_request(ep::http::partial_parse_result& req,
-                 std::unique_ptr<ep::http::body> body);
+    request(boost::beast::http::request<boost::beast::http::empty_body> headers,
+            std::unique_ptr<body> body, boost::asio::ip::tcp::endpoint peer);
 
-    [[nodiscard]] http::verb method() const;
+    request(partial_parse_result& req, std::unique_ptr<body> body);
+
+    [[nodiscard]] verb method() const;
 
     std::string_view target() const;
     const std::string& path() const;
@@ -57,14 +58,16 @@ public:
     const uh::cluster::context& context() const;
     uh::cluster::context& context();
 
-    const std::optional<ep::user::user>& authenticated_user() const;
-    void authenticated_user(std::optional<ep::user::user> user);
+    const user::user& authenticated_user() const;
+    void authenticated_user(user::user user);
+
+    const variables& vars() const { return m_vars; }
 
 private:
-    friend std::ostream& operator<<(std::ostream& out, const http_request& req);
+    friend std::ostream& operator<<(std::ostream& out, const request& req);
 
-    boost::beast::http::request<http::empty_body> m_req;
-    std::unique_ptr<ep::http::body> m_body;
+    boost::beast::http::request<boost::beast::http::empty_body> m_req;
+    std::unique_ptr<body> m_body;
     boost::asio::ip::tcp::endpoint m_peer;
 
     std::string m_bucket_id{};
@@ -72,7 +75,8 @@ private:
     std::map<std::string, std::string> m_params;
     std::string m_path;
     std::string m_query;
-    std::optional<ep::user::user> m_authenticated_user;
+    user::user m_authenticated_user;
+    variables m_vars;
 
     uh::cluster::context m_ctx;
 };
@@ -87,17 +91,16 @@ private:
  *   converted in which case an InvalidArgument command_exception is thrown
  */
 template <typename return_type = std::string>
-std::optional<return_type> query(const http_request& req,
-                                 const std::string& name);
+std::optional<return_type> query(const request& req, const std::string& name);
 
 template <>
-inline std::optional<std::string> query<std::string>(const http_request& req,
+inline std::optional<std::string> query<std::string>(const request& req,
                                                      const std::string& name) {
     return req.query(name);
 }
 
 template <>
-inline std::optional<std::size_t> query<std::size_t>(const http_request& req,
+inline std::optional<std::size_t> query<std::size_t>(const request& req,
                                                      const std::string& name) {
     auto value = req.query(name);
     if (!value) {
@@ -113,7 +116,7 @@ inline std::optional<std::size_t> query<std::size_t>(const http_request& req,
 }
 
 template <>
-inline std::optional<bool> query<bool>(const http_request& req,
+inline std::optional<bool> query<bool>(const request& req,
                                        const std::string& name) {
     auto value = req.query(name);
     if (!value) {
@@ -123,8 +126,8 @@ inline std::optional<bool> query<bool>(const http_request& req,
     return to_bool(*value);
 }
 
-std::ostream& operator<<(std::ostream& out, const http_request& req);
+std::ostream& operator<<(std::ostream& out, const request& req);
 
-} // namespace uh::cluster
+} // namespace uh::cluster::ep::http
 
 #endif

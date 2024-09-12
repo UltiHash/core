@@ -1,57 +1,43 @@
-#include "http_response.h"
+#include "response.h"
 #include "common/coroutines/awaitable_promise.h"
 #include "common/types/common_types.h"
 #include "common/utils/double_buffer.h"
 #include "common/utils/random.h"
+#include "string_body.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
 
-namespace uh::cluster {
+namespace uh::cluster::ep::http {
 
 static constexpr std::size_t BUFFER_CHUNK_SIZE = 32 * MEBI_BYTE;
 
 namespace asio = boost::asio;
 
-string_body::string_body(std::string&& body)
-    : m_body(std::move(body)) {}
+response::response()
+    : response(http::status::ok) {}
 
-std::optional<std::size_t> string_body::length() const { return m_body.size(); }
-
-coro<std::size_t> string_body::read(std::span<char> buffer) {
-    std::size_t count = std::min(buffer.size(), m_body.size());
-
-    memcpy(buffer.data(), m_body.data(), count);
-    m_body = m_body.substr(count);
-
-    co_return count;
-}
-
-http_response::http_response()
-    : http_response(http::status::ok) {}
-
-http_response::http_response(http::status status)
+response::response(http::status status)
     : m_res(status, 11),
       m_body(std::make_unique<string_body>("")) {}
 
-void http_response::set_body(
-    std::unique_ptr<uh::cluster::body>&& body) noexcept {
+void response::set_body(std::unique_ptr<http::body>&& body) noexcept {
     m_body = std::move(body);
 }
 
-void http_response::set_original_size(std::size_t original_size) {
+void response::set_original_size(std::size_t original_size) {
     m_res.set("uh-original-size", std::to_string(original_size));
     m_res.set("uh-original-size-mb",
               std::to_string(static_cast<double>(original_size) / MEBI_BYTE));
 }
 
-void http_response::set_effective_size(std::size_t effective_size) {
+void response::set_effective_size(std::size_t effective_size) {
     m_res.set("uh-effective-size", std::to_string(effective_size));
     m_res.set("uh-effective-size-mb",
               std::to_string(static_cast<double>(effective_size) / MEBI_BYTE));
 }
 
-void http_response::set(const std::string& header,
-                        std::optional<std::string> value) {
+void response::set(const std::string& header,
+                   std::optional<std::string> value) {
     if (value) {
         m_res.set(header, *value);
     } else {
@@ -59,8 +45,8 @@ void http_response::set(const std::string& header,
     }
 }
 
-void http_response::set(const std::string& header,
-                        std::optional<std::size_t> value) {
+void response::set(const std::string& header,
+                   std::optional<std::size_t> value) {
     if (value) {
         m_res.set(header, std::to_string(*value));
     } else {
@@ -68,8 +54,7 @@ void http_response::set(const std::string& header,
     }
 }
 
-std::optional<std::string>
-http_response::header(const std::string& name) const {
+std::optional<std::string> response::header(const std::string& name) const {
     auto it = m_res.find(name);
     if (it == m_res.end()) {
         return {};
@@ -78,8 +63,7 @@ http_response::header(const std::string& name) const {
     return it->value();
 }
 
-http_response& operator<<(http_response& res,
-                          const boost::property_tree::ptree& pt) {
+response& operator<<(response& res, const boost::property_tree::ptree& pt) {
     std::ostringstream ss;
 
     res.set("Content-Type", "application/xml");
@@ -97,7 +81,7 @@ http_response& operator<<(http_response& res,
     return res;
 }
 
-std::ostream& operator<<(std::ostream& out, const http_response& res) {
+std::ostream& operator<<(std::ostream& out, const response& res) {
     const auto& base = res.base();
 
     out << base.result_int() << " " << base.reason() << ", ";
@@ -111,7 +95,7 @@ std::ostream& operator<<(std::ostream& out, const http_response& res) {
     return out;
 }
 
-coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
+coro<void> write(asio::ip::tcp::socket& out, response&& res) {
     auto& body = res.body();
 
     res.set("Server", "UltiHash");
@@ -123,8 +107,8 @@ coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
 
     LOG_DEBUG() << out.remote_endpoint() << ", sending response: " << res;
 
-    http::response_serializer<http::empty_body> sr(res.base());
-    http::write_header(out, sr);
+    beast::http::response_serializer<beast::http::empty_body> sr(res.base());
+    beast::http::write_header(out, sr);
 
     using promise_type =
         awaitable_promise<std::size_t, boost::asio::any_io_executor>;
@@ -159,4 +143,4 @@ coro<void> write(asio::ip::tcp::socket& out, http_response&& res) {
     }
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::ep::http

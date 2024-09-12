@@ -1,10 +1,12 @@
 #include "handler.h"
 #include "http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster::ep {
 
 handler::handler(command_factory&& comm_factory,
-                 std::unique_ptr<ep::http::request_factory> factory,
+                 std::unique_ptr<request_factory> factory,
                  std::unique_ptr<ep::policy::module> policy)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
@@ -21,8 +23,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         /*
          * Note: livetime of response must not exceed livetime of request.
          */
-        std::unique_ptr<http_request> req;
-        http_response resp;
+        std::unique_ptr<request> req;
+        response resp;
         bool keep_alive = false;
 
         try {
@@ -45,7 +47,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
             resp = make_response(command_exception(
-                http::status::bad_request, "BadRequest", "bad request"));
+                status::bad_request, "BadRequest", "bad request"));
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
 
@@ -62,8 +64,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<http_response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                            http_request& req) const {
+coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                       request& req) const {
 
     auto cmd = m_command_factory.create(req);
 
@@ -71,14 +73,14 @@ coro<http_response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     if (m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
-        throw command_exception(http::status::forbidden, "AccessDenied",
+        throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
         LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
-        co_await write(s, http_response(http::status::continue_));
+        co_await write(s, response(status::continue_));
     }
 
     co_return co_await cmd->handle(req);

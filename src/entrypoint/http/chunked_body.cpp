@@ -16,6 +16,8 @@ chunked_body::chunked_body(partial_parse_result& req, trailing_headers trailing)
                       asio::buffer(req.buffer.data(), req.buffer.size()));
 }
 
+std::optional<std::size_t> chunked_body::length() const { return {}; }
+
 coro<std::size_t> chunked_body::read(std::span<char> dest) {
     if (m_end) {
         throw std::runtime_error("trying to read past end of data");

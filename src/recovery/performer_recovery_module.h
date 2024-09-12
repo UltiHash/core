@@ -67,6 +67,7 @@ private:
         auto nodes = m_getter.get_services();
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo);
         unique_buffer buf(RECOVERY_CHUNK_SIZE);
+
         uint128_t recovered_size = 0;
         while (recovered_size < rinfo.recover_size) {
             auto size = std::min(uint128_t{RECOVERY_CHUNK_SIZE},
@@ -203,6 +204,7 @@ private:
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
     ec_group_attributes& m_attributes;
+
 };
 
 } // end namespace uh::cluster

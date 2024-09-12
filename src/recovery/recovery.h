@@ -9,10 +9,6 @@
 
 namespace uh::cluster {
 
-template <size_t num> struct test_desc {
-    ~test_desc() { std::cout << "test desc " << num << std::endl; }
-};
-
 class recovery {
 public:
     recovery(const service_config& service, const recovery_config& sc)
@@ -50,16 +46,11 @@ private:
     std::condition_variable m_cv;
     std::mutex m_mutex;
     bool m_stopped = false;
-    test_desc<4> t4;
 
     io_context_runner m_ioc_runner;
-    test_desc<3> t3;
     service_maintainer<storage_interface> m_storage_maintainer;
-    test_desc<2> t2;
     ec_group_maintainer m_ec_maintainer;
-    test_desc<1> t1;
     ec_get_handler m_getter;
-    test_desc<0> t0;
 };
 } // end namespace uh::cluster
 #endif // CORE_RECOVERY_H

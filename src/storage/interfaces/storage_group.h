@@ -26,6 +26,7 @@ struct storage_group : public storage_interface {
         }
     }
 
+
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {
         m_nodes.at(group_nid) = node;
@@ -175,6 +176,7 @@ private:
     ec_group_attributes m_attributes;
     std::optional<status_watcher> m_status_watcher;
     std::optional<performer_recovery_module> m_rec_mod;
+
 };
 
 } // namespace uh::cluster

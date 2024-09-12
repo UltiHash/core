@@ -8,7 +8,7 @@ namespace uh::cluster::ep::policy {
  * https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html#policy-eval-denyallow
  *  especially the flow chart)
  */
-effect module::check(const http_request& request, const command& cmd) const {
+effect module::check(const http::request& request, const command& cmd) const {
     for (const auto& policy : m_policies) {
         auto result = policy.check(request, cmd);
         if (result.value_or(effect::allow) == effect::deny) {
@@ -18,12 +18,10 @@ effect module::check(const http_request& request, const command& cmd) const {
 
     // TODO Does the requested resource have a resource-based policy?
 
-    if (const auto& user = request.authenticated_user(); user) {
-        for (const auto& policy : user->policies) {
-            auto result = policy.check(request, cmd);
-            if (result.value_or(effect::deny) == effect::allow) {
-                return effect::allow;
-            }
+    for (const auto& policy : request.authenticated_user().policies) {
+        auto result = policy.check(request, cmd);
+        if (result.value_or(effect::deny) == effect::allow) {
+            return effect::allow;
         }
     }
 

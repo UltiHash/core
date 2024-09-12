@@ -14,7 +14,7 @@ public:
     policy(std::string id, std::list<matcher> matchers,
            ep::policy::effect effect);
 
-    std::optional<ep::policy::effect> check(const http_request& req,
+    std::optional<ep::policy::effect> check(const http::request& req,
                                             const command& cmd) const;
 
     const std::string& id() const { return m_id; }
