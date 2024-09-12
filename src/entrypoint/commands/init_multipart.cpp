@@ -4,13 +4,15 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 namespace {
 
-http_response get_response(const http_request& req,
-                           const std::string& upload_id) noexcept {
-    http_response res;
+response get_response(const request& req,
+                      const std::string& upload_id) noexcept {
+    response res;
 
     boost::property_tree::ptree pt;
     pt.put("InitiateMultipartUploadResult.Bucket", req.bucket());
@@ -28,13 +30,13 @@ init_multipart::init_multipart(directory& dir, multipart_state& uploads)
     : m_directory(dir),
       m_uploads(uploads) {}
 
-bool init_multipart::can_handle(const http_request& req) {
-    return req.method() == method::post &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.query("uploads");
+bool init_multipart::can_handle(const request& req) {
+    return req.method() == verb::post && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           req.query("uploads");
 }
 
-coro<http_response> init_multipart::handle(http_request& req) {
+coro<response> init_multipart::handle(request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
     try {
         co_await m_directory.bucket_exists(req.bucket());

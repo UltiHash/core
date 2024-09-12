@@ -3,12 +3,13 @@
 #include "common/utils/double_buffer.h"
 
 using namespace boost;
+using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
 namespace {
 
-coro<std::size_t> fill(http_request& req, std::vector<char>& buffer) {
+coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
     buffer.resize(buffer.capacity());
 
     auto read = co_await req.read_body(buffer);
@@ -46,14 +47,13 @@ put_object::put_object(boost::asio::io_context& ioc,
       m_limits(uhlimits),
       m_dedup(dedup) {}
 
-bool put_object::can_handle(const http_request& req) {
-    return req.method() == method::put &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && !req.has_query() &&
-           !req.header("x-amz-copy-source");
+bool put_object::can_handle(const request& req) {
+    return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           !req.has_query() && !req.header("x-amz-copy-source");
 }
 
-coro<void> put_object::validate(const http_request& req) {
+coro<void> put_object::validate(const request& req) {
     try {
         co_await m_dir.bucket_exists(req.bucket());
     } catch (const error_exception& e) {
@@ -63,10 +63,10 @@ coro<void> put_object::validate(const http_request& req) {
     }
 }
 
-coro<http_response> put_object::handle(http_request& req) {
+coro<response> put_object::handle(request& req) {
 
     metric<entrypoint_put_object_req>::increase(1);
-    http_response res;
+    response res;
 
     auto content_length = req.content_length();
     try {
@@ -107,7 +107,7 @@ coro<http_response> put_object::handle(http_request& req) {
     co_return res;
 }
 
-coro<dedupe_response> put_object::put_large_object(http_request& req,
+coro<dedupe_response> put_object::put_large_object(request& req,
                                                    md5& hash) const {
     const auto buffer_size = m_config.buffer_size;
     double_buffer b(buffer_size);
@@ -138,7 +138,7 @@ coro<dedupe_response> put_object::put_large_object(http_request& req,
     co_return rv;
 }
 
-coro<dedupe_response> put_object::put_small_object(http_request& req,
+coro<dedupe_response> put_object::put_small_object(request& req,
                                                    md5& hash) const {
     auto content_length = req.content_length();
 

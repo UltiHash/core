@@ -12,9 +12,9 @@ class delete_objects : public command {
 public:
     delete_objects(directory&, global_data_view&, limits&);
 
-    static bool can_handle(const http_request& req);
+    static bool can_handle(const ep::http::request& req);
 
-    coro<http_response> handle(http_request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 

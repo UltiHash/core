@@ -2,12 +2,13 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 namespace {
 
-http_response
-get_response(const std::vector<std::string>& buckets_found) noexcept {
+response get_response(const std::vector<std::string>& buckets_found) noexcept {
 
     boost::property_tree::ptree pt;
     boost::property_tree::ptree buckets_node;
@@ -20,7 +21,7 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 
     pt.add_child("ListAllMyBucketsResult.Buckets", buckets_node);
 
-    http_response res;
+    response res;
     res << pt;
 
     return res;
@@ -31,12 +32,12 @@ get_response(const std::vector<std::string>& buckets_found) noexcept {
 list_buckets::list_buckets(directory& dir)
     : m_directory(dir) {}
 
-bool list_buckets::can_handle(const http_request& req) {
-    return req.method() == method::get && req.bucket().empty() &&
+bool list_buckets::can_handle(const request& req) {
+    return req.method() == verb::get && req.bucket().empty() &&
            req.object_key().empty() && !req.has_query();
 }
 
-coro<http_response> list_buckets::handle(http_request& req) {
+coro<response> list_buckets::handle(request& req) {
     metric<entrypoint_list_buckets_req>::increase(1);
     auto buckets = co_await m_directory.list_buckets();
     co_return get_response(buckets);

@@ -2,6 +2,8 @@
 #include "common/crypto/hash.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 multipart::multipart(
@@ -10,25 +12,24 @@ multipart::multipart(
     : m_dedupe_services(dedupe_services),
       m_uploads(uploads) {}
 
-bool multipart::can_handle(const http_request& req) {
-    return req.method() == method::put &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.query("partNumber") &&
-           req.query("uploadId");
+bool multipart::can_handle(const request& req) {
+    return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           req.query("partNumber") && req.query("uploadId");
 }
 
-coro<void> multipart::validate(const http_request& req) {
+coro<void> multipart::validate(const request& req) {
     std::size_t part_num = *query<std::size_t>(req, "partNumber");
 
     if (part_num < 1 || part_num > 10000) {
-        throw command_exception(http::status::bad_request, "BadPartNumber",
+        throw command_exception(status::bad_request, "BadPartNumber",
                                 "part number is invalid");
     }
 
     co_return;
 }
 
-coro<http_response> multipart::handle(http_request& req) {
+coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -43,7 +44,7 @@ coro<http_response> multipart::handle(http_request& req) {
 
     auto md5 = to_hex(md5::from_buffer(buffer.span()));
 
-    http_response res;
+    response res;
     res.set("ETag", md5);
 
     co_await m_uploads.append_upload_part_info(

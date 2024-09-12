@@ -13,11 +13,11 @@ public:
     explicit multipart(roundrobin_load_balancer<deduplicator_interface>&,
                        multipart_state&);
 
-    static bool can_handle(const http_request& req);
+    static bool can_handle(const ep::http::request& req);
 
-    coro<void> validate(const http_request& req) override;
+    coro<void> validate(const ep::http::request& req) override;
 
-    coro<http_response> handle(http_request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 

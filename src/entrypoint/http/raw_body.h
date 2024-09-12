@@ -10,6 +10,8 @@ class raw_body : public body {
 public:
     raw_body(partial_parse_result& req, std::size_t length);
 
+    std::optional<std::size_t> length() const override;
+
     coro<std::size_t> read(std::span<char> dest) override;
 
 private:

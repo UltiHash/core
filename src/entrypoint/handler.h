@@ -17,8 +17,8 @@ public:
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
-    coro<http_response> handle_request(boost::asio::ip::tcp::socket& s,
-                                       http_request& req) const;
+    coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
+                                        http::request& req) const;
 
 private:
     command_factory m_command_factory;

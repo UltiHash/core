@@ -22,7 +22,7 @@
 namespace uh::cluster {
 
 std::unique_ptr<command>
-command_factory::create(const http_request& req) const {
+command_factory::create(const ep::http::request& req) const {
     if (get_object::can_handle(req)) {
         return std::make_unique<get_object>(m_directory, m_gdv);
     }
@@ -80,7 +80,7 @@ command_factory::create(const http_request& req) const {
         return std::make_unique<abort_multipart>(m_uploads);
     }
 
-    throw command_exception(http::status::bad_request, "CommandNotFound",
+    throw command_exception(ep::http::status::bad_request, "CommandNotFound",
                             "no such command found");
 }
 limits& command_factory::get_limits() const { return m_limits; }

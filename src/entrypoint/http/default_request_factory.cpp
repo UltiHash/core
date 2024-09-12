@@ -40,13 +40,13 @@ std::unique_ptr<ep::http::body> make_body(partial_parse_result& req) {
 
 } // namespace
 
-coro<std::unique_ptr<http_request>>
+coro<std::unique_ptr<request>>
 default_request_factory::create(ip::tcp::socket& sock) {
 
     auto req = co_await partial_parse_result::read(sock);
     auto body = make_body(req);
 
-    co_return std::make_unique<http_request>(req, std::move(body));
+    co_return std::make_unique<request>(req, std::move(body));
 }
 
 } // namespace uh::cluster::ep::http

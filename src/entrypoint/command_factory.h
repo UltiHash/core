@@ -27,7 +27,7 @@ struct command_factory {
           m_limits(uhlimits) {}
 
     [[nodiscard]] std::unique_ptr<command>
-    create(const http_request& req) const;
+    create(const ep::http::request& req) const;
 
     [[nodiscard]] limits& get_limits() const;
     [[nodiscard]] directory& get_directory() const;

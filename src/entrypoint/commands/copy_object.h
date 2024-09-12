@@ -11,14 +11,14 @@ class copy_object : public command {
 public:
     copy_object(directory&, global_data_view&);
 
-    static bool can_handle(const http_request& req);
+    static bool can_handle(const ep::http::request& req);
 
-    coro<http_response> handle(http_request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 
 private:
-    coro<void> copy_internal(http_request& req, std::string& src_bucket,
+    coro<void> copy_internal(ep::http::request& req, std::string& src_bucket,
                              std::string& src_key);
 
     directory& m_directory;

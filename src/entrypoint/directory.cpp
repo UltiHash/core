@@ -2,6 +2,8 @@
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 coro<void> directory::put_object(const std::string& bucket, const object& obj) {
@@ -18,7 +20,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
                             bucket, obj.name, span, obj.addr->data_size(),
                             obj.etag, obj.mime);
     } catch (const std::exception& e) {
-        throw command_exception(http::status::not_found, "NoSuchBucket",
+        throw command_exception(status::not_found, "NoSuchBucket",
                                 "bucket not found");
     }
 }
@@ -31,7 +33,7 @@ coro<object> directory::get_object(const std::string& bucket,
         object_id);
 
     if (!row) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
+        throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 
@@ -69,7 +71,7 @@ coro<object> directory::head_object(const std::string& bucket,
                             bucket, object_id);
 
     if (!metadata) {
-        throw command_exception(http::status::not_found, "NoSuchKey",
+        throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 
@@ -89,7 +91,7 @@ coro<void> directory::put_bucket(const std::string& bucket) {
     try {
         co_await dir->execv("CALL uh_create_bucket($1)", bucket);
     } catch (const std::exception&) {
-        throw command_exception(http::status::conflict, "BucketAlreadyExists",
+        throw command_exception(status::conflict, "BucketAlreadyExists",
                                 "The requested bucket name is not available.");
     }
 }
@@ -114,7 +116,7 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 
     if (row->number(0) > 0) {
         throw command_exception(
-            http::status::conflict, "BucketNotEmpty",
+            status::conflict, "BucketNotEmpty",
             "The bucket that you tried to delete is not empty.");
     }
 
@@ -195,14 +197,14 @@ coro<std::size_t> directory::data_size() {
 
 void directory::validate_bucket_name(const std::string& bucket_name) {
     if (bucket_name.size() < 3 || bucket_name.size() > 63) {
-        throw command_exception(http::status::bad_request, "InvalidBucketName",
+        throw command_exception(status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid length");
     }
 
     std::regex bucket_pattern(
         R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
     if (!std::regex_match(bucket_name, bucket_pattern)) {
-        throw command_exception(http::status::bad_request, "InvalidBucketName",
+        throw command_exception(status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid characters");
     }
 }

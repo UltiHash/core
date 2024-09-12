@@ -4,6 +4,8 @@
 #include "common/telemetry/log.h"
 #include "entrypoint/http/command_exception.h"
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 multipart_state::multipart_state(boost::asio::io_context& ioc,
@@ -41,7 +43,7 @@ coro<upload_info> multipart_state::details(const std::string& id) {
             "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
             id);
         if (!row) {
-            throw command_exception(http::status::not_found, "NoSuchUpload",
+            throw command_exception(status::not_found, "NoSuchUpload",
                                     "upload id not found");
         }
 

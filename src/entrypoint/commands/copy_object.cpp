@@ -5,19 +5,21 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/url/url.hpp>
 
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 copy_object::copy_object(directory& dir, global_data_view& gdv)
     : m_directory(dir),
       m_gdv(gdv) {}
 
-bool copy_object::can_handle(const http_request& req) {
-    return req.method() == method::put &&
-           req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           !req.object_key().empty() && req.header("x-amz-copy-source");
+bool copy_object::can_handle(const request& req) {
+    return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
+           !req.bucket().empty() && !req.object_key().empty() &&
+           req.header("x-amz-copy-source");
 }
 
-coro<http_response> copy_object::handle(http_request& req) {
+coro<response> copy_object::handle(request& req) {
     auto copy_source = req.header("x-amz-copy-source");
     if (!copy_source) {
         throw std::runtime_error("x-amz-copy-source not defined");
@@ -26,7 +28,7 @@ coro<http_response> copy_object::handle(http_request& req) {
     boost::urls::url url;
     url.set_encoded_path(*copy_source);
 
-    auto [src_bucket, src_key] = ep::http::extract_bucket_and_object(url);
+    auto [src_bucket, src_key] = extract_bucket_and_object(url);
     co_await copy_internal(req, src_bucket, src_key);
 
     auto obj = co_await m_directory.head_object(req.bucket(), req.object_key());
@@ -37,14 +39,13 @@ coro<http_response> copy_object::handle(http_request& req) {
         pt.put("CopyObjectResult.ETag", *obj.etag);
     }
 
-    http_response res;
+    response res;
     res << pt;
 
     co_return res;
 }
 
-coro<void> copy_object::copy_internal(http_request& req,
-                                      std::string& src_bucket,
+coro<void> copy_object::copy_internal(request& req, std::string& src_bucket,
                                       std::string& src_key) {
     // this method had to be extracted as otherwise GCC 12.3.0 and 13.1.0
     // produce compile errors when built in RelWithDebInfo mode:

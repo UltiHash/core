@@ -12,7 +12,7 @@ class auth_request_factory : public request_factory {
 public:
     auth_request_factory(std::unique_ptr<user::backend> users);
 
-    coro<std::unique_ptr<http_request>>
+    coro<std::unique_ptr<request>>
     create(boost::asio::ip::tcp::socket&) override;
 
 private:

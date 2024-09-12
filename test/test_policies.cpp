@@ -7,6 +7,7 @@
 // ------------- Tests Suites Follow --------------
 
 using namespace uh::cluster;
+using namespace uh::cluster::ep::http;
 using namespace uh::cluster::ep::policy;
 using namespace uh::cluster::ep::user;
 
@@ -16,10 +17,8 @@ class mock_command : public uh::cluster::command {
 public:
     mock_command(const std::string& id)
         : m_id(id) {}
-    coro<http_response> handle(http_request&) override {
-        co_return http_response{};
-    }
-    coro<void> validate(const http_request& req) override { co_return; }
+    coro<response> handle(request&) override { co_return response{}; }
+    coro<void> validate(const request& req) override { co_return; }
     std::string action_id() const override { return m_id; }
 
 private:
@@ -29,6 +28,7 @@ private:
 class mock_body : public uh::cluster::ep::http::body {
 public:
     coro<std::size_t> read(std::span<char>) override { co_return 0ull; }
+    std::optional<std::size_t> length() const override { return {}; }
 };
 
 auto make_request(const std::string& code,
@@ -38,8 +38,8 @@ auto make_request(const std::string& code,
 
     parser.put(boost::asio::buffer(code), ec);
 
-    auto req = http_request(parser.get(), std::make_unique<mock_body>(),
-                            boost::asio::ip::tcp::endpoint());
+    auto req = request(parser.get(), std::make_unique<mock_body>(),
+                       boost::asio::ip::tcp::endpoint());
 
     req.authenticated_user(user{.arn = principal});
     return req;

@@ -7,7 +7,7 @@ namespace uh::cluster::ep::http {
 
 class default_request_factory : public request_factory {
 public:
-    coro<std::unique_ptr<http_request>>
+    coro<std::unique_ptr<request>>
     create(boost::asio::ip::tcp::socket&) override;
 };
 

@@ -10,9 +10,9 @@ class head_object : public command {
 public:
     explicit head_object(directory&);
 
-    static bool can_handle(const http_request& req);
+    static bool can_handle(const ep::http::request& req);
 
-    coro<http_response> handle(http_request& req) override;
+    coro<ep::http::response> handle(ep::http::request& req) override;
 
     std::string action_id() const override;
 
