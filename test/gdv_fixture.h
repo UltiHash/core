@@ -1,6 +1,8 @@
 #ifndef UH_CLUSTER_GDV_FIXTURE_H
 #define UH_CLUSTER_GDV_FIXTURE_H
 
+#include "recovery/recovery.h"
+
 #include <common/global_data/global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
@@ -32,7 +34,19 @@ public:
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
 
+        m_recovery = std::make_unique<recovery>(service_config{}, recovery_config{});
         int i = 0;
+
+        m_ioc.post([this]{m_recovery->run();});
+        m_threads.emplace_back([this, i] {
+            try {
+                m_ioc.run();
+            } catch (std::exception& e) {
+                m_excp_ptrs[i] = std::current_exception();
+            }
+        });
+        i++;
+
         for (const auto& node : m_storage_instances) {
             m_ioc.post([&node] { node->run(); });
             m_threads.emplace_back([this, i] {
@@ -62,12 +76,16 @@ public:
     }
 
     void teardown() {
-
         for (const auto& node : m_storage_instances) {
             node->stop();
         }
 
         m_storage_instances.clear();
+
+        if (m_recovery) {
+            m_recovery->stop();
+            m_recovery.reset();
+        }
 
         for (auto& thread : m_threads) {
             thread.join();
@@ -103,13 +121,14 @@ private:
     }
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
-    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
+    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 2};
     std::vector<temp_directory> m_temp_dirs;
     etcd::SyncClient m_etcd_client;
     global_data_view_config m_gdv_config;
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
+    std::unique_ptr<recovery> m_recovery;
     std::vector<std::unique_ptr<storage>> m_storage_instances;
     service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;

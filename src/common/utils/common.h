@@ -20,6 +20,8 @@ enum role : uint8_t {
     RECOVERY_SERVICE
 };
 
+inline role global_service_role;
+
 const std::map<std::string, role> role_by_abbreviation = {
     {"storage", STORAGE_SERVICE},
     {"deduplicator", DEDUPLICATOR_SERVICE},

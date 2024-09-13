@@ -5,30 +5,10 @@
 #include "common/etcd/namespace.h"
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "roundrobin_load_balancer.h"
 #include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 #include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 
 namespace uh::cluster {
-
-enum class etcd_action : uint8_t {
-    create = 0,
-    set,
-    erase,
-};
-
-inline etcd_action get_etcd_action_enum(const std::string& action_str) {
-    static const std::map<std::string, etcd_action> etcd_action = {
-        {"create", etcd_action::create},
-        {"set", etcd_action::set},
-        {"delete", etcd_action::erase},
-    };
-
-    if (const auto f = etcd_action.find(action_str); f != etcd_action.cend())
-        return f->second;
-
-    throw std::invalid_argument("invalid etcd action");
-}
 
 struct service_endpoint {
     std::size_t id{};
@@ -54,6 +34,7 @@ template <typename service_interface> struct service_maintainer {
                 return m_etcd_client.ls(
                     get_service_root_path(service_interface::service_role));
             });
+
         auto vals = resp.values();
         auto keys = resp.keys();
         for (size_t i = 0; i < vals.size(); i++) {
@@ -82,6 +63,7 @@ template <typename service_interface> struct service_maintainer {
     }
 
     void remove_monitor(service_monitor<service_interface>& monitor) {
+        std::lock_guard l(m_mutex);
         m_monitors.remove_if(
             [&monitor](const service_monitor<service_interface>& m) {
                 return &monitor == &m;
@@ -130,7 +112,8 @@ private:
 
         std::optional<etcd_service_attributes> attribute;
         if (service_attributes_path(path)) {
-            attribute.emplace(get_etcd_key_enum(get_attribute_key(path)));
+            attribute.emplace(
+                get_etcd_service_attribute_enum(get_attribute_key(path)));
             itr->second.attributes.insert_or_assign(*attribute, value);
         }
 
@@ -182,7 +165,8 @@ private:
         }
 
         if (service_attributes_path(path)) {
-            auto attr = get_etcd_key_enum(get_attribute_key(path));
+            auto attr =
+                get_etcd_service_attribute_enum(get_attribute_key(path));
             try {
                 m_detected_service_endpoints.at(id).attributes.erase(attr);
             } catch (...) {

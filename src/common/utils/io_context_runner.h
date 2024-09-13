@@ -42,7 +42,7 @@ public:
         try {
             stop();
         } catch (const std::exception& e) {
-            LOG_ERROR() << "exception thrown in io_context_runner destructor "
+            LOG_ERROR() << "exception thrown in io_context_runner destructor: "
                         << e.what();
         }
     }

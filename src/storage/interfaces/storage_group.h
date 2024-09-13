@@ -5,33 +5,44 @@
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
+#include "common/etcd/ec_groups/status_watcher.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
-#include "recovery/recovery_module_factory.h"
+#include "recovery/recovery_module.h"
 
 namespace uh::cluster {
 
 struct storage_group : public storage_interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
-                  size_t ec_nodes, etcd::SyncClient& etcd_client)
+                  size_t ec_nodes, size_t group_id, etcd::SyncClient& etcd, bool active_recovery)
         : m_nodes(data_nodes + ec_nodes),
           m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
           m_ioc(ioc),
-          m_rec_mod(recovery_module_factory::create(m_getter, m_ioc, *m_ec_calc,
-                                                    etcd_client)) {}
+          m_attributes(group_id, etcd) {
+        if (!active_recovery) {
+            m_status_watcher.emplace(m_attributes, m_status);
+        } else {
+            m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
+        }
+    }
+
 
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {
         m_nodes.at(group_nid) = node;
         m_getter.add_client(id, node);
-        update_status();
+        if (m_rec_mod) {
+            m_rec_mod->async_check_recover(m_status, m_nodes.size());
+        }
     }
 
     void remove(size_t id, size_t group_nid) {
         m_getter.remove_client(id, m_nodes.at(group_nid));
         m_nodes.at(group_nid) = nullptr;
-        update_status();
+        if (m_rec_mod) {
+            m_rec_mod->async_check_recover(m_status, m_nodes.size());
+        }
     }
 
     [[nodiscard]] bool is_healthy() const noexcept {
@@ -153,31 +164,19 @@ struct storage_group : public storage_interface {
             "This operation is not allowed in storage group");
     }
 
+    [[nodiscard]] size_t group_id() const noexcept {
+        return m_attributes.group_id();
+    }
+
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
     storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
-    std::unique_ptr<recovery_module> m_rec_mod;
-
-    void update_status() {
-
-        size_t count = 0;
-        for (const auto& n : m_nodes) {
-            if (n == nullptr) {
-                count++;
-            }
-        }
-
-        if (count == 0) {
-            m_rec_mod->async_check_recover(m_status);
-        } else if (count == m_nodes.size()) {
-            m_status = empty;
-        } else {
-            m_status = degraded;
-        }
-    }
+    ec_group_attributes m_attributes;
+    std::optional<status_watcher> m_status_watcher;
+    std::optional<recovery_module> m_rec_mod;
 };
 
 } // namespace uh::cluster
