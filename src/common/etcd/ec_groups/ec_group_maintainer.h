@@ -9,10 +9,11 @@ namespace uh::cluster {
 struct ec_group_maintainer : public service_monitor<storage_interface> {
 
     ec_group_maintainer(boost::asio::io_context& ioc, size_t data_nodes,
-                        size_t ec_nodes, etcd::SyncClient& etcd_client)
+                        size_t ec_nodes, etcd::SyncClient& etcd_client, bool active_recoverable_groups)
         : m_scheme(data_nodes, ec_nodes),
           m_ioc(ioc),
-          m_etcd_client(etcd_client) {}
+          m_etcd_client(etcd_client),
+            m_active_recoverable_groups(active_recoverable_groups) {}
 
     void add_monitor(service_monitor<storage_group>& monitor) {
 
@@ -46,7 +47,7 @@ private:
                 it, gid,
                 std::make_shared<storage_group>(m_ioc, m_scheme.data_nodes(),
                                                 m_scheme.ec_nodes(), gid,
-                                                m_etcd_client));
+                                                m_etcd_client, m_active_recoverable_groups));
         }
         it->second->insert(id, nid, cl);
 
@@ -57,6 +58,7 @@ private:
 
     void remove_client(size_t id,
                        const std::shared_ptr<storage_interface>& cl) override {
+
         const auto gid = m_scheme.calc_group_id(id);
         const auto nid = m_scheme.calc_group_node_id(id);
 
@@ -79,6 +81,7 @@ private:
         m_monitors;
     boost::asio::io_context& m_ioc;
     etcd::SyncClient& m_etcd_client;
+    const bool m_active_recoverable_groups;
 };
 } // namespace uh::cluster
 

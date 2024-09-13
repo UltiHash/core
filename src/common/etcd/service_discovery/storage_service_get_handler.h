@@ -24,7 +24,9 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
     remove_client(size_t id,
                   const std::shared_ptr<storage_interface>& client) override {
         std::lock_guard l(m_mutex);
+
         m_clients.erase(id);
+
     }
 
     std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {

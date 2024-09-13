@@ -34,6 +34,7 @@ template <typename service_interface> struct service_maintainer {
                 return m_etcd_client.ls(
                     get_service_root_path(service_interface::service_role));
             });
+
         auto vals = resp.values();
         auto keys = resp.keys();
         for (size_t i = 0; i < vals.size(); i++) {
@@ -62,6 +63,7 @@ template <typename service_interface> struct service_maintainer {
     }
 
     void remove_monitor(service_monitor<service_interface>& monitor) {
+        std::lock_guard l(m_mutex);
         m_monitors.remove_if(
             [&monitor](const service_monitor<service_interface>& m) {
                 return &monitor == &m;

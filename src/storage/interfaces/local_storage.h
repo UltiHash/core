@@ -216,7 +216,8 @@ private:
     std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
     std::atomic<double> m_load;
-    data_store& get_data_store(const uint128_t& pointer) {
+
+    [[nodiscard]] data_store& get_data_store(const uint128_t& pointer) const {
         return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
     }
 };

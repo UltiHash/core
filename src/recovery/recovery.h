@@ -6,6 +6,7 @@
 #include "common/utils/io_context_runner.h"
 #include "config.h"
 #include "config/configuration.h"
+#include "common/etcd/service_discovery/service_maintainer.h"
 
 namespace uh::cluster {
 
@@ -15,16 +16,19 @@ public:
         : m_etcd_client(service.etcd_url),
           m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
+    m_getter(1, 0),
+        m_ec_maintainer(m_ioc, 1, 0, m_etcd_client, true),
+
           m_storage_maintainer(
               m_etcd_client,
-              service_factory<storage_interface>(m_ioc, 1, nullptr)),
-          m_ec_maintainer(m_ioc, 1, 0, m_etcd_client),
-          m_getter(1, 0) {
+              service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+
         m_storage_maintainer.add_monitor(m_ec_maintainer);
         m_ec_maintainer.add_monitor(m_getter);
     }
 
     void run() {
+        LOG_INFO() << "running recovery service";
         std::unique_lock lock(m_mutex);
         m_cv.wait(lock, [this] { return m_stopped; });
     }
@@ -37,6 +41,8 @@ public:
         }
         m_cv.notify_all();
         m_ioc_runner.stop();
+        m_ec_maintainer.remove_monitor(m_getter);
+        m_storage_maintainer.remove_monitor(m_ec_maintainer);
     }
 
 private:
@@ -48,9 +54,10 @@ private:
     bool m_stopped = false;
 
     io_context_runner m_ioc_runner;
-    service_maintainer<storage_interface> m_storage_maintainer;
-    ec_group_maintainer m_ec_maintainer;
+
     ec_get_handler m_getter;
+    ec_group_maintainer m_ec_maintainer;
+    service_maintainer<storage_interface> m_storage_maintainer;
 };
 } // end namespace uh::cluster
 #endif // CORE_RECOVERY_H

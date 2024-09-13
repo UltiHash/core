@@ -7,7 +7,6 @@
 #include "common/telemetry/log.h"
 #include "common/utils/address_utils.h"
 #include "common/utils/pointer_traits.h"
-#include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
 
 #include <boost/asio/co_spawn.hpp>
 

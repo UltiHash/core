@@ -9,10 +9,8 @@ struct ec_load_balancer : public service_monitor<storage_group> {
 
     void add_client(size_t,
                     const std::shared_ptr<storage_group>& client) override {
-        LOG_INFO() << "before lock for cl";
 
         std::lock_guard l(m_mutex);
-        LOG_INFO() << "before lock for cl";
 
         if (auto itr = std::ranges::find_if(m_services,
                                             [&client](auto cl) {
@@ -22,7 +20,6 @@ struct ec_load_balancer : public service_monitor<storage_group> {
             itr == m_services.cend()) {
             m_services.emplace(client);
         }
-        LOG_INFO() << "before lock for cl";
 
         m_cv.notify_one();
     }

@@ -5,6 +5,7 @@
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
+#include "common/etcd/ec_groups/status_watcher.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
 #include "recovery/recovery_module.h"
@@ -14,12 +15,12 @@ namespace uh::cluster {
 struct storage_group : public storage_interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
-                  size_t ec_nodes, size_t group_id, etcd::SyncClient& etcd)
+                  size_t ec_nodes, size_t group_id, etcd::SyncClient& etcd, bool active_recovery)
         : m_nodes(data_nodes + ec_nodes),
           m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
           m_ioc(ioc),
           m_attributes(group_id, etcd) {
-        if (global_service_role != RECOVERY_SERVICE) {
+        if (!active_recovery) {
             m_status_watcher.emplace(m_attributes, m_status);
         } else {
             m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
@@ -176,7 +177,6 @@ private:
     ec_group_attributes m_attributes;
     std::optional<status_watcher> m_status_watcher;
     std::optional<recovery_module> m_rec_mod;
-
 };
 
 } // namespace uh::cluster
