@@ -22,6 +22,15 @@ featureTests:
       value: "testing"
       effect: "NoSchedule"
 
+recovery:
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
 etcd:
   replicaCount: 1
   nodeSelector:
