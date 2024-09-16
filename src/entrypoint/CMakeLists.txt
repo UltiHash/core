@@ -1,0 +1,6 @@
+add_library(uh_entrypoint limits.cpp handler.cpp formats.cpp multipart_state.cpp directory.cpp command_factory.cpp utils.cpp variables.cpp)
+target_link_libraries(uh_entrypoint uh_telemetry uh_service_interfaces uh_utils uh_commands uh_http uh_registry uh_network uh_deduplicator uh_types uh_policy uh_user uh_global_data uh_db)
+add_subdirectory(commands)
+add_subdirectory(http)
+add_subdirectory(user)
+add_subdirectory(policy)

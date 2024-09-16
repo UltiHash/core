@@ -1,0 +1,2 @@
+add_subdirectory(registry)
+add_subdirectory(service_discovery)

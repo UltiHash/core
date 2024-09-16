@@ -1,0 +1,4 @@
+add_library(uh_deduplicator fragmentation.cpp deduplicator_handler.cpp)
+target_link_libraries(uh_deduplicator uh_service_interfaces uh_telemetry uh_utils uh_storage uh_registry uh_network uh_types uh_global_data uh_dedupe_set)
+add_subdirectory(dedupe_set)
+add_subdirectory(interfaces)

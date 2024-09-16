@@ -1,0 +1,2 @@
+add_library(uh_telemetry log.cpp traces.cpp metrics.cpp otel_log_sink.cpp)
+target_link_libraries(uh_telemetry uh_utils magic_enum opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics)

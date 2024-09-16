@@ -1,0 +1,2 @@
+add_library(uh_commands list_objects.cpp get_bucket_policy.cpp put_object.cpp head_bucket.cpp list_buckets.cpp head_object.cpp delete_bucket.cpp get_object.cpp delete_objects.cpp multipart.cpp delete_bucket_policy.cpp list_objects_v2.cpp init_multipart.cpp abort_multipart.cpp copy_object.cpp delete_object.cpp list_multipart.cpp create_bucket.cpp put_bucket_policy.cpp get_metrics.cpp complete_multipart.cpp)
+target_link_libraries(uh_commands uh_service_interfaces uh_utils uh_crypto uh_entrypoint uh_http uh_global_data ${Boost_LIBRARIES})
