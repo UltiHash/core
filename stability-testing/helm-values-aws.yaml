@@ -39,6 +39,16 @@ stabilityTest:
     pvcName: stability-test-output
     mountPath: /testing/test
 
+recovery:
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-and-stability-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
 etcd:
   replicaCount: 1
   nodeSelector:
