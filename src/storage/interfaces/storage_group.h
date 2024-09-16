@@ -15,7 +15,8 @@ namespace uh::cluster {
 struct storage_group : public storage_interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
-                  size_t ec_nodes, size_t group_id, etcd::SyncClient& etcd, bool active_recovery)
+                  size_t ec_nodes, size_t group_id, etcd::SyncClient& etcd,
+                  bool active_recovery)
         : m_nodes(data_nodes + ec_nodes),
           m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
           m_ioc(ioc),
@@ -26,7 +27,6 @@ struct storage_group : public storage_interface {
             m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
         }
     }
-
 
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node) {
@@ -166,6 +166,16 @@ struct storage_group : public storage_interface {
 
     [[nodiscard]] size_t group_id() const noexcept {
         return m_attributes.group_id();
+    }
+
+    coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
+                        const std::string_view&) override {
+        throw std::runtime_error("unsupported operation in storage group");
+    }
+
+    coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
+                       size_t size, char* buffer) override {
+        throw std::runtime_error("unsupported operation in storage group");
     }
 
 private:

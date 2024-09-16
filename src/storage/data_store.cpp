@@ -217,11 +217,16 @@ void data_store::perform_write(const address& addr) {
     auto& [alloc, data] = m_ongoing_async_writes.at(pointer);
     lk.unlock();
 
-    for (long written = 0; written < static_cast<long>(data.size());
-         written +=
-         ::pwrite(alloc.fd, data.data() + written, data.size() - written,
-                  static_cast<long>(alloc.seek) + written))
-        ;
+    long written = 0;
+    while (written < static_cast<long>(data.size())) {
+        auto size =
+            ::pwrite(alloc.fd, data.data() + written, data.size() - written,
+                     static_cast<long>(alloc.seek) + written);
+        if (size == 0) {
+            throw std::runtime_error("Could not perform write");
+        }
+        written += size;
+    }
 
     if (m_enable_refcount) {
         m_refcounter.increment(pointer, data.size());
@@ -230,6 +235,35 @@ void data_store::perform_write(const address& addr) {
     std::lock_guard<std::mutex> rm_lk(m_async_mutex);
     m_ongoing_async_writes.erase(pointer);
     m_async_cv.notify_all();
+}
+
+void data_store::manual_write(uint64_t internal_pointer,
+                              const std::string_view& data) {
+
+    const auto [fd, seek] = get_file_offset_pair(internal_pointer);
+
+    long written = 0;
+    while (written < static_cast<long>(data.size())) {
+        auto size = ::pwrite(fd, data.data() + written, data.size() - written,
+                             seek + written);
+        if (size == 0) {
+            throw std::runtime_error("Could not perform write");
+        }
+        written += size;
+    }
+}
+
+void data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
+    const auto [fd, seek] = get_file_offset_pair(pointer);
+    ssize_t tr = 0;
+    do {
+        const auto r = ::pread(fd, buffer + tr, size - tr, seek + tr);
+        if (r <= 0) [[unlikely]] {
+            throw std::runtime_error(std::string("error in reading: ") +
+                                     std::string(strerror(errno)));
+        }
+        tr += r;
+    } while (static_cast<size_t>(tr) < size);
 }
 
 void data_store::wait_for_ongoing_writes(const address& addr) {

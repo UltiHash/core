@@ -63,6 +63,21 @@ public:
     void perform_write(const address& addr);
 
     /**
+     * Manually write the data directly to a spacific internal pointer
+     * @param internal_pointer
+     * @param data
+     */
+    void manual_write(uint64_t internal_pointer, const std::string_view& data);
+
+    /**
+     * Reading direcly from a data store
+     * @param pointer
+     * @param size
+     * @param buffer
+     */
+    void manual_read(uint64_t pointer, size_t size, char* buffer);
+
+    /**
      * Waits for completion of async write operations for the given address
      *
      * @param addr
