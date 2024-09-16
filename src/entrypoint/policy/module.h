@@ -3,6 +3,7 @@
 
 #include "effect.h"
 #include "entrypoint/commands/command.h"
+#include "entrypoint/directory.h"
 #include "entrypoint/http/request.h"
 #include "policy.h"
 
@@ -10,14 +11,17 @@ namespace uh::cluster::ep::policy {
 
 class module {
 public:
+    module(directory& dir);
+
     /**
      * Check configured policies to determine whether the provided
      * request is allowed to proceed.
      */
-    effect check(const http::request& request, const command& cmd) const;
+    coro<effect> check(const http::request& request, const command& cmd) const;
 
 private:
     std::list<policy> m_policies;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster::ep::policy
