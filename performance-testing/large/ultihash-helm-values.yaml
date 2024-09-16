@@ -9,6 +9,16 @@ global:
   logLevel: INFO
   telemetryExportInterval: 30000
 
+recovery:
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-testing-large
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
 etcd:
   replicaCount: 1
   nodeSelector:
