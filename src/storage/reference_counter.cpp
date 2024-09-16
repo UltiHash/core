@@ -28,11 +28,12 @@ void reference_counter::decrement(const address& addr) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
+    std::vector<std::pair<std::size_t, std::size_t>> marked_for_deletion;
+
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
         const auto offset = pointer_traits::get_pointer(frag.pointer);
 
-        std::vector<std::pair<std::size_t, std::size_t>> marked_for_deletion;
         std::optional<std::size_t> deleteRangeStart;
         std::optional<std::size_t> deleteRangeEnd;
 
@@ -85,15 +86,14 @@ void reference_counter::decrement(const address& addr) {
             marked_for_deletion.emplace_back(deleteRangeStart.value(),
                                              deleteRangeEnd.value());
         }
-
-        for (auto range : marked_for_deletion) {
-            std::size_t del_offset = range.first * m_page_size;
-            std::size_t del_size =
-                (range.second - range.first) * m_page_size + m_page_size;
-            m_cb(del_offset, del_size);
-        }
     }
     txn.commit();
+    for (auto range : marked_for_deletion) {
+        std::size_t del_offset = range.first * m_page_size;
+        std::size_t del_size =
+            (range.second - range.first) * m_page_size + m_page_size;
+        m_cb(del_offset, del_size);
+    }
 }
 
 void reference_counter::increment(const std::size_t offset,
@@ -127,6 +127,8 @@ address reference_counter::increment(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
         const auto offset = pointer_traits::get_pointer(frag.pointer);
+        std::map<std::size_t, std::size_t> value_by_page;
+        bool encountered_untracked_page = false;
         for (std::size_t page_pointer = offset;
              page_pointer < offset + frag.size; page_pointer += m_page_size) {
             std::size_t page_id = page_pointer / m_page_size;
@@ -135,10 +137,20 @@ address reference_counter::increment(const address& addr) {
 
             if (dbi.get(txn, key, value)) {
                 std::size_t current_value = std::stoull(std::string(value));
-                std::string value_str(std::to_string(++current_value));
-                dbi.put(txn, key, value_str);
+                value_by_page.emplace(page_id, ++current_value);
             } else {
-                rv.push(frag);
+                encountered_untracked_page = true;
+                break;
+            }
+        }
+
+        if (encountered_untracked_page) {
+            rv.push(frag);
+        } else {
+            for (auto& pair : value_by_page) {
+                std::string key(std::to_string(pair.first));
+                std::string val(std::to_string(pair.second));
+                dbi.put(txn, key, val);
             }
         }
     }
