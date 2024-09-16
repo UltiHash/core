@@ -1,6 +1,7 @@
 name: Feature Testing AWS
 
 on:
+  push:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
