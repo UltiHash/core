@@ -101,11 +101,12 @@ private:
             frag_size += common_size;
             pointer += common_size;
         } while (common_size == pursue_size);
-        data = data.substr(frag_size);
 
         m_dedupe_logger.log_pursue_deduplication(frag_size, frag_pointer);
         fragments.push_stored(frag_pointer, frag_size,
                               data.substr(0, frag_size), header);
+
+        data = data.substr(frag_size);
         co_return frag_size;
     }
 
