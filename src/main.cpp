@@ -5,6 +5,7 @@
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/entrypoint.h"
+#include "recovery/recovery.h"
 #include "storage/storage.h"
 
 using namespace uh;
@@ -27,6 +28,8 @@ void execute_role(const config& c) {
             return start_service(deduplicator(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
             return start_service(entrypoint(c.service, c.entrypoint));
+        case RECOVERY_SERVICE:
+            return start_service(recovery(c.service, c.recovery));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
@@ -42,9 +45,11 @@ int main(int argc, char** argv) {
             return 0;
         }
 
+        global_service_role = config->role;
+
         log::init(config->log);
 
-        initialize_metrics_exporter(config->role, config->service.telemetry_url,
+        initialize_metrics_exporter(config->service.telemetry_url,
                                     config->service.telemetry_interval);
         initialize_traces_exporter(config->service.telemetry_url);
 

@@ -39,8 +39,9 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
     std::shared_ptr<service_interface> get() {
 
         std::unique_lock lk(m_mutex);
+
         if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT,
-                           [this]() { return !empty(); })) {
+                           [this] { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +
                 get_service_string(service_interface::service_role) +
@@ -58,6 +59,8 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
     }
 
     [[nodiscard]] bool empty() const noexcept { return m_services.empty(); }
+
+    [[nodiscard]] size_t size() const noexcept { return m_services.size(); }
 
 private:
     std::mutex m_mutex;

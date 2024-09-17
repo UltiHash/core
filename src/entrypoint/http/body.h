@@ -9,7 +9,17 @@ namespace uh::cluster::ep::http {
 class body {
 public:
     virtual ~body() = default;
-    virtual coro<std::size_t> read(std::span<char> dest) = 0;
+
+    /**
+     * Return remaining length of body if available.
+     */
+    virtual std::optional<std::size_t> length() const = 0;
+
+    /**
+     * Fill the provided span with the next bytes of the body, return number of
+     * bytes written.
+     */
+    virtual coro<std::size_t> read(std::span<char>) = 0;
 };
 
 } // namespace uh::cluster::ep::http

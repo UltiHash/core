@@ -34,6 +34,10 @@ stabilityTest:
     pvcName: stability-test-output
     mountPath: /testing/test
 
+recovery:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
 etcd:
   replicaCount: 1
   nodeSelector:

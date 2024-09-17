@@ -45,6 +45,12 @@ struct directory {
 
     coro<std::vector<std::string>> list_buckets();
 
+    coro<std::optional<std::string>>
+    get_bucket_policy(const std::string& bucket);
+
+    coro<void> set_bucket_policy(const std::string& bucket,
+                                 std::optional<std::string> policy);
+
     coro<std::vector<object>>
     list_objects(const std::string& bucket,
                  const std::optional<std::string>& prefix,

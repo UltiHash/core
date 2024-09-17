@@ -4,9 +4,16 @@
 #include "log.h"
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 
+#include <magic_enum/magic_enum_switch.hpp>
+#include <magic_enum/magic_enum_utility.hpp>
+
+#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
+
 #include <algorithm>
 #include <config.h>
 #include <iostream>
+#include <opentelemetry/sdk/metrics/meter_context_factory.h>
 
 namespace metric_sdk = opentelemetry::sdk::metrics;
 namespace common = opentelemetry::common;
@@ -37,7 +44,8 @@ void initialize_counters() {
             auto metric_prefix = type_str.substr(0, type_str.find("_"));
             auto metric_suffix = type_str.substr(type_str.rfind("_") + 1);
 
-            std::basic_string<char> role_prefix = get_role_prefix(service_role);
+            std::basic_string<char> role_prefix =
+                get_role_prefix(global_service_role);
             if ((metric_suffix == COUNTER_SUFFIX or
                  metric_suffix == REQ_SUFFIX) and
                 (metric_prefix == role_prefix or
@@ -50,14 +58,12 @@ void initialize_counters() {
     });
 }
 
-void initialize_metrics_exporter(role role, const std::string& endpoint,
+void initialize_metrics_exporter(const std::string& endpoint,
                                  unsigned interval) {
 
     if (endpoint.empty()) {
         return;
     }
-
-    uh::cluster::service_role = role;
 
     std::unique_ptr<metric_sdk::MetricReader> reader;
     opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions
@@ -77,7 +83,8 @@ void initialize_metrics_exporter(role role, const std::string& endpoint,
     auto resource = opentelemetry::sdk::resource::Resource::Create(
         {{"service.name", PROJECT_NAME},
          {"service.version", PROJECT_VERSION},
-         {"service.role", std::string(magic_enum::enum_name(service_role))}});
+         {"service.role",
+          std::string(magic_enum::enum_name(global_service_role))}});
 
     auto context =
         metric_sdk::MeterContextFactory::Create(std::move(views), resource);

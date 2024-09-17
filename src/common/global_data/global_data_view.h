@@ -2,9 +2,9 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include "common/caches/lru_cache.h"
-#include "common/etcd/service_discovery/ec_get_handler.h"
-#include "common/etcd/service_discovery/ec_group_maintainer.h"
-#include "common/etcd/service_discovery/ec_load_balancer.h"
+#include "common/etcd/ec_groups/ec_get_handler.h"
+#include "common/etcd/ec_groups/ec_group_maintainer.h"
+#include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
@@ -181,12 +181,6 @@ private:
     ec_group_maintainer m_ec_maintainer;
     ec_load_balancer m_load_balancer;
     ec_get_handler m_basic_getter;
-
-    void extract_node_address_map(
-        const address& addr,
-        std::unordered_map<std::shared_ptr<storage_interface>, address>&
-            node_address_map,
-        std::vector<std::shared_ptr<storage_interface>>& nodes);
 };
 
 } // end namespace uh::cluster

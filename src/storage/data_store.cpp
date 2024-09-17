@@ -258,6 +258,8 @@ void data_store::unlink(const address& addr) {
     }
 }
 
+size_t data_store::id() const noexcept { return m_data_store_id; }
+
 data_store::~data_store() {
     sync();
     for (const auto& open_file : m_open_files) {

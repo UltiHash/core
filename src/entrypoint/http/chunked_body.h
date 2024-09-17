@@ -3,6 +3,7 @@
 
 #include "beast_utils.h"
 #include "body.h"
+#include "common/utils/common.h"
 
 #include <map>
 #include <span>
@@ -26,6 +27,7 @@ public:
 
     virtual ~chunked_body() = default;
 
+    std::optional<std::size_t> length() const override;
     coro<std::size_t> read(std::span<char> dest) override;
 
     virtual void on_chunk_header(const chunk_header&);

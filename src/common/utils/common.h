@@ -4,34 +4,48 @@
 #include "common/types/common_types.h"
 #include <map>
 #include <string>
-#include <unordered_set>
 
 namespace uh::cluster {
+
+static constexpr std::size_t KIBI_BYTE = 1024;
+static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
+static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
+static constexpr std::size_t TEBI_BYTE = 1024 * GIBI_BYTE;
+static constexpr std::size_t PEBI_BYTE = 1024 * TEBI_BYTE;
 
 enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
     ENTRYPOINT_SERVICE,
+    RECOVERY_SERVICE
 };
+
+inline role global_service_role;
 
 const std::map<std::string, role> role_by_abbreviation = {
     {"storage", STORAGE_SERVICE},
     {"deduplicator", DEDUPLICATOR_SERVICE},
-    {"entrypoint", ENTRYPOINT_SERVICE}};
+    {"entrypoint", ENTRYPOINT_SERVICE},
+    {"recovery", RECOVERY_SERVICE}};
 
 enum message_type : uint8_t {
-    STORAGE_READ_FRAGMENT_REQ = 0,
-    STORAGE_READ_ADDRESS_REQ = 1,
-    STORAGE_READ_REQ = 8,
-    STORAGE_WRITE_REQ = 2,
-    STORAGE_SYNC_REQ = 3,
-    STORAGE_LINK_REQ = 9,
-    STORAGE_UNLINK_REQ = 4,
-    STORAGE_USED_REQ = 5,
-    DEDUPLICATOR_REQ = 6,
 
-    SUCCESS = 15,
-    FAILURE = 16
+    SUCCESS = 0,
+    FAILURE = 1,
+
+    STORAGE_READ_FRAGMENT_REQ = 32,
+    STORAGE_READ_ADDRESS_REQ = 33,
+    STORAGE_READ_REQ = 34,
+    STORAGE_WRITE_REQ = 35,
+    STORAGE_SYNC_REQ = 36,
+    STORAGE_LINK_REQ = 37,
+    STORAGE_UNLINK_REQ = 38,
+    STORAGE_USED_REQ = 39,
+    STORAGE_DS_INFO_REQ = 40,
+    STORAGE_INIT_DD_REQ = 41,
+
+    DEDUPLICATOR_REQ = 64,
+
 };
 
 constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
@@ -49,6 +63,9 @@ constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
+
+constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
+constexpr auto RECOVERY_WAIT_FOR_SERVICE_TIMEOUT = std::chrono::hours(1);
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 

@@ -192,6 +192,14 @@ struct local_storage : public storage_interface {
         co_return used;
     }
 
+    coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
+        std::map<size_t, size_t> res;
+        for (const auto& ds : m_data_stores) {
+            res.emplace(ds->id(), ds->get_used_space());
+        }
+        co_return res;
+    }
+
     size_t get_free_space() {
         load_monitor load(m_load);
 
@@ -208,7 +216,8 @@ private:
     std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
     std::atomic<double> m_load;
-    data_store& get_data_store(const uint128_t& pointer) {
+
+    [[nodiscard]] data_store& get_data_store(const uint128_t& pointer) const {
         return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
     }
 };

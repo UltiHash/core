@@ -3,6 +3,8 @@
 #define MAINTAINER_MONITOR_H
 #include "common/etcd/namespace.h"
 
+#include <iostream>
+
 namespace uh::cluster {
 
 template <typename service_interface> struct service_monitor {

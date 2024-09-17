@@ -21,18 +21,18 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
 
     {
         // check if the keys already exist or not
-        const auto host =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_HOST))
-                .value()
-                .as_string();
-        const auto port =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_PORT))
-                .value()
-                .as_string();
+        const auto host = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_HOST))
+                              .value()
+                              .as_string();
+        const auto port = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_PORT))
+                              .value()
+                              .as_string();
         const auto announced_path_registry =
             etcd_client.get(get_announced_path(STORAGE_SERVICE, index))
                 .value()
@@ -48,18 +48,18 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         auto reg =
             registering_registry.register_service({.port = port_address});
 
-        const auto host =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_HOST))
-                .value()
-                .as_string();
-        const auto port =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_PORT))
-                .value()
-                .as_string();
+        const auto host = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_HOST))
+                              .value()
+                              .as_string();
+        const auto port = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_PORT))
+                              .value()
+                              .as_string();
         const auto announced_etcd_path = std::filesystem::path(
             etcd_client.get(get_announced_path(STORAGE_SERVICE, index))
                 .value()
@@ -74,18 +74,18 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
 
     {
         // check for de-registry
-        const auto host =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_HOST))
-                .value()
-                .as_string();
-        const auto port =
-            etcd_client
-                .get(get_attributes_path(STORAGE_SERVICE, index) +
-                     get_etcd_key_string(uh::cluster::ENDPOINT_PORT))
-                .value()
-                .as_string();
+        const auto host = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_HOST))
+                              .value()
+                              .as_string();
+        const auto port = etcd_client
+                              .get(get_attributes_path(STORAGE_SERVICE, index) +
+                                   get_etcd_service_attribute_string(
+                                       uh::cluster::ENDPOINT_PORT))
+                              .value()
+                              .as_string();
         const auto announced_path_registry =
             etcd_client.get(get_announced_path(STORAGE_SERVICE, index))
                 .value()

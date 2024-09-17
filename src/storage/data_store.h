@@ -119,6 +119,8 @@ public:
      */
     [[nodiscard]] size_t get_available_space() const noexcept;
 
+    size_t id() const noexcept;
+
     ~data_store();
 
 private:

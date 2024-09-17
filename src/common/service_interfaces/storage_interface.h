@@ -2,8 +2,10 @@
 #ifndef UH_CLUSTER_STORAGE_INTERFACE_H
 #define UH_CLUSTER_STORAGE_INTERFACE_H
 
-#include "common/network/messenger_core.h"
-#include "common/types/address.h"
+#include "common/coroutines/context.h"
+#include "common/types/common_types.h"
+#include "common/types/scoped_buffer.h"
+#include "common/utils/common.h"
 
 namespace uh::cluster {
 struct storage_interface {
@@ -21,6 +23,7 @@ struct storage_interface {
     virtual coro<void> unlink(context& ctx, const address& addr) = 0;
     virtual coro<void> sync(context& ctx, const address& addr) = 0;
     virtual coro<size_t> get_used_space(context& ctx) = 0;
+    virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) = 0;
 
     virtual ~storage_interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;
