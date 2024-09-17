@@ -5,7 +5,6 @@
 
 namespace uh::cluster {
 
-
 class status_watcher {
 public:
     status_watcher(ec_group_attributes& attributes,
@@ -52,9 +51,8 @@ private:
     std::atomic<ec_status>& m_status;
     ec_group_attributes& m_attributes;
     etcd::Watcher m_watcher;
-    bool m_stop = false;
     std::mutex m_mutex;
 };
 } // end namespace uh::cluster
 
-#endif //STATUS_WATCHER_H
+#endif // STATUS_WATCHER_H
