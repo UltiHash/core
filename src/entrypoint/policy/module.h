@@ -6,6 +6,7 @@
 #include "entrypoint/directory.h"
 #include "entrypoint/http/request.h"
 #include "policy.h"
+#include <filesystem>
 
 namespace uh::cluster::ep::policy {
 
@@ -19,9 +20,11 @@ public:
      */
     coro<effect> check(const http::request& request, const command& cmd) const;
 
+    static const std::filesystem::path GLOBAL_CONFIG;
+
 private:
-    std::list<policy> m_policies;
     directory& m_directory;
+    std::list<policy> m_policies;
 };
 
 } // namespace uh::cluster::ep::policy

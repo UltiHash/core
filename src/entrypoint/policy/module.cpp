@@ -1,10 +1,31 @@
 #include "module.h"
 
+#include "common/telemetry/log.h"
+#include "common/utils/misc.h"
 #include "parser.h"
 
 namespace uh::cluster::ep::policy {
 
-module::module(directory& dir) :m_directory(dir) {}
+namespace {
+
+std::list<policy> read_global_policies(const std::filesystem::path& path) {
+    std::list<policy> rv;
+
+    if (std::filesystem::exists(path)) {
+        rv = parser::parse(read_file(path));
+        LOG_INFO() << "loaded " << rv.size() << " global policies from "
+                   << path;
+    }
+
+    return rv;
+}
+
+} // namespace
+
+const std::filesystem::path module::GLOBAL_CONFIG = "/etc/uh/policies.json";
+
+module::module(directory& dir) :m_directory(dir),
+    m_policies(read_global_policies(GLOBAL_CONFIG)) {}
 
 /*
  * This function implements policy evaluation logic
