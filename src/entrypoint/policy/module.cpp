@@ -16,8 +16,8 @@ coro<effect> module::check(const http::request& request,
                            const command& cmd) const {
     for (const auto& policy : m_policies) {
         auto result = policy.check(request, cmd);
-        if (result.value_or(effect::allow) == effect::deny) {
-            co_return effect::deny;
+        if (result.value_or(effect::deny) == effect::allow) {
+            co_return effect::allow;
         }
     }
 
@@ -40,8 +40,7 @@ coro<effect> module::check(const http::request& request,
         }
     }
 
-    // TODO set to deny when policies have been implemented completely
-    co_return effect::allow;
+    co_return effect::deny;
 }
 
 } // namespace uh::cluster::ep::policy
