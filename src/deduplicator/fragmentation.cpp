@@ -192,25 +192,18 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 }
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
-    size_t before_size = 0;
-    for (auto& frag : m_frags) {
-        before_size += frag.size;
-    }
-    auto stored_frags_before = get_stored_fragments();
-    // std::list<dd_fragment> new_frags;
     size_t last_frag_pos = 0;
     for (auto& frag : m_frags) {
         if (frag.type != STORED) {
             continue;
         }
-        bool match = false;
 
         for (size_t i = last_frag_pos; i < addr.size(); i++) {
             auto rejected_frag = addr.get(i);
             if (rejected_frag.pointer == frag.pointer &&
                 rejected_frag.size == frag.size) {
-                // set.erase({rejected_frag.pointer, rejected_frag.size},
-                //           frag.header);
+                set.erase({rejected_frag.pointer, rejected_frag.size},
+                          frag.header);
                 frag.type = UNSTORED;
                 frag.pointer = 0;
                 frag.hint = std::nullopt;
@@ -219,25 +212,10 @@ void fragmentation::handle_rejected_fragments(const address& addr,
                 m_effective_size += frag.data.size();
                 m_unstored_size += frag.data.size();
                 frag.uploaded = false;
-                match = true;
                 break;
             }
         }
-        if (!match) {
-            LOG_DEBUG() << "unmatched fragment detected";
-        }
     }
-    size_t after_size = 0;
-    for (auto& frag : m_frags) {
-        after_size += frag.size;
-    }
-    auto stored_frags_after = get_stored_fragments();
-    LOG_DEBUG()
-    "before_size = " << before_size << ", stored_frags_before.size() = "
-                     << stored_frags_before.size();
-    LOG_DEBUG()
-    "after_size = " << after_size << ", stored_frags_after.size() = "
-                    << stored_frags_after.size();
 }
 
 } // namespace uh::cluster
