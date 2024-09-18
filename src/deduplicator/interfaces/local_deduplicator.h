@@ -87,26 +87,27 @@ private:
                                 uint128_t pointer, bool header,
                                 fragmentation& fragments) {
         size_t common_size;
-        fragmentation::stored frag{.pointer = pointer -
-                                              m_dedupe_conf.max_fragment_size,
-                                   .size = m_dedupe_conf.max_fragment_size,
-                                   .header = header};
+
+        uint128_t frag_pointer = pointer - m_dedupe_conf.max_fragment_size;
+        size_t frag_size = m_dedupe_conf.max_fragment_size;
+
         do {
             auto stored_data =
                 co_await m_storage.read(ctx, pointer, pursue_size);
 
             common_size = largest_common_prefix(stored_data.string_view(),
-                                                data.substr(frag.size));
+                                                data.substr(frag_size));
 
-            frag.size += common_size;
+            frag_size += common_size;
             pointer += common_size;
         } while (common_size == pursue_size);
-        frag.data = data.substr(0, frag.size);
-        data = data.substr(frag.size);
 
-        m_dedupe_logger.log_pursue_deduplication(frag.size, frag.pointer);
-        fragments.push(std::move(frag));
-        co_return frag.size;
+        m_dedupe_logger.log_pursue_deduplication(frag_size, frag_pointer);
+        fragments.push_stored(frag_pointer, frag_size,
+                              data.substr(0, frag_size), header);
+
+        data = data.substr(frag_size);
+        co_return frag_size;
     }
 
     coro<dedupe_response> deduplicate_data(context& ctx,
@@ -136,10 +137,8 @@ private:
                         frag.pointer + m_dedupe_conf.max_fragment_size,
                         (offset == 0), fragments);
                 } else {
-                    fragments.push({.pointer = frag.pointer,
-                                    .size = size,
-                                    .data = data.substr(0, size),
-                                    .header = (offset == 0)});
+                    fragments.push_stored(frag.pointer, size,
+                                          data.substr(0, size), (offset == 0));
                     data = data.substr(size);
                     m_dedupe_logger.log_deduplication(size, prefix,
                                                       frag.pointer, offset);
@@ -152,8 +151,8 @@ private:
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
 
-            fragments.push(fragmentation::unstored{
-                data.substr(0, frag_size), (offset == 0), std::move(f.hint)});
+            fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
+                                    std::move(f.hint));
 
             data = data.substr(frag_size);
             offset += frag_size;

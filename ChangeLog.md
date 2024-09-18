@@ -1,6 +1,7 @@
 # Changelog
 - The storage service can now perform delete operations and reclaim disk space
 - Deduplicator and Entrypoint services are now making use of storage-level delete operations
+- Fix potential data corruption issue caused by deleting and re-uploading data
 
 ## [0.5.4] 2024-08-08
 - Support for object mime types

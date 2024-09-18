@@ -12,12 +12,34 @@ fragmentation::fragmentation(dedupe_logger& dd_logger)
       m_effective_size(0ull),
       m_unstored_size(0ull) {}
 
-void fragmentation::push(stored&& st) { m_frags.emplace_back(std::move(st)); }
+void fragmentation::push_stored(uint128_t pointer, size_t size,
+                                std::string_view data, bool header) {
+    if (data.empty()) {
+        return;
+    }
+    dd_fragment frag = {
+        .type = STORED,
+        .data = data,
+        .header = header,
+        .pointer = pointer,
+        .size = size,
+    };
+    m_frags.emplace_back(std::move(frag));
+}
 
-void fragmentation::push(unstored&& un) {
-    m_frags.emplace_back(std::move(un));
-    m_effective_size += un.data.size();
-    m_unstored_size += un.data.size();
+void fragmentation::push_unstored(
+    std::string_view data, bool header,
+    std::optional<fragment_set::hint_type>&& hint) {
+    dd_fragment frag = {
+        .type = UNSTORED,
+        .data = data,
+        .header = header,
+        .size = data.size(),
+        .hint = std::move(hint),
+    };
+    m_frags.emplace_back(std::move(frag));
+    m_effective_size += data.size();
+    m_unstored_size += data.size();
 }
 
 void fragmentation::flush_set(fragment_set& set) {
@@ -40,15 +62,13 @@ address fragmentation::make_address() const {
     address rv;
 
     for (const auto& frag : m_frags) {
-        if (std::holds_alternative<unstored>(frag)) {
-            const auto& un = std::get<unstored>(frag);
-            rv.append(un.addr);
+        if (frag.type == UNSTORED) {
+            rv.append(frag.addr);
             continue;
         }
 
-        if (std::holds_alternative<stored>(frag)) {
-            auto stored_frag = std::get<stored>(frag);
-            rv.push({stored_frag.pointer, stored_frag.size});
+        if (frag.type == STORED) {
+            rv.push({frag.pointer, frag.size});
             continue;
         }
     }
@@ -60,10 +80,8 @@ address fragmentation::get_stored_fragments() const {
     address rv;
 
     for (const auto& frag : m_frags) {
-        if (std::holds_alternative<stored>(frag)) {
-            auto stored_frag = std::get<stored>(frag);
-            rv.push({stored_frag.pointer, stored_frag.size});
-            continue;
+        if (frag.type == STORED) {
+            rv.push({frag.pointer, frag.size});
         }
     }
 
@@ -88,33 +106,30 @@ void fragmentation::flush_fragments(fragment_set& set) {
     LOG_CORO_CONTEXT();
 
     for (auto& frag : m_frags) {
-        if (!std::holds_alternative<unstored>(frag)) {
-            auto stored_frag = std::get<stored>(frag);
-            set.mark_deduplication({stored_frag.pointer, stored_frag.size});
+        if (frag.type == STORED) {
+            set.mark_deduplication({frag.pointer, frag.size});
             continue;
         }
 
-        auto& un = std::get<unstored>(frag);
-        if (un.uploaded) {
+        if (frag.uploaded) {
             continue;
         }
 
-        m_dedupe_logger.log_non_deduplication(un.addr.get(0));
+        m_dedupe_logger.log_non_deduplication(frag.addr.get(0));
 
-        set.insert({un.addr.pointers[0], un.addr.pointers[1]},
-                   un.data.substr(0, un.addr.sizes.front()), un.header,
-                   un.hint);
+        set.insert({frag.addr.pointers[0], frag.addr.pointers[1]},
+                   frag.data.substr(0, frag.addr.sizes.front()), frag.header,
+                   frag.hint);
     }
 }
 
 void fragmentation::mark_as_uploaded() {
     for (auto& frag : m_frags) {
-        if (!std::holds_alternative<unstored>(frag)) {
+        if (frag.type != UNSTORED) {
             continue;
         }
 
-        auto& un = std::get<unstored>(frag);
-        un.uploaded = true;
+        frag.uploaded = true;
     }
 
     m_unstored_size = 0ull;
@@ -126,18 +141,17 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
     std::size_t current_idx = 0ull;
 
     for (auto& frag : m_frags) {
-        if (!std::holds_alternative<unstored>(frag)) {
+        if (frag.type != UNSTORED) {
             continue;
         }
 
-        auto& un = std::get<unstored>(frag);
-        if (un.uploaded) {
+        if (frag.uploaded) {
             continue;
         }
 
-        std::size_t un_offs = 0ull;
+        std::size_t frag_offs = 0ull;
 
-        while (un_offs < un.data.size()) {
+        while (frag_offs < frag.data.size()) {
 
             if (!current || current_ofs >= current->size) {
                 if (current_idx >= addr.size()) {
@@ -148,11 +162,11 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
                 ++current_idx;
             }
 
-            auto size =
-                std::min(current->size - current_ofs, un.data.size() - un_offs);
+            auto size = std::min(current->size - current_ofs,
+                                 frag.data.size() - frag_offs);
 
-            un.addr.push(fragment{current->pointer + current_ofs, size});
-            un_offs += size;
+            frag.addr.push(fragment{current->pointer + current_ofs, size});
+            frag_offs += size;
             current_ofs += size;
         }
     }
@@ -163,40 +177,41 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
     std::size_t offs = 0ull;
 
     for (auto& frag : m_frags) {
-        if (!std::holds_alternative<unstored>(frag)) {
+        if (frag.type != UNSTORED) {
+            continue;
+        }
+        if (frag.uploaded) {
             continue;
         }
 
-        auto& un = std::get<unstored>(frag);
-        if (un.uploaded) {
-            continue;
-        }
-
-        memcpy(&buffer[offs], un.data.data(), un.data.size());
-        offs += un.data.size();
+        memcpy(&buffer[offs], frag.data.data(), frag.data.size());
+        offs += frag.data.size();
     }
 
     return buffer;
 }
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
-    for (auto it = m_frags.begin(); it != m_frags.end(); it++) {
-        if (!std::holds_alternative<stored>(*it)) {
+    size_t last_frag_pos = 0;
+    for (auto& frag : m_frags) {
+        if (frag.type != STORED) {
             continue;
         }
 
-        auto stored_frag = std::get<stored>(*it);
-
-        for (std::size_t i = 0; i < addr.size(); i++) {
+        for (size_t i = last_frag_pos; i < addr.size(); i++) {
             auto rejected_frag = addr.get(i);
-            if (rejected_frag.pointer == stored_frag.pointer) {
+            if (rejected_frag.pointer == frag.pointer &&
+                rejected_frag.size == frag.size) {
                 set.erase({rejected_frag.pointer, rejected_frag.size},
-                          stored_frag.header);
-                it->emplace<1>(unstored{.data = stored_frag.data,
-                                        .header = stored_frag.header,
-                                        .hint = std::nullopt});
-                m_effective_size += stored_frag.data.size();
-                m_unstored_size += stored_frag.data.size();
+                          frag.header);
+                frag.type = UNSTORED;
+                frag.pointer = 0;
+                frag.hint = std::nullopt;
+                last_frag_pos = i + 1;
+
+                m_effective_size += frag.data.size();
+                m_unstored_size += frag.data.size();
+                frag.uploaded = false;
                 break;
             }
         }

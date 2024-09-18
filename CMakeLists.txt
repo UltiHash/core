@@ -10,6 +10,7 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(DISABLE_DELETE "Disables reclamation of deleted disk space, only object meta-data will be deleted" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -32,6 +33,11 @@ set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
+endif()
+
+if(DISABLE_DELETE)
+    message(STATUS "Disabled deletion in storage backend")
+    add_definitions(-DDISABLE_STORAGE_REFCOUNT)
 endif()
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")

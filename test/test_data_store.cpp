@@ -459,6 +459,35 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(repeated_write_delete) {
+    auto buffer = random_buffer(MAX_FILE_SIZE_BYTES / 4);
+
+    address buffer_address;
+    for (std::size_t i = 0; i < 100; i++) {
+        buffer_address = ds->register_write(buffer);
+        ds->perform_write(buffer_address);
+        ds->sync();
+        ds->unlink(buffer_address);
+    }
+
+    buffer_address = ds->register_write(buffer);
+    ds->perform_write(buffer_address);
+    ds->sync();
+
+    shared_buffer<char> read_buffer(buffer_address.data_size());
+    size_t t_read = 0;
+    for (size_t i = 0; i < buffer_address.size(); ++i) {
+        const auto p = buffer_address.get(i);
+        auto read_size =
+            ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+        t_read += read_size;
+    }
+
+    BOOST_CHECK(t_read == buffer_address.data_size());
+    BOOST_CHECK(std::memcmp(read_buffer.data(), buffer.data(), buffer.size()) ==
+                0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // end namespace uh::cluster
