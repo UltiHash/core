@@ -387,8 +387,12 @@ data_store::find_async_data(size_t pointer, size_t size) {
 }
 
 void data_store::internal_delete(std::size_t offset, std::size_t size) {
-    if (offset + size > m_used.load()) {
+    if (offset >= m_used.load()) {
         throw std::out_of_range("pointer is out of range");
+    }
+
+    if (offset + size > m_used.load()) {
+        size = m_used.load() - offset;
     }
 
     std::unique_lock<std::mutex> lk(m_async_mutex);
