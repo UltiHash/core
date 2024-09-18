@@ -19,34 +19,19 @@ namespace uh::cluster {
  */
 class fragmentation {
 public:
-    struct unstored {
-        std::string_view data;
-        bool header;
-        std::optional<fragment_set::hint_type> hint;
-
-        bool uploaded = false;
-
-        address addr;
-    };
-
-    struct stored {
-        uint128_t pointer;
-        size_t size{};
-        std::string_view data;
-        bool header = false;
-    };
-
-    fragmentation(dedupe_logger& dd_logger);
+    explicit fragmentation(dedupe_logger& dd_logger);
 
     /**
      * Push a new fragment that was uploaded before.
      */
-    void push(stored&& st);
+    void push_stored(uint128_t pointer, size_t size, std::string_view data,
+                     bool header);
 
     /**
      * Push a new unstored fragment.
      */
-    void push(unstored&& un);
+    void push_unstored(std::string_view data, bool header,
+                       std::optional<fragment_set::hint_type>&& hint);
 
     /**
      * Convert all unstored fragments to stored fragments. Uploads all frags to
@@ -69,15 +54,34 @@ public:
     void handle_rejected_fragments(const address& addr, fragment_set& set);
 
 private:
+    enum fragment_type { STORED, UNSTORED };
+
+    struct dd_fragment {
+        // mandatory fields for both stored and unstored fragments
+        fragment_type type;
+        std::string_view data;
+        bool header = false;
+
+        // fields only used for stored fragments
+        uint128_t pointer;
+        size_t size{};
+
+        // fields only used for unstored fragments
+        std::optional<fragment_set::hint_type> hint;
+        bool uploaded = false;
+        address addr;
+    };
+
     void flush_fragments(fragment_set& set);
     void mark_as_uploaded();
+    std::list<dd_fragment> get_stored_fragments_internal();
 
     void compute_unstored_addresses(const address& addr);
 
     unique_buffer<char> unstored_to_buffer();
 
     dedupe_logger& m_dedupe_logger;
-    std::list<std::variant<stored, unstored>> m_frags;
+    std::list<dd_fragment> m_frags;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
 };

@@ -10,6 +10,7 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(DISABLE_DELETE "Disables reclamation of deleted disk space, only object meta-data will be deleted" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -34,6 +35,11 @@ if(ENABLE_DEDUPE_LOG)
     add_definitions(-DLOG_DEDUPE_SET)
 endif()
 
+if(DISABLE_DELETE)
+    message(STATUS "Disabled deletion in storage backend")
+    add_definitions(-DDISABLE_STORAGE_REFCOUNT)
+endif()
+
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
     if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
@@ -56,7 +62,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES} ${LMDB_LIBRARY} nlohmann_json)
@@ -78,6 +83,8 @@ target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBR
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+add_subdirectory(scripts)
 
 # Unit tests
 if(BUILD_TESTS)
