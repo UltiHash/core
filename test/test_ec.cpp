@@ -181,6 +181,7 @@ BOOST_AUTO_TEST_CASE(ec_non_divisable) {
 BOOST_AUTO_TEST_CASE(large_data) {
 
     reedsolomon_c ec(8, 4);
+
     std::string data(1 * GIBI_BYTE, '0');
     fill_random(data.data(), data.size());
 

@@ -2,6 +2,8 @@
 #define CORE_COMMON_TYPES_H
 
 #include "address.h"
+#include "scoped_buffer.h"
+
 #include <boost/asio/awaitable.hpp>
 #include <chrono>
 
@@ -15,6 +17,18 @@ struct dedupe_response {
         effective_size += other.effective_size;
         addr.append(other.addr);
     }
+};
+
+struct ds_write_request {
+    uint32_t ds_id;
+    uint64_t pointer;
+    std::variant<std::string_view, unique_buffer<>> data;
+};
+
+struct ds_read_request {
+    uint32_t ds_id;
+    uint64_t pointer;
+    size_t size;
 };
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;
