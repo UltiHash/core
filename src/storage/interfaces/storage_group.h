@@ -22,7 +22,12 @@ struct storage_group : public storage_interface {
           m_ioc(ioc),
           m_attributes(group_id, etcd) {
         if (!active_recovery) {
-            m_status_watcher.emplace(m_attributes, m_status);
+            if (data_nodes == 1 and ec_nodes == 0) {
+                m_status = healthy;
+            }
+            else {
+                m_status_watcher.emplace(m_attributes, m_status);
+            }
         } else {
             m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
         }
