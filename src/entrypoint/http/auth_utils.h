@@ -44,8 +44,8 @@ struct auth_info {
     // authenticated user information
     std::optional<user::user> authenticated_user;
 
-    static std::optional<auth_info> create(partial_parse_result& req,
-                                           user::backend& users);
+    static coro<std::optional<auth_info>> create(partial_parse_result& req,
+                                                 user::backend& users);
 };
 
 } // namespace uh::cluster::ep::http

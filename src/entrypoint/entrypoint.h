@@ -12,19 +12,20 @@
 #include "entrypoint/http/auth_request_factory.h"
 #include "entrypoint/http/default_request_factory.h"
 #include "entrypoint/limits.h"
-#include "entrypoint/user/dummy_backend.h"
+#include "entrypoint/user/db_backend.h"
 #include "handler.h"
 
 namespace uh::cluster {
 
 std::unique_ptr<ep::http::request_factory>
-make_request_factory(const entrypoint_config& config) {
+make_request_factory(boost::asio::io_context& ioc,
+                     const entrypoint_config& config) {
     switch (config.authentication) {
     case entrypoint_config::auth_backend::none:
         return std::make_unique<ep::http::default_request_factory>();
     case entrypoint_config::auth_backend::dummy:
         return std::make_unique<ep::http::auth_request_factory>(
-            std::make_unique<ep::user::dummy_backend>());
+            std::make_unique<ep::user::db_backend>(ioc, config.database));
     }
 
     throw std::runtime_error("unsupported authentication backend");
@@ -65,7 +66,7 @@ public:
               std::make_unique<ep::handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  make_request_factory(config),
+                  make_request_factory(m_ioc, config),
                   std::make_unique<ep::policy::module>()),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
