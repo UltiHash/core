@@ -64,6 +64,42 @@ public:
         co_return std::move(dedupe_resp);
     }
 
+    coro<void> send_ds_write(context& ctx, const ds_write_request& req) {
+        register_write_buffer(req.ds_id);
+        register_write_buffer(req.pointer);
+        register_write_buffer(std::get<std::string_view>(req.data));
+        co_await send_buffers(ctx, STORAGE_DS_WRITE_REQ);
+    }
+
+    coro<ds_write_request> recv_ds_write(const header& message_header) {
+        ds_write_request req{
+            .data = unique_buffer<>(message_header.size -
+                                    sizeof(ds_write_request::ds_id) -
+                                    sizeof(ds_write_request::pointer))};
+        register_read_buffer(req.ds_id);
+        register_read_buffer(req.pointer);
+        const auto& buf = std::get<unique_buffer<>>(req.data);
+        register_read_buffer(buf.data(), buf.size());
+        co_await recv_buffers(message_header);
+        co_return req;
+    }
+
+    coro<void> send_ds_read(context& ctx, const ds_read_request& req) {
+        register_write_buffer(req.ds_id);
+        register_write_buffer(req.pointer);
+        register_write_buffer(req.size);
+        co_await send_buffers(ctx, STORAGE_DS_READ_REQ);
+    }
+
+    coro<ds_read_request> recv_ds_read(const header& message_header) {
+        ds_read_request req;
+        register_read_buffer(req.ds_id);
+        register_read_buffer(req.pointer);
+        register_read_buffer(req.size);
+        co_await recv_buffers(message_header);
+        co_return req;
+    }
+
     coro<void> send_address(context& ctx, const message_type type,
                             const address& addr) {
         register_write_buffer(addr.pointers);

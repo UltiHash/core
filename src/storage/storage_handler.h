@@ -73,6 +73,12 @@ public:
                 case STORAGE_INIT_DD_REQ:
                     co_await handle_init_dd(ctx, m, message_header);
                     break;
+                case STORAGE_DS_WRITE_REQ:
+                    co_await handle_ds_write(ctx, m, message_header);
+                    break;
+                case STORAGE_DS_READ_REQ:
+                    co_await handle_ds_read(ctx, m, message_header);
+                    break;
                 default:
                     throw std::invalid_argument("Invalid message type!");
                 }
@@ -185,6 +191,24 @@ private:
     coro<void> handle_init_dd(context& ctx, messenger& m,
                               const messenger::header&) {
         co_await m.send(ctx, SUCCESS, {});
+    }
+
+    coro<void> handle_ds_write(context& ctx, messenger& m,
+                               const messenger::header& h) {
+        const auto req = co_await m.recv_ds_write(h);
+        co_await m_storage.ds_write(
+            ctx, req.ds_id, req.pointer,
+            std::get<unique_buffer<>>(req.data).string_view());
+        co_await m.send(ctx, SUCCESS, {});
+    }
+
+    coro<void> handle_ds_read(context& ctx, messenger& m,
+                              const messenger::header& h) {
+        const auto req = co_await m.recv_ds_read(h);
+        unique_buffer<> buf{req.size};
+        co_await m_storage.ds_read(ctx, req.ds_id, req.pointer, req.size,
+                                   buf.data());
+        co_await m.send(ctx, SUCCESS, buf.span());
     }
 
     local_storage& m_storage;
