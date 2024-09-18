@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
-project(uh-cluster VERSION 0.5.4)
+project(uh-cluster VERSION 0.6.0)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
