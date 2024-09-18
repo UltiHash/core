@@ -200,6 +200,18 @@ struct local_storage : public storage_interface {
         co_return res;
     }
 
+    coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
+                        const std::string_view& data) override {
+        m_data_stores.at(ds_id)->manual_write(pointer, data);
+        co_return;
+    }
+
+    coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
+                       size_t size, char* buffer) override {
+        m_data_stores.at(ds_id)->manual_read(pointer, size, buffer);
+        co_return;
+    }
+
     size_t get_free_space() {
         load_monitor load(m_load);
 

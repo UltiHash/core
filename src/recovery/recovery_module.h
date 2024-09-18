@@ -5,8 +5,6 @@
 #include "common/etcd/ec_groups/ec_group_attributes.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/telemetry/log.h"
-#include "common/utils/address_utils.h"
-#include "common/utils/pointer_traits.h"
 
 #include <boost/asio/co_spawn.hpp>
 
@@ -61,23 +59,29 @@ private:
             co_return;
         }
 
+        auto nodes = m_getter.get_services();
+        if (nodes.size() != rinfo.stats.size()) {
+            throw std::runtime_error(
+                "node failure before starting with recovery");
+        }
+
         LOG_INFO() << "starting recovery for group " << m_attributes.group_id();
 
         set_status(status, recovering);
 
-        auto nodes = m_getter.get_services();
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo);
-        unique_buffer<char> buf(RECOVERY_CHUNK_SIZE);
+
+        unique_buffer<> buf(RECOVERY_CHUNK_SIZE);
 
         uint128_t recovered_size = 0;
-        while (recovered_size < rinfo.recover_size) {
-            auto size = std::min(uint128_t{RECOVERY_CHUNK_SIZE},
-                                 rinfo.recover_size - recovered_size)
-                            .get_low();
-            auto addr = calculate_recovery_address(recovered_size, size,
-                                                   ds_id_used_map);
-            size = addr.sizes.front();
+        auto map_itr = ds_id_used_map.cbegin();
+        auto ds_id = map_itr->first;
+        auto ds_size = map_itr->second;
+        size_t ds_recovered_size = 0;
 
+        while (recovered_size < rinfo.recover_size) {
+            auto size =
+                std::min(RECOVERY_CHUNK_SIZE, ds_size - ds_recovered_size);
             std::vector<size_t> offsets;
             std::vector<std::string_view> shards;
             offsets.reserve(m_getter.size());
@@ -89,22 +93,39 @@ private:
                 pointer += size;
             }
 
-            co_await perform_for_address(
-                addr, m_getter, m_ioc,
-                [&ctx = rinfo.ctx, &buf](auto, auto dn,
-                                         const auto& info) -> coro<void> {
-                    co_await dn->read_address(ctx, buf.data(), info.addr,
-                                              info.pointer_offsets);
+            co_await run_for_all<int, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&](size_t id,
+                    std::shared_ptr<storage_interface> node) -> coro<int> {
+                    co_await node->ds_read(rinfo.ctx, ds_id, ds_recovered_size,
+                                           size, buf.data() + offsets.at(id));
+                    co_return 0;
                 },
-                offsets);
+                nodes);
 
             m_ec_calc.recover(shards, rinfo.stats);
             for (size_t i = 0; i < rinfo.stats.size(); i++) {
                 if (rinfo.stats[i] == lost) {
-                    co_await nodes.at(i)->write(rinfo.ctx, shards.at(i));
+                    co_await nodes.at(i)->ds_write(
+                        rinfo.ctx, ds_id, ds_recovered_size, shards.at(i));
                 }
             }
             recovered_size += size;
+            ds_recovered_size += size;
+            if (ds_recovered_size == ds_size) {
+                ++map_itr;
+                if (map_itr == ds_id_used_map.cend() and
+                    recovered_size != rinfo.recover_size) {
+                    throw std::runtime_error(
+                        "unexpected completion of recovery");
+                }
+                if (map_itr == ds_id_used_map.cend()) {
+                    break;
+                }
+                ds_id = map_itr->first;
+                ds_size = map_itr->second;
+                ds_recovered_size = 0;
+            }
         }
         set_status(status, healthy);
     }
@@ -119,6 +140,7 @@ private:
         std::map<size_t, std::vector<size_t>> sizes;
         context ctx;
         size_t i = 0;
+
         for (const auto& dn : m_getter.get_services()) {
             const auto size = co_await dn->get_used_space(ctx);
             sizes[size].emplace_back(i++);
@@ -141,31 +163,6 @@ private:
         }
 
         co_return rinfo;
-    }
-
-    address
-    calculate_recovery_address(const uint128_t& recovered_size, size_t size,
-                               const std::map<size_t, size_t>& ds_id_used_map) {
-        address addr;
-
-        auto ds = ds_id_used_map.cbegin();
-        size_t internal_offset = pointer_traits::get_pointer(recovered_size);
-        uint128_t upperbound_pointer = ds->second;
-
-        while (upperbound_pointer <= recovered_size) {
-            ++ds;
-            internal_offset = pointer_traits::get_pointer(recovered_size -
-                                                          upperbound_pointer);
-            upperbound_pointer += ds->second;
-        }
-        size_t ds_bounded_size = std::min(size, ds->second - internal_offset);
-
-        for (const auto id : m_getter.get_storage_ids()) {
-            const auto pointer = pointer_traits::get_global_pointer(
-                internal_offset, id, ds->first);
-            addr.push({pointer, ds_bounded_size});
-        }
-        return addr;
     }
 
     coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {

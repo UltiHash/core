@@ -91,6 +91,28 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_map<size_t, size_t>(ctx, message_header);
     }
 
+    coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
+                        const std::string_view& data) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        ds_write_request req{.ds_id = ds_id, .pointer = pointer, .data = data};
+        co_await m->send_ds_write(ctx, req);
+        co_await m->recv_header();
+    }
+
+    coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
+                       size_t size, char* buffer) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        co_await m->send_ds_read(
+            ctx, {.ds_id = ds_id, .pointer = pointer, .size = size});
+        const auto h = co_await m->recv_header();
+        if (h.size != size) {
+            throw std::runtime_error(
+                "mistmatched read size with requested size in ds_read");
+        }
+        m->register_read_buffer(buffer, size);
+        co_await m->recv_buffers(h);
+    }
+
 private:
     client m_storage_service;
 };
