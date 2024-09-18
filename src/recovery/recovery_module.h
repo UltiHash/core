@@ -70,7 +70,8 @@ private:
         set_status(status, recovering);
 
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo);
-        unique_buffer buf(RECOVERY_CHUNK_SIZE);
+
+        unique_buffer<> buf(RECOVERY_CHUNK_SIZE);
 
         uint128_t recovered_size = 0;
         auto map_itr = ds_id_used_map.cbegin();
@@ -140,6 +141,7 @@ private:
         std::map<size_t, std::vector<size_t>> sizes;
         context ctx;
         size_t i = 0;
+
         for (const auto& dn : m_getter.get_services()) {
             const auto size = co_await dn->get_used_space(ctx);
             sizes[size].emplace_back(i++);
