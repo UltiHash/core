@@ -38,6 +38,7 @@ coro<effect> module::check(const http::request& request,
     for (const auto& policy : m_policies) {
         auto result = policy.check(request, cmd);
         if (result.value_or(effect::deny) == effect::allow) {
+            LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
             co_return effect::allow;
         }
     }
@@ -47,8 +48,10 @@ coro<effect> module::check(const http::request& request,
         resource) {
         // TODO cache bucket policies
         auto policies = parser::parse(*resource);
-        for (const auto& p : policies) {
-            if (p.check(request, cmd).value_or(effect::deny) == effect::allow) {
+        for (const auto& policy : policies) {
+            if (policy.check(request, cmd).value_or(effect::deny) ==
+                effect::allow) {
+                LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
                 co_return effect::allow;
             }
         }
@@ -57,6 +60,7 @@ coro<effect> module::check(const http::request& request,
     for (const auto& policy : request.authenticated_user().policies) {
         auto result = policy.check(request, cmd);
         if (result.value_or(effect::deny) == effect::allow) {
+            LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
             co_return effect::allow;
         }
     }
