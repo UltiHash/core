@@ -1,0 +1,21 @@
+#!/bin/bash
+
+[ -z "$UH_DB_USER" ] || [ -z "$UH_DB_PASS" ] || [ -z "$UH_DB_HOSTPORT" ] && {
+    echo "You need to set the environment variables UH_DB_HOSTPORT, UH_DB_USER "
+    echo "and UH_DB_PASS in order to run this script."
+    exit 1
+}
+
+echo "DROP DATABASE uh_directory; DROP DATABASE uh_multipart;" |
+    psql "postgresql://$UH_DB_USER:$UH_DB_PASS@$UH_DB_HOSTPORT/postgres"
+
+SQL_PATH=@PROJECT_SOURCE_DIR@/data/sql
+
+cat $SQL_PATH/provision_databases.sql | psql postgres
+
+for dir in $SQL_PATH/*; do
+    if [ -d  "$dir" ]; then
+        dbname=$(basename "$dir")
+        flyway -locations="filesystem:$dir" -url="jdbc:postgresql://$UH_DB_HOSTPORT/$dbname" -user="$UH_DB_USER" -password="$UH_DB_PASS" migrate
+    fi
+done

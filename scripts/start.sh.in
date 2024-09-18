@@ -1,0 +1,36 @@
+#!/bin/bash
+
+BUILD_DIR=@PROJECT_BINARY_DIR@
+
+set -e
+
+echo "*** resetting database"
+$BUILD_DIR/scripts/reset-db.sh
+
+echo "*** removing old UH data"
+rm --recursive --force --verbose /var/lib/uh/*
+
+echo "*** wipe etcd data"
+etcdctl del --from-key /
+
+echo "*** starting services"
+log_dir=$BUILD_DIR/logs
+mkdir -p $log_dir
+$BUILD_DIR/uh-cluster -l DEBUG storage &> $log_dir/storage.log &
+$BUILD_DIR/uh-cluster -l DEBUG recovery &> $log_dir/recovery.log &
+$BUILD_DIR/uh-cluster -l DEBUG deduplicator &> $log_dir/deduplicator.log &
+$BUILD_DIR/uh-cluster -l DEBUG entrypoint &> $log_dir/entrypoint.log &
+
+echo "All services are running. Log files are written $log_dir and will"
+echo "not be removed after the script has finished."
+echo
+echo "Hit <Return> to kill all spawned processes and shutdown the cluster."
+
+read
+
+kill %4
+kill %3
+kill %2
+kill %1
+
+wait %1 %2 %3 %4

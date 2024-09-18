@@ -15,16 +15,14 @@ namespace uh::cluster {
 class recovery_module {
 public:
     recovery_module(storage_service_get_handler& getter,
-                              boost::asio::io_context& ioc, ec_interface& ec,
-                              ec_group_attributes& attributes)
+                    boost::asio::io_context& ioc, ec_interface& ec,
+                    ec_group_attributes& attributes)
         : m_getter(getter),
           m_ioc(ioc),
           m_ec_calc(ec),
           m_attributes(attributes) {}
 
-    ~recovery_module() {
-        m_attributes.clear();
-    }
+    ~recovery_module() { m_attributes.clear(); }
 
     void async_check_recover(std::atomic<ec_status>& status,
                              size_t group_size) {
@@ -69,7 +67,7 @@ private:
 
         auto nodes = m_getter.get_services();
         const auto ds_id_used_map = co_await get_ds_id_used_map(rinfo);
-        unique_buffer buf(RECOVERY_CHUNK_SIZE);
+        unique_buffer<char> buf(RECOVERY_CHUNK_SIZE);
 
         uint128_t recovered_size = 0;
         while (recovered_size < rinfo.recover_size) {
@@ -207,7 +205,6 @@ private:
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
     ec_group_attributes& m_attributes;
-
 };
 
 } // end namespace uh::cluster
