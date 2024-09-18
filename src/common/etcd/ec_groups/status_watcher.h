@@ -58,3 +58,4 @@ private:
 } // end namespace uh::cluster
 
 #endif //STATUS_WATCHER_H
+

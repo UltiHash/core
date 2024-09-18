@@ -81,7 +81,6 @@ private:
         while (recovered_size < rinfo.recover_size) {
             auto size =
                 std::min(RECOVERY_CHUNK_SIZE, ds_size - ds_recovered_size);
-
             std::vector<size_t> offsets;
             std::vector<std::string_view> shards;
             offsets.reserve(m_getter.size());
@@ -126,6 +125,7 @@ private:
                 ds_size = map_itr->second;
                 ds_recovered_size = 0;
             }
+
         }
         set_status(status, healthy);
     }
@@ -163,6 +163,7 @@ private:
 
         co_return rinfo;
     }
+
 
     coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {
         const auto maps = co_await run_for_all<

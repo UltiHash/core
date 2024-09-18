@@ -183,6 +183,7 @@ struct storage_group : public storage_interface {
         throw std::runtime_error("unsupported operation in storage group");
     }
 
+
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
     storage_service_get_handler m_getter;

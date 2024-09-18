@@ -13,6 +13,16 @@ global:
       add:
       - SYS_PTRACE
 
+recovery:
+  nodeSelector:
+    workload-type: directory
+    purpose: performance-testing-small
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
 etcd:
   replicaCount: 1
   nodeSelector:
