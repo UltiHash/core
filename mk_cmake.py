@@ -34,7 +34,6 @@ def library_name(realpath, base_dir):
     if not os.path.exists(libabs):
         return ""
     library = os.path.relpath(libabs, base_dir)
-    print(f"{realpath} -- {base_dir} -- {libabs} -- {library}")
     return "uh_" + str(library).replace("/", "_")
 
 def dependencies(files, base_dir):
@@ -49,6 +48,7 @@ def dependencies(files, base_dir):
     cli11 = False
     pgsql = False
     etcd = False
+    boost = False
     for f in files:
         includes = grep(f, '^#include "')
         for inc in includes:
@@ -74,6 +74,8 @@ def dependencies(files, base_dir):
             pgsql = len(grep(f, '#include.*libpq-fe.*')) > 0
         if not etcd:
             etcd = len(grep(f, '.*<etcd/.*.hpp>')) > 0
+        if not boost:
+            boost = len(grep(f, '#include.*<boost.*')) > 0
 
 
     dirs = [os.path.dirname(f) for f in ipaths.keys()]
@@ -98,6 +100,8 @@ def dependencies(files, base_dir):
         libs.append('PostgreSQL::PostgreSQL')
     if etcd:
         libs.append('etcd-cpp-api')
+    if boost:
+        libs.append('${Boost_LIBRARIES}')
     libs.sort()
     return libs
 
@@ -109,7 +113,7 @@ def generate_cmake(path, base_dir):
     h_files = [f for f in files if os.path.splitext(f)[1] == '.h']
     cpp_files = [f for f in files if os.path.splitext(f)[1] == '.cpp']
     cpp_string = " ".join(cpp_files)
-    h_string = " ".join(h_files)
+    h_string = " " + " ".join(h_files)
 
     libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files], base_dir)
     libs = [f for f in libs if f != f"{library}"]
@@ -121,7 +125,7 @@ def generate_cmake(path, base_dir):
             if len(libs) != 0:
                 f.write(f"target_link_libraries({library} {lib_string})\n")
         elif len(h_files) != 0:
-            f.write(f"add_library({library} INTERFACE {h_string})\n")
+            f.write(f"add_library({library} INTERFACE{h_string})\n")
             if len(libs) != 0:
                 f.write(f"target_link_libraries({library} INTERFACE {lib_string})\n")
 
