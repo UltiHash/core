@@ -1,5 +1,3 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${Boost_INCLUDE_DIRS})
 add_executable(uh-cluster-2 main.cpp)
 target_link_libraries(uh-cluster-2 uh_common_license uh_common_telemetry uh_common_utils uh_config uh_deduplicator uh_entrypoint uh_storage)

@@ -30,6 +30,9 @@ find_library(LMDB_LIBRARY NAMES lmdb)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
@@ -77,9 +80,9 @@ add_subdirectory(src)
 
 # Unit tests
 if(BUILD_TESTS)
-    message(STATUS "Building unit tests")
     enable_testing()
-#include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
+    message(STATUS "Building unit tests")
+    add_subdirectory(test)
 endif()
 if(BUILD_EXPERIMENTS)
     message(STATUS "Building experiments")
