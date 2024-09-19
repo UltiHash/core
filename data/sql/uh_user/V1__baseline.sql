@@ -21,24 +21,10 @@ CREATE TABLE users (
 --
 
 --
--- uh_create_user(access_key, secret_key) -- create a new user and return it's
--- id
---
-CREATE OR REPLACE FUNCTION uh_create_user(access_key TEXT, secret_key TEXT) RETURNS TEXT
-LANGUAGE plpgsql AS $$
-DECLARE id TEXT;
-BEGIN
-    EXECUTE format('INSERT INTO users (access_key, secret_key) VALUES (%L, %L) RETURNING id',
-        access_key, secret_key) INTO id;
-    RETURN id;
-END;
-$$;
-
---
--- uh_create_temporary_user(access_key, secret_key, session_token, expires) -- create a new
+-- uh_create_user(access_key, secret_key, session_token, expires) -- create a new
 --   user that will expire after a given time and return it's id
 --
-CREATE OR REPLACE FUNCTION uh_create_temporary_user(access_key TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP) RETURNS TEXT
+CREATE OR REPLACE FUNCTION uh_create_user(access_key TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP) RETURNS TEXT
 LANGUAGE plpgsql AS $$
 DECLARE id TEXT;
 BEGIN
@@ -90,4 +76,13 @@ BEGIN
     RETURN QUERY EXECUTE format('SELECT secret_key, policy FROM users WHERE access_key = %L and session_token = %L and expires > now()',
         access_key, session_token);
 END;
+$$;
+
+--
+-- uh_list_access_keys() -- return list of access keys
+--
+CREATE OR REPLACE FUNCTION uh_list_access_keys()
+    RETURNS TABLE (key TEXT)
+LANGUAGE SQL AS $$
+    SELECT access_key FROM users WHERE expires >= now() OR expires IS NULL
 $$;

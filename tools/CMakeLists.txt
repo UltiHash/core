@@ -25,3 +25,7 @@ target_include_directories(${PROJECT_NAME}-uh-dir PRIVATE ${${PROJECT_NAME}_INCL
 add_executable(${PROJECT_NAME}-storage storage/main.cpp)
 target_link_libraries(${PROJECT_NAME}-storage ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-storage PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+add_executable(${PROJECT_NAME}-access-client access/main.cpp)
+target_link_libraries(${PROJECT_NAME}-access-client ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME}-access-client PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
