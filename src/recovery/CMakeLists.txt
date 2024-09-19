@@ -1,2 +1,2 @@
 add_library(uh_recovery INTERFACE recovery.h recovery_module.h config.h)
-target_link_libraries(uh_recovery INTERFACE uh_common_coroutines uh_common_ec uh_common_etcd_ec_groups uh_common_etcd_service_discovery uh_common_telemetry uh_common_utils uh_config)
+target_link_libraries(uh_recovery INTERFACE ${Boost_LIBRARIES} uh_common_coroutines uh_common_ec uh_common_etcd_ec_groups uh_common_etcd_service_discovery uh_common_telemetry uh_common_utils uh_config)

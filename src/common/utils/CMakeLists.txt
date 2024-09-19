@@ -1,2 +1,2 @@
 add_library(uh_common_utils xml_parser.cpp error.cpp strings.cpp temp_directory.cpp address_utils.cpp random.cpp host_utils.cpp common.cpp)
-target_link_libraries(uh_common_utils uh_common_coroutines uh_common_debug uh_common_etcd_service_discovery uh_common_network uh_common_service_interfaces uh_common_telemetry uh_common_types)
+target_link_libraries(uh_common_utils ${Boost_LIBRARIES} uh_common_coroutines uh_common_debug uh_common_etcd_service_discovery uh_common_network uh_common_service_interfaces uh_common_telemetry uh_common_types)

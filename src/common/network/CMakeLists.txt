@@ -1,2 +1,2 @@
 add_library(uh_common_network tools.cpp)
-target_link_libraries(uh_common_network uh_common_coroutines uh_common_telemetry uh_common_types uh_common_utils)
+target_link_libraries(uh_common_network ${Boost_LIBRARIES} uh_common_coroutines uh_common_telemetry uh_common_types uh_common_utils)
