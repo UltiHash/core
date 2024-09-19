@@ -71,7 +71,7 @@ coro<std::unique_ptr<request>>
 auth_request_factory::create(ip::tcp::socket& sock) {
 
     auto req = co_await partial_parse_result::read(sock);
-    auto auth = auth_info::create(req, *m_users);
+    auto auth = co_await auth_info::create(req, *m_users);
 
     auto body = make_body(req, auth);
     auto rv = std::make_unique<request>(req, std::move(body));
