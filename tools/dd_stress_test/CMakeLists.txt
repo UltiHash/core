@@ -1,4 +1,4 @@
 project(dd-stress-test)
 
 add_executable(uh-dd-stress-test main.cpp)
-target_link_libraries(uh-dd-stress-test uh_network)
+target_link_libraries(uh-dd-stress-test uh_common_network)

@@ -78,18 +78,19 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test_config.h.in ${CMAKE_CURRENT
 add_subdirectory(scripts)
 add_subdirectory(src)
 
-# Unit tests
 if(BUILD_TESTS)
     enable_testing()
     message(STATUS "Building unit tests")
     add_subdirectory(test)
 endif()
+
 if(BUILD_EXPERIMENTS)
     message(STATUS "Building experiments")
     add_subdirectory(experiments)
 endif()
+
 if(BUILD_TOOLS)
     message(STATUS "Building tools")
-#add_subdirectory(tools)
+    add_subdirectory(tools)
 endif()
 
