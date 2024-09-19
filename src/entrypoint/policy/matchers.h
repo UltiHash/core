@@ -12,14 +12,18 @@ namespace uh::cluster::ep::policy {
 inline matcher match_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const http::request&,
                                           const command& cmd) {
-        return actions.find(cmd.action_id()) != actions.end();
+        return match_any(actions, [&cmd](auto value) {
+            return equals_wildcard(value, cmd.action_id());
+        });
     };
 }
 
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const http::request&,
                                           const command& cmd) {
-        return actions.find(cmd.action_id()) == actions.end();
+        return match_any(actions, [&cmd](auto value) {
+            return !equals_wildcard(value, cmd.action_id());
+        });
     };
 }
 

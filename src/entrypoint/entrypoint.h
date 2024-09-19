@@ -67,7 +67,7 @@ public:
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
                   make_request_factory(m_ioc, config),
-                  std::make_unique<ep::policy::module>()),
+                  std::make_unique<ep::policy::module>(m_directory)),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
