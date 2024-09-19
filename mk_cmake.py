@@ -30,7 +30,11 @@ def is_dep_fp(dependency):
     ]
 
 def library_name(realpath, base_dir):
-    library = os.path.relpath(realpath, base_dir)
+    libabs = os.path.abspath(realpath)
+    if not os.path.exists(libabs):
+        return ""
+    library = os.path.relpath(libabs, base_dir)
+    print(f"{realpath} -- {base_dir} -- {libabs} -- {library}")
     return "uh_" + str(library).replace("/", "_")
 
 def dependencies(files, base_dir):
@@ -70,7 +74,7 @@ def dependencies(files, base_dir):
 
 
     dirs = [os.path.dirname(f) for f in ipaths.keys()]
-    libs = [library_name(f, base_dir) for f in dirs if f != ""]
+    libs = [library_name(os.path.join("src", f), base_dir) for f in dirs if f != ""]
     libs = [x for x in libs if not is_dep_fp(x)]
     libs = list(set(libs))
     if zpp_bits:
@@ -99,16 +103,21 @@ def generate_cmake(path, base_dir):
     h_files = [f for f in files if os.path.splitext(f)[1] == '.h']
     cpp_files = [f for f in files if os.path.splitext(f)[1] == '.cpp']
     cpp_string = " ".join(cpp_files)
+    h_string = " ".join(h_files)
 
     libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files], base_dir)
+    libs = [f for f in libs if f != f"{library}"]
+    lib_string = " ".join(libs)
 
     with open(os.path.join(path, "CMakeLists.txt"), 'w') as f:
         if len(cpp_files) != 0:
             f.write(f"add_library({library} {cpp_string})\n")
             if len(libs) != 0:
-                libs = [f for f in libs if f != f"{library}"]
-                lib_string = " ".join(libs)
                 f.write(f"target_link_libraries({library} {lib_string})\n")
+        elif len(h_files) != 0:
+            f.write(f"add_library({library} INTERFACE {h_string})\n")
+            if len(libs) != 0:
+                f.write(f"target_link_libraries({library} INTERFACE {lib_string})\n")
 
         if len(dirs) != 0:
             for d in dirs:
