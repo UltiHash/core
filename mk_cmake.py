@@ -29,7 +29,11 @@ def is_dep_fp(dependency):
         "uh_caches",
     ]
 
-def dependencies(files):
+def library_name(realpath, base_dir):
+    library = os.path.relpath(realpath, base_dir)
+    return "uh_" + str(library).replace("/", "_")
+
+def dependencies(files, base_dir):
     m = re.compile('#include "([^"]+)"')
     ipaths = dict()
     zpp_bits = False
@@ -66,7 +70,7 @@ def dependencies(files):
 
 
     dirs = [os.path.dirname(f) for f in ipaths.keys()]
-    libs = ["uh_" + os.path.basename(f) for f in dirs if f != ""]
+    libs = [library_name(f, base_dir) for f in dirs if f != ""]
     libs = [x for x in libs if not is_dep_fp(x)]
     libs = list(set(libs))
     if zpp_bits:
@@ -87,8 +91,8 @@ def dependencies(files):
         libs.append('PostgreSQL::PostgreSQL')
     return libs
 
-def generate_cmake(path):
-    library = os.path.basename(path)
+def generate_cmake(path, base_dir):
+    library = library_name(path, base_dir)
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     dirs = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
 
@@ -96,21 +100,21 @@ def generate_cmake(path):
     cpp_files = [f for f in files if os.path.splitext(f)[1] == '.cpp']
     cpp_string = " ".join(cpp_files)
 
-    libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files])
+    libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files], base_dir)
 
-    with open(os.path.join(path, "CMakeLists.txt"), 'x') as f:
+    with open(os.path.join(path, "CMakeLists.txt"), 'w') as f:
         if len(cpp_files) != 0:
-            f.write(f"add_library(uh_{library} {cpp_string})\n")
+            f.write(f"add_library({library} {cpp_string})\n")
             if len(libs) != 0:
-                libs = [f for f in libs if f != f"uh_{library}"]
+                libs = [f for f in libs if f != f"{library}"]
                 lib_string = " ".join(libs)
-                f.write(f"target_link_libraries(uh_{library} {lib_string})\n")
+                f.write(f"target_link_libraries({library} {lib_string})\n")
 
         if len(dirs) != 0:
             for d in dirs:
                 f.write(f"add_subdirectory({d})\n")
 
-def generate_exec_cmake(path, name):
+def generate_exec_cmake(path, name, base_dir):
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     dirs = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
 
@@ -118,9 +122,9 @@ def generate_exec_cmake(path, name):
     cpp_files = [f for f in files if os.path.splitext(f)[1] == '.cpp']
     cpp_string = " ".join(cpp_files)
 
-    libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files])
+    libs = dependencies([os.path.join(path, f) for f in cpp_files + h_files], base_dir)
 
-    with open(os.path.join(path, "CMakeLists.txt"), 'x') as f:
+    with open(os.path.join(path, "CMakeLists.txt"), 'w') as f:
         f.write("include_directories(${CMAKE_CURRENT_SOURCE_DIR})\n")
         f.write("include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)\n")
         f.write("include_directories(${Boost_INCLUDE_DIRS})\n")
@@ -136,14 +140,12 @@ def generate_exec_cmake(path, name):
 
 
 if __name__ == "__main__":
-    for root, dirs, files in os.walk("src"):
+    base_dir = os.path.join(os.getcwd(), "src")
+    for root, dirs, files in os.walk(base_dir):
         for d in dirs:
             dir_path = os.path.join(root, d)
             print(f"{dir_path}")
 
-            if os.path.exists(dir_path.join("CMakeLists.txt")):
-                print(f"{dir_path}/CMakeLists.txt found, skipping")
-            else:
-                generate_cmake(dir_path)
+            generate_cmake(dir_path, base_dir)
 
-    generate_exec_cmake("/home/sjank/projects/core/src", "uh-cluster-2")
+    generate_exec_cmake("/home/sjank/projects/core/src", "uh-cluster-2", base_dir)
