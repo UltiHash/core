@@ -1,0 +1,2 @@
+add_library(uh_storage_interfaces INTERFACE local_storage.h storage_group.h remote_storage.h)
+target_link_libraries(uh_storage_interfaces INTERFACE uh_common_coroutines uh_common_ec uh_common_etcd_ec_groups uh_common_etcd_service_discovery uh_common_network uh_common_service_interfaces uh_common_utils uh_storage)

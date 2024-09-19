@@ -1,0 +1,2 @@
+add_library(uh_common_etcd_ec_groups INTERFACE ec_group_attributes.h ec_group_maintainer.h status_watcher.h ec_get_handler.h ec_load_balancer.h)
+target_link_libraries(uh_common_etcd_ec_groups INTERFACE etcd-cpp-api magic_enum uh_common_ec uh_common_etcd uh_common_etcd_service_discovery uh_common_service_interfaces uh_common_telemetry uh_common_utils uh_storage_interfaces)

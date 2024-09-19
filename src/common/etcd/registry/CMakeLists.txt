@@ -1,0 +1,2 @@
+add_library(uh_common_etcd_registry service_registry.cpp service_id.cpp)
+target_link_libraries(uh_common_etcd_registry  etcd-cpp-api uh_common_etcd uh_common_network uh_common_utils)

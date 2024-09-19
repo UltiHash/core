@@ -1,0 +1,2 @@
+add_library(uh_common_license license.cpp)
+target_link_libraries(uh_common_license uh_common_utils)

@@ -1,0 +1,2 @@
+add_library(uh_entrypoint_http raw_body.cpp string_body.cpp response.cpp chunked_body.cpp default_request_factory.cpp beast_utils.cpp request_factory.cpp auth_utils.cpp chunk_body_sha256.cpp request.cpp command_exception.cpp auth_request_factory.cpp raw_body_sha256.cpp)
+target_link_libraries(uh_entrypoint_http uh_common_coroutines uh_common_crypto uh_common_telemetry uh_common_types uh_common_utils uh_entrypoint uh_entrypoint_user)

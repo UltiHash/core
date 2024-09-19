@@ -1,0 +1,5 @@
+add_library(uh_common_etcd INTERFACE etcd_lock.h namespace.h)
+target_link_libraries(uh_common_etcd INTERFACE etcd-cpp-api uh_common_utils)
+add_subdirectory(ec_groups)
+add_subdirectory(registry)
+add_subdirectory(service_discovery)

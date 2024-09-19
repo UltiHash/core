@@ -1,0 +1,3 @@
+add_library(uh_storage data_store.cpp reference_counter.cpp)
+target_link_libraries(uh_storage lmdbxx uh_common_coroutines uh_common_debug uh_common_etcd_registry uh_common_network uh_common_telemetry uh_common_types uh_common_utils uh_storage_interfaces)
+add_subdirectory(interfaces)

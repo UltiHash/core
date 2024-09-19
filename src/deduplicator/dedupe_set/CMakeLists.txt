@@ -1,0 +1,2 @@
+add_library(uh_deduplicator_dedupe_set fragment_set_element.cpp fragment_set.cpp fragment_set_log.cpp)
+target_link_libraries(uh_deduplicator_dedupe_set uh_common_caches uh_common_global_data uh_common_types uh_common_utils uh_deduplicator)

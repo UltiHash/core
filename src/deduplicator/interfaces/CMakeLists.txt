@@ -1,0 +1,2 @@
+add_library(uh_deduplicator_interfaces INTERFACE remote_deduplicator.h local_deduplicator.h)
+target_link_libraries(uh_deduplicator_interfaces INTERFACE uh_common_coroutines uh_common_global_data uh_common_network uh_common_service_interfaces uh_deduplicator uh_deduplicator_dedupe_set)

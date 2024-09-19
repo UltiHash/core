@@ -1,0 +1,2 @@
+add_library(uh_config configuration.cpp)
+target_link_libraries(uh_config CLI11::CLI11 uh_common_db uh_common_license uh_common_telemetry uh_common_utils uh_deduplicator uh_entrypoint uh_storage)

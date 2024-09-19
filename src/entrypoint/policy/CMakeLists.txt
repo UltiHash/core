@@ -1,0 +1,2 @@
+add_library(uh_entrypoint_policy policy.cpp parser.cpp module.cpp)
+target_link_libraries(uh_entrypoint_policy nlohmann_json reedsolomon uh_common_telemetry uh_entrypoint uh_entrypoint_commands uh_entrypoint_http)

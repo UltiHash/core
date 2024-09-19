@@ -1,0 +1,2 @@
+add_library(uh_common_etcd_service_discovery INTERFACE roundrobin_load_balancer.h storage_get_handler.h service_maintainer.h storage_service_get_handler.h service_monitor.h)
+target_link_libraries(uh_common_etcd_service_discovery INTERFACE  uh_common_etcd uh_common_service_interfaces uh_common_utils uh_storage_interfaces)

@@ -1,0 +1,2 @@
+add_library(uh_common_global_data global_data_view.cpp)
+target_link_libraries(uh_common_global_data uh_common_caches uh_common_etcd_ec_groups uh_common_etcd_service_discovery uh_common_types uh_common_utils uh_storage_interfaces)

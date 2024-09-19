@@ -48,6 +48,7 @@ def dependencies(files, base_dir):
     reed = False
     cli11 = False
     pgsql = False
+    etcd = False
     for f in files:
         includes = grep(f, '^#include "')
         for inc in includes:
@@ -71,6 +72,8 @@ def dependencies(files, base_dir):
             cli11 = len(grep(f, '#include.*CLI/CLI.hpp.*')) > 0
         if not pgsql:
             pgsql = len(grep(f, '#include.*libpq-fe.*')) > 0
+        if not etcd:
+            etcd = len(grep(f, '.*<etcd/.*.hpp>')) > 0
 
 
     dirs = [os.path.dirname(f) for f in ipaths.keys()]
@@ -93,6 +96,9 @@ def dependencies(files, base_dir):
         libs.append('CLI11::CLI11')
     if pgsql:
         libs.append('PostgreSQL::PostgreSQL')
+    if etcd:
+        libs.append('etcd-cpp-api')
+    libs.sort()
     return libs
 
 def generate_cmake(path, base_dir):

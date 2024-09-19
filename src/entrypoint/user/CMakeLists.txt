@@ -1,0 +1,2 @@
+add_library(uh_entrypoint_user dummy_backend.cpp)
+target_link_libraries(uh_entrypoint_user uh_entrypoint_policy)
