@@ -1,6 +1,7 @@
 #include "common/db/db.h"
 #include "config/configuration.h"
 
+#include "common/telemetry/log.h"
 #include "entrypoint/user/db.h"
 
 using namespace uh::cluster;
@@ -29,6 +30,9 @@ struct config {
         std::optional<std::string> policy;
         bool remove = false;
     } policy;
+
+    boost::log::trivial::severity_level log_level =
+        boost::log::trivial::warning;
 };
 
 std::optional<::config> read_config(int argc, char** argv) {
@@ -38,6 +42,7 @@ std::optional<::config> read_config(int argc, char** argv) {
     ::config rv;
 
     uh::cluster::configure(app, rv.database);
+    uh::cluster::configure(app, rv.log_level);
 
     auto* sub_add = app.add_subcommand("add", "add access entry to database");
     sub_add->add_option("access-id", rv.add.access_id, "entry's access id");
@@ -68,6 +73,7 @@ std::optional<::config> read_config(int argc, char** argv) {
         return {};
     }
 
+    uh::log::set_level(rv.log_level);
     if (sub_add->parsed()) {
         rv.cmd = ::config::command::add;
     } else if (sub_remove->parsed()) {

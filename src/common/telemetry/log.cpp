@@ -198,4 +198,10 @@ void init(const config& cfg) {
 
 // ---------------------------------------------------------------------
 
+void set_level(logging::trivial::severity_level level) {
+    logging::core::get()->set_filter(logging::trivial::severity >= level);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::log

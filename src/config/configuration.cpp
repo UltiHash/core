@@ -231,13 +231,7 @@ std::optional<config> read_config(int argc, char** argv) {
     app.require_subcommand(1);
 
     boost::log::trivial::severity_level log_level;
-    app.add_option("--log-level,-l", log_level,
-                   "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
-        ->transform([](const std::string& severity_str) {
-            return std::to_string(uh::log::severity_from_string(severity_str));
-        })
-        ->default_val(uh::log::to_string(boost::log::trivial::info))
-        ->envname(ENV_CFG_LOG_LEVEL);
+    configure(app, log_level);
 
     app.add_flag_callback(
         "--vcsid", print_vcsid,
@@ -315,6 +309,16 @@ void configure(CLI::App& app, db::config& cfg) {
                    "Number of connections to multipart database")
         ->default_val(cfg.multipart.count)
         ->envname(ENV_CFG_DB_MULTIPART_CONNECTIONS);
+}
+
+void configure(CLI::App& app, boost::log::trivial::severity_level& log_level) {
+    app.add_option("--log-level,-l", log_level,
+                   "severity level, i.e. DEBUG, INFO, WARN, ERROR, or FATAL")
+        ->transform([](const std::string& severity_str) {
+            return std::to_string(uh::log::severity_from_string(severity_str));
+        })
+        ->default_val(uh::log::to_string(log_level))
+        ->envname(ENV_CFG_LOG_LEVEL);
 }
 
 } // namespace uh::cluster

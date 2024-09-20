@@ -37,6 +37,7 @@ struct config {
 std::optional<config> read_config(int argc, char** argv);
 
 void configure(CLI::App& app, db::config& cfg);
+void configure(CLI::App& app, boost::log::trivial::severity_level& log_level);
 
 } // namespace uh::cluster
 

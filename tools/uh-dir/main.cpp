@@ -21,6 +21,9 @@ struct config {
     std::string target_rmb;
     std::string target_info;
     std::string target_obj;
+
+    boost::log::trivial::severity_level log_level =
+        boost::log::trivial::warning;
 };
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -30,6 +33,7 @@ std::optional<config> read_config(int argc, char** argv) {
     config rv;
 
     uh::cluster::configure(app, rv.database);
+    uh::cluster::configure(app, rv.log_level);
 
     auto* sub_ls = app.add_subcommand("ls", "list contents of directory");
     sub_ls->add_option("bucket", rv.target_ls, "list contents of this bucket");
@@ -52,6 +56,7 @@ std::optional<config> read_config(int argc, char** argv) {
         return {};
     }
 
+    uh::log::set_level(rv.log_level);
     if (sub_ls->parsed()) {
         rv.cmd = config::command::ls;
     } else if (sub_mkb->parsed()) {
