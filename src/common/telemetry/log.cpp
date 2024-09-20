@@ -146,6 +146,7 @@ std::string to_string(sink_type type) {
 // ---------------------------------------------------------------------
 
 logging::trivial::severity_level severity_from_string(const std::string& s) {
+    RETURN_IF_MATCH(s, "TRACE", logging::trivial::trace);
     RETURN_IF_MATCH(s, "DEBUG", logging::trivial::debug);
     RETURN_IF_MATCH(s, "INFO", logging::trivial::info);
     RETURN_IF_MATCH(s, "WARN", logging::trivial::warning);
@@ -159,6 +160,8 @@ logging::trivial::severity_level severity_from_string(const std::string& s) {
 
 std::string to_string(boost::log::trivial::severity_level level) {
     switch (level) {
+    case logging::trivial::trace:
+        return "TRACE";
     case logging::trivial::debug:
         return "DEBUG";
     case logging::trivial::info:
@@ -169,8 +172,6 @@ std::string to_string(boost::log::trivial::severity_level level) {
         return "ERROR";
     case logging::trivial::fatal:
         return "FATAL";
-    case logging::trivial::trace:
-        return "TRIVIAL";
     }
 
     throw std::runtime_error("unsupported log level type");
