@@ -230,7 +230,7 @@ std::optional<config> read_config(int argc, char** argv) {
 
     app.require_subcommand(1);
 
-    boost::log::trivial::severity_level log_level;
+    boost::log::trivial::severity_level log_level = boost::log::trivial::info;
     configure(app, log_level);
 
     app.add_flag_callback(
