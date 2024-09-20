@@ -8,7 +8,7 @@
 using namespace uh::cluster;
 
 struct config {
-    enum class command { add, remove, policy, list };
+    enum class command { add, remove, policy, list, cleanup };
 
     uh::cluster::db::config database;
 
@@ -66,6 +66,8 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_policy->add_option("--remove", rv.policy.remove, "delete the policy");
 
     auto sub_list = app.add_subcommand("list", "show stored access entries");
+    auto sub_cleanup =
+        app.add_subcommand("cleanup", "remove expired user accounts");
 
     try {
         app.parse(argc, argv);
@@ -83,6 +85,8 @@ std::optional<::config> read_config(int argc, char** argv) {
         rv.cmd = ::config::command::policy;
     } else if (sub_list->parsed()) {
         rv.cmd = ::config::command::list;
+    } else if (sub_cleanup->parsed()) {
+        rv.cmd = ::config::command::cleanup;
     }
 
     return rv;
@@ -129,6 +133,10 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     }
 }
 
+uh::cluster::coro<void> cleanup(ep::user::db& db, const ::config&) {
+    co_await db.remove_expired();
+}
+
 int main(int argc, char** argv) {
     try {
         auto cfg = ::read_config(argc, argv);
@@ -157,6 +165,9 @@ int main(int argc, char** argv) {
             break;
         case ::config::command::list:
             boost::asio::co_spawn(executor, list_entries(db, *cfg), handler);
+            break;
+        case ::config::command::cleanup:
+            boost::asio::co_spawn(executor, cleanup(db, *cfg), handler);
             break;
         default:
             throw std::runtime_error("unsupported command");
