@@ -12,7 +12,9 @@ public:
 
     struct user_info {
         std::string secret_key;
+        std::optional<std::string> session_token;
         std::optional<std::string> policy;
+        std::optional<utc_time> expires;
     };
 
     /**
@@ -31,7 +33,8 @@ public:
      * @param ttl number of seconds until the account expires (optional)
      */
     coro<void> add(const std::string& key, const std::string& secret,
-                   const std::string& sts, std::optional<std::size_t> ttl);
+                   std::optional<std::string> sts,
+                   std::optional<std::size_t> ttl);
 
     /**
      * Remove user from the DB.

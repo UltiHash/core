@@ -66,15 +66,15 @@ END;
 $$;
 
 --
--- uh_query_user(access_key, session_token) -- retrieve user information
+-- uh_query_user(access_key) -- retrieve user information
 -- suitable for authenticating a user. Returns secret_key and policy.
 --
-CREATE OR REPLACE FUNCTION uh_query_user(access_key TEXT, session_token TEXT)
-    RETURNS TABLE (secret_key TEXT, policy JSON)
+CREATE OR REPLACE FUNCTION uh_query_user(access_key TEXT)
+    RETURNS TABLE (secret_key TEXT, session_token TEXT, policy JSON, expires TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT secret_key, policy FROM users WHERE access_key = %L and session_token = %L and expires > now()',
-        access_key, session_token);
+    RETURN QUERY EXECUTE format('SELECT secret_key, session_token, policy, expires FROM users WHERE access_key = %L AND (expires > now() OR expires IS NULL)',
+        access_key);
 END;
 $$;
 

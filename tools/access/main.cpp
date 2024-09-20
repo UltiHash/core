@@ -2,6 +2,7 @@
 #include "config/configuration.h"
 
 #include "common/telemetry/log.h"
+#include "entrypoint/formats.h"
 #include "entrypoint/user/db.h"
 
 using namespace uh::cluster;
@@ -17,7 +18,7 @@ struct config {
     struct {
         std::string access_id;
         std::string secret_key;
-        std::string sts_token;
+        std::optional<std::string> sts_token;
         std::optional<std::size_t> ttl;
     } add;
 
@@ -47,7 +48,7 @@ std::optional<::config> read_config(int argc, char** argv) {
     auto* sub_add = app.add_subcommand("add", "add access entry to database");
     sub_add->add_option("access-id", rv.add.access_id, "entry's access id");
     sub_add->add_option("secret-key", rv.add.secret_key, "entry's secret");
-    sub_add->add_option("sts-token", rv.add.sts_token, "STS token string");
+    sub_add->add_option("--sts-token", rv.add.sts_token, "STS token string");
     sub_add->add_option("ttl", rv.add.ttl,
                         "number of seconds before expiration");
 
@@ -114,7 +115,17 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     auto entries = co_await db.entries();
 
     for (const auto& entry : entries) {
-        std::cout << entry << "\n";
+        auto info = co_await db.find(entry);
+
+        std::string expires = " -- no expiration -- ";
+        if (info.expires) {
+            expires = iso8601_date(*info.expires);
+        }
+
+        std::cout << entry << "\t"
+                  << info.session_token.value_or("-- no session token --")
+                  << "\t" << (info.policy ? " policy set " : " no policy ")
+                  << "\t" << expires << "\n";
     }
 }
 

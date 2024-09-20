@@ -8,21 +8,25 @@ db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
 coro<db::user_info> db::find(std::string_view key) {
     auto conn = co_await m_db.get();
 
-    auto row = co_await conn->execv(
-        "SELECT secret_key, policy FROM uh_query_user($1, NULL)", key);
+    auto row = co_await conn->execv("SELECT secret_key, session_token, policy, "
+                                    "expires FROM uh_query_user($1)",
+                                    key);
 
     if (!row) {
-        throw std::runtime_error("unknown access id");
+        throw std::runtime_error("unknown access id: " + std::string(key));
     }
 
     co_return user_info{
         .secret_key = *row->string(0),
-        .policy = row->string(1),
+        .session_token = row->string(1),
+        .policy = row->string(2),
+        .expires = row->date(3),
     };
 }
 
 coro<void> db::add(const std::string& key, const std::string& secret,
-                   const std::string& sts, std::optional<std::size_t> ttl) {
+                   std::optional<std::string> sts,
+                   std::optional<std::size_t> ttl) {
     auto conn = co_await m_db.get();
     if (ttl) {
         co_await conn->execv(
