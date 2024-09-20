@@ -61,7 +61,7 @@ public:
     /**
      * Remove all expired users.
      */
-    coro<void> remove_expired();
+    coro<void> remove_expired(std::size_t seconds);
 
 private:
     pool<cluster::db::connection> m_db;

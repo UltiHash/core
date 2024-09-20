@@ -14,6 +14,7 @@ CREATE TABLE users (
     expires TIMESTAMP DEFAULT NULL,
     policy JSON DEFAULT NULL
 );
+CREATE INDEX expires_idx ON users (expires);
 
 -- ------------------------------------------------------------------------
 --
@@ -56,12 +57,13 @@ END;
 $$;
 
 --
--- uh_remove_expired_users() -- remove all users that have expired
+-- uh_remove_expired_users(expired_before) -- remove all users that have expired
+-- before the given timestamp
 --
-CREATE OR REPLACE PROCEDURE uh_remove_expired_users()
+CREATE OR REPLACE PROCEDURE uh_remove_expired_users(expired_before TIMESTAMP)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('DELETE FROM users WHERE expires <= now()');
+    EXECUTE format('DELETE FROM users WHERE expires <= %L', expired_before);
 END;
 $$;
 

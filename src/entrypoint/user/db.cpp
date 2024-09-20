@@ -63,9 +63,11 @@ coro<std::list<std::string>> db::entries() {
     co_return rv;
 }
 
-coro<void> db::remove_expired() {
+coro<void> db::remove_expired(std::size_t seconds) {
     auto conn = co_await m_db.get();
-    co_await conn->execv("CALL uh_remove_expired_users()");
+    co_await conn->execv("CALL uh_remove_expired_users(now()::timestamp - "
+                         "make_interval(secs => $1))",
+                         seconds);
 }
 
 } // namespace uh::cluster::ep::user

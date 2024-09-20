@@ -32,6 +32,10 @@ struct config {
         bool remove = false;
     } policy;
 
+    struct {
+        std::size_t expire_before = 0ull;
+    } cleanup;
+
     boost::log::trivial::severity_level log_level =
         boost::log::trivial::warning;
 };
@@ -66,8 +70,14 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_policy->add_option("--remove", rv.policy.remove, "delete the policy");
 
     auto sub_list = app.add_subcommand("list", "show stored access entries");
+
     auto sub_cleanup =
         app.add_subcommand("cleanup", "remove expired user accounts");
+    sub_cleanup
+        ->add_option(
+            "--expire-before", rv.cleanup.expire_before,
+            "only remove entries that expired before that many seconds")
+        ->default_val(rv.cleanup.expire_before);
 
     try {
         app.parse(argc, argv);
@@ -133,8 +143,8 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     }
 }
 
-uh::cluster::coro<void> cleanup(ep::user::db& db, const ::config&) {
-    co_await db.remove_expired();
+uh::cluster::coro<void> cleanup(ep::user::db& db, const ::config& cfg) {
+    co_await db.remove_expired(cfg.cleanup.expire_before);
 }
 
 int main(int argc, char** argv) {
