@@ -4,18 +4,19 @@
 #include "backend.h"
 #include "common/db/connection.h"
 #include "common/utils/pool.h"
+#include "db.h"
 #include "entrypoint/policy/parser.h"
 
 namespace uh::cluster::ep::user {
 
 class db_backend : public backend {
 public:
-    db_backend(boost::asio::io_context& ioc, const db::config& cfg);
+    db_backend(ep::user::db db);
 
     coro<user> find(std::string_view) override;
 
 private:
-    pool<db::connection> m_db;
+    db m_db;
 };
 
 } // namespace uh::cluster::ep::user

@@ -25,7 +25,8 @@ make_request_factory(boost::asio::io_context& ioc,
         return std::make_unique<ep::http::default_request_factory>();
     case entrypoint_config::auth_backend::dummy:
         return std::make_unique<ep::http::auth_request_factory>(
-            std::make_unique<ep::user::db_backend>(ioc, config.database));
+            std::make_unique<ep::user::db_backend>(
+                ep::user::db(ioc, config.database)));
     }
 
     throw std::runtime_error("unsupported authentication backend");
