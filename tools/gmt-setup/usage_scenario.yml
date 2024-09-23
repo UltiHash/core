@@ -1,0 +1,20 @@
+---
+name: UltiHash Energy/Carbon benchmark
+author: Max Plauth <max@ultihash.io>
+description: This usage_scenario sets up a UH cluster and measures it carbon footprint using the stability test workflow.
+
+compose-file: !include compose.yml
+
+services:
+  storage:
+    setup-commands:
+      - sleep 5
+
+flow:
+  - name: Run stability test
+    container: stability
+    commands:
+      - type: console
+        command: ./start-testing.sh
+        note: Start stability test workflow
+        read-notes-stdout: true

@@ -35,3 +35,5 @@ RUN install -d -m 0755 -o uh -g uh /var/lib/uh
 
 USER uh
 WORKDIR /home/uh
+
+CMD ["/usr/bin/bash", "-l", "-c", "sleep 8 && uh-cluster --registry etcd:2379 deduplicator"]
