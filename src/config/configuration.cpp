@@ -164,10 +164,6 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
 
     configure(*rv, cfg.database);
 
-    rv->add_option("--auth-backend", cfg.authentication,
-                   "authentication backend to user")
-        ->default_val(entrypoint_config::auth_backend::none);
-
     return rv;
 }
 
