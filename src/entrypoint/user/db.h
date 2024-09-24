@@ -10,19 +10,12 @@ class db {
 public:
     db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg);
 
-    struct user_info {
-        std::string secret_key;
-        std::optional<std::string> session_token;
-        std::optional<std::string> policy;
-        std::optional<utc_time> expires;
-    };
-
     /**
      * Find a user using the access_key.
      *
      * @param key access key of the user
      */
-    coro<user_info> find(std::string_view key);
+    coro<user> find(std::string_view key);
 
     /**
      * Add a user and return the access key.

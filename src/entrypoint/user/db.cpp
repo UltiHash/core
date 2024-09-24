@@ -1,11 +1,13 @@
 #include "db.h"
 
+#include "entrypoint/policy/parser.h"
+
 namespace uh::cluster::ep::user {
 
 db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
     : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count) {}
 
-coro<db::user_info> db::find(std::string_view key) {
+coro<user> db::find(std::string_view key) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv("SELECT secret_key, session_token, policy, "
@@ -16,10 +18,11 @@ coro<db::user_info> db::find(std::string_view key) {
         throw std::runtime_error("unknown access id: " + std::string(key));
     }
 
-    co_return user_info{
+    co_return user{
         .secret_key = *row->string(0),
         .session_token = row->string(1),
-        .policy = row->string(2),
+        .policy_json = row->string(2),
+        .policies = policy::parser::parse(row->string(2).value_or("")),
         .expires = row->date(3),
     };
 }
