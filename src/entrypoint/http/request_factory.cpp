@@ -64,13 +64,13 @@ std::unique_ptr<ep::http::body> make_body(partial_parse_result& req,
 
 } // namespace
 
-request_factory::request_factory(std::unique_ptr<user::backend> users)
+request_factory::request_factory(user::db&& users)
     : m_users(std::move(users)) {}
 
 coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
 
     auto req = co_await partial_parse_result::read(sock);
-    auto auth = co_await auth_info::create(req, *m_users);
+    auto auth = co_await auth_info::create(req, m_users);
 
     auto body = make_body(req, auth);
     auto rv = std::make_unique<request>(req, std::move(body));

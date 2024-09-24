@@ -11,7 +11,6 @@
 #include "entrypoint/directory.h"
 #include "entrypoint/http/request_factory.h"
 #include "entrypoint/limits.h"
-#include "entrypoint/user/db_backend.h"
 #include "handler.h"
 
 namespace uh::cluster {
@@ -52,8 +51,7 @@ public:
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
                   ep::http::request_factory(
-                      std::make_unique<ep::user::db_backend>(
-                          ep::user::db(m_ioc, config.database))),
+                      ep::user::db(m_ioc, config.database)),
                   std::make_unique<ep::policy::module>(m_directory)),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);

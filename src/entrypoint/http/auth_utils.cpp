@@ -123,7 +123,7 @@ auth_info::auth_info(std::string hdr)
 }
 
 coro<std::optional<auth_info>> auth_info::create(partial_parse_result& req,
-                                                 user::backend& users) {
+                                                 user::db& users) {
     auto header = req.optional("authorization");
     if (!header) {
         co_return std::nullopt;
