@@ -71,8 +71,8 @@ etcd:
       value: "testing"
       effect: "NoSchedule"
   persistence:
-    size: 5Gi
-    storageClass: local-path
+    size: 125Gi
+    storageClass: ebs-csi-st1
 
 entrypoint:
   replicas: 2
@@ -100,8 +100,8 @@ entrypoint:
 
 storage:
   replicas: 2
-  storageClass: local-path           
-  storageSize: 50Gi
+  storageClass: ebs-csi-st1           
+  storageSize: 300Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -123,8 +123,8 @@ storage:
 
 deduplicator:
   replicas: 2
-  storageClass: local-path
-  storageSize: 4Gi
+  storageClass: ebs-csi-st1
+  storageSize: 125Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -156,8 +156,8 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: local-path
-      size: 4Gi
+      storageClass: ebs-csi-st1
+      size: 125Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
