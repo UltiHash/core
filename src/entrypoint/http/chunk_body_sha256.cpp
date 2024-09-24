@@ -11,22 +11,24 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
-std::string make_prelude(partial_parse_result& req, const auth_info& auth) {
+std::string make_prelude(partial_parse_result& req,
+                         const aws4_signature_info& info) {
     return "AWS4-HMAC-SHA256-PAYLOAD\n" + req.require("x-amz-date") + "\n" +
-           std::string(auth.date) + "/" + std::string(auth.region) + "/" +
-           std::string(auth.service) + "/aws4_request\n";
+           std::string(info.date) + "/" + std::string(info.region) + "/" +
+           std::string(info.service) + "/aws4_request\n";
 }
 
 } // namespace
 
 chunk_body_sha256::chunk_body_sha256(partial_parse_result& req,
-                                     const auth_info& auth,
+                                     const aws4_signature_info& info,
+                                     const std::string& signing_key,
+                                     const std::string& signature,
                                      chunked_body::trailing_headers trailing)
     : chunked_body(req, trailing),
-      m_prelude(make_prelude(req, auth)),
-      m_signing_key(*auth.signing_key),
-      m_to_sign(m_prelude + *auth.signature + "\n" + SHA256_EMPTY_STRING +
-                "\n") {}
+      m_prelude(make_prelude(req, info)),
+      m_signing_key(signing_key),
+      m_to_sign(m_prelude + signature + "\n" + SHA256_EMPTY_STRING + "\n") {}
 
 void chunk_body_sha256::on_chunk_header(const chunk_header& hdr) {
     if (auto it = hdr.extensions.find("chunk-signature");
