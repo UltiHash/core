@@ -18,7 +18,8 @@ namespace uh::cluster::ep::http {
 class request {
 public:
     request(boost::beast::http::request<boost::beast::http::empty_body> headers,
-            std::unique_ptr<body> body, boost::asio::ip::tcp::endpoint peer);
+            std::unique_ptr<body> body, ep::user::user user,
+            boost::asio::ip::tcp::endpoint peer);
 
     request(partial_parse_result& req, std::unique_ptr<body> body);
 
@@ -59,7 +60,6 @@ public:
     uh::cluster::context& context();
 
     const user::user& authenticated_user() const;
-    void authenticated_user(user::user user);
 
     const variables& vars() const { return m_vars; }
 
@@ -68,6 +68,7 @@ private:
 
     boost::beast::http::request<boost::beast::http::empty_body> m_req;
     std::unique_ptr<body> m_body;
+    user::user m_authenticated_user;
     boost::asio::ip::tcp::endpoint m_peer;
 
     std::string m_bucket_id{};
@@ -75,7 +76,6 @@ private:
     std::map<std::string, std::string> m_params;
     std::string m_path;
     std::string m_query;
-    user::user m_authenticated_user;
     variables m_vars;
 
     uh::cluster::context m_ctx;

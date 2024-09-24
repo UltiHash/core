@@ -30,7 +30,7 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
 }
 
 std::optional<std::string>
-partial_parse_result::optional(const std::string& name) {
+partial_parse_result::optional(const std::string& name) const {
 
     if (auto header = headers.find(name); header != headers.end()) {
         return header->value();
@@ -39,7 +39,7 @@ partial_parse_result::optional(const std::string& name) {
     return {};
 }
 
-std::string partial_parse_result::require(const std::string& name) {
+std::string partial_parse_result::require(const std::string& name) const {
 
     auto header = headers.find(name);
     if (header == headers.end()) {

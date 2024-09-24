@@ -7,9 +7,11 @@ using namespace boost;
 namespace uh::cluster::ep::http {
 
 request::request(beast::http::request<beast::http::empty_body> headers,
-                 std::unique_ptr<body> body, asio::ip::tcp::endpoint peer)
+                 std::unique_ptr<body> body, ep::user::user user,
+                 asio::ip::tcp::endpoint peer)
     : m_req(std::move(headers)),
       m_body(std::move(body)),
+      m_authenticated_user(std::move(user)),
       m_peer(peer),
       m_ctx() {
     auto target = parse_request_target(m_req.target());
@@ -20,7 +22,7 @@ request::request(beast::http::request<beast::http::empty_body> headers,
 }
 
 request::request(partial_parse_result& req, std::unique_ptr<body> body)
-    : request(std::move(req.headers), std::move(body), req.peer) {}
+    : request(std::move(req.headers), std::move(body), {}, req.peer) {}
 
 http::verb request::method() const { return m_req.method(); }
 
@@ -65,10 +67,6 @@ uh::cluster::context& request::context() { return m_ctx; }
 
 const user::user& request::authenticated_user() const {
     return m_authenticated_user;
-}
-
-void request::authenticated_user(user::user user) {
-    m_authenticated_user = std::move(user);
 }
 
 std::ostream& operator<<(std::ostream& out, const request& req) {
