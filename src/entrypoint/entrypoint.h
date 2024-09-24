@@ -13,11 +13,11 @@
 #include "entrypoint/limits.h"
 #include "handler.h"
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
-class entrypoint {
+class service {
 public:
-    explicit entrypoint(const service_config& sc, entrypoint_config config)
+    explicit service(const service_config& sc, entrypoint_config config)
         : m_config(std::move(config)),
           m_ioc(boost::asio::io_context(m_config.server.threads)),
 
@@ -47,12 +47,11 @@ public:
           m_limits(sc.license.max_data_store_size),
           m_server(
               m_config.server,
-              std::make_unique<ep::handler>(
+              std::make_unique<handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  ep::http::request_factory(
-                      ep::user::db(m_ioc, config.database)),
-                  std::make_unique<ep::policy::module>(m_directory)),
+                  http::request_factory(user::db(m_ioc, config.database)),
+                  std::make_unique<policy::module>(m_directory)),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
@@ -68,7 +67,7 @@ public:
         m_server.stop();
     }
 
-    ~entrypoint() noexcept {
+    ~service() noexcept {
         m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
     }
 
@@ -96,6 +95,6 @@ private:
     server m_server;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::ep
 
 #endif // CORE_ENTRY_NODE_H
