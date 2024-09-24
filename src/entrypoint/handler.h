@@ -10,7 +10,7 @@ namespace uh::cluster::ep {
 class handler : public protocol_handler {
 public:
     explicit handler(command_factory&& comm_factory,
-                     std::unique_ptr<http::request_factory> factory,
+                     http::request_factory&& factory,
                      std::unique_ptr<policy::module> policy);
 
     coro<void> on_startup() override;
@@ -22,7 +22,7 @@ public:
 
 private:
     command_factory m_command_factory;
-    std::unique_ptr<http::request_factory> m_factory;
+    http::request_factory m_factory;
     std::unique_ptr<policy::module> m_policy;
 };
 

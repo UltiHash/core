@@ -19,10 +19,6 @@ struct entrypoint_config {
     std::optional<storage_config> m_attached_storage;
     db::config database;
     global_data_view_config global_data_view;
-
-    enum class auth_backend { none, dummy };
-
-    auth_backend authentication = auth_backend::none;
 };
 
 } // namespace uh::cluster
