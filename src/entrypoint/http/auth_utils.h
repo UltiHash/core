@@ -1,8 +1,7 @@
 #ifndef CORE_ENTRYPOINT_HTTP_AUTH_UTILS_H
 #define CORE_ENTRYPOINT_HTTP_AUTH_UTILS_H
 
-#include "entrypoint/user/backend.h"
-#include "entrypoint/user/user.h"
+#include "entrypoint/user/db.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -45,7 +44,7 @@ struct auth_info {
     std::optional<user::user> authenticated_user;
 
     static coro<std::optional<auth_info>> create(partial_parse_result& req,
-                                                 user::backend& users);
+                                                 user::db& users);
 };
 
 } // namespace uh::cluster::ep::http

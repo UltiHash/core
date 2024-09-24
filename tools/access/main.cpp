@@ -120,8 +120,8 @@ uh::cluster::coro<void> policy(ep::user::db& db, const ::config& cfg) {
     if (cfg.policy.policy) {
         co_await db.policy(cfg.policy.access_id, cfg.policy.policy);
     } else {
-        auto user_info = co_await db.find(cfg.policy.access_id);
-        std::cout << user_info.policy.value_or("-- no policy --") << "\n";
+        auto user = co_await db.find(cfg.policy.access_id);
+        std::cout << user.policy_json.value_or("-- no policy --") << "\n";
     }
 }
 
@@ -129,16 +129,17 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     auto entries = co_await db.entries();
 
     for (const auto& entry : entries) {
-        auto info = co_await db.find(entry);
+        auto user = co_await db.find(entry);
 
         std::string expires = " -- no expiration -- ";
-        if (info.expires) {
-            expires = iso8601_date(*info.expires);
+        if (user.expires) {
+            expires = iso8601_date(*user.expires);
         }
 
         std::cout << entry << "\t"
-                  << info.session_token.value_or("-- no session token --")
-                  << "\t" << (info.policy ? " policy set " : " no policy ")
+                  << user.session_token.value_or("-- no session token --")
+                  << "\t"
+                  << (user.policies.empty() ? " no policy " : " policy set ")
                   << "\t" << expires << "\n";
     }
 }

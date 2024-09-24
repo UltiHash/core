@@ -9,7 +9,10 @@ namespace uh::cluster::ep::user {
 
 struct user {
     std::string secret_key;
+    std::optional<std::string> session_token;
+    std::optional<std::string> policy_json;
     std::list<policy::policy> policies;
+    std::optional<utc_time> expires;
 
     std::string arn = ANONYMOUS_ARN;
 
