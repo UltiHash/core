@@ -5,8 +5,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::ep {
 
-handler::handler(command_factory&& comm_factory,
-                 std::unique_ptr<request_factory> factory,
+handler::handler(command_factory&& comm_factory, request_factory&& factory,
                  std::unique_ptr<ep::policy::module> policy)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
@@ -28,7 +27,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         bool keep_alive = false;
 
         try {
-            req = co_await m_factory->create(s);
+            req = co_await m_factory.create(s);
             LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
             resp = co_await handle_request(s, *req);
