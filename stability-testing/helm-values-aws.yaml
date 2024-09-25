@@ -71,7 +71,7 @@ etcd:
       value: "testing"
       effect: "NoSchedule"
   persistence:
-    size: 125Gi
+    size: 1Ti
     storageClass: ebs-csi-gp2
 
 entrypoint:
@@ -101,7 +101,7 @@ entrypoint:
 storage:
   replicas: 2
   storageClass: ebs-csi-gp2           
-  storageSize: 300Gi
+  storageSize: 8Ti
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -124,7 +124,7 @@ storage:
 deduplicator:
   replicas: 2
   storageClass: ebs-csi-gp2
-  storageSize: 125Gi
+  storageSize: 8Ti
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -157,7 +157,7 @@ database:
 
     persistence:
       storageClass: ebs-csi-gp2
-      size: 125Gi
+      size: 8Ti
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
