@@ -16,6 +16,7 @@ struct config {
 
     // add options
     struct {
+        std::string username;
         std::string access_id;
         std::string secret_key;
         std::optional<std::string> sts_token;
@@ -50,6 +51,7 @@ std::optional<::config> read_config(int argc, char** argv) {
     uh::cluster::configure(app, rv.log_level);
 
     auto* sub_add = app.add_subcommand("add", "add access entry to database");
+    sub_add->add_option("username", rv.add.username, "user name");
     sub_add->add_option("access-id", rv.add.access_id, "entry's access id");
     sub_add->add_option("secret-key", rv.add.secret_key, "entry's secret");
     sub_add->add_option("--sts-token", rv.add.sts_token, "STS token string");
@@ -103,12 +105,12 @@ std::optional<::config> read_config(int argc, char** argv) {
 }
 
 uh::cluster::coro<void> add_entry(ep::user::db& db, const ::config& cfg) {
-    co_await db.add(cfg.add.access_id, cfg.add.secret_key, cfg.add.sts_token,
-                    cfg.add.ttl);
+    co_await db.add_key(cfg.add.username, cfg.add.access_id, cfg.add.secret_key,
+                        cfg.add.sts_token, cfg.add.ttl);
 }
 
 uh::cluster::coro<void> remove_entry(ep::user::db& db, const ::config& cfg) {
-    co_await db.remove(cfg.remove.access_id);
+    co_await db.remove_key(cfg.remove.access_id);
 }
 
 uh::cluster::coro<void> policy(ep::user::db& db, const ::config& cfg) {

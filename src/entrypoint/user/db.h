@@ -18,23 +18,30 @@ public:
     coro<user> find(std::string_view key);
 
     /**
-     * Add a user and return the access key.
+     * Find a user using username and password.
+     */
+    coro<user> find(std::string_view id, std::string_view pass);
+
+    /**
+     * Add a key to a user
      *
+     * @param name
      * @param key the key to access the user
      * @param secret the secret to assign
      * @param sts sts token
      * @param ttl number of seconds until the account expires (optional)
      */
-    coro<void> add(const std::string& key, const std::string& secret,
-                   std::optional<std::string> sts,
-                   std::optional<std::size_t> ttl);
+    coro<void> add_key(const std::string& name, const std::string& key,
+                       const std::string& secret,
+                       std::optional<std::string> sts,
+                       std::optional<std::size_t> ttl);
 
     /**
-     * Remove user from the DB.
+     * Remove access key from the DB.
      *
      * @param key the user's access key
      */
-    coro<void> remove(const std::string& key);
+    coro<void> remove_key(const std::string& key);
 
     /**
      * Set the policy for a user
@@ -52,7 +59,7 @@ public:
     coro<std::list<std::string>> entries();
 
     /**
-     * Remove all expired users.
+     * Remove all expired keys.
      */
     coro<void> remove_expired(std::size_t seconds);
 
