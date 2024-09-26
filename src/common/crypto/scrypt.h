@@ -10,11 +10,11 @@ namespace uh::cluster {
 class scrypt {
 public:
     struct config {
-        uint64_t n;
-        uint32_t r;
-        uint32_t p;
+        uint64_t n = 2u << 16;
+        uint32_t r = 8u;
+        uint32_t p = 1u;
 
-        uint32_t length;
+        uint32_t length = 32u;
     };
 
     scrypt(const config& c);

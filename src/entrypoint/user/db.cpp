@@ -1,11 +1,13 @@
 #include "db.h"
 
 #include "entrypoint/policy/parser.h"
+#include <common/utils/strings.h>
 
 namespace uh::cluster::ep::user {
 
 db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
-    : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count) {}
+    : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
+      m_crypt({}) {}
 
 coro<user> db::find(std::string_view key) {
     auto conn = co_await m_db.get();
@@ -24,13 +26,35 @@ coro<user> db::find(std::string_view key) {
         .secret_key = *row->string(1),
         .session_token = row->string(2),
         .policy_json = row->string(3),
-        .policies = policy::parser::parse(row->string(2).value_or("")),
+        .policies = policy::parser::parse(row->string(3).value_or("")),
         .expires = row->date(4),
     };
 }
 
 coro<user> db::find(std::string_view id, std::string_view pass) {
-    throw std::runtime_error("password based find not implemented");
+
+    auto conn = co_await m_db.get();
+
+    auto row = co_await conn->execv(
+        "SELECT password, policy FROM uh_query_user($1)", id);
+
+    user rv{.name = std::string(id),
+            .policy_json = row->string(1),
+            .policies = policy::parser::parse(row->string(1).value_or(""))};
+
+    if (!row->string(0)) {
+        throw std::runtime_error("no password defined");
+    }
+
+    auto fields = split(*row->string(0), ':');
+
+    auto pass_enc =
+        m_crypt.derive(std::string(fields[0]), std::string(fields[1]));
+    if (pass_enc != pass) {
+        throw std::runtime_error("password mismatch");
+    }
+
+    co_return rv;
 }
 
 coro<void> db::add_key(const std::string& username, const std::string& key,
