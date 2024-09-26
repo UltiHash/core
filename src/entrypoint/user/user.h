@@ -19,6 +19,7 @@ struct user {
 
     std::string arn = ANONYMOUS_ARN;
 
+    inline static const std::string ANONYMOUS = "anonymous";
     inline static const std::string ANONYMOUS_ARN = "arn:aws:iam::1:anonymous";
 };
 
