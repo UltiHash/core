@@ -1,6 +1,7 @@
 #ifndef CORE_ENTRYPOINT_USER_DB_H
 #define CORE_ENTRYPOINT_USER_DB_H
 
+#include "common/crypto/scrypt.h"
 #include "common/db/db.h"
 #include "user.h"
 
@@ -65,6 +66,7 @@ public:
 
 private:
     pool<cluster::db::connection> m_db;
+    scrypt m_crypt;
 };
 
 } // namespace uh::cluster::ep::user
