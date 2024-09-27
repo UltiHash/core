@@ -62,7 +62,7 @@ services:
       - 8080:8080
 
   stability:
-    image: ghcr.io/ultihash/core-stability-test:latest
+    image: ghcr.io/ultihash/core-stability-test:gmt
     depends_on:
       - storage
       - deduplicator
@@ -74,4 +74,3 @@ services:
       AWS_DEFAULT_REGION: eu-central-1h
     volumes:
       - /data/corpora_test/stability-test-mini:/data
-    entrypoint: ["sleep", "infinity"]
