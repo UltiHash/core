@@ -10,7 +10,7 @@ namespace uh::cluster::ep::user {
  */
 class dummy_backend : public backend {
 public:
-    user find(std::string_view) override;
+    coro<user> find(std::string_view) override;
 
     static constexpr const char* SECRET_ACCESS_KEY = "secret";
 };

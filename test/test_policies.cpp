@@ -146,3 +146,26 @@ BOOST_AUTO_TEST_CASE(check_resource) {
         BOOST_CHECK(!result.has_value());
     }
 }
+
+BOOST_AUTO_TEST_CASE(check_allow_all_policy) {
+    auto policy = parser::parse("{\n"
+                                "  \"Version\": \"2012-10-17\",\n"
+                                "  \"Statement\": {\n"
+                                "    \"Sid\":  \"AllowAllForAnybody\",\n"
+                                "    \"Effect\": \"Allow\",\n"
+                                "    \"Action\": \"*\",\n"
+                                "    \"Principal\": \"*\",\n"
+                                "    \"Resource\": \"*\"\n"
+                                "  }\n"
+                                "}\n");
+
+    BOOST_CHECK_EQUAL(policy.size(), 1ull);
+
+    {
+        auto request = make_request("GET /test HTTP/1.1\r\n\r\n");
+        auto result =
+            policy.front().check(request, mock_command("s3:ListBucket"));
+        BOOST_CHECK(result.has_value());
+        BOOST_CHECK(*result == effect::allow);
+    }
+}

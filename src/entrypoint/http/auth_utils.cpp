@@ -122,11 +122,11 @@ auth_info::auth_info(std::string hdr)
     header_signature = parsed["Signature"];
 }
 
-std::optional<auth_info> auth_info::create(partial_parse_result& req,
-                                           user::backend& users) {
+coro<std::optional<auth_info>> auth_info::create(partial_parse_result& req,
+                                                 user::backend& users) {
     auto header = req.optional("authorization");
     if (!header) {
-        return {};
+        co_return std::nullopt;
     }
 
     auth_info auth;
@@ -140,7 +140,7 @@ std::optional<auth_info> auth_info::create(partial_parse_result& req,
             "The authorization header that you provided is not valid.");
     }
 
-    auto user = users.find(auth.access_key_id);
+    auto user = co_await users.find(auth.access_key_id);
     auth.signing_key = make_signing_key(auth, user.secret_key);
     auth.signature = request_signature(req, auth);
 
@@ -150,7 +150,7 @@ std::optional<auth_info> auth_info::create(partial_parse_result& req,
                                 "Access Denied");
     }
 
-    return auth;
+    co_return auth;
 }
 
 } // namespace uh::cluster::ep::http

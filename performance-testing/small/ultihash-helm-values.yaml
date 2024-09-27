@@ -12,6 +12,17 @@ global:
     capabilities:
       add:
       - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
 
 recovery:
   nodeSelector:

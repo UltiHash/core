@@ -85,6 +85,10 @@ void init(const config& cfg);
 
 // ---------------------------------------------------------------------
 
+void set_level(boost::log::trivial::severity_level level);
+
+// ---------------------------------------------------------------------
+
 static boost::log::sources::severity_logger<boost::log::trivial::severity_level>
     lg;
 

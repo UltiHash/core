@@ -22,6 +22,9 @@ struct config {
     std::size_t length;
     std::string hostname = "localhost";
     std::uint16_t port = 9200;
+
+    boost::log::trivial::severity_level log_level =
+        boost::log::trivial::warning;
 };
 
 std::optional<config> read_config(int argc, char** argv) {
@@ -38,6 +41,8 @@ std::optional<config> read_config(int argc, char** argv) {
     sub_read->add_option("offset", rv.offset, "offset of address");
     sub_read->add_option("length", rv.length, "number of bytes to read");
 
+    uh::cluster::configure(app, rv.log_level);
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::Success& e) {
@@ -45,6 +50,7 @@ std::optional<config> read_config(int argc, char** argv) {
         return {};
     }
 
+    uh::log::set_level(rv.log_level);
     if (sub_read->parsed()) {
         rv.cmd = config::command::read;
     }

@@ -71,7 +71,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     co_await cmd->validate(req);
 
-    if (m_policy->check(req, *cmd) == ep::policy::effect::deny) {
+    if (co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
