@@ -8,7 +8,7 @@
 using namespace uh::cluster;
 
 struct config {
-    enum class command { add, remove, policy, list, cleanup };
+    enum class command { add_user, add_key, remove, policy, list, cleanup };
 
     uh::cluster::db::config database;
 
@@ -17,11 +17,17 @@ struct config {
     // add options
     struct {
         std::string username;
+        std::string password;
+    } add_user;
+
+    // add options
+    struct {
+        std::string username;
         std::string access_id;
         std::string secret_key;
         std::optional<std::string> sts_token;
         std::optional<std::size_t> ttl;
-    } add;
+    } add_key;
 
     struct {
         std::string access_id;
@@ -50,13 +56,21 @@ std::optional<::config> read_config(int argc, char** argv) {
     uh::cluster::configure(app, rv.database);
     uh::cluster::configure(app, rv.log_level);
 
-    auto* sub_add = app.add_subcommand("add", "add access entry to database");
-    sub_add->add_option("username", rv.add.username, "user name");
-    sub_add->add_option("access-id", rv.add.access_id, "entry's access id");
-    sub_add->add_option("secret-key", rv.add.secret_key, "entry's secret");
-    sub_add->add_option("--sts-token", rv.add.sts_token, "STS token string");
-    sub_add->add_option("ttl", rv.add.ttl,
-                        "number of seconds before expiration");
+    auto* sub_add = app.add_subcommand("add", "add user to database");
+    sub_add->add_option("username", rv.add_user.username, "user name");
+    sub_add->add_option("password", rv.add_user.password, "password");
+
+    auto* sub_add_key =
+        app.add_subcommand("add-key", "add access entry to database");
+    sub_add_key->add_option("username", rv.add_key.username, "user name");
+    sub_add_key->add_option("access-id", rv.add_key.access_id,
+                            "entry's access id");
+    sub_add_key->add_option("secret-key", rv.add_key.secret_key,
+                            "entry's secret");
+    sub_add_key->add_option("--sts-token", rv.add_key.sts_token,
+                            "STS token string");
+    sub_add_key->add_option("ttl", rv.add_key.ttl,
+                            "number of seconds before expiration");
 
     auto* sub_remove =
         app.add_subcommand("remove", "remove access entry from database");
@@ -90,7 +104,9 @@ std::optional<::config> read_config(int argc, char** argv) {
 
     uh::log::set_level(rv.log_level);
     if (sub_add->parsed()) {
-        rv.cmd = ::config::command::add;
+        rv.cmd = ::config::command::add_user;
+    } else if (sub_add_key->parsed()) {
+        rv.cmd = ::config::command::add_key;
     } else if (sub_remove->parsed()) {
         rv.cmd = ::config::command::remove;
     } else if (sub_policy->parsed()) {
@@ -104,9 +120,14 @@ std::optional<::config> read_config(int argc, char** argv) {
     return rv;
 }
 
-uh::cluster::coro<void> add_entry(ep::user::db& db, const ::config& cfg) {
-    co_await db.add_key(cfg.add.username, cfg.add.access_id, cfg.add.secret_key,
-                        cfg.add.sts_token, cfg.add.ttl);
+uh::cluster::coro<void> add_user(ep::user::db& db, const ::config& cfg) {
+    co_await db.add_user(cfg.add_user.username, cfg.add_user.password);
+}
+
+uh::cluster::coro<void> add_key(ep::user::db& db, const ::config& cfg) {
+    co_await db.add_key(cfg.add_key.username, cfg.add_key.access_id,
+                        cfg.add_key.secret_key, cfg.add_key.sts_token,
+                        cfg.add_key.ttl);
 }
 
 uh::cluster::coro<void> remove_entry(ep::user::db& db, const ::config& cfg) {
@@ -167,8 +188,11 @@ int main(int argc, char** argv) {
         ep::user::db db(executor, cfg->database);
 
         switch (cfg->cmd) {
-        case ::config::command::add:
-            boost::asio::co_spawn(executor, add_entry(db, *cfg), handler);
+        case ::config::command::add_user:
+            boost::asio::co_spawn(executor, add_user(db, *cfg), handler);
+            break;
+        case ::config::command::add_key:
+            boost::asio::co_spawn(executor, add_key(db, *cfg), handler);
             break;
         case ::config::command::remove:
             boost::asio::co_spawn(executor, remove_entry(db, *cfg), handler);

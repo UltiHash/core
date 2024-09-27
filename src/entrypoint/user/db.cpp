@@ -1,9 +1,18 @@
 #include "db.h"
 
 #include "entrypoint/policy/parser.h"
+
+#include <common/utils/random.h>
 #include <common/utils/strings.h>
 
 namespace uh::cluster::ep::user {
+
+namespace {
+
+static const std::string SALT_CHARACTERS =
+    "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "!@#$%^&*()_-+={}[];'|\\,.<>/?<>`~";
+}
 
 db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
     : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
@@ -55,6 +64,17 @@ coro<user> db::find(std::string_view id, std::string_view pass) {
     }
 
     co_return rv;
+}
+
+coro<void> db::add_user(const std::string& name, const std::string& password) {
+
+    auto conn = co_await m_db.get();
+
+    std::string salt = random_string(48, SALT_CHARACTERS);
+    auto pass_crypt = m_crypt.derive(password, salt);
+    auto pass_db = salt + ":" + pass_crypt;
+
+    co_await conn->execv("CALL uh_add_user($1, $2)", name, pass_db);
 }
 
 coro<void> db::add_key(const std::string& username, const std::string& key,
