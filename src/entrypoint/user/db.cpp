@@ -21,7 +21,7 @@ db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
     : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
       m_crypt({}) {}
 
-coro<user> db::find(std::string_view key) {
+coro<user> db::find(std::string key) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
