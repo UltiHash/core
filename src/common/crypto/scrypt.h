@@ -22,7 +22,6 @@ public:
     std::string derive(std::string password, std::string salt);
 
 private:
-    std::unique_ptr<EVP_KDF_CTX, void (*)(EVP_KDF_CTX*)> m_ctx;
     config m_c;
 };
 

@@ -27,10 +27,11 @@ std::unique_ptr<EVP_KDF_CTX, void (*)(EVP_KDF_CTX*)> make_context() {
 } // namespace
 
 scrypt::scrypt(const config& c)
-    : m_ctx(make_context()),
-      m_c(c) {}
+    : m_c(c) {}
 
 std::string scrypt::derive(std::string password, std::string salt) {
+    auto ctx = make_context();
+
     OSSL_PARAM params[6];
     params[0] = OSSL_PARAM_construct_octet_string(
         OSSL_KDF_PARAM_PASSWORD, password.data(), password.size());
@@ -45,12 +46,10 @@ std::string scrypt::derive(std::string password, std::string salt) {
 
     std::string rv(m_c.length, 0);
 
-    if (EVP_KDF_derive(m_ctx.get(), reinterpret_cast<unsigned char*>(rv.data()),
+    if (EVP_KDF_derive(ctx.get(), reinterpret_cast<unsigned char*>(rv.data()),
                        m_c.length, params) <= 0) {
         throw_from_error("scrypt key derivation failed");
     }
-
-    EVP_KDF_CTX_reset(m_ctx.get());
 
     return rv;
 }
