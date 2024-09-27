@@ -16,7 +16,7 @@ public:
      *
      * @param key access key of the user
      */
-    coro<user> find(std::string_view key);
+    coro<user> find(std::string key);
 
     /**
      * Find a user using username and password.
