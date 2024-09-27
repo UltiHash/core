@@ -51,6 +51,7 @@ std::string_view rtrim(std::string_view in,
  * Decode a base64 encoded string to a buffer.
  */
 std::vector<char> base64_decode(std::string_view b64);
+std::vector<char> base64_encode(std::string_view plain);
 
 /**
  * URL encode the special characters.

@@ -55,7 +55,8 @@ coro<user> db::find(std::string_view id, std::string_view pass) {
         throw std::runtime_error("no password defined");
     }
 
-    auto fields = split(*row->string(0), ':');
+    auto decoded = base64_decode(*row->string(0));
+    auto fields = split(std::string_view(decoded.data(), decoded.size()), ':');
 
     auto pass_enc =
         m_crypt.derive(std::string(fields[0]), std::string(fields[1]));
@@ -74,7 +75,14 @@ coro<void> db::add_user(const std::string& name, const std::string& password) {
     auto pass_crypt = m_crypt.derive(password, salt);
     auto pass_db = salt + ":" + pass_crypt;
 
-    co_await conn->execv("CALL uh_add_user($1, $2)", name, pass_db);
+    try {
+        auto encoded = base64_encode(pass_db);
+        co_await conn->execv("CALL uh_add_user($1, $2)", name,
+                             std::string_view(encoded.data(), encoded.size()));
+    } catch (const std::exception& e) {
+        LOG_DEBUG() << "error adding user: " << e.what();
+        throw;
+    }
 }
 
 coro<void> db::add_key(const std::string& username, const std::string& key,
