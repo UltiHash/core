@@ -15,7 +15,7 @@ coro<std::unique_ptr<request>> no_auth::create(partial_parse_result& req) {
         co_return std::make_unique<request>(
             std::move(req.headers),
             std::make_unique<raw_body>(
-                req, std::stoul(req.require("content-length"))),
+                req, std::stoul(req.optional("content-length").value_or("0"))),
             user::user{.name = user::user::ANONYMOUS}, std::move(req.peer));
     }
 }
