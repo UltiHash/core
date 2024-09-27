@@ -6,8 +6,11 @@
     exit 1
 }
 
-echo "DROP DATABASE uh_directory; DROP DATABASE uh_multipart;" |
-    psql "postgresql://$UH_DB_USER:$UH_DB_PASS@$UH_DB_HOSTPORT/postgres"
+databases="uh_directory uh_multipart uh_user"
+for db in $databases; do
+    echo "DROP DATABASE $db" |
+        psql "postgresql://$UH_DB_USER:$UH_DB_PASS@$UH_DB_HOSTPORT/postgres"
+done
 
 SQL_PATH=@PROJECT_SOURCE_DIR@/data/sql
 
