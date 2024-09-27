@@ -28,7 +28,7 @@ coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
         co_return co_await basic_auth::create(m_users, req);
     }
 
-    throw std::runtime_error("unknown authentication scheme");
+    throw std::runtime_error("unsupported authentication scheme");
 }
 
 } // namespace uh::cluster::ep::http
