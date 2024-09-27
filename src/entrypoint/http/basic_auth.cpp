@@ -35,7 +35,7 @@ coro<std::unique_ptr<request>> basic_auth::create(user::db& users,
         co_return std::make_unique<request>(
             std::move(req.headers),
             std::make_unique<raw_body>(
-                req, std::stoul(req.require("content-length"))),
+                req, std::stoul(req.optional("content-length").value_or("0"))),
             std::move(user), std::move(req.peer));
     }
 }
