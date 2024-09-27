@@ -53,6 +53,16 @@ std::vector<char> base64_decode(std::string_view b64) {
     return rv;
 }
 
+std::vector<char> base64_encode(std::string_view plain) {
+    std::vector<char> rv(beast::detail::base64::encoded_size(plain.size()));
+
+    auto size =
+        beast::detail::base64::encode(&rv[0], plain.data(), plain.size());
+    rv.resize(size);
+
+    return rv;
+}
+
 constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
