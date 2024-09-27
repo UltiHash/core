@@ -24,6 +24,14 @@ public:
     coro<user> find(std::string_view id, std::string_view pass);
 
     /**
+     * Add a new user to database
+     *
+     * @param username user name
+     * @param password
+     */
+    coro<void> add_user(const std::string& name, const std::string& password);
+
+    /**
      * Add a key to a user
      *
      * @param name

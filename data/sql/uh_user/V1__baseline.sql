@@ -27,10 +27,10 @@ CREATE INDEX expires_idx ON keys (expires);
 --
 
 --
--- uh_create_user(username, password) -- create a new
+-- uh_add_user(username, password) -- create a new
 --   user that will expire after a given time and return it's id
 --
-CREATE OR REPLACE PROCEDURE uh_create_user(username TEXT, password TEXT)
+CREATE OR REPLACE PROCEDURE uh_add_user(username TEXT, password TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     EXECUTE format('INSERT INTO users (name, password) VALUES (%L, %L)',
