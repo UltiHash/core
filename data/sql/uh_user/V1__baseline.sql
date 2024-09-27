@@ -9,7 +9,8 @@
 CREATE TABLE users (
     name TEXT PRIMARY KEY,
     password TEXT NOT NULL,
-    policy JSON DEFAULT NULL
+    policy JSON DEFAULT NULL,
+    arn TEXT
 );
 
 CREATE TABLE keys (
@@ -27,14 +28,14 @@ CREATE INDEX expires_idx ON keys (expires);
 --
 
 --
--- uh_add_user(username, password) -- create a new
+-- uh_add_user(username, password, arn) -- create a new
 --   user that will expire after a given time and return it's id
 --
-CREATE OR REPLACE PROCEDURE uh_add_user(username TEXT, password TEXT)
+CREATE OR REPLACE PROCEDURE uh_add_user(username TEXT, password TEXT, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('INSERT INTO users (name, password) VALUES (%L, %L)',
-        username, password);
+    EXECUTE format('INSERT INTO users (name, password, arn) VALUES (%L, %L, %L)',
+        username, password, arn);
 END;
 $$;
 
@@ -64,10 +65,10 @@ $$;
 -- authenticating a user.
 --
 CREATE OR REPLACE FUNCTION uh_query_user(username TEXT)
-    RETURNS TABLE (password TEXT, policy JSON)
+    RETURNS TABLE (password TEXT, policy JSON, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT password, policy FROM users WHERE name = %L',
+    RETURN QUERY EXECUTE format('SELECT password, policy, arn FROM users WHERE name = %L',
         username);
 END;
 $$;
@@ -102,11 +103,11 @@ $$;
 -- uh_query_key(access_key) -- return info associated with access key
 --
 CREATE OR REPLACE FUNCTION uh_query_key(access_key TEXT)
-    RETURNS TABLE(username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON)
+    RETURNS TABLE(username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY EXECUTE format('
-        SELECT username, secret_key, session_token, expires, policy FROM keys
+        SELECT username, secret_key, session_token, expires, policy, arn FROM keys
         JOIN users ON username = name WHERE access_key = %L AND (expires >= now() OR expires IS NULL)', access_key);
 END;
 $$;

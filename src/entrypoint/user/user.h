@@ -17,7 +17,7 @@ struct user {
     std::list<policy::policy> policies;
     std::optional<utc_time> expires;
 
-    std::string arn = ANONYMOUS_ARN;
+    std::optional<std::string> arn = ANONYMOUS_ARN;
 
     inline static const std::string ANONYMOUS = "anonymous";
     inline static const std::string ANONYMOUS_ARN = "arn:aws:iam::1:anonymous";
