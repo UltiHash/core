@@ -30,26 +30,28 @@ coro<user> db::find(std::string_view key) {
         throw std::runtime_error("unknown access id: " + std::string(key));
     }
 
+    auto policy_json = row->string(3);
+    std::list<ep::policy::policy> policies;
+    if (policy_json) {
+        policies = policy::parser::parse(*policy_json);
+    }
+
     co_return user{
         .name = *row->string(0),
         .secret_key = *row->string(1),
         .session_token = row->string(2),
-        .policy_json = row->string(3),
-        .policies = policy::parser::parse(row->string(3).value_or("")),
+        .policy_json = policy_json,
+        .policies = std::move(policies),
         .expires = row->date(4),
     };
 }
 
-coro<user> db::find(std::string_view id, std::string_view pass) {
+coro<user> db::find(std::string id, std::string pass) {
 
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
         "SELECT password, policy FROM uh_query_user($1)", id);
-
-    user rv{.name = std::string(id),
-            .policy_json = row->string(1),
-            .policies = policy::parser::parse(row->string(1).value_or(""))};
 
     if (!row->string(0)) {
         throw std::runtime_error("no password defined");
@@ -58,13 +60,20 @@ coro<user> db::find(std::string_view id, std::string_view pass) {
     auto decoded = base64_decode(*row->string(0));
     auto fields = split(std::string_view(decoded.data(), decoded.size()), ':');
 
-    auto pass_enc =
-        m_crypt.derive(std::string(fields[0]), std::string(fields[1]));
-    if (pass_enc != pass) {
+    auto pass_enc = m_crypt.derive(pass, std::string(fields[0]));
+    if (pass_enc != fields[1]) {
         throw std::runtime_error("password mismatch");
     }
 
-    co_return rv;
+    auto policy_json = row->string(1);
+    std::list<ep::policy::policy> policies;
+    if (policy_json) {
+        policies = policy::parser::parse(*policy_json);
+    }
+
+    co_return user{.name = std::string(id),
+                   .policy_json = policy_json,
+                   .policies = policies};
 }
 
 coro<void> db::add_user(const std::string& name, const std::string& password) {

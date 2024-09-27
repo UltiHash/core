@@ -21,7 +21,7 @@ public:
     /**
      * Find a user using username and password.
      */
-    coro<user> find(std::string_view id, std::string_view pass);
+    coro<user> find(std::string id, std::string pass);
 
     /**
      * Add a new user to database
