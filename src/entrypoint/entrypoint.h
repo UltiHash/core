@@ -50,7 +50,7 @@ public:
               std::make_unique<handler>(
                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
                                   m_uploads, m_config, m_data_view, m_limits),
-                  http::request_factory(user::db(m_ioc, config.database)),
+                  http::request_factory(user::db(m_ioc, m_config.database)),
                   std::make_unique<policy::module>(m_directory)),
               m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
