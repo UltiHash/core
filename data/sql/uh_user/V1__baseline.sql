@@ -78,7 +78,7 @@ $$;
 CREATE OR REPLACE FUNCTION uh_list_users()
     RETURNS TABLE (username TEXT)
 LANGUAGE SQL AS $$
-    SELECT username FROM users;
+    SELECT name FROM users;
 $$;
 
 
@@ -104,6 +104,7 @@ $$;
 CREATE OR REPLACE FUNCTION uh_query_key(access_key TEXT)
     RETURNS TABLE(username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON)
 LANGUAGE plpgsql AS $$
+BEGIN
     RETURN QUERY EXECUTE format('
         SELECT username, secret_key, session_token, expires, policy FROM keys
         JOIN users ON username = name WHERE access_key = %L AND (expires >= now() OR expires IS NULL)', access_key);
