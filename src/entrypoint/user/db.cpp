@@ -1,9 +1,12 @@
 #include "db.h"
 
+#include "entrypoint/http/command_exception.h"
 #include "entrypoint/policy/parser.h"
 
 #include <common/utils/random.h>
 #include <common/utils/strings.h>
+
+using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::ep::user {
 
@@ -27,7 +30,8 @@ coro<user> db::find(std::string_view key) {
         key);
 
     if (!row) {
-        throw std::runtime_error("unknown access id: " + std::string(key));
+        throw command_exception(status::forbidden, "AccessDenied",
+                                "Access Denied");
     }
 
     auto policy_json = row->string(3);
