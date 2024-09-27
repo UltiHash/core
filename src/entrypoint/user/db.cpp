@@ -23,7 +23,7 @@ coro<user> db::find(std::string_view key) {
 
     auto row = co_await conn->execv(
         "SELECT username, secret_key, session_token, policy, "
-        "expires FROM uh_query_key($1)",
+        "expires, arn FROM uh_query_key($1)",
         key);
 
     if (!row) {
@@ -36,14 +36,13 @@ coro<user> db::find(std::string_view key) {
         policies = policy::parser::parse(*policy_json);
     }
 
-    co_return user{
-        .name = *row->string(0),
-        .secret_key = *row->string(1),
-        .session_token = row->string(2),
-        .policy_json = policy_json,
-        .policies = std::move(policies),
-        .expires = row->date(4),
-    };
+    co_return user{.name = *row->string(0),
+                   .secret_key = *row->string(1),
+                   .session_token = row->string(2),
+                   .policy_json = policy_json,
+                   .policies = std::move(policies),
+                   .expires = row->date(4),
+                   .arn = row->string(5)};
 }
 
 coro<user> db::find(std::string id, std::string pass) {
@@ -51,7 +50,7 @@ coro<user> db::find(std::string id, std::string pass) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT password, policy FROM uh_query_user($1)", id);
+        "SELECT password, policy, arn FROM uh_query_user($1)", id);
 
     if (!row->string(0)) {
         throw std::runtime_error("no password defined");
@@ -73,10 +72,12 @@ coro<user> db::find(std::string id, std::string pass) {
 
     co_return user{.name = std::string(id),
                    .policy_json = policy_json,
-                   .policies = policies};
+                   .policies = policies,
+                   .arn = row->string(2)};
 }
 
-coro<void> db::add_user(const std::string& name, const std::string& password) {
+coro<void> db::add_user(const std::string& name, const std::string& password,
+                        std::optional<std::string> arn) {
 
     auto conn = co_await m_db.get();
 
@@ -86,8 +87,9 @@ coro<void> db::add_user(const std::string& name, const std::string& password) {
 
     try {
         auto encoded = base64_encode(pass_db);
-        co_await conn->execv("CALL uh_add_user($1, $2)", name,
-                             std::string_view(encoded.data(), encoded.size()));
+        co_await conn->execv("CALL uh_add_user($1, $2, $3)", name,
+                             std::string_view(encoded.data(), encoded.size()),
+                             arn);
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error adding user: " << e.what();
         throw;

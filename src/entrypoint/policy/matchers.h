@@ -1,6 +1,7 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MATCHERS_H
 #define CORE_ENTRYPOINT_POLICY_MATCHERS_H
 
+#include "common/telemetry/log.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/http/request.h"
 #include "entrypoint/variables.h"
@@ -53,7 +54,11 @@ inline matcher match_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const http::request& r,
                                                 const command& cmd) {
         return match_any(principals, [&r](auto value) {
-            return equals_wildcard(value, r.authenticated_user().arn);
+            if (!r.authenticated_user().arn) {
+                return false;
+            }
+
+            return equals_wildcard(value, *r.authenticated_user().arn);
         });
     };
 }
@@ -62,7 +67,11 @@ inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const http::request& r,
                                                 const command& cmd) {
         return match_all(principals, [&r](auto value) {
-            return !equals_wildcard(value, r.authenticated_user().arn);
+            if (!r.authenticated_user().arn) {
+                return true;
+            }
+
+            return !equals_wildcard(value, *r.authenticated_user().arn);
         });
     };
 }

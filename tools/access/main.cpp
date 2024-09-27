@@ -18,6 +18,7 @@ struct config {
     struct {
         std::string username;
         std::string password;
+        std::optional<std::string> arn;
     } add_user;
 
     // add options
@@ -59,6 +60,7 @@ std::optional<::config> read_config(int argc, char** argv) {
     auto* sub_add = app.add_subcommand("add", "add user to database");
     sub_add->add_option("username", rv.add_user.username, "user name");
     sub_add->add_option("password", rv.add_user.password, "password");
+    sub_add->add_option("arn", rv.add_user.arn, "ARN");
 
     auto* sub_add_key =
         app.add_subcommand("add-key", "add access entry to database");
@@ -121,7 +123,11 @@ std::optional<::config> read_config(int argc, char** argv) {
 }
 
 uh::cluster::coro<void> add_user(ep::user::db& db, const ::config& cfg) {
-    co_await db.add_user(cfg.add_user.username, cfg.add_user.password);
+    std::string arn = cfg.add_user.arn
+                          ? *cfg.add_user.arn
+                          : "arn:uh:iam::0:" + cfg.add_user.username;
+
+    co_await db.add_user(cfg.add_user.username, cfg.add_user.password, arn);
 }
 
 uh::cluster::coro<void> add_key(ep::user::db& db, const ::config& cfg) {
