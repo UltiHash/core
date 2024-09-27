@@ -55,7 +55,7 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_set_user_policy(username TEXT, policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('UPDATE users SET policy = %L WHERE name = %L', policy, access_key);
+    EXECUTE format('UPDATE users SET policy = %L WHERE name = %L', policy, username);
 END;
 $$;
 
