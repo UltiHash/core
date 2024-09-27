@@ -1,5 +1,5 @@
-#ifndef CORE_ENTRYPOINT_HTTP_AUTH_REQUEST_FACTORY_H
-#define CORE_ENTRYPOINT_HTTP_AUTH_REQUEST_FACTORY_H
+#ifndef CORE_ENTRYPOINT_HTTP_REQUEST_FACTORY_H
+#define CORE_ENTRYPOINT_HTTP_REQUEST_FACTORY_H
 
 #include "entrypoint/http/request.h"
 #include "entrypoint/user/db.h"
