@@ -107,11 +107,11 @@ coro<void> db::add_key(const std::string& username, const std::string& key,
     auto conn = co_await m_db.get();
     if (ttl) {
         co_await conn->execv(
-            "SELECT uh_add_user_key($1, $2, $3, $4, now()::timestamp + "
+            "CALL uh_add_user_key($1, $2, $3, $4, now()::timestamp + "
             "make_interval(secs => $5))",
             username, key, secret, sts, ttl);
     } else {
-        co_await conn->execv("SELECT uh_add_user_key($1, $2, $3, $4, NULL)",
+        co_await conn->execv("CALL uh_add_user_key($1, $2, $3, $4, NULL)",
                              username, key, secret, sts);
     }
 }
