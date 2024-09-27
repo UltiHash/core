@@ -20,7 +20,7 @@ coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
         co_return co_await no_auth::create(req);
     }
 
-    if (authorization->starts_with("AWS4_HMAC_SHA256")) {
+    if (authorization->starts_with("AWS4-HMAC-SHA256 ")) {
         co_return co_await aws4_hmac_sha256::create(m_users, req);
     }
 
