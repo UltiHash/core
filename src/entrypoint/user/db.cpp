@@ -158,6 +158,11 @@ coro<std::string> db::policy(const std::string& user, const std::string& name) {
     co_return *row->string(0);
 }
 
+coro<void> db::remove_policy(const std::string& user, const std::string& name) {
+    auto conn = co_await m_db.get();
+    co_await conn->execv("CALL uh_remove_user_policy($1, $2)", user, name);
+}
+
 coro<std::list<std::string>> db::list_user_policies(const std::string& user) {
     auto conn = co_await m_db.get();
 

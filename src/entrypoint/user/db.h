@@ -82,6 +82,13 @@ public:
     coro<std::string> policy(const std::string& user, const std::string& name);
 
     /**
+     * Delete user policy.
+     * @param user user name
+     * @param name policy name
+     */
+    coro<void> remove_policy(const std::string& user, const std::string& name);
+
+    /**
      * Return all policy names for a user name
      */
     coro<std::list<std::string>> list_user_policies(const std::string& user);
