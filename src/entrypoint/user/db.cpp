@@ -146,6 +146,18 @@ coro<void> db::policy(const std::string& user, const std::string& name,
                          policy);
 }
 
+coro<std::string> db::policy(const std::string& user, const std::string& name) {
+    auto conn = co_await m_db.get();
+    auto row = co_await conn->execv(
+        "SELECT value FROM uh_get_user_policy($1) WHERE name = $2", user, name);
+
+    if (!row || !row->string(0)) {
+        throw std::runtime_error("No policy found");
+    }
+
+    co_return *row->string(0);
+}
+
 coro<std::list<std::string>> db::list_user_policies(const std::string& user) {
     auto conn = co_await m_db.get();
 
