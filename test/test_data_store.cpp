@@ -397,7 +397,6 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
 }
 
 BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
-    // const std::size_t FILE_ALIGNMENT_OFFSET = 1337;
     auto buffer1 = random_buffer(MAX_FILE_SIZE_BYTES - 1337);
     auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
 
@@ -434,8 +433,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
 
     {
         shared_buffer<char> read_buffer(full_address.data_size());
-        shared_buffer<char> zero_buffer(DEFAULT_PAGE_SIZE);
-        memset(zero_buffer.data(), 0, DEFAULT_PAGE_SIZE);
+        shared_buffer<char> zero_buffer(buffer2.size() - 1337);
+        memset(zero_buffer.data(), 0, zero_buffer.size());
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
@@ -445,17 +444,14 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
+
         BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
                                 buffer1.size()) == 0);
         BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
                                 buffer2.data(), 1337) == 0);
         BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
                                 zero_buffer.data(), zero_buffer.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES +
-                                    zero_buffer.size(),
-                                buffer2.data() + DEFAULT_PAGE_SIZE + 1337,
-                                buffer2.size() - DEFAULT_PAGE_SIZE - 1337) ==
-                    0);
+        BOOST_CHECK(buffer1.size() + 1337 + zero_buffer.size() == t_read);
     }
 }
 

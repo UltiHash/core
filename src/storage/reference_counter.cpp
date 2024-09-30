@@ -37,9 +37,10 @@ void reference_counter::decrement(const address& addr) {
         std::optional<std::size_t> deleteRangeStart;
         std::optional<std::size_t> deleteRangeEnd;
 
-        for (std::size_t page_pointer = offset;
-             page_pointer < offset + frag.size; page_pointer += m_page_size) {
-            std::size_t page_id = page_pointer / m_page_size;
+        std::size_t start_page = offset / m_page_size;
+        std::size_t end_page = (offset + frag.size - 1) / m_page_size;
+
+        for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;
 
@@ -101,9 +102,10 @@ void reference_counter::increment(const std::size_t offset,
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
-    for (std::size_t page_pointer = offset; page_pointer < offset + size;
-         page_pointer += m_page_size) {
-        std::size_t page_id = page_pointer / m_page_size;
+    std::size_t start_page = offset / m_page_size;
+    std::size_t end_page = (offset + size - 1) / m_page_size;
+
+    for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
         std::string key(std::to_string(page_id));
         std::string_view value;
 
@@ -129,9 +131,11 @@ address reference_counter::increment(const address& addr) {
         const auto offset = pointer_traits::get_pointer(frag.pointer);
         std::map<std::size_t, std::size_t> value_by_page;
         bool encountered_untracked_page = false;
-        for (std::size_t page_pointer = offset;
-             page_pointer < offset + frag.size; page_pointer += m_page_size) {
-            std::size_t page_id = page_pointer / m_page_size;
+
+        std::size_t start_page = offset / m_page_size;
+        std::size_t end_page = (offset + frag.size - 1) / m_page_size;
+
+        for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;
 
