@@ -26,6 +26,7 @@
 #include "commands/iam/create_user.h"
 #include "commands/iam/delete_access_key.h"
 #include "commands/iam/delete_user.h"
+#include "commands/iam/put_user_policy.h"
 
 namespace uh::cluster {
 
@@ -63,6 +64,10 @@ command_factory::action_command(ep::http::request& req) {
 
     if (ep::iam::delete_access_key::can_handle(req)) {
         co_return std::make_unique<ep::iam::delete_access_key>(m_users);
+    }
+
+    if (ep::iam::put_user_policy::can_handle(req)) {
+        co_return std::make_unique<ep::iam::put_user_policy>(m_users);
     }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",
