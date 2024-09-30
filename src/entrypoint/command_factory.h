@@ -26,13 +26,16 @@ struct command_factory {
           m_gdv(gdv),
           m_limits(uhlimits) {}
 
-    [[nodiscard]] std::unique_ptr<command>
-    create(const ep::http::request& req) const;
+    coro<std::unique_ptr<command>> create(ep::http::request& req);
 
     [[nodiscard]] limits& get_limits() const;
     [[nodiscard]] directory& get_directory() const;
 
 private:
+    coro<std::unique_ptr<command>> action_command(ep::http::request& req);
+
+    static constexpr std::size_t MAX_POST_QUERY_LENGTH = 64 * KIBI_BYTE;
+
     boost::asio::io_context& m_ioc;
     roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
     directory& m_directory;

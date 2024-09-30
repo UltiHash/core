@@ -49,6 +49,18 @@ const std::map<std::string, std::string>& request::query_map() const {
     return m_params;
 }
 
+void request::set_query_params(const std::string& query) {
+    boost::urls::url url;
+    url.set_encoded_query(query);
+
+    std::map<std::string, std::string> params;
+    for (const auto& param : url.params()) {
+        params[param.key] = param.value;
+    }
+
+    m_params = std::move(params);
+}
+
 const beast::http::fields& request::header() const { return m_req.base(); }
 
 bool request::has_query() const { return !m_params.empty(); }

@@ -64,9 +64,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       request& req) const {
+                                       request& req) {
 
-    auto cmd = m_command_factory.create(req);
+    auto cmd = co_await m_command_factory.create(req);
 
     co_await cmd->validate(req);
 

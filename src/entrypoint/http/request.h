@@ -48,6 +48,8 @@ public:
     std::optional<std::string> query(const std::string& name) const;
     const std::map<std::string, std::string>& query_map() const;
 
+    void set_query_params(const std::string& query);
+
     const boost::beast::http::fields& header() const;
 
     bool has_query() const;
