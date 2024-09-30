@@ -9,6 +9,12 @@
 
 namespace uh::cluster {
 
+static constexpr const char* CHARS_CAPITALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static constexpr const char* CHARS_LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+static constexpr const char* CHARS_DIGITS = "0123456789";
+static constexpr const char* CHARS_SPECIAL =
+    "!@#$%^&*()-_=+[]{}'\\\"|,./<>?<>~`";
+
 /**
  * Split the provided string into a vector of `string_view`
  */

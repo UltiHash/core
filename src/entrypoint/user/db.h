@@ -38,7 +38,7 @@ public:
     /**
      * Add a key to a user
      *
-     * @param name
+     * @param name user name
      * @param key the key to access the user
      * @param secret the secret to assign
      * @param sts sts token
