@@ -10,6 +10,7 @@
 namespace uh::cluster::ep::user {
 
 struct user {
+    std::string id;
     std::string name;
     std::string secret_key;
     std::optional<std::string> session_token;

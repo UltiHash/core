@@ -25,7 +25,7 @@ coro<user> db::find(std::string key) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT username, secret_key, session_token, policy, "
+        "SELECT id, username, secret_key, session_token, policy, "
         "expires, arn FROM uh_query_key($1)",
         key);
 
@@ -34,19 +34,20 @@ coro<user> db::find(std::string key) {
                                 "Access Denied");
     }
 
-    auto policy_json = row->string(3);
+    auto policy_json = row->string(4);
     std::list<ep::policy::policy> policies;
     if (policy_json) {
         policies = policy::parser::parse(*policy_json);
     }
 
-    co_return user{.name = *row->string(0),
-                   .secret_key = *row->string(1),
-                   .session_token = row->string(2),
+    co_return user{.id = *row->string(0),
+                   .name = *row->string(1),
+                   .secret_key = *row->string(2),
+                   .session_token = row->string(3),
                    .policy_json = policy_json,
                    .policies = std::move(policies),
-                   .expires = row->date(4),
-                   .arn = row->string(5)};
+                   .expires = row->date(5),
+                   .arn = row->string(6)};
 }
 
 coro<user> db::find(std::string id, std::string pass) {
@@ -54,13 +55,13 @@ coro<user> db::find(std::string id, std::string pass) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT password, policy, arn FROM uh_query_user($1)", id);
+        "SELECT id, password, policy, arn FROM uh_query_user($1)", id);
 
     if (!row->string(0)) {
         throw std::runtime_error("no password defined");
     }
 
-    auto decoded = base64_decode(*row->string(0));
+    auto decoded = base64_decode(*row->string(1));
     auto fields = split(std::string_view(decoded.data(), decoded.size()), ':');
 
     auto pass_enc = m_crypt.derive(pass, std::string(fields[0]));
@@ -68,32 +69,44 @@ coro<user> db::find(std::string id, std::string pass) {
         throw std::runtime_error("password mismatch");
     }
 
-    auto policy_json = row->string(1);
+    auto policy_json = row->string(2);
     std::list<ep::policy::policy> policies;
     if (policy_json) {
         policies = policy::parser::parse(*policy_json);
     }
 
-    co_return user{.name = std::string(id),
+    co_return user{.id = *row->string(0),
+                   .name = std::string(id),
                    .policy_json = policy_json,
                    .policies = policies,
-                   .arn = row->string(2)};
+                   .arn = row->string(3)};
 }
 
-coro<void> db::add_user(const std::string& name, const std::string& password,
-                        std::optional<std::string> arn) {
+coro<std::string> db::add_user(const std::string& name,
+                               std::optional<std::string> password,
+                               std::optional<std::string> arn) {
 
     auto conn = co_await m_db.get();
 
-    std::string salt = random_string(48, SALT_CHARACTERS);
-    auto pass_crypt = m_crypt.derive(password, salt);
-    auto pass_db = salt + ":" + pass_crypt;
+    std::optional<std::string> encoded;
+
+    if (password) {
+        std::string salt = random_string(48, SALT_CHARACTERS);
+        auto pass_crypt = m_crypt.derive(*password, salt);
+        auto pass_db = salt + ":" + pass_crypt;
+        auto enc_vec = base64_encode(pass_db);
+        encoded = std::string(&enc_vec[0], enc_vec.size());
+    }
 
     try {
-        auto encoded = base64_encode(pass_db);
-        co_await conn->execv("CALL uh_add_user($1, $2, $3)", name,
-                             std::string_view(encoded.data(), encoded.size()),
-                             arn);
+        auto row = co_await conn->execv(
+            "SELECT id FROM uh_add_user($1, $2, $3)", name, encoded, arn);
+
+        if (!row->string(0)) {
+            throw std::runtime_error("could not retrieve user id");
+        }
+
+        co_return *row->string(0);
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error adding user: " << e.what();
         throw;

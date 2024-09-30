@@ -7,8 +7,9 @@
 -- Table of users
 --
 CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT PRIMARY KEY,
-    password TEXT NOT NULL,
+    password TEXT NULL,
     policy JSON DEFAULT NULL,
     arn TEXT
 );
@@ -31,11 +32,13 @@ CREATE INDEX expires_idx ON keys (expires);
 -- uh_add_user(username, password, arn) -- create a new
 --   user that will expire after a given time and return it's id
 --
-CREATE OR REPLACE PROCEDURE uh_add_user(username TEXT, password TEXT, arn TEXT)
+CREATE OR REPLACE FUNCTION uh_add_user(username TEXT, password TEXT, arn TEXT) RETURNS TEXT
 LANGUAGE plpgsql AS $$
+DECLARE id TEXT;
 BEGIN
-    EXECUTE format('INSERT INTO users (name, password, arn) VALUES (%L, %L, %L)',
-        username, password, arn);
+    EXECUTE format('INSERT INTO users (name, password, arn) VALUES (%L, %L, %L) RETURNING id',
+        username, password, arn) INTO id;
+    RETURN id;
 END;
 $$;
 
@@ -65,10 +68,10 @@ $$;
 -- authenticating a user.
 --
 CREATE OR REPLACE FUNCTION uh_query_user(username TEXT)
-    RETURNS TABLE (password TEXT, policy JSON, arn TEXT)
+    RETURNS TABLE (id UUID, password TEXT, policy JSON, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT password, policy, arn FROM users WHERE name = %L',
+    RETURN QUERY EXECUTE format('SELECT id, password, policy, arn FROM users WHERE name = %L',
         username);
 END;
 $$;
@@ -103,11 +106,11 @@ $$;
 -- uh_query_key(access_key) -- return info associated with access key
 --
 CREATE OR REPLACE FUNCTION uh_query_key(access_key TEXT)
-    RETURNS TABLE(username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON, arn TEXT)
+    RETURNS TABLE(id UUID, username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY EXECUTE format('
-        SELECT username, secret_key, session_token, expires, policy, arn FROM keys
+        SELECT id, username, secret_key, session_token, expires, policy, arn FROM keys
         JOIN users ON username = name WHERE access_key = %L AND (expires >= now() OR expires IS NULL)', access_key);
 END;
 $$;

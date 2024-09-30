@@ -29,9 +29,11 @@ public:
      * @param username user name
      * @param password
      * @param arn user arn
+     * @return user id
      */
-    coro<void> add_user(const std::string& name, const std::string& password,
-                        std::optional<std::string> arn);
+    coro<std::string> add_user(const std::string& name,
+                               std::optional<std::string> password,
+                               std::optional<std::string> arn);
 
     /**
      * Add a key to a user
