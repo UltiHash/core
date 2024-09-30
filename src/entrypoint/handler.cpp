@@ -20,7 +20,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
 
         /*
-         * Note: livetime of response must not exceed livetime of request.
+         * Note: lifetime of response must not exceed lifetime of request.
          */
         std::unique_ptr<request> req;
         response resp;
