@@ -8,14 +8,20 @@
 --
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
     password TEXT NULL,
-    policy JSON DEFAULT NULL,
     arn TEXT
 );
 
+CREATE TABLE policies (
+    username TEXT NOT NULL REFERENCES users(name) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    value JSON NOT NULL,
+    UNIQUE (name, username)
+);
+
 CREATE TABLE keys (
-    username TEXT NOT NULL REFERENCES users ON DELETE CASCADE,
+    username TEXT NOT NULL REFERENCES users(name) ON DELETE CASCADE,
     access_key TEXT UNIQUE NOT NULL,
     secret_key TEXT NOT NULL,
     session_token TEXT DEFAULT NULL,
@@ -53,13 +59,35 @@ END;
 $$;
 
 --
--- uh_set_user_policy(username, policy) -- set user policy for the referenced
--- user. Set policy to `NULL` to remove it.
+-- uh_set_user_policy(username, name, policy) -- insert a named policy into the list
+-- of user policies.
 --
-CREATE OR REPLACE PROCEDURE uh_set_user_policy(username TEXT, policy JSON)
+CREATE OR REPLACE PROCEDURE uh_put_user_policy(username TEXT, name TEXT, policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('UPDATE users SET policy = %L WHERE name = %L', policy, username);
+    EXECUTE format('INSERT INTO policies (username, name, policy) VALUES (%L, %L, %L)', username, name, policy);
+END;
+$$;
+
+--
+-- uh_remove_user_policy(username, name) -- remove a named policy from the list
+-- of user policies.
+--
+CREATE OR REPLACE PROCEDURE uh_remove_user_policy(username TEXT, name TEXT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    EXECUTE format('DELETE FROM policies WHERE username = %L and name = %L', username, name);
+END;
+$$;
+
+--
+-- uh_list_user_policy(username) -- list all named policies for the given user.
+--
+CREATE OR REPLACE FUNCTION uh_get_user_policy(username TEXT)
+    RETURNS TABLE (name TEXT, value JSON)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY EXECUTE format('SELECT name, value FROM policies WHERE username = %L', username);
 END;
 $$;
 
