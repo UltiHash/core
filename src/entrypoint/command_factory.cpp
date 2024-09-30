@@ -22,6 +22,8 @@
 #include "commands/put_bucket_policy.h"
 #include "commands/put_object.h"
 
+#include "commands/iam/create_user.h"
+
 namespace uh::cluster {
 
 coro<std::unique_ptr<command>>
@@ -43,6 +45,10 @@ command_factory::action_command(ep::http::request& req) {
     post_query.resize(size);
 
     req.set_query_params(post_query);
+
+    if (ep::iam::create_user::can_handle(req)) {
+        co_return std::make_unique<ep::iam::create_user>(m_users);
+    }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",
                             "no such command found");
