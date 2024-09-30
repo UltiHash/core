@@ -10,9 +10,9 @@ global_data_view::global_data_view(
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2),
       m_service_maintainer(storage_maintainer),
-      m_ec_maintainer(m_io_service, 1, 0,
+      m_ec_maintainer(m_io_service, m_config.ec_data_shards, m_config.ec_parity_shards,
                       m_service_maintainer.get_etcd_client(), false),
-      m_basic_getter(1, 0) {
+      m_basic_getter(m_config.ec_data_shards, m_config.ec_parity_shards) {
 
     m_service_maintainer.add_monitor(m_ec_maintainer);
     m_ec_maintainer.add_monitor(m_load_balancer);
