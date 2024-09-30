@@ -1,0 +1,76 @@
+services:
+  database:
+    image: bitnami/postgresql:16.3.0
+    environment:
+      POSTGRESQL_PASSWORD: uh
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 5433:5432
+
+  etcd:
+    image: bitnami/etcd:3.5.12
+    environment:
+      ALLOW_NONE_AUTHENTICATION: yes
+
+  database-init:
+    image: ghcr.io/ultihash/database-init:gmt
+    depends_on:
+      - database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: uh
+
+      DB_USER: postgres
+      DB_HOST: database
+      DB_PORT: 5432
+      PGPASSWORD: uh
+
+  storage:
+    image: ghcr.io/ultihash/core:gmt-storage-0.6.0
+    depends_on:
+       - etcd
+    environment:
+      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LOG_LEVEL: DEBUG
+
+  deduplicator:
+    image: ghcr.io/ultihash/core:gmt-deduplicator-0.6.0
+    depends_on:
+      - etcd
+      - storage
+    environment:
+      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LOG_LEVEL: DEBUG
+
+  entrypoint:
+    image: ghcr.io/ultihash/core:gmt-entrypoint-0.6.0
+    depends_on:
+      - etcd
+      - storage
+      - deduplicator
+    environment:
+      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LOG_LEVEL: DEBUG
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_USER: postgres
+      UH_DB_PASS: uh
+    ports:
+      - 8080:8080
+
+  stability:
+    image: ghcr.io/ultihash/core-stability-test:gmt
+    depends_on:
+      - storage
+      - deduplicator
+      - entrypoint
+    environment:
+      CLUSTER_URL: http://entrypoint:8080
+      AWS_ACCESS_KEY_ID: mocked
+      AWS_SECRET_ACCESS_KEY: mocked
+      AWS_DEFAULT_REGION: eu-central-1h
+    volumes:
+      - /data/corpora_test/stability-test-mini:/data

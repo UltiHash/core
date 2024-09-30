@@ -1,0 +1,39 @@
+FROM ghcr.io/ultihash/build-base:latest as build
+
+ARG BuildType=Release
+
+COPY . /core
+WORKDIR /core
+
+# Configure and compile
+RUN mkdir build \
+    && cmake -B build -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${BuildType} \
+    && cmake --build build -j $(nproc) --config ${BuildType}
+
+FROM ubuntu:22.04 as deploy
+
+ARG DebugTools=False
+
+LABEL org.opencontainers.image.description="This container image contains a nightly snapshot of the UltiHash object storage cluster."
+
+# Install curl to test if dependencies are already available (temporary workaround)
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+   && apt-get upgrade --yes \
+   && apt-get install --yes --no-install-recommends libgrpc10 libgrpc++1 libpq5 liblmdb0 \
+   && if [ "$DebugTools" = "True" ]; then \
+        apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
+    fi
+
+COPY --from=build /core/build/uh-cluster /usr/local/bin
+
+RUN addgroup --system --gid 234 uh
+RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
+
+# create working directory
+RUN install -d -m 0755 -o uh -g uh /var/lib/uh
+
+USER uh
+WORKDIR /home/uh
+
+CMD ["/usr/bin/bash", "-l", "-c", "sleep 8 && uh-cluster --registry etcd:2379 deduplicator"]
