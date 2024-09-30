@@ -146,6 +146,20 @@ coro<void> db::policy(const std::string& user, const std::string& name,
                          policy);
 }
 
+coro<std::list<std::string>> db::list_user_policies(const std::string& user) {
+    auto conn = co_await m_db.get();
+
+    std::list<std::string> rv;
+
+    for (auto row = co_await conn->execv(
+             "SELECT name FROM uh_get_user_policy($1)", user);
+         row; row = co_await conn->next()) {
+        rv.emplace_back(*row->string(0));
+    }
+
+    co_return rv;
+}
+
 coro<std::list<std::string>> db::entries() {
     std::list<std::string> rv;
 
