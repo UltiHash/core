@@ -73,6 +73,11 @@ public:
                       const std::string& policy);
 
     /**
+     * Return all policy names for a user name
+     */
+    coro<std::list<std::string>> list_user_policies(const std::string& user);
+
+    /**
      * Get list of users in the database
      */
     coro<std::list<std::string>> entries();
