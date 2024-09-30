@@ -2,6 +2,7 @@
 #define ENTRYPOINT_HTTP_COMPLETE_MULTIPART_H
 
 #include "command.h"
+#include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
@@ -10,7 +11,8 @@ namespace uh::cluster {
 
 class complete_multipart : public command {
 public:
-    complete_multipart(directory&, multipart_state&, limits&);
+    complete_multipart(directory&, global_data_view&, multipart_state&,
+                       limits&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -20,6 +22,7 @@ public:
 
 private:
     directory& m_directory;
+    global_data_view& m_gdv;
     multipart_state& m_uploads;
     limits& m_limits;
 };
