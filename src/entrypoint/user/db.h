@@ -62,14 +62,15 @@ public:
     coro<void> remove_user(const std::string& username);
 
     /**
-     * Set the policy for a user
+     * Add a policy for a user
      *
-     * @param key access_key access key identifying the user
+     * @param user user name
+     * @param name policy name
      * @param policy the policy to set for the user or `std::nullopt` to disable
      *               the policy
      */
-    coro<void> policy(const std::string& key,
-                      std::optional<std::string> policy);
+    coro<void> policy(const std::string& user, const std::string& name,
+                      const std::string& policy);
 
     /**
      * Get list of users in the database
