@@ -44,15 +44,16 @@ public:
 
           m_directory(m_ioc, m_config.database),
           m_uploads(m_ioc, m_config.database),
+          m_users(m_ioc, m_config.database),
           m_limits(sc.license.max_data_store_size),
-          m_server(
-              m_config.server,
-              std::make_unique<handler>(
-                  command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
-                                  m_uploads, m_config, m_data_view, m_limits),
-                  http::request_factory(user::db(m_ioc, m_config.database)),
-                  std::make_unique<policy::module>(m_directory)),
-              m_ioc) {
+          m_server(m_config.server,
+                   std::make_unique<handler>(
+                       command_factory(m_ioc, m_dedupe_load_balancer,
+                                       m_directory, m_uploads, m_config,
+                                       m_data_view, m_limits, m_users),
+                       http::request_factory(m_users),
+                       std::make_unique<policy::module>(m_directory)),
+                   m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
 
@@ -91,6 +92,7 @@ private:
     directory m_directory;
 
     multipart_state m_uploads;
+    user::db m_users;
     limits m_limits;
     server m_server;
 };

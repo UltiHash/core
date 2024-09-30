@@ -10,6 +10,8 @@
 #include "limits.h"
 #include "multipart_state.h"
 
+#include <entrypoint/user/db.h>
+
 namespace uh::cluster {
 
 struct command_factory {
@@ -17,14 +19,15 @@ struct command_factory {
         boost::asio::io_context& ioc,
         roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
         directory& dir, multipart_state& uploads, entrypoint_config& config,
-        global_data_view& gdv, limits& uhlimits)
+        global_data_view& gdv, limits& uhlimits, ep::user::db& users)
         : m_ioc(ioc),
           m_dedupe_services(dedupe_services),
           m_directory(dir),
           m_uploads(uploads),
           m_config(config),
           m_gdv(gdv),
-          m_limits(uhlimits) {}
+          m_limits(uhlimits),
+          m_users(users) {}
 
     coro<std::unique_ptr<command>> create(ep::http::request& req);
 
@@ -43,6 +46,7 @@ private:
     entrypoint_config& m_config;
     global_data_view& m_gdv;
     limits& m_limits;
+    ep::user::db& m_users;
 };
 
 } // end namespace uh::cluster
