@@ -57,6 +57,11 @@ public:
     coro<void> remove_key(const std::string& key);
 
     /**
+     * Remove user
+     */
+    coro<void> remove_user(const std::string& username);
+
+    /**
      * Set the policy for a user
      *
      * @param key access_key access key identifying the user
