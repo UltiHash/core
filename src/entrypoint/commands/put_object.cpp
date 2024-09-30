@@ -104,7 +104,7 @@ coro<response> put_object::handle(request& req) {
         co_await m_dir.put_object(req.bucket(), obj);
 
         if constexpr (m_enable_refcount) {
-            if (old_obj.has_value()) {
+            if (old_obj.has_value() && old_obj->addr.has_value()) {
                 co_await m_gdv.unlink(req.context(),
                                       old_obj.value().addr.value());
             }
