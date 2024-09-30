@@ -134,6 +134,11 @@ coro<void> db::remove_key(const std::string& key) {
     co_await conn->execv("CALL uh_remove_key($1)", key);
 }
 
+coro<void> db::remove_user(const std::string& username) {
+    auto conn = co_await m_db.get();
+    co_await conn->execv("CALL uh_remove_user($1)", username);
+}
+
 coro<void> db::policy(const std::string& name,
                       std::optional<std::string> policy) {
     auto conn = co_await m_db.get();

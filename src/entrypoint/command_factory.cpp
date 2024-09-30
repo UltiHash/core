@@ -23,6 +23,7 @@
 #include "commands/put_object.h"
 
 #include "commands/iam/create_user.h"
+#include "commands/iam/delete_user.h"
 
 namespace uh::cluster {
 
@@ -48,6 +49,10 @@ command_factory::action_command(ep::http::request& req) {
 
     if (ep::iam::create_user::can_handle(req)) {
         co_return std::make_unique<ep::iam::create_user>(m_users);
+    }
+
+    if (ep::iam::delete_user::can_handle(req)) {
+        co_return std::make_unique<ep::iam::delete_user>(m_users);
     }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",
