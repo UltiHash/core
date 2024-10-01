@@ -4,15 +4,10 @@
 namespace uh::cluster {
 
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
-                           size_t capacity, global_data_view& storage,
-                           bool enable_replay)
+                           size_t capacity, global_data_view& storage)
     : m_storage(storage),
-      m_set_log(set_log_path),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
       m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {
-
-    if (enable_replay)
-        m_set_log.replay(m_set, m_storage);
 }
 fragment_set::response fragment_set::find(const std::string_view& data) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
@@ -41,9 +36,6 @@ void fragment_set::insert(const uint128_t& pointer,
                           const std::optional<hint_type>& hint) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, pointer, std::string(prefix), m_storage};
-    fragment_set_log::log_entry entry{set_operation::INSERT, f.pointer(),
-                                      f.size(), f.prefix()};
-    m_set_log.append(entry);
 
     metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
     metric<metric_type::deduplicator_set_fragment_size_counter, byte>::increase(
@@ -72,8 +64,6 @@ void fragment_set::mark_deduplication(const fragment& frag) {
     m_lfu.use(frag.pointer);
 }
 
-void fragment_set::flush() { m_set_log.flush(); }
-
 size_t fragment_set::size() const { return m_set.size(); }
 
 std::lock_guard<std::shared_mutex> fragment_set::lock() {
@@ -82,8 +72,6 @@ std::lock_guard<std::shared_mutex> fragment_set::lock() {
 
 void fragment_set::remove(
     const std::set<fragment_set_element>::const_iterator& itr) {
-    fragment_set_log::log_entry entry{set_operation::REMOVE, itr->pointer()};
-    m_set_log.append(entry);
     if (itr->m_hint_count > 0) {
         itr->m_state = COLD;
         m_colds.emplace_front(itr);

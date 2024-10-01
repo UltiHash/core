@@ -4,7 +4,6 @@
 #include "common/caches/lfu_cache.h"
 #include "common/global_data/global_data_view.h"
 #include "fragment_set_element.h"
-#include "fragment_set_log.h"
 
 #include <set>
 #include <utility>
@@ -69,11 +68,9 @@ public:
      * @param set_log_path A path specifying the location of the log file.
      * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
-     * @param enable_replay Temporary, optional switch for disabling replay of
-     * the fragment_set_log. Default value: true.
      */
     fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
-                 global_data_view& storage, bool enable_replay = true);
+                 global_data_view& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
@@ -116,15 +113,6 @@ public:
     void erase(const fragment& set_element, bool header);
 
     /**
-     * @brief synchronizes the fragment_set log file with the underlying storage
-     * device
-     *
-     * Calls std::fstream::flush() on log file to synchronize cached writes
-     * to persistent storage.
-     */
-    void flush();
-
-    /**
      * Returns the size of the dedupe set (count of fragments)
      * @return
      */
@@ -142,7 +130,6 @@ private:
     global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
-    fragment_set_log m_set_log;
 
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator>

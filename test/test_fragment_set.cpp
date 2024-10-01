@@ -2,6 +2,7 @@
 
 #include "common/utils/temp_directory.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
+#include "deduplicator/dedupe_set/fragment_set_log.h"
 #include "gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
 
@@ -118,6 +119,7 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
              frag_set);
 }
 
+/*
 BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     temp_directory tmp_dir;
     context ctx;
@@ -168,6 +170,7 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
                  frag_set);
     }
 }
+*/
 
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
