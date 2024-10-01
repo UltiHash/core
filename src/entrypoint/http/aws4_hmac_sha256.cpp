@@ -163,7 +163,7 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
 
     auto signed_headers =
         split<std::set<std::string_view>>(parsed["SignedHeaders"], ';');
-    auto user = co_await users.find(std::string(split_credentials[0]));
+    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.secret_key, info);
     auto signature = request_signature(req, info, signed_headers, signing_key);
 

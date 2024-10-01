@@ -15,7 +15,7 @@ coro<ep::http::response> delete_access_key::handle(ep::http::request& req) {
 
     auto username = req.query("username");
     if (username) {
-        auto user = co_await m_users.find(*access_key);
+        auto user = co_await m_users.find_by_key(*access_key);
         if (user.name != *username) {
             throw command_exception(
                 ep::http::status::conflict, "User Name Mismatch",
