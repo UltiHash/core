@@ -6,13 +6,13 @@ get_user_policy::get_user_policy(user::db& users)
     : m_users(users) {}
 
 coro<ep::http::response> get_user_policy::handle(ep::http::request& req) {
-    auto username = req.query("username");
+    auto username = req.query("UserName");
     if (!username) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+                                "UserName missing");
     }
 
-    auto policy_name = req.query("policyname");
+    auto policy_name = req.query("PolicyName");
     if (!policy_name) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
                                 "PolicyName missing");
@@ -35,7 +35,7 @@ std::string get_user_policy::action_id() const { return "iam::GetUserPolicy"; }
 
 bool get_user_policy::can_handle(const ep::http::request& req) {
     return req.method() == http::verb::post &&
-           req.query("action").value_or("") == "GetUserPolicy";
+           req.query("Action").value_or("") == "GetUserPolicy";
 }
 
 } // namespace uh::cluster::ep::iam

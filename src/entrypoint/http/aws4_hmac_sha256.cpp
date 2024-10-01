@@ -3,6 +3,7 @@
 #include "chunk_body_sha256.h"
 #include "raw_body.h"
 #include "raw_body_sha256.h"
+#include "string_body.h"
 #include <common/crypto/hmac.h>
 #include <common/utils/strings.h>
 #include <entrypoint/http/command_exception.h>
@@ -32,7 +33,8 @@ bool include_header(const std::string& name,
 
 std::string
 make_canonical_request(partial_parse_result& req,
-                       const std::set<std::string_view>& signed_headers) {
+                       const std::set<std::string_view>& signed_headers,
+                       const std::string& content_sha) {
 
     auto url = parse_request_target(req.headers.target());
 
@@ -73,15 +75,17 @@ make_canonical_request(partial_parse_result& req,
 
     return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
-           signed_header_names + "\n" + req.require("x-amz-content-sha256");
+           signed_header_names + "\n" + content_sha;
 }
 
 std::string request_signature(partial_parse_result& req,
                               const aws4_signature_info& info,
                               const std::set<std::string_view>& signed_headers,
-                              const std::string& signing_key) {
+                              const std::string& signing_key,
+                              const std::string& content_sha) {
 
-    auto canonical_request = make_canonical_request(req, signed_headers);
+    auto canonical_request =
+        make_canonical_request(req, signed_headers, content_sha);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
@@ -101,36 +105,35 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
                                 std::string signature) {
     auto length = std::stoul(req.optional("content-length").value_or("0"));
 
-    auto content_sha = req.require("x-amz-content-sha256");
+    auto content_sha = req.optional("x-amz-content-sha256");
+    if (!content_sha || *content_sha == "UNSIGNED-PAYLOAD") {
+        LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
+        return std::make_unique<raw_body>(req, length);
+    }
 
-    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
+    if (*content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
         return std::make_unique<chunk_body_sha256>(
             req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::none);
     }
 
-    if (content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
+    if (*content_sha == "STREAMING-UNSIGNED-PAYLOAD-TRAILER") {
         LOG_DEBUG() << req.peer
                     << ": using chunked unsigned payload with trailer";
         return std::make_unique<chunked_body>(
             req, chunked_body::trailing_headers::read);
     }
 
-    if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
+    if (*content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256 with trailer";
         return std::make_unique<chunk_body_sha256>(
             req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::read);
     }
 
-    if (content_sha == "UNSIGNED-PAYLOAD") {
-        LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
-        return std::make_unique<raw_body>(req, length);
-    }
-
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
-    return std::make_unique<raw_body_sha256>(req, std::move(content_sha),
+    return std::make_unique<raw_body_sha256>(req, std::move(*content_sha),
                                              length);
 }
 
@@ -166,7 +169,36 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
         split<std::set<std::string_view>>(parsed["SignedHeaders"], ';');
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
-    auto signature = request_signature(req, info, signed_headers, signing_key);
+
+    std::string content_sha;
+    if (auto content_sha_hdr = req.optional("amz-content-sha256");
+        content_sha_hdr) {
+        content_sha = *content_sha_hdr;
+    }
+
+    std::unique_ptr<body> body;
+    if (auto content_type = req.optional("content-type");
+        content_type.value_or("").starts_with(
+            "application/x-www-form-urlencoded")) {
+
+        auto length = std::stoul(req.optional("content-length").value_or("0"));
+        raw_body reader(req, length);
+
+        std::string buffer(length, 0);
+        auto size = co_await reader.read({&buffer[0], length});
+        if (size != length) {
+            throw std::runtime_error("cannot read content-length bytes");
+        }
+
+        sha256 hash;
+        hash.consume({&buffer[0], length});
+        content_sha = to_hex(hash.finalize());
+
+        body = std::make_unique<string_body>(std::move(buffer));
+    }
+
+    auto signature =
+        request_signature(req, info, signed_headers, signing_key, content_sha);
 
     if (signature != parsed["Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
@@ -174,8 +206,11 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
                                 "Access Denied");
     }
 
-    auto body = make_body(req, std::move(info), std::move(signature),
-                          std::move(signing_key));
+    if (!body) {
+        body = make_body(req, std::move(info), std::move(signature),
+                         std::move(signing_key));
+    }
+
     co_return std::make_unique<request>(std::move(req.headers), std::move(body),
                                         std::move(user), std::move(req.peer));
 }
