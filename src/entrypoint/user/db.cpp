@@ -21,12 +21,12 @@ db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
     : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
       m_crypt({}) {}
 
-coro<user> db::find(std::string key) {
+coro<user> db::find_by_key(std::string key) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT id, username, secret_key, session_token, policy, "
-        "expires, arn FROM uh_query_key($1)",
+        "SELECT id, username, secret_key, session_token, expires, arn "
+        "FROM uh_query_key($1)",
         key);
 
     if (!row) {
@@ -34,28 +34,64 @@ coro<user> db::find(std::string key) {
                                 "Access Denied");
     }
 
-    auto policy_json = row->string(4);
-    std::list<ep::policy::policy> policies;
-    if (policy_json) {
-        policies = policy::parser::parse(*policy_json);
+    user rv{.id = *row->string(0),
+            .name = *row->string(1),
+            .arn = row->string(5),
+            .secret_key = *row->string(2),
+            .session_token = row->string(3),
+            .expires = row->date(4)};
+
+    for (auto row = co_await conn->execv(
+             "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
+         row; row = co_await conn->next()) {
+
+        auto name = row->string(0);
+        auto json = row->string(1);
+
+        if (!name || !json) {
+            continue;
+        }
+
+        rv.policies[*name] = policy::parser::parse(*json);
+        rv.policy_json[*name] = std::move(*json);
     }
 
-    co_return user{.id = *row->string(0),
-                   .name = *row->string(1),
-                   .secret_key = *row->string(2),
-                   .session_token = row->string(3),
-                   .policy_json = policy_json,
-                   .policies = std::move(policies),
-                   .expires = row->date(5),
-                   .arn = row->string(6)};
+    co_return rv;
 }
 
-coro<user> db::find(std::string id, std::string pass) {
+coro<user> db::find(std::string id) {
 
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT id, password, policy, arn FROM uh_query_user($1)", id);
+        "SELECT id, password, arn FROM uh_query_user($1)", id);
+
+    user rv{.id = *row->string(0), .name = id, .arn = row->string(2)};
+
+    for (auto row = co_await conn->execv(
+             "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
+         row; row = co_await conn->next()) {
+
+        auto name = row->string(0);
+        auto json = row->string(1);
+
+        if (!name || !json) {
+            continue;
+        }
+
+        rv.policies[*name] = policy::parser::parse(*json);
+        rv.policy_json[*name] = std::move(*json);
+    }
+
+    co_return rv;
+}
+
+coro<user> db::find_and_check(std::string id, std::string pass) {
+
+    auto conn = co_await m_db.get();
+
+    auto row = co_await conn->execv(
+        "SELECT id, password, arn FROM uh_query_user($1)", id);
 
     if (!row->string(0)) {
         throw std::runtime_error("no password defined");
@@ -69,17 +105,24 @@ coro<user> db::find(std::string id, std::string pass) {
         throw std::runtime_error("password mismatch");
     }
 
-    auto policy_json = row->string(2);
-    std::list<ep::policy::policy> policies;
-    if (policy_json) {
-        policies = policy::parser::parse(*policy_json);
+    user rv{.id = *row->string(0), .name = id, .arn = row->string(2)};
+
+    for (auto row = co_await conn->execv(
+             "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
+         row; row = co_await conn->next()) {
+
+        auto name = row->string(0);
+        auto json = row->string(1);
+
+        if (!name || !json) {
+            continue;
+        }
+
+        rv.policies[*name] = policy::parser::parse(*json);
+        rv.policy_json[*name] = std::move(*json);
     }
 
-    co_return user{.id = *row->string(0),
-                   .name = std::string(id),
-                   .policy_json = policy_json,
-                   .policies = policies,
-                   .arn = row->string(3)};
+    co_return rv;
 }
 
 coro<std::string> db::add_user(const std::string& name,
@@ -99,8 +142,8 @@ coro<std::string> db::add_user(const std::string& name,
     }
 
     try {
-        auto row = co_await conn->execv(
-            "SELECT id FROM uh_add_user($1, $2, $3)", name, encoded, arn);
+        auto row = co_await conn->execv("SELECT uh_add_user($1, $2, $3)", name,
+                                        encoded, arn);
 
         if (!row->string(0)) {
             throw std::runtime_error("could not retrieve user id");

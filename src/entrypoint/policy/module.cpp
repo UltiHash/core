@@ -58,10 +58,13 @@ coro<effect> module::check(const http::request& request,
     }
 
     for (const auto& policy : request.authenticated_user().policies) {
-        auto result = policy.check(request, cmd);
-        if (result.value_or(effect::deny) == effect::allow) {
-            LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
-            co_return effect::allow;
+        for (const auto& p : policy.second) {
+            auto result = p.check(request, cmd);
+            if (result.value_or(effect::deny) == effect::allow) {
+                LOG_DEBUG() << "policy " << policy.first << "/" << p.id()
+                            << ": effect allow";
+                co_return effect::allow;
+            }
         }
     }
 

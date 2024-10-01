@@ -2,8 +2,11 @@
 #include "config/configuration.h"
 
 #include "common/telemetry/log.h"
+#include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/user/db.h"
+
+#include <ranges>
 
 using namespace uh::cluster;
 
@@ -35,9 +38,12 @@ struct config {
     } remove;
 
     struct {
-        std::string access_id;
+        std::string username;
+        std::optional<std::string> name;
         std::optional<std::string> policy;
         bool remove = false;
+        bool get = false;
+        bool put = false;
     } policy;
 
     struct {
@@ -79,13 +85,13 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_remove->add_option("access-id", rv.remove.access_id,
                            "entry's access id");
 
-    auto* sub_policy =
-        app.add_subcommand("policy", "set or read entry's policy");
-    sub_policy->add_option("access-id", rv.policy.access_id,
-                           "entry's access id");
-    sub_policy->add_option("policy", rv.policy.policy,
-                           "set the policy to this");
+    auto* sub_policy = app.add_subcommand("policy", "modify user policies");
+    sub_policy->add_option("username", rv.policy.username, "username");
+    sub_policy->add_option("policy-name", rv.policy.name, "policy name");
+    sub_policy->add_option("policy", rv.policy.policy, "policy JSON");
     sub_policy->add_option("--remove", rv.policy.remove, "delete the policy");
+    sub_policy->add_option("--put", rv.policy.put, "put a policy");
+    sub_policy->add_option("--get", rv.policy.get, "get the policy");
 
     auto sub_list = app.add_subcommand("list", "show stored access entries");
 
@@ -142,15 +148,41 @@ uh::cluster::coro<void> remove_entry(ep::user::db& db, const ::config& cfg) {
 
 uh::cluster::coro<void> policy(ep::user::db& db, const ::config& cfg) {
     if (cfg.policy.remove) {
-        co_await db.policy(cfg.policy.access_id, std::nullopt);
+        if (!cfg.policy.name) {
+            throw std::runtime_error("no policy name given");
+        }
+
+        co_await db.remove_policy(cfg.policy.username, *cfg.policy.name);
         co_return;
     }
 
-    if (cfg.policy.policy) {
-        co_await db.policy(cfg.policy.access_id, cfg.policy.policy);
-    } else {
-        auto user = co_await db.find(cfg.policy.access_id);
-        std::cout << user.policy_json.value_or("-- no policy --") << "\n";
+    if (cfg.policy.get) {
+        if (!cfg.policy.name) {
+            throw std::runtime_error("no policy name given");
+        }
+
+        auto policy = co_await db.policy(cfg.policy.username, *cfg.policy.name);
+        std::cout << policy << "\n";
+        co_return;
+    }
+
+    if (cfg.policy.put) {
+        if (!cfg.policy.policy) {
+            throw std::runtime_error("no policy given");
+        }
+
+        if (!cfg.policy.name) {
+            throw std::runtime_error("no policy name given");
+        }
+
+        co_await db.policy(cfg.policy.username, *cfg.policy.name,
+                           *cfg.policy.policy);
+        co_return;
+    }
+
+    auto policies = co_await db.list_user_policies(cfg.policy.username);
+    for (const auto& pol_name : policies) {
+        std::cout << pol_name << "\n";
     }
 }
 
@@ -160,16 +192,9 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     for (const auto& entry : entries) {
         auto user = co_await db.find(entry);
 
-        std::string expires = " -- no expiration -- ";
-        if (user.expires) {
-            expires = iso8601_date(*user.expires);
-        }
-
-        std::cout << entry << "\t"
-                  << user.session_token.value_or("-- no session token --")
-                  << "\t"
-                  << (user.policies.empty() ? " no policy " : " policy set ")
-                  << "\t" << expires << "\n";
+        std::cout << user.id << "\t" << user.name << "\t"
+                  << user.arn.value_or("<-- no ARN -->") << "\t"
+                  << join(std::views::keys(user.policies), ", ") << "\n";
     }
 }
 

@@ -24,8 +24,8 @@ coro<std::unique_ptr<request>> basic_auth::create(user::db& users,
         throw std::runtime_error("credentials format error");
     }
 
-    auto user =
-        co_await users.find(std::string(creds[0]), std::string(creds[1]));
+    auto user = co_await users.find_and_check(std::string(creds[0]),
+                                              std::string(creds[1]));
 
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
         co_return std::make_unique<request>(

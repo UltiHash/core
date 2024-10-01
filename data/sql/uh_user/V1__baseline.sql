@@ -96,10 +96,10 @@ $$;
 -- authenticating a user.
 --
 CREATE OR REPLACE FUNCTION uh_query_user(username TEXT)
-    RETURNS TABLE (id UUID, password TEXT, policy JSON, arn TEXT)
+    RETURNS TABLE (id UUID, password TEXT, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT id, password, policy, arn FROM users WHERE name = %L',
+    RETURN QUERY EXECUTE format('SELECT id, password, arn FROM users WHERE name = %L',
         username);
 END;
 $$;
@@ -134,11 +134,11 @@ $$;
 -- uh_query_key(access_key) -- return info associated with access key
 --
 CREATE OR REPLACE FUNCTION uh_query_key(access_key TEXT)
-    RETURNS TABLE(id UUID, username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, policy JSON, arn TEXT)
+    RETURNS TABLE(id UUID, username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, arn TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY EXECUTE format('
-        SELECT id, username, secret_key, session_token, expires, policy, arn FROM keys
+        SELECT id, username, secret_key, session_token, expires, arn FROM keys
         JOIN users ON username = name WHERE access_key = %L AND (expires >= now() OR expires IS NULL)', access_key);
 END;
 $$;

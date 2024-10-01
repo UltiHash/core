@@ -29,6 +29,23 @@ container split(std::string_view data, char delimiter = ' ') {
     return {split.begin(), split.end()};
 }
 
+std::string join(std::ranges::input_range auto&& range,
+                 const std::string& delimiter) {
+    std::string rv;
+    bool first = true;
+
+    for (const auto& e : range) {
+        if (!first) {
+            rv += delimiter;
+        }
+
+        rv += e;
+        first = false;
+    }
+
+    return rv;
+}
+
 template <typename container = std::vector<std::string>>
 std::string join(const container& c, const std::string& delimiter) {
     std::string rv;

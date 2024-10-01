@@ -16,12 +16,17 @@ public:
      *
      * @param key access key of the user
      */
-    coro<user> find(std::string key);
+    coro<user> find_by_key(std::string key);
+
+    /**
+     * Find a user using username only.
+     */
+    coro<user> find(std::string id);
 
     /**
      * Find a user using username and password.
      */
-    coro<user> find(std::string id, std::string pass);
+    coro<user> find_and_check(std::string id, std::string pass);
 
     /**
      * Add a new user to database
