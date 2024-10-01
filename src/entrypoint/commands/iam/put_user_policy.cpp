@@ -1,6 +1,7 @@
 #include "put_user_policy.h"
 
 #include <common/utils/random.h>
+#include <entrypoint/policy/parser.h>
 
 namespace uh::cluster::ep::iam {
 
@@ -11,11 +12,30 @@ coro<ep::http::response> put_user_policy::handle(ep::http::request& req) {
     auto user = req.query("UserName");
     if (!user) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+                                "UserName missing");
     }
 
-    (void)m_users;
+    auto name = req.query("PolicyName");
+    if (!name) {
+        throw command_exception(ep::http::status::bad_request, "Invalid Input",
+                                "PolicyName missing");
+    }
+
+    auto document = req.query("PolicyDocument");
+    if (!name) {
+        throw command_exception(ep::http::status::bad_request, "Invalid Input",
+                                "PolicyDocument missing");
+    }
+
+    policy::parser::parse(*document);
+
+    co_await m_users.policy(*user, *name, *document);
+
+    boost::property_tree::ptree pt;
+    pt.put("PutUserPolicyResponse", "");
+
     http::response resp;
+    resp << pt;
     co_return resp;
 }
 
