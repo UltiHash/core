@@ -65,7 +65,7 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_put_user_policy(username TEXT, name TEXT, policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    EXECUTE format('INSERT INTO policies (username, name, policy) VALUES (%L, %L, %L)', username, name, policy);
+    EXECUTE format('INSERT INTO policies (username, name, value) VALUES (%L, %L, %L)', username, name, policy);
 END;
 $$;
 

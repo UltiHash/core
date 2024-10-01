@@ -15,7 +15,9 @@ struct config {
         add_user,
         add_key,
         remove,
-        policy,
+        policy_del,
+        policy_put,
+        policy_get,
         list,
         cleanup,
         info
@@ -47,12 +49,19 @@ struct config {
 
     struct {
         std::string username;
-        std::optional<std::string> name;
-        std::optional<std::string> policy;
-        bool remove = false;
-        bool get = false;
-        bool put = false;
-    } policy;
+        std::string name;
+    } policy_del;
+
+    struct {
+        std::string username;
+        std::string name;
+    } policy_get;
+
+    struct {
+        std::string username;
+        std::string name;
+        std::string policy;
+    } policy_put;
 
     struct {
         std::size_t expire_before = 0ull;
@@ -75,13 +84,20 @@ std::optional<::config> read_config(int argc, char** argv) {
     uh::cluster::configure(app, rv.database);
     uh::cluster::configure(app, rv.log_level);
 
-    auto* sub_add = app.add_subcommand("add", "add user to database");
+    auto* sub_add = app.add_subcommand("user-add", "add user to database");
     sub_add->add_option("username", rv.add_user.username, "user name");
     sub_add->add_option("password", rv.add_user.password, "password");
     sub_add->add_option("arn", rv.add_user.arn, "ARN");
 
+    auto sub_info =
+        app.add_subcommand("user-info", "extensive information about a user");
+    sub_info->add_option("username", rv.info.username, "username");
+
+    auto sub_list =
+        app.add_subcommand("user-list", "show stored access entries");
+
     auto* sub_add_key =
-        app.add_subcommand("add-key", "add access entry to database");
+        app.add_subcommand("key-add", "add access entry to database");
     sub_add_key->add_option("username", rv.add_key.username, "user name");
     sub_add_key->add_option("access-id", rv.add_key.access_id,
                             "entry's access id");
@@ -93,19 +109,26 @@ std::optional<::config> read_config(int argc, char** argv) {
                             "number of seconds before expiration");
 
     auto* sub_remove =
-        app.add_subcommand("remove", "remove access entry from database");
+        app.add_subcommand("key-del", "remove access key from database");
     sub_remove->add_option("access-id", rv.remove.access_id,
                            "entry's access id");
 
-    auto* sub_policy = app.add_subcommand("policy", "modify user policies");
-    sub_policy->add_option("username", rv.policy.username, "username");
-    sub_policy->add_option("policy-name", rv.policy.name, "policy name");
-    sub_policy->add_option("policy", rv.policy.policy, "policy JSON");
-    sub_policy->add_option("--remove", rv.policy.remove, "delete the policy");
-    sub_policy->add_option("--put", rv.policy.put, "put a policy");
-    sub_policy->add_option("--get", rv.policy.get, "get the policy");
+    auto* sub_policy_put = app.add_subcommand("policy-add", "add user policy");
+    sub_policy_put->add_option("username", rv.policy_put.username, "username");
+    sub_policy_put->add_option("policy-name", rv.policy_put.name,
+                               "policy name");
+    sub_policy_put->add_option("policy", rv.policy_put.policy, "policy JSON");
 
-    auto sub_list = app.add_subcommand("list", "show stored access entries");
+    auto* sub_policy_get = app.add_subcommand("policy-get", "read user policy");
+    sub_policy_get->add_option("username", rv.policy_get.username, "username");
+    sub_policy_get->add_option("policy-name", rv.policy_get.name,
+                               "policy name");
+
+    auto* sub_policy_del =
+        app.add_subcommand("policy-del", "remove user policy");
+    sub_policy_del->add_option("username", rv.policy_del.username, "username");
+    sub_policy_del->add_option("policy-name", rv.policy_del.name,
+                               "policy name");
 
     auto sub_cleanup =
         app.add_subcommand("cleanup", "remove expired user accounts");
@@ -114,10 +137,6 @@ std::optional<::config> read_config(int argc, char** argv) {
             "--expire-before", rv.cleanup.expire_before,
             "only remove entries that expired before that many seconds")
         ->default_val(rv.cleanup.expire_before);
-
-    auto sub_info =
-        app.add_subcommand("info", "extensive information about a user");
-    sub_info->add_option("username", rv.info.username, "username");
 
     try {
         app.parse(argc, argv);
@@ -133,8 +152,12 @@ std::optional<::config> read_config(int argc, char** argv) {
         rv.cmd = ::config::command::add_key;
     } else if (sub_remove->parsed()) {
         rv.cmd = ::config::command::remove;
-    } else if (sub_policy->parsed()) {
-        rv.cmd = ::config::command::policy;
+    } else if (sub_policy_get->parsed()) {
+        rv.cmd = ::config::command::policy_get;
+    } else if (sub_policy_del->parsed()) {
+        rv.cmd = ::config::command::policy_del;
+    } else if (sub_policy_put->parsed()) {
+        rv.cmd = ::config::command::policy_put;
     } else if (sub_list->parsed()) {
         rv.cmd = ::config::command::list;
     } else if (sub_cleanup->parsed()) {
@@ -164,44 +187,19 @@ uh::cluster::coro<void> remove_entry(ep::user::db& db, const ::config& cfg) {
     co_await db.remove_key(cfg.remove.access_id);
 }
 
-uh::cluster::coro<void> policy(ep::user::db& db, const ::config& cfg) {
-    if (cfg.policy.remove) {
-        if (!cfg.policy.name) {
-            throw std::runtime_error("no policy name given");
-        }
+uh::cluster::coro<void> policy_get(ep::user::db& db, const ::config& cfg) {
+    auto policy =
+        co_await db.policy(cfg.policy_get.username, cfg.policy_get.name);
+    std::cout << policy << "\n";
+}
 
-        co_await db.remove_policy(cfg.policy.username, *cfg.policy.name);
-        co_return;
-    }
+uh::cluster::coro<void> policy_del(ep::user::db& db, const ::config& cfg) {
+    co_await db.remove_policy(cfg.policy_del.username, cfg.policy_del.name);
+}
 
-    if (cfg.policy.get) {
-        if (!cfg.policy.name) {
-            throw std::runtime_error("no policy name given");
-        }
-
-        auto policy = co_await db.policy(cfg.policy.username, *cfg.policy.name);
-        std::cout << policy << "\n";
-        co_return;
-    }
-
-    if (cfg.policy.put) {
-        if (!cfg.policy.policy) {
-            throw std::runtime_error("no policy given");
-        }
-
-        if (!cfg.policy.name) {
-            throw std::runtime_error("no policy name given");
-        }
-
-        co_await db.policy(cfg.policy.username, *cfg.policy.name,
-                           *cfg.policy.policy);
-        co_return;
-    }
-
-    auto policies = co_await db.list_user_policies(cfg.policy.username);
-    for (const auto& pol_name : policies) {
-        std::cout << pol_name << "\n";
-    }
+uh::cluster::coro<void> policy_put(ep::user::db& db, const ::config& cfg) {
+    co_await db.policy(cfg.policy_put.username, cfg.policy_put.name,
+                       cfg.policy_put.policy);
 }
 
 uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
@@ -229,7 +227,7 @@ uh::cluster::coro<void> info(ep::user::db& db, const ::config& cfg) {
 
     std::cout << "policies:\n";
     for (const auto& pol : user.policies) {
-        std::cout << pol.first << "\n";
+        std::cout << "- " << pol.first << "\n";
     }
     std::cout << "\n";
 
@@ -274,8 +272,14 @@ int main(int argc, char** argv) {
         case ::config::command::remove:
             boost::asio::co_spawn(executor, remove_entry(db, *cfg), handler);
             break;
-        case ::config::command::policy:
-            boost::asio::co_spawn(executor, policy(db, *cfg), handler);
+        case ::config::command::policy_get:
+            boost::asio::co_spawn(executor, policy_get(db, *cfg), handler);
+            break;
+        case ::config::command::policy_del:
+            boost::asio::co_spawn(executor, policy_del(db, *cfg), handler);
+            break;
+        case ::config::command::policy_put:
+            boost::asio::co_spawn(executor, policy_put(db, *cfg), handler);
             break;
         case ::config::command::list:
             boost::asio::co_spawn(executor, list_entries(db, *cfg), handler);
