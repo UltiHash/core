@@ -6,10 +6,10 @@ list_user_policies::list_user_policies(user::db& users)
     : m_users(users) {}
 
 coro<ep::http::response> list_user_policies::handle(ep::http::request& req) {
-    auto username = req.query("username");
+    auto username = req.query("UserName");
     if (!username) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+                                "UserName missing");
     }
 
     boost::property_tree::ptree pt_names;
@@ -35,7 +35,7 @@ std::string list_user_policies::action_id() const {
 
 bool list_user_policies::can_handle(const ep::http::request& req) {
     return req.method() == http::verb::post &&
-           req.query("action").value_or("") == "ListUserPolicies";
+           req.query("Action").value_or("") == "ListUserPolicies";
 }
 
 } // namespace uh::cluster::ep::iam

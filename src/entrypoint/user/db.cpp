@@ -155,7 +155,8 @@ coro<std::string> db::add_user(const std::string& name,
         co_return *row->string(0);
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error adding user: " << e.what();
-        throw;
+        throw command_exception(status::conflict, "UserExists",
+                                "User already exists");
     }
 }
 
