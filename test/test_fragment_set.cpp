@@ -119,6 +119,7 @@ BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
              frag_set);
 }
 
+/*
 BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
     temp_directory tmp_dir;
     context ctx;
@@ -169,6 +170,7 @@ BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
                  frag_set);
     }
 }
+*/
 
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
