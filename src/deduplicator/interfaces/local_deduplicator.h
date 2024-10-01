@@ -46,7 +46,7 @@ struct local_deduplicator : public deduplicator_interface {
     local_deduplicator(deduplicator_config config, global_data_view& storage)
         : m_dedupe_conf(std::move(config)),
           m_fragment_set(m_dedupe_conf.working_dir / "log",
-                         m_dedupe_conf.set_capacity, storage, false),
+                         m_dedupe_conf.set_capacity, storage),
           m_storage(storage),
           m_dedupe_workers(m_storage.get_executor(),
                            m_dedupe_conf.worker_thread_count),
