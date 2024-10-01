@@ -11,7 +11,15 @@
 using namespace uh::cluster;
 
 struct config {
-    enum class command { add_user, add_key, remove, policy, list, cleanup };
+    enum class command {
+        add_user,
+        add_key,
+        remove,
+        policy,
+        list,
+        cleanup,
+        info
+    };
 
     uh::cluster::db::config database;
 
@@ -49,6 +57,10 @@ struct config {
     struct {
         std::size_t expire_before = 0ull;
     } cleanup;
+
+    struct {
+        std::string username;
+    } info;
 
     boost::log::trivial::severity_level log_level =
         boost::log::trivial::warning;
@@ -103,6 +115,10 @@ std::optional<::config> read_config(int argc, char** argv) {
             "only remove entries that expired before that many seconds")
         ->default_val(rv.cleanup.expire_before);
 
+    auto sub_info =
+        app.add_subcommand("info", "extensive information about a user");
+    sub_info->add_option("username", rv.info.username, "username");
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::Success& e) {
@@ -123,6 +139,8 @@ std::optional<::config> read_config(int argc, char** argv) {
         rv.cmd = ::config::command::list;
     } else if (sub_cleanup->parsed()) {
         rv.cmd = ::config::command::cleanup;
+    } else if (sub_info->parsed()) {
+        rv.cmd = ::config::command::info;
     }
 
     return rv;
@@ -202,6 +220,34 @@ uh::cluster::coro<void> cleanup(ep::user::db& db, const ::config& cfg) {
     co_await db.remove_expired(cfg.cleanup.expire_before);
 }
 
+uh::cluster::coro<void> info(ep::user::db& db, const ::config& cfg) {
+    auto user = co_await db.find(cfg.info.username);
+
+    std::cout << "id:\t" << user.id << "\n"
+              << "name:\t" << user.name << "\n"
+              << "arn:\t" << user.arn.value_or("<-- no ARN -->") << "\n\n";
+
+    std::cout << "policies:\n";
+    for (const auto& pol : user.policies) {
+        std::cout << pol.first << "\n";
+    }
+    std::cout << "\n";
+
+    std::cout << "keys:\n";
+    auto keys = co_await db.list_user_keys(cfg.info.username);
+    for (const auto& key : keys) {
+        std::cout << key.id << "\t" << key.secret_key << "\t"
+                  << key.session_token.value_or("<-- no STS token -->") << "\t";
+
+        if (key.expires) {
+            std::cout << iso8601_date(*key.expires);
+        } else {
+            std::cout << "<-- no expiration -->";
+        }
+        std::cout << "\n";
+    }
+}
+
 int main(int argc, char** argv) {
     try {
         auto cfg = ::read_config(argc, argv);
@@ -236,6 +282,9 @@ int main(int argc, char** argv) {
             break;
         case ::config::command::cleanup:
             boost::asio::co_spawn(executor, cleanup(db, *cfg), handler);
+            break;
+        case ::config::command::info:
+            boost::asio::co_spawn(executor, info(db, *cfg), handler);
             break;
         default:
             throw std::runtime_error("unsupported command");

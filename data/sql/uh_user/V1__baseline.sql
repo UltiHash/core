@@ -144,6 +144,20 @@ END;
 $$;
 
 --
+-- uh_list_user_keys(username) -- return all access keys for a user
+--
+CREATE OR REPLACE FUNCTION uh_list_user_keys(username TEXT)
+    RETURNS TABLE(access_key TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY EXECUTE format('
+        SELECT access_key, secret_key, session_token, expires FROM keys
+        WHERE username = %L AND (expires >= now() OR expires IS NULL)', username);
+END;
+$$;
+
+
+--
 -- uh_remove_key(access_key) -- delete an access key
 --
 CREATE OR REPLACE PROCEDURE uh_remove_key(access_key TEXT)

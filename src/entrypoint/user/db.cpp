@@ -34,12 +34,15 @@ coro<user> db::find_by_key(std::string key) {
                                 "Access Denied");
     }
 
+    ep::user::key k{.id = key,
+                    .secret_key = *row->string(2),
+                    .session_token = row->string(3),
+                    .expires = row->date(4)};
+
     user rv{.id = *row->string(0),
             .name = *row->string(1),
             .arn = row->string(5),
-            .secret_key = *row->string(2),
-            .session_token = row->string(3),
-            .expires = row->date(4)};
+            .access_key = std::move(k)};
 
     for (auto row = co_await conn->execv(
              "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
@@ -215,6 +218,25 @@ coro<std::list<std::string>> db::list_user_policies(const std::string& user) {
              "SELECT name FROM uh_get_user_policy($1)", user);
          row; row = co_await conn->next()) {
         rv.emplace_back(*row->string(0));
+    }
+
+    co_return rv;
+}
+
+coro<std::list<key>> db::list_user_keys(const std::string& user) {
+    std::list<key> rv;
+
+    auto conn = co_await m_db.get();
+    for (auto row = co_await conn->execv(
+             "SELECT access_key, secret_key, session_token, expires FROM "
+             "uh_list_user_keys($1)",
+             user);
+         row; row = co_await conn->next()) {
+
+        rv.emplace_back(key{.id = *row->string(0),
+                            .secret_key = *row->string(1),
+                            .session_token = row->string(2),
+                            .expires = row->date(3)});
     }
 
     co_return rv;
