@@ -15,7 +15,7 @@ coro<ep::http::response> list_user_policies::handle(ep::http::request& req) {
     boost::property_tree::ptree pt_names;
     auto policies = co_await m_users.list_user_policies(*username);
     for (const auto& policy : policies) {
-        pt_names.put("member", policy);
+        pt_names.add("member", policy);
     }
 
     boost::property_tree::ptree pt;
