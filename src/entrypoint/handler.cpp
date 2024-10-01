@@ -67,9 +67,11 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                        request& req) {
 
     auto cmd = co_await m_command_factory.create(req);
+    LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     co_await cmd->validate(req);
 
+    LOG_DEBUG() << req.peer() << ": checking policies";
     if (co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(status::forbidden, "AccessDenied",
@@ -82,6 +84,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         co_await write(s, response(status::continue_));
     }
 
+    LOG_DEBUG() << req.peer() << ": executing " << cmd->action_id();
     co_return co_await cmd->handle(req);
 }
 

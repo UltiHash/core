@@ -13,6 +13,7 @@ for db in $databases; do
 done
 
 SQL_PATH=@PROJECT_SOURCE_DIR@/data/sql
+BIN_PATH=@PROJECT_BINARY_DIR@
 
 cat $SQL_PATH/provision_databases.sql | psql postgres
 
@@ -22,3 +23,8 @@ for dir in $SQL_PATH/*; do
         flyway -locations="filesystem:$dir" -url="jdbc:postgresql://$UH_DB_HOSTPORT/$dbname" -user="$UH_DB_USER" -password="$UH_DB_PASS" migrate
     fi
 done
+
+access=$BIN_PATH/tools/uh-cluster-access-client
+$access user-add 'root' 'password' 'arn:uh:iam::0:users/root'
+$access key-add 'root' 'FANCY-ROOT-KEY' 'SECRET' 86400
+$access policy-add 'root' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAllForRoot", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/root", "Resource": "*" } }'
