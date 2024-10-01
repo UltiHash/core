@@ -106,7 +106,7 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
         return std::make_unique<chunk_body_sha256>(
-            req, info, signing_key, signature,
+            req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::none);
     }
 
@@ -120,7 +120,7 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
     if (content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256 with trailer";
         return std::make_unique<chunk_body_sha256>(
-            req, info, signing_key, signature,
+            req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::read);
     }
 
@@ -130,7 +130,8 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
     }
 
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
-    return std::make_unique<raw_body_sha256>(req, signature, length);
+    return std::make_unique<raw_body_sha256>(req, std::move(content_sha),
+                                             length);
 }
 
 } // namespace
