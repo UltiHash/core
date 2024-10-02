@@ -207,8 +207,8 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
     }
 
     if (!body) {
-        body = make_body(req, std::move(info), std::move(signature),
-                         std::move(signing_key));
+        body = make_body(req, std::move(info), std::move(signing_key),
+                         std::move(signature));
     }
 
     co_return std::make_unique<request>(std::move(req.headers), std::move(body),
