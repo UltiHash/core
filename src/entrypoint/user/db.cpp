@@ -69,6 +69,10 @@ coro<user> db::find(std::string id) {
     auto row = co_await conn->execv(
         "SELECT id, password, arn FROM uh_query_user($1)", id);
 
+    if (!row) {
+        throw std::runtime_error("unknown user id");
+    }
+
     user rv{.id = *row->string(0), .name = id, .arn = row->string(2)};
 
     for (auto row = co_await conn->execv(
@@ -95,6 +99,10 @@ coro<user> db::find_and_check(std::string id, std::string pass) {
 
     auto row = co_await conn->execv(
         "SELECT id, password, arn FROM uh_query_user($1)", id);
+
+    if (!row) {
+        throw std::runtime_error("unknown user id");
+    }
 
     if (!row->string(0)) {
         throw std::runtime_error("no password defined");
