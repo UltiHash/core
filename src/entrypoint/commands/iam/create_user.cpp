@@ -18,7 +18,7 @@ coro<ep::http::response> create_user::handle(ep::http::request& req) {
     auto path = req.query("path").value_or("/");
 
     std::string user_path = std::string("user") + path + *name;
-    aws::arn arn("iam", req.authenticated_user().id, user_path);
+    aws::arn arn("iam", erase_all(req.authenticated_user().id, "-"), user_path);
 
     auto id = co_await m_users.add_user(*name, {}, arn.to_string());
 
