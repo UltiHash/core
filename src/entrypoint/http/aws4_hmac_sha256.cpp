@@ -171,7 +171,7 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
     std::string content_sha;
-    if (auto content_sha_hdr = req.optional("amz-content-sha256");
+    if (auto content_sha_hdr = req.optional("x-amz-content-sha256");
         content_sha_hdr) {
         content_sha = *content_sha_hdr;
     }

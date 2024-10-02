@@ -30,7 +30,7 @@ struct config {
     // add options
     struct {
         std::string username;
-        std::string password;
+        std::optional<std::string> password;
         std::optional<std::string> arn;
     } add_user;
 
