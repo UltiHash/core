@@ -32,6 +32,7 @@ struct config {
         std::string username;
         std::optional<std::string> password;
         std::optional<std::string> arn;
+        bool ignore_existing = false;
     } add_user;
 
     // add options
@@ -41,6 +42,7 @@ struct config {
         std::string secret_key;
         std::optional<std::string> sts_token;
         std::optional<std::size_t> ttl;
+        bool ignore_existing = false;
     } add_key;
 
     struct {
@@ -61,6 +63,7 @@ struct config {
         std::string username;
         std::string name;
         std::string policy;
+        bool ignore_existing = false;
     } policy_put;
 
     struct {
@@ -88,6 +91,8 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_add->add_option("username", rv.add_user.username, "user name");
     sub_add->add_option("--password", rv.add_user.password, "password");
     sub_add->add_option("arn", rv.add_user.arn, "ARN");
+    sub_add->add_flag("--if-not-exists", rv.add_user.ignore_existing,
+                      "Do not raise an error if the user already exists");
 
     auto sub_info =
         app.add_subcommand("user-info", "extensive information about a user");
@@ -107,6 +112,8 @@ std::optional<::config> read_config(int argc, char** argv) {
                             "STS token string");
     sub_add_key->add_option("ttl", rv.add_key.ttl,
                             "number of seconds before expiration");
+    sub_add_key->add_flag("--if-not-exists", rv.add_key.ignore_existing,
+                          "Do not raise an error if the key already exists");
 
     auto* sub_remove =
         app.add_subcommand("key-del", "remove access key from database");
@@ -118,6 +125,8 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_policy_put->add_option("policy-name", rv.policy_put.name,
                                "policy name");
     sub_policy_put->add_option("policy", rv.policy_put.policy, "policy JSON");
+    sub_policy_put->add_flag("--if-not-exists", rv.policy_put.ignore_existing,
+                             "check if a policy by that name already exists");
 
     auto* sub_policy_get = app.add_subcommand("policy-get", "read user policy");
     sub_policy_get->add_option("username", rv.policy_get.username, "username");
@@ -174,10 +183,27 @@ uh::cluster::coro<void> add_user(ep::user::db& db, const ::config& cfg) {
                           ? *cfg.add_user.arn
                           : "arn:uh:iam::0:users/" + cfg.add_user.username;
 
+    if (cfg.add_user.ignore_existing) {
+        try {
+            co_await db.find(cfg.add_user.username);
+            co_return;
+        } catch (const std::exception&) {
+        }
+    }
+
     co_await db.add_user(cfg.add_user.username, cfg.add_user.password, arn);
 }
 
 uh::cluster::coro<void> add_key(ep::user::db& db, const ::config& cfg) {
+
+    if (cfg.add_key.ignore_existing) {
+        try {
+            co_await db.find_by_key(cfg.add_key.access_id);
+            co_return;
+        } catch (const std::exception&) {
+        }
+    }
+
     co_await db.add_key(cfg.add_key.username, cfg.add_key.access_id,
                         cfg.add_key.secret_key, cfg.add_key.sts_token,
                         cfg.add_key.ttl);
@@ -198,6 +224,14 @@ uh::cluster::coro<void> policy_del(ep::user::db& db, const ::config& cfg) {
 }
 
 uh::cluster::coro<void> policy_put(ep::user::db& db, const ::config& cfg) {
+    if (cfg.policy_put.ignore_existing) {
+        try {
+            co_await db.policy(cfg.policy_put.username, cfg.policy_put.name);
+            co_return;
+        } catch (const std::exception& e) {
+        }
+    }
+
     co_await db.policy(cfg.policy_put.username, cfg.policy_put.name,
                        cfg.policy_put.policy);
 }
