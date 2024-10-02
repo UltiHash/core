@@ -63,6 +63,19 @@ std::vector<char> base64_encode(std::string_view plain) {
     return rv;
 }
 
+std::string erase_all(std::string haystack, const std::string& characters) {
+    std::string rv;
+    rv.reserve(haystack.size());
+
+    for (auto ch : haystack) {
+        if (characters.find(ch) == std::string::npos) {
+            rv += ch;
+        }
+    }
+
+    return rv;
+}
+
 constexpr boost::urls::grammar::lut_chars custom_unreserved_chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"

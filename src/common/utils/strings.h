@@ -77,6 +77,11 @@ std::vector<char> base64_decode(std::string_view b64);
 std::vector<char> base64_encode(std::string_view plain);
 
 /**
+ * Remove a set of characters from input string
+ */
+std::string erase_all(std::string haystack, const std::string& characters);
+
+/**
  * URL encode the special characters.
  */
 std::string url_encode(const std::string&) noexcept;
