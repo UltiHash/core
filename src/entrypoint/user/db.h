@@ -41,6 +41,11 @@ public:
                                std::optional<std::string> arn);
 
     /**
+     * Mark user as super-user
+     */
+    coro<void> set_super_user(const std::string& name, bool flag);
+
+    /**
      * Add a key to a user
      *
      * @param name user name
