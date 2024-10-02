@@ -20,6 +20,7 @@ struct user {
     std::string id;
     std::string name;
     std::optional<std::string> arn = ANONYMOUS_ARN;
+    bool super_user = false;
 
     std::map<std::string, std::string> policy_json;
     std::map<std::string, std::list<policy::policy>> policies;

@@ -10,7 +10,8 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
     password TEXT NULL,
-    arn TEXT
+    arn TEXT,
+    super_user INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE policies (
@@ -45,6 +46,16 @@ BEGIN
     EXECUTE format('INSERT INTO users (name, password, arn) VALUES (%L, %L, %L) RETURNING id',
         username, password, arn) INTO id;
     RETURN id;
+END;
+$$;
+
+--
+-- uh_set_super_user(username TEXT, value INTEGER)
+--
+CREATE OR REPLACE PROCEDURE uh_set_super_user(username TEXT, value INTEGER)
+LANGUAGE plpgsql AS $$
+BEGIN
+    EXECUTE format('UPDATE users SET super_user = %L WHERE name = %L', value, username);
 END;
 $$;
 
@@ -96,10 +107,10 @@ $$;
 -- authenticating a user.
 --
 CREATE OR REPLACE FUNCTION uh_query_user(username TEXT)
-    RETURNS TABLE (id UUID, password TEXT, arn TEXT)
+    RETURNS TABLE (id UUID, password TEXT, arn TEXT, super_user INTEGER)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE format('SELECT id, password, arn FROM users WHERE name = %L',
+    RETURN QUERY EXECUTE format('SELECT id, password, arn, super_user FROM users WHERE name = %L',
         username);
 END;
 $$;
@@ -112,7 +123,6 @@ CREATE OR REPLACE FUNCTION uh_list_users()
 LANGUAGE SQL AS $$
     SELECT name FROM users;
 $$;
-
 
 --
 -- uh_add_user_key(username, access_key, secret_key, session_token, expires)
@@ -134,11 +144,11 @@ $$;
 -- uh_query_key(access_key) -- return info associated with access key
 --
 CREATE OR REPLACE FUNCTION uh_query_key(access_key TEXT)
-    RETURNS TABLE(id UUID, username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, arn TEXT)
+    RETURNS TABLE(id UUID, username TEXT, secret_key TEXT, session_token TEXT, expires TIMESTAMP, arn TEXT, super_user INTEGER)
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY EXECUTE format('
-        SELECT id, username, secret_key, session_token, expires, arn FROM keys
+        SELECT id, username, secret_key, session_token, expires, arn, super_user FROM keys
         JOIN users ON username = name WHERE access_key = %L AND (expires >= now() OR expires IS NULL)', access_key);
 END;
 $$;

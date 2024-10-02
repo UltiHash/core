@@ -24,10 +24,10 @@ db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
 coro<user> db::find_by_key(std::string key) {
     auto conn = co_await m_db.get();
 
-    auto row = co_await conn->execv(
-        "SELECT id, username, secret_key, session_token, expires, arn "
-        "FROM uh_query_key($1)",
-        key);
+    auto row = co_await conn->execv("SELECT id, username, secret_key, "
+                                    "session_token, expires, arn, super_user "
+                                    "FROM uh_query_key($1)",
+                                    key);
 
     if (!row) {
         throw command_exception(status::forbidden, "AccessDenied",
@@ -42,6 +42,7 @@ coro<user> db::find_by_key(std::string key) {
     user rv{.id = *row->string(0),
             .name = *row->string(1),
             .arn = row->string(5),
+            .super_user = *row->boolean(6),
             .access_key = std::move(k)};
 
     for (auto row = co_await conn->execv(
@@ -67,13 +68,16 @@ coro<user> db::find(std::string id) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT id, password, arn FROM uh_query_user($1)", id);
+        "SELECT id, password, arn, super_user FROM uh_query_user($1)", id);
 
     if (!row) {
         throw std::runtime_error("unknown user id");
     }
 
-    user rv{.id = *row->string(0), .name = id, .arn = row->string(2)};
+    user rv{.id = *row->string(0),
+            .name = id,
+            .arn = row->string(2),
+            .super_user = *row->boolean(3)};
 
     for (auto row = co_await conn->execv(
              "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
@@ -98,7 +102,7 @@ coro<user> db::find_and_check(std::string id, std::string pass) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv(
-        "SELECT id, password, arn FROM uh_query_user($1)", id);
+        "SELECT id, password, arn, super_user FROM uh_query_user($1)", id);
 
     if (!row) {
         throw std::runtime_error("unknown user id");
@@ -116,7 +120,10 @@ coro<user> db::find_and_check(std::string id, std::string pass) {
         throw std::runtime_error("password mismatch");
     }
 
-    user rv{.id = *row->string(0), .name = id, .arn = row->string(2)};
+    user rv{.id = *row->string(0),
+            .name = id,
+            .arn = row->string(2),
+            .super_user = *row->boolean(3)};
 
     for (auto row = co_await conn->execv(
              "SELECT name, value FROM uh_get_user_policy($1)", rv.name);
@@ -166,6 +173,11 @@ coro<std::string> db::add_user(const std::string& name,
         throw command_exception(status::conflict, "UserExists",
                                 "User already exists");
     }
+}
+
+coro<void> db::set_super_user(const std::string& name, bool flag) {
+    auto conn = co_await m_db.get();
+    co_await conn->execv("CALL uh_set_super_user($1, $2)", name, flag ? 1 : 0);
 }
 
 coro<void> db::add_key(const std::string& username, const std::string& key,

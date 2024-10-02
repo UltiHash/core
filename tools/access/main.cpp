@@ -33,6 +33,7 @@ struct config {
         std::optional<std::string> password;
         std::optional<std::string> arn;
         bool ignore_existing = false;
+        bool super_user = false;
     } add_user;
 
     // add options
@@ -91,6 +92,8 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_add->add_option("username", rv.add_user.username, "user name");
     sub_add->add_option("--password", rv.add_user.password, "password");
     sub_add->add_option("arn", rv.add_user.arn, "ARN");
+    sub_add->add_flag("--superuser", rv.add_user.super_user,
+                      "mark this user as super-user");
     sub_add->add_flag("--if-not-exists", rv.add_user.ignore_existing,
                       "Do not raise an error if the user already exists");
 
@@ -192,6 +195,10 @@ uh::cluster::coro<void> add_user(ep::user::db& db, const ::config& cfg) {
     }
 
     co_await db.add_user(cfg.add_user.username, cfg.add_user.password, arn);
+
+    if (cfg.add_user.super_user) {
+        co_await db.set_super_user(cfg.add_user.username, true);
+    }
 }
 
 uh::cluster::coro<void> add_key(ep::user::db& db, const ::config& cfg) {
@@ -244,7 +251,13 @@ uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
 
         std::cout << user.id << "\t" << user.name << "\t"
                   << user.arn.value_or("<-- no ARN -->") << "\t"
-                  << join(std::views::keys(user.policies), ", ") << "\n";
+                  << join(std::views::keys(user.policies), ", ");
+
+        if (user.super_user) {
+            std::cout << " [*]";
+        }
+
+        std::cout << "\n";
     }
 }
 
@@ -257,8 +270,13 @@ uh::cluster::coro<void> info(ep::user::db& db, const ::config& cfg) {
 
     std::cout << "id:\t" << user.id << "\n"
               << "name:\t" << user.name << "\n"
-              << "arn:\t" << user.arn.value_or("<-- no ARN -->") << "\n\n";
+              << "arn:\t" << user.arn.value_or("<-- no ARN -->") << "\n";
 
+    if (user.super_user) {
+        std::cout << "Super user account!\n";
+    }
+
+    std::cout << "\n";
     std::cout << "policies:\n";
     for (const auto& pol : user.policies) {
         std::cout << "- " << pol.first << "\n";
