@@ -14,6 +14,6 @@ do
 done
 
 # Set up the super user
-uh-cluster-access-client user-add --db-host $DB_HOST:$DB_PORT --db-user $DB_USER --db-pass $PGPASSWORD --superuser --if-not-exists $SUPER_USER_USERNAME
-uh-cluster-access-client key-add --db-host $DB_HOST:$DB_PORT --db-user $DB_USER --db-pass $PGPASSWORD --if-not-exists $SUPER_USER_USERNAME $SUPER_USER_ACCESS_KEY_ID $SUPER_USER_SECRET_KEY
+uh-cluster-access-client --db-host $DB_HOST:$DB_PORT --db-user $DB_USER --db-pass $PGPASSWORD user-add --superuser --if-not-exists $SUPER_USER_USERNAME
+uh-cluster-access-client --db-host $DB_HOST:$DB_PORT --db-user $DB_USER --db-pass $PGPASSWORD key-add --if-not-exists $SUPER_USER_USERNAME $SUPER_USER_ACCESS_KEY_ID $SUPER_USER_SECRET_KEY
 
