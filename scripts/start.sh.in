@@ -26,6 +26,11 @@ echo "not be removed after the script has finished."
 echo
 echo "Hit <Return> to kill all spawned processes and shutdown the cluster."
 
+notify_path=$(which notify-send)
+if [ -x "$notify_path" ]; then
+    $notify_path --expire-time=3000 'UH cluster is running'
+fi
+
 read
 
 kill %4

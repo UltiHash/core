@@ -39,3 +39,6 @@ $access policy-add 'tenant' 'allow-all' '{ "Version": "2012-10-17", "Statement":
 $access user-add 'iam' 'arn:uh:iam::0:users/iam'
 $access key-add 'iam' 'ABCDEFGHIJKLMNOPQRST' 'abcdefghijklmnopqrstuvwxyzabcdefghijklmn' 86400
 $access policy-add 'iam' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAll", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/*", "Resource": "*" } }'
+
+uh_dir=$BIN_PATH/tools/uh-cluster-uh-dir
+$uh_dir mkb test-aws-s3a
