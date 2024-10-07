@@ -131,7 +131,7 @@ std::size_t data_store::read_up_to(char* buffer,
 
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
         pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
-        pointer + size > m_current_offset.load()) {
+        pointer > m_current_offset.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
