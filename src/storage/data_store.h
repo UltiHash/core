@@ -158,9 +158,6 @@ private:
 
     std::filesystem::path add_new_file(size_t offset, size_t file_size);
 
-    [[nodiscard]] static std::pair<size_t, size_t>
-    parse_file_name(const std::string& filename);
-
     [[nodiscard]] std::string get_name(size_t offset) const;
 
     static bool is_data_file(const std::filesystem::path& path);
@@ -173,7 +170,8 @@ private:
     const std::filesystem::path m_root;
     data_store_config m_conf;
     std::vector<std::pair<int, size_t>> m_open_files;
-    std::atomic<size_t> m_used{};
+    std::atomic<size_t> m_current_offset{};
+    std::atomic<size_t> m_used_space{};
     std::mutex m_allocate_mutex;
     std::mutex m_sync_end_offset_mutex;
     std::mutex m_async_mutex;

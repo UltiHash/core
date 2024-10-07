@@ -5,6 +5,19 @@
 
 namespace uh::cluster {
 
+struct ds_file_info {
+    std::size_t storage_id;
+    std::size_t offset;
+};
+
+ds_file_info parse_file_name(const std::string& filename) {
+    const auto index1 = filename.find_first_of('_') + 1;
+    const auto index2 = filename.substr(index1).find('_') + index1 + 1;
+    const auto id_str = filename.substr(index1, index2 - 1 - index1);
+    const auto offset_str = filename.substr(index2);
+    return {std::stoul(id_str), std::stoul(offset_str)};
+}
+
 data_store::data_store(data_store_config conf,
                        const std::filesystem::path& working_dir,
                        uint32_t service_id, uint32_t data_store_id)
@@ -21,17 +34,17 @@ data_store::data_store(data_store_config conf,
         std::filesystem::create_directories(m_root);
     }
 
-    std::map<uint128_t, std::pair<int, std::filesystem::path>> open_files;
+    std::map<std::size_t, std::pair<int, std::filesystem::path>> open_files;
     for (const auto& entry : std::filesystem::directory_iterator(m_root)) {
         if (!is_data_file(entry.path())) {
             continue;
         }
 
-        const auto id_offset = parse_file_name(entry.path().filename());
-        if (id_offset.first != m_storage_id)
+        const auto file_info = parse_file_name(entry.path().filename());
+        if (file_info.storage_id != m_storage_id)
             [[unlikely]] { // non-adaptive data store with fixed id
             throw std::range_error(
-                "The data store is spawned on the wrong data node");
+                "The data store is spawned on the wrong storage service");
         }
 
         const int fd = open(entry.path().c_str(), O_RDWR);
@@ -41,12 +54,11 @@ data_store::data_store(data_store_config conf,
                 std::error_code(errno, std::system_category()));
         }
 
-        open_files.emplace(id_offset.second, std::pair{fd, entry.path()});
+        open_files.emplace(file_info.offset, std::pair{fd, entry.path()});
     }
 
     for (const auto& of : open_files) {
-        m_open_files.emplace_back(of.second.first,
-                                  pointer_traits::get_pointer(of.first));
+        m_open_files.emplace_back(of.second.first,of.first);
     }
 
     std::filesystem::path last_path;
@@ -72,7 +84,8 @@ data_store::data_store(data_store_config conf,
     metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
         [this] { return get_used_space(); });
 
-    m_used = fetch_used_space(last_path);
+    m_current_offset = m_open_files.back().second + m_last_file_data_end;
+    m_used_space = fetch_used_space(last_path);
 }
 
 std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
@@ -80,7 +93,8 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
     const auto pointer = pointer_traits::get_pointer(global_pointer);
 
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
-        pointer + size > m_used.load()) {
+        pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
+        pointer + size > m_current_offset.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
@@ -116,7 +130,8 @@ std::size_t data_store::read_up_to(char* buffer,
     const auto pointer = pointer_traits::get_pointer(global_pointer);
 
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
-        pointer > m_used.load()) {
+        pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
+        pointer > m_current_offset.load()) {
         throw std::out_of_range("pointer is out of range");
     }
 
@@ -186,7 +201,7 @@ size_t data_store::fetch_used_space(
 }
 
 address data_store::register_write(const shared_buffer<char>& data) {
-    if (m_used + data.size() > m_conf.max_data_store_size or
+    if (m_used_space + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
@@ -354,15 +369,6 @@ std::filesystem::path data_store::add_new_file(size_t offset,
     return file_path;
 }
 
-std::pair<size_t, size_t>
-data_store::parse_file_name(const std::string& filename) {
-    const auto index1 = filename.find_first_of('_') + 1;
-    const auto index2 = filename.substr(index1).find('_') + index1 + 1;
-    const auto id_str = filename.substr(index1, index2 - 1 - index1);
-    const auto offset_str = filename.substr(index2);
-    return {std::stoul(id_str), std::stoul(offset_str)};
-}
-
 std::string data_store::get_name(size_t offset) const {
     return "data_" + std::to_string(m_storage_id) + "_" +
            std::to_string(offset);
@@ -372,14 +378,14 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
     return path.filename().string().starts_with("data_");
 }
 
-uint64_t data_store::get_used_space() const noexcept { return m_used; }
+uint64_t data_store::get_used_space() const noexcept { return m_used_space; }
 
 size_t data_store::get_available_space() const noexcept {
-    auto capacity = m_conf.max_data_store_size - m_used;
+    auto capacity = m_conf.max_data_store_size - m_used_space;
     try {
         auto space = std::filesystem::space(m_root);
         capacity =
-            std::min(space.available, m_conf.max_data_store_size - m_used);
+            std::min(space.available, capacity);
     } catch (...) {
     }
 
@@ -403,7 +409,8 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     alloc.global_offset = pointer_traits::get_global_pointer(
         m_open_files.back().second + alloc.seek, m_storage_id, m_data_store_id);
 
-    m_used += size;
+    m_current_offset += size;
+    m_used_space += size;
     return alloc;
 }
 
@@ -421,12 +428,13 @@ data_store::find_async_data(size_t pointer, size_t size) {
 }
 
 void data_store::internal_delete(std::size_t offset, std::size_t size) {
-    if (offset >= m_used.load()) {
+    std::size_t current_offset = m_current_offset.load();
+    if (offset >= current_offset) {
         throw std::out_of_range("pointer is out of range");
     }
 
-    if (offset + size > m_used.load()) {
-        size = m_used.load() - offset;
+    if (offset + size > current_offset) {
+        size = current_offset - offset;
     }
 
     std::unique_lock<std::mutex> lk(m_async_mutex);
@@ -445,6 +453,7 @@ void data_store::internal_delete(std::size_t offset, std::size_t size) {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not deallocate the data.");
     }
+    m_used_space -= size;
 }
 
 } // end namespace uh::cluster
