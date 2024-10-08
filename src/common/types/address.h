@@ -14,6 +14,8 @@ struct fragment {
     bool operator==(const fragment& frag) const {
         return pointer == frag.pointer && size == frag.size;
     }
+
+    std::string to_string() const;
 };
 
 struct address {
@@ -62,6 +64,8 @@ struct address {
      * Return true if the address is empty, ie. was default constructed.
      */
     [[nodiscard]] bool empty() const noexcept;
+
+    std::string to_string() const;
 
     /**
      * Return number of fragments for a given allocation size.

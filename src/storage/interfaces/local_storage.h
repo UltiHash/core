@@ -55,7 +55,10 @@ struct local_storage : public storage_interface {
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
         load_monitor load(m_load);
+        LOG_DEBUG() << ctx.peer() << ": read fragment start(" << f.to_string()
+                    << ")";
         get_data_store(f.pointer).read(buffer, f.pointer, f.size);
+        LOG_DEBUG() << ctx.peer() << ": read fragment done";
         co_return;
     }
 
