@@ -61,6 +61,7 @@ constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
     "UH_DB_DIRECTORY_CONNECTIONS";
 constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
     "UH_DB_MULTIPART_CONNECTIONS";
+constexpr const char* ENV_CFG_DB_USERS_CONNECTIONS = "UH_DB_USERS_CONNECTIONS";
 constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 

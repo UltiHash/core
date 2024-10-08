@@ -176,10 +176,6 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
 
     configure(*rv, cfg.database);
 
-    rv->add_option("--auth-backend", cfg.authentication,
-                   "authentication backend to user")
-        ->default_val(entrypoint_config::auth_backend::none);
-
     return rv;
 }
 
@@ -321,6 +317,11 @@ void configure(CLI::App& app, db::config& cfg) {
                    "Number of connections to multipart database")
         ->default_val(cfg.multipart.count)
         ->envname(ENV_CFG_DB_MULTIPART_CONNECTIONS);
+
+    app.add_option("--db-users-connections", cfg.users.count,
+                   "Number of connections to users database")
+        ->default_val(cfg.users.count)
+        ->envname(ENV_CFG_DB_USERS_CONNECTIONS);
 }
 
 void configure(CLI::App& app, boost::log::trivial::severity_level& log_level) {

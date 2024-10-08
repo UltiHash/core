@@ -6,10 +6,14 @@
     exit 1
 }
 
-echo "DROP DATABASE uh_directory; DROP DATABASE uh_multipart;" |
-    psql "postgresql://$UH_DB_USER:$UH_DB_PASS@$UH_DB_HOSTPORT/postgres"
+databases="uh_directory uh_multipart uh_user"
+for db in $databases; do
+    echo "DROP DATABASE $db" |
+        psql "postgresql://$UH_DB_USER:$UH_DB_PASS@$UH_DB_HOSTPORT/postgres"
+done
 
 SQL_PATH=@PROJECT_SOURCE_DIR@/data/sql
+BIN_PATH=@PROJECT_BINARY_DIR@
 
 cat $SQL_PATH/provision_databases.sql | psql postgres
 
@@ -19,3 +23,22 @@ for dir in $SQL_PATH/*; do
         flyway -locations="filesystem:$dir" -url="jdbc:postgresql://$UH_DB_HOSTPORT/$dbname" -user="$UH_DB_USER" -password="$UH_DB_PASS" migrate
     fi
 done
+
+access=$BIN_PATH/tools/uh-cluster-access-client
+$access user-add --superuser 'root' 'arn:uh:iam::0:users/root'
+$access key-add 'root' 'FANCY-ROOT-KEY' 'SECRET' 86400
+
+$access user-add 'john.doe' 'arn:uh:iam::0:users/john.doe'
+$access key-add 'john.doe' 'NOPQRSTUVWXYZABCDEFG' 'nopqrstuvwxyzabcdefghijklmnabcdefghijklm' 86400
+$access policy-add 'john.doe' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAll", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/*", "Resource": "*" } }'
+
+$access user-add 'tenant' 'arn:uh:iam::0:users/tenant'
+$access key-add 'tenant' 'HIJKLMNOPQRSTUVWXYZA' 'opqrstuvwxyzabcdefghijklmnopqrstuvwxyzab' 86400
+$access policy-add 'tenant' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAll", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/*", "Resource": "*" } }'
+
+$access user-add 'iam' 'arn:uh:iam::0:users/iam'
+$access key-add 'iam' 'ABCDEFGHIJKLMNOPQRST' 'abcdefghijklmnopqrstuvwxyzabcdefghijklmn' 86400
+$access policy-add 'iam' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAll", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/*", "Resource": "*" } }'
+
+uh_dir=$BIN_PATH/tools/uh-cluster-uh-dir
+$uh_dir mkb test-aws-s3a

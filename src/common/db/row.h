@@ -22,6 +22,7 @@ public:
     std::optional<int64_t> number(int col);
     std::optional<std::size_t> size_type(int col);
     std::optional<utc_time> date(int col);
+    std::optional<bool> boolean(int col);
 
 private:
     friend class connection;

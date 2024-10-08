@@ -9,32 +9,15 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
-#include "entrypoint/http/auth_request_factory.h"
-#include "entrypoint/http/default_request_factory.h"
+#include "entrypoint/http/request_factory.h"
 #include "entrypoint/limits.h"
-#include "entrypoint/user/db_backend.h"
 #include "handler.h"
 
-namespace uh::cluster {
+namespace uh::cluster::ep {
 
-std::unique_ptr<ep::http::request_factory>
-make_request_factory(boost::asio::io_context& ioc,
-                     const entrypoint_config& config) {
-    switch (config.authentication) {
-    case entrypoint_config::auth_backend::none:
-        return std::make_unique<ep::http::default_request_factory>();
-    case entrypoint_config::auth_backend::dummy:
-        return std::make_unique<ep::http::auth_request_factory>(
-            std::make_unique<ep::user::db_backend>(
-                ep::user::db(ioc, config.database)));
-    }
-
-    throw std::runtime_error("unsupported authentication backend");
-}
-
-class entrypoint {
+class service {
 public:
-    explicit entrypoint(const service_config& sc, entrypoint_config config)
+    explicit service(const service_config& sc, entrypoint_config config)
         : m_config(std::move(config)),
           m_ioc(boost::asio::io_context(m_config.server.threads)),
 
@@ -61,15 +44,16 @@ public:
 
           m_directory(m_ioc, m_config.database),
           m_uploads(m_ioc, m_config.database),
+          m_users(m_ioc, m_config.database),
           m_limits(sc.license.max_data_store_size),
-          m_server(
-              m_config.server,
-              std::make_unique<ep::handler>(
-                  command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
-                                  m_uploads, m_config, m_data_view, m_limits),
-                  make_request_factory(m_ioc, config),
-                  std::make_unique<ep::policy::module>(m_directory)),
-              m_ioc) {
+          m_server(m_config.server,
+                   std::make_unique<handler>(
+                       command_factory(m_ioc, m_dedupe_load_balancer,
+                                       m_directory, m_uploads, m_config,
+                                       m_data_view, m_limits, m_users),
+                       http::request_factory(m_users),
+                       std::make_unique<policy::module>(m_directory)),
+                   m_ioc) {
         m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
     }
 
@@ -84,7 +68,7 @@ public:
         m_server.stop();
     }
 
-    ~entrypoint() noexcept {
+    ~service() noexcept {
         m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
     }
 
@@ -108,10 +92,11 @@ private:
     directory m_directory;
 
     multipart_state m_uploads;
+    user::db m_users;
     limits m_limits;
     server m_server;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::ep
 
 #endif // CORE_ENTRY_NODE_H

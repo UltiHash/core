@@ -2,13 +2,26 @@
 #include "config/configuration.h"
 
 #include "common/telemetry/log.h"
+#include "common/utils/strings.h"
 #include "entrypoint/formats.h"
 #include "entrypoint/user/db.h"
+
+#include <ranges>
 
 using namespace uh::cluster;
 
 struct config {
-    enum class command { add, remove, policy, list, cleanup };
+    enum class command {
+        add_user,
+        add_key,
+        remove,
+        policy_del,
+        policy_put,
+        policy_get,
+        list,
+        cleanup,
+        info
+    };
 
     uh::cluster::db::config database;
 
@@ -16,25 +29,51 @@ struct config {
 
     // add options
     struct {
+        std::string username;
+        std::optional<std::string> password;
+        std::optional<std::string> arn;
+        bool ignore_existing = false;
+        bool super_user = false;
+    } add_user;
+
+    // add options
+    struct {
+        std::string username;
         std::string access_id;
         std::string secret_key;
         std::optional<std::string> sts_token;
         std::optional<std::size_t> ttl;
-    } add;
+        bool ignore_existing = false;
+    } add_key;
 
     struct {
         std::string access_id;
     } remove;
 
     struct {
-        std::string access_id;
-        std::optional<std::string> policy;
-        bool remove = false;
-    } policy;
+        std::string username;
+        std::string name;
+    } policy_del;
+
+    struct {
+        std::string username;
+        std::string name;
+    } policy_get;
+
+    struct {
+        std::string username;
+        std::string name;
+        std::string policy;
+        bool ignore_existing = false;
+    } policy_put;
 
     struct {
         std::size_t expire_before = 0ull;
     } cleanup;
+
+    struct {
+        std::string username;
+    } info;
 
     boost::log::trivial::severity_level log_level =
         boost::log::trivial::warning;
@@ -49,27 +88,59 @@ std::optional<::config> read_config(int argc, char** argv) {
     uh::cluster::configure(app, rv.database);
     uh::cluster::configure(app, rv.log_level);
 
-    auto* sub_add = app.add_subcommand("add", "add access entry to database");
-    sub_add->add_option("access-id", rv.add.access_id, "entry's access id");
-    sub_add->add_option("secret-key", rv.add.secret_key, "entry's secret");
-    sub_add->add_option("--sts-token", rv.add.sts_token, "STS token string");
-    sub_add->add_option("ttl", rv.add.ttl,
-                        "number of seconds before expiration");
+    auto* sub_add = app.add_subcommand("user-add", "add user to database");
+    sub_add->add_option("username", rv.add_user.username, "user name");
+    sub_add->add_option("--password", rv.add_user.password, "password");
+    sub_add->add_option("arn", rv.add_user.arn, "ARN");
+    sub_add->add_flag("--superuser", rv.add_user.super_user,
+                      "mark this user as super-user");
+    sub_add->add_flag("--if-not-exists", rv.add_user.ignore_existing,
+                      "Do not raise an error if the user already exists");
+
+    auto sub_info =
+        app.add_subcommand("user-info", "extensive information about a user");
+    sub_info->add_option("username", rv.info.username, "username");
+
+    auto sub_list =
+        app.add_subcommand("user-list", "show stored access entries");
+
+    auto* sub_add_key =
+        app.add_subcommand("key-add", "add access entry to database");
+    sub_add_key->add_option("username", rv.add_key.username, "user name");
+    sub_add_key->add_option("access-id", rv.add_key.access_id,
+                            "entry's access id");
+    sub_add_key->add_option("secret-key", rv.add_key.secret_key,
+                            "entry's secret");
+    sub_add_key->add_option("--sts-token", rv.add_key.sts_token,
+                            "STS token string");
+    sub_add_key->add_option("ttl", rv.add_key.ttl,
+                            "number of seconds before expiration");
+    sub_add_key->add_flag("--if-not-exists", rv.add_key.ignore_existing,
+                          "Do not raise an error if the key already exists");
 
     auto* sub_remove =
-        app.add_subcommand("remove", "remove access entry from database");
+        app.add_subcommand("key-del", "remove access key from database");
     sub_remove->add_option("access-id", rv.remove.access_id,
                            "entry's access id");
 
-    auto* sub_policy =
-        app.add_subcommand("policy", "set or read entry's policy");
-    sub_policy->add_option("access-id", rv.policy.access_id,
-                           "entry's access id");
-    sub_policy->add_option("policy", rv.policy.policy,
-                           "set the policy to this");
-    sub_policy->add_option("--remove", rv.policy.remove, "delete the policy");
+    auto* sub_policy_put = app.add_subcommand("policy-add", "add user policy");
+    sub_policy_put->add_option("username", rv.policy_put.username, "username");
+    sub_policy_put->add_option("policy-name", rv.policy_put.name,
+                               "policy name");
+    sub_policy_put->add_option("policy", rv.policy_put.policy, "policy JSON");
+    sub_policy_put->add_flag("--if-not-exists", rv.policy_put.ignore_existing,
+                             "check if a policy by that name already exists");
 
-    auto sub_list = app.add_subcommand("list", "show stored access entries");
+    auto* sub_policy_get = app.add_subcommand("policy-get", "read user policy");
+    sub_policy_get->add_option("username", rv.policy_get.username, "username");
+    sub_policy_get->add_option("policy-name", rv.policy_get.name,
+                               "policy name");
+
+    auto* sub_policy_del =
+        app.add_subcommand("policy-del", "remove user policy");
+    sub_policy_del->add_option("username", rv.policy_del.username, "username");
+    sub_policy_del->add_option("policy-name", rv.policy_del.name,
+                               "policy name");
 
     auto sub_cleanup =
         app.add_subcommand("cleanup", "remove expired user accounts");
@@ -88,63 +159,143 @@ std::optional<::config> read_config(int argc, char** argv) {
 
     uh::log::set_level(rv.log_level);
     if (sub_add->parsed()) {
-        rv.cmd = ::config::command::add;
+        rv.cmd = ::config::command::add_user;
+    } else if (sub_add_key->parsed()) {
+        rv.cmd = ::config::command::add_key;
     } else if (sub_remove->parsed()) {
         rv.cmd = ::config::command::remove;
-    } else if (sub_policy->parsed()) {
-        rv.cmd = ::config::command::policy;
+    } else if (sub_policy_get->parsed()) {
+        rv.cmd = ::config::command::policy_get;
+    } else if (sub_policy_del->parsed()) {
+        rv.cmd = ::config::command::policy_del;
+    } else if (sub_policy_put->parsed()) {
+        rv.cmd = ::config::command::policy_put;
     } else if (sub_list->parsed()) {
         rv.cmd = ::config::command::list;
     } else if (sub_cleanup->parsed()) {
         rv.cmd = ::config::command::cleanup;
+    } else if (sub_info->parsed()) {
+        rv.cmd = ::config::command::info;
     }
 
     return rv;
 }
 
-uh::cluster::coro<void> add_entry(ep::user::db& db, const ::config& cfg) {
-    co_await db.add(cfg.add.access_id, cfg.add.secret_key, cfg.add.sts_token,
-                    cfg.add.ttl);
+uh::cluster::coro<void> add_user(ep::user::db& db, const ::config& cfg) {
+    std::string arn = cfg.add_user.arn
+                          ? *cfg.add_user.arn
+                          : "arn:uh:iam::0:users/" + cfg.add_user.username;
+
+    if (cfg.add_user.ignore_existing) {
+        try {
+            co_await db.find(cfg.add_user.username);
+            co_return;
+        } catch (const std::exception&) {
+        }
+    }
+
+    co_await db.add_user(cfg.add_user.username, cfg.add_user.password, arn);
+
+    if (cfg.add_user.super_user) {
+        co_await db.set_super_user(cfg.add_user.username, true);
+    }
+}
+
+uh::cluster::coro<void> add_key(ep::user::db& db, const ::config& cfg) {
+
+    if (cfg.add_key.ignore_existing) {
+        try {
+            co_await db.find_by_key(cfg.add_key.access_id);
+            co_return;
+        } catch (const std::exception&) {
+        }
+    }
+
+    co_await db.add_key(cfg.add_key.username, cfg.add_key.access_id,
+                        cfg.add_key.secret_key, cfg.add_key.sts_token,
+                        cfg.add_key.ttl);
 }
 
 uh::cluster::coro<void> remove_entry(ep::user::db& db, const ::config& cfg) {
-    co_await db.remove(cfg.remove.access_id);
+    co_await db.remove_key(cfg.remove.access_id);
 }
 
-uh::cluster::coro<void> policy(ep::user::db& db, const ::config& cfg) {
-    if (cfg.policy.remove) {
-        co_await db.policy(cfg.policy.access_id, std::nullopt);
-        co_return;
+uh::cluster::coro<void> policy_get(ep::user::db& db, const ::config& cfg) {
+    auto policy =
+        co_await db.policy(cfg.policy_get.username, cfg.policy_get.name);
+    std::cout << policy << "\n";
+}
+
+uh::cluster::coro<void> policy_del(ep::user::db& db, const ::config& cfg) {
+    co_await db.remove_policy(cfg.policy_del.username, cfg.policy_del.name);
+}
+
+uh::cluster::coro<void> policy_put(ep::user::db& db, const ::config& cfg) {
+    if (cfg.policy_put.ignore_existing) {
+        try {
+            co_await db.policy(cfg.policy_put.username, cfg.policy_put.name);
+            co_return;
+        } catch (const std::exception& e) {
+        }
     }
 
-    if (cfg.policy.policy) {
-        co_await db.policy(cfg.policy.access_id, cfg.policy.policy);
-    } else {
-        auto user_info = co_await db.find(cfg.policy.access_id);
-        std::cout << user_info.policy.value_or("-- no policy --") << "\n";
-    }
+    co_await db.policy(cfg.policy_put.username, cfg.policy_put.name,
+                       cfg.policy_put.policy);
 }
 
 uh::cluster::coro<void> list_entries(ep::user::db& db, const ::config& cfg) {
     auto entries = co_await db.entries();
 
     for (const auto& entry : entries) {
-        auto info = co_await db.find(entry);
+        auto user = co_await db.find(entry);
 
-        std::string expires = " -- no expiration -- ";
-        if (info.expires) {
-            expires = iso8601_date(*info.expires);
+        std::cout << user.id << "\t" << user.name << "\t"
+                  << user.arn.value_or("<-- no ARN -->") << "\t"
+                  << join(std::views::keys(user.policies), ", ");
+
+        if (user.super_user) {
+            std::cout << " [*]";
         }
 
-        std::cout << entry << "\t"
-                  << info.session_token.value_or("-- no session token --")
-                  << "\t" << (info.policy ? " policy set " : " no policy ")
-                  << "\t" << expires << "\n";
+        std::cout << "\n";
     }
 }
 
 uh::cluster::coro<void> cleanup(ep::user::db& db, const ::config& cfg) {
     co_await db.remove_expired(cfg.cleanup.expire_before);
+}
+
+uh::cluster::coro<void> info(ep::user::db& db, const ::config& cfg) {
+    auto user = co_await db.find(cfg.info.username);
+
+    std::cout << "id:\t" << user.id << "\n"
+              << "name:\t" << user.name << "\n"
+              << "arn:\t" << user.arn.value_or("<-- no ARN -->") << "\n";
+
+    if (user.super_user) {
+        std::cout << "Super user account!\n";
+    }
+
+    std::cout << "\n";
+    std::cout << "policies:\n";
+    for (const auto& pol : user.policies) {
+        std::cout << "- " << pol.first << "\n";
+    }
+    std::cout << "\n";
+
+    std::cout << "keys:\n";
+    auto keys = co_await db.list_user_keys(cfg.info.username);
+    for (const auto& key : keys) {
+        std::cout << key.id << "\t" << key.secret_key << "\t"
+                  << key.session_token.value_or("<-- no STS token -->") << "\t";
+
+        if (key.expires) {
+            std::cout << iso8601_date(*key.expires);
+        } else {
+            std::cout << "<-- no expiration -->";
+        }
+        std::cout << "\n";
+    }
 }
 
 int main(int argc, char** argv) {
@@ -164,20 +315,32 @@ int main(int argc, char** argv) {
         ep::user::db db(executor, cfg->database);
 
         switch (cfg->cmd) {
-        case ::config::command::add:
-            boost::asio::co_spawn(executor, add_entry(db, *cfg), handler);
+        case ::config::command::add_user:
+            boost::asio::co_spawn(executor, add_user(db, *cfg), handler);
+            break;
+        case ::config::command::add_key:
+            boost::asio::co_spawn(executor, add_key(db, *cfg), handler);
             break;
         case ::config::command::remove:
             boost::asio::co_spawn(executor, remove_entry(db, *cfg), handler);
             break;
-        case ::config::command::policy:
-            boost::asio::co_spawn(executor, policy(db, *cfg), handler);
+        case ::config::command::policy_get:
+            boost::asio::co_spawn(executor, policy_get(db, *cfg), handler);
+            break;
+        case ::config::command::policy_del:
+            boost::asio::co_spawn(executor, policy_del(db, *cfg), handler);
+            break;
+        case ::config::command::policy_put:
+            boost::asio::co_spawn(executor, policy_put(db, *cfg), handler);
             break;
         case ::config::command::list:
             boost::asio::co_spawn(executor, list_entries(db, *cfg), handler);
             break;
         case ::config::command::cleanup:
             boost::asio::co_spawn(executor, cleanup(db, *cfg), handler);
+            break;
+        case ::config::command::info:
+            boost::asio::co_spawn(executor, info(db, *cfg), handler);
             break;
         default:
             throw std::runtime_error("unsupported command");
