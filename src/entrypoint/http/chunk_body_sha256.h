@@ -3,13 +3,16 @@
 
 #include "chunked_body.h"
 #include "common/crypto/hash.h"
-#include "entrypoint/http/auth_utils.h"
+#include "entrypoint/http/aws4_hmac_sha256.h"
 
 namespace uh::cluster::ep::http {
 
 class chunk_body_sha256 : public chunked_body {
 public:
-    chunk_body_sha256(partial_parse_result& req, const auth_info& auth,
+    chunk_body_sha256(partial_parse_result& req,
+                      const aws4_signature_info& info,
+                      const std::string& signing_key,
+                      const std::string& signature,
                       chunked_body::trailing_headers trailing);
 
     void on_chunk_header(const chunk_header&) override;

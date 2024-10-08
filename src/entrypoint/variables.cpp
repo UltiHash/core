@@ -123,6 +123,9 @@ bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
     }
 
     auto groups = split(wildcarded, '*');
+    if (groups.size() == 1) {
+        return qfind(b, groups[0], 0) == 0;
+    }
 
     std::size_t pos = 0;
     for (const auto& g : groups) {

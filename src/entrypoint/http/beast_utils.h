@@ -2,7 +2,6 @@
 #define CORE_ENTRYPOINT_HTTP_BEAST_UTILS_H
 
 #include "common/types/common_types.h"
-#include "entrypoint/http/auth_utils.h"
 
 #include <boost/asio.hpp>
 #include <boost/beast/core.hpp>
@@ -23,8 +22,8 @@ using status = beast::http::status;
 struct partial_parse_result {
     static coro<partial_parse_result> read(boost::asio::ip::tcp::socket& sock);
 
-    std::optional<std::string> optional(const std::string& name);
-    std::string require(const std::string& name);
+    std::optional<std::string> optional(const std::string& name) const;
+    std::string require(const std::string& name) const;
 
     boost::asio::ip::tcp::socket& socket;
     beast::flat_buffer buffer;

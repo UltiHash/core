@@ -81,6 +81,7 @@ BOOST_AUTO_TEST_CASE(wildcard_match) {
     BOOST_CHECK(equals_wildcard("*", "foo"));
     BOOST_CHECK(equals_wildcard("*?", "f"));
     BOOST_CHECK(!equals_wildcard("*?", ""));
+    BOOST_CHECK(!equals_wildcard("root", "arn:foo:root"));
 }
 
 } // namespace
