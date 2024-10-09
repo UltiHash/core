@@ -55,7 +55,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
   build-database-init:
-    runs-on: lightweight-generic-jobs
+    runs-on: heavyweight-generic-jobs
     steps:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
