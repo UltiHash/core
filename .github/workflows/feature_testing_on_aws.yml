@@ -1,10 +1,9 @@
 name: Feature Testing AWS
 
 on:
-  push:
-  #schedule:
-  #  - cron: '0 0 * * MON-FRI'
-  #workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
 
 env:
   ENVIRONMENT_NAME: feature-testing-aarch64
@@ -43,7 +42,7 @@ jobs:
             DebugTools=True
     
   build-database-init:
-    runs-on: lightweight-generic-jobs
+    runs-on: heavyweight-generic-jobs
     steps:
       - uses: actions/checkout@v4
         with:
