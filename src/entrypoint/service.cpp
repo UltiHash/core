@@ -1,5 +1,8 @@
 #include "service.h"
 
+#include "common/telemetry/metrics.h"
+#include "common/utils/scope_guard.h"
+
 namespace uh::cluster::ep {
 
 namespace {
@@ -8,14 +11,27 @@ static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
 
 coro<void> update_limits(directory& dir, limits& l) {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
+    std::atomic<std::size_t> size = co_await dir.data_size();
+    l.storage_size(size);
+
+    metric<entrypoint_original_data_volume_gauge, byte,
+           int64_t>::register_gauge_callback([&size]() {
+        auto s = size.load();
+        LOG_DEBUG() << "gauge_callback for original data: " << s;
+
+        return s;
+    });
+    auto g = scope_guard([]() {
+        metric<entrypoint_original_data_volume_gauge, byte,
+               int64_t>::remove_gauge_callback();
+    });
 
     while (true) {
-        auto size = co_await dir.data_size();
-
-        l.storage_size(size);
-
         timer.expires_from_now(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
+
+        size = co_await dir.data_size();
+        l.storage_size(size);
     }
 }
 
