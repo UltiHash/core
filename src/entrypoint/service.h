@@ -17,60 +17,13 @@ namespace uh::cluster::ep {
 
 class service {
 public:
-    explicit service(const service_config& sc, entrypoint_config config)
-        : m_config(std::move(config)),
-          m_ioc(boost::asio::io_context(m_config.server.threads)),
+    explicit service(const service_config& sc, entrypoint_config config);
 
-          m_etcd_client(sc.etcd_url),
-          m_service_id(get_service_id(m_etcd_client,
-                                      get_service_string(ENTRYPOINT_SERVICE),
-                                      sc.working_dir)),
-          m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+    void run();
 
-          m_attached_storage(sc, m_config.m_attached_storage),
-          m_attached_dedupe(sc, m_config.m_attached_deduplicator),
-          m_storage_maintainer(
-              m_etcd_client,
-              service_factory<storage_interface>(
-                  m_ioc,
-                  m_config.global_data_view.storage_service_connection_count,
-                  m_attached_storage.get_local_service_interface())),
-          m_dedupe_maintainer(
-              m_etcd_client,
-              service_factory<deduplicator_interface>(
-                  m_ioc, m_config.dedupe_node_connection_count,
-                  m_attached_dedupe.get_local_service_interface())),
-          m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer),
+    void stop();
 
-          m_directory(m_ioc, m_config.database),
-          m_uploads(m_ioc, m_config.database),
-          m_users(m_ioc, m_config.database),
-          m_limits(sc.license.max_data_store_size),
-          m_server(m_config.server,
-                   std::make_unique<handler>(
-                       command_factory(m_ioc, m_dedupe_load_balancer,
-                                       m_directory, m_uploads, m_config,
-                                       m_data_view, m_limits, m_users),
-                       http::request_factory(m_users),
-                       std::make_unique<policy::module>(m_directory)),
-                   m_ioc) {
-        m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
-    }
-
-    void run() {
-        m_registration =
-            m_service_registry.register_service(m_server.get_server_config());
-        m_server.run();
-    }
-
-    void stop() {
-        LOG_INFO() << "stopping " << m_service_registry.get_service_name();
-        m_server.stop();
-    }
-
-    ~service() noexcept {
-        m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
-    }
+    ~service() noexcept;
 
 private:
     entrypoint_config m_config;
