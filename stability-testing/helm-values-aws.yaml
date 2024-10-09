@@ -28,10 +28,6 @@ stabilityTest:
   readTimeout: 600
   concurentJobs: 2
   extraEnv:
-    - name: AWS_ACCESS_KEY_ID
-      value: "mocked"
-    - name: AWS_SECRET_ACCESS_KEY
-      value: "mocked"
     - name: AWS_DEFAULT_REGION
       value: "eu-central-1"
   nodeSelector:
