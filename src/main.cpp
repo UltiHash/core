@@ -4,7 +4,7 @@
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
-#include "entrypoint/entrypoint.h"
+#include "entrypoint/service.h"
 #include "recovery/recovery.h"
 #include "storage/storage.h"
 

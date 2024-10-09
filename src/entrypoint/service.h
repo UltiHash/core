@@ -1,5 +1,5 @@
-#ifndef CORE_ENTRY_NODE_H
-#define CORE_ENTRY_NODE_H
+#ifndef CORE_ENTRYPOINT_SERVICE_H
+#define CORE_ENTRYPOINT_SERVICE_H
 
 #include <functional>
 
