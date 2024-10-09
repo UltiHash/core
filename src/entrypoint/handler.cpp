@@ -11,11 +11,6 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
       m_factory(std::move(factory)),
       m_policy(std::move(policy)) {}
 
-coro<void> handler::on_startup() {
-    m_command_factory.get_limits().storage_size(
-        co_await m_command_factory.get_directory().data_size());
-}
-
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
 

@@ -2,7 +2,26 @@
 
 namespace uh::cluster::ep {
 
-explicit service::service(const service_config& sc, entrypoint_config config)
+namespace {
+
+static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
+
+coro<void> update_limits(directory& dir, limits& l) {
+    boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
+
+    while (true) {
+        auto size = co_await dir.data_size();
+
+        l.storage_size(size);
+
+        timer.expires_from_now(LIMITS_UPDATE_INTERVAL);
+        co_await timer.async_wait(boost::asio::use_awaitable);
+    }
+}
+
+} // namespace
+
+service::service(const service_config& sc, entrypoint_config config)
     : m_config(std::move(config)),
       m_ioc(boost::asio::io_context(m_config.server.threads)),
 
@@ -38,6 +57,15 @@ explicit service::service(const service_config& sc, entrypoint_config config)
                    std::make_unique<policy::module>(m_directory)),
                m_ioc) {
     m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
+
+    co_spawn(
+        m_ioc, update_limits(m_directory, m_limits), [](std::exception_ptr e) {
+            try {
+                std::rethrow_exception(e);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "metrics monitor stopped working: " << e.what();
+            }
+        });
 }
 
 void service::run() {
