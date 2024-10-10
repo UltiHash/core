@@ -52,25 +52,6 @@ void return_connection(auto&& s) {
     cv.notify_one();
 }
 
-void do_sync() {
-    message_type type = STORAGE_SYNC_REQ;
-    size_t length = 0;
-    std::vector<boost::asio::const_buffer> send_buffers{
-        {&type, sizeof(type)}, {&length, sizeof(length)}};
-
-    auto socket = borrow_connection();
-    boost::asio::write(*socket, send_buffers);
-
-    messenger_core::header h{};
-    std::vector<boost::asio::mutable_buffer> recv_buffers{
-        {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
-    boost::asio::read(*socket, recv_buffers);
-    if (h.type != SUCCESS) [[unlikely]] {
-        throw std::runtime_error("unsuccessful sync");
-    }
-    return_connection(std::move(socket));
-}
-
 size_t do_write(const unique_buffer<char>& buffer) {
     message_type type = STORAGE_WRITE_REQ;
     size_t length = buffer.size();
@@ -110,12 +91,7 @@ size_t do_io(const params& ps) {
         unique_buffer<char> random_data(length);
 
         total_size += do_write(random_data);
-
-        if (i % 4 == 0) {
-            do_sync();
-        }
     }
-    do_sync();
 
     return total_size;
 }

@@ -104,18 +104,6 @@ public:
                                    const address& addr);
 
     /**
-     * @brief Must be called on all addresses returned #write to ensure their
-     * persistence.
-     *
-     * Data written using the #write method is only guaranteed to be persistent
-     * after calling this method on the resulting address.
-     *
-     * @param ctx open telemetry context
-     * @param addr The address of all data to be synced to persistent storage.
-     */
-    coro<void> sync(context& ctx, const address& addr);
-
-    /**
      * @brief registers a reference to a storage region to claim co-ownership
      * of data.
      *

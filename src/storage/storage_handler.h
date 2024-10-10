@@ -61,9 +61,6 @@ public:
                 case STORAGE_UNLINK_REQ:
                     co_await handle_unlink(ctx, m, message_header);
                     break;
-                case STORAGE_SYNC_REQ:
-                    co_await handle_sync(ctx, m, message_header);
-                    break;
                 case STORAGE_USED_REQ:
                     co_await handle_get_used(ctx, m, message_header);
                     break;
@@ -163,15 +160,6 @@ private:
 
         const auto addr = co_await m.recv_address(h);
         co_await m_storage.unlink(ctx, addr);
-
-        co_await m.send(ctx, SUCCESS, {});
-    }
-
-    coro<void> handle_sync(context& ctx, messenger& m,
-                           const messenger::header& h) {
-
-        const auto addr = co_await m.recv_address(h);
-        co_await m_storage.sync(ctx, addr);
 
         co_await m.send(ctx, SUCCESS, {});
     }

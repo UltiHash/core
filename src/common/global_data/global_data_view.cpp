@@ -86,19 +86,6 @@ coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
         });
 }
 
-coro<void> global_data_view::sync(context& ctx, const address& addr) {
-
-    if (addr.empty()) [[unlikely]] {
-        throw std::length_error("Empty address is not allowed for sync");
-    }
-
-    co_await perform_for_address(
-        addr, m_basic_getter, m_io_service,
-        [&ctx](auto, auto dn, const auto& info) -> coro<void> {
-            co_await dn->sync(ctx, info.addr);
-        });
-}
-
 coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     auto nodes = m_basic_getter.get_services();
 
