@@ -42,3 +42,4 @@ $access policy-add 'iam' 'allow-all' '{ "Version": "2012-10-17", "Statement": { 
 
 uh_dir=$BIN_PATH/tools/uh-cluster-uh-dir
 $uh_dir mkb test-aws-s3a
+$uh_dir mkb datasets
