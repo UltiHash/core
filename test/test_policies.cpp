@@ -38,11 +38,8 @@ auto make_request(const std::string& code,
 
     parser.put(boost::asio::buffer(code), ec);
 
-    auto req = request(parser.get(), std::make_unique<mock_body>(),
-                       boost::asio::ip::tcp::endpoint());
-
-    req.authenticated_user(user{.arn = principal});
-    return req;
+    return request(parser.get(), std::make_unique<mock_body>(),
+                   user{.arn = principal}, boost::asio::ip::tcp::endpoint());
 }
 
 } // namespace

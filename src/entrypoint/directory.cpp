@@ -84,6 +84,7 @@ coro<object> directory::head_object(const std::string& bucket,
 }
 
 coro<void> directory::put_bucket(const std::string& bucket) {
+    LOG_DEBUG() << "put_bucket(" << bucket << ")";
     validate_bucket_name(bucket);
 
     auto dir = co_await m_db.get();
@@ -155,13 +156,16 @@ coro<std::vector<std::string>> directory::list_buckets() {
 
 coro<std::optional<std::string>>
 directory::get_bucket_policy(const std::string& bucket) {
-    co_await bucket_exists(bucket);
-
     auto dir = co_await m_db.get();
-    auto row =
-        co_await dir->execv("SELECT policy FROM uh_bucket_policy($1)", bucket);
 
-    co_return row->string(0);
+    try {
+        auto row = co_await dir->execv(
+            "SELECT policy FROM uh_bucket_policy($1)", bucket);
+        co_return row->string(0);
+    } catch (const std::exception& e) {
+    }
+
+    co_return std::nullopt;
 }
 
 coro<void> directory::set_bucket_policy(const std::string& bucket,
@@ -202,15 +206,12 @@ coro<std::size_t> directory::data_size() {
     std::size_t rv = 0;
     auto dir = co_await m_db.get();
 
-    LOG_DEBUG() << "read directory data_size";
-
     auto buckets = co_await list_buckets();
     for (const auto& bucket : buckets) {
         auto row = co_await dir->execv("SELECT uh_bucket_size($1)", bucket);
         rv += row->number(0).value_or(0);
     }
 
-    LOG_DEBUG() << "read directory data_size: done";
     co_return rv;
 }
 

@@ -5,30 +5,24 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster::ep {
 
-handler::handler(command_factory&& comm_factory,
-                 std::unique_ptr<request_factory> factory,
+handler::handler(command_factory&& comm_factory, request_factory&& factory,
                  std::unique_ptr<ep::policy::module> policy)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
       m_policy(std::move(policy)) {}
 
-coro<void> handler::on_startup() {
-    m_command_factory.get_limits().storage_size(
-        co_await m_command_factory.get_directory().data_size());
-}
-
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
 
         /*
-         * Note: livetime of response must not exceed livetime of request.
+         * Note: lifetime of response must not exceed lifetime of request.
          */
         std::unique_ptr<request> req;
         response resp;
         bool keep_alive = false;
 
         try {
-            req = co_await m_factory->create(s);
+            req = co_await m_factory.create(s);
             LOG_DEBUG() << req->peer() << ": read request: " << *req;
 
             resp = co_await handle_request(s, *req);
@@ -65,13 +59,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       request& req) const {
+                                       request& req) {
 
-    auto cmd = m_command_factory.create(req);
+    auto cmd = co_await m_command_factory.create(req);
+    LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     co_await cmd->validate(req);
 
-    if (co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
+    LOG_DEBUG() << req.peer() << ": checking policies";
+    if (!req.authenticated_user().super_user &&
+        co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
@@ -83,6 +80,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         co_await write(s, response(status::continue_));
     }
 
+    LOG_DEBUG() << req.peer() << ": executing " << cmd->action_id();
     co_return co_await cmd->handle(req);
 }
 

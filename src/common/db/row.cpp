@@ -105,4 +105,13 @@ std::optional<utc_time> row::date(int col) {
     return utc_time::clock::from_time_t(std::mktime(&tm));
 }
 
+std::optional<bool> row::boolean(int col) {
+    auto rv = number(col);
+    if (!rv) {
+        return std::nullopt;
+    }
+
+    return rv != 0;
+}
+
 } // namespace uh::cluster::db

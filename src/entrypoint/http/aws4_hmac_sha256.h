@@ -1,0 +1,23 @@
+#ifndef CORE_ENTRYPOINT_HTTP_AWS4_HMAC_SHA256_H
+#define CORE_ENTRYPOINT_HTTP_AWS4_HMAC_SHA256_H
+
+#include <entrypoint/http/beast_utils.h>
+#include <entrypoint/user/db.h>
+
+namespace uh::cluster::ep::http {
+
+struct aws4_signature_info {
+    std::string date;
+    std::string region;
+    std::string service;
+};
+
+class aws4_hmac_sha256 {
+public:
+    static coro<std::unique_ptr<request>> create(user::db& users,
+                                                 partial_parse_result& req);
+};
+
+} // namespace uh::cluster::ep::http
+
+#endif

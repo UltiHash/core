@@ -4,7 +4,7 @@
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
-#include "entrypoint/entrypoint.h"
+#include "entrypoint/service.h"
 #include "recovery/recovery.h"
 #include "storage/storage.h"
 
@@ -27,7 +27,7 @@ void execute_role(const config& c) {
         case DEDUPLICATOR_SERVICE:
             return start_service(deduplicator(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
-            return start_service(entrypoint(c.service, c.entrypoint));
+            return start_service(ep::service(c.service, c.entrypoint));
         case RECOVERY_SERVICE:
             return start_service(recovery(c.service, c.recovery));
         }

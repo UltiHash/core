@@ -9,6 +9,12 @@
 
 namespace uh::cluster {
 
+static constexpr const char* CHARS_CAPITALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static constexpr const char* CHARS_LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
+static constexpr const char* CHARS_DIGITS = "0123456789";
+static constexpr const char* CHARS_SPECIAL =
+    "!@#$%^&*()-_=+[]{}'\\\"|,./<>?<>~`";
+
 /**
  * Split the provided string into a vector of `string_view`
  */
@@ -21,6 +27,23 @@ container split(std::string_view data, char delimiter = ' ') {
         });
 
     return {split.begin(), split.end()};
+}
+
+std::string join(std::ranges::input_range auto&& range,
+                 const std::string& delimiter) {
+    std::string rv;
+    bool first = true;
+
+    for (const auto& e : range) {
+        if (!first) {
+            rv += delimiter;
+        }
+
+        rv += e;
+        first = false;
+    }
+
+    return rv;
 }
 
 template <typename container = std::vector<std::string>>
@@ -51,6 +74,12 @@ std::string_view rtrim(std::string_view in,
  * Decode a base64 encoded string to a buffer.
  */
 std::vector<char> base64_decode(std::string_view b64);
+std::vector<char> base64_encode(std::string_view plain);
+
+/**
+ * Remove a set of characters from input string
+ */
+std::string erase_all(std::string haystack, const std::string& characters);
 
 /**
  * URL encode the special characters.

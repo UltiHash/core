@@ -26,8 +26,7 @@ enum metric_type {
     deduplicator_set_fragment_size_counter,
     entrypoint_ingested_data_counter,
     entrypoint_egressed_data_counter,
-    directory_deduplicated_data_volume_gauge,
-    directory_original_data_volume_gauge,
+    entrypoint_original_data_volume_gauge,
     storage_available_space_gauge,
     storage_used_space_gauge,
     storage_read_fragment_req,
@@ -159,6 +158,10 @@ public:
     static void register_gauge_callback(std::function<value_type()> fun) {
         m_gauge_cb = fun;
         get_gauge()->AddCallback(gauge_callback_wrapper, nullptr);
+    }
+
+    static void remove_gauge_callback() {
+        get_gauge()->RemoveCallback(gauge_callback_wrapper, nullptr);
     }
 };
 

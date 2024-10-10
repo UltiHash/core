@@ -55,7 +55,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
   build-database-init:
-    runs-on: lightweight-generic-jobs
+    runs-on: heavyweight-generic-jobs
     steps:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
@@ -138,7 +138,7 @@ jobs:
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/auth/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
           sleep 180
 
       - name: Run feature tests

@@ -123,7 +123,8 @@ list_objects::list_objects(directory& dir)
 bool list_objects::can_handle(const request& req) {
     return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && req.object_key().empty() &&
-           !req.query("uploads") && !req.query("list-type");
+           !req.query("uploads") && !req.query("list-type") &&
+           !req.query("policy");
 }
 
 coro<response> list_objects::handle(request& req) {

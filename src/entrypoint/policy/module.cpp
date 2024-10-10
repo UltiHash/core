@@ -35,11 +35,21 @@ module::module(directory& dir) :m_directory(dir),
  */
 coro<effect> module::check(const http::request& request,
                            const command& cmd) const {
+
+    bool has_allow = false;
+
     for (const auto& policy : m_policies) {
         auto result = policy.check(request, cmd);
-        if (result.value_or(effect::deny) == effect::allow) {
-            LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
-            co_return effect::allow;
+        if (!result) {
+            continue;
+        }
+
+        if (*result == effect::deny) {
+            co_return effect::deny;
+        }
+
+        if (*result == effect::allow) {
+            has_allow = true;
         }
     }
 
@@ -49,23 +59,39 @@ coro<effect> module::check(const http::request& request,
         // TODO cache bucket policies
         auto policies = parser::parse(*resource);
         for (const auto& policy : policies) {
-            if (policy.check(request, cmd).value_or(effect::deny) ==
-                effect::allow) {
-                LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
-                co_return effect::allow;
+            auto result = policy.check(request, cmd);
+            if (!result) {
+                continue;
+            }
+
+            if (*result == effect::deny) {
+                co_return effect::deny;
+            }
+
+            if (*result == effect::allow) {
+                has_allow = true;
             }
         }
     }
 
     for (const auto& policy : request.authenticated_user().policies) {
-        auto result = policy.check(request, cmd);
-        if (result.value_or(effect::deny) == effect::allow) {
-            LOG_DEBUG() << "policy " << policy.id() << ": effect allow";
-            co_return effect::allow;
+        for (const auto& p : policy.second) {
+            auto result = p.check(request, cmd);
+            if (!result) {
+                continue;
+            }
+
+            if (*result == effect::deny) {
+                co_return effect::deny;
+            }
+
+            if (*result == effect::allow) {
+                has_allow = true;
+            }
         }
     }
 
-    co_return effect::deny;
+    co_return has_allow ? effect::allow : effect::deny;
 }
 
 } // namespace uh::cluster::ep::policy
