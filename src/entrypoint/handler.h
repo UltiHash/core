@@ -13,8 +13,6 @@ public:
                      http::request_factory&& factory,
                      std::unique_ptr<policy::module> policy);
 
-    coro<void> on_startup() override;
-
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
     coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,

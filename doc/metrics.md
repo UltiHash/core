@@ -23,17 +23,6 @@ Each service measures the number of requests it receives and handles using monot
 
 - `deduplicator_req`: number of requests received to deduplicate uploaded data
 
-### Directory service requests (internal, custom protocol):
-
-- `directory_bucket_list_req`: number of requests received to list buckets
-- `directory_bucket_put_req`: number of requests received to insert a bucket
-- `directory_bucket_delete_req`: number of requests received to delete a bucket
-- `directory_bucket_exists_req`: number of requests received to check if a bucket exists
-- `directory_object_list_req`: number of requests received to list objects in a bucket
-- `directory_object_put_req`: number of requests received to create an object
-- `directory_object_get_req`: number of requests received to retrieve an object
-- `directory_object_delete_req`: number of requests received to delete an object
-
 ### Entrypoint service requests (external, S3 protocol):
 
 - `entrypoint_abort_multipart_req`: number of [`AbortMultipartUpload`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html) requests received
@@ -72,7 +61,6 @@ Each service measures the number of requests it receives and handles using monot
 - `active_connections`: Number of currently handled connections
 
 ### Gauges ###
-- `directory_deduplicated_data_volume_gauge`: The deduplicated data volume in the storage cluster, maintained by the `directory service`
-- `directory_original_data_volume_gauge`: The original/raw data volume in the storage cluster, maintained by the `directory service`
+- `entrypoint_original_data_volume_gauge`: The original/raw data volume in the storage cluster, maintained by the `entrypoint service`
 - `storage_available_space_gauge`: Storage space available to a `storage service` instance
 - `storage_used_space_gauge`: Storage space used by a `storage service` instance
