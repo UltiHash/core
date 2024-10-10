@@ -65,8 +65,6 @@ coro<void> deduplicator_handler::handle_dedupe(context& ctx, messenger& m,
     m.register_read_buffer(data);
     co_await m.recv_buffers(h);
 
-    LOG_DEBUG() << "deduplicating " << data.size() << " bytes of data";
-
     auto dedupe_resp =
         co_await m_local_dedupe.deduplicate(ctx, data.string_view());
     co_await m.send_dedupe_response(ctx, dedupe_resp);

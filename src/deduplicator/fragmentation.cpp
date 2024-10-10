@@ -94,7 +94,6 @@ coro<void> fragmentation::flush_data(context& ctx, global_data_view& gdv) {
     }
 
     auto buffer = unstored_to_buffer();
-
     auto addr = co_await gdv.write(ctx, {&buffer[0], buffer.size()});
 
     compute_unstored_addresses(addr);
@@ -190,6 +189,7 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
     return buffer;
 }
+
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
     size_t last_frag_pos = 0;
