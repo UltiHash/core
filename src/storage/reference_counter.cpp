@@ -1,4 +1,5 @@
 #include "reference_counter.h"
+#include "common/telemetry/log.h"
 #include "common/utils/common.h"
 #include "common/utils/pointer_traits.h"
 
@@ -46,19 +47,22 @@ void reference_counter::decrement(const address& addr) {
 
             if (!dbi.get(txn, key, value)) {
                 txn.abort();
-                throw std::runtime_error(
-                    "attempted to to decrease refcount of an "
-                    "un-tracked page at page " +
-                    std::to_string(page_id));
+                std::string msg = "attempted to to decrease refcount of the "
+                                  "un-tracked page " +
+                                  std::to_string(page_id);
+                LOG_WARN() << msg;
+                throw std::runtime_error(msg);
             }
 
             std::size_t current_value = std::stoull(std::string(value));
 
             if (current_value == 0) {
                 txn.abort();
-                throw std::runtime_error("encountered page with refcount zero, "
-                                         "even though such entries "
-                                         "should not exist");
+                std::string msg = "encountered page with refcount zero, "
+                                  "even though such entries "
+                                  "should not exist";
+                LOG_WARN() << msg;
+                throw std::runtime_error(msg);
             }
 
             if (--current_value == 0) {
