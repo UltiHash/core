@@ -8,7 +8,7 @@ spec:
     - name: registry-credentials
   nodeSelector:
     workload-type: tester
-    purpose:  performance-testing-large
+    purpose:  performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -31,18 +31,10 @@ spec:
           value: "$READ_TIMEOUT"
         - name: JOBS
           value: "$JOBS"
-        - name: MULTIPART_CHUNK_SIZE
-          value: "$MULTIPART_CHUNK_SIZE"
         - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name:  "${RELEASE_NAME}-super-user-credentials"
-              key: access-key-id
+          value: $AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name:  "${RELEASE_NAME}-super-user-credentials"
-              key: secret-key
+          value: $AWS_SECRET_ACCESS_KEY
         - name: TEST_NAME
           value: "$TEST_NAME"
         - name: PROM_URL
