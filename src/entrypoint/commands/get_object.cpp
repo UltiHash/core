@@ -68,6 +68,61 @@ private:
     timer m_timer;
 };
 
+std::pair<std::size_t, std::size_t> parse_range_spec(std::string_view spec,
+                                                     std::size_t size) {
+    auto dash = spec.find('-');
+    if (dash == std::string::npos) {
+        throw command_exception(status::bad_request, "BadRequest",
+                                "cannot parse range specifier");
+    }
+
+    try {
+        if (dash == 0) {
+            auto bytes = std::stoull(std::string(spec.substr(1)));
+            return std::make_pair(size - bytes + 1, size);
+        } else {
+            auto from = std::stoull(std::string(spec.substr(0, dash)));
+            auto to = std::stoull(std::string(spec.substr(dash + 1))) + 1;
+
+            return std::make_pair(from, to);
+        }
+    } catch (const std::exception& e) {
+        LOG_DEBUG() << "error parsing `" << spec << "`: " << e.what();
+        throw command_exception(status::bad_request, "BadRequest",
+                                "cannot parse range specifier");
+    }
+
+    return {};
+}
+
+address apply_range(address addr, std::string_view range) {
+    if (addr.size() == 0) {
+        return addr;
+    }
+
+    auto equals = range.find('=');
+    if (equals == std::string::npos) {
+        throw command_exception(status::bad_request, "BadRequest",
+                                "cannot parse range specifier");
+    }
+
+    if (lowercase(std::string(range.substr(0, equals))) != "bytes") {
+        throw command_exception(status::bad_request, "BadRequest",
+                                "unsupported range unit");
+    }
+
+    address rv;
+    auto size = addr.data_size();
+    auto specs = split(range.substr(equals + 1), ',');
+    for (auto spec : specs) {
+        auto range = parse_range_spec(spec, size);
+
+        rv.append(addr.range(range.first, range.second));
+    }
+
+    return rv;
+}
+
 } // namespace
 
 get_object::get_object(directory& dir, global_data_view& storage)
@@ -84,19 +139,34 @@ coro<response> get_object::handle(request& req) {
     metric<entrypoint_get_object_req>::increase(1);
 
     response res;
+    object obj;
 
     try {
-        auto obj = co_await m_dir.get_object(req.bucket(), req.object_key());
-
-        res.set("ETag", obj.etag);
-        res.set("Content-Type", obj.mime);
-        res.set_body(std::make_unique<local_read_handle>(
-            m_storage, std::move(*obj.addr), req.context()));
+        obj = co_await m_dir.get_object(req.bucket(), req.object_key());
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
     }
 
+    if (auto range = req.header("Range"); range) {
+        res.base().result(status::partial_content);
+
+        auto addr = apply_range(*obj.addr, *range);
+
+        LOG_DEBUG() << "range based access: header=" << *range
+                    << ", obj-addr=" << obj.addr->to_string()
+                    << ", range-addr: " << addr.to_string();
+
+        res.set_body(std::make_unique<local_read_handle>(
+            m_storage, std::move(addr), req.context()));
+
+    } else {
+        res.set_body(std::make_unique<local_read_handle>(
+            m_storage, std::move(*obj.addr), req.context()));
+    }
+
+    res.set("ETag", obj.etag);
+    res.set("Content-Type", obj.mime);
     co_return res;
 }
 

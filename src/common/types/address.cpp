@@ -6,6 +6,14 @@ std::string fragment::to_string() const {
     return pointer.to_string() + "[" + std::to_string(size) + "]";
 }
 
+fragment fragment::subfrag(std::size_t start, std::size_t end) const {
+    if (start >= end) {
+        return {};
+    }
+
+    return {pointer + start, std::min(size, end) - start};
+}
+
 address::address(std::size_t size)
     : pointers(size * 2),
       sizes(size) {}
@@ -64,6 +72,38 @@ std::size_t address::data_size() const {
 }
 
 [[nodiscard]] bool address::empty() const noexcept { return sizes.empty(); }
+
+address address::range(std::size_t start, std::size_t end) const {
+    fragment f;
+
+    std::size_t ptr = 0ull;
+    std::size_t index = 0ull;
+    for (; index < size(); ++index) {
+        f = get(index);
+        if (start < ptr + f.size) {
+            f = f.subfrag(start - ptr, end - ptr);
+            ptr = start + f.size;
+            break;
+        }
+
+        ptr += f.size;
+    }
+
+    if (index == size()) {
+        return {};
+    }
+
+    address rv;
+    rv.push(f);
+
+    for (++index; ptr < end && index < size(); ++index) {
+        f = get(index).subfrag(0, end - ptr);
+        rv.push(f);
+        ptr += f.size;
+    }
+
+    return rv;
+}
 
 std::string address::to_string() const {
     std::string frags;
