@@ -207,6 +207,8 @@ public:
             co_await recv_buffers(h);
             c.set_otel_context(trace::deserialize_context(std::move(otel_buf)));
         }
+
+        c.peer() = m_socket.remote_endpoint();
         co_return c;
     }
 
