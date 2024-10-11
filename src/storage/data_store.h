@@ -30,9 +30,8 @@ public:
                uint32_t service_id, uint32_t data_store_id);
 
     /**
-     * Allocates for the given data size and stores the
-     * data, the allocation, and internal allocation info in the
-     * ongoing async writes queue.
+     * Writes data to persistent storage. On completion, the provided data
+     * is guaranteed to be written to persistent storage.
      *
      * @affects get_used_space()
      * @affects get_available_space()
@@ -43,7 +42,7 @@ public:
     address write(const std::string_view& data);
 
     /**
-     * Manually write the data directly to a spacific internal pointer
+     * Manually write the data directly to a specific internal pointer
      * @param internal_pointer
      * @param data
      */

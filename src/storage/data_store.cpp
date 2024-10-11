@@ -195,6 +195,10 @@ address data_store::write(const std::string_view& data) {
     auto alloc = internal_allocate(data.size());
 
     const auto local_pointer = pointer_traits::get_pointer(alloc.global_offset);
+    if (m_enable_refcount) {
+        m_refcounter.increment(local_pointer, data.size());
+    }
+
     long written = 0;
     while (written < static_cast<long>(data.size())) {
         auto size =
@@ -208,9 +212,6 @@ address data_store::write(const std::string_view& data) {
     }
     sync();
 
-    if (m_enable_refcount) {
-        m_refcounter.increment(local_pointer, data.size());
-    }
 
     address data_address;
     data_address.push({.pointer = alloc.global_offset, .size = data.size()});
