@@ -136,7 +136,7 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
-          input: performance-testing/small/performance-tester.yaml
+          input: performance-testing/small/performance-tester-s3.yaml
           output: performance-tester-s3.yaml
 
       - name: Generate the performance tester manifest for UltiHash
@@ -148,8 +148,7 @@ jobs:
           S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
           S3_SOURCE_BUCKET: test
           S3_DESTINATION_BUCKET: test
-          AWS_ACCESS_KEY_ID: mocked
-          AWS_SECRET_ACCESS_KEY: mocked
+          RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
@@ -172,7 +171,7 @@ jobs:
       - name: Install the UltiHash cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/auth/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
           sleep 180
 
       - name: Execute the performance test against UltiHash
