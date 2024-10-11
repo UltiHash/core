@@ -173,8 +173,11 @@ private:
                     LOG_DEBUG() << ctx.peer() << ": " << rejected.size()
                                 << " fragments rejected, "
                                 << rejected.data_size() << " in bytes";
-                    fragments.handle_rejected_fragments(rejected,
-                                                        m_fragment_set);
+                    co_await m_dedupe_workers.post_in_workers(
+                        ctx, [this, &rejected, &fragments] {
+                            fragments.handle_rejected_fragments(rejected,
+                                                                m_fragment_set);
+                        });
                     LOG_DEBUG()
                         << ctx.peer() << ": handle_rejected_fragments done";
                 }
