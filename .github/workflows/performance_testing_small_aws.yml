@@ -11,70 +11,70 @@ env:
 
 jobs:
 
-  build-core:
-    runs-on: heavyweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
+  #build-core:
+  #  runs-on: heavyweight-generic-jobs
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #      with:
+  #        token: ${{ secrets.PAT }}
+  #        submodules: recursive
  
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
   
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
+#      - name: Login to ghcr.io container registry
+#        uses: docker/login-action@v2
+#        with:
+#          registry: ghcr.io
+#          username: plauth
+#          password: ${{ secrets.PAT }}
    
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/arm64
-          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          push: true
-          build-args: |
-            BuildType=RelWithDebInfo
-            DebugTools=True
+#      - name: Build and push the Docker image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: .
+#          file: Dockerfile
+#          platforms: linux/arm64
+#          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+#          push: true
+#          build-args: |
+#            BuildType=RelWithDebInfo
+#            DebugTools=True
 
-  build-database-init:
-    runs-on: lightweight-generic-jobs
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
-  
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-  
-      - name: Login to ghcr.io container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: plauth
-          password: ${{ secrets.PAT }}
-   
-      - name: Build and push the Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: tools/database-init/Dockerfile
-          platforms: linux/arm64
-          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
-          push: true
+#  build-database-init:
+#    runs-on: lightweight-generic-jobs
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          token: ${{ secrets.PAT }}
+#          submodules: recursive
+#  
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#  
+#      - name: Login to ghcr.io container registry
+#        uses: docker/login-action@v2
+#        with:
+#          registry: ghcr.io
+#          username: plauth
+#          password: ${{ secrets.PAT }}
+#   
+#      - name: Build and push the Docker image
+#        uses: docker/build-push-action@v5
+#        with:
+#          context: .
+#          file: tools/database-init/Dockerfile
+#          platforms: linux/arm64
+#          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+#          push: true
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+ #   needs: 
+ #     - build-core
+ #     - build-database-init
     steps:
 
       - uses: actions/checkout@v4
@@ -137,7 +137,7 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
-          input: performance-testing/small/performance-tester.yaml
+          input: performance-testing/small/performance-tester-s3.yaml
           output: performance-tester-s3.yaml
 
       - name: Generate the performance tester manifest for UltiHash
