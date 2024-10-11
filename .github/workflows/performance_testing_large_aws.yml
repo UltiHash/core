@@ -1,7 +1,6 @@
 name: Large-Sized Performance Testing AWS
 
 on:
-  push:
   workflow_dispatch:
 
 env:
