@@ -2,6 +2,10 @@
 
 namespace uh::cluster {
 
+std::string fragment::to_string() const {
+    return pointer.to_string() + "[" + std::to_string(size) + "]";
+}
+
 address::address(std::size_t size)
     : pointers(size * 2),
       sizes(size) {}
@@ -60,5 +64,19 @@ std::size_t address::data_size() const {
 }
 
 [[nodiscard]] bool address::empty() const noexcept { return sizes.empty(); }
+
+std::string address::to_string() const {
+    std::string frags;
+
+    for (std::size_t index = 0; index < sizes.size(); ++index) {
+        if (!frags.empty()) {
+            frags += ", ";
+        }
+
+        frags += get(index).to_string();
+    }
+
+    return frags;
+}
 
 } // namespace uh::cluster

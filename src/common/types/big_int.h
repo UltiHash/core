@@ -27,11 +27,11 @@ public:
 
     explicit big_int(const std::string& num_str)
         : big_int() {
-        const auto index = num_str.find('_') + 1;
+        const auto index = num_str.find(':') + 1;
         const auto num0_str = num_str.substr(0, index - 1);
         const auto num1_str = num_str.substr(index, num_str.size());
-        num[0] = std::stoul(num0_str);
-        num[1] = std::stoul(num1_str);
+        num[0] = std::stoul(num0_str, nullptr, 16);
+        num[1] = std::stoul(num1_str, nullptr, 16);
     }
 
     auto operator<=>(const big_int&) const = default;
@@ -103,7 +103,10 @@ public:
     }
 
     [[nodiscard]] inline std::string to_string() const {
-        return std::to_string(num[0]) + "_" + std::to_string(num[1]);
+        std::stringstream s;
+        s << std::hex << num[0] << ":" << std::hex << std::setfill('0')
+          << std::setw(sizeof(uint64_t) * 2) << num[1];
+        return s.str();
     }
 
     [[nodiscard]] constexpr inline uint64_t get_high() const noexcept {
