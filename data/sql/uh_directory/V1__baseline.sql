@@ -62,7 +62,6 @@ BEGIN
         id bigint GENERATED ALWAYS AS IDENTITY,
         name TEXT NOT NULL PRIMARY KEY,
         small BYTEA DEFAULT NULL,
-        large OID DEFAULT NULL,
         size BIGINT NOT NULL,
         last_modified TIMESTAMP NOT NULL DEFAULT now(),
         etag TEXT DEFAULT NULL,
@@ -89,30 +88,16 @@ END
 $$;
 
 --
--- uh_put_large_obj(bucket, key, addr) -- add an object with name `key`
--- described by `addr` to `bucket`. The object data must be written using
--- PostGre's large object facility. The resulting OID is passed to this
--- function as addr.
---
-CREATE OR REPLACE PROCEDURE uh_put_large_obj(bucket regclass, key text, addr oid, size bigint)
-LANGUAGE plpgsql AS $$
-BEGIN
-    CALL uh_check_bucket(bucket);
-    EXECUTE format('INSERT INTO %s ("name", "large", "size") VALUES(%L, %L, %L)', bucket, key, addr, size);
-END
-$$;
-
---
 -- uh_get_object(bucket, key) -- retrieve the address portion of an object
 -- identified by `bucket` and `key`. If the object contains no small address
 -- data, NULL is returned.
 --
 CREATE OR REPLACE FUNCTION uh_get_object(bucket regclass, key text)
-    RETURNS TABLE (small BYTEA, large oid, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
+    RETURNS TABLE (small BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN QUERY EXECUTE format('SELECT small, large, size, last_modified, etag, mime FROM %s WHERE name = %L', bucket, key);
+    RETURN QUERY EXECUTE format('SELECT small, size, last_modified, etag, mime FROM %s WHERE name = %L', bucket, key);
 END;
 $$;
 
