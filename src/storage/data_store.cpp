@@ -103,16 +103,6 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::unique_lock<std::mutex> lk(m_async_mutex);
-    if (const auto [async_offset, data] = find_async_data(pointer, size);
-        data.data() != nullptr) {
-        const auto offset = pointer - async_offset;
-        std::memcpy(buffer, data.data() + offset, size);
-        return size;
-    }
-
-    lk.unlock();
-
     const auto [fd, seek] =
         get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
@@ -142,17 +132,6 @@ std::size_t data_store::read_up_to(char* buffer,
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::unique_lock<std::mutex> lk(m_async_mutex);
-    if (const auto [async_offset, data] = find_async_data(pointer, 0);
-        data.data() != nullptr) {
-        const auto offset = pointer - async_offset;
-        const auto data_size = std::min(size, data.size());
-        std::memcpy(buffer, data.data() + offset, data_size);
-        return data_size;
-    }
-
-    lk.unlock();
-
     const auto [fd, seek] =
         get_file_offset_pair(pointer_traits::get_pointer(global_pointer));
 
@@ -180,7 +159,7 @@ std::size_t data_store::read_up_to(char* buffer,
 
 void data_store::sync() {
 
-    std::unique_lock<std::mutex> lock(m_sync_end_offset_mutex);
+    std::unique_lock<std::mutex> lock(m_sync_mutex);
 
     const auto ret = ::pwrite(m_open_files.back().first, &m_last_file_data_end,
                               sizeof(m_last_file_data_end), m_conf.file_size);
@@ -207,40 +186,17 @@ size_t data_store::fetch_used_space(
     return size + m_last_file_data_end;
 }
 
-address data_store::register_write(const shared_buffer<char>& data) {
+address data_store::write(const std::string_view& data) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
+
     auto alloc = internal_allocate(data.size());
-    address data_address;
-    data_address.push({.pointer = alloc.global_offset, .size = data.size()});
 
-    std::lock_guard<std::mutex> lk(m_async_mutex);
-    m_ongoing_async_writes.emplace(
-        pointer_traits::get_pointer(alloc.global_offset),
-        std::make_pair(alloc, data));
-    return data_address;
-}
-
-address data_store::register_write(const std::string_view& data) {
-    shared_buffer<char> buffer(data.size());
-    std::memcpy(buffer.data(), data.data(), data.size());
-    return register_write(buffer);
-}
-
-void data_store::perform_write(const address& addr) {
-    if (addr.size() != 1) {
-        throw std::runtime_error("Invalid address size");
-    }
-
-    const auto pointer = pointer_traits::get_pointer(addr.get(0).pointer);
-    std::unique_lock<std::mutex> lk(m_async_mutex);
-    auto& [alloc, data] = m_ongoing_async_writes.at(pointer);
-    lk.unlock();
-
+    const auto local_pointer = pointer_traits::get_pointer(alloc.global_offset);
     if (m_enable_refcount) {
-        m_refcounter.increment(pointer, data.size());
+        m_refcounter.increment(local_pointer, data.size());
     }
 
     long written = 0;
@@ -254,10 +210,12 @@ void data_store::perform_write(const address& addr) {
         }
         written += size;
     }
+    sync();
 
-    std::lock_guard<std::mutex> rm_lk(m_async_mutex);
-    m_ongoing_async_writes.erase(pointer);
-    m_async_cv.notify_all();
+
+    address data_address;
+    data_address.push({.pointer = alloc.global_offset, .size = data.size()});
+    return data_address;
 }
 
 void data_store::manual_write(uint64_t internal_pointer,
@@ -287,18 +245,6 @@ void data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
         }
         tr += r;
     } while (static_cast<size_t>(tr) < size);
-}
-
-void data_store::wait_for_ongoing_writes(const address& addr) {
-    for (size_t i = 0; i < addr.size(); ++i) {
-        const auto frag = addr.get(i);
-        const auto pointer = pointer_traits::get_pointer(frag.pointer);
-
-        std::unique_lock<std::mutex> lk(m_async_mutex);
-        m_async_cv.wait(lk, [this, pointer, size = frag.size]() {
-            return find_async_data(pointer, size).first == 0;
-        });
-    }
 }
 
 address data_store::link(const address& addr) {
@@ -424,19 +370,6 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     return alloc;
 }
 
-std::pair<size_t, shared_buffer<char>>
-data_store::find_async_data(size_t pointer, size_t size) {
-    auto async_data = m_ongoing_async_writes.upper_bound(pointer);
-    if (async_data != m_ongoing_async_writes.cbegin()) {
-        async_data--;
-        if (async_data->first + async_data->second.second.size() >=
-            pointer + size) {
-            return {async_data->first, async_data->second.second};
-        }
-    }
-    return {0, nullptr};
-}
-
 void data_store::internal_delete(std::size_t offset, std::size_t size) {
     std::size_t current_offset = m_current_offset.load();
     if (offset >= current_offset) {
@@ -448,15 +381,6 @@ void data_store::internal_delete(std::size_t offset, std::size_t size) {
         // TODO maybe set current_offset to offset + size
         size = current_offset - offset;
     }
-
-    std::unique_lock<std::mutex> lk(m_async_mutex);
-    if (const auto [async_offset, data] = find_async_data(offset, size);
-        data.data() != nullptr) {
-        const auto data_offset = offset - async_offset;
-        std::memset(data.data() + data_offset, 0, size);
-        return;
-    }
-    lk.unlock();
 
     const auto [fd, seek] = get_file_offset_pair(offset);
 

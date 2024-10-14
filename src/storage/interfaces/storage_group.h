@@ -136,19 +136,6 @@ struct storage_group : public storage_interface {
             });
     }
 
-    coro<void> sync(context& ctx, const address& addr) override {
-
-        if (!is_healthy()) {
-            throw std::runtime_error("unhealthy storage system");
-        }
-
-        co_await perform_for_address(
-            addr, m_getter, m_ioc,
-            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
-                co_await dn->sync(ctx, info.addr);
-            });
-    }
-
     coro<size_t> get_used_space(context& ctx) override {
 
         if (!is_healthy()) {

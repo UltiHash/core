@@ -30,9 +30,8 @@ public:
                uint32_t service_id, uint32_t data_store_id);
 
     /**
-     * Allocates for the given data size and stores the
-     * data, the allocation, and internal allocation info in the
-     * ongoing async writes queue.
+     * Writes data to persistent storage. On completion, the provided data
+     * is guaranteed to be written to persistent storage.
      *
      * @affects get_used_space()
      * @affects get_available_space()
@@ -40,30 +39,10 @@ public:
      * @param data
      * @return  allocated address
      */
-    address register_write(const shared_buffer<char>& data);
+    address write(const std::string_view& data);
 
     /**
-     * Allocates for the given data size and stores the
-     * data, the allocation, and internal allocation info in the
-     * ongoing async writes queue.
-     *
-     * @affects get_used_space()
-     * @affects get_available_space()
-     *
-     * @param data
-     * @return  allocated address
-     */
-    address register_write(const std::string_view& data);
-
-    /**
-     * Writes the data that is registered by the given address to disk.
-     *
-     * @param addr the address that the data is registered with
-     */
-    void perform_write(const address& addr);
-
-    /**
-     * Manually write the data directly to a spacific internal pointer
+     * Manually write the data directly to a specific internal pointer
      * @param internal_pointer
      * @param data
      */
@@ -76,13 +55,6 @@ public:
      * @param buffer
      */
     void manual_read(uint64_t pointer, size_t size, char* buffer);
-
-    /**
-     * Waits for completion of async write operations for the given address
-     *
-     * @param addr
-     */
-    void wait_for_ongoing_writes(const address& addr);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -116,12 +88,6 @@ public:
     void unlink(const address& addr);
 
     /**
-     * @brief Flushes modified files to disk.
-     * @throws std::exception corrupted storage
-     */
-    void sync();
-
-    /**
      * @brief Gives out the current used space of the data store.
      * @return size_t: the used space in the data store
      */
@@ -145,10 +111,13 @@ private:
         uint128_t global_offset;
     };
 
-    alloc_t internal_allocate(size_t size);
+    /**
+     * @brief Flushes modified files to disk.
+     * @throws std::exception corrupted storage
+     */
+    void sync();
 
-    std::pair<size_t, shared_buffer<char>> find_async_data(size_t pointer,
-                                                           size_t size);
+    alloc_t internal_allocate(size_t size);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;
@@ -173,11 +142,7 @@ private:
     std::atomic<size_t> m_current_offset{};
     std::atomic<size_t> m_used_space{};
     std::mutex m_allocate_mutex;
-    std::mutex m_sync_end_offset_mutex;
-    std::mutex m_async_mutex;
-    std::condition_variable m_async_cv;
-    std::map<size_t, std::pair<alloc_t, shared_buffer<char>>>
-        m_ongoing_async_writes;
+    std::mutex m_sync_mutex;
     reference_counter m_refcounter;
 #ifdef DISABLE_STORAGE_REFCOUNT
     static constexpr bool m_enable_refcount = false;

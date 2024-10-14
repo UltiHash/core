@@ -42,12 +42,9 @@ struct local_storage : public storage_interface {
         address total_addr;
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
             const auto part_size = std::min(data.size() - i * part, part);
-            auto addr = m_data_stores[i]->register_write(
+            auto addr = m_data_stores[i]->write(
                 data.substr(i * part, part_size));
             total_addr.append(addr);
-            boost::asio::post(m_threads, [addr = std::move(addr), i, this]() {
-                m_data_stores[i]->perform_write(addr);
-            });
         }
         co_return total_addr;
     }
@@ -138,39 +135,6 @@ struct local_storage : public storage_interface {
             boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
                 try {
                     m_data_stores[i]->unlink(ds_addresses[i]);
-                    p->set_value();
-                } catch (const std::exception&) {
-                    p->set_exception(std::current_exception());
-                }
-            });
-            futures.emplace_back(p->get_future());
-        }
-        for (auto& f : futures) {
-            f.get();
-        }
-
-        co_return;
-    }
-
-    coro<void> sync(context& ctx, const address& addr) override {
-        load_monitor load(m_load);
-
-        std::vector<address> ds_addresses(m_data_stores.size());
-        for (size_t i = 0; i < addr.size(); i++) {
-            const auto f = addr.get(i);
-            const auto id = pointer_traits::get_data_store_id(f.pointer);
-            ds_addresses.at(id).push(f);
-        }
-
-        std::vector<std::future<void>> futures;
-        futures.reserve(m_data_stores.size());
-        for (size_t i = 0; i < m_data_stores.size(); ++i) {
-
-            auto p = std::make_shared<std::promise<void>>();
-            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
-                try {
-                    m_data_stores[i]->wait_for_ongoing_writes(ds_addresses[i]);
-                    m_data_stores[i]->sync();
                     p->set_value();
                 } catch (const std::exception&) {
                     p->set_exception(std::current_exception());
