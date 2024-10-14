@@ -120,6 +120,7 @@ coro<response> complete_multipart::handle(request& req) {
     if constexpr (m_enable_refcount) {
         if (old_obj.has_value() && old_obj->addr.has_value()) {
             co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+            m_limits.free_storage_size(old_obj->size);
         }
     }
 
