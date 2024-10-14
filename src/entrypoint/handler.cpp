@@ -34,8 +34,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             keep_alive = true;
         } catch (const boost::system::system_error& se) {
             if (se.code() == boost::beast::http::error::end_of_stream) {
-                LOG_ERROR()
-                    << s.remote_endpoint() << ": peer closed connection";
+                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
                 break;
             }
 
