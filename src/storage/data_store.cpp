@@ -255,10 +255,15 @@ address data_store::link(const address& addr) {
     }
 }
 
-void data_store::unlink(const address& addr) {
+size_t data_store::unlink(const address& addr) {
     if constexpr (m_enable_refcount) {
-        m_refcounter.decrement(addr);
+        try {
+            return m_refcounter.decrement(addr);
+        } catch (const std::invalid_argument&) {
+            return std::numeric_limits<std::size_t>::max();
+        }
     }
+    return 0;
 }
 
 size_t data_store::id() const noexcept { return m_data_store_id; }
@@ -370,7 +375,7 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     return alloc;
 }
 
-void data_store::internal_delete(std::size_t offset, std::size_t size) {
+std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
     std::size_t current_offset = m_current_offset.load();
     if (offset >= current_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset=" << offset << ", with current_offset=" << current_offset;
@@ -390,6 +395,7 @@ void data_store::internal_delete(std::size_t offset, std::size_t size) {
                                 "Could not deallocate the data.");
     }
     m_used_space -= size;
+    return size;
 }
 
 } // end namespace uh::cluster
