@@ -78,7 +78,7 @@ struct local_deduplicator : public deduplicator_interface {
         dedupe_response dd_resp;
         for (std::size_t i = 0; i < pieces_count; i++) {
             auto resp = co_await proms[i]->get();
-            dd_resp.addr.append(resp.addr.shrink());
+            dd_resp.addr.append(resp.addr);
             dd_resp.effective_size += resp.effective_size;
         }
 
