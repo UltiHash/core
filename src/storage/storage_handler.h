@@ -159,9 +159,9 @@ private:
                              const messenger::header& h) {
 
         const auto addr = co_await m.recv_address(h);
-        co_await m_storage.unlink(ctx, addr);
+        std::size_t freed_bytes = co_await m_storage.unlink(ctx, addr);
 
-        co_await m.send(ctx, SUCCESS, {});
+        co_await m.send_primitive<size_t>(ctx, SUCCESS, freed_bytes);
     }
 
     coro<void> handle_get_used(context& ctx, messenger& m,

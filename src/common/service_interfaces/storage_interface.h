@@ -20,13 +20,13 @@ struct storage_interface {
                                     const std::vector<size_t>& offsets) = 0;
 
     virtual coro<address> link(context& ctx, const address& addr) = 0;
-    virtual coro<void> unlink(context& ctx, const address& addr) = 0;
-    virtual coro<size_t> get_used_space(context& ctx) = 0;
+    virtual coro<std::size_t> unlink(context& ctx, const address& addr) = 0;
+    virtual coro<std::size_t> get_used_space(context& ctx) = 0;
     virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) = 0;
     virtual coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
                                 const std::string_view&) = 0;
     virtual coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
-                               size_t size, char* buffer) = 0;
+                               std::size_t size, char* buffer) = 0;
 
     virtual ~storage_interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;

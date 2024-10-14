@@ -123,17 +123,19 @@ struct storage_group : public storage_interface {
         co_return rv;
     }
 
-    coro<void> unlink(context& ctx, const address& addr) override {
+    coro<std::size_t> unlink(context& ctx, const address& addr) override {
 
         if (!is_healthy()) {
             throw std::runtime_error("unhealthy storage system");
         }
 
+        std::atomic<size_t> freed_bytes;
         co_await perform_for_address(
             addr, m_getter, m_ioc,
-            [&ctx](auto, auto dn, const auto& info) -> coro<void> {
-                co_await dn->unlink(ctx, info.addr);
+            [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+                freed_bytes += co_await dn->unlink(ctx, info.addr);
             });
+        co_return freed_bytes;
     }
 
     coro<size_t> get_used_space(context& ctx) override {

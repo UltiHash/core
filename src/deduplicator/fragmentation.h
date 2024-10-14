@@ -37,8 +37,9 @@ public:
      * Convert all unstored fragments to stored fragments. Uploads all frags to
      * downstream storage.
      */
-    void flush_set(fragment_set& set);
-    coro<void> flush_data(context& ctx, global_data_view& gdv);
+    void flush_fragment_set(fragment_set& set);
+    coro<void> flush_storage(context& ctx, global_data_view& gdv);
+    coro<void> link_unstored(context& ctx, global_data_view& gdv);
 
     std::size_t effective_size() const;
     std::size_t unstored_size() const;
@@ -68,22 +69,19 @@ private:
 
         // fields only used for unstored fragments
         std::optional<fragment_set::hint_type> hint;
-        bool uploaded = false;
         address addr;
     };
 
-    void flush_fragments(fragment_set& set);
-    void mark_as_uploaded();
-    std::list<dd_fragment> get_stored_fragments_internal();
-
-    void compute_unstored_addresses(const address& addr);
+    void compute_unstored_addresses();
 
     unique_buffer<char> unstored_to_buffer();
+    void merge_adjacent_unstored();
 
     dedupe_logger& m_dedupe_logger;
     std::list<dd_fragment> m_frags;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
+    address m_buffer_address;
 };
 
 } // namespace uh::cluster
