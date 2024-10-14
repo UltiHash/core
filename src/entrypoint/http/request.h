@@ -23,7 +23,7 @@ public:
 
     request(partial_parse_result& req, std::unique_ptr<body> body);
 
-    [[nodiscard]] verb method() const;
+    verb method() const;
 
     std::string_view target() const;
     const std::string& path() const;

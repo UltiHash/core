@@ -16,6 +16,13 @@ struct fragment {
     }
 
     std::string to_string() const;
+
+    /**
+     * Return a fragment that spawns a sub range of this fragment.
+     */
+    fragment
+    subfrag(std::size_t start,
+            std::size_t end = std::numeric_limits<std::size_t>::max()) const;
 };
 
 struct address {
@@ -64,6 +71,11 @@ struct address {
      * Return true if the address is empty, ie. was default constructed.
      */
     [[nodiscard]] bool empty() const noexcept;
+
+    /**
+     * Return a sub range of the address.
+     */
+    address range(std::size_t start, std::size_t end) const;
 
     std::string to_string() const;
 
