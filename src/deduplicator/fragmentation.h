@@ -34,12 +34,15 @@ public:
                        std::optional<fragment_set::hint_type>&& hint);
 
     /**
-     * Convert all unstored fragments to stored fragments. Uploads all frags to
-     * downstream storage.
+     * Convert all unstored fragments to stored fragments.
      */
     void flush_fragment_set(fragment_set& set);
+
+    /**
+     * Writes all unstored fragments to downstream storage.
+     */
     coro<void> flush_storage(context& ctx, global_data_view& gdv);
-    coro<void> link_unstored(context& ctx, global_data_view& gdv);
+
 
     std::size_t effective_size() const;
     std::size_t unstored_size() const;
@@ -72,10 +75,13 @@ private:
         address addr;
     };
 
+    void flush_fragments_internal(fragment_set& set);
+    coro<void> link_unstored_fragments(context& ctx, global_data_view& gdv);
+    void mark_as_uploaded();
+
     void compute_unstored_addresses();
 
     unique_buffer<char> unstored_to_buffer();
-    void merge_adjacent_unstored();
 
     dedupe_logger& m_dedupe_logger;
     std::list<dd_fragment> m_frags;

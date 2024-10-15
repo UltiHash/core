@@ -47,22 +47,8 @@ void fragmentation::flush_fragment_set(fragment_set& set) {
         return;
     }
 
-    auto lock = set.lock();
-    LOG_CORO_CONTEXT();
-
-    for (auto& frag : m_frags) {
-        if (frag.type == STORED) {
-            set.mark_deduplication({frag.pointer, frag.size});
-        } else {
-            m_dedupe_logger.log_non_deduplication(frag.addr.get(0));
-
-            set.insert({frag.addr.pointers[0], frag.addr.pointers[1]},
-                       frag.data.substr(0, frag.addr.sizes.front()), frag.header,
-                       frag.hint);
-        }
-    }
-
-    m_unstored_size = 0ull;
+    flush_fragments_internal(set);
+    mark_as_uploaded();
 }
 
 std::size_t fragmentation::effective_size() const { return m_effective_size; }
@@ -111,9 +97,10 @@ coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
     m_buffer_address = co_await gdv.write(ctx, {&buffer[0], buffer.size()});
 
     compute_unstored_addresses();
+    co_await link_unstored_fragments(ctx, gdv);
 }
 
-coro<void> fragmentation::link_unstored(context& ctx, global_data_view& gdv) {
+coro<void> fragmentation::link_unstored_fragments(context& ctx, global_data_view& gdv) {
     //merge_adjacent_unstored();
 
     address unstored;
@@ -127,6 +114,36 @@ coro<void> fragmentation::link_unstored(context& ctx, global_data_view& gdv) {
     if(freed_bytes != 0) {
         throw std::runtime_error("there is a mismatch between the stored address and computed addresses");
     }
+}
+
+void fragmentation::flush_fragments_internal(fragment_set& set) {
+
+    auto lock = set.lock();
+    LOG_CORO_CONTEXT();
+
+    for (auto& frag : m_frags) {
+        if (frag.type == STORED) {
+            set.mark_deduplication({frag.pointer, frag.size});
+            continue;
+        }
+
+        m_dedupe_logger.log_non_deduplication(frag.addr.get(0));
+
+        set.insert({frag.addr.pointers[0], frag.addr.pointers[1]},
+                   frag.data.substr(0, frag.addr.sizes.front()), frag.header,
+                   frag.hint);
+    }
+}
+
+void fragmentation::mark_as_uploaded() {
+    for (auto& frag : m_frags) {
+        if (frag.type != UNSTORED) {
+            continue;
+        }
+
+    }
+
+    m_unstored_size = 0ull;
 }
 
 void fragmentation::compute_unstored_addresses() {
@@ -159,21 +176,6 @@ void fragmentation::compute_unstored_addresses() {
             frag_offs += size;
             current_ofs += size;
         }
-    }
-}
-
-void fragmentation::merge_adjacent_unstored() {
-    auto it = m_frags.begin();
-    while (it != m_frags.end()) {
-        if (it->type == UNSTORED) {
-            auto next_it = std::next(it);
-            while (next_it != m_frags.end() && next_it->type == UNSTORED &&
-                   it->pointer + it->size == next_it->pointer) {
-                it->size += next_it->size;
-                next_it = m_frags.erase(next_it);
-            }
-        }
-        ++it;
     }
 }
 
