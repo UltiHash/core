@@ -29,17 +29,11 @@ coro<object> directory::get_object(const std::string& bucket,
                                    const std::string& object_id) {
     auto dir = co_await m_db.get();
     auto row = co_await dir->execb(
-        "SELECT small::BYTEA, large FROM uh_get_object($1, $2)", bucket,
-        object_id);
+        "SELECT small::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
 
     if (!row) {
         throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");
-    }
-
-    auto large = row->number(1);
-    if (large) {
-        throw std::runtime_error("large objects not supported");
     }
 
     auto small = row->data(0);
