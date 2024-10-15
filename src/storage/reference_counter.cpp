@@ -19,12 +19,6 @@ reference_counter::reference_counter(
     m_env.open(root.c_str(), 0);
 }
 
-void reference_counter::decrement(std::size_t offset, std::size_t size) {
-    address addr;
-    addr.push({offset, size});
-    decrement(addr);
-}
-
 size_t reference_counter::decrement(const address& addr) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
