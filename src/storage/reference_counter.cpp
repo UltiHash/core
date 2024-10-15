@@ -41,22 +41,19 @@ size_t reference_counter::decrement(const address& addr) {
 
             if (!dbi.get(txn, key, value)) {
                 txn.abort();
-                std::string msg = "attempted to to decrease refcount of the "
-                                  "un-tracked page " +
+                std::string msg = "decreasing refcount of un-tracked page " +
                                   std::to_string(page_id);
                 LOG_ERROR() << msg;
-                throw std::invalid_argument(msg);
+                throw std::runtime_error(msg);
             }
 
             std::size_t current_value = std::stoull(std::string(value));
 
             if (current_value == 0) {
                 txn.abort();
-                std::string msg = "encountered page with refcount zero, "
-                                  "even though such entries "
-                                  "should not exist";
+                std::string msg = "encountered page with refcount zero";
                 LOG_ERROR() << msg;
-                throw std::domain_error(msg);
+                throw std::runtime_error(msg);
             }
 
             if (--current_value == 0) {

@@ -9,9 +9,7 @@
 
 namespace uh::cluster {
 
-std::size_t dummy_delete(std::size_t offset, std::size_t size) {
-    return 0;
-}
+std::size_t dummy_delete(std::size_t offset, std::size_t size) { return 0; }
 
 address make_address(std::size_t offset, std::size_t size) {
     address addr;
@@ -31,15 +29,13 @@ BOOST_AUTO_TEST_CASE(test_increment_decrement) {
 
     address test_addr = make_address(0, DEFAULT_PAGE_SIZE);
 
-    BOOST_CHECK_THROW(refcounter.decrement(test_addr),
-                      std::invalid_argument);
+    BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
     BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
     BOOST_CHECK(!delete_triggered);
     BOOST_CHECK_NO_THROW(refcounter.decrement(test_addr));
     BOOST_CHECK(delete_triggered);
-    BOOST_CHECK_THROW(refcounter.decrement(test_addr),
-                      std::invalid_argument);
+    BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
     BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
 }
@@ -50,8 +46,7 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
     {
         reference_counter refcounter(testdir.path(), DEFAULT_PAGE_SIZE,
                                      dummy_delete);
-        BOOST_CHECK_THROW(refcounter.decrement(test_addr),
-                          std::invalid_argument);
+        BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
         BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
         BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
     }
@@ -66,8 +61,7 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
         BOOST_CHECK(!delete_triggered);
         BOOST_CHECK_NO_THROW(refcounter.decrement(test_addr));
         BOOST_CHECK(delete_triggered);
-        BOOST_CHECK_THROW(refcounter.decrement(test_addr),
-                          std::invalid_argument);
+        BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
         BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
         BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
     }
@@ -88,7 +82,7 @@ BOOST_AUTO_TEST_CASE(test_bulk_increment_decrement) {
     BOOST_CHECK(delete_triggered == 0);
     BOOST_CHECK_NO_THROW(refcounter.decrement(test_addr));
     BOOST_CHECK(delete_triggered == 1);
-    BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::invalid_argument);
+    BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
     BOOST_CHECK_NO_THROW(refcounter.increment(0, GIBI_BYTE));
 }

@@ -100,19 +100,21 @@ coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
     co_await link_unstored_fragments(ctx, gdv);
 }
 
-coro<void> fragmentation::link_unstored_fragments(context& ctx, global_data_view& gdv) {
-    //merge_adjacent_unstored();
-
+coro<void> fragmentation::link_unstored_fragments(context& ctx,
+                                                  global_data_view& gdv) {
     address unstored;
-        for (const auto& frag : m_frags) {
+    for (const auto& frag : m_frags) {
         if (frag.type == UNSTORED) {
             unstored.append(frag.addr);
         }
     }
+
     co_await gdv.link(ctx, unstored);
+
     std::size_t freed_bytes = co_await gdv.unlink(ctx, m_buffer_address);
-    if(freed_bytes != 0) {
-        throw std::runtime_error("there is a mismatch between the stored address and computed addresses");
+    if (freed_bytes != 0) {
+        throw std::runtime_error("there is a mismatch between the stored "
+                                 "address and computed addresses");
     }
 }
 
@@ -135,16 +137,7 @@ void fragmentation::flush_fragments_internal(fragment_set& set) {
     }
 }
 
-void fragmentation::mark_as_uploaded() {
-    for (auto& frag : m_frags) {
-        if (frag.type != UNSTORED) {
-            continue;
-        }
-
-    }
-
-    m_unstored_size = 0ull;
-}
+void fragmentation::mark_as_uploaded() { m_unstored_size = 0ull; }
 
 void fragmentation::compute_unstored_addresses() {
     std::optional<fragment> current;
@@ -164,6 +157,7 @@ void fragmentation::compute_unstored_addresses() {
                 if (current_idx >= m_buffer_address.size()) {
                     throw std::runtime_error("insufficient data");
                 }
+
                 current = m_buffer_address.get(current_idx);
                 current_ofs = 0ull;
                 ++current_idx;
@@ -197,7 +191,7 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
-   std::size_t last_frag_pos = 0;
+    std::size_t last_frag_pos = 0;
     for (auto& frag : m_frags) {
         if (frag.type != STORED) {
             continue;
