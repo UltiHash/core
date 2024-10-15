@@ -9,7 +9,9 @@
 
 namespace uh::cluster {
 
-void dummy_delete(std::size_t offset, std::size_t size) {}
+std::size_t dummy_delete(std::size_t offset, std::size_t size) {
+    return 0;
+}
 
 BOOST_AUTO_TEST_CASE(test_increment_decrement) {
     temp_directory testdir;
@@ -18,6 +20,7 @@ BOOST_AUTO_TEST_CASE(test_increment_decrement) {
         testdir.path(), DEFAULT_PAGE_SIZE,
         [&delete_triggered](std::size_t offset, std::size_t size) {
             delete_triggered = true;
+            return 0;
         });
 
     BOOST_CHECK_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE),
@@ -46,6 +49,7 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
             testdir.path(), DEFAULT_PAGE_SIZE,
             [&delete_triggered](std::size_t offset, std::size_t size) {
                 delete_triggered = true;
+                return 0;
             });
         BOOST_CHECK(!delete_triggered);
         BOOST_CHECK_NO_THROW(refcounter.decrement(0, DEFAULT_PAGE_SIZE));
@@ -63,6 +67,7 @@ BOOST_AUTO_TEST_CASE(test_bulk_increment_decrement) {
         testdir.path(), DEFAULT_PAGE_SIZE,
         [&delete_triggered](std::size_t offset, std::size_t size) {
             delete_triggered++;
+            return 0;
         });
     BOOST_CHECK_NO_THROW(refcounter.increment(0, GIBI_BYTE));
     BOOST_CHECK(delete_triggered == 0);
