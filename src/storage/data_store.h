@@ -135,6 +135,8 @@ private:
 
     size_t internal_delete(std::size_t offset, std::size_t size);
 
+    void advance_current_offset_to_next_page();
+
     size_t m_last_file_data_end{};
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;

@@ -375,6 +375,15 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     return alloc;
 }
 
+void data_store::advance_current_offset_to_next_page() {
+    size_t current = m_current_offset.load(std::memory_order_relaxed);
+    size_t rounded;
+
+    do {
+        rounded = (current + (m_conf.page_size - 1ull)) & ~(m_conf.page_size - 1ull);
+    } while (!m_current_offset.compare_exchange_weak(current, rounded, std::memory_order_relaxed));
+}
+
 std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
     std::size_t current_offset = m_current_offset.load();
     if (offset >= current_offset) {
@@ -383,10 +392,11 @@ std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
     }
 
     if (offset + size > current_offset) {
-        // TODO maybe set current_offset to offset + size
+        advance_current_offset_to_next_page();
         size = current_offset - offset;
     }
 
+    LOG_DEBUG() << "internal_delete invoked on " << offset << "[" << size << "]";
     const auto [fd, seek] = get_file_offset_pair(offset);
 
     if (fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size))
