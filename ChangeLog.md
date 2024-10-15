@@ -1,3 +1,7 @@
+## [1.0.0] 2024-10-15
+- Added basic policy and authentication support
+- Finished deletion support
+
 ## [0.6.0] 2024-09-18
 - The storage service can now perform delete operations and reclaim disk space
 - Deduplicator and Entrypoint services are now making use of storage-level delete operations
