@@ -384,11 +384,9 @@ std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
     }
 
     if (offset + size > current_offset) {
-        size = current_offset - offset;
+        return 0;
     }
 
-    LOG_DEBUG() << "internal_delete invoked on " << offset << "[" << size
-                << "]";
     const auto [fd, seek] = get_file_offset_pair(offset);
 
     if (fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size))
