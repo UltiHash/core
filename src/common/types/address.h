@@ -37,12 +37,6 @@ struct address {
     auto operator<=>(const address&) const = default;
 
     /**
-     * Return an address describing the same buffer but with adjacent fragments
-     * merged.
-     */
-    address shrink() const;
-
-    /**
      * Push a fragment to the end of the address.
      */
     void push(const fragment& frag);

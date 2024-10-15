@@ -42,12 +42,12 @@ void fragmentation::push_unstored(
     m_unstored_size += data.size();
 }
 
-void fragmentation::flush_set(fragment_set& set) {
+void fragmentation::flush_fragment_set(fragment_set& set) {
     if (m_unstored_size == 0ull) {
         return;
     }
 
-    flush_fragments(set);
+    flush_fragments_internal(set);
     mark_as_uploaded();
 }
 
@@ -88,18 +88,37 @@ address fragmentation::get_stored_fragments() const {
     return rv;
 }
 
-coro<void> fragmentation::flush_data(context& ctx, global_data_view& gdv) {
+coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
     if (m_unstored_size == 0ull) {
         co_return;
     }
 
     auto buffer = unstored_to_buffer();
-    auto addr = co_await gdv.write(ctx, {&buffer[0], buffer.size()});
+    m_buffer_address = co_await gdv.write(ctx, {&buffer[0], buffer.size()});
 
-    compute_unstored_addresses(addr);
+    compute_unstored_addresses();
+    co_await link_unstored_fragments(ctx, gdv);
 }
 
-void fragmentation::flush_fragments(fragment_set& set) {
+coro<void> fragmentation::link_unstored_fragments(context& ctx,
+                                                  global_data_view& gdv) {
+    address unstored;
+    for (const auto& frag : m_frags) {
+        if (frag.type == UNSTORED) {
+            unstored.append(frag.addr);
+        }
+    }
+
+    co_await gdv.link(ctx, unstored);
+
+    std::size_t freed_bytes = co_await gdv.unlink(ctx, m_buffer_address);
+    if (freed_bytes != 0) {
+        throw std::runtime_error("there is a mismatch between the stored "
+                                 "address and computed addresses");
+    }
+}
+
+void fragmentation::flush_fragments_internal(fragment_set& set) {
 
     auto lock = set.lock();
     LOG_CORO_CONTEXT();
@@ -107,10 +126,6 @@ void fragmentation::flush_fragments(fragment_set& set) {
     for (auto& frag : m_frags) {
         if (frag.type == STORED) {
             set.mark_deduplication({frag.pointer, frag.size});
-            continue;
-        }
-
-        if (frag.uploaded) {
             continue;
         }
 
@@ -122,19 +137,9 @@ void fragmentation::flush_fragments(fragment_set& set) {
     }
 }
 
-void fragmentation::mark_as_uploaded() {
-    for (auto& frag : m_frags) {
-        if (frag.type != UNSTORED) {
-            continue;
-        }
+void fragmentation::mark_as_uploaded() { m_unstored_size = 0ull; }
 
-        frag.uploaded = true;
-    }
-
-    m_unstored_size = 0ull;
-}
-
-void fragmentation::compute_unstored_addresses(const address& addr) {
+void fragmentation::compute_unstored_addresses() {
     std::optional<fragment> current;
     std::size_t current_ofs = 0ull;
     std::size_t current_idx = 0ull;
@@ -144,19 +149,16 @@ void fragmentation::compute_unstored_addresses(const address& addr) {
             continue;
         }
 
-        if (frag.uploaded) {
-            continue;
-        }
-
         std::size_t frag_offs = 0ull;
 
         while (frag_offs < frag.data.size()) {
 
             if (!current || current_ofs >= current->size) {
-                if (current_idx >= addr.size()) {
+                if (current_idx >= m_buffer_address.size()) {
                     throw std::runtime_error("insufficient data");
                 }
-                current = addr.get(current_idx);
+
+                current = m_buffer_address.get(current_idx);
                 current_ofs = 0ull;
                 ++current_idx;
             }
@@ -179,9 +181,6 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
         if (frag.type != UNSTORED) {
             continue;
         }
-        if (frag.uploaded) {
-            continue;
-        }
 
         memcpy(&buffer[offs], frag.data.data(), frag.data.size());
         offs += frag.data.size();
@@ -192,7 +191,7 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
-    size_t last_frag_pos = 0;
+    std::size_t last_frag_pos = 0;
     for (auto& frag : m_frags) {
         if (frag.type != STORED) {
             continue;
@@ -211,7 +210,6 @@ void fragmentation::handle_rejected_fragments(const address& addr,
 
                 m_effective_size += frag.data.size();
                 m_unstored_size += frag.data.size();
-                frag.uploaded = false;
                 break;
             }
         }

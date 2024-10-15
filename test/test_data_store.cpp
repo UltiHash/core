@@ -240,6 +240,20 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
     BOOST_TEST(failures == 0);
 }
 
+BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
+    auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
+    auto addr = ds->write(buffer.string_view());
+    BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
+    addr = ds->write(buffer.string_view());
+    BOOST_TEST(addr.size() == 1);
+    address illegal_addr;
+    illegal_addr.push({0, addr.data_size()/2});
+    illegal_addr.push({addr.data_size()/2, (addr.data_size() - addr.data_size()/2)});
+    BOOST_TEST(addr.data_size() == illegal_addr.data_size());
+    BOOST_TEST(addr.size() != illegal_addr.size());
+    BOOST_CHECK_NE(ds->unlink(illegal_addr), illegal_addr.data_size());
+}
+
 BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
     auto buffer1 = random_buffer(DEFAULT_PAGE_SIZE);
     auto buffer2 = random_buffer(DEFAULT_PAGE_SIZE);

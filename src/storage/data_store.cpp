@@ -1,6 +1,6 @@
 #include "data_store.h"
-#include "common/telemetry/metrics.h"
 #include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
 #include <mutex>
 
@@ -59,7 +59,7 @@ data_store::data_store(data_store_config conf,
     }
 
     for (const auto& of : open_files) {
-        m_open_files.emplace_back(of.second.first,of.first);
+        m_open_files.emplace_back(of.second.first, of.first);
     }
 
     std::filesystem::path last_path;
@@ -88,7 +88,8 @@ data_store::data_store(data_store_config conf,
     m_current_offset = fetch_used_space(last_path);
     // TODO: calculated space on startup may not consider punched holes
     m_used_space = fetch_used_space(last_path);
-    LOG_DEBUG() << "data store " << m_data_store_id << ": current_offset=" << m_current_offset;
+    LOG_DEBUG() << "data store " << m_data_store_id
+                << ": current_offset=" << m_current_offset;
 }
 
 std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
@@ -99,7 +100,8 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
         pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
         pointer + size > current_offset) {
-        LOG_WARN() << "attempted to read data from the out-of-bounds offset=" << pointer << ", with current_offset=" << current_offset;
+        LOG_WARN() << "attempted to read data from the out-of-bounds offset="
+                   << pointer << ", with current_offset=" << current_offset;
         throw std::out_of_range("pointer is out of range");
     }
 
@@ -128,7 +130,8 @@ std::size_t data_store::read_up_to(char* buffer,
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
         pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
         pointer > current_offset) {
-        LOG_WARN() << "attempted to read data from the out-of-bounds offset=" << pointer << ", with current_offset=" << current_offset;
+        LOG_WARN() << "attempted to read data from the out-of-bounds offset="
+                   << pointer << ", with current_offset=" << current_offset;
         throw std::out_of_range("pointer is out of range");
     }
 
@@ -206,12 +209,11 @@ address data_store::write(const std::string_view& data) {
                      static_cast<long>(alloc.seek) + written);
         if (size == 0) {
             throw std::runtime_error("Could not perform write");
-            //TODO: roll back ref counter increment
+            // TODO: roll back ref counter increment
         }
         written += size;
     }
     sync();
-
 
     address data_address;
     data_address.push({.pointer = alloc.global_offset, .size = data.size()});
@@ -255,10 +257,15 @@ address data_store::link(const address& addr) {
     }
 }
 
-void data_store::unlink(const address& addr) {
+size_t data_store::unlink(const address& addr) {
     if constexpr (m_enable_refcount) {
-        m_refcounter.decrement(addr);
+        try {
+            return m_refcounter.decrement(addr);
+        } catch (const std::exception&) {
+            return std::numeric_limits<std::size_t>::max();
+        }
     }
+    return 0;
 }
 
 size_t data_store::id() const noexcept { return m_data_store_id; }
@@ -332,9 +339,7 @@ bool data_store::is_data_file(const std::filesystem::path& path) {
     return path.filename().string().starts_with("data_");
 }
 
-uint64_t data_store::get_used_space() const noexcept {
-    return m_used_space;
-}
+uint64_t data_store::get_used_space() const noexcept { return m_used_space; }
 
 size_t data_store::get_available_space() const noexcept {
     auto capacity = m_conf.max_data_store_size - m_used_space;
@@ -370,18 +375,20 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     return alloc;
 }
 
-void data_store::internal_delete(std::size_t offset, std::size_t size) {
+std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
     std::size_t current_offset = m_current_offset.load();
     if (offset >= current_offset) {
-        LOG_WARN() << "attempted to delete data at the out-of-bounds offset=" << offset << ", with current_offset=" << current_offset;
+        LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
+                   << offset << ", with current_offset=" << current_offset;
         throw std::out_of_range("pointer is out of range");
     }
 
     if (offset + size > current_offset) {
-        // TODO maybe set current_offset to offset + size
         size = current_offset - offset;
     }
 
+    LOG_DEBUG() << "internal_delete invoked on " << offset << "[" << size
+                << "]";
     const auto [fd, seek] = get_file_offset_pair(offset);
 
     if (fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, seek, size))
@@ -390,6 +397,7 @@ void data_store::internal_delete(std::size_t offset, std::size_t size) {
                                 "Could not deallocate the data.");
     }
     m_used_space -= size;
+    return size;
 }
 
 } // end namespace uh::cluster

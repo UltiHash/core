@@ -128,9 +128,10 @@ public:
      * @param ctx traces context
      * @param addr The address specifying the storage regions to be
      * un-referenced.
-     * @return
+     * @return number of bytes freed in response to removing references.
+     * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    coro<void> unlink(context& ctx, const address& addr);
+    coro<std::size_t> unlink(context& ctx, const address& addr);
 
     /**
      * @brief Computes used space across all available storage service

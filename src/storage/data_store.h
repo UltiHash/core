@@ -84,8 +84,10 @@ public:
      * If a storage location is no longer referenced, it is deleted and the
      * space it was using is made available for reuse.
      * @param address: storage locations that are to be unreferenced.
+     * @return number of bytes freed in response to removing references.
+     * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    void unlink(const address& addr);
+    size_t unlink(const address& addr);
 
     /**
      * @brief Gives out the current used space of the data store.
@@ -131,7 +133,7 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
-    void internal_delete(std::size_t offset, std::size_t size);
+    size_t internal_delete(std::size_t offset, std::size_t size);
 
     size_t m_last_file_data_end{};
     const uint32_t m_storage_id;

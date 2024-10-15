@@ -18,35 +18,6 @@ address::address(std::size_t size)
     : pointers(size * 2),
       sizes(size) {}
 
-address address::shrink() const {
-    address rv;
-
-    if (empty()) {
-        return rv;
-    }
-
-    uint128_t ptr(pointers[0], pointers[1]);
-    std::size_t size = sizes[0];
-
-    for (std::size_t index = 1; index < sizes.size(); ++index) {
-
-        uint128_t current(pointers[2 * index], pointers[2 * index + 1]);
-
-        if (ptr + size == current) {
-            size += sizes[index];
-            continue;
-        }
-
-        rv.push({ptr, size});
-        ptr = current;
-        size = sizes[index];
-    }
-
-    rv.push({ptr, size});
-
-    return rv;
-}
-
 void address::push(const fragment& frag) {
     pointers.emplace_back(frag.pointer.get_data()[0]);
     pointers.emplace_back(frag.pointer.get_data()[1]);

@@ -54,7 +54,7 @@ struct local_deduplicator : public deduplicator_interface {
 
     coro<dedupe_response> deduplicate(context& ctx,
                                       const std::string_view& data) override {
-        size_t piece_size = std::ceil(static_cast<double>(data.size()) /
+        std::size_t piece_size = std::ceil(static_cast<double>(data.size()) /
                                       static_cast<double>(pieces_count));
         std::vector<std::string_view> pieces;
         std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
@@ -78,7 +78,7 @@ struct local_deduplicator : public deduplicator_interface {
         dedupe_response dd_resp;
         for (std::size_t i = 0; i < pieces_count; i++) {
             auto resp = co_await proms[i]->get();
-            dd_resp.addr.append(resp.addr.shrink());
+            dd_resp.addr.append(resp.addr);
             dd_resp.effective_size += resp.effective_size;
         }
 
@@ -90,10 +90,10 @@ private:
     coro<size_t> pursue_pointer(context& ctx, std::string_view& data,
                                 uint128_t pointer, bool header,
                                 fragmentation& fragments) {
-        size_t common_size;
+        std::size_t common_size;
 
         uint128_t frag_pointer = pointer - m_dedupe_conf.max_fragment_size;
-        size_t frag_size = m_dedupe_conf.max_fragment_size;
+        std::size_t frag_size = m_dedupe_conf.max_fragment_size;
 
         do {
             auto stored_data =
@@ -119,9 +119,9 @@ private:
 
         LOG_DEBUG() << ctx.peer() << ": deduplicate_data: size=" << data.size();
         fragmentation fragments(m_dedupe_logger);
-        size_t offset = 0;
-        size_t non_dedupe_count = 0;
-        size_t dedupe_count = 0;
+        std::size_t offset = 0;
+        std::size_t non_dedupe_count = 0;
+        std::size_t dedupe_count = 0;
 
         while (!data.empty()) {
             auto f = co_await m_dedupe_workers.post_in_workers(
@@ -150,18 +150,17 @@ private:
                     offset += size;
                 }
                 dedupe_count++;
-                continue;
+            } else {
+                auto frag_size =
+                    std::min(data.size(), m_dedupe_conf.max_fragment_size);
+
+                fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
+                                        std::move(f.hint));
+
+                data = data.substr(frag_size);
+                offset += frag_size;
+                non_dedupe_count++;
             }
-
-            auto frag_size =
-                std::min(data.size(), m_dedupe_conf.max_fragment_size);
-
-            fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
-                                    std::move(f.hint));
-
-            data = data.substr(frag_size);
-            offset += frag_size;
-            non_dedupe_count++;
         }
 
         if constexpr (m_enable_refcount) {
@@ -185,11 +184,12 @@ private:
         }
 
         LOG_DEBUG() << ctx.peer() << ": flushing unstored data to storage";
-        co_await fragments.flush_data(ctx, m_storage);
+        co_await fragments.flush_storage(ctx, m_storage);
 
         LOG_DEBUG() << ctx.peer() << ": flushing fragments to fragment set";
         co_await m_dedupe_workers.post_in_workers(
-            ctx, [this, &fragments] { fragments.flush_set(m_fragment_set); });
+            ctx, [this, &fragments] {
+            fragments.flush_fragment_set(m_fragment_set); });
 
         LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
         dedupe_response result{.effective_size = fragments.effective_size(),

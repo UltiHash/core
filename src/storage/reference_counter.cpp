@@ -7,7 +7,7 @@ namespace uh::cluster {
 
 reference_counter::reference_counter(
     const std::filesystem::path& root, const std::size_t page_size,
-    const std::function<void(std::size_t offset, std::size_t size)>& cb)
+    const std::function<std::size_t(std::size_t offset, std::size_t size)>& cb)
     : m_env(lmdb::env::create()),
       m_page_size(page_size),
       m_cb(cb) {
@@ -19,13 +19,7 @@ reference_counter::reference_counter(
     m_env.open(root.c_str(), 0);
 }
 
-void reference_counter::decrement(std::size_t offset, std::size_t size) {
-    address addr;
-    addr.push({offset, size});
-    decrement(addr);
-}
-
-void reference_counter::decrement(const address& addr) {
+size_t reference_counter::decrement(const address& addr) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -47,10 +41,9 @@ void reference_counter::decrement(const address& addr) {
 
             if (!dbi.get(txn, key, value)) {
                 txn.abort();
-                std::string msg = "attempted to to decrease refcount of the "
-                                  "un-tracked page " +
+                std::string msg = "decreasing refcount of un-tracked page " +
                                   std::to_string(page_id);
-                LOG_WARN() << msg;
+                LOG_ERROR() << msg;
                 throw std::runtime_error(msg);
             }
 
@@ -58,10 +51,8 @@ void reference_counter::decrement(const address& addr) {
 
             if (current_value == 0) {
                 txn.abort();
-                std::string msg = "encountered page with refcount zero, "
-                                  "even though such entries "
-                                  "should not exist";
-                LOG_WARN() << msg;
+                std::string msg = "encountered page with refcount zero";
+                LOG_ERROR() << msg;
                 throw std::runtime_error(msg);
             }
 
@@ -93,12 +84,16 @@ void reference_counter::decrement(const address& addr) {
         }
     }
     txn.commit();
+
+    size_t freed_space = 0;
     for (auto range : marked_for_deletion) {
         std::size_t del_offset = range.first * m_page_size;
         std::size_t del_size =
             (range.second - range.first) * m_page_size + m_page_size;
-        m_cb(del_offset, del_size);
+        freed_space += m_cb(del_offset, del_size);
     }
+
+    return freed_space;
 }
 
 void reference_counter::increment(const std::size_t offset,

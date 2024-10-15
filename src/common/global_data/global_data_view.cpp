@@ -113,13 +113,14 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     co_return rv;
 }
 
-coro<void> global_data_view::unlink(context& ctx, const address& addr) {
-
+coro<std::size_t> global_data_view::unlink(context& ctx, const address& addr) {
+    std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx](auto, auto dn, const auto& info) -> coro<void> {
-            co_await dn->unlink(ctx, info.addr);
+        [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+            freed_bytes += co_await dn->unlink(ctx, info.addr);
         });
+    co_return freed_bytes;
 }
 
 [[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {

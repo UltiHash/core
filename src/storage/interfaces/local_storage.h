@@ -117,7 +117,7 @@ struct local_storage : public storage_interface {
         co_return rv;
     }
 
-    coro<void> unlink(context& ctx, const address& addr) override {
+    coro<std::size_t> unlink(context& ctx, const address& addr) override {
         load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
@@ -127,26 +127,27 @@ struct local_storage : public storage_interface {
             ds_addresses.at(id).push(f);
         }
 
-        std::vector<std::future<void>> futures;
+        std::vector<std::future<std::size_t>> futures;
         futures.reserve(m_data_stores.size());
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
 
-            auto p = std::make_shared<std::promise<void>>();
+            auto p = std::make_shared<std::promise<std::size_t>>();
             boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
                 try {
-                    m_data_stores[i]->unlink(ds_addresses[i]);
-                    p->set_value();
+                    p->set_value(m_data_stores[i]->unlink(ds_addresses[i]));
                 } catch (const std::exception&) {
                     p->set_exception(std::current_exception());
                 }
             });
             futures.emplace_back(p->get_future());
         }
+
+        std::size_t freed_bytes = 0;
         for (auto& f : futures) {
-            f.get();
+            freed_bytes += f.get();
         }
 
-        co_return;
+        co_return freed_bytes;
     }
 
     coro<size_t> get_used_space(context& ctx) override {
