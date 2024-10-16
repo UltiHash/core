@@ -20,7 +20,7 @@ class deduplicator {
 public:
     explicit deduplicator(const service_config& sc,
                           const deduplicator_config& config)
-        : m_etcd_client(sc.etcd_url),
+        : m_etcd_client(make_etcd_client(sc.etcd_config)),
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),

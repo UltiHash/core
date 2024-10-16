@@ -41,7 +41,7 @@ service::service(const service_config& sc, entrypoint_config config)
     : m_config(std::move(config)),
       m_ioc(boost::asio::io_context(m_config.server.threads)),
 
-      m_etcd_client(sc.etcd_url),
+      m_etcd_client(make_etcd_client(sc.etcd_config)),
       m_service_id(get_service_id(m_etcd_client,
                                   get_service_string(ENTRYPOINT_SERVICE),
                                   sc.working_dir)),
