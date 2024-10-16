@@ -19,12 +19,13 @@ service_registry::service_registry(uh::cluster::role role, std::size_t index,
 
 service_registry::registration::registration(
     etcd::SyncClient& client, role r, size_t id,
-    const std::map<std::string, std::string>& kv_pairs, std::size_t ttl)
+    std::map<std::string, std::string> kv_pairs, std::size_t ttl)
     : m_client(client),
-      m_lease(m_client.leasegrant(ttl).value().lease()),
-      m_keepalive(m_client, ttl, m_lease),
+      m_kv_pairs(std::move(kv_pairs)),
+      m_ttl(ttl),
       m_service_role(r),
       m_id(id),
+      m_handle(new etcd_handle(m_client, m_ttl, m_kv_pairs)),
       m_monitor_thread([this] {
           while (true) {
 
@@ -37,14 +38,26 @@ service_registry::registration::registration(
                   return;
               }
 
+              try {
+                  m_handle->check();
+              } catch (const std::exception& e) {
+                  LOG_WARN() << "service registration lost etcd connection: "
+                             << e.what();
+                  try {
+                      m_handle = std::unique_ptr<etcd_handle>(
+                          new etcd_handle(m_client, m_ttl, m_kv_pairs));
+                      LOG_INFO() << "re-established etcd connection";
+                  } catch (const std::exception& e) {
+                      LOG_WARN() << "error connecting to etcd: " << e.what();
+                      continue;
+                  }
+              }
+
               for (auto& kv : m_monitored_attributes) {
-                  m_client.put(kv.first, kv.second(), m_lease);
+                  m_client.put(kv.first, kv.second(), m_handle->lease);
               }
           }
-      }) {
-    for (const auto& pair : kv_pairs)
-        m_client.add(pair.first, pair.second, m_lease);
-}
+      }) {}
 
 void service_registry::registration::monitor(
     etcd_service_attributes key, const std::function<std::string()>& func) {
@@ -63,9 +76,28 @@ service_registry::registration::~registration() {
     }
 
     m_monitor_thread.join();
-    m_client.leaserevoke(m_lease);
-    m_keepalive.Cancel();
 }
+
+service_registry::registration::etcd_handle::etcd_handle(
+    etcd::SyncClient& client, std::size_t ttl,
+    const std::map<std::string, std::string>& kv_pairs)
+    : client(client),
+      lease(client.leasegrant(ttl).value().lease()),
+      keepalive(client, ttl, lease) {
+
+    for (const auto& pair : kv_pairs)
+        client.add(pair.first, pair.second, lease);
+}
+
+service_registry::registration::etcd_handle::~etcd_handle() {
+    try {
+        client.leaserevoke(lease);
+        keepalive.Cancel();
+    } catch (const std::exception&) {
+    }
+}
+
+void service_registry::registration::etcd_handle::check() { keepalive.Check(); }
 
 std::unique_ptr<service_registry::registration>
 service_registry::register_service(const server_config& config) {
@@ -76,7 +108,7 @@ service_registry::register_service(const server_config& config) {
     const std::string attribute_key_base =
         get_attributes_path(m_service_role, m_id);
 
-    const std::map<std::string, std::string> kv_pairs = {
+    std::map<std::string, std::string> kv_pairs = {
         {attribute_key_base +
              get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST),
          get_host()},
@@ -90,7 +122,8 @@ service_registry::register_service(const server_config& config) {
     };
 
     return std::make_unique<registration>(m_etcd_client, m_service_role, m_id,
-                                          kv_pairs, m_etcd_default_ttl);
+                                          std::move(kv_pairs),
+                                          m_etcd_default_ttl);
 }
 
 } // namespace uh::cluster
