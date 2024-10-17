@@ -2,6 +2,7 @@
 #define CONFIG_CONFIG_H
 
 #include "common/db/config.h"
+#include "common/etcd/utils.h"
 #include "common/license/license.h"
 #include "common/telemetry/log.h"
 #include "common/utils/common.h"
@@ -16,7 +17,7 @@
 namespace uh::cluster {
 
 struct service_config {
-    std::string etcd_url = "http://127.0.0.1:2379";
+    uh::cluster::etcd_config etcd_config;
     std::string working_dir = "/var/lib/uh";
     std::string telemetry_url;
     uh::cluster::license license;

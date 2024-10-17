@@ -74,8 +74,18 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->envname(ENV_CFG_LICENSE)
         ->required();
 
-    group->add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
-        ->default_val(cfg.etcd_url);
+    group
+        ->add_option("--registry,-r", cfg.etcd_config.url,
+                     "URL to etcd endpoint")
+        ->default_val(cfg.etcd_config.url);
+    group
+        ->add_option("--registry-user", cfg.etcd_config.username,
+                     "username for etcd authentication")
+        ->envname(ENV_CFG_ETCD_USERNAME);
+    group
+        ->add_option("--registry-pass", cfg.etcd_config.password,
+                     "password for etcd authentication")
+        ->envname(ENV_CFG_ETCD_PASSWORD);
 
     group
         ->add_option("--workdir,-w", cfg.working_dir,

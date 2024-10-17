@@ -20,25 +20,41 @@ public:
     class registration {
     public:
         registration(etcd::SyncClient& client, role role, std::size_t index,
-                     const std::map<std::string, std::string>& kv_pairs,
+                     std::map<std::string, std::string> kv_pairs,
                      std::size_t ttl);
 
         registration(const registration&) = delete;
         registration(registration&&) noexcept = delete;
         registration& operator=(const registration&) = delete;
         registration& operator=(registration&&) = delete;
+
         void monitor(etcd_service_attributes key,
                      const std::function<std::string()>& func);
 
         ~registration();
 
     private:
+        struct etcd_handle {
+
+            etcd_handle(etcd::SyncClient& client, std::size_t ttl,
+                        const std::map<std::string, std::string>& kv_pairs);
+
+            ~etcd_handle();
+            void check();
+
+            etcd::SyncClient& client;
+            int64_t lease;
+            etcd::KeepAlive keepalive;
+        };
+
         etcd::SyncClient& m_client;
-        int64_t m_lease;
-        etcd::KeepAlive m_keepalive;
+        std::map<std::string, std::string> m_kv_pairs;
+        std::size_t m_ttl;
 
         const role m_service_role;
         const size_t m_id;
+
+        std::unique_ptr<etcd_handle> m_handle;
 
         bool m_stop = false;
         std::map<std::string, std::function<std::string()>>
