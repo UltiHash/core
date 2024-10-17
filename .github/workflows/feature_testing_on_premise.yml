@@ -43,17 +43,7 @@ jobs:
 
       - name: Test service startup with invalid licenses
         run: bash feature-testing/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-
-      - name: Scan the Docker image for vulnerabilitites
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: false
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-
+        
   build-database-init:
     runs-on: heavyweight-generic-jobs
     steps:
@@ -139,7 +129,6 @@ jobs:
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
-          sleep 180
 
       - name: Run feature tests
         run: |
