@@ -164,7 +164,8 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 auto limit = std::min((thread_id + 1) * thread_io_count,
                                       test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
-                    addresses.emplace_back(ds->write(test_data[k].string_view()));
+                    addresses.emplace_back(
+                        ds->write(test_data[k].string_view()));
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
@@ -247,8 +248,9 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     addr = ds->write(buffer.string_view());
     BOOST_TEST(addr.size() == 1);
     address illegal_addr;
-    illegal_addr.push({0, addr.data_size()/2});
-    illegal_addr.push({addr.data_size()/2, (addr.data_size() - addr.data_size()/2)});
+    illegal_addr.push({0, addr.data_size() / 2});
+    illegal_addr.push(
+        {addr.data_size() / 2, (addr.data_size() - addr.data_size() / 2)});
     BOOST_TEST(addr.data_size() == illegal_addr.data_size());
     BOOST_TEST(addr.size() != illegal_addr.size());
     BOOST_CHECK_NE(ds->unlink(illegal_addr), illegal_addr.data_size());
@@ -435,9 +437,10 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
                                 buffer1.size()) == 0);
         BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
                                 buffer2.data(), 1337) == 0);
-        //temporarily disable check for internal_delete workaround
-        //BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
-        //                        zero_buffer.data(), zero_buffer.size()) == 0);
+        // temporarily disable check for internal_delete workaround
+        // BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
+        //                         zero_buffer.data(), zero_buffer.size()) ==
+        //                         0);
         BOOST_CHECK(buffer1.size() + 1337 + zero_buffer.size() == t_read);
     }
 }

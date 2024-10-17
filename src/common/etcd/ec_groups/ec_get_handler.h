@@ -34,7 +34,6 @@ private:
         const auto gid = m_scheme.calc_group_id(id);
         if (!m_getter.contains(gid))
             m_getter.add_client(gid, client);
-
     }
 
     void remove_client(size_t id,
@@ -42,7 +41,6 @@ private:
 
         if (client->is_empty())
             m_getter.remove_client(id, client);
-
     }
 
     ec_scheme m_scheme;

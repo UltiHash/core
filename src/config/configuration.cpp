@@ -127,15 +127,15 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.read_cache_capacity_l2);
 
     group
-        ->add_option("--ec-data-shards",
-                     cfg.ec_data_shards,
-                     "number of data shards (K) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-data-shards", cfg.ec_data_shards,
+            "number of data shards (K) in an erasure-coded storage group")
         ->default_val(cfg.ec_data_shards);
 
     group
-        ->add_option("--ec-parity-shards",
-                     cfg.ec_parity_shards,
-                     "number of parity shards (M) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-parity-shards", cfg.ec_parity_shards,
+            "number of parity shards (M) in an erasure-coded storage group")
         ->default_val(cfg.ec_parity_shards);
 }
 

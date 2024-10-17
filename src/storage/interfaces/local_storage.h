@@ -42,8 +42,8 @@ struct local_storage : public storage_interface {
         address total_addr;
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
             const auto part_size = std::min(data.size() - i * part, part);
-            auto addr = m_data_stores[i]->write(
-                data.substr(i * part, part_size));
+            auto addr =
+                m_data_stores[i]->write(data.substr(i * part, part_size));
             total_addr.append(addr);
         }
         co_return total_addr;
