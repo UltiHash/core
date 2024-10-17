@@ -85,8 +85,9 @@ coro<response> put_object::handle(request& req) {
         auto tag = to_hex(hash.finalize());
         LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
+        auto original_size = resp.addr.data_size();
         object obj{.name = req.object_key(),
-                   .size = resp.addr.data_size(),
+                   .size = original_size,
                    .addr = std::move(resp.addr),
                    .etag = tag,
                    .mime = req.header("Content-Type")};
@@ -115,7 +116,7 @@ coro<response> put_object::handle(request& req) {
             static_cast<double>(content_length) / MEBI_BYTE);
 
         res.set("ETag", tag);
-        res.set_original_size(content_length);
+        res.set_original_size(original_size);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
         m_limits.free_storage_size(content_length);
