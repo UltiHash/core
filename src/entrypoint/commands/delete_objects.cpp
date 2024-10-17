@@ -86,18 +86,10 @@ coro<response> delete_objects::handle(request& req) {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
             try {
-                object obj;
-                if constexpr (m_enable_refcount) {
-                    obj = co_await m_directory.get_object(req.bucket(), *key);
-                } else {
-                    obj = co_await m_directory.head_object(req.bucket(), *key);
-                }
-
+                object obj =
+                    co_await m_directory.get_object(req.bucket(), *key);
                 co_await m_directory.delete_object(req.bucket(), *key);
-
-                if constexpr (m_enable_refcount) {
-                    co_await m_gdv.unlink(req.context(), obj.addr.value());
-                }
+                co_await m_gdv.unlink(req.context(), obj.addr.value());
 
                 m_limits.free_storage_size(obj.size);
             } catch (command_exception&) {
