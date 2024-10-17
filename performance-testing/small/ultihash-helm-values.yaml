@@ -26,7 +26,7 @@ global:
 
 recovery:
   nodeSelector:
-    workload-type: directory
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
@@ -37,7 +37,7 @@ recovery:
 etcd:
   replicaCount: 1
   nodeSelector:
-    workload-type: directory
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
@@ -46,12 +46,12 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 8Gi
-    storageClass: local-path
+    storageClass: ebs-csi-gp2
 
 entrypoint:
-  replicas: 2
+  replicas: 1
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
@@ -68,19 +68,14 @@ entrypoint:
             values:
             - entrypoint
         topologyKey: kubernetes.io/hostname
-  extraEnv:
-    - name: UH_DB_DIRECTORY_CONNECTIONS
-      value: "5"
-    - name: UH_DB_MULTIPART_CONNECTIONS
-      value: "5"
 
   ingress:
     enabled: false
 
 storage:
-  replicas: 2
-  storageClass: local-path          
-  storageSize: 70Gi
+  replicas: 1
+  storageClass: ebs-csi-gp2        
+  storageSize: 10Ti
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -92,26 +87,26 @@ storage:
             - storage
         topologyKey: kubernetes.io/hostname                  
   nodeSelector:
-    workload-type: storage
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
-  localVolumes:                      
-    - name: storage0
-      hostPath: "/storage0"
-      containerPath: "/var/lib/uh/storage0"
-    - name: storage1
-      hostPath: "/storage1"
-      containerPath: "/var/lib/uh/storage1"
+  #localVolumes:                      
+  #  - name: storage0
+  #    hostPath: "/storage0"
+  #    containerPath: "/var/lib/uh/storage0"
+  #  - name: storage1
+  #    hostPath: "/storage1"
+  #    containerPath: "/var/lib/uh/storage1"
 
 
 deduplicator:
-  replicas: 2
-  storageClass: local-path
-  storageSize: 10Gi
+  replicas: 1
+  storageClass: ebs-csi-gp2
+  storageSize: 200Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -123,7 +118,7 @@ deduplicator:
             - deduplicator
         topologyKey: kubernetes.io/hostname
   nodeSelector:
-    workload-type: storage
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
@@ -134,7 +129,7 @@ deduplicator:
 database:
   primary:
     nodeSelector:
-      workload-type: directory
+      workload-type: test10tb
       purpose: performance-testing-small
     tolerations:
     - key: "purpose"
@@ -143,13 +138,13 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: local-path
-      size: 20Gi
+      storageClass: ebs-csi-gp2
+      size: 200Gi
 
 databaseInit:
   image: $DATABASE_INIT_IMAGE
   nodeSelector:
-    workload-type: directory
+    workload-type: test10tb
     purpose: performance-testing-small
   tolerations:
     - key: "purpose"
