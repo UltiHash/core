@@ -74,8 +74,18 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->envname(ENV_CFG_LICENSE)
         ->required();
 
-    group->add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
-        ->default_val(cfg.etcd_url);
+    group
+        ->add_option("--registry,-r", cfg.etcd_config.url,
+                     "URL to etcd endpoint")
+        ->default_val(cfg.etcd_config.url);
+    group
+        ->add_option("--registry-user", cfg.etcd_config.username,
+                     "username for etcd authentication")
+        ->envname(ENV_CFG_ETCD_USERNAME);
+    group
+        ->add_option("--registry-pass", cfg.etcd_config.password,
+                     "password for etcd authentication")
+        ->envname(ENV_CFG_ETCD_PASSWORD);
 
     group
         ->add_option("--workdir,-w", cfg.working_dir,
@@ -127,15 +137,15 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.read_cache_capacity_l2);
 
     group
-        ->add_option("--ec-data-shards",
-                     cfg.ec_data_shards,
-                     "number of data shards (K) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-data-shards", cfg.ec_data_shards,
+            "number of data shards (K) in an erasure-coded storage group")
         ->default_val(cfg.ec_data_shards);
 
     group
-        ->add_option("--ec-parity-shards",
-                     cfg.ec_parity_shards,
-                     "number of parity shards (M) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-parity-shards", cfg.ec_parity_shards,
+            "number of parity shards (M) in an erasure-coded storage group")
         ->default_val(cfg.ec_parity_shards);
 }
 
