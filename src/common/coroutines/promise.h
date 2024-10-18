@@ -402,6 +402,73 @@ private:
     std::shared_ptr<shared_state<void>> m_shared_state;
 };
 
+/**
+ * Use as a completion token in cojunction with boost async operations.
+ *
+ * Usage:
+ *    promise<std::size_t> p;
+ *    auto f = p.get_future();
+ *    ioc.async_read(..., ..., use_promise(std::move(p)));
+ *    ...
+ *    auto result = f.get();
+ */
+template <typename result>
+requires(!std::is_same_v<result, void>)
+auto use_promise(promise<result>&& p) {
+    return [p = std::move(p)](const boost::system::error_code& e,
+                              result r) mutable -> void {
+        if (e.failed()) {
+            try {
+                throw std::runtime_error(e.to_string());
+            } catch (const std::exception& e) {
+                p.set_exception(std::current_exception());
+            }
+        } else {
+            p.set_value(std::move(r));
+        }
+    };
+}
+
+template <typename result>
+requires std::is_same_v<result, void>
+auto use_promise(promise<void>&& p) {
+    return
+        [p = std::move(p)](const boost::system::error_code& e) mutable -> void {
+            if (e.failed()) {
+                try {
+                    throw std::runtime_error(e.to_string());
+                } catch (const std::exception& e) {
+                    p.set_exception(std::current_exception());
+                }
+            } else {
+                p.set_value();
+            }
+        };
+}
+
+template <typename result>
+requires(!std::is_same_v<result, void>)
+auto use_promise_cospawn(promise<result>&& p) {
+    return [p = std::move(p)](std::exception_ptr e, result r) mutable -> void {
+        if (e) {
+            p.set_exception(e);
+        } else {
+            p.set_value(std::move(r));
+        }
+    };
+}
+
+template <typename result>
+requires(std::is_same_v<result, void>)
+auto use_promise_cospawn(promise<void>&& p) {
+    return [p = std::move(p)](std::exception_ptr e) mutable -> void {
+        if (e) {
+            p.set_exception(e);
+        } else {
+            p.set_value();
+        }
+    };
+}
 } // namespace uh::cluster
 
 #endif
