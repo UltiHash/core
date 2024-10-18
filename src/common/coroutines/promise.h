@@ -460,7 +460,7 @@ auto use_promise_cospawn(promise<result>&& p) {
 
 template <typename result>
 requires(std::is_same_v<result, void>)
-auto use_promise_cospawn(promise<void>&& p) {
+auto use_promise_cospawn(promise<result>&& p) {
     return [p = std::move(p)](std::exception_ptr e) mutable -> void {
         if (e) {
             p.set_exception(e);
