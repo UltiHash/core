@@ -151,7 +151,7 @@ jobs:
           S3_DESTINATION_BUCKET: test
           RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
           READ_TIMEOUT: "600"
-          JOBS: "4"
+          JOBS: "10"
         with:
           input: performance-testing/small/performance-tester.yaml
           output: performance-tester-ultihash.yaml
