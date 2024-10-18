@@ -1,5 +1,6 @@
 #include "multipart.h"
 #include "common/crypto/hash.h"
+#include "common/telemetry/metrics.h"
 #include "entrypoint/http/command_exception.h"
 
 using namespace uh::cluster::ep::http;
