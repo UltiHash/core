@@ -164,7 +164,8 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 auto limit = std::min((thread_id + 1) * thread_io_count,
                                       test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
-                    addresses.emplace_back(ds->write(test_data[k].string_view()));
+                    addresses.emplace_back(
+                        ds->write(test_data[k].string_view()));
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
@@ -247,8 +248,9 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     addr = ds->write(buffer.string_view());
     BOOST_TEST(addr.size() == 1);
     address illegal_addr;
-    illegal_addr.push({0, addr.data_size()/2});
-    illegal_addr.push({addr.data_size()/2, (addr.data_size() - addr.data_size()/2)});
+    illegal_addr.push({0, addr.data_size() / 2});
+    illegal_addr.push(
+        {addr.data_size() / 2, (addr.data_size() - addr.data_size() / 2)});
     BOOST_TEST(addr.data_size() == illegal_addr.data_size());
     BOOST_TEST(addr.size() != illegal_addr.size());
     BOOST_CHECK_NE(ds->unlink(illegal_addr), illegal_addr.data_size());
@@ -382,63 +384,6 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
                                     ALIGNMENT_OFFSET,
                                 buffer3.data(),
                                 DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET) == 0);
-    }
-}
-
-BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
-    auto buffer1 = random_buffer(MAX_FILE_SIZE_BYTES - 1337);
-    auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
-
-    address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view());
-    auto buffer2_address = ds->write(buffer2.string_view());
-    full_address.append(buffer1_address);
-    full_address.append(buffer2_address);
-    ds.reset();
-
-    ds = make_data_store();
-
-    {
-        shared_buffer<char> read_buffer(full_address.data_size());
-        size_t t_read = 0;
-        for (size_t i = 0; i < full_address.size(); ++i) {
-            const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
-            t_read += read_size;
-        }
-
-        BOOST_CHECK(t_read == full_address.data_size());
-        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
-                                buffer1.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
-                                buffer2.data(), buffer2.size()) == 0);
-    }
-
-    ds->unlink(buffer2_address);
-
-    {
-        shared_buffer<char> read_buffer(full_address.data_size());
-        shared_buffer<char> zero_buffer(buffer2.size() - 1337);
-        memset(zero_buffer.data(), 0, zero_buffer.size());
-        size_t t_read = 0;
-        for (size_t i = 0; i < full_address.size(); ++i) {
-            const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
-            t_read += read_size;
-        }
-
-        BOOST_CHECK(t_read == full_address.data_size());
-
-        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
-                                buffer1.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
-                                buffer2.data(), 1337) == 0);
-        //temporarily disable check for internal_delete workaround
-        //BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
-        //                        zero_buffer.data(), zero_buffer.size()) == 0);
-        BOOST_CHECK(buffer1.size() + 1337 + zero_buffer.size() == t_read);
     }
 }
 

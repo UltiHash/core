@@ -55,7 +55,7 @@ struct local_deduplicator : public deduplicator_interface {
     coro<dedupe_response> deduplicate(context& ctx,
                                       const std::string_view& data) override {
         std::size_t piece_size = std::ceil(static_cast<double>(data.size()) /
-                                      static_cast<double>(pieces_count));
+                                           static_cast<double>(pieces_count));
         std::vector<std::string_view> pieces;
         std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
         proms.reserve(pieces_count);
@@ -154,8 +154,8 @@ private:
                 auto frag_size =
                     std::min(data.size(), m_dedupe_conf.max_fragment_size);
 
-                fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
-                                        std::move(f.hint));
+                fragments.push_unstored(data.substr(0, frag_size),
+                                        (offset == 0), std::move(f.hint));
 
                 data = data.substr(frag_size);
                 offset += frag_size;
@@ -163,23 +163,20 @@ private:
             }
         }
 
-        if constexpr (m_enable_refcount) {
-            auto stored_fragments = fragments.get_stored_fragments();
-            if (!stored_fragments.empty()) {
-                auto rejected = co_await m_storage.link(ctx, stored_fragments);
+        auto stored_fragments = fragments.get_stored_fragments();
+        if (!stored_fragments.empty()) {
+            auto rejected = co_await m_storage.link(ctx, stored_fragments);
 
-                if (!rejected.empty()) {
-                    LOG_DEBUG() << ctx.peer() << ": " << rejected.size()
-                                << " fragments rejected, "
-                                << rejected.data_size() << " in bytes";
-                    co_await m_dedupe_workers.post_in_workers(
-                        ctx, [this, &rejected, &fragments] {
-                            fragments.handle_rejected_fragments(rejected,
-                                                                m_fragment_set);
-                        });
-                    LOG_DEBUG()
-                        << ctx.peer() << ": handle_rejected_fragments done";
-                }
+            if (!rejected.empty()) {
+                LOG_DEBUG() << ctx.peer() << ": " << rejected.size()
+                            << " fragments rejected, " << rejected.data_size()
+                            << " in bytes";
+                co_await m_dedupe_workers.post_in_workers(
+                    ctx, [this, &rejected, &fragments] {
+                        fragments.handle_rejected_fragments(rejected,
+                                                            m_fragment_set);
+                    });
+                LOG_DEBUG() << ctx.peer() << ": handle_rejected_fragments done";
             }
         }
 
@@ -187,9 +184,9 @@ private:
         co_await fragments.flush_storage(ctx, m_storage);
 
         LOG_DEBUG() << ctx.peer() << ": flushing fragments to fragment set";
-        co_await m_dedupe_workers.post_in_workers(
-            ctx, [this, &fragments] {
-            fragments.flush_fragment_set(m_fragment_set); });
+        co_await m_dedupe_workers.post_in_workers(ctx, [this, &fragments] {
+            fragments.flush_fragment_set(m_fragment_set);
+        });
 
         LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
         dedupe_response result{.effective_size = fragments.effective_size(),
@@ -209,12 +206,6 @@ private:
     dedupe_logger m_dedupe_logger;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
     constexpr static std::size_t pieces_count = 2;
-
-#ifdef DISABLE_STORAGE_REFCOUNT
-    static constexpr bool m_enable_refcount = false;
-#else
-    static constexpr bool m_enable_refcount = true;
-#endif
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_LOCAL_DEDUPLICATOR_H

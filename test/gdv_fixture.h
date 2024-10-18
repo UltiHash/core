@@ -34,10 +34,11 @@ public:
                 std::make_unique<storage>(service_cfg, storage_cfg));
         }
 
-        m_recovery = std::make_unique<recovery>(service_config{}, recovery_config{});
+        m_recovery =
+            std::make_unique<recovery>(service_config{}, recovery_config{});
         int i = 0;
 
-        m_ioc.post([this]{m_recovery->run();});
+        m_ioc.post([this] { m_recovery->run(); });
         m_threads.emplace_back([this, i] {
             try {
                 m_ioc.run();
