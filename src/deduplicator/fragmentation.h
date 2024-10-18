@@ -43,7 +43,6 @@ public:
      */
     coro<void> flush_storage(context& ctx, global_data_view& gdv);
 
-
     std::size_t effective_size() const;
     std::size_t unstored_size() const;
 

@@ -146,11 +146,6 @@ private:
     std::mutex m_allocate_mutex;
     std::mutex m_sync_mutex;
     reference_counter m_refcounter;
-#ifdef DISABLE_STORAGE_REFCOUNT
-    static constexpr bool m_enable_refcount = false;
-#else
-    static constexpr bool m_enable_refcount = true;
-#endif
 };
 
 } // end namespace uh::cluster

@@ -106,22 +106,18 @@ coro<response> complete_multipart::handle(request& req) {
                .mime = info.mime};
 
     std::optional<object> old_obj;
-    if constexpr (m_enable_refcount) {
-        try {
-            old_obj =
-                co_await m_directory.get_object(req.bucket(), req.object_key());
-        } catch (command_exception&) {
-            old_obj = std::nullopt;
-        }
+    try {
+        old_obj =
+            co_await m_directory.get_object(req.bucket(), req.object_key());
+    } catch (command_exception&) {
+        old_obj = std::nullopt;
     }
 
     co_await m_directory.put_object(req.bucket(), obj);
 
-    if constexpr (m_enable_refcount) {
-        if (old_obj.has_value() && old_obj->addr.has_value()) {
-            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
-            m_limits.free_storage_size(old_obj->size);
-        }
+    if (old_obj.has_value() && old_obj->addr.has_value()) {
+        co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+        m_limits.free_storage_size(old_obj->size);
     }
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);

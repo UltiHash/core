@@ -24,8 +24,7 @@ struct storage_group : public storage_interface {
         if (!active_recovery) {
             if (data_nodes == 1 and ec_nodes == 0) {
                 m_status = healthy;
-            }
-            else {
+            } else {
                 m_status_watcher.emplace(m_attributes, m_status);
             }
         } else {
@@ -132,7 +131,8 @@ struct storage_group : public storage_interface {
         std::atomic<size_t> freed_bytes;
         co_await perform_for_address(
             addr, m_getter, m_ioc,
-            [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+            [&ctx, &freed_bytes](auto, auto dn,
+                                 const auto& info) -> coro<void> {
                 freed_bytes += co_await dn->unlink(ctx, info.addr);
             });
         co_return freed_bytes;
@@ -171,7 +171,6 @@ struct storage_group : public storage_interface {
                        size_t size, char* buffer) override {
         throw std::runtime_error("unsupported operation in storage group");
     }
-
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
