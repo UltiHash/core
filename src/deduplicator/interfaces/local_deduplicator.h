@@ -48,8 +48,7 @@ struct local_deduplicator : public deduplicator_interface {
           m_fragment_set(m_dedupe_conf.working_dir / "log",
                          m_dedupe_conf.set_capacity, storage),
           m_storage(storage),
-          m_dedupe_workers(m_storage.get_executor(),
-                           m_dedupe_conf.worker_thread_count),
+          m_dedupe_workers(m_dedupe_conf.worker_thread_count),
           m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {}
 
     coro<dedupe_response> deduplicate(context& ctx,
