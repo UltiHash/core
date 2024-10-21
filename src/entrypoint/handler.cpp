@@ -23,7 +23,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         try {
             req = co_await m_factory.create(s);
-            LOG_DEBUG() << req->peer() << ": read request: " << *req;
+            LOG_INFO() << req->peer() << ": read request: " << *req;
 
             resp = co_await handle_request(s, *req);
             metric<success>::increase(1);
