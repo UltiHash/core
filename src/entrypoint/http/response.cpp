@@ -1,5 +1,5 @@
 #include "response.h"
-#include "common/coroutines/awaitable_promise.h"
+#include "common/coroutines/promise.h"
 #include "common/types/common_types.h"
 #include "common/utils/double_buffer.h"
 #include "common/utils/random.h"
@@ -110,9 +110,7 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res) {
     beast::http::response_serializer<beast::http::empty_body> sr(res.base());
     beast::http::write_header(out, sr);
 
-    using promise_type =
-        awaitable_promise<std::size_t, boost::asio::any_io_executor>;
-    std::shared_ptr<promise_type> promise;
+    std::optional<future<std::size_t>> fut;
 
     std::size_t buffer_size =
         body.length() && *body.length() < BUFFER_CHUNK_SIZE ? *body.length()
@@ -126,20 +124,20 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res) {
         auto count = co_await res.body().read(buffer);
         buffer.resize(count);
 
-        if (promise) {
-            co_await promise->get();
+        if (fut) {
+            co_await fut->get();
         }
 
-        promise = std::make_shared<promise_type>(out.get_executor());
-        asio::async_write(out, asio::buffer(buffer),
-                          use_awaitable_promise(promise));
+        promise<std::size_t> p;
+        fut = p.get_future();
+        asio::async_write(out, asio::buffer(buffer), use_promise(std::move(p)));
 
         buffers.flip();
     }
 
-    if (promise) {
-        co_await promise->get();
-        promise.reset();
+    if (fut) {
+        co_await fut->get();
+        fut.reset();
     }
 }
 

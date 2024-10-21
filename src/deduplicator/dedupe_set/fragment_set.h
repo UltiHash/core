@@ -31,8 +31,15 @@ public:
             h.m_own = false;
         }
 
+        hint_type& operator=(hint_type&& other) {
+            m_hint = other.m_hint;
+            m_own = true;
+            other.m_own = false;
+            return *this;
+        }
+
     private:
-        const std::set<fragment_set_element>::const_iterator m_hint;
+        std::set<fragment_set_element>::const_iterator m_hint;
         bool m_own = true;
     };
 

@@ -1,7 +1,7 @@
 #ifndef CORE_COMMON_POOL_H
 #define CORE_COMMON_POOL_H
 
-#include "common/coroutines/awaitable_promise.h"
+#include "common/coroutines/promise.h"
 #include "common/debug/debug.h"
 
 #include <list>
@@ -55,7 +55,7 @@ public:
     coro<handle> get() {
         LOG_CORO_CONTEXT();
 
-        std::shared_ptr<awaitable_promise<handle>> promise;
+        future<std::unique_ptr<resource>> f;
 
         {
             std::unique_lock<std::mutex> lk(*m_mutex);
@@ -65,14 +65,15 @@ public:
                 m_resources.pop_front();
                 lk.unlock();
 
-                co_return handle(std::move(res), std::ref(*this));
+                co_return handle(std::move(res), *this);
             }
 
-            promise = std::make_shared<awaitable_promise<handle>>(m_ctx);
-            m_promises.push_back(promise);
+            promise<std::unique_ptr<resource>> p;
+            f = p.get_future();
+            m_promises.push_back(std::move(p));
         }
 
-        co_return co_await promise->get();
+        co_return handle(co_await f.get(), *this);
     }
 
 private:
@@ -88,10 +89,10 @@ private:
         std::unique_lock<std::mutex> lk(*m_mutex);
 
         if (!m_promises.empty()) {
-            auto promise = m_promises.front();
+            auto promise = std::move(m_promises.front());
             m_promises.pop_front();
 
-            promise->set(handle(std::move(r), *this));
+            promise.set_value(std::move(r));
             return;
         }
 
@@ -101,7 +102,7 @@ private:
     boost::asio::io_context& m_ctx;
     std::unique_ptr<std::mutex> m_mutex;
     std::list<std::unique_ptr<resource>> m_resources;
-    std::list<std::shared_ptr<awaitable_promise<handle>>> m_promises;
+    std::list<promise<std::unique_ptr<resource>>> m_promises;
 };
 
 } // namespace uh::cluster

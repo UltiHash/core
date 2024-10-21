@@ -98,6 +98,36 @@ coro<response> complete_multipart::handle(request& req) {
 
     auto etag = multipart_etag(info);
 
+    co_await apply(req, info, etag);
+
+    metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
+
+    response res;
+    res.set("ETag", etag);
+    res.set_original_size(info.data_size);
+    res.set_effective_size(info.effective_size);
+
+    boost::property_tree::ptree pt;
+    pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
+    pt.put("CompleteMultipartUploadResult.Key", info.key);
+    pt.put("CompleteMultipartUploadResult.ETag", etag);
+    res << pt;
+
+    co_await m_uploads.remove_upload(upload_id);
+    co_return res;
+}
+
+std::string complete_multipart::action_id() const {
+    return "s3:CompleteMultipartUpload";
+}
+
+/*
+ * This function was factored out of handle(), as gcc would issue warnings of
+ * type `mismatched-new-delete`: _called on pointer returned from a mismatched
+ * allocation function_.
+ */
+coro<void> complete_multipart::apply(request& req, const upload_info& info,
+                                     const std::string& etag) {
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),
                .size = addr.data_size(),
@@ -119,26 +149,6 @@ coro<response> complete_multipart::handle(request& req) {
         co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
         m_limits.free_storage_size(old_obj->size);
     }
-
-    metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
-
-    response res;
-    res.set("ETag", etag);
-    res.set_original_size(info.data_size);
-    res.set_effective_size(info.effective_size);
-
-    boost::property_tree::ptree pt;
-    pt.put("CompleteMultipartUploadResult.Bucket", req.bucket());
-    pt.put("CompleteMultipartUploadResult.Key", info.key);
-    pt.put("CompleteMultipartUploadResult.ETag", etag);
-    res << pt;
-
-    co_await m_uploads.remove_upload(upload_id);
-    co_return res;
-}
-
-std::string complete_multipart::action_id() const {
-    return "s3:CompleteMultipartUpload";
 }
 
 } // namespace uh::cluster

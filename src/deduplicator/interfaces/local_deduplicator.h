@@ -48,8 +48,7 @@ struct local_deduplicator : public deduplicator_interface {
           m_fragment_set(m_dedupe_conf.working_dir / "log",
                          m_dedupe_conf.set_capacity, storage),
           m_storage(storage),
-          m_dedupe_workers(m_storage.get_executor(),
-                           m_dedupe_conf.worker_thread_count),
+          m_dedupe_workers(m_dedupe_conf.worker_thread_count),
           m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {}
 
     coro<dedupe_response> deduplicate(context& ctx,
@@ -57,27 +56,27 @@ struct local_deduplicator : public deduplicator_interface {
         std::size_t piece_size = std::ceil(static_cast<double>(data.size()) /
                                            static_cast<double>(pieces_count));
         std::vector<std::string_view> pieces;
-        std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
-        proms.reserve(pieces_count);
+        std::vector<future<dedupe_response>> futures;
+        futures.reserve(pieces_count);
         pieces.reserve(pieces_count);
 
         LOG_DEBUG() << ctx.peer() << ": deduplicating " << data.size() << " in "
                     << pieces_count << " chunks";
+
         for (std::size_t i = 0; i < pieces_count; ++i) {
             pieces.emplace_back(data.substr(
                 i * piece_size,
                 std::min(piece_size, data.size() - i * piece_size)));
-            auto p = std::make_shared<awaitable_promise<dedupe_response>>(
-                m_storage.get_executor());
+            promise<dedupe_response> p;
+            futures.emplace_back(p.get_future());
             boost::asio::co_spawn(m_storage.get_executor(),
                                   deduplicate_data(ctx, pieces.back()),
-                                  use_awaitable_promise_cospawn(p));
-            proms.emplace_back(p);
+                                  use_promise_cospawn(std::move(p)));
         }
 
         dedupe_response dd_resp;
         for (std::size_t i = 0; i < pieces_count; i++) {
-            auto resp = co_await proms[i]->get();
+            auto resp = co_await futures[i].get();
             dd_resp.addr.append(resp.addr);
             dd_resp.effective_size += resp.effective_size;
         }
