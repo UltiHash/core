@@ -21,6 +21,9 @@ public:
     std::string action_id() const override;
 
 private:
+    coro<void> apply(ep::http::request& req, const upload_info& info,
+                     const std::string& etag);
+
     directory& m_directory;
     global_data_view& m_gdv;
     multipart_state& m_uploads;
