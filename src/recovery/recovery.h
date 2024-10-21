@@ -27,8 +27,10 @@ public:
 
     void run() {
         LOG_INFO() << "running recovery service";
-        std::unique_lock lock(m_mutex);
-        m_cv.wait(lock, [this] { return m_stopped; });
+        while (!m_stopped) {
+            std::unique_lock lock(m_mutex);
+            m_cv.wait(lock, [this] { return m_stopped; });
+        }
     }
 
     void stop() {
