@@ -55,6 +55,10 @@ value_provider make_value_provider() {
         return r.authenticated_user().id;
     });
 
+    vp.add("aws:SourceIp", [](const auto& r, const auto&) {
+        return r.peer().address().to_string();
+    });
+
     return vp;
 }
 
