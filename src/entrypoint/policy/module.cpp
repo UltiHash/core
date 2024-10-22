@@ -38,7 +38,7 @@ coro<effect> module::check(const http::request& request,
 
     bool has_allow = false;
 
-    auto vars = variables::from_request(request, cmd);
+    variables vars(request, cmd);
 
     for (const auto& policy : m_policies) {
         auto result = policy.check(vars);

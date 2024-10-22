@@ -1,6 +1,7 @@
 #ifndef CORE_ENTRYPOINT_VARIABLES_H
 #define CORE_ENTRYPOINT_VARIABLES_H
 
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -19,34 +20,41 @@ class request;
 
 namespace uh::cluster::ep::policy {
 
+class value_provider {
+public:
+    typedef std::function<std::optional<std::string>(const http::request&,
+                                                     const command&)>
+        function_type;
+
+    std::optional<std::string>
+    get(std::string_view name, const http::request& r, const command& c) const;
+
+    void add(const std::string& name, function_type func);
+
+private:
+    std::map<std::string, function_type, std::less<>> m_providers;
+};
+
 class variables {
 public:
     typedef std::map<std::string, std::string>::const_iterator const_iterator;
     typedef std::map<std::string, std::string>::value_type value_type;
 
-    variables() = default;
+    variables(const http::request& req, const command& cmd);
     variables(variables&&) = default;
     variables(const variables&) = default;
 
-    variables(std::initializer_list<value_type> init);
-
-    const_iterator begin() const;
-    const_iterator end() const;
-
-    const_iterator find(std::string_view name) const;
-
     std::optional<std::string_view> get(std::string_view name) const;
-
-    void set(std::string name, std::string value);
-
-    static variables from_request(const http::request& req, const command& cmd);
+    void put(std::string k, std::string v);
 
     static constexpr const char* NAME_ACTION_ID = "__uh_action_id";
     static constexpr const char* NAME_RESOURCE_ARN = "__resource_arn";
     static constexpr const char* NAME_PRINCIPAL = "__uh_principal";
 
 private:
-    std::map<std::string, std::string> m_vars;
+    const http::request& m_req;
+    const command& m_cmd;
+    mutable std::map<std::string, std::string, std::less<>> m_cache;
 };
 
 /**

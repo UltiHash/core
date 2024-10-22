@@ -16,6 +16,7 @@ namespace uh::cluster::ep::http {
 
 class request {
 public:
+    request() = default;
     request(boost::beast::http::request<boost::beast::http::empty_body> headers,
             std::unique_ptr<body> body, ep::user::user user,
             boost::asio::ip::tcp::endpoint peer);

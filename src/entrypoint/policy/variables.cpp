@@ -1,5 +1,6 @@
 #include "variables.h"
 
+#include "common/telemetry/log.h"
 #include "common/utils/strings.h"
 #include "entrypoint/commands/command.h"
 
@@ -32,46 +33,64 @@ std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
     return std::string::npos;
 }
 
-} // namespace
+value_provider make_value_provider() {
+    value_provider vp;
 
-variables::variables(std::initializer_list<variables::value_type> init)
-    : m_vars(std::move(init)) {}
+    vp.add(variables::NAME_ACTION_ID,
+           [](const auto&, const auto& c) { return c.action_id(); });
 
-variables::const_iterator variables::begin() const { return m_vars.begin(); }
+    vp.add(variables::NAME_RESOURCE_ARN, [](const auto& r, const auto&) {
+        return "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
+    });
 
-variables::const_iterator variables::end() const { return m_vars.end(); }
+    vp.add(variables::NAME_PRINCIPAL, [](const auto& r, const auto&) {
+        return r.authenticated_user().arn;
+    });
 
-variables::const_iterator variables::find(std::string_view name) const {
-    return m_vars.find(std::string(name));
+    return vp;
 }
 
-std::optional<std::string_view> variables::get(std::string_view name) const {
-    auto it = find(name);
-    if (it == end()) {
+value_provider& default_value_provider() {
+    static value_provider vp = make_value_provider();
+    return vp;
+}
+
+} // namespace
+
+std::optional<std::string> value_provider::get(std::string_view name,
+                                               const http::request& r,
+                                               const command& c) const {
+    auto it = m_providers.find(name);
+    if (it == m_providers.end()) {
         return {};
     }
 
-    return it->second;
+    return it->second(r, c);
 }
 
-void variables::set(std::string name, std::string value) {
-    m_vars[std::move(name)] = std::move(value);
+void value_provider::add(const std::string& name, function_type func) {
+    m_providers[name] = std::move(func);
 }
 
-variables variables::from_request(const http::request& req,
-                                  const command& cmd) {
-    variables rv;
+variables::variables(const http::request& req, const command& cmd)
+    : m_req(req),
+      m_cmd(cmd) {}
 
-    rv.set(variables::NAME_ACTION_ID, cmd.action_id());
-
-    std::string arn = "arn:aws:s3:::" + req.bucket() + "/" + req.object_key();
-    rv.set(variables::NAME_RESOURCE_ARN, arn);
-
-    if (req.authenticated_user().arn) {
-        rv.set(variables::NAME_PRINCIPAL, *req.authenticated_user().arn);
+std::optional<std::string_view> variables::get(std::string_view name) const {
+    if (auto it = m_cache.find(name); it != m_cache.end()) {
+        return it->second;
     }
 
-    return rv;
+    if (auto value = default_value_provider().get(name, m_req, m_cmd); value) {
+        auto res = m_cache.emplace(std::move(name), std::move(*value));
+        return res.first->second;
+    }
+
+    return {};
+}
+
+void variables::put(std::string k, std::string v) {
+    m_cache[std::move(k)] = std::move(v);
 }
 
 std::string var_replace(std::string_view format, const variables& vars) {
@@ -98,9 +117,8 @@ std::string var_replace(std::string_view format, const variables& vars) {
                 if (end_of_var != std::string::npos) {
                     auto var_name = format.substr(i + 2, end_of_var - i - 2);
 
-                    auto it = vars.find(var_name);
-                    if (it != vars.end()) {
-                        rv.append(it->second);
+                    if (auto it = vars.get(var_name); it) {
+                        rv.append(*it);
                     }
 
                     i = end_of_var;
