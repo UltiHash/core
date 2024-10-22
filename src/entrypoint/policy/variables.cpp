@@ -76,6 +76,9 @@ value_provider make_value_provider() {
     vp.add("s3:delimiter",
            [](const auto& r, const auto&) { return r.query("delimiter"); });
 
+    vp.add("s3:prefix",
+           [](const auto& r, const auto&) { return r.query("prefix"); });
+
     return vp;
 }
 
