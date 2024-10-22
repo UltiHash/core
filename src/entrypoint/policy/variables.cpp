@@ -65,6 +65,10 @@ value_provider make_value_provider() {
     vp.add("aws:UserAgent",
            [](const auto& r, const auto&) { return r.header("User-Agent"); });
 
+    vp.add("s3:x-amz-content-sha256", [](const auto& r, const auto&) {
+        return r.header("x-amz-content-sha256");
+    });
+
     return vp;
 }
 
