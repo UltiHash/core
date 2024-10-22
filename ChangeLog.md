@@ -2,6 +2,7 @@
 - Re-connect when losing connection to etcd
 - Support authentication against etcd
 - Correctly report original size in responses to PutObject and CompleteMultipartUpload
+- Fix request ID for `100 Continue` responses
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support

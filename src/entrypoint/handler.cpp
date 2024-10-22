@@ -1,4 +1,5 @@
 #include "handler.h"
+#include "common/utils/random.h"
 #include "http/command_exception.h"
 
 using namespace uh::cluster::ep::http;
@@ -18,14 +19,16 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
          * Note: lifetime of response must not exceed lifetime of request.
          */
         std::unique_ptr<request> req;
+        std::string id = generate_unique_id();
         response resp;
         bool keep_alive = false;
 
         try {
             req = co_await m_factory.create(s);
-            LOG_INFO() << req->peer() << ": read request: " << *req;
+            LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
+                        << *req;
 
-            resp = co_await handle_request(s, *req);
+            resp = co_await handle_request(s, *req, id);
             metric<success>::increase(1);
             keep_alive = true;
         } catch (const command_exception& e) {
@@ -47,7 +50,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             resp = make_response(command_exception());
         }
 
-        co_await write(s, std::move(resp));
+        co_await write(s, std::move(resp), id);
         if (!keep_alive) {
             break;
         }
@@ -58,7 +61,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
-                                       request& req) {
+                                       request& req, const std::string& id) {
 
     auto cmd = co_await m_command_factory.create(req);
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
@@ -76,7 +79,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
         LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
-        co_await write(s, response(status::continue_));
+        co_await write(s, response(status::continue_), id);
     }
 
     LOG_DEBUG() << req.peer() << ": executing " << cmd->action_id();
