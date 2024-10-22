@@ -73,6 +73,9 @@ value_provider make_value_provider() {
         return r.header("x-amz-copy-source");
     });
 
+    vp.add("s3:delimiter",
+           [](const auto& r, const auto&) { return r.query("delimiter"); });
+
     return vp;
 }
 
