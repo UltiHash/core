@@ -105,11 +105,23 @@ jobs:
       - name: Select the Kuberentes node for deployment
         run: echo "KUBERNETES_NODE=$(shuf -e -n 1 opm-k8s-worker-01 opm-k8s-worker-02)" >> $GITHUB_ENV
 
+      - name: Obtain the current Job ID
+        uses: Tiryoh/gha-jobid-action@v1
+        id: jobs
+        with:
+          job_name: "deploy-and-test"
+          github_token: ${{ secrets.PAT }}
+
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CEPH_TESTS_REPORTS_BUCKET: ultihash-ceph-tests-reports
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          WORKFLOW_JOB_ID: ${{ steps.jobs.outputs.job_id }}
+          AWS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
         with:
           input: feature-testing/helm-values-on-premise.yaml
           output: helm-values.yaml

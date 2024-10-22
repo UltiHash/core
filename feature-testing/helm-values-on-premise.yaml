@@ -27,6 +27,17 @@ global:
 featureTests:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
+  extraEnvs:
+    - name: CEPH_TESTS_REPORTS_BUCKET
+      value: $CEPH_TESTS_REPORTS_BUCKET
+    - name: WORKFLOW_RUN_ID
+      value: $WORKFLOW_RUN_ID
+    - name: WORKFLOW_JOB_ID
+      value: $WORKFLOW_JOB_ID
+    - name: AWS_KEY_ID
+      value: $AWS_KEY_ID
+    - name: AWS_SECRET_KEY
+      value: $AWS_SECRET_KEY
 
 etcd:
   replicaCount: 1
