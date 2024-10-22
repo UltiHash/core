@@ -2,7 +2,6 @@
 #include "common/coroutines/promise.h"
 #include "common/types/common_types.h"
 #include "common/utils/double_buffer.h"
-#include "common/utils/random.h"
 #include "string_body.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
@@ -95,11 +94,12 @@ std::ostream& operator<<(std::ostream& out, const response& res) {
     return out;
 }
 
-coro<void> write(asio::ip::tcp::socket& out, response&& res) {
+coro<void> write(asio::ip::tcp::socket& out, response&& res,
+                 const std::string& id) {
     auto& body = res.body();
 
     res.set("Server", "UltiHash");
-    res.set("x-amz-request-id", generate_unique_id());
+    res.set("x-amz-request-id", id);
 
     if (!res.header("Content-Length")) {
         res.set("Content-Length", body.length());
