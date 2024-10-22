@@ -62,6 +62,9 @@ value_provider make_value_provider() {
     vp.add("aws:referer",
            [](const auto& r, const auto&) { return r.header("Referer"); });
 
+    vp.add("aws:UserAgent",
+           [](const auto& r, const auto&) { return r.header("User-Agent"); });
+
     return vp;
 }
 
