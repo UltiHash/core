@@ -47,6 +47,10 @@ value_provider make_value_provider() {
         return r.authenticated_user().arn;
     });
 
+    vp.add("aws:username", [](const auto& r, const auto&) {
+        return r.authenticated_user().name;
+    });
+
     return vp;
 }
 
