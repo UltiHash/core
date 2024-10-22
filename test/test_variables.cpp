@@ -1,9 +1,9 @@
 #define BOOST_TEST_MODULE "entrypoint variables"
 
 #include <boost/test/unit_test.hpp>
-#include <entrypoint/variables.h>
+#include <entrypoint/policy/variables.h>
 
-using namespace uh::cluster::ep;
+using namespace uh::cluster::ep::policy;
 
 namespace {
 

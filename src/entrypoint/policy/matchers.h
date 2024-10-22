@@ -4,8 +4,8 @@
 #include "common/telemetry/log.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/http/request.h"
-#include "entrypoint/variables.h"
 #include "matcher.h"
+#include "variables.h"
 #include <iostream>
 
 namespace uh::cluster::ep::policy {

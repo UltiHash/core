@@ -5,7 +5,7 @@
 #include <optional>
 #include <string>
 
-namespace uh::cluster::ep {
+namespace uh::cluster::ep::policy {
 
 class variables {
 public:
@@ -50,6 +50,6 @@ bool equals_wildcard(std::string_view wildcarded, std::string_view b);
 
 std::optional<int64_t> to_int(std::string_view s);
 
-} // namespace uh::cluster::ep
+} // namespace uh::cluster::ep::policy
 
 #endif

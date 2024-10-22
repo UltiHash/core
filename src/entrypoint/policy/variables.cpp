@@ -6,7 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 
-namespace uh::cluster::ep {
+namespace uh::cluster::ep::policy {
 
 namespace {
 
@@ -151,4 +151,4 @@ std::optional<int64_t> to_int(std::string_view s) {
 
     return rv;
 }
-} // namespace uh::cluster::ep
+} // namespace uh::cluster::ep::policy
