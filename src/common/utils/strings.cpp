@@ -120,6 +120,20 @@ bool to_bool(std::string str_to_eval) {
     return b;
 }
 
+bool equals_nocase(std::string_view a, std::string_view b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    for (auto i = 0ull; i < a.size(); ++i) {
+        if (tolower(a[i]) != tolower(b[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 std::string unhex(std::string in) {
     if (in.size() % 2 != 0) {
         throw std::invalid_argument("string size must be even");

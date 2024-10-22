@@ -104,6 +104,11 @@ std::string lowercase(std::string s);
 bool to_bool(std::string str_to_eval);
 
 /**
+ * Compare both strings ignoring character case.
+ */
+bool equals_nocase(std::string_view a, std::string_view b);
+
+/**
  * Return a string representing the provided char as hex string.
  */
 template <typename T>

@@ -66,11 +66,6 @@ private:
 std::string var_replace(std::string_view format, const variables& vars);
 
 /**
- * Compare both strings ignoring character case.
- */
-bool equals_nocase(std::string_view a, std::string_view b);
-
-/**
  * Compare string `wildcarded` with string `b`, matching `*` against
  * any particular substring and `?` against any character.
  */
