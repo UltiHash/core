@@ -69,6 +69,10 @@ value_provider make_value_provider() {
         return r.header("x-amz-content-sha256");
     });
 
+    vp.add("s3:x-amz-copy-source", [](const auto& r, const auto&) {
+        return r.header("x-amz-copy-source");
+    });
+
     return vp;
 }
 
