@@ -59,6 +59,9 @@ value_provider make_value_provider() {
         return r.peer().address().to_string();
     });
 
+    vp.add("aws:referer",
+           [](const auto& r, const auto&) { return r.header("Referer"); });
+
     return vp;
 }
 
