@@ -2,76 +2,66 @@
 #define CORE_ENTRYPOINT_POLICY_MATCHERS_H
 
 #include "common/telemetry/log.h"
-#include "entrypoint/commands/command.h"
-#include "entrypoint/http/request.h"
 #include "matcher.h"
-#include "variables.h"
-#include <iostream>
+#include <set>
 
 namespace uh::cluster::ep::policy {
 
 inline matcher match_action(std::set<std::string> actions) {
-    return [actions = std::move(actions)](const http::request&,
-                                          const command& cmd) {
-        return match_any(actions, [&cmd](auto value) {
-            return equals_wildcard(value, cmd.action_id());
+    return [actions = std::move(actions)](const variables& vars) {
+        return match_any(actions, [&vars](auto value) {
+            return equals_wildcard(value, *vars.get(variables::NAME_ACTION_ID));
         });
     };
 }
 
 inline matcher match_not_action(std::set<std::string> actions) {
-    return [actions = std::move(actions)](const http::request&,
-                                          const command& cmd) {
-        return match_any(actions, [&cmd](auto value) {
-            return !equals_wildcard(value, cmd.action_id());
+    return [actions = std::move(actions)](const variables& vars) {
+        return match_any(actions, [&vars](auto value) {
+            return !equals_wildcard(value,
+                                    *vars.get(variables::NAME_ACTION_ID));
         });
     };
 }
 
 inline matcher match_resource(std::set<std::string> resources) {
-    return [resources = std::move(resources)](const http::request& r,
-                                              const command& cmd) {
-        std::string arn = "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
-
-        return match_any(resources, [&arn](auto value) {
-            return equals_wildcard(value, arn);
+    return [resources = std::move(resources)](const variables& vars) {
+        return match_any(resources, [&vars](auto value) {
+            return equals_wildcard(value,
+                                   *vars.get(variables::NAME_RESOURCE_ARN));
         });
     };
 }
 
 inline matcher match_not_resource(std::set<std::string> resources) {
-    return [resources = std::move(resources)](const http::request& r,
-                                              const command& cmd) {
-        std::string arn = "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
-
-        return match_all(resources, [&arn](auto value) {
-            return !equals_wildcard(value, arn);
+    return [resources = std::move(resources)](const variables& vars) {
+        return match_all(resources, [&vars](auto value) {
+            return !equals_wildcard(value,
+                                    *vars.get(variables::NAME_RESOURCE_ARN));
         });
     };
 }
 
 inline matcher match_principal(std::set<std::string> principals) {
-    return [principals = std::move(principals)](const http::request& r,
-                                                const command& cmd) {
-        return match_any(principals, [&r](auto value) {
-            if (!r.authenticated_user().arn) {
-                return false;
+    return [principals = std::move(principals)](const variables& vars) {
+        return match_any(principals, [&vars](auto value) {
+            if (auto arn = vars.get(variables::NAME_PRINCIPAL); arn) {
+                return equals_wildcard(value, *arn);
             }
 
-            return equals_wildcard(value, *r.authenticated_user().arn);
+            return false;
         });
     };
 }
 
 inline matcher match_not_principal(std::set<std::string> principals) {
-    return [principals = std::move(principals)](const http::request& r,
-                                                const command& cmd) {
-        return match_all(principals, [&r](auto value) {
-            if (!r.authenticated_user().arn) {
-                return true;
+    return [principals = std::move(principals)](const variables& vars) {
+        return match_all(principals, [&vars](auto value) {
+            if (auto arn = vars.get(variables::NAME_PRINCIPAL); arn) {
+                return !equals_wildcard(value, *arn);
             }
 
-            return !equals_wildcard(value, *r.authenticated_user().arn);
+            return true;
         });
     };
 }
@@ -79,9 +69,7 @@ inline matcher match_not_principal(std::set<std::string> principals) {
 inline matcher var_matcher(std::map<std::string, std::list<std::string>> values,
                            undefined_variable uv, auto match_func) {
 
-    return [values = std::move(values), uv, match_func](const http::request& r,
-                                                        const command&) {
-        const variables& vars = r.vars();
+    return [values = std::move(values), uv, match_func](const variables& vars) {
         for (const auto& check : values) {
             auto value = vars.get(check.first);
             if (!value) {
@@ -248,8 +236,7 @@ inline matcher match_numericgreaterthanequals(
 inline matcher
 match_dateequals(std::map<std::string, std::list<std::string>> strings,
                  undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateEquals not implemented");
     };
@@ -258,8 +245,7 @@ match_dateequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_datenotequals(std::map<std::string, std::list<std::string>> strings,
                     undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateNotEquals not implemented");
     };
@@ -268,8 +254,7 @@ match_datenotequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_datelessthan(std::map<std::string, std::list<std::string>> strings,
                    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateLessThan not implemented");
     };
@@ -278,8 +263,7 @@ match_datelessthan(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_datelessthanequals(std::map<std::string, std::list<std::string>> strings,
                          undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateLessThanEquals not implemented");
     };
@@ -288,8 +272,7 @@ match_datelessthanequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_dategreaterthan(std::map<std::string, std::list<std::string>> strings,
                       undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateGreaterThan not implemented");
     };
@@ -298,8 +281,7 @@ match_dategreaterthan(std::map<std::string, std::list<std::string>> strings,
 inline matcher match_dategreaterthanequals(
     std::map<std::string, std::list<std::string>> strings,
     undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("DateGreaterThanEquals not implemented");
     };
@@ -307,8 +289,7 @@ inline matcher match_dategreaterthanequals(
 
 inline matcher match_bool(std::map<std::string, std::list<std::string>> strings,
                           undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("Bool not implemented");
     };
@@ -317,8 +298,7 @@ inline matcher match_bool(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_binaryequals(std::map<std::string, std::list<std::string>> strings,
                    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("BinaryEquals not implemented");
     };
@@ -327,8 +307,7 @@ match_binaryequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_ipaddress(std::map<std::string, std::list<std::string>> strings,
                 undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("IpAddress not implemented");
     };
@@ -337,8 +316,7 @@ match_ipaddress(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_notipaddress(std::map<std::string, std::list<std::string>> strings,
                    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("NotIpAddress not implemented");
     };
@@ -347,8 +325,7 @@ match_notipaddress(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_arnequals(std::map<std::string, std::list<std::string>> strings,
                 undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("ArnEquals not implemented");
     };
@@ -357,8 +334,7 @@ match_arnequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_arnlike(std::map<std::string, std::list<std::string>> strings,
               undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("ArnLike not implemented");
     };
@@ -367,8 +343,7 @@ match_arnlike(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_arnnotequals(std::map<std::string, std::list<std::string>> strings,
                    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("ArnNotEquals not implemented");
     };
@@ -377,8 +352,7 @@ match_arnnotequals(std::map<std::string, std::list<std::string>> strings,
 inline matcher
 match_arnnotlike(std::map<std::string, std::list<std::string>> strings,
                  undefined_variable uv) {
-    return [strings = std::move(strings), uv](const http::request&,
-                                              const command&) -> bool {
+    return [strings = std::move(strings), uv](const variables&) -> bool {
         (void)uv;
         throw std::runtime_error("ArnNotLike not implemented");
     };
@@ -386,8 +360,7 @@ match_arnnotlike(std::map<std::string, std::list<std::string>> strings,
 
 inline matcher
 match_null(std::map<std::string, std::list<std::string>> strings) {
-    return [strings = std::move(strings)](const http::request& r,
-                                          const command&) -> bool {
+    return [strings = std::move(strings)](const variables&) -> bool {
         throw std::runtime_error("Null not implemented");
     };
 }

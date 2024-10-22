@@ -20,21 +20,6 @@ std::list<policy> read_global_policies(const std::filesystem::path& path) {
     return rv;
 }
 
-variables make_variables(const http::request& req, const command& cmd) {
-    variables rv;
-
-    rv.set(variables::NAME_ACTION_ID, cmd.action_id());
-
-    std::string arn = "arn:aws:s3:::" + req.bucket() + "/" + req.object_key();
-    rv.set(variables::NAME_RESOURCE_ARN, arn);
-
-    if (req.authenticated_user().arn) {
-        rv.set(variables::NAME_PRINCIPAL, *req.authenticated_user().arn);
-    }
-
-    return rv;
-}
-
 } // namespace
 
 const std::filesystem::path module::GLOBAL_CONFIG = "/etc/uh/policies.json";
@@ -53,10 +38,10 @@ coro<effect> module::check(const http::request& request,
 
     bool has_allow = false;
 
-    variables vars = make_variables(request, cmd);
+    auto vars = variables::from_request(request, cmd);
 
     for (const auto& policy : m_policies) {
-        auto result = policy.check(request, cmd);
+        auto result = policy.check(vars);
         if (!result) {
             continue;
         }
@@ -76,7 +61,7 @@ coro<effect> module::check(const http::request& request,
         // TODO cache bucket policies
         auto policies = parser::parse(*resource);
         for (const auto& policy : policies) {
-            auto result = policy.check(request, cmd);
+            auto result = policy.check(vars);
             if (!result) {
                 continue;
             }
@@ -93,7 +78,7 @@ coro<effect> module::check(const http::request& request,
 
     for (const auto& policy : request.authenticated_user().policies) {
         for (const auto& p : policy.second) {
-            auto result = p.check(request, cmd);
+            auto result = p.check(vars);
             if (!result) {
                 continue;
             }

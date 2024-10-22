@@ -1,6 +1,7 @@
 #include "variables.h"
 
 #include "common/utils/strings.h"
+#include "entrypoint/commands/command.h"
 
 #include <charconv>
 #include <iostream>
@@ -55,6 +56,22 @@ std::optional<std::string_view> variables::get(std::string_view name) const {
 
 void variables::set(std::string name, std::string value) {
     m_vars[std::move(name)] = std::move(value);
+}
+
+variables variables::from_request(const http::request& req,
+                                  const command& cmd) {
+    variables rv;
+
+    rv.set(variables::NAME_ACTION_ID, cmd.action_id());
+
+    std::string arn = "arn:aws:s3:::" + req.bucket() + "/" + req.object_key();
+    rv.set(variables::NAME_RESOURCE_ARN, arn);
+
+    if (req.authenticated_user().arn) {
+        rv.set(variables::NAME_PRINCIPAL, *req.authenticated_user().arn);
+    }
+
+    return rv;
 }
 
 std::string var_replace(std::string_view format, const variables& vars) {

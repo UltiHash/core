@@ -5,6 +5,18 @@
 #include <optional>
 #include <string>
 
+namespace uh::cluster {
+
+class command;
+
+namespace ep::http {
+
+class request;
+
+}
+
+} // namespace uh::cluster
+
 namespace uh::cluster::ep::policy {
 
 class variables {
@@ -26,6 +38,8 @@ public:
     std::optional<std::string_view> get(std::string_view name) const;
 
     void set(std::string name, std::string value);
+
+    static variables from_request(const http::request& req, const command& cmd);
 
     static constexpr const char* NAME_ACTION_ID = "__uh_action_id";
     static constexpr const char* NAME_RESOURCE_ARN = "__resource_arn";
