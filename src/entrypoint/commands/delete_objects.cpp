@@ -98,8 +98,8 @@ coro<response> delete_objects::handle(request& req) {
             success.emplace_back(*key);
 
         } catch (const error_exception& e) {
-            LOG_ERROR() << req.peer() << ": Failed to delete the bucket "
-                        << bucket_id << " to the directory: " << e;
+            LOG_INFO() << req.peer() << ": Failed to delete the bucket "
+                       << bucket_id << ": " << e;
             switch (*e.error()) {
             case error::object_not_found:
                 failure.emplace_back(*key, "NoSuchKey");
