@@ -53,6 +53,10 @@ std::optional<std::string_view> variables::get(std::string_view name) const {
     return it->second;
 }
 
+void variables::set(std::string name, std::string value) {
+    m_vars[std::move(name)] = std::move(value);
+}
+
 std::string var_replace(std::string_view format, const variables& vars) {
     std::string rv;
     char last = 0;

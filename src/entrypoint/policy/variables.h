@@ -25,6 +25,12 @@ public:
 
     std::optional<std::string_view> get(std::string_view name) const;
 
+    void set(std::string name, std::string value);
+
+    static constexpr const char* NAME_ACTION_ID = "__uh_action_id";
+    static constexpr const char* NAME_RESOURCE_ARN = "__resource_arn";
+    static constexpr const char* NAME_PRINCIPAL = "__uh_principal";
+
 private:
     std::map<std::string, std::string> m_vars;
 };

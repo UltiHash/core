@@ -20,6 +20,21 @@ std::list<policy> read_global_policies(const std::filesystem::path& path) {
     return rv;
 }
 
+variables make_variables(const http::request& req, const command& cmd) {
+    variables rv;
+
+    rv.set(variables::NAME_ACTION_ID, cmd.action_id());
+
+    std::string arn = "arn:aws:s3:::" + req.bucket() + "/" + req.object_key();
+    rv.set(variables::NAME_RESOURCE_ARN, arn);
+
+    if (req.authenticated_user().arn) {
+        rv.set(variables::NAME_PRINCIPAL, *req.authenticated_user().arn);
+    }
+
+    return rv;
+}
+
 } // namespace
 
 const std::filesystem::path module::GLOBAL_CONFIG = "/etc/uh/policies.json";
@@ -37,6 +52,8 @@ coro<effect> module::check(const http::request& request,
                            const command& cmd) const {
 
     bool has_allow = false;
+
+    variables vars = make_variables(request, cmd);
 
     for (const auto& policy : m_policies) {
         auto result = policy.check(request, cmd);
