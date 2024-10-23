@@ -1,6 +1,7 @@
 #include "get_object.h"
 #include "common/utils/time_utils.h"
 #include "entrypoint/http/command_exception.h"
+#include <entrypoint/http/range.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -67,67 +68,6 @@ private:
     std::size_t m_total = 0;
     timer m_timer;
 };
-
-std::pair<std::size_t, std::size_t> parse_range_spec(std::string_view spec,
-                                                     std::size_t size) {
-    auto dash = spec.find('-');
-    if (dash == std::string::npos) {
-        throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
-    }
-
-    try {
-        if (dash == 0) {
-            auto bytes = std::stoull(std::string(spec.substr(1)));
-            return std::make_pair(size - bytes + 1, size);
-        }
-
-        if (dash == spec.size() - 1) {
-            auto bytes =
-                std::stoull(std::string(spec.substr(0, spec.size() - 1)));
-            return std::make_pair(bytes, size);
-        }
-
-        auto from = std::stoull(std::string(spec.substr(0, dash)));
-        auto to = std::stoull(std::string(spec.substr(dash + 1))) + 1;
-
-        return std::make_pair(from, to);
-    } catch (const std::exception& e) {
-        LOG_DEBUG() << "error parsing `" << spec << "`: " << e.what();
-        throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
-    }
-
-    return {};
-}
-
-address apply_range(address addr, std::string_view range) {
-    if (addr.size() == 0) {
-        return addr;
-    }
-
-    auto equals = range.find('=');
-    if (equals == std::string::npos) {
-        throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
-    }
-
-    if (lowercase(std::string(range.substr(0, equals))) != "bytes") {
-        throw command_exception(status::bad_request, "BadRequest",
-                                "unsupported range unit");
-    }
-
-    address rv;
-    auto size = addr.data_size();
-    auto specs = split(range.substr(equals + 1), ',');
-    for (auto spec : specs) {
-        auto range = parse_range_spec(spec, size);
-
-        rv.append(addr.range(range.first, range.second));
-    }
-
-    return rv;
-}
 
 } // namespace
 
