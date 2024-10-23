@@ -7,6 +7,7 @@ target_include_directories(${PROJECT_NAME}_OBJECTS INTERFACE ${CMAKE_CURRENT_SOU
 function(uh_add_test name)
     add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
     target_link_libraries(${PROJECT_NAME}_${name} uh_test ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+    target_include_directories(${PROJECT_NAME}_${name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     add_test(NAME ${PROJECT_NAME}_${name} COMMAND ${PROJECT_NAME}_${name})
 endfunction()
 
