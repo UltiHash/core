@@ -23,6 +23,18 @@ std::string imf_fixdate(const utc_time& ts);
  */
 std::string iso8601_date(const utc_time& ts);
 
+/**
+ * Input a timestamp in ISO 8601 time format, as described above.
+ */
+utc_time read_iso8601_date(const std::string& str);
+
+namespace detail {
+
+utc_time read_local_time(const std::string& sv);
+std::chrono::seconds read_timezone_offset(const std::string& str);
+
+} // namespace detail
+
 } // namespace uh::cluster
 
 #endif
