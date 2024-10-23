@@ -36,14 +36,14 @@ std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
 value_provider make_value_provider() {
     value_provider vp;
 
-    vp.add(variables::NAME_ACTION_ID,
+    vp.add("uh:ActionId",
            [](const auto&, const auto& c) { return c.action_id(); });
 
-    vp.add(variables::NAME_RESOURCE_ARN, [](const auto& r, const auto&) {
+    vp.add("uh:ResourceArn", [](const auto& r, const auto&) {
         return "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
     });
 
-    vp.add(variables::NAME_PRINCIPAL, [](const auto& r, const auto&) {
+    vp.add("aws:PrincipalArn", [](const auto& r, const auto&) {
         return r.authenticated_user().arn;
     });
 
