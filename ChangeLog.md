@@ -7,6 +7,7 @@
   `aws:username`, `aws:userid`, `aws:PrincipalArn`, `aws:SourceIp`, `aws:referer`,
   `aws:UserAgent`, `s3:x-amz-content-sha256`, `s3:x-amz-copy-source`, `s3:delimiter`,
   `s3:prefix`
+- Add default content-type for objects
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
