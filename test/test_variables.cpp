@@ -4,33 +4,15 @@
 #include <common/types/common_types.h>
 #include <entrypoint/commands/command.h>
 #include <entrypoint/http/request.h>
-#include <entrypoint/policy/variables.h>
-#include <test/http_request.h>
+#include <test/entrypoint.h>
 
 using namespace uh::cluster;
+using namespace uh::cluster::test;
 using namespace uh::cluster::ep;
 using namespace uh::cluster::ep::http;
 using namespace uh::cluster::ep::policy;
 
 namespace {
-
-struct mock_command : public uh::cluster::command {
-    coro<response> handle(request&) override { co_return response{}; }
-    coro<void> validate(const request& req) override { co_return; }
-    std::string action_id() const override { return ""; }
-};
-
-variables vars(std::initializer_list<std::pair<std::string, std::string>> v) {
-    static http::request req;
-    static mock_command cmd;
-    variables rv(req, cmd);
-
-    for (auto& p : v) {
-        rv.put(std::move(p.first), std::move(p.second));
-    }
-
-    return rv;
-}
 
 BOOST_AUTO_TEST_CASE(variable_replace) {
     {
@@ -111,15 +93,15 @@ BOOST_AUTO_TEST_CASE(wildcard_match) {
 
 BOOST_AUTO_TEST_CASE(default_variables) {
     auto user_arn = "arn:aws:iam::2:random_user";
-    auto request = test::make_request(
-        "GET /bucket/object?delimiter=!!!&prefix=foo HTTP/1.1\r\n"
-        "User-Agent: USER_AGENT\r\n"
-        "X-amz-content-sha256: UNSIGNED-PAYLOAD\r\n"
-        "x-amz-copy-source: COPY_SOURCE\r\n"
-        "Referer: HTTP_REFERER\r\n\r\n",
-        user_arn);
+    auto request =
+        make_request("GET /bucket/object?delimiter=!!!&prefix=foo HTTP/1.1\r\n"
+                     "User-Agent: USER_AGENT\r\n"
+                     "X-amz-content-sha256: UNSIGNED-PAYLOAD\r\n"
+                     "x-amz-copy-source: COPY_SOURCE\r\n"
+                     "Referer: HTTP_REFERER\r\n\r\n",
+                     user_arn);
 
-    auto command = test::mock_command("s3:GetObject");
+    auto command = mock_command("s3:GetObject");
     variables vars(request, command);
 
     BOOST_CHECK_EQUAL(vars.get("uh:ActionId").value_or(""), "s3:GetObject");

@@ -2,7 +2,7 @@
 
 #include "entrypoint/policy/parser.h"
 #include <boost/test/unit_test.hpp>
-#include <test/http_request.h>
+#include <test/entrypoint.h>
 
 // ------------- Tests Suites Follow --------------
 

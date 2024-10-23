@@ -1,6 +1,7 @@
 #include "http_request.h"
 
 using namespace uh::cluster::ep::http;
+using namespace uh::cluster::ep::policy;
 using namespace uh::cluster::ep::user;
 
 namespace uh::cluster::test {
@@ -27,6 +28,18 @@ ep::http::request make_request(const std::string& code,
 
     return request(parser.get(), std::make_unique<mock_body>(),
                    user{.arn = principal}, boost::asio::ip::tcp::endpoint());
+}
+
+variables vars(std::initializer_list<std::pair<std::string, std::string>> v) {
+    static request req;
+    static mock_command cmd;
+    variables rv(req, cmd);
+
+    for (auto& p : v) {
+        rv.put(std::move(p.first), std::move(p.second));
+    }
+
+    return rv;
 }
 
 } // namespace uh::cluster::test

@@ -2,12 +2,13 @@
 #define CORE_TEST_HTTP_REQUEST_H
 
 #include <entrypoint/commands/command.h>
+#include <entrypoint/policy/variables.h>
 
 namespace uh::cluster::test {
 
 class mock_command : public command {
 public:
-    mock_command(const std::string& id);
+    mock_command(const std::string& id = "");
     coro<ep::http::response> handle(ep::http::request&) override;
     coro<void> validate(const ep::http::request& req) override;
     std::string action_id() const override;
@@ -25,6 +26,9 @@ public:
 ep::http::request
 make_request(const std::string& code,
              const std::string& principal = ep::user::user::ANONYMOUS_ARN);
+
+ep::policy::variables
+vars(std::initializer_list<std::pair<std::string, std::string>> v);
 
 } // namespace uh::cluster::test
 
