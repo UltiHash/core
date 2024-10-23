@@ -80,12 +80,18 @@ std::pair<std::size_t, std::size_t> parse_range_spec(std::string_view spec,
         if (dash == 0) {
             auto bytes = std::stoull(std::string(spec.substr(1)));
             return std::make_pair(size - bytes + 1, size);
-        } else {
-            auto from = std::stoull(std::string(spec.substr(0, dash)));
-            auto to = std::stoull(std::string(spec.substr(dash + 1))) + 1;
-
-            return std::make_pair(from, to);
         }
+
+        if (dash == spec.size() - 1) {
+            auto bytes =
+                std::stoull(std::string(spec.substr(0, spec.size() - 1)));
+            return std::make_pair(bytes, size);
+        }
+
+        auto from = std::stoull(std::string(spec.substr(0, dash)));
+        auto to = std::stoull(std::string(spec.substr(dash + 1))) + 1;
+
+        return std::make_pair(from, to);
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error parsing `" << spec << "`: " << e.what();
         throw command_exception(status::bad_request, "BadRequest",
