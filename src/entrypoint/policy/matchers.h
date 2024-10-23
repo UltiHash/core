@@ -10,7 +10,7 @@ namespace uh::cluster::ep::policy {
 inline matcher match_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
         return match_any(actions, [&vars](auto value) {
-            return equals_wildcard(value, *vars.get(variables::NAME_ACTION_ID));
+            return equals_wildcard(value, *vars.get("uh:ActionId"));
         });
     };
 }
@@ -18,8 +18,7 @@ inline matcher match_action(std::set<std::string> actions) {
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
         return match_any(actions, [&vars](auto value) {
-            return !equals_wildcard(value,
-                                    *vars.get(variables::NAME_ACTION_ID));
+            return !equals_wildcard(value, *vars.get("uh:ActionId"));
         });
     };
 }
@@ -27,8 +26,7 @@ inline matcher match_not_action(std::set<std::string> actions) {
 inline matcher match_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_any(resources, [&vars](auto value) {
-            return equals_wildcard(value,
-                                   *vars.get(variables::NAME_RESOURCE_ARN));
+            return equals_wildcard(value, *vars.get("uh:ResourceArn"));
         });
     };
 }
@@ -36,8 +34,7 @@ inline matcher match_resource(std::set<std::string> resources) {
 inline matcher match_not_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_all(resources, [&vars](auto value) {
-            return !equals_wildcard(value,
-                                    *vars.get(variables::NAME_RESOURCE_ARN));
+            return !equals_wildcard(value, *vars.get("uh:ResourceArn"));
         });
     };
 }
@@ -45,7 +42,7 @@ inline matcher match_not_resource(std::set<std::string> resources) {
 inline matcher match_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_any(principals, [&vars](auto value) {
-            if (auto arn = vars.get(variables::NAME_PRINCIPAL); arn) {
+            if (auto arn = vars.get("aws:PrincipalArn"); arn) {
                 return equals_wildcard(value, *arn);
             }
 
@@ -57,7 +54,7 @@ inline matcher match_principal(std::set<std::string> principals) {
 inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_all(principals, [&vars](auto value) {
-            if (auto arn = vars.get(variables::NAME_PRINCIPAL); arn) {
+            if (auto arn = vars.get("aws:PrincipalArn"); arn) {
                 return !equals_wildcard(value, *arn);
             }
 
