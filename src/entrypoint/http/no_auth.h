@@ -3,7 +3,6 @@
 
 #include <common/types/common_types.h>
 
-#include <entrypoint/http/beast_utils.h>
 #include <entrypoint/http/request.h>
 
 #include <memory>

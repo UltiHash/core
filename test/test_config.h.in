@@ -1,1 +1,1 @@
-#define TEST_DATA_DIR "@CMAKE_CURRENT_SOURCE_DIR@/data"
+#define TEST_DATA_DIR "@CMAKE_SOURCE_DIR@/data"

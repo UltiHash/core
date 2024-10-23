@@ -1,38 +1,28 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MATCHER_H
 #define CORE_ENTRYPOINT_POLICY_MATCHER_H
 
+#include "variables.h"
 #include <functional>
 #include <list>
-#include <map>
-#include <set>
-#include <string>
-
-namespace uh::cluster {
-class command;
-
-namespace ep::http {
-class request;
-}
-} // namespace uh::cluster
 
 namespace uh::cluster::ep::policy {
 
 enum class undefined_variable { ignore, do_not_match };
 
-typedef std::function<bool(const http::request&, const command&)> matcher;
+typedef std::function<bool(const variables& vars)> matcher;
 
 inline matcher match_always() {
-    return [](const http::request&, const command&) { return true; };
+    return [](const variables&) { return true; };
 }
 
 inline matcher match_never() {
-    return [](const http::request&, const command&) { return false; };
+    return [](const variables&) { return false; };
 }
 
 inline matcher conjunction(std::list<matcher> subs) {
-    return [subs = std::move(subs)](const http::request& r, const command& c) {
+    return [subs = std::move(subs)](const variables& vars) {
         for (const auto& m : subs) {
-            if (!m(r, c)) {
+            if (!m(vars)) {
                 return false;
             }
         }

@@ -4,8 +4,6 @@
 #include "raw_body.h"
 #include <common/utils/strings.h>
 
-#include <entrypoint/http/request.h>
-
 namespace uh::cluster::ep::http {
 
 coro<std::unique_ptr<request>> basic_auth::create(user::db& users,

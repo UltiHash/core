@@ -64,7 +64,6 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOU
 add_compile_options(-Wall -Werror)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
@@ -84,7 +83,7 @@ add_subdirectory(scripts)
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
+    add_subdirectory(test)
 endif()
 if(BUILD_EXPERIMENTS)
     message(STATUS "Building experiments")
