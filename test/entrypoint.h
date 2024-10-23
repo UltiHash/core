@@ -1,5 +1,5 @@
-#ifndef CORE_TEST_HTTP_REQUEST_H
-#define CORE_TEST_HTTP_REQUEST_H
+#ifndef CORE_TEST_ENTRYPOINT_H
+#define CORE_TEST_ENTRYPOINT_H
 
 #include <entrypoint/commands/command.h>
 #include <entrypoint/policy/variables.h>
