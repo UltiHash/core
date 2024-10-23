@@ -10,7 +10,11 @@ namespace uh::cluster::ep::policy {
 inline matcher match_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
         return match_any(actions, [&vars](auto value) {
-            return equals_wildcard(value, *vars.get("uh:ActionId"));
+            if (auto action = vars.get("uh:ActionId"); action) {
+                return equals_wildcard(value, *action);
+            }
+
+            return false;
         });
     };
 }
@@ -18,7 +22,11 @@ inline matcher match_action(std::set<std::string> actions) {
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
         return match_any(actions, [&vars](auto value) {
-            return !equals_wildcard(value, *vars.get("uh:ActionId"));
+            if (auto action = vars.get("uh:ActionId"); action) {
+                return !equals_wildcard(value, *action);
+            }
+
+            return true;
         });
     };
 }
@@ -26,7 +34,11 @@ inline matcher match_not_action(std::set<std::string> actions) {
 inline matcher match_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_any(resources, [&vars](auto value) {
-            return equals_wildcard(value, *vars.get("uh:ResourceArn"));
+            if (auto arn = vars.get("uh:ResourceArn"); arn) {
+                return equals_wildcard(value, *arn);
+            }
+
+            return false;
         });
     };
 }
@@ -34,7 +46,11 @@ inline matcher match_resource(std::set<std::string> resources) {
 inline matcher match_not_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_all(resources, [&vars](auto value) {
-            return !equals_wildcard(value, *vars.get("uh:ResourceArn"));
+            if (auto arn = vars.get("uh:ResourceArn"); arn) {
+                return !equals_wildcard(value, *arn);
+            }
+
+            return true;
         });
     };
 }
