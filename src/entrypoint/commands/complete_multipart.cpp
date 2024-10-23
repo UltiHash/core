@@ -134,7 +134,7 @@ coro<void> complete_multipart::apply(request& req, const upload_info& info,
                .size = addr.data_size(),
                .addr = std::move(addr),
                .etag = etag,
-               .mime = info.mime.value_or(DEFAULT_OBJECT_CONTENT_TYPE)};
+               .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
     std::optional<object> old_obj;
     try {

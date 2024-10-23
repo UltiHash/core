@@ -93,7 +93,7 @@ coro<response> put_object::handle(request& req) {
                    .addr = std::move(resp.addr),
                    .etag = tag,
                    .mime = req.header("Content-Type")
-                               .value_or(DEFAULT_OBJECT_CONTENT_TYPE)};
+                               .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         std::optional<object> old_obj;
         try {
