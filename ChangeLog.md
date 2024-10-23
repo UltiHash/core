@@ -3,6 +3,10 @@
 - Support authentication against etcd
 - Correctly report original size in responses to PutObject and CompleteMultipartUpload
 - Fix request ID for `100 Continue` responses
+- Add support for policy variables: `uh:ActionId`, `uh:ResourceArn`,
+  `aws:username`, `aws:userid`, `aws:PrincipalArn`, `aws:SourceIp`, `aws:referer`,
+  `aws:UserAgent`, `s3:x-amz-content-sha256`, `s3:x-amz-copy-source`, `s3:delimiter`,
+  `s3:prefix`
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
