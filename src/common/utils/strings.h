@@ -108,6 +108,28 @@ bool to_bool(std::string str_to_eval);
  */
 bool equals_nocase(std::string_view a, std::string_view b);
 
+struct nocase_less {
+    struct is_transparent {};
+
+    bool operator()(std::string_view a, std::string_view b) const {
+        if (a.size() != b.size()) {
+            return a.size() < b.size();
+        }
+
+        for (auto i = 0ull; i < a.size(); ++i) {
+            if (tolower(a[i]) != tolower(b[i])) {
+                return tolower(a[i]) < tolower(b[i]);
+            }
+        }
+
+        return false;
+    }
+
+    bool operator()(auto& a, auto& b) const {
+        return operator()(std::string_view(a), std::string_view(b));
+    }
+};
+
 /**
  * Return a string representing the provided char as hex string.
  */

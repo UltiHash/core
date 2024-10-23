@@ -1,6 +1,8 @@
 #ifndef CORE_ENTRYPOINT_VARIABLES_H
 #define CORE_ENTRYPOINT_VARIABLES_H
 
+#include <common/utils/strings.h>
+
 #include <functional>
 #include <map>
 #include <optional>
@@ -32,7 +34,7 @@ public:
     void add(const std::string& name, function_type func);
 
 private:
-    std::map<std::string, function_type, std::less<>> m_providers;
+    std::map<std::string, function_type, nocase_less> m_providers;
 };
 
 class variables {
