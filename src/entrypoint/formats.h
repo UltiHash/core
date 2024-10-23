@@ -26,12 +26,12 @@ std::string iso8601_date(const utc_time& ts);
 /**
  * Input a timestamp in ISO 8601 time format, as described above.
  */
-utc_time read_iso8601_date(const std::string& str);
+utc_time read_iso8601_date(std::string_view str);
 
 namespace detail {
 
-utc_time read_local_time(const std::string& sv);
-std::chrono::seconds read_timezone_offset(const std::string& str);
+utc_time read_local_date(std::string_view str);
+std::chrono::seconds read_timezone(std::string_view str);
 
 } // namespace detail
 
