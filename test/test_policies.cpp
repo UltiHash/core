@@ -1,48 +1,15 @@
 #define BOOST_TEST_MODULE "policy JSON parser tests"
 
-#include "entrypoint/commands/command.h"
 #include "entrypoint/policy/parser.h"
 #include <boost/test/unit_test.hpp>
+#include <test/http_request.h>
 
 // ------------- Tests Suites Follow --------------
 
 using namespace uh::cluster;
-using namespace uh::cluster::ep::http;
 using namespace uh::cluster::ep::policy;
 using namespace uh::cluster::ep::user;
-
-namespace {
-
-class mock_command : public uh::cluster::command {
-public:
-    mock_command(const std::string& id)
-        : m_id(id) {}
-    coro<response> handle(request&) override { co_return response{}; }
-    coro<void> validate(const request& req) override { co_return; }
-    std::string action_id() const override { return m_id; }
-
-private:
-    std::string m_id;
-};
-
-class mock_body : public uh::cluster::ep::http::body {
-public:
-    coro<std::size_t> read(std::span<char>) override { co_return 0ull; }
-    std::optional<std::size_t> length() const override { return {}; }
-};
-
-auto make_request(const std::string& code,
-                  const std::string& principal = user::ANONYMOUS_ARN) {
-    boost::beast::http::request_parser<boost::beast::http::empty_body> parser;
-    boost::beast::error_code ec;
-
-    parser.put(boost::asio::buffer(code), ec);
-
-    return request(parser.get(), std::make_unique<mock_body>(),
-                   user{.arn = principal}, boost::asio::ip::tcp::endpoint());
-}
-
-} // namespace
+using namespace uh::cluster::test;
 
 BOOST_AUTO_TEST_CASE(check_action) {
     auto policy = parser::parse("{\n"

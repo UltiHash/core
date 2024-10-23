@@ -1,0 +1,32 @@
+#include "http_request.h"
+
+using namespace uh::cluster::ep::http;
+using namespace uh::cluster::ep::user;
+
+namespace uh::cluster::test {
+
+mock_command::mock_command(const std::string& id)
+    : m_id(id) {}
+
+coro<response> mock_command::handle(request&) { co_return response{}; }
+
+coro<void> mock_command::validate(const request& req) { co_return; }
+
+std::string mock_command::action_id() const { return m_id; }
+
+coro<std::size_t> mock_body::read(std::span<char>) { co_return 0ull; }
+
+std::optional<std::size_t> mock_body::length() const { return {}; }
+
+ep::http::request make_request(const std::string& code,
+                               const std::string& principal) {
+    boost::beast::http::request_parser<boost::beast::http::empty_body> parser;
+    boost::beast::error_code ec;
+
+    parser.put(boost::asio::buffer(code), ec);
+
+    return request(parser.get(), std::make_unique<mock_body>(),
+                   user{.arn = principal}, boost::asio::ip::tcp::endpoint());
+}
+
+} // namespace uh::cluster::test

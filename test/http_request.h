@@ -1,0 +1,31 @@
+#ifndef CORE_TEST_HTTP_REQUEST_H
+#define CORE_TEST_HTTP_REQUEST_H
+
+#include <entrypoint/commands/command.h>
+
+namespace uh::cluster::test {
+
+class mock_command : public command {
+public:
+    mock_command(const std::string& id);
+    coro<ep::http::response> handle(ep::http::request&) override;
+    coro<void> validate(const ep::http::request& req) override;
+    std::string action_id() const override;
+
+private:
+    std::string m_id;
+};
+
+class mock_body : public ep::http::body {
+public:
+    coro<std::size_t> read(std::span<char>) override;
+    std::optional<std::size_t> length() const override;
+};
+
+ep::http::request
+make_request(const std::string& code,
+             const std::string& principal = ep::user::user::ANONYMOUS_ARN);
+
+} // namespace uh::cluster::test
+
+#endif

@@ -1,7 +1,8 @@
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
-add_library(uh_test gdv_fixture.h dummy.cpp)
+add_library(uh_test gdv_fixture.h http_request.cpp)
 target_link_libraries(uh_test ${PROJECT_NAME}_OBJECTS)
+target_include_directories(${PROJECT_NAME}_OBJECTS INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 function(uh_add_test name)
     add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
