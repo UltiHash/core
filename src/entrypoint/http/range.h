@@ -37,7 +37,10 @@ range_spec parse_range_header(std::string_view header, std::size_t max);
  */
 range_spec::range parse_range_spec(std::string_view header, std::size_t max);
 
-address apply_range(address addr, std::string_view range);
+/**
+ * Apply the range specification to the given address.
+ */
+address apply_range(address addr, const range_spec& spec);
 
 } // namespace uh::cluster::ep::http
 

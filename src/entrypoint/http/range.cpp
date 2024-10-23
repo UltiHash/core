@@ -64,15 +64,13 @@ range_spec::range parse_range_spec(std::string_view spec, std::size_t size) {
     return {};
 }
 
-address apply_range(address addr, std::string_view range) {
+address apply_range(address addr, const range_spec& spec) {
     if (addr.size() == 0) {
         return addr;
     }
 
-    auto range_spec = parse_range_header(range, addr.data_size());
-
     address rv;
-    for (const auto& range : range_spec.ranges) {
+    for (const auto& range : spec.ranges) {
         rv.append(addr.range(range.start, range.end));
     }
 

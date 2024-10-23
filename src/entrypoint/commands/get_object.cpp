@@ -97,11 +97,22 @@ coro<response> get_object::handle(request& req) {
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
 
-        auto addr = apply_range(*obj.addr, *range);
+        auto spec = ep::http::parse_range_header(*range, obj.addr->data_size());
+
+        if (spec.ranges.size() != 1) {
+            throw command_exception(status::not_implemented, "MultiRange",
+                                    "no support for multiple ranges");
+        }
+
+        auto addr = apply_range(*obj.addr, spec);
 
         LOG_DEBUG() << "range based access: header=" << *range
                     << ", obj-addr=" << obj.addr->to_string()
                     << ", range-addr: " << addr.to_string();
+
+        const auto& r = spec.ranges.front();
+        res.set("Content-Range", "bytes " + std::to_string(r.start) + "-" +
+                                     std::to_string(r.end) + "/*");
 
         res.set_body(std::make_unique<local_read_handle>(
             m_storage, std::move(addr), req.context()));
