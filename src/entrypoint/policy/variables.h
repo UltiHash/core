@@ -49,10 +49,6 @@ public:
     std::optional<std::string_view> get(std::string_view name) const;
     void put(std::string k, std::string v);
 
-    static constexpr const char* NAME_ACTION_ID = "uh:ActionId";
-    static constexpr const char* NAME_RESOURCE_ARN = "uh:ResourceArn";
-    static constexpr const char* NAME_PRINCIPAL = "aws:PrincipalArn";
-
 private:
     const http::request& m_req;
     const command& m_cmd;
