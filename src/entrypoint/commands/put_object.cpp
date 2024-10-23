@@ -1,6 +1,7 @@
 #include "put_object.h"
 
 #include "common/utils/double_buffer.h"
+#include <entrypoint/constant.h>
 
 using namespace boost;
 using namespace uh::cluster::ep::http;
@@ -91,7 +92,8 @@ coro<response> put_object::handle(request& req) {
                    .size = original_size,
                    .addr = std::move(resp.addr),
                    .etag = tag,
-                   .mime = req.header("Content-Type")};
+                   .mime = req.header("Content-Type")
+                               .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         std::optional<object> old_obj;
         try {
