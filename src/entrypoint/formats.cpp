@@ -51,7 +51,6 @@ std::chrono::seconds read_timezone_offset(const std::string& str) {
         }
         std::istringstream ss(std::string(str.end() - 5, str.end()));
         tm t;
-        // str.find_last_of("+-");
         ss >> std::get_time(&t, "%H:%M"); // Parse time in "HH:MM" format
         auto offset =
             std::chrono::hours(t.tm_hour) + std::chrono::minutes(t.tm_min);
