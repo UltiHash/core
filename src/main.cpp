@@ -49,6 +49,10 @@ int main(int argc, char** argv) {
 
         log::init(config->log);
 
+        LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION
+                   << " [" << PROJECT_VCSID << "], running as "
+                   << magic_enum::enum_name(global_service_role);
+
         initialize_metrics_exporter(config->service.telemetry_url,
                                     config->service.telemetry_interval);
         initialize_traces_exporter(config->service.telemetry_url);
