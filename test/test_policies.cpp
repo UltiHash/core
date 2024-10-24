@@ -1,48 +1,15 @@
 #define BOOST_TEST_MODULE "policy JSON parser tests"
 
-#include "entrypoint/commands/command.h"
 #include "entrypoint/policy/parser.h"
 #include <boost/test/unit_test.hpp>
+#include <test/entrypoint.h>
 
 // ------------- Tests Suites Follow --------------
 
 using namespace uh::cluster;
-using namespace uh::cluster::ep::http;
 using namespace uh::cluster::ep::policy;
 using namespace uh::cluster::ep::user;
-
-namespace {
-
-class mock_command : public uh::cluster::command {
-public:
-    mock_command(const std::string& id)
-        : m_id(id) {}
-    coro<response> handle(request&) override { co_return response{}; }
-    coro<void> validate(const request& req) override { co_return; }
-    std::string action_id() const override { return m_id; }
-
-private:
-    std::string m_id;
-};
-
-class mock_body : public uh::cluster::ep::http::body {
-public:
-    coro<std::size_t> read(std::span<char>) override { co_return 0ull; }
-    std::optional<std::size_t> length() const override { return {}; }
-};
-
-auto make_request(const std::string& code,
-                  const std::string& principal = user::ANONYMOUS_ARN) {
-    boost::beast::http::request_parser<boost::beast::http::empty_body> parser;
-    boost::beast::error_code ec;
-
-    parser.put(boost::asio::buffer(code), ec);
-
-    return request(parser.get(), std::make_unique<mock_body>(),
-                   user{.arn = principal}, boost::asio::ip::tcp::endpoint());
-}
-
-} // namespace
+using namespace uh::cluster::test;
 
 BOOST_AUTO_TEST_CASE(check_action) {
     auto policy = parser::parse("{\n"
@@ -62,8 +29,8 @@ BOOST_AUTO_TEST_CASE(check_action) {
                                     "Host: bucket-id\r\n"
                                     "\r\n");
 
-        auto result =
-            policy.front().check(request, mock_command("s3:GetObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:GetObject")));
         BOOST_CHECK(result.has_value());
         BOOST_CHECK(*result == effect::allow);
     }
@@ -73,8 +40,8 @@ BOOST_AUTO_TEST_CASE(check_action) {
                                     "Host: bucket-id\r\n"
                                     "\r\n");
 
-        auto result =
-            policy.front().check(request, mock_command("s3:PutObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:PutObject")));
         BOOST_CHECK(!result.has_value());
     }
 }
@@ -97,8 +64,8 @@ BOOST_AUTO_TEST_CASE(check_principal) {
     {
         auto request =
             make_request("GET /bucket/my_object_id HTTP/1.1\r\n\r\n");
-        auto result =
-            policy.front().check(request, mock_command("s3:GetObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:GetObject")));
         BOOST_CHECK(result.has_value());
         BOOST_CHECK(*result == effect::allow);
     }
@@ -107,8 +74,8 @@ BOOST_AUTO_TEST_CASE(check_principal) {
         auto request = make_request("GET /bucket/my_object_id HTTP/1.1\r\n\r\n",
                                     "arn:aws:iam::2:random_user");
 
-        auto result =
-            policy.front().check(request, mock_command("s3:GetObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:GetObject")));
         BOOST_CHECK(!result.has_value());
     }
 }
@@ -130,16 +97,16 @@ BOOST_AUTO_TEST_CASE(check_resource) {
     {
         auto request =
             make_request("GET /bucket/my_object_id HTTP/1.1\r\n\r\n");
-        auto result =
-            policy.front().check(request, mock_command("s3:GetObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:GetObject")));
         BOOST_CHECK(result.has_value());
         BOOST_CHECK(*result == effect::allow);
     }
 
     {
         auto request = make_request("GET /vedro/my_object_id HTTP/1.1\r\n\r\n");
-        auto result =
-            policy.front().check(request, mock_command("s3:GetObject"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:GetObject")));
         BOOST_CHECK(!result.has_value());
     }
 }
@@ -160,8 +127,8 @@ BOOST_AUTO_TEST_CASE(check_allow_all_policy) {
 
     {
         auto request = make_request("GET /test HTTP/1.1\r\n\r\n");
-        auto result =
-            policy.front().check(request, mock_command("s3:ListBucket"));
+        auto result = policy.front().check(
+            variables(request, mock_command("s3:ListBucket")));
         BOOST_CHECK(result.has_value());
         BOOST_CHECK(*result == effect::allow);
     }

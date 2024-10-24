@@ -50,7 +50,8 @@ response& operator<<(response& res, const boost::property_tree::ptree& pt);
 
 std::ostream& operator<<(std::ostream& out, const response& res);
 
-coro<void> write(boost::asio::ip::tcp::socket& out, response&& res);
+coro<void> write(boost::asio::ip::tcp::socket& out, response&& res,
+                 const std::string& id);
 
 template <typename value_type>
 void put(boost::property_tree::ptree& tree, const std::string& key,

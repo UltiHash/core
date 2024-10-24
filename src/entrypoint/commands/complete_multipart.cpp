@@ -2,6 +2,7 @@
 #include "common/crypto/hash.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
+#include <entrypoint/constant.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -133,7 +134,7 @@ coro<void> complete_multipart::apply(request& req, const upload_info& info,
                .size = addr.data_size(),
                .addr = std::move(addr),
                .etag = etag,
-               .mime = info.mime};
+               .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
     std::optional<object> old_obj;
     try {
