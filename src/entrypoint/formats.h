@@ -31,7 +31,7 @@ utc_time read_iso8601_date(std::string_view str);
 namespace detail {
 
 utc_time read_local_date(std::string_view str);
-std::chrono::seconds read_timezone(std::string_view str);
+std::chrono::hours read_timezone(std::string_view str);
 
 } // namespace detail
 

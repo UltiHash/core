@@ -69,9 +69,9 @@ utc_time read_local_date(std::string_view sv) {
     return utc_time::clock::from_time_t(timegm(&t));
 }
 
-std::chrono::seconds read_timezone(std::string_view sv) {
+std::chrono::hours read_timezone(std::string_view sv) {
     if (sv == "Z")
-        return 0s;
+        return 0h;
 
     if (sv.size() != tz_len)
         throw create_time_format_error();

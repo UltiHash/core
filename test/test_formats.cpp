@@ -1,7 +1,7 @@
 
 #include <boost/throw_exception.hpp>
 #include <stdexcept>
-#define BOOST_TEST_MODULE "Test formats"
+#define BOOST_TEST_MODULE "formats"
 
 #include "entrypoint/formats.h"
 #include <boost/test/data/monomorphic.hpp> // for data driven tests
@@ -28,8 +28,7 @@ std::ostream& operator<<(std::ostream& os,
  */
 
 BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
-    auto now = std::chrono::time_point_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now());
+    auto now = std::chrono::system_clock::now();
     auto str = iso8601_date(now);
     BOOST_TEST(read_iso8601_date(str) == now);
 }
@@ -111,8 +110,7 @@ BOOST_DATA_TEST_CASE(read_timezone_handles_offsets_in_reasonable_range,
 
     auto offset = detail::read_timezone(ss.str());
 
-    BOOST_TEST(offset == std::chrono::duration_cast<std::chrono::seconds>(
-                             std::chrono::hours(sample)));
+    BOOST_TEST(offset == std::chrono::hours(sample));
 }
 
 BOOST_DATA_TEST_CASE(read_timezone__does_not_handle_wrong_input,
