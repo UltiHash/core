@@ -55,7 +55,7 @@ namespace detail {
 
 // Flow: string -> tm -> time_t -> time_point
 utc_time read_local_date(std::string_view sv) {
-    if (sv.size() != date_len)
+    if (sv.size() != date_len) [[unlikely]]
         throw create_time_format_error();
 
     std::istringstream ss;
@@ -63,21 +63,21 @@ utc_time read_local_date(std::string_view sv) {
 
     std::tm t = {};
     ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
-    if (ss.fail())
+    if (ss.fail()) [[unlikely]]
         throw create_time_format_error();
 
     return utc_time::clock::from_time_t(timegm(&t));
 }
 
 std::chrono::hours read_timezone(std::string_view sv) {
-    if (sv == "Z")
+    if (sv == "Z") [[unlikely]]
         return 0h;
 
-    if (sv.size() != tz_len)
+    if (sv.size() != tz_len) [[unlikely]]
         throw create_time_format_error();
 
     auto& pol = sv[0];
-    if (pol != '+' && pol != '-')
+    if (pol != '+' && pol != '-') [[unlikely]]
         throw create_time_format_error();
 
     // Drop sign
@@ -86,10 +86,10 @@ std::chrono::hours read_timezone(std::string_view sv) {
 
     tm t;
     ss >> std::get_time(&t, "%H:00"); // Parse time in "HH:00" format
-    if (ss.fail())
+    if (ss.fail()) [[unlikely]]
         throw create_time_format_error();
 
-    if (t.tm_hour <= -24 || t.tm_hour >= 24)
+    if (t.tm_hour <= -24 || t.tm_hour >= 24) [[unlikely]]
         throw create_time_format_error();
 
     auto offset = std::chrono::hours(t.tm_hour);
