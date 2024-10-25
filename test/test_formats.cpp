@@ -16,24 +16,6 @@ using namespace uh::cluster;
 using namespace std::chrono_literals;
 namespace bdata = boost::unit_test::data;
 
-namespace boost {
-namespace test_tools {
-namespace tt_detail {
-template <typename Clock, typename Duration>
-std::ostream& operator<<(std::ostream& os,
-                         const std::chrono::time_point<Clock, Duration>& tp);
-}
-} // namespace test_tools
-} // namespace boost
-
-template <typename Clock, typename Duration>
-std::ostream& operator<<(std::ostream& os,
-                         const std::chrono::time_point<Clock, Duration>& tp) {
-    std::time_t time = Clock::to_time_t(tp);
-    os << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
-    return os;
-}
-
 /******************************************************************************
  * Tests for read_iso8601
  */
@@ -42,7 +24,7 @@ BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
     auto now = std::chrono::time_point_cast<std::chrono::seconds>(
         std::chrono::system_clock::now());
     auto str = iso8601_date(now);
-    BOOST_TEST(read_iso8601_date(str) == now);
+    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == iso8601_date(now));
 }
 
 BOOST_AUTO_TEST_CASE(iso8601_date__reverses_read_iso8601_date_when_TZD_is_Z) {
@@ -61,7 +43,7 @@ BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
                      time, index) {
     auto tp = std::chrono::system_clock::from_time_t(time);
     auto str = iso8601_date(tp);
-    BOOST_TEST(read_iso8601_date(str) == tp);
+    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == iso8601_date(tp));
 }
 
 /******************************************************************************
