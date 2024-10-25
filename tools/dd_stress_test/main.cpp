@@ -133,7 +133,7 @@ params get_params(int argc, char* args[]) {
 }
 
 std::string dump_usage() {
-    return {"Usage: <executable> <server-bind_address> <server-port> "
+    return {"Usage: dd_stress_test <server-bind_address> <server-port> "
             "<threads-count> <connection-count> <message-count>"};
 }
 

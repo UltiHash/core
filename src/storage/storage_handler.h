@@ -39,7 +39,7 @@ public:
 
                 LOG_CORO_CONTEXT();
 
-                LOG_DEBUG() << remote.str() << " received "
+                LOG_DEBUG() << remote.str() << ": received "
                             << magic_enum::enum_name(message_header.type);
 
                 switch (message_header.type) {
