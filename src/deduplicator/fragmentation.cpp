@@ -21,8 +21,8 @@ void fragmentation::push_stored(uint128_t pointer, size_t size,
         .type = STORED,
         .data = data,
         .header = header,
-        .pointer = pointer,
-        .size = size,
+        .stored_pointer = pointer,
+        .stored_size = size,
     };
     m_frags.emplace_back(std::move(frag));
 }
@@ -34,7 +34,7 @@ void fragmentation::push_unstored(
         .type = UNSTORED,
         .data = data,
         .header = header,
-        .size = data.size(),
+        .stored_size = data.size(),
         .hint = std::move(hint),
     };
     m_frags.emplace_back(std::move(frag));
@@ -43,20 +43,68 @@ void fragmentation::push_unstored(
 }
 
 void fragmentation::flush_fragment_set(fragment_set& set) {
+    if (m_state != FLUSHED_STORAGE) {
+        throw std::runtime_error("flush_fragment_set may only be called "
+                                 "after calling flush_storage");
+    }
+
     if (m_unstored_size == 0ull) {
         return;
     }
 
     flush_fragments_internal(set);
     mark_as_uploaded();
+
+    m_state = FLUSHED_FRAGMENT_SET;
 }
 
 std::size_t fragmentation::effective_size() const { return m_effective_size; }
 std::size_t fragmentation::unstored_size() const { return m_unstored_size; }
 
+address shrink(address& addr) {
+    address rv;
+    if (addr.empty()) {
+        return rv;
+    }
+
+    auto first = addr.get(0);
+    uint128_t ptr = first.pointer;
+    std::size_t size = first.size;
+
+    for (std::size_t index = 1; index < addr.size(); ++index) {
+        auto current = addr.get(index);
+        if (ptr + size == current.pointer) {
+            size += current.size;
+            continue;
+        }
+        rv.push({ptr, size});
+        ptr = current.pointer;
+        size = current.size;
+    }
+    rv.push({ptr, size});
+    return rv;
+}
+
+void fragmentation::merge_consecutive_unstored() {
+    auto it = m_frags.begin();
+    while (it != m_frags.end()) {
+        if (it->type == UNSTORED) {
+            auto next_it = std::next(it);
+            while (next_it != m_frags.end() && next_it->type == UNSTORED &&
+                   it->addr.consecutive(next_it->addr)) {
+                it->addr.append(next_it->addr);
+                next_it = m_frags.erase(next_it);
+            }
+            it->addr = shrink(it->addr);
+        }
+        ++it;
+    }
+};
+
 address fragmentation::make_address() const {
-    if (m_unstored_size != 0ull) {
-        throw std::runtime_error("fragmentation must be flushed first");
+    if (m_state != MERGED_AND_LINKED_UNSTORED or m_unstored_size != 0ull) {
+        throw std::runtime_error("make_address may only be called "
+                                 "after calling merge_and_link_unstored");
     }
 
     address rv;
@@ -68,7 +116,7 @@ address fragmentation::make_address() const {
         }
 
         if (frag.type == STORED) {
-            rv.push({frag.pointer, frag.size});
+            rv.push({frag.stored_pointer, frag.stored_size});
             continue;
         }
     }
@@ -81,7 +129,7 @@ address fragmentation::get_stored_fragments() const {
 
     for (const auto& frag : m_frags) {
         if (frag.type == STORED) {
-            rv.push({frag.pointer, frag.size});
+            rv.push({frag.stored_pointer, frag.stored_size});
         }
     }
 
@@ -89,6 +137,11 @@ address fragmentation::get_stored_fragments() const {
 }
 
 coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
+    if (m_state != HANDLED_REJECTED) {
+        throw std::runtime_error("flush_storage may only be called "
+                                 "after calling handle_rejected_fragments");
+    }
+
     if (m_unstored_size == 0ull) {
         co_return;
     }
@@ -97,11 +150,23 @@ coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
     m_buffer_address = co_await gdv.write(ctx, {&buffer[0], buffer.size()});
 
     compute_unstored_addresses();
-    co_await link_unstored_fragments(ctx, gdv);
+
+    m_state = FLUSHED_STORAGE;
 }
 
-coro<void> fragmentation::link_unstored_fragments(context& ctx,
+coro<void> fragmentation::merge_and_link_unstored(context& ctx,
                                                   global_data_view& gdv) {
+    if (m_state != FLUSHED_FRAGMENT_SET) {
+        throw std::runtime_error("merge_and_link_unstored may only be called "
+                                 "after calling flush_fragment_set");
+    }
+
+    if (m_unstored_size != 0ull) {
+        throw std::runtime_error("fragmentation must be flushed first");
+    }
+
+    merge_consecutive_unstored();
+
     address unstored;
     for (const auto& frag : m_frags) {
         if (frag.type == UNSTORED) {
@@ -116,6 +181,8 @@ coro<void> fragmentation::link_unstored_fragments(context& ctx,
         throw std::runtime_error("there is a mismatch between the stored "
                                  "address and computed addresses");
     }
+
+    m_state = MERGED_AND_LINKED_UNSTORED;
 }
 
 void fragmentation::flush_fragments_internal(fragment_set& set) {
@@ -125,7 +192,7 @@ void fragmentation::flush_fragments_internal(fragment_set& set) {
 
     for (auto& frag : m_frags) {
         if (frag.type == STORED) {
-            set.mark_deduplication({frag.pointer, frag.size});
+            set.mark_deduplication({frag.stored_pointer, frag.stored_size});
             continue;
         }
 
@@ -191,29 +258,35 @@ unique_buffer<char> fragmentation::unstored_to_buffer() {
 
 void fragmentation::handle_rejected_fragments(const address& addr,
                                               fragment_set& set) {
+    if (m_state != DEDUPE_IN_PROGRESS) {
+        throw std::runtime_error(
+            "handle_rejected_fragments may only be called "
+            "after the deduplication process has completed");
+    }
     std::size_t last_frag_pos = 0;
-    for (auto& frag : m_frags) {
-        if (frag.type != STORED) {
+    for (auto& stored_frag : m_frags) {
+        if (stored_frag.type != STORED) {
             continue;
         }
 
         for (size_t i = last_frag_pos; i < addr.size(); i++) {
             auto rejected_frag = addr.get(i);
-            if (rejected_frag.pointer == frag.pointer &&
-                rejected_frag.size == frag.size) {
+            if (rejected_frag.pointer == stored_frag.stored_pointer &&
+                rejected_frag.size == stored_frag.stored_size) {
                 set.erase({rejected_frag.pointer, rejected_frag.size},
-                          frag.header);
-                frag.type = UNSTORED;
-                frag.pointer = 0;
-                frag.hint = std::nullopt;
+                          stored_frag.header);
+                stored_frag.type = UNSTORED;
+                stored_frag.stored_pointer = 0;
+                stored_frag.hint = std::nullopt;
                 last_frag_pos = i + 1;
 
-                m_effective_size += frag.data.size();
-                m_unstored_size += frag.data.size();
+                m_effective_size += stored_frag.data.size();
+                m_unstored_size += stored_frag.data.size();
                 break;
             }
         }
     }
+    m_state = HANDLED_REJECTED;
 }
 
 } // namespace uh::cluster

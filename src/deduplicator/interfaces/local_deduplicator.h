@@ -55,7 +55,7 @@ struct local_deduplicator : public deduplicator_interface {
     coro<dedupe_response> deduplicate(context& ctx,
                                       const std::string_view& data) override {
         std::size_t piece_size = std::ceil(static_cast<double>(data.size()) /
-                                      static_cast<double>(pieces_count));
+                                           static_cast<double>(pieces_count));
         std::vector<std::string_view> pieces;
         std::vector<std::shared_ptr<awaitable_promise<dedupe_response>>> proms;
         proms.reserve(pieces_count);
@@ -154,8 +154,8 @@ private:
                 auto frag_size =
                     std::min(data.size(), m_dedupe_conf.max_fragment_size);
 
-                fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
-                                        std::move(f.hint));
+                fragments.push_unstored(data.substr(0, frag_size),
+                                        (offset == 0), std::move(f.hint));
 
                 data = data.substr(frag_size);
                 offset += frag_size;
@@ -187,9 +187,12 @@ private:
         co_await fragments.flush_storage(ctx, m_storage);
 
         LOG_DEBUG() << ctx.peer() << ": flushing fragments to fragment set";
-        co_await m_dedupe_workers.post_in_workers(
-            ctx, [this, &fragments] {
-            fragments.flush_fragment_set(m_fragment_set); });
+        co_await m_dedupe_workers.post_in_workers(ctx, [this, &fragments] {
+            fragments.flush_fragment_set(m_fragment_set);
+        });
+
+        LOG_DEBUG() << ctx.peer() << ": merge and link unstored fragments";
+        co_await fragments.merge_and_link_unstored(ctx, m_storage);
 
         LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
         dedupe_response result{.effective_size = fragments.effective_size(),

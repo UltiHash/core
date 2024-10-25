@@ -67,6 +67,14 @@ struct address {
     [[nodiscard]] bool empty() const noexcept;
 
     /**
+     * Checks if the provided address is consecutive to this address.
+     * address
+     * @param addr
+     * @return true if the provided address is consecutive to this address.
+     */
+    bool consecutive(const address& addr);
+
+    /**
      * Return a sub range of the address.
      */
     address range(std::size_t start, std::size_t end) const;

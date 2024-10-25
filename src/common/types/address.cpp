@@ -18,6 +18,12 @@ address::address(std::size_t size)
     : pointers(size * 2),
       sizes(size) {}
 
+bool address::consecutive(const address& addr) {
+    auto this_addr_end = get(0).pointer + data_size();
+    auto other_addr_start = addr.get(0).pointer;
+    return this_addr_end == other_addr_start;
+}
+
 void address::push(const fragment& frag) {
     pointers.emplace_back(frag.pointer.get_data()[0]);
     pointers.emplace_back(frag.pointer.get_data()[1]);
