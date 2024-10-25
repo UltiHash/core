@@ -16,11 +16,22 @@ using namespace uh::cluster;
 using namespace std::chrono_literals;
 namespace bdata = boost::unit_test::data;
 
+namespace boost {
+namespace test_tools {
+namespace tt_detail {
+template <typename Clock, typename Duration>
+std::ostream& operator<<(std::ostream& os,
+                         const std::chrono::time_point<Clock, Duration>& tp);
+}
+} // namespace test_tools
+} // namespace boost
+
 template <typename Clock, typename Duration>
 std::ostream& operator<<(std::ostream& os,
                          const std::chrono::time_point<Clock, Duration>& tp) {
     std::time_t time = Clock::to_time_t(tp);
-    return os << std::ctime(&time); // Convert time_point to readable string
+    os << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
+    return os;
 }
 
 /******************************************************************************
