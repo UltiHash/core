@@ -4,8 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-  push:
-
+  
 jobs:
 
   provision-aarch64-runner:
