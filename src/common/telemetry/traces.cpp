@@ -1,5 +1,6 @@
 #include "traces.h"
 #include "common/utils/common.h"
+#include "log.h"
 #include "opentelemetry/context/propagation/global_propagator.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h"
 #include "opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h"
@@ -14,6 +15,10 @@ namespace uh::cluster {
 namespace trace_sdk = opentelemetry::sdk::trace;
 
 void initialize_traces_exporter(const std::string& endpoint) {
+    if (endpoint.empty()) {
+        return;
+    }
+    LOG_DEBUG() << "trace endpoint: " << endpoint;
     opentelemetry::exporter::otlp::OtlpGrpcExporterOptions trace_opts;
     trace_opts.endpoint = endpoint;
     auto exporter =
