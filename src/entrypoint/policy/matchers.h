@@ -2,6 +2,7 @@
 #define CORE_ENTRYPOINT_POLICY_MATCHERS_H
 
 #include "common/telemetry/log.h"
+#include "entrypoint/formats.h"
 #include "matcher.h"
 #include <set>
 
@@ -246,58 +247,20 @@ inline matcher match_numericgreaterthanequals(
         });
 }
 
+template <typename Comparator>
 inline matcher
-match_dateequals(std::map<std::string, std::list<std::string>> strings,
-                 undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateEquals not implemented");
-    };
-}
-
-inline matcher
-match_datenotequals(std::map<std::string, std::list<std::string>> strings,
-                    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateNotEquals not implemented");
-    };
-}
-
-inline matcher
-match_datelessthan(std::map<std::string, std::list<std::string>> strings,
-                   undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateLessThan not implemented");
-    };
-}
-
-inline matcher
-match_datelessthanequals(std::map<std::string, std::list<std::string>> strings,
-                         undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateLessThanEquals not implemented");
-    };
-}
-
-inline matcher
-match_dategreaterthan(std::map<std::string, std::list<std::string>> strings,
-                      undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateGreaterThan not implemented");
-    };
-}
-
-inline matcher match_dategreaterthanequals(
-    std::map<std::string, std::list<std::string>> strings,
-    undefined_variable uv) {
-    return [strings = std::move(strings), uv](const variables&) -> bool {
-        (void)uv;
-        throw std::runtime_error("DateGreaterThanEquals not implemented");
-    };
+match_datecomparison(std::map<std::string, std::list<std::string>> values,
+                     undefined_variable uv, Comparator comp) {
+    using namespace std::chrono_literals;
+    return var_matcher(
+        std::move(values), uv,
+        [comp](const auto& vars, const auto& var, const auto& options) -> bool {
+            if (options.size() != 1) [[unlikely]]
+                throw std::runtime_error(
+                    "list is not supported as a condicion value");
+            return comp(read_iso8601_date(var_replace(var, vars)),
+                        read_iso8601_date(options.front()));
+        });
 }
 
 inline matcher match_bool(std::map<std::string, std::list<std::string>> strings,
