@@ -28,7 +28,8 @@ std::ostream& operator<<(std::ostream& os,
  */
 
 BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
-    auto now = std::chrono::system_clock::now();
+    auto now = std::chrono::time_point_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now());
     auto str = iso8601_date(now);
     BOOST_TEST(read_iso8601_date(str) == now);
 }
