@@ -42,10 +42,6 @@ make_log_config(const service_config& cfg,
     if (cfg.telemetry_url.empty()) {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
                                          .level = log_level,
-                                         .service_role = service_role},
-                        log::sink_config{.type = log::sink_type::file,
-                                         .filename = "log.log",
-                                         .level = log_level,
                                          .service_role = service_role}}};
     } else {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,

@@ -9,6 +9,7 @@
   `s3:prefix`
 - Add default content-type for objects
 - Fix bug in parsing HTTP range requests
+- Remove output to log.log
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
