@@ -9,6 +9,7 @@
   `s3:prefix`, `aws:CurrentTime`
 - Add default content-type for objects
 - Fix bug in parsing HTTP range requests
+- Remove output to log.log
 - Add support for date condition operators: `DateEquals`, `DateNotEquals`,
   `DateLessThan`, `DateLessThanEquals`, `DateGreaterThan`, `DateGreaterThanEquals`
 
