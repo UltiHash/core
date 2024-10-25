@@ -24,17 +24,18 @@ BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
     auto now = std::chrono::time_point_cast<std::chrono::seconds>(
         std::chrono::system_clock::now());
     auto str = iso8601_date(now);
-    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == iso8601_date(now));
+    BOOST_CHECK_EQUAL(iso8601_date(read_iso8601_date(str)), iso8601_date(now));
 }
 
 BOOST_AUTO_TEST_CASE(iso8601_date__reverses_read_iso8601_date_when_TZD_is_Z) {
     auto str = std::string("2011-02-18T23:12:34Z");
-    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == str);
+    BOOST_CHECK_EQUAL(iso8601_date(read_iso8601_date(str)), str);
 }
 
 BOOST_AUTO_TEST_CASE(iso8601_date__prints_UTC_time) {
     auto str = std::string("2011-02-18T23:12:34-02:00");
-    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == "2011-02-18T21:12:34Z");
+    BOOST_CHECK_EQUAL(iso8601_date(read_iso8601_date(str)),
+                      "2011-02-18T21:12:34Z");
 }
 
 BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
@@ -43,7 +44,7 @@ BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
                      time, index) {
     auto tp = std::chrono::system_clock::from_time_t(time);
     auto str = iso8601_date(tp);
-    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == iso8601_date(tp));
+    BOOST_CHECK_EQUAL(iso8601_date(read_iso8601_date(str)), iso8601_date(tp));
 }
 
 /******************************************************************************
@@ -77,7 +78,7 @@ BOOST_AUTO_TEST_CASE(read_timezone__handles_Z) {
 
     auto offset = detail::read_timezone(str);
 
-    BOOST_TEST(offset == 0h);
+    BOOST_CHECK_EQUAL(offset, 0h);
 }
 
 BOOST_AUTO_TEST_CASE(read_timezone__handles_plus_TZ) {
@@ -85,7 +86,7 @@ BOOST_AUTO_TEST_CASE(read_timezone__handles_plus_TZ) {
 
     auto offset = detail::read_timezone(str);
 
-    BOOST_TEST(offset == 2h);
+    BOOST_CHECK_EQUAL(offset, 2h);
 }
 
 BOOST_AUTO_TEST_CASE(read_timezone__handles_minus_TZ) {
@@ -93,7 +94,7 @@ BOOST_AUTO_TEST_CASE(read_timezone__handles_minus_TZ) {
 
     auto offset = detail::read_timezone(str);
 
-    BOOST_TEST(offset == -2h);
+    BOOST_CHECK_EQUAL(offset, -2h);
 }
 
 BOOST_DATA_TEST_CASE(read_timezone_handles_offsets_in_reasonable_range,
@@ -104,7 +105,7 @@ BOOST_DATA_TEST_CASE(read_timezone_handles_offsets_in_reasonable_range,
 
     auto offset = detail::read_timezone(ss.str());
 
-    BOOST_TEST(offset == std::chrono::hours(sample));
+    BOOST_CHECK_EQUAL(offset, std::chrono::hours(sample));
 }
 
 BOOST_DATA_TEST_CASE(read_timezone__does_not_handle_wrong_input,
