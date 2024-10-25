@@ -32,19 +32,19 @@ using namespace std::chrono_literals;
 /*
  * Constants, related to specification
  */
-constexpr auto constexpr_size = std::char_traits<char>::length;
-constexpr auto date_len = constexpr_size("2011-02-18T23:12:34");
-constexpr auto tz_len = constexpr_size("+02:00");
+constexpr auto CONSTEXPR_SIZE = std::char_traits<char>::length;
+constexpr auto DATE_LEN = CONSTEXPR_SIZE("2011-02-18T23:12:34");
+constexpr auto TZ_LEN = CONSTEXPR_SIZE("+02:00");
 
 inline std::runtime_error create_time_format_error() {
-    return std::runtime_error("Time format error: `2011-02-18T23:12:34-02:00` "
+    return std::runtime_error("time format error: `2011-02-18T23:12:34-02:00` "
                               "and `2011-02-18T23:12:34Z` supported");
 }
 
 utc_time read_iso8601_date(std::string_view str) {
 
-    auto date_str = std::string_view(str).substr(0, date_len);
-    auto tz_str = std::string_view(str).substr(date_len, str.size() - date_len);
+    auto date_str = std::string_view(str).substr(0, DATE_LEN);
+    auto tz_str = std::string_view(str).substr(DATE_LEN, str.size() - DATE_LEN);
 
     auto time = detail::read_local_date(date_str);
     auto offset = detail::read_timezone(tz_str);
@@ -55,7 +55,7 @@ namespace detail {
 
 // Flow: string -> tm -> time_t -> time_point
 utc_time read_local_date(std::string_view sv) {
-    if (sv.size() != date_len) [[unlikely]]
+    if (sv.size() != DATE_LEN) [[unlikely]]
         throw create_time_format_error();
 
     std::istringstream ss;
@@ -73,7 +73,7 @@ std::chrono::hours read_timezone(std::string_view sv) {
     if (sv == "Z") [[unlikely]]
         return 0h;
 
-    if (sv.size() != tz_len) [[unlikely]]
+    if (sv.size() != TZ_LEN) [[unlikely]]
         throw create_time_format_error();
 
     auto& pol = sv[0];
