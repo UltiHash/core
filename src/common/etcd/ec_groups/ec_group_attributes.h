@@ -45,9 +45,7 @@ public:
                       std::string(magic_enum::enum_name(status)));
     }
 
-    void clear() {
-        m_etcd_client.rmdir(get_ec_group_path(m_gid));
-    }
+    void clear() { m_etcd_client.rmdir(get_ec_group_path(m_gid)); }
 
     std::optional<ec_status> get_status() {
         auto resp = wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this] {
@@ -62,7 +60,9 @@ public:
 
     [[nodiscard]] size_t group_id() const noexcept { return m_gid; }
 
-    [[nodiscard]] etcd::SyncClient& etcd_client() const noexcept { return m_etcd_client; }
+    [[nodiscard]] etcd::SyncClient& etcd_client() const noexcept {
+        return m_etcd_client;
+    }
 
 private:
     void set_attribute(etcd_ec_group_attributes attr,

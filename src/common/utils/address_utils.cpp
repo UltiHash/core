@@ -1,6 +1,6 @@
 #include "address_utils.h"
 
-#include "common/coroutines/awaitable_promise.h"
+#include "common/coroutines/promise.h"
 
 namespace uh::cluster {
 
@@ -45,18 +45,19 @@ coro<size_t> perform_for_address(
     auto info =
         extract_node_address_map(addr, storage_get_handler, existing_offsets);
 
-    std::vector<std::shared_ptr<awaitable_promise<void>>> proms;
-    proms.reserve(info.node_info_map.size());
+    std::vector<future<void>> futures;
+    futures.reserve(info.node_info_map.size());
 
     size_t i = 0;
     for (auto& dn : info.node_info_map) {
-        proms.emplace_back(std::make_shared<awaitable_promise<void>>(ioc));
+        promise<void> p;
+        futures.emplace_back(p.get_future());
         boost::asio::co_spawn(ioc, fn(i++, dn.first, dn.second),
-                              use_awaitable_promise_cospawn(proms.back()));
+                              use_promise_cospawn(std::move(p)));
     }
 
-    for (auto& p : proms) {
-        co_await p->get();
+    for (auto& f : futures) {
+        co_await f.get();
     }
 
     co_return info.data_size;

@@ -1,5 +1,6 @@
 #include "multipart.h"
 #include "common/crypto/hash.h"
+#include "common/telemetry/metrics.h"
 #include "entrypoint/http/command_exception.h"
 
 using namespace uh::cluster::ep::http;
@@ -47,9 +48,11 @@ coro<response> multipart::handle(request& req) {
     response res;
     res.set("ETag", md5);
 
+    auto data_size = resp.addr.data_size();
+
     co_await m_uploads.append_upload_part_info(
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
-        buffer.size(), std::move(md5));
+        data_size, std::move(md5));
 
     co_return res;
 }

@@ -4,8 +4,7 @@
 #include <filesystem>
 #include <string>
 
-namespace uh::cluster
-{
+namespace uh::cluster {
 
 std::string read_file(const std::filesystem::path& p);
 

@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-
+  
 jobs:
 
   provision-aarch64-runner:
@@ -34,7 +34,8 @@ jobs:
             --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=aarch64-github-runner}]' \
             --instance-initiated-shutdown-behavior terminate \
             --associate-public-ip-address \
-            --region eu-central-1
+            --region eu-central-1 \
+            --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":50}}]'
     
   unit-gcc-aarch64-linux:
     strategy:

@@ -2,6 +2,7 @@
 #include "common/crypto/hash.h"
 #include "common/utils/xml_parser.h"
 #include "entrypoint/http/command_exception.h"
+#include <entrypoint/constant.h>
 
 using namespace uh::cluster::ep::http;
 
@@ -98,31 +99,7 @@ coro<response> complete_multipart::handle(request& req) {
 
     auto etag = multipart_etag(info);
 
-    auto addr = info.generate_total_address();
-    object obj{.name = req.object_key(),
-               .size = addr.data_size(),
-               .addr = std::move(addr),
-               .etag = etag,
-               .mime = info.mime};
-
-    std::optional<object> old_obj;
-    if constexpr (m_enable_refcount) {
-        try {
-            old_obj =
-                co_await m_directory.get_object(req.bucket(), req.object_key());
-        } catch (command_exception&) {
-            old_obj = std::nullopt;
-        }
-    }
-
-    co_await m_directory.put_object(req.bucket(), obj);
-
-    if constexpr (m_enable_refcount) {
-        if (old_obj.has_value() && old_obj->addr.has_value()) {
-            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
-            m_limits.free_storage_size(old_obj->size);
-        }
-    }
+    co_await apply(req, info, etag);
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
@@ -143,6 +120,36 @@ coro<response> complete_multipart::handle(request& req) {
 
 std::string complete_multipart::action_id() const {
     return "s3:CompleteMultipartUpload";
+}
+
+/*
+ * This function was factored out of handle(), as gcc would issue warnings of
+ * type `mismatched-new-delete`: _called on pointer returned from a mismatched
+ * allocation function_.
+ */
+coro<void> complete_multipart::apply(request& req, const upload_info& info,
+                                     const std::string& etag) {
+    auto addr = info.generate_total_address();
+    object obj{.name = req.object_key(),
+               .size = addr.data_size(),
+               .addr = std::move(addr),
+               .etag = etag,
+               .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
+
+    std::optional<object> old_obj;
+    try {
+        old_obj =
+            co_await m_directory.get_object(req.bucket(), req.object_key());
+    } catch (command_exception&) {
+        old_obj = std::nullopt;
+    }
+
+    co_await m_directory.put_object(req.bucket(), obj);
+
+    if (old_obj.has_value() && old_obj->addr.has_value()) {
+        co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+        m_limits.free_storage_size(old_obj->size);
+    }
 }
 
 } // namespace uh::cluster

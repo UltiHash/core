@@ -121,4 +121,27 @@ BOOST_AUTO_TEST_CASE(string_base64_decode) {
     BOOST_CHECK(decoded == plain);
 }
 
+BOOST_AUTO_TEST_CASE(nocase_map) {
+    std::map<std::string, std::string, nocase_less> m;
+
+    m["foo"] = "bar";
+    BOOST_CHECK_EQUAL(m.size(), 1ull);
+    BOOST_CHECK_EQUAL(m["foo"], "bar");
+    BOOST_CHECK_EQUAL(m["fOo"], "bar");
+    BOOST_CHECK_EQUAL(m["FoO"], "bar");
+
+    {
+        auto res =
+            m.insert(std::make_pair(std::string("baz"), std::string("quux")));
+        BOOST_CHECK(res.second);
+    }
+
+    {
+        auto res = m.find("bAz");
+        BOOST_CHECK(res != m.end());
+        BOOST_CHECK_EQUAL(res->first, "baz");
+        BOOST_CHECK_EQUAL(res->second, "quux");
+    }
+}
+
 } // namespace uh::cluster

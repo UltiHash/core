@@ -63,6 +63,8 @@ constexpr const char* ENV_CFG_DB_MULTIPART_CONNECTIONS =
 constexpr const char* ENV_CFG_DB_USERS_CONNECTIONS = "UH_DB_USERS_CONNECTIONS";
 constexpr const char* ENV_CFG_DB_USER = "UH_DB_USER";
 constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
+constexpr const char* ENV_CFG_ETCD_USERNAME = "UH_ETCD_USERNAME";
+constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 

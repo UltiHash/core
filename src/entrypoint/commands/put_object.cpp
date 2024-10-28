@@ -1,6 +1,7 @@
 #include "put_object.h"
 
 #include "common/utils/double_buffer.h"
+#include <entrypoint/constant.h>
 
 using namespace boost;
 using namespace uh::cluster::ep::http;
@@ -18,21 +19,22 @@ coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
     co_return read;
 }
 
-std::shared_ptr<awaitable_promise<dedupe_response>>
+future<dedupe_response>
 upload(context& ctx, boost::asio::io_context& ioc,
        roundrobin_load_balancer<deduplicator_interface>& dedup,
        const std::vector<char>& buffer) {
-    auto pr = std::make_shared<awaitable_promise<dedupe_response>>(ioc);
+    promise<dedupe_response> p;
+    auto f = p.get_future();
 
     if (!buffer.empty()) {
         asio::co_spawn(
             ioc, dedup.get()->deduplicate(ctx, {buffer.data(), buffer.size()}),
-            use_awaitable_promise_cospawn(pr));
+            use_promise_cospawn(std::move(p)));
     } else {
-        pr->set(dedupe_response());
+        p.set_value(dedupe_response());
     }
 
-    return pr;
+    return f;
 }
 
 } // namespace
@@ -85,37 +87,33 @@ coro<response> put_object::handle(request& req) {
         auto tag = to_hex(hash.finalize());
         LOG_DEBUG() << req.peer() << ": etag: " << tag;
 
+        auto original_size = resp.addr.data_size();
         object obj{.name = req.object_key(),
-                   .size = resp.addr.data_size(),
+                   .size = original_size,
                    .addr = std::move(resp.addr),
                    .etag = tag,
-                   .mime = req.header("Content-Type")};
+                   .mime = req.header("Content-Type")
+                               .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         std::optional<object> old_obj;
-        if constexpr (m_enable_refcount) {
-            try {
-                old_obj =
-                    co_await m_dir.get_object(req.bucket(), req.object_key());
-            } catch (command_exception&) {
-                old_obj = std::nullopt;
-            }
+        try {
+            old_obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+        } catch (command_exception&) {
+            old_obj = std::nullopt;
         }
 
         co_await m_dir.put_object(req.bucket(), obj);
 
-        if constexpr (m_enable_refcount) {
-            if (old_obj.has_value() && old_obj->addr.has_value()) {
-                co_await m_gdv.unlink(req.context(),
-                                      old_obj.value().addr.value());
-                m_limits.free_storage_size(old_obj->size);
-            }
+        if (old_obj.has_value() && old_obj->addr.has_value()) {
+            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+            m_limits.free_storage_size(old_obj->size);
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
 
         res.set("ETag", tag);
-        res.set_original_size(content_length);
+        res.set_original_size(original_size);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
         m_limits.free_storage_size(content_length);
@@ -142,18 +140,18 @@ coro<dedupe_response> put_object::put_large_object(request& req,
     dedupe_response rv;
 
     do {
-        auto promise = upload(req.context(), m_ioc, m_dedup, b.current());
+        auto future = upload(req.context(), m_ioc, m_dedup, b.current());
         b.flip();
 
         read = co_await fill(req, b.current());
         hash.consume(b.current());
         transferred += read;
 
-        rv.append(co_await promise->get());
+        rv.append(co_await future.get());
     } while (transferred < content_length);
 
-    auto promise = upload(req.context(), m_ioc, m_dedup, b.current());
-    rv.append(co_await promise->get());
+    auto future = upload(req.context(), m_ioc, m_dedup, b.current());
+    rv.append(co_await future.get());
 
     co_return rv;
 }

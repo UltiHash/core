@@ -42,10 +42,6 @@ make_log_config(const service_config& cfg,
     if (cfg.telemetry_url.empty()) {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
                                          .level = log_level,
-                                         .service_role = service_role},
-                        log::sink_config{.type = log::sink_type::file,
-                                         .filename = "log.log",
-                                         .level = log_level,
                                          .service_role = service_role}}};
     } else {
         lc = {.sinks = {log::sink_config{.type = log::sink_type::cout,
@@ -74,8 +70,18 @@ void register_service(CLI::App& app, service_config& cfg) {
         ->envname(ENV_CFG_LICENSE)
         ->required();
 
-    group->add_option("--registry,-r", cfg.etcd_url, "URL to etcd endpoint")
-        ->default_val(cfg.etcd_url);
+    group
+        ->add_option("--registry,-r", cfg.etcd_config.url,
+                     "URL to etcd endpoint")
+        ->default_val(cfg.etcd_config.url);
+    group
+        ->add_option("--registry-user", cfg.etcd_config.username,
+                     "username for etcd authentication")
+        ->envname(ENV_CFG_ETCD_USERNAME);
+    group
+        ->add_option("--registry-pass", cfg.etcd_config.password,
+                     "password for etcd authentication")
+        ->envname(ENV_CFG_ETCD_PASSWORD);
 
     group
         ->add_option("--workdir,-w", cfg.working_dir,
@@ -127,15 +133,15 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->default_val(cfg.read_cache_capacity_l2);
 
     group
-        ->add_option("--ec-data-shards",
-                     cfg.ec_data_shards,
-                     "number of data shards (K) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-data-shards", cfg.ec_data_shards,
+            "number of data shards (K) in an erasure-coded storage group")
         ->default_val(cfg.ec_data_shards);
 
     group
-        ->add_option("--ec-parity-shards",
-                     cfg.ec_parity_shards,
-                     "number of parity shards (M) in an erasure-coded storage group")
+        ->add_option(
+            "--ec-parity-shards", cfg.ec_parity_shards,
+            "number of parity shards (M) in an erasure-coded storage group")
         ->default_val(cfg.ec_parity_shards);
 }
 
@@ -197,10 +203,6 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     rv->add_option("--max-fragment-size", cfg.max_fragment_size,
                    "maximum fragment size")
         ->default_val(cfg.max_fragment_size);
-
-    rv->add_option("--minimum-data-size", cfg.dedupe_worker_minimum_data_size,
-                   "minimum worker data size")
-        ->default_val(cfg.dedupe_worker_minimum_data_size);
 
     rv->add_option("--set-capacity", cfg.set_capacity,
                    "maximum number of fragments in the dedupe set")
