@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(read_iso8601_date__does_not_handle_decimal_fraction) {
 BOOST_AUTO_TEST_CASE(read_local_date__does_not_handle_wrong_input) {
     auto str = "2011-02-18X23:12:34Z";
 
-    BOOST_REQUIRE_THROW(detail::read_local_date(str), std::runtime_error);
+    BOOST_REQUIRE_THROW(read_iso8601_date(str), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(read_iso8601_date__handles_the_year_2260) {
@@ -103,10 +103,10 @@ BOOST_AUTO_TEST_CASE(read_iso8601_date__doesnt_handle_the_year_2261) {
 BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
                      bdata::random(0, 1893456000) /*1970-2030*/ ^
                          bdata::xrange(100),
-                     time, index) {
-    auto tp = std::chrono::system_clock::from_time_t(time);
+                     seconds, index) {
+    auto time = iso8601_date(std::chrono::system_clock::from_time_t(seconds));
 
-    auto read_tp = read_iso8601_date(iso8601_date(tp));
+    auto read_time = iso8601_date(read_iso8601_date(time));
 
-    BOOST_TEST(read_tp == tp);
+    BOOST_TEST(read_time == time);
 }
