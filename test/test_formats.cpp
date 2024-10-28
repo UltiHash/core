@@ -15,49 +15,32 @@ using namespace uh::cluster;
 using namespace std::chrono_literals;
 namespace bdata = boost::unit_test::data;
 
-template <typename Clock, typename Duration>
-std::ostream& operator<<(std::ostream& os,
-                         const std::chrono::time_point<Clock, Duration>& tp) {
-    std::time_t time = Clock::to_time_t(tp);
-    return os << std::ctime(&time); // Convert time_point to readable string
-}
-
 /******************************************************************************
  * Tests for read_iso8601
  */
 
-BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
-    auto now = std::chrono::time_point_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now());
-    auto str = iso8601_date(now);
-
-    auto read_date = read_iso8601_date(str);
-
-    BOOST_TEST(read_date == now);
-}
-
 BOOST_AUTO_TEST_CASE(iso8601_date__reverses_read_iso8601_date_when_TZD_is_Z) {
     auto str = std::string("2011-02-18T23:12:34Z");
 
-    auto read_date = read_iso8601_date(str);
+    auto read_date = iso8601_date(read_iso8601_date(str));
 
-    BOOST_TEST(iso8601_date(read_date) == str);
+    BOOST_TEST(read_date == str);
 }
 
 BOOST_AUTO_TEST_CASE(iso8601_date__prints_UTC_time) {
     auto str = std::string("2011-02-18T23:12:34-02:00");
 
-    auto read_date = read_iso8601_date(str);
+    auto read_date = iso8601_date(read_iso8601_date(str));
 
-    BOOST_TEST(iso8601_date(read_date) == "2011-02-18T21:12:34Z");
+    BOOST_TEST(read_date == "2011-02-18T21:12:34Z");
 }
 
 BOOST_AUTO_TEST_CASE(read_iso8601_date__handles_the_year_2260) {
     auto str = std::string("2260-01-01T00:00:00Z");
 
-    auto read_date = read_iso8601_date(str);
+    auto read_date = iso8601_date(read_iso8601_date(str));
 
-    BOOST_TEST(iso8601_date(read_date) == str);
+    BOOST_TEST(read_date == str);
 }
 
 BOOST_AUTO_TEST_CASE(read_iso8601_date__doesnt_handle_the_year_2261) {
@@ -72,9 +55,9 @@ BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
                      time, index) {
     auto tp = std::chrono::system_clock::from_time_t(time);
 
-    auto str = iso8601_date(tp);
+    auto read_tp = read_iso8601_date(iso8601_date(tp));
 
-    BOOST_TEST(read_iso8601_date(str) == tp);
+    BOOST_TEST(read_tp == tp);
 }
 
 /******************************************************************************
@@ -85,9 +68,9 @@ BOOST_AUTO_TEST_CASE(read_local_date__handles_seconds) {
     // Arrange
     auto str = "2011-02-18T23:12:34";
     // Act
-    auto date = detail::read_local_date(str);
+    auto date = iso8601_date(detail::read_local_date(str));
     // Assert
-    BOOST_CHECK_EQUAL(iso8601_date(date), "2011-02-18T23:12:34Z");
+    BOOST_CHECK_EQUAL(date, "2011-02-18T23:12:34Z");
 }
 
 BOOST_AUTO_TEST_CASE(read_local_date__does_not_handle_decimal_fraction) {
@@ -130,12 +113,13 @@ BOOST_AUTO_TEST_CASE(read_timezone__handles_minus_TZ) {
 BOOST_DATA_TEST_CASE(read_timezone__handles_offsets_in_reasonable_range,
                      bdata::xrange(-23, 24)) {
     std::stringstream ss;
+    auto sample_offset = std::chrono::hours(sample);
     ss << ((sample < 0) ? "-" : "+");
     ss << std::setw(2) << std::setfill('0') << std::abs(sample) << ":00";
 
     auto offset = detail::read_timezone(ss.str());
 
-    BOOST_TEST(offset == std::chrono::hours(sample));
+    BOOST_TEST(offset == sample_offset);
 }
 
 BOOST_DATA_TEST_CASE(read_timezone__does_not_handle_wrong_input,
