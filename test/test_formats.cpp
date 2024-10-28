@@ -15,6 +15,13 @@ using namespace uh::cluster;
 using namespace std::chrono_literals;
 namespace bdata = boost::unit_test::data;
 
+template <typename Clock, typename Duration>
+std::ostream& operator<<(std::ostream& os,
+                         const std::chrono::time_point<Clock, Duration>& tp) {
+    std::time_t time = Clock::to_time_t(tp);
+    return os << std::ctime(&time); // Convert time_point to readable string
+}
+
 /******************************************************************************
  * Tests for read_iso8601
  */
@@ -26,7 +33,7 @@ BOOST_AUTO_TEST_CASE(read_iso8601_date__reverses_iso8601_date) {
 
     auto read_date = read_iso8601_date(str);
 
-    BOOST_TEST(iso8601_date(read_date) == iso8601_date(now));
+    BOOST_TEST(read_date == now);
 }
 
 BOOST_AUTO_TEST_CASE(iso8601_date__reverses_read_iso8601_date_when_TZD_is_Z) {
@@ -45,6 +52,20 @@ BOOST_AUTO_TEST_CASE(iso8601_date__prints_UTC_time) {
     BOOST_TEST(iso8601_date(read_date) == "2011-02-18T21:12:34Z");
 }
 
+BOOST_AUTO_TEST_CASE(read_iso8601_date__handles_the_year_2260) {
+    auto str = std::string("2260-01-01T00:00:00Z");
+
+    auto read_date = read_iso8601_date(str);
+
+    BOOST_TEST(iso8601_date(read_date) == str);
+}
+
+BOOST_AUTO_TEST_CASE(read_iso8601_date__doesnt_handle_the_year_2261) {
+    auto str = std::string("2261-01-01T00:00:00Z");
+
+    BOOST_REQUIRE_THROW(read_iso8601_date(str), std::runtime_error);
+}
+
 BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
                      bdata::random(0, 1893456000) /*1970-2030*/ ^
                          bdata::xrange(100),
@@ -53,7 +74,7 @@ BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
 
     auto str = iso8601_date(tp);
 
-    BOOST_TEST(iso8601_date(read_iso8601_date(str)) == iso8601_date(tp));
+    BOOST_TEST(read_iso8601_date(str) == tp);
 }
 
 /******************************************************************************
@@ -106,7 +127,7 @@ BOOST_AUTO_TEST_CASE(read_timezone__handles_minus_TZ) {
     BOOST_TEST(offset == -2h);
 }
 
-BOOST_DATA_TEST_CASE(read_timezone_handles_offsets_in_reasonable_range,
+BOOST_DATA_TEST_CASE(read_timezone__handles_offsets_in_reasonable_range,
                      bdata::xrange(-23, 24)) {
     std::stringstream ss;
     ss << ((sample < 0) ? "-" : "+");

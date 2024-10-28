@@ -35,10 +35,14 @@ using namespace std::chrono_literals;
 constexpr auto CONSTEXPR_SIZE = std::char_traits<char>::length;
 constexpr auto DATE_LEN = CONSTEXPR_SIZE("2011-02-18T23:12:34");
 constexpr auto TZ_LEN = CONSTEXPR_SIZE("+02:00");
+constexpr auto MAX_YEAR = 2261;
+constexpr auto TM_YEAR_OFFSET = 1900;
 
 inline std::runtime_error create_time_format_error() {
-    return std::runtime_error("time format error: `2011-02-18T23:12:34-02:00` "
-                              "and `2011-02-18T23:12:34Z` supported");
+    return std::runtime_error(R"(
+time format error: 
+    - `2011-02-18T23:12:34-02:00` and `2011-02-18T23:12:34Z` formats are supported
+    - Constaints should be less than `2270-01-01T00:00:00Z`)");
 }
 
 utc_time read_iso8601_date(std::string_view str) {
@@ -63,7 +67,11 @@ utc_time read_local_date(std::string_view sv) {
 
     std::tm t = {};
     ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
+
     if (ss.fail()) [[unlikely]]
+        throw create_time_format_error();
+
+    if (t.tm_year + TM_YEAR_OFFSET >= MAX_YEAR) [[unlikely]]
         throw create_time_format_error();
 
     return utc_time::clock::from_time_t(timegm(&t));

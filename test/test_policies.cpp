@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(check_condition__handles_lessthan_and_greaterthan) {
     auto policy = parser::parse(create_test_deny_policy_with_condition(
         R"json({
             "DateGreaterThan" : {"aws:CurrentTime" : "2020-01-01T00:00:01Z"},
-            "DateLessThan" : {"aws:CurrentTime" : "2200-01-01T00:00:01Z"}
+            "DateLessThan" : {"aws:CurrentTime" : "2224-01-01T00:00:01Z"}
         })json"));
 
     auto result = policy.front().check(
