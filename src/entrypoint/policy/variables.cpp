@@ -3,6 +3,7 @@
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
 #include "entrypoint/commands/command.h"
+#include "entrypoint/formats.h"
 
 #include <charconv>
 #include <iostream>
@@ -78,6 +79,10 @@ value_provider make_value_provider() {
 
     vp.add("s3:prefix",
            [](const auto& r, const auto&) { return r.query("prefix"); });
+
+    vp.add("aws:CurrentTime", [](const auto& r, const auto&) {
+        return iso8601_date(std::chrono::system_clock::now());
+    });
 
     return vp;
 }

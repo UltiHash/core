@@ -6,10 +6,13 @@
 - Add support for policy variables: `uh:ActionId`, `uh:ResourceArn`,
   `aws:username`, `aws:userid`, `aws:PrincipalArn`, `aws:SourceIp`, `aws:referer`,
   `aws:UserAgent`, `s3:x-amz-content-sha256`, `s3:x-amz-copy-source`, `s3:delimiter`,
-  `s3:prefix`
+  `s3:prefix`, `aws:CurrentTime`
 - Add default content-type for objects
 - Fix bug in parsing HTTP range requests
 - Remove output to log.log
+- Add support for date condition operators: `DateEquals`, `DateNotEquals`,
+  `DateLessThan`, `DateLessThanEquals`, `DateGreaterThan`, `DateGreaterThanEquals`
+  - Conditions should be less than `2261-01-01T00:00:00Z`
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
