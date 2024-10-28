@@ -11,6 +11,14 @@ option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_custom_target(
+    copy-compile-commands ALL
+    ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_BINARY_DIR}/compile_commands.json
+        ${CMAKE_CURRENT_LIST_DIR}
+    )
+
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)

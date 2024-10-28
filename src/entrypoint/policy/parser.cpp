@@ -180,24 +180,28 @@ matcher condition_matcher(std::string key, const json& condition) {
                                               if_exists);
     }
     if (key == "DateEquals") {
-        return match_dateequals(condition_parameter(condition), if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::equal_to<utc_time>());
     }
     if (key == "DateNotEquals") {
-        return match_datenotequals(condition_parameter(condition), if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::not_equal_to<utc_time>());
     }
     if (key == "DateLessThan") {
-        return match_datelessthan(condition_parameter(condition), if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::less<utc_time>());
     }
     if (key == "DateLessThanEquals") {
-        return match_datelessthanequals(condition_parameter(condition),
-                                        if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::less_equal<utc_time>());
     }
     if (key == "DateGreaterThan") {
-        return match_dategreaterthan(condition_parameter(condition), if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::greater<utc_time>());
     }
     if (key == "DateGreaterThanEquals") {
-        return match_dategreaterthanequals(condition_parameter(condition),
-                                           if_exists);
+        return match_datecomparison(condition_parameter(condition), if_exists,
+                                    std::greater_equal<utc_time>());
     }
     if (key == "Bool") {
         return match_bool(condition_parameter(condition), if_exists);

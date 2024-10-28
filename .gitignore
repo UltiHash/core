@@ -9,3 +9,4 @@ server-agency/src/config.hpp
 testing/.venv
 testing/ceph_s3_test.conf
 **/__pycache__/
+compile_commands.json
