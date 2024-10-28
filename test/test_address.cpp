@@ -89,4 +89,17 @@ BOOST_AUTO_TEST_CASE(range) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(consecutive) {
+    address a, b, c, d;
+    a.push({0, 100});
+    b.push({100, 100});
+    c.push({200, 100});
+    d.push({150, 100});
+
+    BOOST_CHECK(a.consecutive(b));
+    BOOST_CHECK(!a.consecutive(c));
+    BOOST_CHECK(b.consecutive(c));
+    BOOST_CHECK(!c.consecutive(d));
+}
+
 } // namespace uh::cluster
