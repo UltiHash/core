@@ -38,8 +38,10 @@ coro<effect> module::check(const http::request& request,
 
     bool has_allow = false;
 
+    variables vars(request, cmd);
+
     for (const auto& policy : m_policies) {
-        auto result = policy.check(request, cmd);
+        auto result = policy.check(vars);
         if (!result) {
             continue;
         }
@@ -59,7 +61,7 @@ coro<effect> module::check(const http::request& request,
         // TODO cache bucket policies
         auto policies = parser::parse(*resource);
         for (const auto& policy : policies) {
-            auto result = policy.check(request, cmd);
+            auto result = policy.check(vars);
             if (!result) {
                 continue;
             }
@@ -76,7 +78,7 @@ coro<effect> module::check(const http::request& request,
 
     for (const auto& policy : request.authenticated_user().policies) {
         for (const auto& p : policy.second) {
-            auto result = p.check(request, cmd);
+            auto result = p.check(vars);
             if (!result) {
                 continue;
             }

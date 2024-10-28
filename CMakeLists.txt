@@ -10,7 +10,6 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
-option(DISABLE_DELETE "Disables reclamation of deleted disk space, only object meta-data will be deleted" OFF)
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -33,11 +32,6 @@ set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
-endif()
-
-if(DISABLE_DELETE)
-    message(STATUS "Disabled deletion in storage backend")
-    add_definitions(-DDISABLE_STORAGE_REFCOUNT)
 endif()
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -70,7 +64,6 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOU
 add_compile_options(-Wall -Werror)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
@@ -90,7 +83,7 @@ add_subdirectory(scripts)
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
+    add_subdirectory(test)
 endif()
 if(BUILD_EXPERIMENTS)
     message(STATUS "Building experiments")

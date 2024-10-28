@@ -198,9 +198,7 @@ address data_store::write(const std::string_view& data) {
     auto alloc = internal_allocate(data.size());
 
     const auto local_pointer = pointer_traits::get_pointer(alloc.global_offset);
-    if (m_enable_refcount) {
-        m_refcounter.increment(local_pointer, data.size());
-    }
+    m_refcounter.increment(local_pointer, data.size());
 
     long written = 0;
     while (written < static_cast<long>(data.size())) {
@@ -250,22 +248,15 @@ void data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
 }
 
 address data_store::link(const address& addr) {
-    if constexpr (m_enable_refcount) {
-        return m_refcounter.increment(addr);
-    } else {
-        return address{};
-    }
+    return m_refcounter.increment(addr);
 }
 
 size_t data_store::unlink(const address& addr) {
-    if constexpr (m_enable_refcount) {
-        try {
-            return m_refcounter.decrement(addr);
-        } catch (const std::exception&) {
-            return std::numeric_limits<std::size_t>::max();
-        }
+    try {
+        return m_refcounter.decrement(addr);
+    } catch (const std::exception&) {
+        return std::numeric_limits<std::size_t>::max();
     }
-    return 0;
 }
 
 size_t data_store::id() const noexcept { return m_data_store_id; }

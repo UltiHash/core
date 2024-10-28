@@ -2,8 +2,7 @@
 
 #include <fstream>
 
-namespace uh::cluster
-{
+namespace uh::cluster {
 
 std::string read_file(const std::filesystem::path& p) {
     constexpr std::size_t read_size = 4096;

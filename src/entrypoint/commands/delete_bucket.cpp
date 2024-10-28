@@ -20,8 +20,8 @@ coro<response> delete_bucket::handle(request& req) {
     try {
         co_await m_directory.delete_bucket(req.bucket());
     } catch (const error_exception& e) {
-        LOG_ERROR() << "Failed to delete the bucket " << req.bucket() << ":"
-                    << e;
+        LOG_INFO() << "Failed to delete the bucket " << req.bucket() << ":"
+                   << e;
         throw_from_error(e.error());
     }
 

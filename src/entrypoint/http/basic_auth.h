@@ -1,7 +1,7 @@
 #ifndef CORE_ENTRYPOINT_HTTP_BASIC_AUTH_H
 #define CORE_ENTRYPOINT_HTTP_BASIC_AUTH_H
 
-#include <entrypoint/http/beast_utils.h>
+#include <entrypoint/http/request.h>
 #include <entrypoint/user/db.h>
 
 namespace uh::cluster::ep::http {

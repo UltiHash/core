@@ -14,6 +14,7 @@ components and describes their purpose.
     licenses under `ROOT/data/licenses` for testing)
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified endpoint using OTLP via gRPC (format: "hostname:port")
 - `UH_WORKING_DIR` - configures the working directory for different services. In specific case of storage service, when multiple working directories are desired, they can be listed and separated by ":".
+
 # Database Connection
 
 - `UH_DB_HOSTPORT` - configure host and port of the DBMS (format: "hostname:port")
@@ -21,3 +22,8 @@ components and describes their purpose.
 - `UH_DB_MULTIPART_CONNECTIONS` - number of connections used to connect to multipart database
 - `UH_DB_USER` - configure user name for connections to the DBMS
 - `UH_DB_PASS` - pass the connection password for the user given in `UH_DB_USER`
+
+# ETCD Authentication
+
+- `UH_ETCD_USERNAME` - username for etcd authentication
+- `UH_ETCD_PASSWORD` - password for etcd authentication

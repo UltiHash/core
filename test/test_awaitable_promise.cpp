@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
-#include "common/coroutines/awaitable_promise.h"
+#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+
+#include "common/coroutines/promise.h"
 #include "common/network/client.h"
 #include "common/network/server.h"
 #include <boost/test/unit_test.hpp>
@@ -16,13 +18,15 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
     boost::asio::co_spawn(
         ioc,
         [&ioc]() -> coro<void> {
-            auto pr = std::make_shared<awaitable_promise<int>>(ioc);
-            ioc.post([pr]() { pr->set(1); });
-            BOOST_TEST((co_await pr->get()) == 1);
+            promise<int> p;
+            auto f = p.get_future();
+            ioc.post([p = std::move(p)]() mutable { p.set_value(1); });
+            BOOST_TEST((co_await f.get()) == 1);
         },
         [](const std::exception_ptr& e) {
-            if (e)
+            if (e) {
                 std::rethrow_exception(e);
+            }
         });
 
     ioc.run();
@@ -35,19 +39,21 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
     boost::asio::co_spawn(
         ioc,
         [&ioc]() -> coro<void> {
-            auto pr = std::make_shared<awaitable_promise<int>>(ioc);
-            ioc.post([pr]() {
+            promise<int> p;
+            auto f = p.get_future();
+            ioc.post([p = std::move(p)]() mutable {
                 try {
                     throw std::exception{};
                 } catch (const std::exception& e) {
-                    pr->set_exception(std::current_exception());
+                    p.set_exception(std::current_exception());
                 }
             });
-            BOOST_CHECK_THROW((co_await pr->get()), std::exception);
+            BOOST_CHECK_THROW((co_await f.get()), std::exception);
         },
         [](const std::exception_ptr& e) {
-            if (e)
+            if (e) {
                 std::rethrow_exception(e);
+            }
         });
 
     ioc.run();
@@ -69,15 +75,17 @@ BOOST_AUTO_TEST_CASE(stress_test) {
         boost::asio::co_spawn(
             ioc,
             [&ioc, i, &failures]() -> coro<void> {
-                auto pr = std::make_shared<awaitable_promise<int>>(ioc);
-                ioc.post([pr, i]() { pr->set(int(i)); });
-                if ((co_await pr->get()) != i) {
+                promise<int> p;
+                auto f = p.get_future();
+                ioc.post([p = std::move(p), i]() mutable { p.set_value(i); });
+                if ((co_await f.get()) != i) {
                     failures++;
                 }
             },
             [](const std::exception_ptr& e) {
-                if (e)
+                if (e) {
                     std::rethrow_exception(e);
+                }
             });
     }
 
@@ -107,16 +115,20 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [&ioc, i, &failures, &workers]() -> coro<void> {
-                auto pr = std::make_shared<awaitable_promise<int>>(ioc);
-                boost::asio::post(workers, [pr, i]() { pr->set(int(i)); });
-                if ((co_await pr->get()) != i) {
+            [i, &failures, &workers]() -> coro<void> {
+                promise<int> p;
+                auto f = p.get_future();
+                boost::asio::post(workers, [p = std::move(p), i]() mutable {
+                    p.set_value(int(i));
+                });
+                if ((co_await f.get()) != i) {
                     failures++;
                 }
             },
             [](const std::exception_ptr& e) {
-                if (e)
+                if (e) {
                     std::rethrow_exception(e);
+                }
             });
     }
 
@@ -150,16 +162,14 @@ private:
     std::mutex m_mutex;
 };
 
-coro<void> handle(boost::asio::io_context& ioc, auto& counter) {
+coro<void> handle(auto& counter) {
     LOG_CORO_CONTEXT();
 
     for (int i = 0; i < 100000; i++) {
-        boost::asio::strand<boost::asio::io_context::executor_type>(
-            ioc.get_executor());
-        auto promise = std::make_shared<awaitable_promise<void>>(ioc);
-
-        promise->set();
-        co_await promise->get();
+        promise<void> p;
+        auto f = p.get_future();
+        p.set_value();
+        co_await f.get();
     }
 
     counter.finished();
@@ -167,7 +177,7 @@ coro<void> handle(boost::asio::io_context& ioc, auto& counter) {
 
 coro<void> do_spawn(auto& ioc, auto& counter, int count) {
     while (count > 0) {
-        co_spawn(ioc, handle(ioc, counter), [](const std::exception_ptr& e) {});
+        co_spawn(ioc, handle(counter), [](const std::exception_ptr& e) {});
         --count;
     }
 

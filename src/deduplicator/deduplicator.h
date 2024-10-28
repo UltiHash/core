@@ -20,7 +20,7 @@ class deduplicator {
 public:
     explicit deduplicator(const service_config& sc,
                           const deduplicator_config& config)
-        : m_etcd_client(sc.etcd_url),
+        : m_etcd_client(make_etcd_client(sc.etcd_config)),
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
@@ -33,7 +33,6 @@ public:
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
-          m_dedupe_workers(m_ioc, config.worker_thread_count),
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
@@ -70,8 +69,6 @@ private:
 
     attached_service<storage> m_attached_storage;
     service_maintainer<storage_interface> m_storage_maintainer;
-
-    worker_pool m_dedupe_workers;
 
     global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;

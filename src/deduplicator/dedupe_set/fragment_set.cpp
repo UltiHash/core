@@ -7,8 +7,7 @@ fragment_set::fragment_set(const std::filesystem::path& set_log_path,
                            size_t capacity, global_data_view& storage)
     : m_storage(storage),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
-      m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {
-}
+      m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {}
 fragment_set::response fragment_set::find(const std::string_view& data) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, std::string(prefix), m_storage};

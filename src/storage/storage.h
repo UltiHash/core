@@ -15,7 +15,7 @@ namespace uh::cluster {
 class storage {
 public:
     explicit storage(const service_config& service, const storage_config& sc)
-        : m_etcd_client(service.etcd_url),
+        : m_etcd_client(make_etcd_client(service.etcd_config)),
           m_service_id(get_service_id(m_etcd_client,
                                       get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
