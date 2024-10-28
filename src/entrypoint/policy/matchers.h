@@ -257,7 +257,7 @@ match_datecomparison(std::map<std::string, std::list<std::string>> values,
         [comp](const auto& vars, const auto& var, const auto& options) -> bool {
             if (options.size() != 1) [[unlikely]]
                 throw std::runtime_error(
-                    "list is not supported as a condicion value");
+                    "list is not supported as a condition value");
             return comp(read_iso8601_date(var_replace(var, vars)),
                         read_iso8601_date(options.front()));
         });
