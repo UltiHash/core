@@ -49,6 +49,7 @@ void fragmentation::flush_fragment_set(fragment_set& set) {
     }
 
     if (m_unstored_size == 0ull) {
+        m_state = FLUSHED_FRAGMENT_SET;
         return;
     }
 
@@ -137,12 +138,13 @@ address fragmentation::get_stored_fragments() const {
 }
 
 coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
-    if (m_state != HANDLED_REJECTED) {
+    if (!(m_state == DEDUPE_IN_PROGRESS or m_state == HANDLED_REJECTED)) {
         throw std::runtime_error("flush_storage may only be called "
                                  "after calling handle_rejected_fragments");
     }
 
     if (m_unstored_size == 0ull) {
+        m_state = FLUSHED_STORAGE;
         co_return;
     }
 
