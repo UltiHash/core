@@ -47,6 +47,9 @@ time format error:
 
 utc_time read_iso8601_date(std::string_view str) {
 
+    if (str.size() < DATE_LEN)
+        throw create_time_format_error();
+
     auto date_str = std::string_view(str).substr(0, DATE_LEN);
     auto tz_str = std::string_view(str).substr(DATE_LEN, str.size() - DATE_LEN);
 
