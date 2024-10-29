@@ -62,30 +62,6 @@ void fragmentation::flush_fragment_set(fragment_set& set) {
 std::size_t fragmentation::effective_size() const { return m_effective_size; }
 std::size_t fragmentation::unstored_size() const { return m_unstored_size; }
 
-address shrink(address& addr) {
-    address rv;
-    if (addr.empty()) {
-        return rv;
-    }
-
-    auto first = addr.get(0);
-    uint128_t ptr = first.pointer;
-    std::size_t size = first.size;
-
-    for (std::size_t index = 1; index < addr.size(); ++index) {
-        auto current = addr.get(index);
-        if (ptr + size == current.pointer) {
-            size += current.size;
-            continue;
-        }
-        rv.push({ptr, size});
-        ptr = current.pointer;
-        size = current.size;
-    }
-    rv.push({ptr, size});
-    return rv;
-}
-
 void fragmentation::merge_consecutive_unstored() {
     auto it = m_frags.begin();
     while (it != m_frags.end()) {
@@ -96,7 +72,7 @@ void fragmentation::merge_consecutive_unstored() {
                 it->addr.append(next_it->addr);
                 next_it = m_frags.erase(next_it);
             }
-            it->addr = shrink(it->addr);
+            it->addr = it->addr.shrink();
         }
         ++it;
     }
