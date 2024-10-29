@@ -279,7 +279,9 @@ std::list<policy> parser::parse(const std::string& code) {
     auto js = json::parse(code);
 
     auto version = optional(js, "Version");
-    if (!version || version->get().get<std::string>() != IAM_JSON_VERSION) {
+    // see
+    // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#policy-vars-using-variables
+    if (!version || version->get().get<std::string>() < IAM_JSON_VERSION) {
         throw std::runtime_error("no version element or unsupported version");
     }
 
