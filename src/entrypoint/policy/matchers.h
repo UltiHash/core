@@ -61,7 +61,7 @@ inline matcher match_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_any(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
-                return value == *arn;
+                return equals_wildcard(value, *arn);
             }
 
             return false;
@@ -73,7 +73,7 @@ inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_all(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
-                return value != *arn;
+                return !equals_wildcard(value, *arn);
             }
 
             return true;
