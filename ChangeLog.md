@@ -13,6 +13,8 @@
 - Add support for date condition operators: `DateEquals`, `DateNotEquals`,
   `DateLessThan`, `DateLessThanEquals`, `DateGreaterThan`, `DateGreaterThanEquals`
   - Conditions should be less than `2261-01-01T00:00:00Z`
+- Reduced size of object metadata 
+- Improved read performance
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
