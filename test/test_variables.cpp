@@ -78,6 +78,8 @@ BOOST_AUTO_TEST_CASE(wildcard_match) {
 
     BOOST_CHECK(equals_wildcard("foo*bar", "foobar"));
     BOOST_CHECK(equals_wildcard("foo*bar", "fooquuxbar"));
+    BOOST_CHECK(equals_wildcard("foo*bar", "fooqbarquuxbar"));
+    BOOST_CHECK(equals_wildcard("foo*bar", "fooqbarxx"));
 
     BOOST_CHECK(equals_wildcard("fo*ar*ux", "foobarquux"));
     BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbar"));
