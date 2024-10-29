@@ -32,11 +32,12 @@ inline matcher match_not_action(std::set<std::string> actions) {
     };
 }
 
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#policy-vars-wheretouse
 inline matcher match_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_any(resources, [&vars](auto value) {
             if (auto arn = vars.get("uh:ResourceArn"); arn) {
-                return equals_wildcard(value, *arn);
+                return equals_wildcard(var_replace(value, vars), *arn);
             }
 
             return false;
@@ -48,7 +49,7 @@ inline matcher match_not_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_all(resources, [&vars](auto value) {
             if (auto arn = vars.get("uh:ResourceArn"); arn) {
-                return !equals_wildcard(value, *arn);
+                return !equals_wildcard(var_replace(value, vars), *arn);
             }
 
             return true;
@@ -60,7 +61,7 @@ inline matcher match_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_any(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
-                return equals_wildcard(value, *arn);
+                return value == *arn;
             }
 
             return false;
@@ -72,7 +73,7 @@ inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
         return match_all(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
-                return !equals_wildcard(value, *arn);
+                return value != *arn;
             }
 
             return true;
