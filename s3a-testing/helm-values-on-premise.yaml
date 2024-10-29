@@ -24,6 +24,11 @@ global:
        }
     }
 
+s3aTests:
+  extraEnv:
+    - name: GITHUB_PAT
+      value: $GITHUB_PAT
+
 etcd:
   replicaCount: 1
   nodeSelector:

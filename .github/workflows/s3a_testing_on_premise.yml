@@ -101,6 +101,7 @@ jobs:
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          GITHUB_PAT: ${{ secrets.PAT }}
         with:
           input: s3a-testing/helm-values-on-premise.yaml
           output: helm-values.yaml
@@ -123,4 +124,4 @@ jobs:
 
       - name: Run feature tests
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 1h
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 2h
