@@ -84,6 +84,10 @@ value_provider make_value_provider() {
         return iso8601_date(std::chrono::system_clock::now());
     });
 
+    vp.add("*", [](const auto& r, const auto&) { return std::string("*"); });
+    vp.add("?", [](const auto& r, const auto&) { return std::string("?"); });
+    vp.add("$", [](const auto& r, const auto&) { return std::string("$"); });
+
     return vp;
 }
 
@@ -179,6 +183,7 @@ std::string var_replace(std::string_view format, const variables& vars) {
     return rv;
 }
 
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html
 bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
     if (wildcarded.empty()) {
         return b.empty();
