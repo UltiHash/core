@@ -19,6 +19,28 @@ public:
     connection(const connection&) = delete;
     connection(connection&&) = default;
 
+    class transaction {
+    public:
+        transaction(transaction&& other);
+        ~transaction();
+
+        transaction(const transaction&) = delete;
+
+        coro<void> commit();
+
+    private:
+        friend class connection;
+        transaction(db::connection& conn);
+
+        db::connection& m_conn;
+        bool m_active = true;
+    };
+
+    /**
+     * Begin a transaction.
+     */
+    transaction begin();
+
     /**
      * Execute a query without parameters. The result format will be text.
      */

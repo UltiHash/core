@@ -42,6 +42,34 @@ connection::connection(boost::asio::io_context& ioc, const connstr& cs)
     }
 }
 
+connection::transaction::transaction(connection& conn)
+    : m_conn(conn) {
+    m_conn.raw_exec("BEGIN");
+}
+
+connection::transaction::transaction(transaction&& other)
+    : m_conn(other.m_conn),
+      m_active(other.m_active) {
+    other.m_active = false;
+}
+
+connection::transaction::~transaction() {
+    if (m_active) {
+        try {
+            m_conn.raw_exec("ABORT");
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "transaction could not be aborted: " << e.what();
+        }
+    }
+}
+
+coro<void> connection::transaction::commit() {
+    co_await m_conn.exec("COMMIT");
+    m_active = false;
+}
+
+connection::transaction connection::begin() { return transaction(*this); }
+
 coro<std::optional<row>> connection::exec(const std::string& query) {
     LOG_CORO_CONTEXT();
 
