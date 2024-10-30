@@ -1,12 +1,9 @@
 name: S3A Testing On Premise
 
 on:
-  #schedule:
-  #  - cron: '0 0 * * MON-FRI'
+  schedule:
+    - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-  pull_request:
-    branches:
-    - "*"
 
 env:
   ENVIRONMENT_NAME: s3a-testing-x86-64
@@ -124,4 +121,4 @@ jobs:
 
       - name: Run feature tests
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 2h
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 1h
