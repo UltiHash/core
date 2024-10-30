@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:latest as build
+FROM ghcr.io/ultihash/build-base:20240711 AS build
 
 COPY . /core
 WORKDIR /core
@@ -11,6 +11,7 @@ FROM flyway/flyway:10.17
 
 RUN apt-get update -y && \
     apt-get install -y postgresql-client libgrpc-dev libgrpc++-dev liblmdb-dev liblmdb++-dev
+
 
 COPY --from=build /core/build/tools/uh-cluster-access-client /usr/local/bin
 
