@@ -20,8 +20,8 @@ coro<response> head_object::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto obj =
-            co_await m_directory.head_object(req.bucket(), req.object_key());
+        auto dir = co_await m_directory.get();
+        auto obj = co_await dir.head_object(req.bucket(), req.object_key());
 
         response res;
         res.set("Content-Length", std::to_string(obj.size));

@@ -39,7 +39,8 @@ bool init_multipart::can_handle(const request& req) {
 coro<response> init_multipart::handle(request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
     try {
-        co_await m_directory.bucket_exists(req.bucket());
+        auto dir = co_await m_directory.get();
+        co_await dir.bucket_exists(req.bucket());
     } catch (const error_exception& e) {
         throw_from_error(e.error());
     }

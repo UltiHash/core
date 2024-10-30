@@ -88,7 +88,8 @@ coro<response> get_object::handle(request& req) {
     object obj;
 
     try {
-        obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+        auto dir = co_await m_dir.get();
+        obj = co_await dir.get_object(req.bucket(), req.object_key());
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchKey",
                                 "object not found");

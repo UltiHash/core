@@ -9,57 +9,72 @@ namespace uh::cluster {
 
 enum class bucket_delete_policy { only_empty, all };
 
-struct directory {
-
+class directory {
+public:
     directory(boost::asio::io_context& ioc, const db::config& cfg)
         : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
-    coro<void> put_object(const std::string& bucket, const object& obj);
+    class instance {
+    public:
+        instance(instance&& other) = default;
+        instance(const instance&) = delete;
 
-    coro<object> get_object(const std::string& bucket,
-                            const std::string& object_id);
+        db::connection* operator->();
 
-    coro<object> head_object(const std::string& bucket,
-                             const std::string& object_id);
+        coro<void> put_object(const std::string& bucket, const object& obj);
 
-    coro<void> put_bucket(const std::string& bucket);
+        coro<object> get_object(const std::string& bucket,
+                                const std::string& object_id);
 
-    coro<void> bucket_exists(const std::string& bucket);
+        coro<object> head_object(const std::string& bucket,
+                                 const std::string& object_id);
 
-    coro<void> delete_bucket(const std::string& bucket);
+        coro<void> put_bucket(const std::string& bucket);
 
-    coro<void> delete_object(const std::string& bucket,
-                             const std::string& object_id);
+        coro<void> bucket_exists(const std::string& bucket);
 
-    coro<void> copy_object(const std::string& bucket_src,
-                           const std::string& key_src,
-                           const std::string& bucket_dst,
-                           const std::string& key_dst);
+        coro<void> delete_bucket(const std::string& bucket);
 
-    coro<void> copy_object_ifmatch(const std::string& bucket_src,
-                                   const std::string& key_src,
-                                   const std::string& bucket_dst,
-                                   const std::string& key_dst,
-                                   const std::string& etag);
+        coro<void> delete_object(const std::string& bucket,
+                                 const std::string& object_id);
 
-    coro<std::vector<std::string>> list_buckets();
+        coro<void> copy_object(const std::string& bucket_src,
+                               const std::string& key_src,
+                               const std::string& bucket_dst,
+                               const std::string& key_dst);
 
-    coro<std::optional<std::string>>
-    get_bucket_policy(const std::string& bucket);
+        coro<void> copy_object_ifmatch(const std::string& bucket_src,
+                                       const std::string& key_src,
+                                       const std::string& bucket_dst,
+                                       const std::string& key_dst,
+                                       const std::string& etag);
 
-    coro<void> set_bucket_policy(const std::string& bucket,
-                                 std::optional<std::string> policy);
+        coro<std::vector<std::string>> list_buckets();
 
-    coro<std::vector<object>>
-    list_objects(const std::string& bucket,
-                 const std::optional<std::string>& prefix,
-                 const std::optional<std::string>& lower_bound);
+        coro<std::optional<std::string>>
+        get_bucket_policy(const std::string& bucket);
 
-    /**
-     * Return amount of data stored in all buckets.
-     */
-    coro<std::size_t> data_size();
+        coro<void> set_bucket_policy(const std::string& bucket,
+                                     std::optional<std::string> policy);
+
+        coro<std::vector<object>>
+        list_objects(const std::string& bucket,
+                     const std::optional<std::string>& prefix,
+                     const std::optional<std::string>& lower_bound);
+
+        /**
+         * Return amount of data stored in all buckets.
+         */
+        coro<std::size_t> data_size();
+
+    private:
+        friend class directory;
+        instance(pool<db::connection>::handle&& handle);
+        pool<db::connection>::handle m_handle;
+    };
+
+    coro<instance> get();
 
 private:
     pool<db::connection> m_db;

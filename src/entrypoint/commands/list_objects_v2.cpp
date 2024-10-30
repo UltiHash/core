@@ -144,8 +144,8 @@ coro<response> list_objects_v2::handle(request& req) {
 
     std::vector<object> obj_list;
     try {
-        obj_list =
-            co_await m_directory.list_objects(req.bucket(), prefix, lowerbound);
+        auto dir = co_await m_directory.get();
+        obj_list = co_await dir.list_objects(req.bucket(), prefix, lowerbound);
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");

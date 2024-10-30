@@ -137,21 +137,14 @@ coro<void> complete_multipart::apply(request& req, const upload_info& info,
                .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
     std::optional<object> old_obj;
+    auto dir = co_await m_directory.get();
     try {
-        old_obj =
-            co_await m_directory.get_object(req.bucket(), req.object_key());
+        old_obj = co_await dir.get_object(req.bucket(), req.object_key());
     } catch (command_exception&) {
         old_obj = std::nullopt;
     }
 
-    if (old_obj.has_value() && old_obj.value().addr.has_value() &&
-        old_obj.value().addr.value() == obj.addr.value()) {
-        LOG_DEBUG() << "CompleteMultipartUpload has already been called on "
-                       "this object, nothing more to do here.";
-        co_return;
-    }
-
-    co_await m_directory.put_object(req.bucket(), obj);
+    co_await dir.put_object(req.bucket(), obj);
 
     if (old_obj.has_value() && old_obj->addr.has_value()) {
         co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());

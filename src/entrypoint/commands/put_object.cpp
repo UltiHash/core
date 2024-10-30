@@ -58,7 +58,8 @@ bool put_object::can_handle(const request& req) {
 
 coro<void> put_object::validate(const request& req) {
     try {
-        co_await m_dir.bucket_exists(req.bucket());
+        auto dir = co_await m_dir.get();
+        co_await dir.bucket_exists(req.bucket());
     } catch (const error_exception& e) {
         LOG_INFO() << req.peer() << " failed to get bucket `" << req.bucket()
                    << "`: " << e;
@@ -96,13 +97,15 @@ coro<response> put_object::handle(request& req) {
                                .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         std::optional<object> old_obj;
+        auto dir = co_await m_dir.get();
+
         try {
-            old_obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+            old_obj = co_await dir.get_object(req.bucket(), req.object_key());
         } catch (command_exception&) {
             old_obj = std::nullopt;
         }
 
-        co_await m_dir.put_object(req.bucket(), obj);
+        co_await dir.put_object(req.bucket(), obj);
 
         if (old_obj.has_value() && old_obj->addr.has_value()) {
             co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());

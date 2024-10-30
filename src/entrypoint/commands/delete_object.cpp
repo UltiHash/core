@@ -20,9 +20,9 @@ bool delete_object::can_handle(const request& req) {
 coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
-        object obj =
-            co_await m_directory.get_object(req.bucket(), req.object_key());
-        co_await m_directory.delete_object(req.bucket(), req.object_key());
+        auto dir = co_await m_directory.get();
+        object obj = co_await dir.get_object(req.bucket(), req.object_key());
+        co_await dir.delete_object(req.bucket(), req.object_key());
         co_await m_gdv.unlink(req.context(), obj.addr.value());
 
         m_limits.free_storage_size(obj.size);

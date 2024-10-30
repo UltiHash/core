@@ -31,7 +31,8 @@ coro<response> copy_object::handle(request& req) {
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
     co_await copy_internal(req, src_bucket, src_key);
 
-    auto obj = co_await m_directory.head_object(req.bucket(), req.object_key());
+    auto dir = co_await m_directory.get();
+    auto obj = co_await dir.head_object(req.bucket(), req.object_key());
 
     boost::property_tree::ptree pt;
     pt.put("CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
@@ -54,18 +55,20 @@ coro<void> copy_object::copy_internal(request& req, std::string& src_bucket,
     // delete(void*, std::size_t) [with Executor =
     // boost::asio::any_io_executor]' called on pointer returned from a
     // mismatched allocation function
-    auto src_obj = co_await m_directory.get_object(src_bucket, src_key);
+
+    auto dir = co_await m_directory.get();
+    auto src_obj = co_await dir.get_object(src_bucket, src_key);
 
     if (auto ifmatch = req.header("x-amz-copy-source-if-match"); ifmatch) {
         if (src_obj.etag == *ifmatch) {
             co_await m_gdv.link(req.context(), src_obj.addr.value());
-            co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
-                                             req.object_key());
+            co_await dir.copy_object(src_bucket, src_key, req.bucket(),
+                                     req.object_key());
         }
     } else {
         co_await m_gdv.link(req.context(), src_obj.addr.value());
-        co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
-                                         req.object_key());
+        co_await dir.copy_object(src_bucket, src_key, req.bucket(),
+                                 req.object_key());
     }
 }
 
