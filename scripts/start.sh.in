@@ -1,6 +1,12 @@
 #!/bin/bash
 
 BUILD_DIR=@PROJECT_BINARY_DIR@
+UH_DATA=/var/lib/uh
+
+instances=1
+if [ -n "$1" ];then
+    instances="$1"
+fi
 
 set -e
 
@@ -8,7 +14,7 @@ echo "*** resetting database"
 $BUILD_DIR/scripts/reset-db.sh
 
 echo "*** removing old UH data"
-rm --recursive --force --verbose /var/lib/uh/*
+rm --recursive --force --verbose $UH_DATA/*
 
 echo "*** wipe etcd data"
 etcdctl del --from-key /
@@ -16,9 +22,19 @@ etcdctl del --from-key /
 echo "*** starting services"
 log_dir=$BUILD_DIR/logs
 mkdir -p $log_dir
-$BUILD_DIR/uh-cluster -l DEBUG storage &> $log_dir/storage.log &
+
+for ((id = 0; id < $instances; ++id)); do
+    mkdir -p $UH_DATA/storage-$id
+    $BUILD_DIR/uh-cluster -l DEBUG --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
+done
+
 $BUILD_DIR/uh-cluster -l DEBUG recovery &> $log_dir/recovery.log &
-$BUILD_DIR/uh-cluster -l DEBUG deduplicator &> $log_dir/deduplicator.log &
+
+for ((id = 0; id < $instances; ++id)); do
+    mkdir -p $UH_DATA/deduplicator-$id
+    $BUILD_DIR/uh-cluster -l DEBUG --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
+done
+
 $BUILD_DIR/uh-cluster -l DEBUG entrypoint &> $log_dir/entrypoint.log &
 
 echo "All services are running. Log files are written $log_dir and will"
@@ -33,9 +49,5 @@ fi
 
 read
 
-kill %4
-kill %3
-kill %2
-kill %1
-
-wait %1 %2 %3 %4
+kill $(jobs -p)
+wait $(jobs -p)

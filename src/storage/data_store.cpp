@@ -145,7 +145,7 @@ std::size_t data_store::read_up_to(char* buffer,
         max_size = remaining_in_last_file;
     }
 
-    while (static_cast<size_t>(tr) < max_size and tr + seek) {
+    while (static_cast<size_t>(tr) < max_size) {
         const auto r = ::pread(fd, buffer + tr, max_size - tr, seek + tr);
         if (r == 0) [[unlikely]] {
             return tr;
