@@ -134,6 +134,7 @@ void variables::put(std::string k, std::string v) {
     m_cache[std::move(k)] = std::move(v);
 }
 
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html
 std::string var_replace(std::string_view format, const variables& vars) {
     std::string rv;
     char last = 0;

@@ -19,6 +19,12 @@ inline matcher match_never() {
     return [](const variables&) { return false; };
 }
 
+// See
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html
+
+/*
+ * implements logical AND for multiple condition operators
+ */
 inline matcher conjunction(std::list<matcher> subs) {
     return [subs = std::move(subs)](const variables& vars) {
         for (const auto& m : subs) {
@@ -31,6 +37,9 @@ inline matcher conjunction(std::list<matcher> subs) {
     };
 }
 
+/*
+ * implements logical OR for multiple values for a context key
+ */
 bool match_any(const auto& list, auto pred) {
     for (const auto& opt : list) {
         if (pred(opt)) {
@@ -41,6 +50,20 @@ bool match_any(const auto& list, auto pred) {
     return false;
 }
 
+/*
+ * implements logical NOR for multiple values for a context key
+ */
+bool match_none(const auto& list, auto pred) {
+    for (const auto& opt : list) {
+        if (pred(opt)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// NOT((NOT A) OR (NOT B)) == A AND B, but we should implement A NOR B
 bool match_all(const auto& list, auto pred) { return !match_any(list, pred); }
 
 } // namespace uh::cluster::ep::policy

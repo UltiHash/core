@@ -130,6 +130,13 @@ condition_parameter(const json& condition) {
     return rv;
 }
 
+/*
+ * "Condition": {
+ *   <key>: { <values:key>: [ <values:value> ] }
+ * }
+ *
+ * `values` are the function parameter on matchers; see matchers.h
+ */
 matcher condition_matcher(std::string key, const json& condition) {
     undefined_variable if_exists = undefined_variable::do_not_match;
     if (key.ends_with("IfExists")) {

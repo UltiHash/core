@@ -32,6 +32,12 @@ inline matcher match_not_action(std::set<std::string> actions) {
     };
 }
 
+// We can use policy variables in the `Resource` element and in string
+// comparisons in the `Condition` element.
+// Predefined policy variables for special charactors can be used in any string
+// where you can use regular policy variables.
+//
+// see
 // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#policy-vars-wheretouse
 inline matcher match_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
@@ -81,6 +87,10 @@ inline matcher match_not_principal(std::set<std::string> principals) {
     };
 }
 
+/*
+ * implements logical AND for multiple context keys attached to a single
+ * condition operator
+ */
 inline matcher var_matcher(std::map<std::string, std::list<std::string>> values,
                            undefined_variable uv, auto match_func) {
 
@@ -110,8 +120,8 @@ match_stringequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_any(options, [&](const auto& v) {
-                return var == var_replace(v, vars);
+            return match_any(options, [&](const auto& value) {
+                return var == var_replace(value, vars);
             });
         });
 }
@@ -122,8 +132,8 @@ match_stringnotequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return var == var_replace(v, vars);
+            return !match_any(options, [&](const auto& value) {
+                return var == var_replace(value, vars);
             });
         });
 }
@@ -134,8 +144,8 @@ inline matcher match_stringequalsignorecase(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_any(options, [&](const auto& v) {
-                return equals_nocase(var, var_replace(v, vars));
+            return match_any(options, [&](const auto& value) {
+                return equals_nocase(var, var_replace(value, vars));
             });
         });
 }
@@ -146,8 +156,8 @@ inline matcher match_stringnotequalsignorecase(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return equals_nocase(var, var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return equals_nocase(var, var_replace(value, vars));
             });
         });
 }
@@ -158,8 +168,8 @@ match_stringlike(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_any(options, [&](const auto& v) {
-                return equals_wildcard(var, var_replace(v, vars));
+            return match_any(options, [&](const auto& value) {
+                return equals_wildcard(var, var_replace(value, vars));
             });
         });
 }
@@ -170,8 +180,8 @@ match_stringnotlike(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return equals_wildcard(var, var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return equals_wildcard(var, var_replace(value, vars));
             });
         });
 }
@@ -182,8 +192,8 @@ match_numericequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_any(options, [&](const auto& v) {
-                return to_int(var) == to_int(var_replace(v, vars));
+            return match_any(options, [&](const auto& value) {
+                return to_int(var) == to_int(var_replace(value, vars));
             });
         });
 }
@@ -194,8 +204,8 @@ match_numericnotequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return to_int(var) == to_int(var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return to_int(var) == to_int(var_replace(value, vars));
             });
         });
 }
@@ -206,8 +216,8 @@ match_numericlessthan(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return to_int(var) < to_int(var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return to_int(var) < to_int(var_replace(value, vars));
             });
         });
 }
@@ -218,8 +228,8 @@ inline matcher match_numericlessthanequals(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return to_int(var) <= to_int(var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return to_int(var) <= to_int(var_replace(value, vars));
             });
         });
 }
@@ -230,8 +240,8 @@ match_numericgreaterthan(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return to_int(var) > to_int(var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return to_int(var) > to_int(var_replace(value, vars));
             });
         });
 }
@@ -242,8 +252,8 @@ inline matcher match_numericgreaterthanequals(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& v) {
-                return to_int(var) >= to_int(var_replace(v, vars));
+            return !match_any(options, [&](const auto& value) {
+                return to_int(var) >= to_int(var_replace(value, vars));
             });
         });
 }
