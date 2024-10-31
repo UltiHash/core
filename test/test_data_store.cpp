@@ -387,6 +387,167 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(test_match_after_delete) {
+    auto buffer1 = random_buffer(DEFAULT_PAGE_SIZE / 2);
+    auto buffer2 = random_buffer(DEFAULT_PAGE_SIZE / 2);
+    auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE);
+
+    auto buffer1_address = ds->write(buffer1.string_view());
+
+    {
+        shared_buffer<char> read_buffer(buffer1_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < buffer1_address.size(); ++i) {
+            const auto p = buffer1_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == buffer1_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+    }
+
+    ds->unlink(buffer1_address);
+
+    {
+        shared_buffer<char> read_buffer(buffer1_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < buffer1_address.size(); ++i) {
+            const auto p = buffer1_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == buffer1_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+    }
+
+    auto buffer2_address = ds->write(buffer2.string_view());
+    address combined_buffer_address;
+    combined_buffer_address.append(buffer1_address);
+    combined_buffer_address.append(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(combined_buffer_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
+            const auto p = combined_buffer_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == combined_buffer_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+    }
+
+    ds->link(buffer1_address);
+    ds->unlink(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(combined_buffer_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
+            const auto p = combined_buffer_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == combined_buffer_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+    }
+
+    ds->unlink(buffer1_address);
+
+    {
+        shared_buffer<char> read_buffer(combined_buffer_address.data_size());
+        shared_buffer<char> zero_buffer(combined_buffer_address.size());
+        memset(zero_buffer.data(), 0, zero_buffer.size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
+            const auto p = combined_buffer_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == combined_buffer_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), zero_buffer.data(),
+                                zero_buffer.size()) == 0);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
+    auto buffer1 = random_buffer(MAX_FILE_SIZE_BYTES - 1337);
+    auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
+
+    address full_address;
+    auto buffer1_address = ds->write(buffer1.string_view());
+    auto buffer2_address = ds->write(buffer2.string_view());
+    full_address.append(buffer1_address);
+    full_address.append(buffer2_address);
+    ds.reset();
+
+    ds = make_data_store();
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), buffer2.size()) == 0);
+    }
+
+    ds->unlink(buffer2_address);
+
+    {
+        shared_buffer<char> read_buffer(full_address.data_size());
+        shared_buffer<char> zero_buffer(DEFAULT_PAGE_SIZE);
+        memset(zero_buffer.data(), 0, zero_buffer.size());
+        size_t t_read = 0;
+        for (size_t i = 0; i < full_address.size(); ++i) {
+            const auto p = full_address.get(i);
+            auto read_size =
+                ds->read(read_buffer.data() + t_read, p.pointer, p.size);
+            t_read += read_size;
+        }
+
+        BOOST_CHECK(t_read == full_address.data_size());
+
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(), 1337) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES,
+                                zero_buffer.data(), zero_buffer.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + MAX_FILE_SIZE_BYTES +
+                                    zero_buffer.size(),
+                                buffer2.data() + 1337 + zero_buffer.size(),
+                                buffer2.size() - 1337 - zero_buffer.size()) ==
+                    0);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(repeated_write_delete) {
     auto buffer = random_buffer(MAX_FILE_SIZE_BYTES / 4);
 
