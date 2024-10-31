@@ -13,6 +13,10 @@
 - Add support for date condition operators: `DateEquals`, `DateNotEquals`,
   `DateLessThan`, `DateLessThanEquals`, `DateGreaterThan`, `DateGreaterThanEquals`
   - Conditions should be less than `2261-01-01T00:00:00Z`
+- Fix bug on `NotAction`, `NotPrincipal`, `NotResource`: implement NOR for multiple
+  context values
+- Implement special characters: `${*}`, `${?}`, `${$}`
+- Support variable for resource statement
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support

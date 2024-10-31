@@ -22,9 +22,9 @@ inline matcher match_action(std::set<std::string> actions) {
 
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
-        return match_any(actions, [&vars](auto value) {
+        return match_none(actions, [&vars](auto value) {
             if (auto action = vars.get("uh:ActionId"); action) {
-                return !equals_wildcard(value, *action);
+                return equals_wildcard(value, *action);
             }
 
             return true;
@@ -53,9 +53,9 @@ inline matcher match_resource(std::set<std::string> resources) {
 
 inline matcher match_not_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
-        return match_all(resources, [&vars](auto value) {
+        return match_none(resources, [&vars](auto value) {
             if (auto arn = vars.get("uh:ResourceArn"); arn) {
-                return !equals_wildcard(var_replace(value, vars), *arn);
+                return equals_wildcard(var_replace(value, vars), *arn);
             }
 
             return true;
@@ -77,9 +77,9 @@ inline matcher match_principal(std::set<std::string> principals) {
 
 inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
-        return match_all(principals, [&vars](auto value) {
+        return match_none(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
-                return !equals_wildcard(value, *arn);
+                return equals_wildcard(value, *arn);
             }
 
             return true;
@@ -88,7 +88,7 @@ inline matcher match_not_principal(std::set<std::string> principals) {
 }
 
 /*
- * implements logical AND for multiple context keys attached to a single
+ * Implements logical AND for multiple context keys attached to a single
  * condition operator
  */
 inline matcher var_matcher(std::map<std::string, std::list<std::string>> values,
@@ -132,7 +132,7 @@ match_stringnotequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
+            return match_none(options, [&](const auto& value) {
                 return var == var_replace(value, vars);
             });
         });
@@ -156,7 +156,7 @@ inline matcher match_stringnotequalsignorecase(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
+            return match_none(options, [&](const auto& value) {
                 return equals_nocase(var, var_replace(value, vars));
             });
         });
@@ -180,21 +180,24 @@ match_stringnotlike(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
+            return match_none(options, [&](const auto& value) {
                 return equals_wildcard(var, var_replace(value, vars));
             });
         });
 }
 
+template <typename Comparator>
 inline matcher
-match_numericequals(std::map<std::string, std::list<std::string>> values,
-                    undefined_variable uv) {
+match_numericcomparison(std::map<std::string, std::list<std::string>> values,
+                        undefined_variable uv, Comparator comp) {
     return var_matcher(
         std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            return match_any(options, [&](const auto& value) {
-                return to_int(var) == to_int(var_replace(value, vars));
-            });
+        [comp](const auto& vars, const auto& var, const auto& options) {
+            if (options.size() != 1) [[unlikely]]
+                throw std::runtime_error("list is not supported as a condition "
+                                         "value for this comparison operator");
+            return comp(to_int(var),
+                        to_int(var_replace(options.front(), vars)));
         });
 }
 
@@ -204,9 +207,10 @@ match_numericnotequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
-                return to_int(var) == to_int(var_replace(value, vars));
-            });
+            if (options.size() != 1) [[unlikely]]
+                throw std::runtime_error("list is not supported as a condition "
+                                         "value for this comparison operator");
+            return to_int(var) != to_int(var_replace(options.front(), vars));
         });
 }
 
@@ -216,9 +220,10 @@ match_numericlessthan(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
-                return to_int(var) < to_int(var_replace(value, vars));
-            });
+            if (options.size() != 1) [[unlikely]]
+                throw std::runtime_error("list is not supported as a condition "
+                                         "value for this comparison operator");
+            return to_int(var) < to_int(var_replace(options.front(), vars));
         });
 }
 
@@ -228,9 +233,10 @@ inline matcher match_numericlessthanequals(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
-                return to_int(var) <= to_int(var_replace(value, vars));
-            });
+            if (options.size() != 1) [[unlikely]]
+                throw std::runtime_error("list is not supported as a condition "
+                                         "value for this comparison operator");
+            return to_int(var) <= to_int(var_replace(options.front(), vars));
         });
 }
 
@@ -267,10 +273,10 @@ match_datecomparison(std::map<std::string, std::list<std::string>> values,
         std::move(values), uv,
         [comp](const auto& vars, const auto& var, const auto& options) -> bool {
             if (options.size() != 1) [[unlikely]]
-                throw std::runtime_error(
-                    "list is not supported as a condition value");
-            return comp(read_iso8601_date(var_replace(var, vars)),
-                        read_iso8601_date(options.front()));
+                throw std::runtime_error("list is not supported as a condition "
+                                         "value for this comparison operator");
+            return comp(read_iso8601_date(var),
+                        read_iso8601_date(var_replace(options.front(), vars)));
         });
 }
 

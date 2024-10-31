@@ -16,81 +16,134 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(variable_replace) {
     {
-        auto result = var_replace("foo", vars({}));
-        BOOST_CHECK(result == "foo");
-    }
-
-    {
-        auto result = var_replace("${foo}", vars({{"foo", "bar"}}));
-        BOOST_CHECK(result == "bar");
-    }
-
-    {
-        auto result = var_replace("fo${bar}o", vars({}));
-        BOOST_CHECK(result == "foo");
-    }
-
-    {
-        auto result = var_replace("${}", vars({}));
-        BOOST_CHECK(result == "");
-    }
-
-    {
-        auto result = var_replace("${foo:bar}", vars({{"foo:bar", "baz"}}));
-        BOOST_CHECK(result == "baz");
-    }
-
-    {
-        auto result = var_replace("${foo}${", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "baz${");
+        auto result = var_replace(remap_wildcards("foo"), vars({}));
+        BOOST_TEST(result == "foo");
     }
 
     {
         auto result =
-            var_replace("${foo}${bar}", vars({{"foo", "baz"}, {"bar", "bar"}}));
-        BOOST_CHECK(result == "bazbar");
+            var_replace(remap_wildcards("${foo}"), vars({{"foo", "bar"}}));
+        BOOST_TEST(result == "bar");
     }
 
     {
-        auto result = var_replace("\\${foo}", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "${foo}");
+        auto result = var_replace(remap_wildcards("fo${bar}o"), vars({}));
+        BOOST_TEST(result == "foo");
     }
 
     {
-        auto result = var_replace("${${foo}}", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "}");
+        auto result = var_replace(remap_wildcards("${}"), vars({}));
+        BOOST_TEST(result == "");
+    }
+
+    {
+        auto result = var_replace(remap_wildcards("${foo:bar}"),
+                                  vars({{"foo:bar", "baz"}}));
+        BOOST_TEST(result == "baz");
+    }
+
+    {
+        auto result =
+            var_replace(remap_wildcards("${foo}${"), vars({{"foo", "baz"}}));
+        BOOST_TEST(result == "baz${");
+    }
+
+    {
+        auto result = var_replace(remap_wildcards("${foo}${bar}"),
+                                  vars({{"foo", "baz"}, {"bar", "bar"}}));
+        BOOST_TEST(result == "bazbar");
+    }
+
+    {
+        auto result =
+            var_replace(remap_wildcards("\\${foo}"), vars({{"foo", "baz"}}));
+        BOOST_TEST(result == "${foo}");
+    }
+
+    {
+        auto result =
+            var_replace(remap_wildcards("${${foo}}"), vars({{"foo", "baz"}}));
+        BOOST_TEST(result == "}");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__fails_for_wrong_format) {
+    {
+        auto result =
+            var_replace(remap_wildcards("{foo}"), vars({{"foo", "baz"}}));
+        BOOST_TEST(result != "baz");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__fails_for_wrong_variable_name) {
+    {
+        auto result =
+            var_replace(remap_wildcards("${foo}"), vars({{"foo2", "baz"}}));
+        BOOST_TEST(result != "baz");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__remap_specialchars_well) {
+    {
+        auto result =
+            var_replace(remap_wildcards("${*}"), vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "*");
+    }
+    {
+        auto result =
+            var_replace(remap_wildcards("${?}"), vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "?");
+    }
+    {
+        auto result =
+            var_replace(remap_wildcards("${$}"), vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "$");
     }
 }
 
 BOOST_AUTO_TEST_CASE(wildcard_match) {
-    BOOST_CHECK(equals_wildcard("", ""));
-    BOOST_CHECK(!equals_wildcard("", "bar"));
-    BOOST_CHECK(equals_wildcard("foo", "foo"));
-    BOOST_CHECK(!equals_wildcard("foo", "bar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards(""), ""));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo"), "foo"));
 
-    BOOST_CHECK(equals_wildcard("foo*", "foo"));
-    BOOST_CHECK(equals_wildcard("foo*", "foobar"));
-    BOOST_CHECK(equals_wildcard("fo*", "fo"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*"), "foo"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*"), "foobar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("fo*"), "fo"));
 
-    BOOST_CHECK(equals_wildcard("ba?", "baz"));
-    BOOST_CHECK(equals_wildcard("ba?", "bar"));
-    BOOST_CHECK(equals_wildcard("ba?q", "barq"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("ba?"), "baz"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("ba?"), "bar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("ba?q"), "barq"));
 
-    BOOST_CHECK(equals_wildcard("foo*bar", "foobar"));
-    BOOST_CHECK(equals_wildcard("foo*bar", "fooquuxbar"));
-    BOOST_CHECK(equals_wildcard("foo*bar", "fooqbarquuxbar"));
-    BOOST_CHECK(equals_wildcard("foo*bar", "fooqbarxx"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*bar"), "foobar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*bar"), "fooquuxbar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*bar"), "fooqbarquuxbar"));
 
-    BOOST_CHECK(equals_wildcard("fo*ar*ux", "foobarquux"));
-    BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbar"));
-    BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbaz"));
-    BOOST_CHECK(equals_wildcard("foo*ba?", "foobaz"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("fo*ar*ux"), "foobarquux"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*ba?"), "fooquuxbar"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*ba?"), "fooquuxbaz"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("foo*ba?"), "foobaz"));
 
-    BOOST_CHECK(equals_wildcard("???", "foo"));
-    BOOST_CHECK(equals_wildcard("*", "foo"));
-    BOOST_CHECK(equals_wildcard("*?", "f"));
-    BOOST_CHECK(!equals_wildcard("*?", ""));
-    BOOST_CHECK(!equals_wildcard("root", "arn:foo:root"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("???"), "foo"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("*"), "foo"));
+    BOOST_CHECK(equals_wildcard(remap_wildcards("*?"), "f"));
+
+    BOOST_CHECK(equals_wildcard(
+        var_replace(remap_wildcards("foo*${*}"), vars({})), "foo_asdf_*"));
+    BOOST_CHECK(
+        equals_wildcard(var_replace(remap_wildcards("foo*${*}end"), vars({})),
+                        "foo_asdf_*end"));
+    BOOST_CHECK(equals_wildcard(
+        var_replace(remap_wildcards("foo*${$}${foo}"), vars({{"foo", "bar"}})),
+        "foo_$bar"));
+}
+
+BOOST_AUTO_TEST_CASE(wildcard_match__fails_on_false_match) {
+    BOOST_CHECK(!equals_wildcard(remap_wildcards(""), "bar"));
+    BOOST_CHECK(!equals_wildcard(remap_wildcards("foo"), "bar"));
+    BOOST_CHECK(!equals_wildcard(remap_wildcards("*?"), ""));
+    BOOST_CHECK(!equals_wildcard(remap_wildcards("root"), "arn:foo:root"));
+
+    BOOST_CHECK(!equals_wildcard(
+        var_replace(remap_wildcards("foo*bar"), vars({})), "fooqbarxx"));
 }
 
 BOOST_AUTO_TEST_CASE(default_variables) {

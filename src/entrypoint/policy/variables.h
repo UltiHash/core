@@ -49,6 +49,9 @@ public:
     std::optional<std::string_view> get(std::string_view name) const;
     void put(std::string k, std::string v);
 
+    static constexpr char wildcard_asterisk = -1;
+    static constexpr char wildcard_questionmark = -2;
+
 private:
     const http::request& m_req;
     const command& m_cmd;
@@ -64,12 +67,19 @@ private:
 std::string var_replace(std::string_view format, const variables& vars);
 
 /**
+ * Substitute wildcards to predefined remap values.
+ * This function returns input string to make test convinient.
+ */
+std::string remap_wildcards(std::string& str);
+std::string remap_wildcards(std::string&& str);
+
+/**
  * Compare string `wildcarded` with string `b`, matching `*` against
  * any particular substring and `?` against any character.
  */
 bool equals_wildcard(std::string_view wildcarded, std::string_view b);
 
-std::optional<int64_t> to_int(std::string_view s);
+int64_t to_int(std::string_view s);
 
 } // namespace uh::cluster::ep::policy
 

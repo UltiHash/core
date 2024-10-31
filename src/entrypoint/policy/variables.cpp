@@ -1,4 +1,5 @@
 #include "variables.h"
+#include "parser.h"
 
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
@@ -21,7 +22,8 @@ std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
     for (auto pos = 0ull; pos <= h.size() - n.size(); ++pos) {
         std::size_t n_idx = 0ull;
         for (; n_idx < n.size(); ++n_idx) {
-            if (n[n_idx] != h[pos + n_idx] && n[n_idx] != '?') {
+            if (n[n_idx] != h[pos + n_idx] &&
+                n[n_idx] != variables::wildcard_questionmark) {
                 break;
             }
         }
@@ -161,7 +163,23 @@ std::string var_replace(std::string_view format, const variables& vars) {
 
                     if (auto it = vars.get(var_name); it) {
                         rv.append(*it);
+                    } else {
+                        if (var_name.size() == 1) {
+                            if (var_name[0] == variables::wildcard_asterisk)
+                                rv.push_back('*');
+                            if (var_name[0] == variables::wildcard_questionmark)
+                                rv.push_back('?');
+                            if (var_name[0] == '$')
+                                rv.push_back('$');
+                        }
                     }
+
+                    // vp.add("*", [](const auto& r, const auto&) { return
+                    // std::string("*"); }); vp.add("?", [](const auto& r, const
+                    // auto&) { return std::string("?"); }); vp.add("$",
+                    // [](const auto& r, const auto&) { return std::string("$");
+                    // });
+                    //
 
                     i = end_of_var;
                 } else {
@@ -184,13 +202,29 @@ std::string var_replace(std::string_view format, const variables& vars) {
     return rv;
 }
 
+std::string remap_wildcards(std::string& str) {
+    static std::unordered_map<char, char> replacements = {
+        {'*', variables::wildcard_asterisk},
+        {'?', variables::wildcard_questionmark}};
+
+    std::transform(str.begin(), str.end(), str.begin(), [&](char c) {
+        return replacements.count(c) ? replacements[c] : c;
+    });
+    return str;
+}
+
+std::string remap_wildcards(std::string&& str) {
+    std::string result = std::move(str);
+    return remap_wildcards(result);
+}
+
 // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html
 bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
     if (wildcarded.empty()) {
         return b.empty();
     }
 
-    auto groups = split(wildcarded, '*');
+    auto groups = split(wildcarded, variables::wildcard_asterisk);
     if (groups.size() == 1) {
         return qfind(b, groups[0], 0) == 0;
     }
@@ -209,14 +243,15 @@ bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
     return true;
 }
 
-std::optional<int64_t> to_int(std::string_view s) {
+int64_t to_int(std::string_view s) {
     int64_t rv;
 
     auto result = std::from_chars(s.begin(), s.end(), rv);
     if (result.ptr != s.end() || result.ec != std::errc()) {
-        return {};
+        throw std::runtime_error("string to int conversion failed");
     }
 
     return rv;
 }
+
 } // namespace uh::cluster::ep::policy

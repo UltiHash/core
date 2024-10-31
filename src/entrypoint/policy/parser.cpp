@@ -36,8 +36,13 @@ optional(const json& j, std::string_view key) {
     return *it;
 }
 
+/*
+ * Replace wildcard charactors
+ */
 std::string to_string(const json& element) {
-    return element.get<std::string>();
+    auto values = element.get<std::string>();
+    remap_wildcards(values);
+    return values;
 }
 
 template <class container>
@@ -136,6 +141,11 @@ condition_parameter(const json& condition) {
  * }
  *
  * `values` are the function parameter on matchers; see matchers.h
+ *
+ * In some matchers,
+ *
+ * - values:key == var
+ * - values:value == options
  */
 matcher condition_matcher(std::string key, const json& condition) {
     undefined_variable if_exists = undefined_variable::do_not_match;
@@ -164,28 +174,39 @@ matcher condition_matcher(std::string key, const json& condition) {
     if (key == "StringNotLike") {
         return match_stringnotlike(condition_parameter(condition), if_exists);
     }
+
+    /*
+     * Numeric comparison
+     */
     if (key == "NumericEquals") {
-        return match_numericequals(condition_parameter(condition), if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists, std::equal_to<int64_t>());
     }
     if (key == "NumericNotEquals") {
-        return match_numericnotequals(condition_parameter(condition),
-                                      if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists, std::not_equal_to<int64_t>());
     }
     if (key == "NumericLessThan") {
-        return match_numericlessthan(condition_parameter(condition), if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists, std::less<int64_t>());
     }
     if (key == "NumericLessThanEquals") {
-        return match_numericlessthanequals(condition_parameter(condition),
-                                           if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists, std::less_equal<int64_t>());
     }
     if (key == "NumericGreaterThan") {
-        return match_numericgreaterthan(condition_parameter(condition),
-                                        if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists, std::greater<int64_t>());
     }
     if (key == "NumericGreaterThanEquals") {
-        return match_numericgreaterthanequals(condition_parameter(condition),
-                                              if_exists);
+        return match_numericcomparison(condition_parameter(condition),
+                                       if_exists,
+                                       std::greater_equal<int64_t>());
     }
+
+    /*
+     * Date comparison
+     */
     if (key == "DateEquals") {
         return match_datecomparison(condition_parameter(condition), if_exists,
                                     std::equal_to<utc_time>());
@@ -286,7 +307,6 @@ std::list<policy> parser::parse(const std::string& code) {
     auto js = json::parse(code);
 
     auto version = optional(js, "Version");
-
     // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#policy-vars-using-variables
     if (!version || version->get().get<std::string>() != IAM_JSON_VERSION) {
         throw std::runtime_error("no version element or unsupported version");
