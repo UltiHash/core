@@ -1,0 +1,124 @@
+name: S3A Testing On Premise
+
+on:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
+
+env:
+  ENVIRONMENT_NAME: s3a-testing-x86-64
+
+jobs:
+
+  build-core:
+    runs-on: heavyweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          tags: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          push: true
+          build-args: |
+            BuildType=RelWithDebInfo
+            DebugTools=True
+        
+  build-database-init:
+    runs-on: heavyweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: plauth
+          password: ${{ secrets.PAT }}
+
+      - name: Build and push the Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: tools/database-init/Dockerfile
+          platforms: linux/amd64
+          tags: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          push: true
+
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    needs:
+      - build-core
+      - build-database-init
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Generate Helm values
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          GITHUB_PAT: ${{ secrets.PAT }}
+        with:
+          input: s3a-testing/helm-values-on-premise.yaml
+          output: helm-values.yaml
+
+      - name: Delete the testing environment if exists
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+        continue-on-error: true
+
+      - name: Install the Helm chart
+        run: |
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
+          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
+          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+
+      - name: Run feature tests
+        run: |
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 1h
