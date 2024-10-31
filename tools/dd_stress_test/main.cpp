@@ -1,209 +1,208 @@
 #include "common/network/messenger.h"
-#include "common/telemetry/log.h"
 #include "common/types/common_types.h"
 #include "common/utils/random.h"
 #include "common/utils/time_utils.h"
+#include <CLI/CLI.hpp>
+#include <deduplicator/interfaces/remote_deduplicator.h>
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <iostream>
 #include <random>
 
 using namespace uh::cluster;
 
-struct params {
-    std::string address;
-    long port{};
-    long threads{};
-    long conns{};
-    size_t message_count{};
+struct config {
+    std::string host = "127.0.0.1";
+    uint16_t port = 9300;
+    std::size_t threads = 4;
+    std::size_t connections = 16;
+    std::size_t jobs = 8;
+    size_t min_data_size = 32ul * MEBI_BYTE;
+    size_t max_data_size = 32ul * MEBI_BYTE;
+    size_t messages = 32;
+    std::string generator = "random";
 };
 
-size_t min_data_size = 64ul * MEBI_BYTE;
-size_t max_data_size = 64ul * MEBI_BYTE;
+std::optional<::config> read_config(int argc, char** argv) {
+    CLI::App app("UH deduplicator stress test");
+    argv = app.ensure_utf8(argv);
 
-boost::asio::io_context ioc;
-std::deque<std::unique_ptr<boost::asio::ip::tcp::socket>> sockets;
-std::mutex m;
-std::condition_variable cv;
+    app.description(
+        "Send a bunch of deduplication requests to a deduplicator. "
+        "The test runs N jobs, each sending a given number of messages. ");
 
-void create_connections(const params& ps) {
-    boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::address::from_string(ps.address), ps.port);
+    ::config rv;
 
-    for (int i = 0; i < ps.conns; ++i) {
-        sockets.emplace_back(
-            std::make_unique<boost::asio::ip::tcp::socket>(ioc));
-        sockets.back()->connect(endpoint);
+    app.add_option("--host,-H", rv.host, "DD host name")->default_val(rv.host);
+    app.add_option("--port,-p", rv.port, "DD port")->default_val(rv.port);
+    app.add_option("--threads,-t", rv.threads, "number of I/O threads")
+        ->default_val(rv.threads);
+    app.add_option("--connections,-c", rv.connections, "number of connections")
+        ->default_val(rv.connections);
+    app.add_option("--messages,-n", rv.messages, "number of messages to send")
+        ->default_val(rv.messages);
+    app.add_option("--jobs,-j", rv.jobs, "number of jobs")
+        ->default_val(rv.jobs);
+    app.add_option("--min", rv.min_data_size, "minimum size of message")
+        ->default_val(rv.min_data_size);
+    app.add_option("--max", rv.max_data_size, "maximum size of message")
+        ->default_val(rv.max_data_size);
+    app.add_option("--generator", rv.generator,
+                   "data generator (random or fixed)")
+        ->default_val(rv.generator);
+
+    try {
+        app.parse(argc, argv);
+    } catch (const CLI::Success& e) {
+        app.exit(e);
+        return {};
     }
+
+    return rv;
 }
 
-auto borrow_connection() {
-    std::unique_lock<std::mutex> l(m);
-    cv.wait(l, []() { return !sockets.empty(); });
-    auto s = std::move(sockets.front());
-    sockets.pop_front();
-    return s;
+std::string fixed_string(std::size_t length) {
+    std::string pattern = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    std::string rv;
+    rv.reserve(length);
+
+    while (rv.size() < length) {
+        rv.append(pattern, 0, std::min(pattern.size(), length - rv.size()));
+    }
+
+    return rv;
 }
 
-void return_connection(auto&& s) {
-    std::lock_guard<std::mutex> l(m);
-    sockets.push_back(std::move(s));
-    cv.notify_one();
-}
-
-std::vector<std::vector<std::string>> generate_data(const params& ps) {
+std::vector<std::vector<std::string>> gen_fixed(const config& cfg) {
 
     std::random_device rd;
     std::mt19937 generator(rd());
-    std::uniform_int_distribution<size_t> distribution(min_data_size,
-                                                       max_data_size);
+    std::uniform_int_distribution<size_t> distribution(cfg.min_data_size,
+                                                       cfg.max_data_size);
 
-    std::vector<std::vector<std::string>> random_data;
-    random_data.reserve(ps.threads);
+    std::vector<std::vector<std::string>> data;
+    data.reserve(cfg.jobs);
 
-    for (int t = 0; t < ps.threads; t++) {
-        random_data.emplace_back();
-        random_data.back().reserve(ps.message_count);
-        for (size_t i = 0; i < ps.message_count; ++i) {
+    for (std::size_t t = 0; t < cfg.jobs; t++) {
+        data.emplace_back();
+        data.back().reserve(cfg.messages);
+        for (size_t i = 0; i < cfg.messages; ++i) {
             size_t length = distribution(generator);
-            random_data.back().emplace_back(random_string(length));
+            data.back().emplace_back(fixed_string(length));
         }
     }
 
-    return random_data;
+    return data;
 }
 
-std::pair<size_t, size_t> do_io(const std::vector<std::string>& random_data) {
+std::vector<std::vector<std::string>> gen_random(const config& cfg) {
 
-    size_t total_size = 0;
-    size_t effective_size = 0;
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<size_t> distribution(cfg.min_data_size,
+                                                       cfg.max_data_size);
 
-    for (const auto& data : random_data) {
-        message_type type = DEDUPLICATOR_REQ;
-        const auto length = data.length();
-        std::vector<boost::asio::const_buffer> send_buffers{
-            {&type, sizeof(type)},
-            {&length, sizeof(length)},
-            {data.data(), data.size()}};
+    std::vector<std::vector<std::string>> data;
+    data.reserve(cfg.jobs);
 
-        auto socket = borrow_connection();
-        boost::asio::write(*socket, send_buffers);
-
-        messenger_core::header h{};
-        std::vector<boost::asio::mutable_buffer> recv_buffers{
-            {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
-        boost::asio::read(*socket, recv_buffers);
-
-        dedupe_response dedupe_resp;
-        dedupe_resp.addr = address(address::allocated_elements(
-            h.size - sizeof(dedupe_resp.effective_size)));
-        std::vector<boost::asio::mutable_buffer> buffers{
-            boost::asio::buffer(&dedupe_resp.effective_size,
-                                sizeof dedupe_resp.effective_size),
-            boost::asio::buffer(dedupe_resp.addr.pointers),
-            boost::asio::buffer(dedupe_resp.addr.sizes),
-        };
-
-        boost::asio::read(*socket, buffers);
-        if (h.type != SUCCESS) [[unlikely]] {
-            throw std::runtime_error("unsuccessful integration");
+    for (std::size_t t = 0; t < cfg.jobs; t++) {
+        data.emplace_back();
+        data.back().reserve(cfg.messages);
+        for (size_t i = 0; i < cfg.messages; ++i) {
+            size_t length = distribution(generator);
+            data.back().emplace_back(random_string(length));
         }
-
-        return_connection(std::move(socket));
-        total_size += length;
-        effective_size += dedupe_resp.effective_size;
     }
 
-    return {total_size, effective_size};
+    return data;
 }
 
-params get_params(int argc, char* args[]) {
-
-    if (argc != 6) {
-        throw std::invalid_argument("Wrong number of parameters");
+std::vector<std::vector<std::string>> generate_data(const config& cfg) {
+    if (cfg.generator == "random") {
+        return gen_random(cfg);
     }
 
-    return {
-        .address = std::string{args[1]},
-        .port = strtol(args[2], nullptr, 10),
-        .threads = strtol(args[3], nullptr, 10),
-        .conns = strtol(args[4], nullptr, 10),
-        .message_count = strtoul(args[5], nullptr, 10),
-    };
+    if (cfg.generator == "fixed") {
+        return gen_fixed(cfg);
+    }
+
+    throw std::runtime_error("unsupported generator: " + cfg.generator);
 }
 
-std::string dump_usage() {
-    return {"Usage: <executable> <server-bind_address> <server-port> "
-            "<threads-count> <connection-count> <message-count>"};
+coro<void> do_io(deduplicator_interface& dd,
+                 const std::vector<std::string>& data) {
+    context ctx;
+
+    for (const auto& data : data) {
+        co_await dd.deduplicate(ctx, data);
+    }
 }
 
-int main(int argc, char* args[]) {
-
-    params ps;
+int main(int argc, char** argv) {
 
     try {
-        ps = get_params(argc, args);
-    } catch (std::exception& e) {
-        LOG_ERROR() << "Error in parameters:";
-        LOG_ERROR() << e.what();
-        LOG_ERROR() << dump_usage();
-        exit(1);
-    }
-
-    create_connections(ps);
-
-    std::vector<std::thread> threads;
-    threads.reserve(ps.threads);
-
-    std::vector<std::pair<size_t, size_t>> io_sizes(ps.threads);
-    std::vector<std::exception_ptr> exceptions(ps.threads);
-
-    const auto random_data = generate_data(ps);
-
-    timer tt;
-
-    for (int i = 0; i < ps.threads; ++i) {
-        threads.emplace_back([&random_data, &io_sizes, &exceptions, i]() {
-            try {
-                io_sizes[i] = do_io(random_data[i]);
-            } catch (const std::exception&) {
-                exceptions[i] = std::current_exception();
-            }
-        });
-    }
-
-    for (auto& t : threads) {
-        t.join();
-    }
-
-    for (const auto& e : exceptions) {
-        if (e) {
-            try {
-                std::rethrow_exception(e);
-            } catch (const std::exception& e) {
-                LOG_ERROR() << "Error occurred in threads: " << e.what();
-                exit(1);
-            }
+        auto cfg = ::read_config(argc, argv);
+        if (!cfg) {
+            return 0;
         }
+
+        boost::asio::io_context ioc;
+        auto handler = [](const std::exception_ptr& e) {
+            if (e) {
+                std::rethrow_exception(e);
+            }
+        };
+
+        remote_deduplicator dd(
+            client(ioc, cfg->host, cfg->port, cfg->connections));
+        std::list<std::thread> threads;
+
+        std::cout << "generating random data: " << cfg->messages
+                  << " for every job(" << cfg->jobs << "), each between "
+                  << cfg->min_data_size << " and " << cfg->max_data_size
+                  << " bytes in size.\n";
+        std::size_t total = cfg->messages * cfg->jobs *
+                            ((cfg->min_data_size + cfg->max_data_size) / 2);
+        std::cout << "average total size: " << total << "\n";
+
+        const auto data = generate_data(*cfg);
+
+        std::cout << "generation done, starting upload\n";
+        timer tt;
+
+        for (std::size_t i = 0; i < cfg->jobs; ++i) {
+            boost::asio::co_spawn(ioc, do_io(dd, data[i]), handler);
+        }
+
+        for (std::size_t i = 0; i < cfg->threads; ++i) {
+            threads.emplace_back([&ioc]() { ioc.run(); });
+        }
+
+        for (auto& t : threads) {
+            t.join();
+        }
+
+        auto passed = tt.passed();
+        std::size_t data_size = std::accumulate(
+            data.begin(), data.end(), 0ull, [](auto val, auto& vec) {
+                return val + std::accumulate(vec.begin(), vec.end(), 0ull,
+                                             [](auto val, auto& s) {
+                                                 return val + s.size();
+                                             });
+            });
+
+        std::cout << "time passed: " << passed << "s\n";
+        std::cout << "data uploaded: " << data_size << " bytes ("
+                  << data_size / MEBI_BYTE << " MB)\n";
+        std::cout << "throughput: "
+                  << ((data_size / MEBI_BYTE) / passed.count()) << " MB/s\n";
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
     }
 
-    const auto accumulated_total_size =
-        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0,
-                        [](auto sum, auto& v) { return sum + v.first; });
-
-    const auto accumulated_eff_size =
-        std::accumulate(io_sizes.cbegin(), io_sizes.cend(), 0.0,
-                        [](auto sum, auto& v) { return sum + v.second; });
-
-    const std::chrono::duration<double> duration = tt.passed();
-    const auto total_size =
-        accumulated_total_size / static_cast<double>(MEBI_BYTE);
-    const auto eff_size = accumulated_eff_size / static_cast<double>(MEBI_BYTE);
-    const auto bandwidth = total_size / duration.count();
-    LOG_INFO() << "Integrated " << total_size << " MB";
-    LOG_INFO() << "Effective size " << eff_size << " MB";
-    LOG_INFO() << "Deduplication ratio " << 1.0 - eff_size / total_size
-               << " MB";
-    LOG_INFO() << "Operation duration " << duration.count() << " s";
-    LOG_INFO() << "Operation bandwidth " << bandwidth << " MB/s";
+    return 0;
 }
