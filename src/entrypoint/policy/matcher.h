@@ -19,11 +19,10 @@ inline matcher match_never() {
     return [](const variables&) { return false; };
 }
 
-// See
-// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html
-
 /*
- * implements logical AND for multiple condition operators
+ * Implements logical AND for multiple condition operators
+ * See
+ * https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html
  */
 inline matcher conjunction(std::list<matcher> subs) {
     return [subs = std::move(subs)](const variables& vars) {
@@ -38,7 +37,7 @@ inline matcher conjunction(std::list<matcher> subs) {
 }
 
 /*
- * implements logical OR for multiple values for a context key
+ * Implements logical OR for multiple values for a context key
  */
 bool match_any(const auto& list, auto pred) {
     for (const auto& opt : list) {
@@ -51,7 +50,7 @@ bool match_any(const auto& list, auto pred) {
 }
 
 /*
- * implements logical NOR for multiple values for a context key
+ * Implements logical NOR for multiple values for a context key
  */
 bool match_none(const auto& list, auto pred) {
     for (const auto& opt : list) {
