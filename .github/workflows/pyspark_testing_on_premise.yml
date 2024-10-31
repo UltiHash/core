@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-  push:
 
 env:
   ENVIRONMENT_NAME: pyspark-testing-x86-64
@@ -120,6 +119,6 @@ jobs:
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
 
-      - name: Run feature tests
+      - name: Run PySpark test
         run: |
           helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-pyspark-test --logs --timeout 1h
