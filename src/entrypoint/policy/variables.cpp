@@ -93,10 +93,6 @@ value_provider make_value_provider() {
         return iso8601_date(std::chrono::system_clock::now());
     });
 
-    vp.add("*", [](const auto& r, const auto&) { return std::string("*"); });
-    vp.add("?", [](const auto& r, const auto&) { return std::string("?"); });
-    vp.add("$", [](const auto& r, const auto&) { return std::string("$"); });
-
     return vp;
 }
 
