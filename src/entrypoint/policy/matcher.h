@@ -62,9 +62,6 @@ bool match_none(const auto& list, auto pred) {
     return true;
 }
 
-// NOT((NOT A) OR (NOT B)) == A AND B, but we should implement A NOR B
-bool match_all(const auto& list, auto pred) { return !match_any(list, pred); }
-
 } // namespace uh::cluster::ep::policy
 
 #endif

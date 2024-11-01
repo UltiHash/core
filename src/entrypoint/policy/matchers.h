@@ -201,69 +201,6 @@ match_numericcomparison(std::map<std::string, std::list<std::string>> values,
         });
 }
 
-inline matcher
-match_numericnotequals(std::map<std::string, std::list<std::string>> values,
-                       undefined_variable uv) {
-    return var_matcher(
-        std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            if (options.size() != 1) [[unlikely]]
-                throw std::runtime_error("list is not supported as a condition "
-                                         "value for this comparison operator");
-            return to_int(var) != to_int(var_replace(options.front(), vars));
-        });
-}
-
-inline matcher
-match_numericlessthan(std::map<std::string, std::list<std::string>> values,
-                      undefined_variable uv) {
-    return var_matcher(
-        std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            if (options.size() != 1) [[unlikely]]
-                throw std::runtime_error("list is not supported as a condition "
-                                         "value for this comparison operator");
-            return to_int(var) < to_int(var_replace(options.front(), vars));
-        });
-}
-
-inline matcher match_numericlessthanequals(
-    std::map<std::string, std::list<std::string>> values,
-    undefined_variable uv) {
-    return var_matcher(
-        std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            if (options.size() != 1) [[unlikely]]
-                throw std::runtime_error("list is not supported as a condition "
-                                         "value for this comparison operator");
-            return to_int(var) <= to_int(var_replace(options.front(), vars));
-        });
-}
-
-inline matcher
-match_numericgreaterthan(std::map<std::string, std::list<std::string>> values,
-                         undefined_variable uv) {
-    return var_matcher(
-        std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
-                return to_int(var) > to_int(var_replace(value, vars));
-            });
-        });
-}
-
-inline matcher match_numericgreaterthanequals(
-    std::map<std::string, std::list<std::string>> values,
-    undefined_variable uv) {
-    return var_matcher(
-        std::move(values), uv,
-        [](const auto& vars, const auto& var, const auto& options) {
-            return !match_any(options, [&](const auto& value) {
-                return to_int(var) >= to_int(var_replace(value, vars));
-            });
-        });
-}
-
 template <typename Comparator>
 inline matcher
 match_datecomparison(std::map<std::string, std::list<std::string>> values,

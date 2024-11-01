@@ -36,9 +36,16 @@ std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
     return std::string::npos;
 }
 
+/*
+ * Only alphanumeric characters and the following characters are allowed in IAM
+ * paths: forward slash (/), plus (+), equals (=), comma (,), period (.),
+ * at (@), underscore (_), and hyphen (-).
+ * https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html#arns-paths
+ */
 value_provider make_value_provider() {
     value_provider vp;
 
+    // [](const http::request& r, const command& c) {}
     vp.add("uh:ActionId",
            [](const auto&, const auto& c) { return c.action_id(); });
 
