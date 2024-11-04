@@ -1,4 +1,4 @@
-name: S3A Testing On Premise
+name: PySpark Testing On Premise
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  ENVIRONMENT_NAME: s3a-testing-x86-64
+  ENVIRONMENT_NAME: pyspark-testing-x86-64
 
 jobs:
 
@@ -98,9 +98,9 @@ jobs:
         env:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
-          GITHUB_PAT: ${{ secrets.PAT }}
+          BUCKET_NAME: datasets
         with:
-          input: s3a-testing/helm-values-on-premise.yaml
+          input: pyspark-testing/helm-values-on-premise.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
@@ -119,6 +119,6 @@ jobs:
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
 
-      - name: Run S3A tests
+      - name: Run PySpark test
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-s3a-tests --logs --timeout 1h
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-pyspark-test --logs --timeout 1h
