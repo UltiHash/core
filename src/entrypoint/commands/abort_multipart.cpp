@@ -6,8 +6,9 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-abort_multipart::abort_multipart(multipart_state& uploads)
-    : m_uploads(uploads) {}
+abort_multipart::abort_multipart(directory& dir, multipart_state& uploads)
+    : m_dir(dir),
+      m_uploads(uploads) {}
 
 bool abort_multipart::can_handle(const request& req) {
     return req.method() == verb::delete_ &&
@@ -17,6 +18,9 @@ bool abort_multipart::can_handle(const request& req) {
 
 coro<response> abort_multipart::handle(request& req) {
     metric<entrypoint_abort_multipart_req>::increase(1);
+
+    auto dir = co_await m_dir.get();
+    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
 
     auto upload_id = *req.query("uploadId");
 
@@ -30,6 +34,7 @@ coro<response> abort_multipart::handle(request& req) {
             "aborted or completed.");
     }
 
+    co_await txn.commit();
     co_return response{};
 }
 

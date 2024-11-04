@@ -2,13 +2,14 @@
 #define ENTRYPOINT_HTTP_ABORT_MULTIPART_H
 
 #include "command.h"
+#include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
 
 namespace uh::cluster {
 
 class abort_multipart : public command {
 public:
-    explicit abort_multipart(multipart_state&);
+    explicit abort_multipart(directory& dir, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -17,6 +18,7 @@ public:
     std::string action_id() const override;
 
 private:
+    directory& m_dir;
     multipart_state& m_uploads;
 };
 

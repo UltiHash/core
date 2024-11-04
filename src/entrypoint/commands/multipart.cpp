@@ -9,8 +9,9 @@ namespace uh::cluster {
 
 multipart::multipart(
     roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
-    multipart_state& uploads)
+    directory& dir, multipart_state& uploads)
     : m_dedupe_services(dedupe_services),
+      m_dir(dir),
       m_uploads(uploads) {}
 
 bool multipart::can_handle(const request& req) {
@@ -50,10 +51,14 @@ coro<response> multipart::handle(request& req) {
 
     auto data_size = resp.addr.data_size();
 
+    auto dir = co_await m_dir.get();
+    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
+
     co_await m_uploads.append_upload_part_info(
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         data_size, std::move(md5));
 
+    co_await txn.commit();
     co_return res;
 }
 

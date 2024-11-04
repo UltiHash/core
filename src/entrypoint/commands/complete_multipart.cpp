@@ -91,6 +91,9 @@ coro<response> complete_multipart::handle(request& req) {
     auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
+    auto dir = co_await m_directory.get();
+    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
+
     auto upload_id = *req.query("uploadId");
     const auto info = co_await m_uploads.details(upload_id);
 
@@ -99,7 +102,7 @@ coro<response> complete_multipart::handle(request& req) {
 
     auto etag = multipart_etag(info);
 
-    co_await apply(req, info, etag);
+    co_await apply(req, dir, info, etag);
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
@@ -115,6 +118,8 @@ coro<response> complete_multipart::handle(request& req) {
     res << pt;
 
     co_await m_uploads.remove_upload(upload_id);
+    co_await txn.commit();
+
     co_return res;
 }
 
@@ -127,7 +132,8 @@ std::string complete_multipart::action_id() const {
  * type `mismatched-new-delete`: _called on pointer returned from a mismatched
  * allocation function_.
  */
-coro<void> complete_multipart::apply(request& req, const upload_info& info,
+coro<void> complete_multipart::apply(request& req, directory::instance& dir,
+                                     const upload_info& info,
                                      const std::string& etag) {
     auto addr = info.generate_total_address();
     object obj{.name = req.object_key(),
@@ -137,7 +143,6 @@ coro<void> complete_multipart::apply(request& req, const upload_info& info,
                .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
     std::optional<object> old_obj;
-    auto dir = co_await m_directory.get();
     try {
         old_obj = co_await dir.get_object(req.bucket(), req.object_key());
     } catch (command_exception&) {

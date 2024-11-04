@@ -98,6 +98,7 @@ coro<response> put_object::handle(request& req) {
 
         std::optional<object> old_obj;
         auto dir = co_await m_dir.get();
+        auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
 
         try {
             old_obj = co_await dir.get_object(req.bucket(), req.object_key());
@@ -106,6 +107,7 @@ coro<response> put_object::handle(request& req) {
         }
 
         co_await dir.put_object(req.bucket(), obj);
+        co_await txn.commit();
 
         if (old_obj.has_value() && old_obj->addr.has_value()) {
             co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());

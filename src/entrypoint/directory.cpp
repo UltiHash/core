@@ -75,6 +75,15 @@ coro<object> directory::instance::head_object(const std::string& bucket,
                      .mime = metadata->string(3)};
 }
 
+coro<db::connection::transaction>
+directory::instance::lock_object(const std::string& bucket,
+                                 const std::string& object_id) {
+    auto txn = m_handle->begin();
+    co_await m_handle->execv("CALL uh_lock_object($1, $2)", bucket, object_id);
+
+    co_return txn;
+}
+
 coro<void> directory::instance::put_bucket(const std::string& bucket) {
     LOG_DEBUG() << "put_bucket(" << bucket << ")";
     validate_bucket_name(bucket);

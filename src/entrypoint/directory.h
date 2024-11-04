@@ -30,6 +30,9 @@ public:
         coro<object> head_object(const std::string& bucket,
                                  const std::string& object_id);
 
+        coro<db::connection::transaction>
+        lock_object(const std::string& bucket, const std::string& object_id);
+
         coro<void> put_bucket(const std::string& bucket);
 
         coro<void> bucket_exists(const std::string& bucket);
