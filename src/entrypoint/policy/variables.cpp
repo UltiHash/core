@@ -149,8 +149,9 @@ std::string var_replace(std::string_view format, const variables& vars) {
                         rv.append(*it);
                     } else {
                         if (var_name.size() == 1) {
-                            if (var_name[0] == asterisk)
+                            if (var_name[0] == asterisk) {
                                 rv.push_back('*');
+                            }
                             if (var_name[0] == questionmark)
                                 rv.push_back('?');
                             if (var_name[0] == '$')
@@ -241,7 +242,7 @@ bool equals_wildcard(std::string_view pattern, std::string_view str,
         [&](char c) { return replacements.count(c) ? replacements[c] : c; });
 
     // Evaluate variables, including special character variables.
-    var_replace<temp_asterisk, temp_questionmark>(buf, vars);
+    buf = var_replace<temp_asterisk, temp_questionmark>(buf, vars);
 
     // Do wildcard matching with replaced wildcard characters
     return equals_wildcard<temp_asterisk, temp_questionmark>(buf, str);
