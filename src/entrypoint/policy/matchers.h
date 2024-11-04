@@ -1,10 +1,8 @@
 #ifndef CORE_ENTRYPOINT_POLICY_MATCHERS_H
 #define CORE_ENTRYPOINT_POLICY_MATCHERS_H
 
-#include "common/telemetry/log.h"
 #include "entrypoint/formats.h"
 #include "matcher.h"
-#include <iostream>
 #include <set>
 
 namespace uh::cluster::ep::policy {

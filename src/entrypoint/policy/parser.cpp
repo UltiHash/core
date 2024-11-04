@@ -3,7 +3,6 @@
 #include "matcher.h"
 #include "matchers.h"
 
-#include "common/telemetry/log.h"
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <set>
@@ -147,7 +146,6 @@ condition_parameter(const json& condition) {
  */
 matcher condition_matcher(std::string key, const json& condition) {
 
-    LOG_INFO() << "condition_matcher with key: " << key;
     undefined_variable if_exists = undefined_variable::do_not_match;
     if (key.ends_with("IfExists")) {
         if_exists = undefined_variable::ignore;

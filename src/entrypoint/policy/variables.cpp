@@ -1,14 +1,10 @@
 #include "variables.h"
-#include "parser.h"
 
-#include "common/telemetry/log.h"
-#include "common/utils/strings.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/formats.h"
 
 #include <algorithm>
 #include <charconv>
-#include <iostream>
 #include <stdexcept>
 
 namespace uh::cluster::ep::policy {
@@ -28,9 +24,8 @@ value_provider make_value_provider() {
         return c.action_id();
     });
 
-    vp.add("uh:ResourceArn", [](const http::request& r, const command& c) {
-        return "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
-    });
+    vp.add("uh:ResourceArn",
+           [](const http::request& r, const command& c) { return r.arn(); });
 
     vp.add("aws:PrincipalArn", [](const http::request& r, const command& c) {
         return r.authenticated_user().arn;
@@ -206,10 +201,6 @@ std::string remap_wildcards(std::string&& str) {
 template <char asterisk, char questionmark>
 bool equals_wildcard(std::string_view pattern, std::string_view str,
                      size_t pat_index, size_t str_index) {
-    if (pat_index == 0 && str_index == 0) {
-        std::cout << "pattern: " << pattern << std::endl;
-        std::cout << "str: " << str << std::endl;
-    }
     if (pat_index == pattern.size()) {
         return str_index == str.size();
     }

@@ -59,45 +59,51 @@ BOOST_FIXTURE_TEST_SUITE(common_policy, common_policy_for_single_bucket)
 
 BOOST_AUTO_TEST_CASE(allows_listbucket_on_bucket) {
 
-    {
-        auto result = policies.front().check(
-            variables(make_request("GET /test/?list-type=2 HTTP/1.1\r\n\r\n"),
-                      mock_command("s3:ListBucket")));
+    auto effect = policies.front().check(
+        variables(make_request("GET /test/?list-type=2 HTTP/1.1\r\n\r\n"),
+                  mock_command("s3:ListBucket")));
 
-        BOOST_CHECK(result.has_value());
-        BOOST_CHECK(*result == effect::allow);
-    }
-    {
-        auto result = policies.front().check(
-            variables(make_request("PUT /test/obj.txt HTTP/1.1\r\n\r\n"),
-                      mock_command("s3:PutObject")));
+    BOOST_CHECK(effect.has_value());
+    BOOST_CHECK(*effect == effect::allow);
+}
 
-        BOOST_CHECK(result.has_value());
-        BOOST_CHECK(*result == effect::allow);
-    }
-    {
-        auto result = policies.front().check(
-            variables(make_request("GET /test/obj.txt HTTP/1.1\r\n\r\n"),
-                      mock_command("s3:GetObject")));
+BOOST_AUTO_TEST_CASE(allows_putobject_into_bucket) {
+    auto effect = std::next(policies.begin())
+                      ->check(variables(
+                          make_request("PUT /test/obj.txt HTTP/1.1\r\n\r\n"),
+                          mock_command("s3:PutObject")));
 
-        BOOST_CHECK(result.has_value());
-        BOOST_CHECK(*result == effect::allow);
-    }
-    {
-        auto result = policies.front().check(
-            variables(make_request("DELETE /test/obj.txt HTTP/1.1\r\n\r\n"),
-                      mock_command("s3:DeleteObject")));
+    BOOST_CHECK(effect.has_value());
+    BOOST_CHECK(*effect == effect::allow);
+}
 
-        BOOST_CHECK(result.has_value());
-        BOOST_CHECK(*result == effect::allow);
-    }
-    {
-        auto result = policies.front().check(
-            variables(make_request("DELETE /test HTTP/1.1\r\n\r\n"),
-                      mock_command("s3:DeleteObject")));
+BOOST_AUTO_TEST_CASE(allows_getobject_into_bucket) {
+    auto effect = std::next(policies.begin())
+                      ->check(variables(
+                          make_request("GET /test/obj.txt HTTP/1.1\r\n\r\n"),
+                          mock_command("s3:GetObject")));
 
-        BOOST_CHECK(!result.has_value());
-    }
+    BOOST_CHECK(effect.has_value());
+    BOOST_CHECK(*effect == effect::allow);
+}
+
+BOOST_AUTO_TEST_CASE(allows_deleteobject_into_bucket) {
+    auto effect = std::next(policies.begin())
+                      ->check(variables(
+                          make_request("DELETE /test/obj.txt HTTP/1.1\r\n\r\n"),
+                          mock_command("s3:DeleteObject")));
+
+    BOOST_CHECK(effect.has_value());
+    BOOST_CHECK(*effect == effect::allow);
+}
+
+BOOST_AUTO_TEST_CASE(denies_deleteobject_on_bucket) {
+    auto effect =
+        std::next(policies.begin())
+            ->check(variables(make_request("DELETE /test HTTP/1.1\r\n\r\n"),
+                              mock_command("s3:DeleteObject")));
+
+    BOOST_CHECK(!effect.has_value());
 }
 
 BOOST_AUTO_TEST_SUITE_END();
