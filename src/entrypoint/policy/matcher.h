@@ -49,19 +49,6 @@ bool match_any(const auto& list, auto pred) {
     return false;
 }
 
-/*
- * Implements logical NOR for multiple values for a context key
- */
-bool match_none(const auto& list, auto pred) {
-    for (const auto& opt : list) {
-        if (pred(opt)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 } // namespace uh::cluster::ep::policy
 
 #endif

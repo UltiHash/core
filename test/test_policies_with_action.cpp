@@ -41,10 +41,10 @@ BOOST_AUTO_TEST_CASE(allows_one_of_the_allowed_actions) {
         "Action", R"json(["s3:GetObject", "s3:PutObject"])json"));
 
     auto get_result = policy.front().check(
-        variables(make_request("GET /test HTTP/1.1\r\n\r\n"),
+        variables(make_request("GET /test/obj.txt HTTP/1.1\r\n\r\n"),
                   mock_command("s3:GetObject")));
     auto put_result = policy.front().check(
-        variables(make_request("GET /test HTTP/1.1\r\n\r\n"),
+        variables(make_request("PUT /test/obj.txt HTTP/1.1\r\n\r\n"),
                   mock_command("s3:PutObject")));
 
     BOOST_CHECK(get_result.has_value());
@@ -64,6 +64,28 @@ BOOST_AUTO_TEST_CASE(doesnt_allow_not_allowed_actions) {
     BOOST_CHECK(!list_result.has_value());
 }
 
+BOOST_AUTO_TEST_CASE(allows_every_action_with_wildcard_match) {
+    auto policy =
+        parser::parse(create_allow_policy("Action", R"json("s3:*")json"));
+
+    auto put_result = policy.front().check(
+        variables(make_request("PUT /test/obj.txt HTTP/1.1\r\n\r\n"),
+                  mock_command("s3:PutObject")));
+    auto get_result = policy.front().check(
+        variables(make_request("GET /test/obj.txt HTTP/1.1\r\n\r\n"),
+                  mock_command("s3:GetObject")));
+    auto list_result = policy.front().check(
+        variables(make_request("GET /test HTTP/1.1\r\n\r\n"),
+                  mock_command("s3:ListBucket")));
+
+    BOOST_CHECK(put_result.has_value());
+    BOOST_CHECK(*put_result == effect::allow);
+    BOOST_CHECK(get_result.has_value());
+    BOOST_CHECK(*get_result == effect::allow);
+    BOOST_CHECK(list_result.has_value());
+    BOOST_CHECK(*list_result == effect::allow);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 /*******************************************************************************
@@ -71,7 +93,7 @@ BOOST_AUTO_TEST_SUITE_END()
  */
 BOOST_AUTO_TEST_SUITE(allow_policy_with_not_action)
 
-BOOST_AUTO_TEST_CASE(allow_not_mentioned_actions) {
+BOOST_AUTO_TEST_CASE(allows_not_mentioned_actions) {
     auto policy = parser::parse(create_allow_policy(
         "NotAction", R"json(["s3:GetObject", "s3:PutObject"])json"));
 
@@ -89,10 +111,10 @@ BOOST_AUTO_TEST_CASE(doesnt_allow_mentioned_actions) {
         "NotAction", R"json(["s3:GetObject", "s3:PutObject"])json"));
 
     auto get_result = policy.front().check(
-        variables(make_request("GET /test HTTP/1.1\r\n\r\n"),
+        variables(make_request("GET /test/obj.txt HTTP/1.1\r\n\r\n"),
                   mock_command("s3:GetObject")));
     auto put_result = policy.front().check(
-        variables(make_request("GET /test HTTP/1.1\r\n\r\n"),
+        variables(make_request("PUT /test/obj.txt HTTP/1.1\r\n\r\n"),
                   mock_command("s3:PutObject")));
 
     BOOST_CHECK(!get_result.has_value());

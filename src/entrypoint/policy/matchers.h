@@ -4,6 +4,7 @@
 #include "common/telemetry/log.h"
 #include "entrypoint/formats.h"
 #include "matcher.h"
+#include <iostream>
 #include <set>
 
 namespace uh::cluster::ep::policy {
@@ -15,19 +16,19 @@ inline matcher match_action(std::set<std::string> actions) {
                 return equals_wildcard(value, *action);
             }
 
-            return false;
+            throw std::runtime_error("uh:ActionId cannot be evaluated");
         });
     };
 }
 
 inline matcher match_not_action(std::set<std::string> actions) {
     return [actions = std::move(actions)](const variables& vars) {
-        return match_none(actions, [&vars](auto value) {
+        return !match_any(actions, [&vars](auto value) {
             if (auto action = vars.get("uh:ActionId"); action) {
                 return equals_wildcard(value, *action);
             }
 
-            return true;
+            throw std::runtime_error("uh:ActionId cannot be evaluated");
         });
     };
 }
@@ -43,22 +44,22 @@ inline matcher match_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
         return match_any(resources, [&vars](auto value) {
             if (auto arn = vars.get("uh:ResourceArn"); arn) {
-                return equals_wildcard(var_replace(value, vars), *arn);
+                return equals_wildcard(value, *arn, vars);
             }
 
-            return false;
+            throw std::runtime_error("uh:ResourceArn cannot be evaluated");
         });
     };
 }
 
 inline matcher match_not_resource(std::set<std::string> resources) {
     return [resources = std::move(resources)](const variables& vars) {
-        return match_none(resources, [&vars](auto value) {
+        return !match_any(resources, [&vars](auto value) {
             if (auto arn = vars.get("uh:ResourceArn"); arn) {
-                return equals_wildcard(var_replace(value, vars), *arn);
+                return equals_wildcard(value, *arn, vars);
             }
 
-            return true;
+            throw std::runtime_error("uh:ResourceArn cannot be evaluated");
         });
     };
 }
@@ -70,19 +71,19 @@ inline matcher match_principal(std::set<std::string> principals) {
                 return equals_wildcard(value, *arn);
             }
 
-            return false;
+            throw std::runtime_error("aws:PrincipalArn cannot be evaluated");
         });
     };
 }
 
 inline matcher match_not_principal(std::set<std::string> principals) {
     return [principals = std::move(principals)](const variables& vars) {
-        return match_none(principals, [&vars](auto value) {
+        return !match_any(principals, [&vars](auto value) {
             if (auto arn = vars.get("aws:PrincipalArn"); arn) {
                 return equals_wildcard(value, *arn);
             }
 
-            return true;
+            throw std::runtime_error("aws:PrincipalArn cannot be evaluated");
         });
     };
 }
@@ -132,7 +133,7 @@ match_stringnotequals(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_none(options, [&](const auto& value) {
+            return !match_any(options, [&](const auto& value) {
                 return var == var_replace(value, vars);
             });
         });
@@ -156,7 +157,7 @@ inline matcher match_stringnotequalsignorecase(
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_none(options, [&](const auto& value) {
+            return !match_any(options, [&](const auto& value) {
                 return equals_nocase(var, var_replace(value, vars));
             });
         });
@@ -169,7 +170,7 @@ match_stringlike(std::map<std::string, std::list<std::string>> values,
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
             return match_any(options, [&](const auto& value) {
-                return equals_wildcard(var, var_replace(value, vars));
+                return equals_wildcard(var, value, vars);
             });
         });
 }
@@ -180,8 +181,8 @@ match_stringnotlike(std::map<std::string, std::list<std::string>> values,
     return var_matcher(
         std::move(values), uv,
         [](const auto& vars, const auto& var, const auto& options) {
-            return match_none(options, [&](const auto& value) {
-                return equals_wildcard(var, var_replace(value, vars));
+            return !match_any(options, [&](const auto& value) {
+                return equals_wildcard(var, value, vars);
             });
         });
 }

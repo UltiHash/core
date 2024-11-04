@@ -49,35 +49,31 @@ public:
     std::optional<std::string_view> get(std::string_view name) const;
     void put(std::string k, std::string v);
 
-    static constexpr char wildcard_asterisk = -1;
-    static constexpr char wildcard_questionmark = -2;
-
 private:
     const http::request& m_req;
     const command& m_cmd;
     mutable std::map<std::string, std::string, std::less<>> m_cache;
 };
 
-/**
- * Replace all occurrences of `${variable name}` with the contents of the
- * variable defined in vars. If the variable is not defined, do not replace the
- * placeholder. Occurrences of the form
- * `\${foo}` are replaced by the term `${foo}` (escaping).
- */
+template <char asterisk = '*', char questionmark = '?'>
 std::string var_replace(std::string_view format, const variables& vars);
 
 /**
- * Substitute wildcards to predefined remap values.
- * This function returns input string to make test convinient.
+ * Compare string `pattern` with string `str`, matching `*` against
+ * any particular substring and `?` against any character.
+ * Get variables as it's input.
+ * Variable replacemance on pattern is done internally.
  */
-std::string remap_wildcards(std::string& str);
-std::string remap_wildcards(std::string&& str);
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     const variables& vars);
 
 /**
- * Compare string `wildcarded` with string `b`, matching `*` against
+ * Compare string `pattern` with string `str`, matching `*` against
  * any particular substring and `?` against any character.
  */
-bool equals_wildcard(std::string_view wildcarded, std::string_view b);
+template <char asterisk = '*', char questionmark = '?'>
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     size_t pat_index = 0, size_t str_index = 0);
 
 int64_t to_int(std::string_view s);
 

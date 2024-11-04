@@ -40,9 +40,7 @@ optional(const json& j, std::string_view key) {
  * Replace wildcard charactors
  */
 std::string to_string(const json& element) {
-    auto values = element.get<std::string>();
-    remap_wildcards(values);
-    return values;
+    return element.get<std::string>();
 }
 
 template <class container>
@@ -148,6 +146,8 @@ condition_parameter(const json& condition) {
  * - values:value == options
  */
 matcher condition_matcher(std::string key, const json& condition) {
+
+    LOG_INFO() << "condition_matcher with key: " << key;
     undefined_variable if_exists = undefined_variable::do_not_match;
     if (key.ends_with("IfExists")) {
         if_exists = undefined_variable::ignore;
