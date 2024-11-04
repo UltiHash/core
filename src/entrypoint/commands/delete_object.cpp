@@ -21,8 +21,12 @@ coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
     try {
         auto dir = co_await m_directory.get();
+
+        auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
         object obj = co_await dir.get_object(req.bucket(), req.object_key());
         co_await dir.delete_object(req.bucket(), req.object_key());
+        co_await txn.commit();
+
         co_await m_gdv.unlink(req.context(), obj.addr.value());
 
         m_limits.free_storage_size(obj.size);
