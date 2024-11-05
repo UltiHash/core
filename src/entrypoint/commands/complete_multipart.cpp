@@ -144,6 +144,13 @@ coro<void> complete_multipart::apply(request& req, const upload_info& info,
         old_obj = std::nullopt;
     }
 
+    if (old_obj.has_value() && old_obj.value().addr.has_value() &&
+        old_obj.value().addr.value() == obj.addr.value()) {
+        LOG_DEBUG() << "CompleteMultipartUpload has already been called on "
+                       "this object, nothing more to do here.";
+        co_return;
+    }
+
     co_await m_directory.put_object(req.bucket(), obj);
 
     if (old_obj.has_value() && old_obj->addr.has_value()) {

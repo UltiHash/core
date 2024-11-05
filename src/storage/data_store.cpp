@@ -29,7 +29,8 @@ data_store::data_store(data_store_config conf,
       m_refcounter(m_root, m_conf.page_size,
                    std::bind_front(&data_store::internal_delete, this)) {
 
-    m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.file_size + 1);
+    m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.max_file_size +
+                         1);
 
     if (!std::filesystem::exists(m_root)) {
         std::filesystem::create_directories(m_root);
@@ -65,11 +66,11 @@ data_store::data_store(data_store_config conf,
     std::filesystem::path last_path;
 
     if (m_open_files.empty()) {
-        last_path = add_new_file(0, static_cast<long>(m_conf.file_size));
+        last_path = add_new_file(0, static_cast<long>(m_conf.max_file_size));
     } else {
         const auto ret =
             ::pread(m_open_files.back().first, &m_last_file_data_end,
-                    sizeof(m_last_file_data_end), m_conf.file_size);
+                    sizeof(m_last_file_data_end), m_conf.max_file_size);
         if (ret != sizeof(m_last_file_data_end)) {
             throw std::system_error(
                 std::error_code(errno, std::system_category()),
@@ -164,8 +165,9 @@ void data_store::sync() {
 
     std::unique_lock<std::mutex> lock(m_sync_mutex);
 
-    const auto ret = ::pwrite(m_open_files.back().first, &m_last_file_data_end,
-                              sizeof(m_last_file_data_end), m_conf.file_size);
+    const auto ret =
+        ::pwrite(m_open_files.back().first, &m_last_file_data_end,
+                 sizeof(m_last_file_data_end), m_conf.max_file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -191,14 +193,11 @@ size_t data_store::fetch_used_space(
 
 address data_store::write(const std::string_view& data) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
-        data.size() > static_cast<size_t>(m_conf.file_size)) [[unlikely]] {
+        data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
 
     auto alloc = internal_allocate(data.size());
-
-    const auto local_pointer = pointer_traits::get_pointer(alloc.global_offset);
-    m_refcounter.increment(local_pointer, data.size());
 
     long written = 0;
     while (written < static_cast<long>(data.size())) {
@@ -310,8 +309,9 @@ std::filesystem::path data_store::add_new_file(size_t offset,
     }
 
     m_last_file_data_end = 0;
-    const auto ret = ::pwrite(fd, &m_last_file_data_end,
-                              sizeof(m_last_file_data_end), m_conf.file_size);
+    const auto ret =
+        ::pwrite(fd, &m_last_file_data_end, sizeof(m_last_file_data_end),
+                 m_conf.max_file_size);
     if (ret != sizeof(m_last_file_data_end)) [[unlikely]] {
         throw std::system_error(std::error_code(errno, std::system_category()),
                                 "Could not write the data size");
@@ -344,39 +344,63 @@ size_t data_store::get_available_space() const noexcept {
 }
 
 data_store::alloc_t data_store::internal_allocate(size_t size) {
-
     std::lock_guard<std::mutex> lock(m_allocate_mutex);
 
-    if (m_last_file_data_end + size > m_conf.file_size) [[unlikely]] {
+    if (m_last_file_data_end + size > m_conf.max_file_size) [[unlikely]] {
         sync();
         const auto offset = m_open_files.back().second + m_last_file_data_end;
-        add_new_file(offset, m_conf.file_size);
+        add_new_file(offset, m_conf.max_file_size);
         assert(offset == m_current_offset);
     }
 
     alloc_t alloc;
     alloc.seek = m_last_file_data_end;
     alloc.fd = m_open_files.back().first;
+    std::size_t local_pointer = m_open_files.back().second + alloc.seek;
     alloc.global_offset = pointer_traits::get_global_pointer(
-        m_open_files.back().second + alloc.seek, m_storage_id, m_data_store_id);
+        local_pointer, m_storage_id, m_data_store_id);
 
     m_last_file_data_end += size;
     m_current_offset += size;
     m_used_space += size;
+
+    m_refcounter.increment(local_pointer, size);
+    update_last_page_ref();
+
     return alloc;
+}
+void data_store::update_last_page_ref() {
+    std::size_t last_page = m_current_offset / m_conf.page_size;
+    if (m_locked_page.has_value()) {
+        if (last_page != m_locked_page.value()) {
+            m_refcounter.increment(last_page * m_conf.page_size,
+                                   m_conf.page_size);
+            address addr;
+            addr.push({pointer_traits::get_global_pointer(
+                           m_locked_page.value() * m_conf.page_size,
+                           m_storage_id, m_data_store_id),
+                       m_conf.page_size});
+            m_refcounter.decrement(addr);
+            m_locked_page = last_page;
+        }
+    } else {
+        m_refcounter.increment(last_page * m_conf.page_size, m_conf.page_size);
+        m_locked_page = last_page;
+    }
 }
 
 std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
-    std::size_t current_offset = m_current_offset.load();
-    if (offset >= current_offset) {
+    std::size_t last_page_id = m_current_offset.load() / m_conf.page_size;
+    std::size_t last_page_offset = last_page_id * m_conf.page_size;
+    if (offset >= last_page_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
-                   << offset << ", with current_offset=" << current_offset;
-        throw std::out_of_range("pointer is out of range");
+                   << offset << ", with last_page_offset=" << last_page_offset;
+        throw std::out_of_range("pointer for delete operation is out of range");
     }
 
-    if (offset + size > current_offset) {
-        return 0;
-    }
+    LOG_DEBUG() << "page " << offset / m_conf.page_size
+                << " dropped to 0, deleting page (offset=" << offset
+                << ", size=" << size << ")";
 
     const auto [fd, seek] = get_file_offset_pair(offset);
 

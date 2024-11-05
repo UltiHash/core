@@ -16,6 +16,7 @@
 - Reduced size of object metadata
 - Improved read performance
 - Fix a bug in storage, leading to failed deduplication requests
+- Improved robustness for successive write-delete-write command sequences and small object sizes
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
