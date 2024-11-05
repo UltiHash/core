@@ -15,7 +15,7 @@ struct storage_config {
 
     std::list<std::filesystem::path> m_data_store_roots;
     data_store_config data_store = {
-        .file_size = 1 * GIBI_BYTE,
+        .max_file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,
         .page_size = DEFAULT_PAGE_SIZE,
     };
