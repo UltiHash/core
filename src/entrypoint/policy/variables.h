@@ -55,21 +55,27 @@ private:
     mutable std::map<std::string, std::string, std::less<>> m_cache;
 };
 
-/**
- * Replace all occurrences of `${variable name}` with the contents of the
- * variable defined in vars. If the variable is not defined, do not replace the
- * placeholder. Occurrences of the form
- * `\${foo}` are replaced by the term `${foo}` (escaping).
- */
+template <char asterisk = '*', char questionmark = '?'>
 std::string var_replace(std::string_view format, const variables& vars);
 
 /**
- * Compare string `wildcarded` with string `b`, matching `*` against
+ * Compare string `pattern` with string `str`, matching `*` against
+ * any particular substring and `?` against any character.
+ * Get variables as it's input.
+ * Variable replacemance on pattern is done internally.
+ */
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     const variables& vars);
+
+/**
+ * Compare string `pattern` with string `str`, matching `*` against
  * any particular substring and `?` against any character.
  */
-bool equals_wildcard(std::string_view wildcarded, std::string_view b);
+template <char asterisk = '*', char questionmark = '?'>
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     size_t pat_index = 0, size_t str_index = 0);
 
-std::optional<int64_t> to_int(std::string_view s);
+int64_t to_int(std::string_view s);
 
 } // namespace uh::cluster::ep::policy
 

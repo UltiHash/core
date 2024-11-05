@@ -13,6 +13,7 @@ namespace uh::cluster::ep::policy {
 class module {
 public:
     module(directory& dir);
+    module(std::list<policy> policies);
 
     /**
      * Check configured policies to determine whether the provided
