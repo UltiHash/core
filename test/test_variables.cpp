@@ -17,56 +17,83 @@ namespace {
 BOOST_AUTO_TEST_CASE(variable_replace) {
     {
         auto result = var_replace("foo", vars({}));
-        BOOST_CHECK(result == "foo");
+        BOOST_TEST(result == "foo");
     }
 
     {
         auto result = var_replace("${foo}", vars({{"foo", "bar"}}));
-        BOOST_CHECK(result == "bar");
+        BOOST_TEST(result == "bar");
     }
 
     {
         auto result = var_replace("fo${bar}o", vars({}));
-        BOOST_CHECK(result == "foo");
+        BOOST_TEST(result == "foo");
     }
 
     {
         auto result = var_replace("${}", vars({}));
-        BOOST_CHECK(result == "");
+        BOOST_TEST(result == "");
     }
 
     {
         auto result = var_replace("${foo:bar}", vars({{"foo:bar", "baz"}}));
-        BOOST_CHECK(result == "baz");
+        BOOST_TEST(result == "baz");
     }
 
     {
         auto result = var_replace("${foo}${", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "baz${");
+        BOOST_TEST(result == "baz${");
     }
 
     {
         auto result =
             var_replace("${foo}${bar}", vars({{"foo", "baz"}, {"bar", "bar"}}));
-        BOOST_CHECK(result == "bazbar");
+        BOOST_TEST(result == "bazbar");
     }
 
     {
         auto result = var_replace("\\${foo}", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "${foo}");
+        BOOST_TEST(result == "${foo}");
     }
 
     {
         auto result = var_replace("${${foo}}", vars({{"foo", "baz"}}));
-        BOOST_CHECK(result == "}");
+        BOOST_TEST(result == "}");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__fails_for_wrong_format) {
+    {
+        auto result = var_replace("{foo}", vars({{"foo", "baz"}}));
+        BOOST_TEST(result != "baz");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__fails_for_wrong_variable_name) {
+    {
+        auto result = var_replace("${foo}", vars({{"foo2", "baz"}}));
+        BOOST_TEST(result != "baz");
+    }
+}
+
+BOOST_AUTO_TEST_CASE(variable_replace__remap_specialchars_well) {
+    {
+        auto result = var_replace("${*}", vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "*");
+    }
+    {
+        auto result = var_replace("${?}", vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "?");
+    }
+    {
+        auto result = var_replace("${$}", vars({{"foo2", "baz"}}));
+        BOOST_TEST(result == "$");
     }
 }
 
 BOOST_AUTO_TEST_CASE(wildcard_match) {
     BOOST_CHECK(equals_wildcard("", ""));
-    BOOST_CHECK(!equals_wildcard("", "bar"));
     BOOST_CHECK(equals_wildcard("foo", "foo"));
-    BOOST_CHECK(!equals_wildcard("foo", "bar"));
 
     BOOST_CHECK(equals_wildcard("foo*", "foo"));
     BOOST_CHECK(equals_wildcard("foo*", "foobar"));
@@ -78,6 +105,7 @@ BOOST_AUTO_TEST_CASE(wildcard_match) {
 
     BOOST_CHECK(equals_wildcard("foo*bar", "foobar"));
     BOOST_CHECK(equals_wildcard("foo*bar", "fooquuxbar"));
+    BOOST_CHECK(equals_wildcard("foo*bar", "fooqbarquuxbar"));
 
     BOOST_CHECK(equals_wildcard("fo*ar*ux", "foobarquux"));
     BOOST_CHECK(equals_wildcard("foo*ba?", "fooquuxbar"));
@@ -87,8 +115,20 @@ BOOST_AUTO_TEST_CASE(wildcard_match) {
     BOOST_CHECK(equals_wildcard("???", "foo"));
     BOOST_CHECK(equals_wildcard("*", "foo"));
     BOOST_CHECK(equals_wildcard("*?", "f"));
+
+    BOOST_CHECK(equals_wildcard("foo*${*}", "foo_asdf_*", vars({})));
+    BOOST_CHECK(equals_wildcard("foo*${*}end", "foo_asdf_*end", vars({})));
+    BOOST_CHECK(
+        equals_wildcard("foo*${$}${foo}", "foo_$bar", vars({{"foo", "bar"}})));
+}
+
+BOOST_AUTO_TEST_CASE(wildcard_match__fails_on_false_match) {
+    BOOST_CHECK(!equals_wildcard("", "bar"));
+    BOOST_CHECK(!equals_wildcard("foo", "bar"));
     BOOST_CHECK(!equals_wildcard("*?", ""));
     BOOST_CHECK(!equals_wildcard("root", "arn:foo:root"));
+
+    BOOST_CHECK(!equals_wildcard("foo*bar", "fooqbarxx", vars({})));
 }
 
 BOOST_AUTO_TEST_CASE(default_variables) {

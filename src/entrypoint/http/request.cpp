@@ -33,6 +33,13 @@ const std::string& request::bucket() const { return m_bucket_id; }
 
 const std::string& request::object_key() const { return m_object_key; }
 
+std::string request::arn() const {
+    if (m_object_key.size() != 0)
+        return "arn:aws:s3:::" + m_bucket_id + "/" + m_object_key;
+    else
+        return "arn:aws:s3:::" + m_bucket_id;
+}
+
 coro<std::size_t> request::read_body(std::span<char> buffer) {
     return m_body->read(buffer);
 }
