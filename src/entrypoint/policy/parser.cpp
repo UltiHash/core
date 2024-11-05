@@ -35,11 +35,13 @@ optional(const json& j, std::string_view key) {
     return *it;
 }
 
-/*
- * Replace wildcard charactors
- */
+constexpr int MAX_VALUEFIELD_LEN = 200;
+
 std::string to_string(const json& element) {
-    return element.get<std::string>();
+    auto ret = element.get<std::string>();
+    if (ret.size() > MAX_VALUEFIELD_LEN)
+        throw std::runtime_error("unsupported size value string");
+    return ret;
 }
 
 template <class container>
