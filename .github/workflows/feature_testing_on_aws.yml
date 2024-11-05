@@ -112,7 +112,7 @@ jobs:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: feature-testing/helm-values-aws.yaml
+          input: testing/feature/helm-values-aws.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
