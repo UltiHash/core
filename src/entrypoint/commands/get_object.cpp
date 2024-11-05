@@ -43,6 +43,11 @@ public:
         co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
         m_total += buffer_size;
         m_size -= buffer_size;
+
+        if (m_size == 0) {
+            co_await m_storage.unlink(m_ctx, m_addr);
+        }
+
         co_return buffer_size;
     }
 
@@ -87,8 +92,10 @@ coro<response> get_object::handle(request& req) {
     response res;
     object obj;
 
+    auto dir = co_await m_dir.get();
+    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
+
     try {
-        auto dir = co_await m_dir.get();
         obj = co_await dir.get_object(req.bucket(), req.object_key());
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchKey",
@@ -106,6 +113,13 @@ coro<response> get_object::handle(request& req) {
         }
 
         auto addr = apply_range(*obj.addr, spec);
+        auto rejects = co_await m_storage.link(req.context(), addr);
+        if (!rejects.empty()) {
+            throw command_exception(status::internal_server_error,
+                                    "Data Corrupted", "found corrupted data");
+        }
+
+        co_await txn.commit();
 
         LOG_DEBUG() << "range based access: header=" << *range
                     << ", obj-addr=" << obj.addr->to_string()
@@ -119,6 +133,14 @@ coro<response> get_object::handle(request& req) {
             m_storage, std::move(addr), req.context()));
 
     } else {
+        auto rejects = co_await m_storage.link(req.context(), *obj.addr);
+        if (!rejects.empty()) {
+            throw command_exception(status::internal_server_error,
+                                    "Data Corrupted", "found corrupted data");
+        }
+
+        co_await txn.commit();
+
         res.set_body(std::make_unique<local_read_handle>(
             m_storage, std::move(*obj.addr), req.context()));
     }

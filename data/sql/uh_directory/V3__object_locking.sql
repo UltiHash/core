@@ -11,3 +11,17 @@ BEGIN
         bucket, key);
 END
 $$;
+
+--
+-- Creates a lock on the specified object until the current transaction
+-- is left. The lock is of type `FOR SHARE`.
+--
+CREATE OR REPLACE PROCEDURE uh_lock_object_shared(bucket regclass, key text)
+LANGUAGE plpgsql AS $$
+BEGIN
+    CALL uh_check_bucket(bucket);
+
+    EXECUTE Format('SELECT id FROM %s WHERE name = %L FOR SHARE',
+        bucket, key);
+END
+$$;
