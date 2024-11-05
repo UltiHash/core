@@ -74,6 +74,16 @@ private:
     timer m_timer;
 };
 
+coro<object> read_object(auto& dir, const std::string& bucket,
+                         const std::string& key) {
+    try {
+        co_return co_await dir.get_object(bucket, key);
+    } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchKey",
+                                "object not found");
+    }
+}
+
 } // namespace
 
 get_object::get_object(directory& dir, global_data_view& storage)
@@ -90,17 +100,10 @@ coro<response> get_object::handle(request& req) {
     metric<entrypoint_get_object_req>::increase(1);
 
     response res;
-    object obj;
 
     auto dir = co_await m_dir.get();
     auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
-
-    try {
-        obj = co_await dir.get_object(req.bucket(), req.object_key());
-    } catch (const std::exception& e) {
-        throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
-    }
+    object obj = co_await read_object(dir, req.bucket(), req.object_key());
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
