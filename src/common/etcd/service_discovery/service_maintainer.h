@@ -20,13 +20,7 @@ template <typename service_interface> struct service_maintainer {
     service_maintainer(etcd::SyncClient& etcd_client,
                        service_factory<service_interface> service_factory)
         : m_etcd_client(etcd_client),
-          m_watcher(
-              m_etcd_client,
-              get_service_root_path(service_interface::service_role),
-              [this](const etcd::Response& response) {
-                  return handle_state_changes(response);
-              },
-              true),
+          m_watcher(create_watcher()),
           m_service_factory(std::move(service_factory)) {
 
         auto resp =
@@ -204,6 +198,22 @@ private:
     service_factory<service_interface> m_service_factory;
     std::list<std::reference_wrapper<service_monitor<service_interface>>>
         m_monitors;
+    auto create_watcher() {
+        while (true) {
+            try {
+                return etcd::Watcher(
+                    m_etcd_client,
+                    get_service_root_path(service_interface::service_role),
+                    [this](const etcd::Response& response) {
+                        return handle_state_changes(response);
+                    },
+                    true);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "Failed to create Watcher: " << e.what();
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            }
+        }
+    }
 };
 
 } // namespace uh::cluster
