@@ -16,10 +16,10 @@ public:
         : m_etcd_client(make_etcd_client(service.etcd_config)),
           m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, m_etcd_client, true),
+          m_ec_maintainer(m_ioc, 1, 0, *m_etcd_client, true),
 
           m_storage_maintainer(
-              m_etcd_client,
+              *m_etcd_client,
               service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
@@ -45,7 +45,7 @@ public:
     }
 
 private:
-    etcd::SyncClient m_etcd_client;
+    std::unique_ptr<etcd::SyncClient> m_etcd_client;
 
     boost::asio::io_context m_ioc;
     std::condition_variable m_cv;

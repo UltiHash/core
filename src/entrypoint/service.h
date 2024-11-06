@@ -29,7 +29,7 @@ private:
     entrypoint_config m_config;
 
     boost::asio::io_context m_ioc;
-    etcd::SyncClient m_etcd_client;
+    std::unique_ptr<etcd::SyncClient> m_etcd_client;
     std::size_t m_service_id;
     service_registry m_service_registry;
     std::unique_ptr<service_registry::registration> m_registration;
