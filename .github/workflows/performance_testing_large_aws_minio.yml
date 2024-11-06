@@ -55,7 +55,7 @@ jobs:
         run: |
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-          kubectl apply -f performance-testing/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
+          kubectl apply -f testing/performance/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
 
       - name: Generate the manifest for the S3 data downloder
         uses: danielr1996/envsubst-action@1.0.0
@@ -64,7 +64,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
         with:
-          input: performance-testing/large/s3-data-downloader.yaml
+          input: testing/performance/large/s3-data-downloader.yaml
           output: s3-data-downloader.yaml
 
       - name: Generate the performance tester manifest for Minio
@@ -82,22 +82,22 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "10"
         with:
-          input: performance-testing/large/performance-tester.yaml
+          input: testing/performance/large/performance-tester.yaml
           output: performance-tester-minio.yaml
       
       - name: Download the data corpora to the tester machine
         run: |
-          bash performance-testing/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
+          bash testing/performance/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
 
       - name: Install the MinIO cluster
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update bitnami
-          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values performance-testing/large/minio-helm-values.yaml --version 14.6.22 --wait --timeout 15m
+          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values testing/performance/large/minio-helm-values.yaml --version 14.6.22 --wait --timeout 15m
 
       - name: Execute the performance test against MinIO
         run: |
-          bash performance-testing/execute_job.sh performance-tester-minio.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+          bash testing/performance/execute_job.sh performance-tester-minio.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs

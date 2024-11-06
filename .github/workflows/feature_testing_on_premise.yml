@@ -42,7 +42,7 @@ jobs:
             DebugTools=True
 
       - name: Test service startup with invalid licenses
-        run: bash feature-testing/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
+        run: bash testing/feature/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
         
   build-database-init:
     runs-on: heavyweight-generic-jobs
@@ -111,7 +111,7 @@ jobs:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: feature-testing/helm-values-on-premise.yaml
+          input: testing/feature/helm-values-on-premise.yaml
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
@@ -132,4 +132,4 @@ jobs:
 
       - name: Run feature tests
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 15m
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 20m

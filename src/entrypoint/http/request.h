@@ -30,6 +30,7 @@ public:
 
     const std::string& bucket() const;
     const std::string& object_key() const;
+    std::string arn() const;
 
     coro<std::size_t> read_body(std::span<char> buffer);
 

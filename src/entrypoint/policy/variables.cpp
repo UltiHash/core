@@ -1,86 +1,75 @@
 #include "variables.h"
 
-#include "common/telemetry/log.h"
-#include "common/utils/strings.h"
 #include "entrypoint/commands/command.h"
 #include "entrypoint/formats.h"
 
+#include <algorithm>
 #include <charconv>
-#include <iostream>
 #include <stdexcept>
 
 namespace uh::cluster::ep::policy {
 
 namespace {
 
-std::size_t qfind(std::string_view h, std::string_view n, std::size_t start) {
-    if (n.size() > h.size()) {
-        return std::string::npos;
-    }
-
-    for (auto pos = 0ull; pos <= h.size() - n.size(); ++pos) {
-        std::size_t n_idx = 0ull;
-        for (; n_idx < n.size(); ++n_idx) {
-            if (n[n_idx] != h[pos + n_idx] && n[n_idx] != '?') {
-                break;
-            }
-        }
-
-        if (n_idx == n.size()) {
-            return pos;
-        }
-    }
-
-    return std::string::npos;
-}
-
+/*
+ * Only alphanumeric characters and the following characters are allowed in IAM
+ * paths: forward slash (/), plus (+), equals (=), comma (,), period (.),
+ * at (@), underscore (_), and hyphen (-).
+ * https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html#arns-paths
+ */
 value_provider make_value_provider() {
     value_provider vp;
 
-    vp.add("uh:ActionId",
-           [](const auto&, const auto& c) { return c.action_id(); });
-
-    vp.add("uh:ResourceArn", [](const auto& r, const auto&) {
-        return "arn:aws:s3:::" + r.bucket() + "/" + r.object_key();
+    vp.add("uh:ActionId", [](const http::request& r, const command& c) {
+        return c.action_id();
     });
 
-    vp.add("aws:PrincipalArn", [](const auto& r, const auto&) {
+    vp.add("uh:ResourceArn",
+           [](const http::request& r, const command& c) { return r.arn(); });
+
+    vp.add("aws:PrincipalArn", [](const http::request& r, const command& c) {
         return r.authenticated_user().arn;
     });
 
-    vp.add("aws:username", [](const auto& r, const auto&) {
+    vp.add("aws:username", [](const http::request& r, const command& c) {
         return r.authenticated_user().name;
     });
 
-    vp.add("aws:userid", [](const auto& r, const auto&) {
+    vp.add("aws:userid", [](const http::request& r, const command& c) {
         return r.authenticated_user().id;
     });
 
-    vp.add("aws:SourceIp", [](const auto& r, const auto&) {
+    vp.add("aws:SourceIp", [](const http::request& r, const command& c) {
         return r.peer().address().to_string();
     });
 
-    vp.add("aws:referer",
-           [](const auto& r, const auto&) { return r.header("Referer"); });
-
-    vp.add("aws:UserAgent",
-           [](const auto& r, const auto&) { return r.header("User-Agent"); });
-
-    vp.add("s3:x-amz-content-sha256", [](const auto& r, const auto&) {
-        return r.header("x-amz-content-sha256");
+    vp.add("aws:referer", [](const http::request& r, const command& c) {
+        return r.header("Referer");
     });
 
-    vp.add("s3:x-amz-copy-source", [](const auto& r, const auto&) {
-        return r.header("x-amz-copy-source");
+    vp.add("aws:UserAgent", [](const http::request& r, const command& c) {
+        return r.header("User-Agent");
     });
 
-    vp.add("s3:delimiter",
-           [](const auto& r, const auto&) { return r.query("delimiter"); });
+    vp.add("s3:x-amz-content-sha256",
+           [](const http::request& r, const command& c) {
+               return r.header("x-amz-content-sha256");
+           });
 
-    vp.add("s3:prefix",
-           [](const auto& r, const auto&) { return r.query("prefix"); });
+    vp.add("s3:x-amz-copy-source",
+           [](const http::request& r, const command& c) {
+               return r.header("x-amz-copy-source");
+           });
 
-    vp.add("aws:CurrentTime", [](const auto& r, const auto&) {
+    vp.add("s3:delimiter", [](const http::request& r, const command& c) {
+        return r.query("delimiter");
+    });
+
+    vp.add("s3:prefix", [](const http::request& r, const command& c) {
+        return r.query("prefix");
+    });
+
+    vp.add("aws:CurrentTime", [](const http::request& r, const command& c) {
         return iso8601_date(std::chrono::system_clock::now());
     });
 
@@ -130,6 +119,8 @@ void variables::put(std::string k, std::string v) {
     m_cache[std::move(k)] = std::move(v);
 }
 
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html
+template <char asterisk, char questionmark>
 std::string var_replace(std::string_view format, const variables& vars) {
     std::string rv;
     char last = 0;
@@ -156,7 +147,24 @@ std::string var_replace(std::string_view format, const variables& vars) {
 
                     if (auto it = vars.get(var_name); it) {
                         rv.append(*it);
+                    } else {
+                        if (var_name.size() == 1) {
+                            if (var_name[0] == asterisk) {
+                                rv.push_back('*');
+                            }
+                            if (var_name[0] == questionmark)
+                                rv.push_back('?');
+                            if (var_name[0] == '$')
+                                rv.push_back('$');
+                        }
                     }
+
+                    // vp.add("*", [](const auto& r, const auto&) { return
+                    // std::string("*"); }); vp.add("?", [](const auto& r, const
+                    // auto&) { return std::string("?"); }); vp.add("$",
+                    // [](const auto& r, const auto&) { return std::string("$");
+                    // });
+                    //
 
                     i = end_of_var;
                 } else {
@@ -179,38 +187,76 @@ std::string var_replace(std::string_view format, const variables& vars) {
     return rv;
 }
 
-bool equals_wildcard(std::string_view wildcarded, std::string_view b) {
-    if (wildcarded.empty()) {
-        return b.empty();
-    }
+template std::string var_replace<'*', '?'>(std::string_view format,
+                                           const variables& vars);
 
-    auto groups = split(wildcarded, '*');
-    if (groups.size() == 1) {
-        return qfind(b, groups[0], 0) == 0;
-    }
+std::string remap_wildcards(std::string& str) { return str; }
 
-    std::size_t pos = 0;
-    for (const auto& g : groups) {
-        pos = qfind(b, g, pos);
-
-        if (pos == std::string_view::npos) {
-            return false;
-        }
-
-        pos += g.size();
-    }
-
-    return true;
+std::string remap_wildcards(std::string&& str) {
+    std::string result = std::move(str);
+    return remap_wildcards(result);
 }
 
-std::optional<int64_t> to_int(std::string_view s) {
+// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_resource.html
+
+template <char asterisk, char questionmark>
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     size_t pat_index, size_t str_index) {
+    if (pat_index == pattern.size()) {
+        return str_index == str.size();
+    }
+
+    if (pattern[pat_index] == asterisk) {
+        return equals_wildcard<asterisk, questionmark>( //
+                   pattern, str, pat_index + 1, str_index) ||
+               (str_index < str.size() &&
+                equals_wildcard<asterisk, questionmark>( //
+                    pattern, str, pat_index, str_index + 1));
+    }
+
+    if ((pattern[pat_index] == questionmark) ||
+        (str_index < str.size() && str[str_index] == pattern[pat_index])) {
+        return equals_wildcard<asterisk, questionmark>(
+            pattern, str, pat_index + 1, str_index + 1);
+    }
+
+    return false;
+}
+
+template bool equals_wildcard<'*', '?'>(std::string_view pattern,
+                                        std::string_view str, size_t pat_index,
+                                        size_t str_index);
+
+bool equals_wildcard(std::string_view pattern, std::string_view str,
+                     const variables& vars) {
+    constexpr char temp_asterisk = -1;
+    constexpr char temp_questionmark = -2;
+
+    // Replace wildcard characters.
+    static std::unordered_map<char, char> replacements = {
+        {'*', temp_asterisk}, {'?', temp_questionmark}};
+    auto buf = std::string();
+    buf.reserve(pattern.size());
+    std::transform(
+        pattern.begin(), pattern.end(), std::back_inserter(buf),
+        [&](char c) { return replacements.count(c) ? replacements[c] : c; });
+
+    // Evaluate variables, including special character variables.
+    buf = var_replace<temp_asterisk, temp_questionmark>(buf, vars);
+
+    // Do wildcard matching with replaced wildcard characters
+    return equals_wildcard<temp_asterisk, temp_questionmark>(buf, str);
+}
+
+int64_t to_int(std::string_view s) {
     int64_t rv;
 
     auto result = std::from_chars(s.begin(), s.end(), rv);
     if (result.ptr != s.end() || result.ec != std::errc()) {
-        return {};
+        throw std::runtime_error("string to int conversion failed");
     }
 
     return rv;
 }
+
 } // namespace uh::cluster::ep::policy

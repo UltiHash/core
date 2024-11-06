@@ -35,6 +35,8 @@ size_t reference_counter::decrement(const address& addr) {
         std::size_t start_page = offset / m_page_size;
         std::size_t end_page = (offset + frag.size - 1) / m_page_size;
 
+        LOG_DEBUG() << "decrementing refcount at offset=" << offset
+                    << ", size=" << frag.size;
         for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;
@@ -104,6 +106,8 @@ void reference_counter::increment(const std::size_t offset,
     std::size_t start_page = offset / m_page_size;
     std::size_t end_page = (offset + size - 1) / m_page_size;
 
+    LOG_DEBUG() << "incrementing refcount at offset=" << offset
+                << ", size=" << size << " (on write)";
     for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
         std::string key(std::to_string(page_id));
         std::string_view value;
@@ -134,6 +138,8 @@ address reference_counter::increment(const address& addr) {
         std::size_t start_page = offset / m_page_size;
         std::size_t end_page = (offset + frag.size - 1) / m_page_size;
 
+        LOG_DEBUG() << "incrementing refcount at offset=" << offset
+                    << ", size=" << frag.size << " (on link)";
         for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;
