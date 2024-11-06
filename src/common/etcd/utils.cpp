@@ -1,7 +1,6 @@
 #include "utils.h"
 
 #include "common/telemetry/log.h"
-#include <thread>
 
 namespace uh::cluster {
 
@@ -14,11 +13,16 @@ std::unique_ptr<etcd::SyncClient> make_etcd_client(const etcd_config& cfg) {
             }
 
             auto client = std::make_unique<etcd::SyncClient>(cfg.url);
-            (void)(volatile etcd::Response)client->head();
+
+            while (!client->head().is_ok()) {
+                LOG_ERROR() << "Wait until etcd::SyncClient.head().is_ok() "
+                               "returns true";
+                sleep(1);
+            }
             return client;
         } catch (const std::exception& e) {
             LOG_ERROR() << "Failed to create etcd::SyncClient: " << e.what();
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            sleep(1);
         }
     }
 }

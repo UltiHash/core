@@ -210,7 +210,7 @@ private:
                     true);
             } catch (const std::exception& e) {
                 LOG_ERROR() << "Failed to create etcd::Watcher: " << e.what();
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                sleep(1);
             }
         }
     }
