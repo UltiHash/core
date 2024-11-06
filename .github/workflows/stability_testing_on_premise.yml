@@ -1,10 +1,9 @@
 name: Stability Testing On Premise
 
 on:
-  #schedule:
-  #  - cron: '0 0 * * MON-FRI'
-  #workflow_dispatch:
-  push:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
 
 env:
   ENVIRONMENT_NAME: stability-testing-x86-64
