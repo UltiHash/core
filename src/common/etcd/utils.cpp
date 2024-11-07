@@ -14,10 +14,11 @@ std::unique_ptr<etcd::SyncClient> make_etcd_client(const etcd_config& cfg) {
 
             auto client = std::make_unique<etcd::SyncClient>(cfg.url);
 
-            while (!client->head().is_ok()) {
+            if (!client->head().is_ok()) {
                 LOG_ERROR() << "Wait until etcd::SyncClient.head().is_ok() "
                                "returns true";
                 sleep(1);
+                continue;
             }
             return client;
         } catch (const std::exception& e) {
