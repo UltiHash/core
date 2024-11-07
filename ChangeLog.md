@@ -21,6 +21,7 @@
   context values
 - Implement special characters: `${*}`, `${?}`, `${$}`
 - Support variable on resource policy statement
+- Prevent services from being destroyed while etcd is not booted up
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
