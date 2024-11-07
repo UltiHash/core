@@ -111,7 +111,8 @@ coro<void> directory::instance::bucket_exists(const std::string& bucket) {
     try {
         co_await m_handle->execv("SELECT uh_bucket_exists($1)", bucket);
     } catch (const std::exception&) {
-        throw error_exception(error::bucket_not_found);
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 }
 
