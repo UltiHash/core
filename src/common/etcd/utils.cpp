@@ -7,12 +7,13 @@ namespace uh::cluster {
 std::unique_ptr<etcd::SyncClient> make_etcd_client(const etcd_config& cfg) {
     while (true) {
         try {
+            std::unique_ptr<etcd::SyncClient> client;
             if (cfg.username && cfg.password) {
-                auto client = std::make_unique<etcd::SyncClient>(
+                client = std::make_unique<etcd::SyncClient>(
                     cfg.url, *cfg.username, *cfg.password);
+            } else {
+                client = std::make_unique<etcd::SyncClient>(cfg.url);
             }
-
-            auto client = std::make_unique<etcd::SyncClient>(cfg.url);
 
             if (!client->head().is_ok()) {
                 LOG_ERROR() << "Wait until etcd::SyncClient.head().is_ok() "
