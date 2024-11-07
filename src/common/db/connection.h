@@ -64,6 +64,16 @@ public:
 
     /**
      * Execute a query with parameter variables passing the variable values
+     * as parameter pack *synchronously*. The query result will be returned
+     * as textual value.
+     */
+    template <typename... args>
+    std::optional<row> raw_execv(const std::string& query, args... a) {
+        return raw_exec_format(query, 0, a...);
+    }
+
+    /**
+     * Execute a query with parameter variables passing the variable values
      * as parameter pack. The query result will be returned as binary value.
      */
     template <typename... args>
@@ -106,6 +116,39 @@ private:
         }
 
         co_return co_await next();
+    }
+
+    template <typename... args>
+    std::optional<row> raw_exec_format(const std::string& query,
+                                       int result_format, args... a) {
+        std::vector<const char*> values;
+        std::vector<int> lengths;
+        std::vector<int> format;
+        std::list<std::string> memory;
+
+        foreach (
+            [&](const auto& h) {
+                append_args(h, values, lengths, format, memory);
+            },
+            a...)
+            ;
+
+        m_result = std::shared_ptr<PGresult>(
+            PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
+                         values.data(), lengths.data(), format.data(),
+                         result_format),
+            PQclear);
+        m_row = 0;
+        if (!m_result) {
+            throw_error_message();
+        }
+
+        if (PQntuples(m_result.get()) == 0) {
+            m_result.reset();
+            return std::nullopt;
+        }
+
+        return row(m_result, 0);
     }
 
     coro<void> wait();
