@@ -16,14 +16,14 @@ std::unique_ptr<etcd::SyncClient> make_etcd_client(const etcd_config& cfg) {
             }
 
             if (!client->head().is_ok()) {
-                LOG_ERROR() << "Wait until etcd::SyncClient.head().is_ok() "
-                               "returns true";
+                LOG_INFO() << "cannot connect to etcd. trying to reconnect";
                 sleep(1);
                 continue;
             }
             return client;
         } catch (const std::exception& e) {
-            LOG_ERROR() << "Failed to create etcd::SyncClient: " << e.what();
+            LOG_INFO() << "cannot connect to etcd. trying to reconnect: "
+                       << e.what();
             sleep(1);
         }
     }
