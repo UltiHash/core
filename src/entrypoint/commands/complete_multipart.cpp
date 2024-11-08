@@ -105,7 +105,26 @@ coro<response> complete_multipart::handle(request& req) {
 
         etag = multipart_etag(info);
 
-        co_await apply(req, dir, info, etag);
+        auto addr = info.generate_total_address();
+        object obj{.name = req.object_key(),
+                   .size = addr.data_size(),
+                   .addr = std::move(addr),
+                   .etag = etag,
+                   .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
+
+        std::optional<object> old_obj;
+        try {
+            old_obj = co_await dir.get_object(req.bucket(), req.object_key());
+        } catch (const command_exception&) {
+        }
+
+        co_await dir.put_object(req.bucket(), obj);
+
+        if (old_obj && old_obj->addr) {
+            m_limits.free_storage_size(old_obj->size);
+            co_await m_gdv.unlink(req.context(), *old_obj->addr);
+        }
+
         co_await m_uploads.remove_upload(*req.query("uploadId"));
     }
 
@@ -127,35 +146,6 @@ coro<response> complete_multipart::handle(request& req) {
 
 std::string complete_multipart::action_id() const {
     return "s3:CompleteMultipartUpload";
-}
-
-/*
- * This function was factored out of handle(), as gcc would issue warnings of
- * type `mismatched-new-delete`: _called on pointer returned from a mismatched
- * allocation function_.
- */
-coro<void> complete_multipart::apply(request& req, directory::instance& dir,
-                                     const upload_info& info,
-                                     const std::string& etag) {
-    auto addr = info.generate_total_address();
-    object obj{.name = req.object_key(),
-               .size = addr.data_size(),
-               .addr = std::move(addr),
-               .etag = etag,
-               .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
-
-    std::optional<object> old_obj;
-    try {
-        old_obj = co_await dir.get_object(req.bucket(), req.object_key());
-    } catch (command_exception&) {
-    }
-
-    co_await dir.put_object(req.bucket(), obj);
-
-    if (old_obj && old_obj->addr) {
-        m_limits.free_storage_size(old_obj->size);
-        co_await m_gdv.unlink(req.context(), *old_obj->addr);
-    }
 }
 
 } // namespace uh::cluster

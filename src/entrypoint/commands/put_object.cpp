@@ -96,21 +96,11 @@ coro<response> put_object::handle(request& req) {
                    .mime = req.header("Content-Type")
                                .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
-        std::optional<object> old_obj;
-        auto dir = co_await m_dir.get();
-        auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
-
-        try {
-            old_obj = co_await dir.get_object(req.bucket(), req.object_key());
-        } catch (const command_exception&) {
-        }
-
-        co_await dir.put_object(req.bucket(), obj);
-        lock.release();
-
-        if (old_obj && old_obj->addr) {
-            co_await m_gdv.unlink(req.context(), *old_obj->addr);
-            m_limits.free_storage_size(old_obj->size);
+        {
+            auto dir = co_await m_dir.get();
+            auto freed = co_await safe_put_object(req.context(), dir, m_gdv,
+                                                  req.bucket(), obj);
+            m_limits.free_storage_size(freed);
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(

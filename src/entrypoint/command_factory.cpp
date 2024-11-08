@@ -131,7 +131,7 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<create_bucket>(m_directory);
     }
     if (copy_object::can_handle(req)) {
-        co_return std::make_unique<copy_object>(m_directory, m_gdv);
+        co_return std::make_unique<copy_object>(m_directory, m_gdv, m_limits);
     }
     if (list_multipart::can_handle(req)) {
         co_return std::make_unique<list_multipart>(m_uploads);

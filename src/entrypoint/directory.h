@@ -2,6 +2,7 @@
 #define UH_CLUSTER_ENTRYPOINT_DIRECTORY_H
 
 #include "common/db/db.h"
+#include "common/global_data/global_data_view.h"
 #include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
 #include "common/utils/scope_guard.h"
@@ -90,6 +91,28 @@ private:
 
     static void validate_bucket_name(const std::string& bucket_name);
 };
+
+/**
+ * Convenience function to safely put an object. Returns the amount of reclaimed
+ * memory.
+ *
+ * Before writing the new object data it will retrieve data already stored. This
+ * data will be freed be unlinking it.
+ *
+ * If there is any error during execution, the function will unlink the object's
+ * address data and set it to empty.
+ *
+ * @param ctx the request context
+ * @param dir a directory instance
+ * @param gdv reference to the global data view
+ * @param bucket name of the bucket to work in
+ * @param obj object specification to write, including object name
+ *
+ * @return number of bytes reclaimed
+ */
+coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
+                                  global_data_view& gdv,
+                                  const std::string& bucket, object& obj);
 
 } // namespace uh::cluster
 
