@@ -42,19 +42,19 @@ service::service(const service_config& sc, entrypoint_config config)
       m_ioc(boost::asio::io_context(m_config.server.threads)),
 
       m_etcd_client(make_etcd_client(sc.etcd_config)),
-      m_service_id(get_service_id(m_etcd_client,
+      m_service_id(get_service_id(*m_etcd_client,
                                   get_service_string(ENTRYPOINT_SERVICE),
                                   sc.working_dir)),
-      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd_client),
+      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, *m_etcd_client),
 
       m_attached_storage(sc, m_config.m_attached_storage),
       m_attached_dedupe(sc, m_config.m_attached_deduplicator),
       m_storage_maintainer(
-          m_etcd_client,
+          *m_etcd_client,
           service_factory<storage_interface>(
               m_ioc, m_config.global_data_view.storage_service_connection_count,
               m_attached_storage.get_local_service_interface())),
-      m_dedupe_maintainer(m_etcd_client,
+      m_dedupe_maintainer(*m_etcd_client,
                           service_factory<deduplicator_interface>(
                               m_ioc, m_config.dedupe_node_connection_count,
                               m_attached_dedupe.get_local_service_interface())),

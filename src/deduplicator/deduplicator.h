@@ -21,14 +21,15 @@ public:
     explicit deduplicator(const service_config& sc,
                           const deduplicator_config& config)
         : m_etcd_client(make_etcd_client(sc.etcd_config)),
-          m_service_id(get_service_id(m_etcd_client,
+          m_service_id(get_service_id(*m_etcd_client,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
-          m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd_client),
+          m_service_registry(DEDUPLICATOR_SERVICE, m_service_id,
+                             *m_etcd_client),
           m_attached_storage(sc, config.m_attached_storage),
           m_storage_maintainer(
-              m_etcd_client,
+              *m_etcd_client,
               service_factory<storage_interface>(
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
@@ -61,7 +62,7 @@ public:
     }
 
 private:
-    etcd::SyncClient m_etcd_client;
+    std::unique_ptr<etcd::SyncClient> m_etcd_client;
     std::size_t m_service_id;
     boost::asio::io_context m_ioc;
 
