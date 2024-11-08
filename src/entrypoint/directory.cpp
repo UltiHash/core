@@ -29,7 +29,7 @@ coro<object> directory::get_object(const std::string& bucket,
                                    const std::string& object_id) {
     auto dir = co_await m_db.get();
     auto row = co_await dir->execb(
-        "SELECT small::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
+        "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
 
     if (!row) {
         throw command_exception(status::not_found, "NoSuchKey",

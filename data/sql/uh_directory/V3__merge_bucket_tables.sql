@@ -11,7 +11,6 @@ ALTER TABLE __buckets
 ALTER TABLE __buckets
     ADD CONSTRAINT unique_name UNIQUE (name);
 
-
 --
 -- The table "__objects" lists all available objects across all buckets
 --
@@ -51,7 +50,7 @@ END $$;
 --
 -- uh_check_bucket(bucket) -- raise an exception when the bucket doesn't exist
 --
-DROP PROCEDURE IF EXISTS uh_check_bucket(REGCLASS)
+DROP PROCEDURE IF EXISTS uh_check_bucket(REGCLASS);
 
 CREATE OR REPLACE PROCEDURE uh_check_bucket(bucket TEXT)
 LANGUAGE plpgsql AS $$
@@ -74,13 +73,31 @@ BEGIN
 END
 $$;
 
+
+
+CREATE OR REPLACE PROCEDURE log_buckets_contents()
+LANGUAGE plpgsql AS $$
+DECLARE
+    bucket_row RECORD;
+BEGIN
+    -- Loop through each row in the __buckets table
+    FOR bucket_row IN
+        SELECT * FROM __buckets
+    LOOP
+        -- Print the contents of each row (adjust columns as needed)
+        RAISE NOTICE 'Bucket ID: %, Name: %, Policy: %', 
+            bucket_row.id, bucket_row.name, bucket_row.policy;
+    END LOOP;
+END;
+$$;
+
 --
--- uh_put_object(bucket, key, addr, etag) -- add an object with name `key`
+-- uh_put_object(bucket, object, addr, etag) -- add an object with name `object`
 -- described by `addr` to `bucket`. The object size is limited to 1GB.
 --
-DROP PROCEDURE uh_put_object(REGCLASS, TEXT, BYTEA, BIGINT, TEXT, TEXT)
+DROP PROCEDURE uh_put_small_obj(REGCLASS, TEXT, BYTEA, BIGINT, TEXT, TEXT);
 
-CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, name TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
+CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 DECLARE bucket_id BIGINT;
 BEGIN
@@ -95,18 +112,18 @@ BEGIN
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (bucket_id, name) DO UPDATE
          SET address = EXCLUDED.address, size = EXCLUDED.size, etag = EXCLUDED.etag, mime = EXCLUDED.mime'
-    USING bucket_id, name, address, size, etag, mime;
+    USING bucket_id, object, address, size, etag, mime;
 END
 $$;
 
 --
--- uh_get_object(bucket, key) -- retrieve the address portion of an object
--- identified by `bucket` and `key`. If the object contains no small address
+-- uh_get_object(bucket, object) -- retrieve the address portion of an object
+-- identified by `bucket` and `object`. If the object contains no small address
 -- data, NULL is returned.
 --
-DROP FUNCTION uh_get_object(REGCLASS, TEXT)
+DROP FUNCTION uh_get_object(REGCLASS, TEXT);
 
-CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, key TEXT)
+CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
     RETURNS TABLE (address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -114,7 +131,7 @@ BEGIN
         'SELECT address, size, last_modified, etag, mime 
          FROM __objects 
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
-    USING bucket, key;
+    USING bucket, object;
 END;
 $$;
 
@@ -147,9 +164,9 @@ $$;
 --
 -- uh_delete_object(bucket, object_id): delete object
 --
-DROP PROCEDURE uh_delete_object(REGCLASS, TEXT)
+DROP PROCEDURE uh_delete_object(REGCLASS, TEXT);
 
-CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, key TEXT)
+CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, object TEXT)
 LANGUAGE plpgsql AS $$
 DECLARE
     rows_deleted INT;
@@ -157,21 +174,21 @@ BEGIN
     EXECUTE 
         'DELETE FROM __objects 
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
-    USING bucket, key;
+    USING bucket, object;
 
     GET DIAGNOSTICS rows_deleted = ROW_COUNT;
     IF rows_deleted = 0 THEN
-        RAISE NOTICE 'Object with key "%s" in bucket "%s" does not exist.', key, bucket;
+        RAISE NOTICE 'Object "%s" in bucket "%s" does not exist.', object, bucket;
     END IF;
 END;
 $$;
 
 --
--- uh_copy_object(bucket_src, key_src, bucket_dest, key_dest):
+-- uh_copy_object(bucket_src, object_src, bucket_dest, object_dest):
 --
-DROP PROCEDURE uh_copy_object(REGCLASS, TEXT, REGCLASS, TEXT)
+DROP PROCEDURE uh_copy_object(REGCLASS, TEXT, REGCLASS, TEXT);
 
-CREATE OR REPLACE PROCEDURE uh_copy_object(bucket_src TEXT, key_src TEXT, bucket_dst TEXT, key_dst TEXT)
+CREATE OR REPLACE PROCEDURE uh_copy_object(bucket_src TEXT, object_src TEXT, bucket_dst TEXT, object_dst TEXT)
 LANGUAGE plpgsql AS $$
 DECLARE obj_record RECORD;
 BEGIN
@@ -179,10 +196,10 @@ BEGIN
     INTO obj_record
     FROM __objects
     WHERE bucket_id = (SELECT id FROM __buckets WHERE name = bucket_src)
-      AND name = key_src;
+      AND name = object_src;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Object with key "%s" in bucket "%s" does not exist.', key_src, bucket_src;
+        RAISE EXCEPTION 'Object "%s" in bucket "%s" does not exist.', object_src, bucket_src;
     END IF;
 
     PERFORM uh_check_bucket(bucket_dst);
@@ -194,14 +211,14 @@ BEGIN
          SET address = EXCLUDED.address, size = EXCLUDED.size,
              last_modified = EXCLUDED.last_modified,
              etag = EXCLUDED.etag, mime = EXCLUDED.mime'
-    USING bucket_dst, key_dst, obj_record.address, obj_record.size, obj_record.last_modified, obj_record.etag, obj_record.mime;
+    USING bucket_dst, object_dst, obj_record.address, obj_record.size, obj_record.last_modified, obj_record.etag, obj_record.mime;
 END;
 $$;
 
 --
 -- uh_list_objects(bucket): return all objects in `bucket`
 --
-DROP FUNCTION uh_list_objects(REGCLASS)
+DROP FUNCTION uh_list_objects(REGCLASS);
 
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT)
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
@@ -220,7 +237,7 @@ $$;
 -- uh_list_objects(bucket, prefix): return all objects in `bucket` with a
 -- given `prefix`
 --
-DROP FUNCTION uh_list_objects(REGCLASS, TEXT)
+DROP FUNCTION uh_list_objects(REGCLASS, TEXT);
 
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT)
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
@@ -240,7 +257,7 @@ $$;
 -- uh_list_objects(bucket, prefix): return all objects in `bucket` with a
 -- given `prefix` that are bigger than `lower_bound`
 --
-DROP FUNCTION uh_list_objects(bucket REGCLASS, prefix TEXT, lower_bound TEXT)
+DROP FUNCTION uh_list_objects(bucket REGCLASS, prefix TEXT, lower_bound TEXT);
 
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound TEXT)
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
@@ -292,7 +309,7 @@ $$;
 --
 -- uh_bucket_policy(bucket): get the policy from a bucket
 --
-DROP FUNCTION uh_bucket_policy(REGCLASS)
+DROP FUNCTION uh_bucket_policy(REGCLASS);
 
 -- uh_bucket_policy function
 CREATE OR REPLACE FUNCTION uh_bucket_policy(bucket TEXT)
@@ -307,7 +324,7 @@ $$;
 --
 -- uh_bucket_set_policy(bucket): set the policy for a bucket
 --
-DROP PROCEDURE uh_bucket_set_policy(REGCLASS, JSON)
+DROP PROCEDURE uh_bucket_set_policy(REGCLASS, JSON);
 
 CREATE OR REPLACE PROCEDURE uh_bucket_set_policy(bucket TEXT, new_policy JSON)
 LANGUAGE plpgsql AS $$
