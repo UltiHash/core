@@ -91,18 +91,23 @@ coro<response> complete_multipart::handle(request& req) {
     auto size = co_await req.read_body(buffer.span());
     buffer.resize(size);
 
-    auto dir = co_await m_directory.get();
-    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
+    upload_info info;
+    std::string etag;
 
-    auto upload_id = *req.query("uploadId");
-    const auto info = co_await m_uploads.details(upload_id);
+    {
+        auto dir = co_await m_directory.get();
+        auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
 
-    validate_internal(info, buffer.span());
-    m_limits.check_storage_size(info.data_size);
+        info = co_await m_uploads.details(*req.query("uploadId"));
 
-    auto etag = multipart_etag(info);
+        validate_internal(info, buffer.span());
+        m_limits.check_storage_size(info.data_size);
 
-    co_await apply(req, dir, info, etag);
+        etag = multipart_etag(info);
+
+        co_await apply(req, dir, info, etag);
+        co_await m_uploads.remove_upload(*req.query("uploadId"));
+    }
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);
 
@@ -116,9 +121,6 @@ coro<response> complete_multipart::handle(request& req) {
     pt.put("CompleteMultipartUploadResult.Key", info.key);
     pt.put("CompleteMultipartUploadResult.ETag", etag);
     res << pt;
-
-    co_await m_uploads.remove_upload(upload_id);
-    co_await txn.commit();
 
     co_return res;
 }
@@ -146,14 +148,13 @@ coro<void> complete_multipart::apply(request& req, directory::instance& dir,
     try {
         old_obj = co_await dir.get_object(req.bucket(), req.object_key());
     } catch (command_exception&) {
-        old_obj = std::nullopt;
     }
 
     co_await dir.put_object(req.bucket(), obj);
 
-    if (old_obj.has_value() && old_obj->addr.has_value()) {
-        co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+    if (old_obj && old_obj->addr) {
         m_limits.free_storage_size(old_obj->size);
+        co_await m_gdv.unlink(req.context(), *old_obj->addr);
     }
 }
 

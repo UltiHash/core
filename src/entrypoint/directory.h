@@ -4,6 +4,9 @@
 #include "common/db/db.h"
 #include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
+#include "common/utils/scope_guard.h"
+
+#include <functional>
 
 namespace uh::cluster {
 
@@ -17,10 +20,10 @@ public:
 
     class instance {
     public:
+        using object_lock = guard<std::function<void()>>;
+
         instance(instance&& other) = default;
         instance(const instance&) = delete;
-
-        db::connection* operator->();
 
         coro<void> put_object(const std::string& bucket, const object& obj);
 
@@ -30,12 +33,11 @@ public:
         coro<object> head_object(const std::string& bucket,
                                  const std::string& object_id);
 
-        coro<db::connection::transaction>
-        lock_object(const std::string& bucket, const std::string& object_id);
+        coro<object_lock> lock_object(const std::string& bucket,
+                                      const std::string& object_id);
 
-        coro<db::connection::transaction>
-        lock_object_shared(const std::string& bucket,
-                           const std::string& object_id);
+        coro<object_lock> lock_object_shared(const std::string& bucket,
+                                             const std::string& object_id);
 
         coro<void> put_bucket(const std::string& bucket);
 

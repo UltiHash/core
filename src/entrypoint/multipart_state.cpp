@@ -43,8 +43,11 @@ coro<upload_info> multipart_state::details(const std::string& id) {
             "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
             id);
         if (!row) {
-            throw command_exception(status::not_found, "NoSuchUpload",
-                                    "upload id not found");
+            throw command_exception(
+                status::not_found, "NoSuchUpload",
+                "The specified multipart upload does not exist. The upload ID "
+                "might not be valid, or the multipart upload might have been "
+                "aborted or completed.");
         }
 
         rv.bucket = *row->string(0);

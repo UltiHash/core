@@ -18,9 +18,6 @@ public:
     std::string action_id() const override;
 
 private:
-    coro<void> copy_internal(ep::http::request& req, std::string& src_bucket,
-                             std::string& src_key);
-
     directory& m_directory;
     global_data_view& m_gdv;
 };

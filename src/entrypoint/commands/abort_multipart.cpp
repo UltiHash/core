@@ -6,9 +6,11 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-abort_multipart::abort_multipart(directory& dir, multipart_state& uploads)
+abort_multipart::abort_multipart(directory& dir, multipart_state& uploads,
+                                 global_data_view& gdv)
     : m_dir(dir),
-      m_uploads(uploads) {}
+      m_uploads(uploads),
+      m_gdv(gdv) {}
 
 bool abort_multipart::can_handle(const request& req) {
     return req.method() == verb::delete_ &&
@@ -19,22 +21,26 @@ bool abort_multipart::can_handle(const request& req) {
 coro<response> abort_multipart::handle(request& req) {
     metric<entrypoint_abort_multipart_req>::increase(1);
 
-    auto dir = co_await m_dir.get();
-    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
-
     auto upload_id = *req.query("uploadId");
+    upload_info details;
 
-    try {
+    {
+        auto dir = co_await m_dir.get();
+        auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
+
+        details = co_await m_uploads.details(upload_id);
         co_await m_uploads.remove_upload(upload_id);
-    } catch (const std::exception& e) {
-        throw command_exception(
-            status::not_found, "NoSuchUpload",
-            "The specified multipart upload does not exist. The upload ID "
-            "might not be valid, or the multipart upload might have been "
-            "aborted or completed.");
     }
 
-    co_await txn.commit();
+    for (const auto& part : details.parts) {
+        try {
+            co_await m_gdv.unlink(req.context(), part.second.addr);
+        } catch (const error_exception& e) {
+            LOG_WARN() << req.peer()
+                       << ": freeing memory on storage failed: " << e.what();
+        }
+    }
+
     co_return response{};
 }
 

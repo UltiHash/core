@@ -3,6 +3,10 @@
 #include "common/telemetry/log.h"
 #include "common/utils/error.h"
 
+#include <entrypoint/http/command_exception.h>
+
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 limits::limits(std::size_t max_data_size)

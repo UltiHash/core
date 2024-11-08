@@ -150,7 +150,8 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<delete_bucket>(m_directory);
     }
     if (abort_multipart::can_handle(req)) {
-        co_return std::make_unique<abort_multipart>(m_directory, m_uploads);
+        co_return std::make_unique<abort_multipart>(m_directory, m_uploads,
+                                                    m_gdv);
     }
     if (get_bucket_policy::can_handle(req)) {
         co_return std::make_unique<get_bucket_policy>(m_directory);

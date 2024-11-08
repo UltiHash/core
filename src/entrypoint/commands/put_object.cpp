@@ -98,19 +98,18 @@ coro<response> put_object::handle(request& req) {
 
         std::optional<object> old_obj;
         auto dir = co_await m_dir.get();
-        auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
+        auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
 
         try {
             old_obj = co_await dir.get_object(req.bucket(), req.object_key());
-        } catch (command_exception&) {
-            old_obj = std::nullopt;
+        } catch (const command_exception&) {
         }
 
         co_await dir.put_object(req.bucket(), obj);
-        co_await txn.commit();
+        lock.release();
 
-        if (old_obj.has_value() && old_obj->addr.has_value()) {
-            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
+        if (old_obj && old_obj->addr) {
+            co_await m_gdv.unlink(req.context(), *old_obj->addr);
             m_limits.free_storage_size(old_obj->size);
         }
 

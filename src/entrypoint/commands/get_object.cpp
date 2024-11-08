@@ -74,16 +74,6 @@ private:
     timer m_timer;
 };
 
-coro<object> read_object(auto& dir, const std::string& bucket,
-                         const std::string& key) {
-    try {
-        co_return co_await dir.get_object(bucket, key);
-    } catch (const std::exception& e) {
-        throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
-    }
-}
-
 } // namespace
 
 get_object::get_object(directory& dir, global_data_view& storage)
@@ -102,8 +92,8 @@ coro<response> get_object::handle(request& req) {
     response res;
 
     auto dir = co_await m_dir.get();
-    auto txn = co_await dir.lock_object(req.bucket(), req.object_key());
-    object obj = co_await read_object(dir, req.bucket(), req.object_key());
+    auto lock = co_await dir.lock_object_shared(req.bucket(), req.object_key());
+    object obj = co_await dir.get_object(req.bucket(), req.object_key());
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
@@ -122,7 +112,7 @@ coro<response> get_object::handle(request& req) {
                                     "Data Corrupted", "found corrupted data");
         }
 
-        co_await txn.commit();
+        lock.release();
 
         LOG_DEBUG() << "range based access: header=" << *range
                     << ", obj-addr=" << obj.addr->to_string()
@@ -142,7 +132,7 @@ coro<response> get_object::handle(request& req) {
                                     "Data Corrupted", "found corrupted data");
         }
 
-        co_await txn.commit();
+        lock.release();
 
         res.set_body(std::make_unique<local_read_handle>(
             m_storage, std::move(*obj.addr), req.context()));

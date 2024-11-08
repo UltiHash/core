@@ -75,23 +75,26 @@ coro<object> directory::instance::head_object(const std::string& bucket,
                      .mime = metadata->string(3)};
 }
 
-coro<db::connection::transaction>
+coro<directory::instance::object_lock>
 directory::instance::lock_object(const std::string& bucket,
                                  const std::string& object_id) {
-    auto txn = m_handle->begin();
     co_await m_handle->execv("CALL uh_lock_object($1, $2)", bucket, object_id);
 
-    co_return txn;
+    co_return object_lock([this, bucket, object_id]() {
+        m_handle->raw_execv("CALL un_unlock_object($1, $2)", bucket, object_id);
+    });
 }
 
-coro<db::connection::transaction>
+coro<directory::instance::object_lock>
 directory::instance::lock_object_shared(const std::string& bucket,
                                         const std::string& object_id) {
-    auto txn = m_handle->begin();
     co_await m_handle->execv("CALL uh_lock_object_shared($1, $2)", bucket,
                              object_id);
 
-    co_return txn;
+    co_return object_lock([this, bucket, object_id]() {
+        m_handle->raw_execv("CALL un_unlock_object_shared($1, $2)", bucket,
+                            object_id);
+    });
 }
 
 coro<void> directory::instance::put_bucket(const std::string& bucket) {
