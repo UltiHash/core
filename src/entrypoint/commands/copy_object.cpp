@@ -25,12 +25,14 @@ coro<response> copy_object::handle(request& req) {
     url.set_encoded_path(*req.header("x-amz-copy-source"));
 
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
+    std::size_t freed = 0ull;
+    object obj;
 
     {
         auto dir = co_await m_directory.get();
         auto lock = co_await dir.lock_object_shared(src_bucket, src_key);
 
-        object obj = co_await dir.get_object(src_bucket, src_key);
+        obj = co_await dir.get_object(src_bucket, src_key);
 
         if (auto ifmatch = req.header("x-amz-copy-source-if-match");
             ifmatch.value_or("") != obj.etag) {
@@ -51,8 +53,8 @@ coro<response> copy_object::handle(request& req) {
         }
 
         obj.name = req.object_key();
-        auto freed = co_await safe_put_object(req.context(), dir, m_gdv,
-                                              req.bucket(), obj);
+        freed = co_await safe_put_object(req.context(), dir, m_gdv,
+                                         req.bucket(), obj);
     }
 
     m_limits.free_storage_size(freed);
