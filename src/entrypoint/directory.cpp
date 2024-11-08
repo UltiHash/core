@@ -16,7 +16,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
     try {
         auto dir = co_await m_db.get();
-        co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5, $6)",
+        co_await dir->execv("CALL uh_put_object($1, $2, $3, $4, $5, $6)",
                             bucket, obj.name, span, obj.addr->data_size(),
                             obj.etag, obj.mime);
     } catch (const std::exception& e) {
