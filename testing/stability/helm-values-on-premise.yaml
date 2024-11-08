@@ -57,6 +57,14 @@ entrypoint:
   replicas: 2
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraVolumeMounts:
+    - name: core-dump            
+      mountPath: /tmp/core-dumps/
+  extraVolumes:
+    - name: core-dump
+      hostPath:
+        path: /tmp/core-dumps/
 
   ingress:
     enabled: false
@@ -67,6 +75,14 @@ storage:
   storageSize: 50Gi                  
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraVolumeMounts:
+    - name: core-dump            
+      mountPath: /tmp/core-dumps/
+  extraVolumes:
+    - name: core-dump
+      hostPath:
+        path: /tmp/core-dumps/ 
 
 deduplicator:
   replicas: 2
@@ -74,6 +90,14 @@ deduplicator:
   storageSize: 4Gi
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraVolumeMounts:
+    - name: core-dump            
+      mountPath: /tmp/core-dumps/
+  extraVolumes:
+    - name: core-dump
+      hostPath:
+        path: /tmp/core-dumps/ 
 
 database:
   primary:

@@ -120,7 +120,7 @@ jobs:
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
-          kubectl apply -f performance-testing/small/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
+          kubectl apply -f testing/performance/small/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
 
       - name: Generate the performance tester manifest for S3
         uses: danielr1996/envsubst-action@1.0.0
@@ -136,7 +136,7 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
-          input: performance-testing/small/performance-tester-s3.yaml
+          input: testing/performance/small/performance-tester-s3.yaml
           output: performance-tester-s3.yaml
 
       - name: Generate the performance tester manifest for UltiHash
@@ -152,7 +152,7 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
-          input: performance-testing/small/performance-tester.yaml
+          input: testing/performance/small/performance-tester.yaml
           output: performance-tester-ultihash.yaml
 
       - name: Generate Helm values for UltiHash
@@ -161,12 +161,12 @@ jobs:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: performance-testing/small/ultihash-helm-values.yaml
+          input: testing/performance/small/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml
       
       - name: Execute the performance test against S3 
         run: |
-          bash performance-testing/execute_job.sh performance-tester-s3.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+          bash testing/performance/execute_job.sh performance-tester-s3.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
           
       - name: Install the UltiHash cluster
         run: |
@@ -175,7 +175,7 @@ jobs:
 
       - name: Execute the performance test against UltiHash
         run: |
-          bash performance-testing/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+          bash testing/performance/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs
