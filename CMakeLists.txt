@@ -71,6 +71,14 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOU
 
 add_compile_options(-Wall -Werror)
 
+#
+# GCC 13 and before issue warnings when using coroutines. Re-try with a newer
+# version and remove if it succeeds.
+#
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109224
+#
+add_compile_options(-Wno-mismatched-new-delete)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
