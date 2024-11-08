@@ -27,6 +27,27 @@ void check_result(const PGresult* result) {
     }
 }
 
+void log_raised_message(void* arg, const char* message) {
+    std::stringstream s;
+    s << "[pg:" << std::hex << std::setfill('0') << std::setw(16)
+      << static_cast<std::size_t>(arg) << "] ";
+
+    std::string db_id = s.str();
+    std::string msg = message;
+
+    if (msg.find("EXCEPTION") != std::string::npos) {
+        LOG_ERROR() << db_id << msg;
+    } else if (msg.find("WARNING") != std::string::npos) {
+        LOG_WARN() << db_id << msg;
+    } else if (msg.find("NOTICE") != std::string::npos) {
+        LOG_WARN() << db_id << msg;
+    } else if (msg.find("INFO") != std::string::npos) {
+        LOG_INFO() << db_id << msg;
+    } else if (msg.find("DEBUG") != std::string::npos) {
+        LOG_DEBUG() << db_id << msg;
+    }
+}
+
 } // namespace
 
 connection::connection(boost::asio::io_context& ioc, const connstr& cs)
@@ -40,6 +61,8 @@ connection::connection(boost::asio::io_context& ioc, const connstr& cs)
     if (m_fd.native_handle() == -1) {
         throw std::runtime_error("illegal file descriptor for connection");
     }
+
+    PQsetNoticeProcessor(m_ptr.get(), log_raised_message, this);
 }
 
 coro<std::optional<row>> connection::exec(const std::string& query) {
