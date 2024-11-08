@@ -75,23 +75,23 @@ coro<object> directory::instance::head_object(const std::string& bucket,
                      .mime = metadata->string(3)};
 }
 
-coro<directory::instance::object_lock>
+directory::instance::object_lock
 directory::instance::lock_object(const std::string& bucket,
                                  const std::string& object_id) {
-    co_await m_handle->execv("CALL uh_lock_object($1, $2)", bucket, object_id);
+    m_handle->raw_execv("CALL uh_lock_object($1, $2)", bucket, object_id);
 
-    co_return object_lock([this, bucket, object_id]() {
+    return object_lock([this, bucket, object_id]() {
         m_handle->raw_execv("CALL uh_unlock_object($1, $2)", bucket, object_id);
     });
 }
 
-coro<directory::instance::object_lock>
+directory::instance::object_lock
 directory::instance::lock_object_shared(const std::string& bucket,
                                         const std::string& object_id) {
-    co_await m_handle->execv("CALL uh_lock_object_shared($1, $2)", bucket,
-                             object_id);
+    m_handle->raw_execv("CALL uh_lock_object_shared($1, $2)", bucket,
+                        object_id);
 
-    co_return object_lock([this, bucket, object_id]() {
+    return object_lock([this, bucket, object_id]() {
         m_handle->raw_execv("CALL uh_unlock_object_shared($1, $2)", bucket,
                             object_id);
     });
@@ -236,7 +236,7 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
 coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
                                   global_data_view& gdv,
                                   const std::string& bucket, object& obj) {
-    auto lock = co_await dir.lock_object(bucket, obj.name);
+    auto lock = dir.lock_object(bucket, obj.name);
 
     std::optional<object> old;
     try {
@@ -250,6 +250,8 @@ coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
     } catch (...) {
         error = std::current_exception();
     }
+
+    lock.release();
 
     if (error) {
         co_await gdv.unlink(ctx, *obj.addr);

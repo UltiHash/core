@@ -28,23 +28,19 @@ void check_result(const PGresult* result) {
 }
 
 void log_raised_message(void* arg, const char* message) {
-    std::stringstream s;
-    s << "[pg:" << std::hex << std::setfill('0') << std::setw(16)
-      << static_cast<std::size_t>(arg) << "] ";
-
-    std::string db_id = s.str();
+    connection* c = reinterpret_cast<connection*>(arg);
     std::string msg = message;
 
     if (msg.find("EXCEPTION") != std::string::npos) {
-        LOG_ERROR() << db_id << msg;
+        LOG_ERROR() << c->id() << msg;
     } else if (msg.find("WARNING") != std::string::npos) {
-        LOG_WARN() << db_id << msg;
+        LOG_WARN() << c->id() << msg;
     } else if (msg.find("NOTICE") != std::string::npos) {
-        LOG_WARN() << db_id << msg;
+        LOG_WARN() << c->id() << msg;
     } else if (msg.find("INFO") != std::string::npos) {
-        LOG_INFO() << db_id << msg;
+        LOG_INFO() << c->id() << msg;
     } else if (msg.find("DEBUG") != std::string::npos) {
-        LOG_DEBUG() << db_id << msg;
+        LOG_DEBUG() << c->id() << msg;
     }
 }
 
@@ -70,6 +66,7 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
     co_await cancel();
 
+    LOG_DEBUG() << id() << ": exec(" << query << ")";
     if (!PQsendQuery(m_ptr.get(), query.c_str())) {
         throw_error_message();
     }
@@ -79,6 +76,8 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
 std::optional<row> connection::raw_exec(const std::string& query) {
     LOG_CORO_CONTEXT();
+    LOG_DEBUG() << id() << ": raw_exec(" << query << ")";
+
     m_result =
         std::shared_ptr<PGresult>(PQexec(m_ptr.get(), query.c_str()), PQclear);
     m_row = 0;
@@ -130,6 +129,13 @@ coro<void> connection::cancel() {
         result = PQgetResult(m_ptr.get());
         PQclear(result);
     } while (result != nullptr);
+}
+
+std::string connection::id() const {
+    std::stringstream s;
+    s << "[pg:" << std::hex << std::setfill('0') << std::setw(16)
+      << reinterpret_cast<std::size_t>(this) << "] ";
+    return s.str();
 }
 
 coro<void> connection::wait() {

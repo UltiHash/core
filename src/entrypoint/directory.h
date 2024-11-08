@@ -34,11 +34,11 @@ public:
         coro<object> head_object(const std::string& bucket,
                                  const std::string& object_id);
 
-        coro<object_lock> lock_object(const std::string& bucket,
-                                      const std::string& object_id);
+        object_lock lock_object(const std::string& bucket,
+                                const std::string& object_id);
 
-        coro<object_lock> lock_object_shared(const std::string& bucket,
-                                             const std::string& object_id);
+        object_lock lock_object_shared(const std::string& bucket,
+                                       const std::string& object_id);
 
         coro<void> put_bucket(const std::string& bucket);
 

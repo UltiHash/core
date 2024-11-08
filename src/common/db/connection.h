@@ -70,6 +70,8 @@ public:
      */
     coro<void> cancel();
 
+    std::string id() const;
+
 private:
     template <typename... args>
     coro<std::optional<row>> exec_format(const std::string& query,
@@ -86,6 +88,7 @@ private:
             a...)
             ;
 
+        LOG_DEBUG() << id() << ": exec_format(" << query << ")";
         co_await cancel();
         if (!PQsendQueryParams(m_ptr.get(), query.c_str(), sizeof...(a),
                                nullptr, values.data(), lengths.data(),
@@ -111,6 +114,7 @@ private:
             a...)
             ;
 
+        LOG_DEBUG() << id() << ": raw_exec_format(" << query << ")";
         m_result = std::shared_ptr<PGresult>(
             PQexecParams(m_ptr.get(), query.c_str(), sizeof...(a), nullptr,
                          values.data(), lengths.data(), format.data(),

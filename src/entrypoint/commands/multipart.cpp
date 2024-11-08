@@ -52,7 +52,7 @@ coro<response> multipart::handle(request& req) {
     auto data_size = resp.addr.data_size();
 
     auto dir = co_await m_dir.get();
-    auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
+    auto lock = dir.lock_object(req.bucket(), req.object_key());
 
     co_await m_uploads.append_upload_part_info(
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,

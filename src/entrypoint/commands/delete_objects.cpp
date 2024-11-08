@@ -87,7 +87,7 @@ coro<response> delete_objects::handle(request& req) {
                         << *key;
             try {
                 auto dir = co_await m_directory.get();
-                auto lock = co_await dir.lock_object(req.bucket(), *key);
+                auto lock = dir.lock_object(req.bucket(), *key);
 
                 object obj = co_await dir.get_object(req.bucket(), *key);
                 co_await dir.delete_object(req.bucket(), *key);

@@ -30,7 +30,7 @@ coro<response> copy_object::handle(request& req) {
 
     {
         auto dir = co_await m_directory.get();
-        auto lock = co_await dir.lock_object_shared(src_bucket, src_key);
+        auto lock = dir.lock_object_shared(src_bucket, src_key);
 
         obj = co_await dir.get_object(src_bucket, src_key);
 

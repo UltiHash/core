@@ -96,7 +96,7 @@ coro<response> complete_multipart::handle(request& req) {
 
     {
         auto dir = co_await m_directory.get();
-        auto lock = co_await dir.lock_object(req.bucket(), req.object_key());
+        auto lock = dir.lock_object(req.bucket(), req.object_key());
 
         info = co_await m_uploads.details(*req.query("uploadId"));
 

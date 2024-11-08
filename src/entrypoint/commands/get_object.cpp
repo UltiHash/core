@@ -92,7 +92,7 @@ coro<response> get_object::handle(request& req) {
     response res;
 
     auto dir = co_await m_dir.get();
-    auto lock = co_await dir.lock_object_shared(req.bucket(), req.object_key());
+    auto lock = dir.lock_object_shared(req.bucket(), req.object_key());
     object obj = co_await dir.get_object(req.bucket(), req.object_key());
 
     if (auto range = req.header("Range"); range) {
