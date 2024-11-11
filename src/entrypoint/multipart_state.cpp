@@ -39,9 +39,14 @@ coro<upload_info> multipart_state::details(const std::string& id) {
     upload_info rv;
 
     {
-        auto row = co_await conn->execv(
-            "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
-            id);
+        std::optional<db::row> row;
+        try {
+            row = co_await conn->execv(
+                "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
+                id);
+        } catch (const std::exception& e) {
+        }
+
         if (!row) {
             throw command_exception(
                 status::not_found, "NoSuchUpload",
