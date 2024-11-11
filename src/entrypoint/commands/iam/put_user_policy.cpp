@@ -22,7 +22,7 @@ coro<ep::http::response> put_user_policy::handle(ep::http::request& req) {
     }
 
     auto document = req.query("PolicyDocument");
-    if (!name) {
+    if (!document) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
                                 "PolicyDocument missing");
     }
