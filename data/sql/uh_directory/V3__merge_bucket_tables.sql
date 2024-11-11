@@ -74,23 +74,6 @@ END
 $$;
 
 
-
-CREATE OR REPLACE PROCEDURE log_buckets_contents()
-LANGUAGE plpgsql AS $$
-DECLARE
-    bucket_row RECORD;
-BEGIN
-    -- Loop through each row in the __buckets table
-    FOR bucket_row IN
-        SELECT * FROM __buckets
-    LOOP
-        -- Print the contents of each row (adjust columns as needed)
-        RAISE NOTICE 'Bucket ID: %, Name: %, Policy: %', 
-            bucket_row.id, bucket_row.name, bucket_row.policy;
-    END LOOP;
-END;
-$$;
-
 --
 -- uh_put_object(bucket, object, addr, etag) -- add an object with name `object`
 -- described by `addr` to `bucket`. The object size is limited to 1GB.
@@ -101,8 +84,6 @@ CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTE
 LANGUAGE plpgsql AS $$
 DECLARE bucket_id BIGINT;
 BEGIN
-    CALL uh_check_bucket(bucket);
-
     SELECT id INTO bucket_id FROM __buckets WHERE name = bucket;
 
     IF bucket_id IS NULL THEN
@@ -129,7 +110,6 @@ CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
     RETURNS TABLE (address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    CALL uh_check_bucket(bucket);
     RETURN QUERY EXECUTE 
         'SELECT address, size, last_modified, etag, mime 
          FROM __objects 
@@ -161,11 +141,10 @@ DROP PROCEDURE IF EXISTS uh_delete_bucket(REGCLASS);
 CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    CALL uh_check_bucket(bucket);
     DELETE FROM __buckets WHERE name = bucket;
 
     IF NOT FOUND THEN
-        RAISE NOTICE 'Bucket "%s" does not exist.', bucket;
+        RAISE EXCEPTION 'Bucket "%s" does not exist.', bucket;
     END IF;
 END;
 $$;
@@ -179,7 +158,6 @@ LANGUAGE plpgsql AS $$
 DECLARE
     rows_deleted INT;
 BEGIN
-    CALL uh_check_bucket(bucket);
     EXECUTE 
         'DELETE FROM __objects 
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
@@ -187,7 +165,7 @@ BEGIN
 
     GET DIAGNOSTICS rows_deleted = ROW_COUNT;
     IF rows_deleted = 0 THEN
-        RAISE NOTICE 'Object "%s" in bucket "%s" does not exist.', object, bucket;
+        RAISE EXCEPTION 'Object "%s" in bucket "%s" does not exist.', object, bucket;
     END IF;
 END;
 $$;
