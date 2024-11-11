@@ -39,23 +39,22 @@ void throw_from_error(const error& e) {
         return;
     case error::bucket_already_exists:
         throw command_exception(status::conflict, "BucketAlreadyExists",
-                                "error: bucket already exists");
+                                "bucket already exists");
     case error::bucket_not_empty:
         throw command_exception(status::conflict, "BucketNotEmpty",
-                                "error: bucket is not empty");
+                                "bucket is not empty");
     case error::object_not_found:
         throw command_exception(status::not_found, "NoSuchKey",
-                                "error: object not found");
+                                "object not found");
     case error::bucket_not_found:
         throw command_exception(status::not_found, "NoSuchBucket",
-                                "error: bucket not found");
+                                "bucket not found");
     case error::storage_limit_exceeded:
         throw command_exception(status::insufficient_storage,
-                                "error: StorageLimitExceeded",
-                                "insufficient storage");
+                                "StorageLimitExceeded", "insufficient storage");
     case error::invalid_bucket_name:
         throw command_exception(status::bad_request, "InvalidBucketName",
-                                "error: bucket name has invalid characters");
+                                "bucket name has invalid characters");
     default:
         throw command_exception();
     }
