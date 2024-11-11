@@ -8,7 +8,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 command_exception::command_exception()
-    : command_exception(status::bad_request, "InternalServerError",
+    : command_exception(status::internal_server_error, "InternalServerError",
                         "internal server error") {}
 
 command_exception::command_exception(status status, const std::string& code,
