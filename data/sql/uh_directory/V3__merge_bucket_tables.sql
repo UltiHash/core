@@ -101,6 +101,8 @@ CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTE
 LANGUAGE plpgsql AS $$
 DECLARE bucket_id BIGINT;
 BEGIN
+    CALL uh_check_bucket(bucket);
+
     SELECT id INTO bucket_id FROM __buckets WHERE name = bucket;
 
     IF bucket_id IS NULL THEN
@@ -127,6 +129,7 @@ CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
     RETURNS TABLE (address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     RETURN QUERY EXECUTE 
         'SELECT address, size, last_modified, etag, mime 
          FROM __objects 
@@ -136,12 +139,16 @@ END;
 $$;
 
 --
--- uh_bucket_exists(bucket): return true if the bucket exists
+-- No one use it's return value
+-- Now caller expects exception when it doesn't exist
 --
+DROP FUNCTION uh_bucket_exists(regclass);
+
 CREATE OR REPLACE FUNCTION uh_bucket_exists(bucket TEXT)
     RETURNS BOOLEAN
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     RETURN EXISTS (SELECT 1 FROM __buckets WHERE name = bucket);
 END;
 $$;
@@ -154,6 +161,7 @@ DROP PROCEDURE IF EXISTS uh_delete_bucket(REGCLASS);
 CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     DELETE FROM __buckets WHERE name = bucket;
 
     IF NOT FOUND THEN
@@ -171,6 +179,7 @@ LANGUAGE plpgsql AS $$
 DECLARE
     rows_deleted INT;
 BEGIN
+    CALL uh_check_bucket(bucket);
     EXECUTE 
         'DELETE FROM __objects 
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
@@ -202,7 +211,7 @@ BEGIN
         RAISE EXCEPTION 'Object "%s" in bucket "%s" does not exist.', object_src, bucket_src;
     END IF;
 
-    PERFORM uh_check_bucket(bucket_dst);
+    CALL uh_check_bucket(bucket_dst);
 
     EXECUTE 
         'INSERT INTO __objects (bucket_id, name, address, size, last_modified, etag, mime)
@@ -224,6 +233,7 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT)
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     RETURN QUERY
     SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
     FROM __objects o
@@ -243,6 +253,7 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT)
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     RETURN QUERY
     SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
     FROM __objects o
@@ -263,6 +274,7 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound
     RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
+    CALL uh_check_bucket(bucket);
     IF lower_bound = '' THEN
         RETURN QUERY
             SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
@@ -295,6 +307,7 @@ CREATE OR REPLACE FUNCTION uh_bucket_size(bucket TEXT)
 LANGUAGE plpgsql AS $$
 DECLARE result BIGINT;
 BEGIN
+    CALL uh_check_bucket(bucket);
     SELECT SUM(o.size)
     INTO result
     FROM __objects o
@@ -316,7 +329,7 @@ CREATE OR REPLACE FUNCTION uh_bucket_policy(bucket TEXT)
     RETURNS TABLE(policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    PERFORM uh_check_bucket(bucket);
+    CALL uh_check_bucket(bucket);
     RETURN QUERY 
     SELECT policy FROM __buckets WHERE name = bucket;
 END;
@@ -329,7 +342,7 @@ DROP PROCEDURE uh_bucket_set_policy(REGCLASS, JSON);
 CREATE OR REPLACE PROCEDURE uh_bucket_set_policy(bucket TEXT, new_policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    PERFORM uh_check_bucket(bucket);
+    CALL uh_check_bucket(bucket);
 
     UPDATE __buckets
     SET policy = new_policy
