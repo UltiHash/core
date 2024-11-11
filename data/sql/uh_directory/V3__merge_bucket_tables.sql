@@ -118,10 +118,7 @@ BEGIN
 END;
 $$;
 
---
--- No one use it's return value
--- Now caller expects exception when it doesn't exist
---
+
 DROP FUNCTION uh_bucket_exists(regclass);
 
 CREATE OR REPLACE FUNCTION uh_bucket_exists(bucket TEXT)
@@ -129,7 +126,9 @@ CREATE OR REPLACE FUNCTION uh_bucket_exists(bucket TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    RETURN EXISTS (SELECT 1 FROM __buckets WHERE name = bucket);
+    -- Now caller expects exception when it doesn't exist; no one use it's return value
+    RETURN TRUE;
+    -- RETURN EXISTS (SELECT 1 FROM __buckets WHERE name = bucket);
 END;
 $$;
 
@@ -253,26 +252,15 @@ CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound
 LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
-    IF lower_bound = '' THEN
-        RETURN QUERY
-            SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
-            FROM __objects o
-            JOIN __buckets b ON o.bucket_id = b.id
-            WHERE b.name = bucket
-              AND o.name LIKE prefix || '%'
-              AND o.name > lower_bound
-            ORDER BY o.name;
-    ELSE
-        RETURN QUERY
-            SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
-            FROM __objects o
-            JOIN __buckets b ON o.bucket_id = b.id
-            WHERE b.name = bucket
-              AND o.name LIKE prefix || '%'
-              AND o.name > lower_bound
-              AND NOT starts_with(o.name, lower_bound)
-            ORDER BY o.name;
-    END IF;
+    RETURN QUERY
+        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime
+        FROM __objects o
+        JOIN __buckets b ON o.bucket_id = b.id
+        WHERE b.name = bucket
+          AND o.name LIKE prefix || '%'
+          AND (lower_bound = '' OR 
+              (o.name > lower_bound AND NOT starts_with(o.name, lower_bound)))
+        ORDER BY o.name;
 END;
 $$;
 
@@ -285,12 +273,15 @@ CREATE OR REPLACE FUNCTION uh_bucket_size(bucket TEXT)
 LANGUAGE plpgsql AS $$
 DECLARE result BIGINT;
 BEGIN
-    CALL uh_check_bucket(bucket);
     SELECT SUM(o.size)
     INTO result
     FROM __objects o
     JOIN __buckets b ON o.bucket_id = b.id
     WHERE b.name = bucket;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" does not exist in __buckets table', bucket;
+    END IF;
 
     RETURN COALESCE(result, 0);
 END;
@@ -302,16 +293,26 @@ $$;
 --
 DROP FUNCTION uh_bucket_policy(REGCLASS);
 
--- uh_bucket_policy function
 CREATE OR REPLACE FUNCTION uh_bucket_policy(bucket TEXT)
     RETURNS TABLE(policy JSON)
 LANGUAGE plpgsql AS $$
+DECLARE policy_record JSON;
 BEGIN
-    CALL uh_check_bucket(bucket);
-    RETURN QUERY 
-    SELECT policy FROM __buckets WHERE name = bucket;
+    -- Execute the query and save the result to a variable
+    SELECT policy INTO policy_record
+    FROM __buckets
+    WHERE name = bucket;
+
+    -- Check if the bucket was found
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" does not exist in __buckets table', bucket;
+    END IF;
+
+    -- Return the policy
+    RETURN QUERY SELECT policy_record;
 END;
 $$;
+
 --
 -- uh_bucket_set_policy(bucket): set the policy for a bucket
 --
@@ -320,10 +321,12 @@ DROP PROCEDURE uh_bucket_set_policy(REGCLASS, JSON);
 CREATE OR REPLACE PROCEDURE uh_bucket_set_policy(bucket TEXT, new_policy JSON)
 LANGUAGE plpgsql AS $$
 BEGIN
-    CALL uh_check_bucket(bucket);
-
     UPDATE __buckets
     SET policy = new_policy
     WHERE name = bucket;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" does not exist in __buckets table', bucket;
+    END IF;
 END;
 $$;
