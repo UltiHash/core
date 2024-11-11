@@ -101,7 +101,10 @@ coro<response> complete_multipart::handle(request& req) {
         info = co_await m_uploads.details(*req.query("uploadId"));
 
         validate_internal(info, buffer.span());
-        m_limits.check_storage_size(info.data_size);
+
+        if (!info.completed) {
+            m_limits.check_storage_size(info.data_size);
+        }
 
         etag = multipart_etag(info);
 
@@ -112,20 +115,23 @@ coro<response> complete_multipart::handle(request& req) {
                    .etag = etag,
                    .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
-        std::optional<object> old_obj;
-        try {
-            old_obj = co_await dir.get_object(req.bucket(), req.object_key());
-        } catch (const command_exception&) {
+        if (!info.completed) {
+            std::optional<object> old_obj;
+            try {
+                old_obj =
+                    co_await dir.get_object(req.bucket(), req.object_key());
+            } catch (const command_exception&) {
+            }
+
+            co_await dir.put_object(req.bucket(), obj);
+
+            if (old_obj && old_obj->addr) {
+                m_limits.free_storage_size(old_obj->size);
+                co_await m_gdv.unlink(req.context(), *old_obj->addr);
+            }
+
+            co_await m_uploads.remove_upload(*req.query("uploadId"));
         }
-
-        co_await dir.put_object(req.bucket(), obj);
-
-        if (old_obj && old_obj->addr) {
-            m_limits.free_storage_size(old_obj->size);
-            co_await m_gdv.unlink(req.context(), *old_obj->addr);
-        }
-
-        co_await m_uploads.remove_upload(*req.query("uploadId"));
     }
 
     metric<entrypoint_ingested_data_counter, byte>::increase(info.data_size);

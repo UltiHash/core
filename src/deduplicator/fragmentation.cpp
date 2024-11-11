@@ -156,6 +156,10 @@ coro<void> fragmentation::merge_and_link_unstored(context& ctx,
 
     std::size_t freed_bytes = co_await gdv.unlink(ctx, m_buffer_address);
     if (freed_bytes != 0) {
+        LOG_WARN() << ctx.peer() << ": unexpectedly freed " << freed_bytes
+                   << " bytes, "
+                   << "unstored=" << unstored.to_string()
+                   << ", m_buffer_address=" << m_buffer_address.to_string();
         throw std::runtime_error("there is a mismatch between the stored "
                                  "address and computed addresses");
     }

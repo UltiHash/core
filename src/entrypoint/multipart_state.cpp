@@ -41,9 +41,9 @@ coro<upload_info> multipart_state::details(const std::string& id) {
     {
         std::optional<db::row> row;
         try {
-            row = co_await conn->execv(
-                "SELECT bucket, key, erased_since, mime FROM uh_get_upload($1)",
-                id);
+            row = co_await conn->execv("SELECT bucket, key, erased_since, "
+                                       "mime, complete FROM uh_get_upload($1)",
+                                       id);
         } catch (const std::exception& e) {
         }
 
@@ -58,6 +58,7 @@ coro<upload_info> multipart_state::details(const std::string& id) {
         rv.bucket = *row->string(0);
         rv.key = *row->string(1);
         rv.erased = row->date(2).has_value();
+        rv.completed = row->boolean(4).value_or(false);
         rv.mime = row->string(3);
     }
 
@@ -107,6 +108,7 @@ coro<void> multipart_state::remove_upload(const std::string& id) {
     LOG_DEBUG() << "remove upload, id: " << id;
 
     auto conn = co_await m_db.get();
+    co_await conn->execv("CALL uh_complete_upload($1)", id);
     co_await conn->execv("CALL uh_delete_upload($1)", id);
 
     co_await clear_infos(*conn);
