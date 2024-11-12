@@ -18,7 +18,7 @@
 namespace uh::cluster {
 
 struct data_store_config {
-    size_t file_size;
+    size_t max_file_size;
     size_t max_data_store_size;
     size_t page_size;
 };

@@ -37,7 +37,7 @@ struct data_store_fixture {
     }
 
     [[nodiscard]] data_store_config make_data_store_config() const {
-        return {.file_size = MAX_FILE_SIZE_BYTES,
+        return {.max_file_size = MAX_FILE_SIZE_BYTES,
                 .max_data_store_size = MAX_DATA_STORE_SIZE_BYTES,
                 .page_size = DEFAULT_PAGE_SIZE};
     }
