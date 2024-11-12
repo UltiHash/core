@@ -199,6 +199,9 @@ address data_store::write(const std::string_view& data) {
 
     auto alloc = internal_allocate(data.size());
 
+    const auto local_pointer = pointer_traits::get_pointer(alloc.global_offset);
+    m_refcounter.increment(local_pointer, data.size());
+
     long written = 0;
     while (written < static_cast<long>(data.size())) {
         auto size =
@@ -344,9 +347,10 @@ size_t data_store::get_available_space() const noexcept {
 }
 
 data_store::alloc_t data_store::internal_allocate(size_t size) {
-    std::unique_lock<std::mutex> lock(m_allocate_mutex);
+    std::lock_guard<std::mutex> lock(m_allocate_mutex);
 
     if (m_last_file_data_end + size > m_conf.max_file_size) [[unlikely]] {
+        sync();
         const auto offset = m_open_files.back().second + m_last_file_data_end;
         add_new_file(offset, m_conf.max_file_size);
         assert(offset == m_current_offset);
@@ -355,51 +359,26 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     alloc_t alloc;
     alloc.seek = m_last_file_data_end;
     alloc.fd = m_open_files.back().first;
-    std::size_t local_pointer = m_open_files.back().second + alloc.seek;
     alloc.global_offset = pointer_traits::get_global_pointer(
-        local_pointer, m_storage_id, m_data_store_id);
+        m_open_files.back().second + alloc.seek, m_storage_id, m_data_store_id);
 
     m_last_file_data_end += size;
     m_current_offset += size;
     m_used_space += size;
-
-    m_refcounter.enqueue_increment(local_pointer, size);
-    update_last_page_ref();
-
-    lock.unlock();
-    m_refcounter.flush_queue();
-
     return alloc;
-}
-void data_store::update_last_page_ref() {
-    std::size_t last_page = m_current_offset / m_conf.page_size;
-    if (m_locked_page.has_value()) {
-        if (last_page != m_locked_page.value()) {
-            m_refcounter.enqueue_increment(last_page * m_conf.page_size,
-                                           m_conf.page_size);
-            m_refcounter.enquque_decrement(
-                m_locked_page.value() * m_conf.page_size, m_conf.page_size);
-            m_locked_page = last_page;
-        }
-    } else {
-        m_refcounter.enqueue_increment(last_page * m_conf.page_size,
-                                       m_conf.page_size);
-        m_locked_page = last_page;
-    }
 }
 
 std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
-    std::size_t last_page_id = m_current_offset.load() / m_conf.page_size;
-    std::size_t last_page_offset = last_page_id * m_conf.page_size;
-    if (offset >= last_page_offset) {
+    std::size_t current_offset = m_current_offset.load();
+    if (offset >= current_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
-                   << offset << ", with last_page_offset=" << last_page_offset;
-        throw std::out_of_range("pointer for delete operation is out of range");
+                   << offset << ", with current_offset=" << current_offset;
+        throw std::out_of_range("pointer is out of range");
     }
 
-    LOG_DEBUG() << "page " << offset / m_conf.page_size
-                << " dropped to 0, deleting page (offset=" << offset
-                << ", size=" << size << ")";
+    if (offset + size > current_offset) {
+        return 0;
+    }
 
     const auto [fd, seek] = get_file_offset_pair(offset);
 

@@ -18,7 +18,7 @@
 namespace uh::cluster {
 
 struct data_store_config {
-    size_t max_file_size;
+    size_t file_size;
     size_t max_data_store_size;
     size_t page_size;
 };
@@ -133,8 +133,6 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
-    void update_last_page_ref();
-
     size_t internal_delete(std::size_t offset, std::size_t size);
 
     size_t m_last_file_data_end{};
@@ -145,7 +143,6 @@ private:
     std::vector<std::pair<int, size_t>> m_open_files;
     std::atomic<size_t> m_current_offset{};
     std::atomic<size_t> m_used_space{};
-    std::optional<std::size_t> m_locked_page = std::nullopt;
     std::mutex m_allocate_mutex;
     std::mutex m_sync_mutex;
     reference_counter m_refcounter;
