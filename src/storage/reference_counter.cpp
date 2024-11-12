@@ -34,7 +34,15 @@ size_t reference_counter::decrement(const address& addr) {
     }
     txn.commit();
 
-    return call_cb(marked_for_deletion);
+    size_t freed_space = 0;
+    for (auto range : marked_for_deletion) {
+        std::size_t del_offset = range.first * this->m_page_size;
+        std::size_t del_size =
+            (range.second - range.first) * this->m_page_size +
+            this->m_page_size;
+        freed_space += this->m_cb(del_offset, del_size);
+    }
+    return freed_space;
 }
 
 void reference_counter::decrement(
@@ -96,19 +104,6 @@ void reference_counter::decrement(
         marked_for_deletion.emplace_back(deleteRangeStart.value(),
                                          deleteRangeEnd.value());
     }
-}
-
-size_t reference_counter::call_cb(
-    std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion) {
-    size_t freed_space = 0;
-    for (auto range : marked_for_deletion) {
-        std::size_t del_offset = range.first * this->m_page_size;
-        std::size_t del_size =
-            (range.second - range.first) * this->m_page_size +
-            this->m_page_size;
-        freed_space += this->m_cb(del_offset, del_size);
-    }
-    return freed_space;
 }
 
 void reference_counter::increment(const std::size_t offset,
@@ -196,7 +191,7 @@ void reference_counter::enquque_decrement(std::size_t offset,
     m_cmd_queue.emplace_back(DECREMENT, offset, size);
 }
 
-std::size_t reference_counter::flush_queue() {
+void reference_counter::flush_queue() {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
     std::vector<std::pair<std::size_t, std::size_t>> marked_for_deletion;
@@ -220,7 +215,6 @@ std::size_t reference_counter::flush_queue() {
     }
 
     txn.commit();
-    return call_cb(marked_for_deletion);
 }
 
 } // namespace uh::cluster

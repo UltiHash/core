@@ -73,9 +73,8 @@ public:
      * untracked page, the transaction is rolled back and a std::runtime
      * exception is thrown. This call is only intended to be used by the
      * data store and should not be exported to be used by upstream services.
-     * @return Disk space reclaimed in the context of this call
      */
-    std::size_t flush_queue();
+    void flush_queue();
 
 private:
     enum operation { INCREMENT, DECREMENT };
@@ -97,8 +96,6 @@ private:
         const std::size_t offset, const std::size_t size,
         std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
         lmdb::txn& txn, lmdb::dbi& dbi);
-    size_t call_cb(
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion);
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_REFERENCE_COUNTER_H
