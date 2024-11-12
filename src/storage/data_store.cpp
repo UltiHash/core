@@ -344,7 +344,7 @@ size_t data_store::get_available_space() const noexcept {
 }
 
 data_store::alloc_t data_store::internal_allocate(size_t size) {
-    std::lock_guard<std::mutex> lock(m_allocate_mutex);
+    std::unique_lock<std::mutex> lock(m_allocate_mutex);
 
     if (m_last_file_data_end + size > m_conf.max_file_size) [[unlikely]] {
         sync();
@@ -364,8 +364,11 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     m_current_offset += size;
     m_used_space += size;
 
-    m_refcounter.increment(local_pointer, size);
+    m_refcounter.enqueue_increment(local_pointer, size);
     update_last_page_ref();
+
+    lock.unlock();
+    m_refcounter.flush_queue();
 
     return alloc;
 }
@@ -373,18 +376,15 @@ void data_store::update_last_page_ref() {
     std::size_t last_page = m_current_offset / m_conf.page_size;
     if (m_locked_page.has_value()) {
         if (last_page != m_locked_page.value()) {
-            m_refcounter.increment(last_page * m_conf.page_size,
-                                   m_conf.page_size);
-            address addr;
-            addr.push({pointer_traits::get_global_pointer(
-                           m_locked_page.value() * m_conf.page_size,
-                           m_storage_id, m_data_store_id),
-                       m_conf.page_size});
-            m_refcounter.decrement(addr);
+            m_refcounter.enqueue_increment(last_page * m_conf.page_size,
+                                           m_conf.page_size);
+            m_refcounter.enquque_decrement(
+                m_locked_page.value() * m_conf.page_size, m_conf.page_size);
             m_locked_page = last_page;
         }
     } else {
-        m_refcounter.increment(last_page * m_conf.page_size, m_conf.page_size);
+        m_refcounter.enqueue_increment(last_page * m_conf.page_size,
+                                       m_conf.page_size);
         m_locked_page = last_page;
     }
 }
