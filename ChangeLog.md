@@ -21,6 +21,7 @@
   context values
 - Implement special characters: `${*}`, `${?}`, `${$}`
 - Support variable on resource policy statement
+- Prevent services from being destroyed while etcd is not booted up
 - Restrictions on naming buckets have been resolved (e.g. cannot start with a number)
 
 ## [1.0.0] 2024-10-15

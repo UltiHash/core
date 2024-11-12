@@ -2,6 +2,7 @@
 #define CORE_COMMON_ETCD_UTILS_H
 
 #include <etcd/SyncClient.hpp>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -18,7 +19,7 @@ struct etcd_config {
 /**
  * Create etcd client
  */
-::etcd::SyncClient make_etcd_client(const etcd_config& cfg);
+std::unique_ptr<::etcd::SyncClient> make_etcd_client(const etcd_config& cfg);
 
 } // namespace uh::cluster
 

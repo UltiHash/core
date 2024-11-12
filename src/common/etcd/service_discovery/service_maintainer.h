@@ -26,7 +26,8 @@ template <typename service_interface> struct service_maintainer {
               [this](const etcd::Response& response) {
                   return handle_state_changes(response);
               },
-              true),
+              true // recursive
+              ),
           m_service_factory(std::move(service_factory)) {
 
         auto resp =

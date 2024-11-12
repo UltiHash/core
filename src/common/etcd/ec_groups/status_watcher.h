@@ -20,7 +20,8 @@ public:
               [this](const etcd::Response& response) {
                   return handle_state_changes(response);
               },
-              true) {
+              true // recursive
+          ) {
         if (auto stat = m_attributes.get_status(); stat) {
             m_status = *stat;
         }
