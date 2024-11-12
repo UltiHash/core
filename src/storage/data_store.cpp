@@ -347,7 +347,6 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     std::unique_lock<std::mutex> lock(m_allocate_mutex);
 
     if (m_last_file_data_end + size > m_conf.max_file_size) [[unlikely]] {
-        sync();
         const auto offset = m_open_files.back().second + m_last_file_data_end;
         add_new_file(offset, m_conf.max_file_size);
         assert(offset == m_current_offset);
