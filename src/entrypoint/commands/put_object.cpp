@@ -57,14 +57,8 @@ bool put_object::can_handle(const request& req) {
 }
 
 coro<void> put_object::validate(const request& req) {
-    try {
-        auto dir = co_await m_dir.get();
-        co_await dir.bucket_exists(req.bucket());
-    } catch (const error_exception& e) {
-        LOG_INFO() << req.peer() << " failed to get bucket `" << req.bucket()
-                   << "`: " << e;
-        throw_from_error(e.error());
-    }
+    auto dir = co_await m_dir.get();
+    co_await dir.bucket_exists(req.bucket());
 }
 
 coro<response> put_object::handle(request& req) {

@@ -18,15 +18,10 @@ bool head_bucket::can_handle(const request& req) {
 coro<response> head_bucket::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
-    try {
-        auto dir = co_await m_directory.get();
-        co_await dir.bucket_exists(req.bucket());
+    auto dir = co_await m_directory.get();
+    co_await dir.bucket_exists(req.bucket());
 
-        co_return response{};
-    } catch (const std::exception& e) {
-        throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
-    }
+    co_return response{};
 }
 
 std::string head_bucket::action_id() const { return "s3:HeadBucket"; }
