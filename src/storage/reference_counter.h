@@ -4,7 +4,6 @@
 #include <filesystem>
 
 #include "common/types/address.h"
-#include <deque>
 #include <functional>
 #include <lmdbxx/lmdb++.h>
 
@@ -45,57 +44,10 @@ public:
      */
     address increment(const address& addr);
 
-    /***
-     * Registers an page reference increment operation for the region specified
-     * by offset and size to be performed asynchronously. This call is only
-     * intended to be used by the data store and should not be exported to be
-     * used by upstream services.
-     *
-     * @param offset
-     * @param size
-     */
-    void enqueue_increment(std::size_t offset, std::size_t size);
-
-    /***
-     * Registers an page reference decrement operation for the region specified
-     * by offset and size to be performed asynchronously. This call is only
-     * intended to be used by the data store and should not be exported to be
-     * used by upstream services.
-     *
-     * @param offset
-     * @param size
-     */
-    void enquque_decrement(std::size_t offset, std::size_t size);
-
-    /***
-     * Executes all enqueued operations in a single transaction.
-     * In case an enqueued decrement operation attemts to decrement an
-     * untracked page, the transaction is rolled back and a std::runtime
-     * exception is thrown. This call is only intended to be used by the
-     * data store and should not be exported to be used by upstream services.
-     */
-    void flush_queue();
-
 private:
-    enum operation { INCREMENT, DECREMENT };
-
-    struct refcount_cmd {
-        operation op;
-        std::size_t offset;
-        std::size_t size;
-    };
-
     lmdb::env m_env;
     std::size_t m_page_size;
     std::function<std::size_t(std::size_t offset, std::size_t size)> m_cb;
-    std::deque<refcount_cmd> m_cmd_queue;
-
-    void increment(const std::size_t offset, const std::size_t size,
-                   lmdb::txn& txn, lmdb::dbi& dbi);
-    void decrement(
-        const std::size_t offset, const std::size_t size,
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
-        lmdb::txn& txn, lmdb::dbi& dbi);
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_REFERENCE_COUNTER_H
