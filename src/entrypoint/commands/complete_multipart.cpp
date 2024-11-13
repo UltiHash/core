@@ -116,21 +116,21 @@ coro<response> complete_multipart::handle(request& req) {
                    .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         if (!info.completed) {
-            std::optional<object> old_obj;
+            std::optional<object> old;
             try {
-                old_obj =
-                    co_await dir.get_object(req.bucket(), req.object_key());
+                old = co_await dir.get_object(req.bucket(), req.object_key());
             } catch (const command_exception&) {
             }
 
             co_await dir.put_object(req.bucket(), obj);
-
-            if (old_obj && old_obj->addr) {
-                m_limits.free_storage_size(old_obj->size);
-                co_await m_gdv.unlink(req.context(), *old_obj->addr);
-            }
-
             co_await m_uploads.remove_upload(*req.query("uploadId"));
+
+            lock.release();
+
+            if (old && old->addr) {
+                m_limits.free_storage_size(old->size);
+                co_await m_gdv.unlink(req.context(), *old->addr);
+            }
         }
     }
 
