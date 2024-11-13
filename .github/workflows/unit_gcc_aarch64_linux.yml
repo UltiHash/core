@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
+  push:
   
 jobs:
 
@@ -26,7 +27,7 @@ jobs:
         run: | 
           aws ec2 run-instances \
             --count 1 \
-            --image-id ami-0907f9d64d47fb0a5 \
+            --image-id ${{ vars.AARCH64_RUNNER_AMI }} \
             --instance-type r8g.2xlarge \
             --key-name aarch64-github-runner \
             --security-group-ids sg-050ac7da1ac46a7c8 \
