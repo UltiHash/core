@@ -1,4 +1,4 @@
-## [UNRELEASED]
+## [1.1.0] 2024-11-11
 - Re-connect when losing connection to etcd
 - Support authentication against etcd
 - Correctly report original size in responses to PutObject and CompleteMultipartUpload
