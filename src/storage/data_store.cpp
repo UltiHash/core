@@ -371,13 +371,14 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
 
     return alloc;
 }
+
 void data_store::update_last_page_ref() {
     std::size_t last_page = m_current_offset / m_conf.page_size;
     if (m_locked_page.has_value()) {
         if (last_page != m_locked_page.value()) {
             m_refcounter.enqueue_increment(last_page * m_conf.page_size,
                                            m_conf.page_size);
-            m_refcounter.enquque_decrement(
+            m_refcounter.enqueue_decrement(
                 m_locked_page.value() * m_conf.page_size, m_conf.page_size);
             m_locked_page = last_page;
         }

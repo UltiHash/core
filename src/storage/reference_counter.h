@@ -65,7 +65,7 @@ public:
      * @param offset
      * @param size
      */
-    void enquque_decrement(std::size_t offset, std::size_t size);
+    void enqueue_decrement(std::size_t offset, std::size_t size);
 
     /***
      * Executes all enqueued operations in a single transaction.

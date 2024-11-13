@@ -186,7 +186,8 @@ void reference_counter::enqueue_increment(std::size_t offset,
                                           std::size_t size) {
     m_cmd_queue.emplace_back(INCREMENT, offset, size);
 }
-void reference_counter::enquque_decrement(std::size_t offset,
+
+void reference_counter::enqueue_decrement(std::size_t offset,
                                           std::size_t size) {
     m_cmd_queue.emplace_back(DECREMENT, offset, size);
 }
