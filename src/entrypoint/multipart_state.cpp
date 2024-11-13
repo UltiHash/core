@@ -77,6 +77,39 @@ coro<upload_info> multipart_state::details(const std::string& id) {
     co_return rv;
 }
 
+coro<upload_info::part>
+multipart_state::part_details(const std::string& upload_id, uint16_t part_id) {
+    LOG_CORO_CONTEXT();
+    LOG_DEBUG() << "get part info, upload_id: " << upload_id
+                << ", part_id: " << part_id;
+
+    auto conn = co_await m_db.get();
+
+    upload_info::part rv;
+    {
+        auto row = co_await conn->execv(
+            "SELECT size, etag FROM uh_get_upload_part($1, $2)", upload_id,
+            part_id);
+        if (!row) {
+            throw command_exception(status::not_found, "NoSuchPart",
+                                    "part id not found");
+        }
+        rv.size = *row->number(0);
+        rv.etag = *row->string(2);
+    }
+    {
+        auto row = co_await conn->execb(
+            "SELECT address FROM uh_get_upload_part($1, $2)", upload_id,
+            part_id);
+        if (!row) {
+            throw command_exception(status::not_found, "NoSuchPart",
+                                    "part id not found");
+        }
+        rv.addr = to_address(*row->data(0));
+    }
+    co_return rv;
+}
+
 coro<void> multipart_state::append_upload_part_info(const std::string& id,
                                                     uint16_t part,
                                                     const dedupe_response& resp,
