@@ -16,7 +16,6 @@
 - Reduced size of object metadata
 - Improved read performance
 - Fix a bug in storage, leading to failed deduplication requests
-- Improved robustness for successive write-delete-write command sequences and small object sizes
 - Fix bug on `NotAction`, `NotPrincipal`, `NotResource`: implement NOR for multiple
   context values
 - Implement special characters: `${*}`, `${?}`, `${$}`

@@ -134,7 +134,7 @@ jobs:
 
       - name: Run feature tests
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 20m
+          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-feature-tests --logs --timeout 15m
 
   cleanup:
     runs-on: lightweight-generic-jobs
