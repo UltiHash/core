@@ -17,16 +17,16 @@ coro<void> directory::instance::put_object(const std::string& bucket,
 
     try {
         co_await m_handle->execv("CALL uh_put_object($1, $2, $3, $4, $5, $6)",
-                            bucket, obj.name, span, obj.addr->data_size(),
-                            obj.etag, obj.mime);
+                                 bucket, obj.name, span, obj.addr->data_size(),
+                                 obj.etag, obj.mime);
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "bucket not found");
     }
 }
 
-coro<object> directory::get_object(const std::string& bucket,
-                                   const std::string& object_id) {
+coro<object> directory::instance::get_object(const std::string& bucket,
+                                             const std::string& object_id) {
     auto row = co_await m_handle->execb(
         "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
 
