@@ -35,7 +35,7 @@ coro<response> copy_object::handle(request& req) {
         obj = co_await dir.get_object(src_bucket, src_key);
 
         if (auto ifmatch = req.header("x-amz-copy-source-if-match");
-            ifmatch.value_or("") != obj.etag) {
+            ifmatch && *ifmatch != obj.etag) {
             throw command_exception(
                 status::precondition_failed, "PreconditionFailed",
                 "At least one of the preconditions that you "
