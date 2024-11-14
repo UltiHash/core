@@ -187,23 +187,13 @@ address reference_counter::increment(const address& addr) {
     return rv;
 }
 
-void reference_counter::enqueue_increment(std::size_t offset,
-                                          std::size_t size) {
-    m_cmd_queue.emplace_back(INCREMENT, offset, size);
-}
-
-void reference_counter::enqueue_decrement(std::size_t offset,
-                                          std::size_t size) {
-    m_cmd_queue.emplace_back(DECREMENT, offset, size);
-}
-
-std::size_t reference_counter::flush_queue() {
+std::size_t reference_counter::execute(std::deque<refcount_cmd>& cmd_queue) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
     std::vector<std::pair<std::size_t, std::size_t>> marked_for_deletion;
 
-    for (; !m_cmd_queue.empty(); m_cmd_queue.pop_front()) {
-        auto& cmd = m_cmd_queue.front();
+    for (; !cmd_queue.empty(); cmd_queue.pop_front()) {
+        auto& cmd = cmd_queue.front();
         switch (cmd.op) {
         case INCREMENT:
             increment(cmd.offset, cmd.size, txn, dbi);
@@ -214,7 +204,7 @@ std::size_t reference_counter::flush_queue() {
         default:
             txn.abort();
             std::string msg = "encountered invalid operation in "
-                              "reference_counter::flush_queue()";
+                              "reference_counter::execute()";
             LOG_ERROR() << msg;
             throw std::runtime_error(msg);
         }
