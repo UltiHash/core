@@ -32,7 +32,12 @@ public:
         : m_socket(ioc) {
         boost::asio::ip::tcp::endpoint endpoint(
             boost::asio::ip::address::from_string(ip_addr), port);
-        m_socket.connect(endpoint);
+        try {
+            m_socket.connect(endpoint);
+        } catch (const std::exception& e) {
+            throw error_exception(error(error::internal_network_error,
+                                        "socket connection failed"));
+        }
         clear_buffers();
     }
 
@@ -108,13 +113,18 @@ public:
 
     coro<header> recv_header() {
         header h;
-        std::vector<boost::asio::mutable_buffer> buffers{
-            {&h.type, sizeof h.type},
-            {&h.size, sizeof h.size},
-            {&h.ctx_size, sizeof h.ctx_size}};
+        try {
+            std::vector<boost::asio::mutable_buffer> buffers{
+                {&h.type, sizeof h.type},
+                {&h.size, sizeof h.size},
+                {&h.ctx_size, sizeof h.ctx_size}};
 
-        co_await boost::asio::async_read(m_socket, buffers,
-                                         boost::asio::use_awaitable);
+            co_await boost::asio::async_read(m_socket, buffers,
+                                             boost::asio::use_awaitable);
+        } catch (const std::exception& e) {
+            throw error_exception(
+                error(error::internal_network_error, "recv_header failed"));
+        }
 
         if (h.type == FAILURE) [[unlikely]] {
             const auto e = co_await recv_error(h);
@@ -133,11 +143,16 @@ public:
                 "The size of the buffers does not match with the header size!");
         }
 
-        co_await boost::asio::async_read(m_socket, m_read_buffers,
-                                         boost::asio::use_awaitable);
+        try {
+            co_await boost::asio::async_read(m_socket, m_read_buffers,
+                                             boost::asio::use_awaitable);
+            m_read_buffers.clear();
+            m_read_size = 0;
 
-        m_read_buffers.clear();
-        m_read_size = 0;
+        } catch (const std::exception& e) {
+            throw error_exception(
+                error(error::internal_network_error, "recv_buffers failed"));
+        }
     }
 
     void reserve_write_buffers(size_t capacity) {
@@ -164,19 +179,24 @@ public:
 
     coro<void> send_buffers(context& ctx, const message_type type) {
 
-        if (type == SUCCESS)
-            metric<success>::increase(1);
+        try {
+            if (type == SUCCESS)
+                metric<success>::increase(1);
 
-        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
-        decltype(header::ctx_size) ctx_size = ctx_buf.size();
+            auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
+            decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
-        m_write_buffers[0] = {&type, sizeof type};
-        m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
-        m_write_buffers[2] = {&ctx_size, sizeof ctx_size};
-        m_write_buffers[3] = boost::asio::buffer(ctx_buf);
+            m_write_buffers[0] = {&type, sizeof type};
+            m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
+            m_write_buffers[2] = {&ctx_size, sizeof ctx_size};
+            m_write_buffers[3] = boost::asio::buffer(ctx_buf);
 
-        co_await boost::asio::async_write(m_socket, m_write_buffers,
-                                          boost::asio::use_awaitable);
+            co_await boost::asio::async_write(m_socket, m_write_buffers,
+                                              boost::asio::use_awaitable);
+        } catch (const std::exception& e) {
+            throw error_exception(
+                error(error::internal_network_error, "send_buffers failed"));
+        }
 
         reset_write_buffers();
     }
@@ -214,33 +234,33 @@ public:
 
     coro<void> send(context& ctx, const message_type type,
                     std::span<const char> data) {
+        try {
+            if (type == SUCCESS)
+                metric<success>::increase(1);
 
-        if (type == SUCCESS)
-            metric<success>::increase(1);
+            auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
+            decltype(header::ctx_size) ctx_size = ctx_buf.size();
 
-        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
-        decltype(header::ctx_size) ctx_size = ctx_buf.size();
+            const auto size = static_cast<size_type>(data.size());
 
-        const auto size = static_cast<size_type>(data.size());
+            std::vector<boost::asio::const_buffer> buffers{
+                {&type, sizeof(type)},
+                {&size, sizeof(size)},
+                {&ctx_size, sizeof ctx_size},
+                {ctx_buf.data(), ctx_buf.size()},
+                {data.data(), data.size()}};
 
-        std::vector<boost::asio::const_buffer> buffers{
-            {&type, sizeof(type)},
-            {&size, sizeof(size)},
-            {&ctx_size, sizeof ctx_size},
-            {ctx_buf.data(), ctx_buf.size()},
-            {data.data(), data.size()}};
-
-        co_await boost::asio::async_write(m_socket, buffers,
-                                          boost::asio::use_awaitable);
+            co_await boost::asio::async_write(m_socket, buffers,
+                                              boost::asio::use_awaitable);
+        } catch (const std::exception& e) {
+            throw error_exception(
+                error(error::internal_network_error, "send failed"));
+        }
     }
 
     void clear_buffers() {
         reset_write_buffers();
         reset_read_buffers();
-    }
-
-    inline boost::asio::ip::tcp::socket& get_socket() noexcept {
-        return m_socket;
     }
 
     ~messenger_core() {

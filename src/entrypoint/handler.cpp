@@ -28,37 +28,27 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
                        << *req;
 
+            resp = co_await handle_request(s, *req, id);
+            metric<success>::increase(1);
+            keep_alive = true;
+        } catch (const command_exception& e) {
+            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+            // error::internal_network_error is handled here.
+            resp = make_response(e);
+            keep_alive = true;
         } catch (const boost::system::system_error& se) {
             if (se.code() == boost::beast::http::error::end_of_stream) {
                 LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
                 break;
             }
-            LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-            resp = make_response(command_exception(
-                status::bad_request, "BadRequest", "bad request"));
 
-        } catch (const std::exception& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(command_exception());
-        }
-
-        try {
-            resp = co_await handle_request(s, *req, id);
-            metric<success>::increase(1);
-            keep_alive = true;
-
-        } catch (const command_exception& e) {
-            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(e);
-            keep_alive = true;
-
-        } catch (const boost::system::system_error& se) {
             LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
             resp = make_response(command_exception(
                 status::internal_server_error, "InternalServerError",
                 "internal server error"));
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+
             resp = make_response(command_exception());
         }
 
