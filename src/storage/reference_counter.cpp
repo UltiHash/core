@@ -35,15 +35,16 @@ size_t reference_counter::decrement(const address& addr) {
         std::size_t start_page = offset / m_page_size;
         std::size_t end_page = (offset + frag.size - 1) / m_page_size;
 
-        LOG_DEBUG() << "decrementing refcount at offset=" << offset
-                    << ", size=" << frag.size;
+        LOG_DEBUG() << "decrementing refcount at offset=" << std::hex << offset
+                    << std::dec << ", size=" << frag.size
+                    << ", pages: " << start_page << "-" << end_page;
         for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;
 
             if (!dbi.get(txn, key, value)) {
                 txn.abort();
-                std::string msg = "decreasing refcount of un-tracked page " +
+                std::string msg = "decreasing refcount of un-tracked page $" +
                                   std::to_string(page_id);
                 LOG_ERROR() << msg;
                 throw std::runtime_error(msg);
@@ -106,8 +107,9 @@ void reference_counter::increment(const std::size_t offset,
     std::size_t start_page = offset / m_page_size;
     std::size_t end_page = (offset + size - 1) / m_page_size;
 
-    LOG_DEBUG() << "incrementing refcount at offset=" << offset
-                << ", size=" << size << " (on write)";
+    LOG_DEBUG() << "incrementing refcount at offset=" << std::hex << offset
+                << std::dec << ", size=" << size
+                << " (on write), pages=" << start_page << "-" << end_page;
     for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
         std::string key(std::to_string(page_id));
         std::string_view value;
@@ -138,8 +140,9 @@ address reference_counter::increment(const address& addr) {
         std::size_t start_page = offset / m_page_size;
         std::size_t end_page = (offset + frag.size - 1) / m_page_size;
 
-        LOG_DEBUG() << "incrementing refcount at offset=" << offset
-                    << ", size=" << frag.size << " (on link)";
+        LOG_DEBUG() << "incrementing refcount at offset=" << std::hex << offset
+                    << std::dec << ", size=" << frag.size
+                    << " (on link), pages=" << start_page << "-" << end_page;
         for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
             std::string key(std::to_string(page_id));
             std::string_view value;

@@ -251,11 +251,7 @@ address data_store::link(const address& addr) {
 }
 
 size_t data_store::unlink(const address& addr) {
-    try {
-        return m_refcounter.decrement(addr);
-    } catch (const std::exception&) {
-        return std::numeric_limits<std::size_t>::max();
-    }
+    return m_refcounter.decrement(addr);
 }
 
 size_t data_store::id() const noexcept { return m_data_store_id; }

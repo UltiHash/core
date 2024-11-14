@@ -19,6 +19,7 @@ request::request(beast::http::request<beast::http::empty_body> headers,
     m_path = std::move(target.path);
     m_bucket_id = std::move(target.bucket);
     m_object_key = std::move(target.object);
+    m_ctx.peer() = m_peer;
 }
 
 request::request(partial_parse_result& req, std::unique_ptr<body> body)
