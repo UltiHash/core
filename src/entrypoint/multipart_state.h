@@ -19,6 +19,7 @@ struct upload_info {
     std::string key;
     std::string bucket;
     bool erased;
+    bool completed = false;
     std::optional<std::string> mime;
     std::map<uint16_t, part> parts;
 

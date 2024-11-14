@@ -263,6 +263,18 @@ public:
         reset_read_buffers();
     }
 
+    inline boost::asio::ip::tcp::endpoint local() const {
+        return m_socket.local_endpoint();
+    }
+
+    inline boost::asio::ip::tcp::endpoint peer() const {
+        return m_socket.remote_endpoint();
+    }
+
+    inline boost::asio::ip::tcp::socket& get_socket() noexcept {
+        return m_socket;
+    }
+
     ~messenger_core() {
         try {
             if (m_socket.is_open()) {

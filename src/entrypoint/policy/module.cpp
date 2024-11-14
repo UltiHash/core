@@ -55,9 +55,11 @@ coro<effect> module::check(const http::request& request,
         }
     }
 
-    if (auto resource =
-            co_await m_directory.get_bucket_policy(request.bucket());
+    auto dir = co_await m_directory.get();
+    if (auto resource = co_await dir.get_bucket_policy(request.bucket());
         resource) {
+        LOG_DEBUG() << request.peer() << ": bucket policy: " << *resource;
+
         // TODO cache bucket policies
         auto policies = parser::parse(*resource);
         for (const auto& policy : policies) {

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
-project(uh-cluster VERSION 1.0.0)
+project(uh-cluster VERSION 1.1.0)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
@@ -70,6 +70,14 @@ set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_INCLUDE_DIRS} ${LMDB_INCLUDE_DIR})
 
 add_compile_options(-Wall -Werror)
+
+#
+# GCC 13 and before issue warnings when using coroutines. Re-try with a newer
+# version and remove if it succeeds.
+#
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109224
+#
+add_compile_options(-Wno-mismatched-new-delete)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 

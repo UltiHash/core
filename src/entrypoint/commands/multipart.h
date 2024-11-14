@@ -4,6 +4,7 @@
 #include "command.h"
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/service_interfaces/deduplicator_interface.h"
+#include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
 
 namespace uh::cluster {
@@ -11,7 +12,7 @@ namespace uh::cluster {
 class multipart : public command {
 public:
     explicit multipart(roundrobin_load_balancer<deduplicator_interface>&,
-                       multipart_state&);
+                       directory& dir, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -23,6 +24,7 @@ public:
 
 private:
     roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
+    directory& m_dir;
     multipart_state& m_uploads;
 };
 
