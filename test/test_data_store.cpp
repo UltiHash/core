@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
         {addr.data_size() / 2, (addr.data_size() - addr.data_size() / 2)});
     BOOST_TEST(addr.data_size() == illegal_addr.data_size());
     BOOST_TEST(addr.size() != illegal_addr.size());
-    BOOST_CHECK_NE(ds->unlink(illegal_addr), illegal_addr.data_size());
+    BOOST_CHECK_THROW(ds->unlink(illegal_addr), std::exception);
 }
 
 BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {

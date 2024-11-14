@@ -10,12 +10,20 @@ public:
 
     ~guard() {
         try {
-            m_f();
+            release();
         } catch (...) {
         }
     }
 
+    void release() {
+        if (m_active) {
+            m_active = false;
+            m_f();
+        }
+    }
+
 private:
+    bool m_active = true;
     fini m_f;
 };
 

@@ -26,7 +26,7 @@ done
 
 access=$BIN_PATH/tools/uh-cluster-access-client
 $access user-add --superuser 'root' 'arn:uh:iam::0:users/root'
-$access key-add 'root' 'FANCY-ROOT-KEY' 'SECRET' 86400
+$access key-add 'root' 'FANCY-ROOT-KEY' 'SECRET'
 
 $access user-add 'john.doe' 'arn:uh:iam::0:users/john.doe'
 $access key-add 'john.doe' 'NOPQRSTUVWXYZABCDEFG' 'nopqrstuvwxyzabcdefghijklmnabcdefghijklm' 86400

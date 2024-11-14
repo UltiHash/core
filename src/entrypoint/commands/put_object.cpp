@@ -57,13 +57,8 @@ bool put_object::can_handle(const request& req) {
 }
 
 coro<void> put_object::validate(const request& req) {
-    try {
-        co_await m_dir.bucket_exists(req.bucket());
-    } catch (const error_exception& e) {
-        LOG_INFO() << req.peer() << " failed to get bucket `" << req.bucket()
-                   << "`: " << e;
-        throw_from_error(e.error());
-    }
+    auto dir = co_await m_dir.get();
+    co_await dir.bucket_exists(req.bucket());
 }
 
 coro<response> put_object::handle(request& req) {
@@ -95,18 +90,11 @@ coro<response> put_object::handle(request& req) {
                    .mime = req.header("Content-Type")
                                .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
-        std::optional<object> old_obj;
-        try {
-            old_obj = co_await m_dir.get_object(req.bucket(), req.object_key());
-        } catch (command_exception&) {
-            old_obj = std::nullopt;
-        }
-
-        co_await m_dir.put_object(req.bucket(), obj);
-
-        if (old_obj.has_value() && old_obj->addr.has_value()) {
-            co_await m_gdv.unlink(req.context(), old_obj.value().addr.value());
-            m_limits.free_storage_size(old_obj->size);
+        {
+            auto dir = co_await m_dir.get();
+            auto freed = co_await safe_put_object(req.context(), dir, m_gdv,
+                                                  req.bucket(), obj);
+            m_limits.free_storage_size(freed);
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(

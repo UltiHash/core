@@ -9,9 +9,10 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-copy_object::copy_object(directory& dir, global_data_view& gdv)
+copy_object::copy_object(directory& dir, global_data_view& gdv, limits& limits)
     : m_directory(dir),
-      m_gdv(gdv) {}
+      m_gdv(gdv),
+      m_limits(limits) {}
 
 bool copy_object::can_handle(const request& req) {
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -20,53 +21,52 @@ bool copy_object::can_handle(const request& req) {
 }
 
 coro<response> copy_object::handle(request& req) {
-    auto copy_source = req.header("x-amz-copy-source");
-    if (!copy_source) {
-        throw std::runtime_error("x-amz-copy-source not defined");
-    }
-
     boost::urls::url url;
-    url.set_encoded_path(*copy_source);
+    url.set_encoded_path(*req.header("x-amz-copy-source"));
 
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
-    co_await copy_internal(req, src_bucket, src_key);
+    std::size_t freed = 0ull;
+    object obj;
 
-    auto obj = co_await m_directory.head_object(req.bucket(), req.object_key());
+    {
+        auto dir = co_await m_directory.get();
+        auto lock = dir.lock_object_shared(src_bucket, src_key);
+
+        obj = co_await dir.get_object(src_bucket, src_key);
+
+        if (auto ifmatch = req.header("x-amz-copy-source-if-match");
+            ifmatch && *ifmatch != obj.etag) {
+            throw command_exception(
+                status::precondition_failed, "PreconditionFailed",
+                "At least one of the preconditions that you "
+                "specified did not hold.");
+        }
+
+        m_limits.check_storage_size(obj.size);
+
+        auto rejects = co_await m_gdv.link(req.context(), *obj.addr);
+        if (!rejects.empty()) {
+            LOG_ERROR() << req.peer()
+                        << ": database contains object without references";
+            throw command_exception(status::internal_server_error,
+                                    "Data Corrupted", "found corrupted data");
+        }
+
+        obj.name = req.object_key();
+        freed = co_await safe_put_object(req.context(), dir, m_gdv,
+                                         req.bucket(), obj);
+    }
+
+    m_limits.free_storage_size(freed);
 
     boost::property_tree::ptree pt;
-    pt.put("CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
-    if (obj.etag) {
-        pt.put("CopyObjectResult.ETag", *obj.etag);
-    }
+    put(pt, "CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
+    put(pt, "CopyObjectResult.ETag", obj.etag);
 
     response res;
     res << pt;
 
     co_return res;
-}
-
-coro<void> copy_object::copy_internal(request& req, std::string& src_bucket,
-                                      std::string& src_key) {
-    // this method had to be extracted as otherwise GCC 12.3.0 and 13.1.0
-    // produce compile errors when built in RelWithDebInfo mode:
-    // error: 'static void
-    // boost::asio::detail::awaitable_frame_base<Executor>::operator
-    // delete(void*, std::size_t) [with Executor =
-    // boost::asio::any_io_executor]' called on pointer returned from a
-    // mismatched allocation function
-    auto src_obj = co_await m_directory.get_object(src_bucket, src_key);
-
-    if (auto ifmatch = req.header("x-amz-copy-source-if-match"); ifmatch) {
-        if (src_obj.etag == *ifmatch) {
-            co_await m_gdv.link(req.context(), src_obj.addr.value());
-            co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
-                                             req.object_key());
-        }
-    } else {
-        co_await m_gdv.link(req.context(), src_obj.addr.value());
-        co_await m_directory.copy_object(src_bucket, src_key, req.bucket(),
-                                         req.object_key());
-    }
 }
 
 std::string copy_object::action_id() const { return "s3:CopyObject"; }

@@ -9,8 +9,9 @@ namespace uh::cluster {
 
 multipart::multipart(
     roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
-    global_data_view& gdv, multipart_state& uploads)
+    directory& dir, global_data_view& gdv, multipart_state& uploads)
     : m_dedupe_services(dedupe_services),
+      m_dir(dir),
       m_gdv(gdv),
       m_uploads(uploads) {}
 
@@ -45,8 +46,12 @@ coro<response> multipart::handle(request& req) {
     }
 
     auto md5 = to_hex(md5::from_buffer(buffer.span()));
+
     response res;
     res.set("ETag", md5);
+
+    auto dir = co_await m_dir.get();
+    auto lock = dir.lock_object(req.bucket(), req.object_key());
 
     std::optional<upload_info::part> existing_part;
     try {
@@ -60,8 +65,8 @@ coro<response> multipart::handle(request& req) {
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         resp.addr.data_size(), std::move(md5));
 
-    if (existing_part.has_value()) {
-        co_await m_gdv.unlink(req.context(), existing_part.value().addr);
+    if (existing_part) {
+        co_await m_gdv.unlink(req.context(), existing_part->addr);
     }
 
     co_return res;
