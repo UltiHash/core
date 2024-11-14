@@ -17,7 +17,8 @@ bool get_bucket_policy::can_handle(const ep::http::request& req) {
 
 coro<response> get_bucket_policy::handle(request& req) {
 
-    auto policy = co_await m_dir.get_bucket_policy(req.bucket());
+    auto dir = co_await m_dir.get();
+    auto policy = co_await dir.get_bucket_policy(req.bucket());
 
     if (policy) {
         response r;

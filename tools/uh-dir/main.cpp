@@ -77,7 +77,8 @@ std::ostream& operator<<(std::ostream& out, const object& obj) {
     return out;
 }
 
-uh::cluster::coro<void> list_bucket(directory& dir, const std::string& target) {
+uh::cluster::coro<void> list_bucket(directory& d, const std::string& target) {
+    auto dir = co_await d.get();
     if (target.empty()) {
         for (const auto& bucket : co_await dir.list_buckets()) {
             std::cout << bucket << "\n";
@@ -92,17 +93,19 @@ uh::cluster::coro<void> list_bucket(directory& dir, const std::string& target) {
     }
 }
 
-uh::cluster::coro<void> make_bucket(directory& dir, const std::string& target) {
+uh::cluster::coro<void> make_bucket(directory& d, const std::string& target) {
+    auto dir = co_await d.get();
     co_await dir.put_bucket(target);
 }
 
-uh::cluster::coro<void> remove_bucket(directory& dir,
-                                      const std::string& target) {
+uh::cluster::coro<void> remove_bucket(directory& d, const std::string& target) {
+    auto dir = co_await d.get();
     co_await dir.delete_bucket(target);
 }
 
-uh::cluster::coro<void> object_info(directory& dir, const std::string& bucket,
+uh::cluster::coro<void> object_info(directory& d, const std::string& bucket,
                                     const std::string& key) {
+    auto dir = co_await d.get();
     auto object = co_await dir.get_object(bucket, key);
 
     std::cout << "object: " << object.name << "\n"

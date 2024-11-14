@@ -3,6 +3,10 @@
 #include "common/telemetry/log.h"
 #include "common/utils/error.h"
 
+#include <entrypoint/http/command_exception.h>
+
+using namespace uh::cluster::ep::http;
+
 namespace uh::cluster {
 
 limits::limits(std::size_t max_data_size)
@@ -14,7 +18,8 @@ void limits::storage_size(std::size_t size) { m_data_storage_size = size; }
 void limits::check_storage_size(std::size_t increment) {
     auto new_size = m_data_storage_size + increment;
     if (new_size > m_max_data_size) {
-        throw error_exception(error::storage_limit_exceeded);
+        throw command_exception(status::insufficient_storage,
+                                "StorageLimitExceeded", "insufficient storage");
     }
 
     if (new_size * 100 > m_max_data_size * SIZE_LIMIT_WARNING_PERCENTAGE) {
