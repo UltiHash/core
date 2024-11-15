@@ -52,6 +52,12 @@ public:
     coro<upload_info> details(const std::string& id);
 
     /**
+     * Retrieve part info for the given upload and part id
+     */
+    coro<upload_info::part> part_details(const std::string& upload_id,
+                                         uint16_t part_id);
+
+    /**
      * Set a part info for a given id.
      */
     coro<void> append_upload_part_info(const std::string& id, uint16_t part_id,
