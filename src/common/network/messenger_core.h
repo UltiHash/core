@@ -292,7 +292,7 @@ private:
     error_exception create_internal_network_error(const std::string& message,
                                                   const std::exception& e) {
         return error_exception(
-            error(error::internal_network_error, message + e.what()));
+            error(error::internal_network_error, message + " | " + e.what()));
     }
 };
 

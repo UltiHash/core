@@ -33,7 +33,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             keep_alive = true;
         } catch (const command_exception& e) {
             LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-            // error::internal_network_error is handled here.
             resp = make_response(e);
             keep_alive = true;
         } catch (const boost::system::system_error& se) {
