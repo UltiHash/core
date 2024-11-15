@@ -80,7 +80,7 @@ public:
                     throw std::invalid_argument("Invalid message type!");
                 }
             } catch (const boost::system::system_error& e) {
-                LOG_FATAL()
+                LOG_ERROR()
                     << "boost::system::system_error should be converted to "
                        "error_exception with error::internal_network_error";
                 if (e.code() == boost::asio::error::eof) {

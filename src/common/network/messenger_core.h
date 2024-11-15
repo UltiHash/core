@@ -35,8 +35,7 @@ public:
         try {
             m_socket.connect(endpoint);
         } catch (const std::exception& e) {
-            throw error_exception(error(error::internal_network_error,
-                                        "socket connection failed"));
+            throw create_internal_network_error("socket connection failed", e);
         }
         clear_buffers();
     }
@@ -122,8 +121,7 @@ public:
             co_await boost::asio::async_read(m_socket, buffers,
                                              boost::asio::use_awaitable);
         } catch (const std::exception& e) {
-            throw error_exception(
-                error(error::internal_network_error, "recv_header failed"));
+            throw create_internal_network_error("recv_header failed", e);
         }
 
         if (h.type == FAILURE) [[unlikely]] {
@@ -150,8 +148,7 @@ public:
             m_read_size = 0;
 
         } catch (const std::exception& e) {
-            throw error_exception(
-                error(error::internal_network_error, "recv_buffers failed"));
+            throw create_internal_network_error("recv_buffers failed", e);
         }
     }
 
@@ -194,8 +191,7 @@ public:
             co_await boost::asio::async_write(m_socket, m_write_buffers,
                                               boost::asio::use_awaitable);
         } catch (const std::exception& e) {
-            throw error_exception(
-                error(error::internal_network_error, "send_buffers failed"));
+            throw create_internal_network_error("send_buffers failed", e);
         }
 
         reset_write_buffers();
@@ -253,8 +249,7 @@ public:
             co_await boost::asio::async_write(m_socket, buffers,
                                               boost::asio::use_awaitable);
         } catch (const std::exception& e) {
-            throw error_exception(
-                error(error::internal_network_error, "send failed"));
+            throw create_internal_network_error("send failed", e);
         }
     }
 
@@ -293,6 +288,12 @@ private:
     std::vector<boost::asio::const_buffer> m_write_buffers;
     size_type m_read_size = 0;
     size_type m_write_size = 0;
+
+    error_exception create_internal_network_error(const std::string& message,
+                                                  const std::exception& e) {
+        return error_exception(
+            error(error::internal_network_error, message + e.what()));
+    }
 };
 
 } // end namespace uh::cluster

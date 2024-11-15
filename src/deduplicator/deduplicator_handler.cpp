@@ -36,7 +36,7 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
                 throw std::invalid_argument("Invalid message type!");
             }
         } catch (const boost::system::system_error& e) {
-            LOG_FATAL() << "boost::system::system_error should be converted to "
+            LOG_ERROR() << "boost::system::system_error should be converted to "
                            "error_exception with error::internal_network_error";
             if (e.code() == boost::asio::error::eof) {
                 LOG_INFO() << remote.str() << " disconnected";
