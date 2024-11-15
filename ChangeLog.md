@@ -1,3 +1,6 @@
+## [UNRELEASED]
+- Request downstream error to be treated as an internal error to allow the client to retry
+
 ## [1.1.0] 2024-11-11
 - Re-connect when losing connection to etcd
 - Support authentication against etcd
@@ -23,7 +26,6 @@
 - Support variable on resource policy statement
 - Prevent services from being destroyed while etcd is not booted up
 - Restrictions on naming buckets have been resolved (e.g. cannot start with a number)
-- Request downstream error to be treated as an internal error to allow the client to retry
 
 ## [1.0.0] 2024-10-15
 - Added basic policy and authentication support
