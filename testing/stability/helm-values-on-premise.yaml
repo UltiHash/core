@@ -65,6 +65,9 @@ entrypoint:
     - name: core-dump
       hostPath:
         path: /tmp/core-dumps/
+  extraEnv:
+    - name: UH_DB_DIRECTORY_CONNECTIONS
+      value: "8"
 
   ingress:
     enabled: false
