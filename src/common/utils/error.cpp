@@ -15,7 +15,8 @@ static const std::vector<std::string> error_messages = {
     "bucket is not empty",
     "bucket name is invalid",
     "storage limit is exceeded",
-    "bucket already exists"};
+    "bucket already exists",
+    "internal server error"};
 
 static const std::string error_out_of_range = "error out of range";
 
