@@ -57,15 +57,15 @@ private:
     lmdb::env m_env;
     std::size_t m_page_size;
     std::function<std::size_t(std::size_t offset, std::size_t size)> m_cb;
-    ;
 
     bool increment(const std::size_t offset, const std::size_t size,
                    bool upstream, lmdb::txn& txn, lmdb::dbi& dbi);
-    void decrement(const std::size_t offset, const std::size_t size,
-                   std::optional<std::reference_wrapper<
-                       std::vector<std::pair<std::size_t, std::size_t>>>>
-                       marked_for_deletion,
-                   lmdb::txn& txn, lmdb::dbi& dbi);
+    void decrement(
+        const std::size_t offset, const std::size_t size,
+        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
+        lmdb::txn& txn, lmdb::dbi& dbi);
+    size_t free_storage(
+        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion);
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_REFERENCE_COUNTER_H

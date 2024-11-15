@@ -20,6 +20,7 @@ reference_counter::reference_counter(
 }
 
 void reference_counter::execute(std::deque<refcount_cmd>& cmd_queue) {
+    std::vector<std::pair<std::size_t, std::size_t>> marked_for_deletion;
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -30,7 +31,7 @@ void reference_counter::execute(std::deque<refcount_cmd>& cmd_queue) {
             increment(cmd.offset, cmd.size, false, txn, dbi);
             break;
         case DECREMENT:
-            decrement(cmd.offset, cmd.size, std::nullopt, txn, dbi);
+            decrement(cmd.offset, cmd.size, marked_for_deletion, txn, dbi);
             break;
         default:
             txn.abort();
@@ -42,6 +43,8 @@ void reference_counter::execute(std::deque<refcount_cmd>& cmd_queue) {
     }
 
     txn.commit();
+
+    free_storage(marked_for_deletion);
 }
 
 address reference_counter::increment(const address& addr) {
@@ -76,15 +79,7 @@ size_t reference_counter::decrement(const address& addr) {
     }
     txn.commit();
 
-    size_t freed_space = 0;
-    for (auto range : marked_for_deletion) {
-        std::size_t del_offset = range.first * this->m_page_size;
-        std::size_t del_size =
-            (range.second - range.first) * this->m_page_size +
-            this->m_page_size;
-        freed_space += this->m_cb(del_offset, del_size);
-    }
-    return freed_space;
+    return free_storage(marked_for_deletion);
 }
 
 bool reference_counter::increment(const std::size_t offset,
@@ -124,9 +119,7 @@ bool reference_counter::increment(const std::size_t offset,
 
 void reference_counter::decrement(
     const std::size_t offset, const std::size_t size,
-    std::optional<std::reference_wrapper<
-        std::vector<std::pair<std::size_t, std::size_t>>>>
-        marked_for_deletion,
+    std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
     lmdb::txn& txn, lmdb::dbi& dbi) {
 
     std::optional<std::size_t> deleteRangeStart;
@@ -153,18 +146,16 @@ void reference_counter::decrement(
         std::size_t current_value = std::stoull(std::string(value));
 
         if (--current_value == 0) {
-            if (marked_for_deletion) {
-                if (deleteRangeStart && deleteRangeEnd &&
-                    page_id == *deleteRangeEnd + 1) {
-                    deleteRangeEnd = page_id;
-                } else {
-                    if (deleteRangeStart && deleteRangeEnd) {
-                        marked_for_deletion->get().emplace_back(
-                            *deleteRangeStart, *deleteRangeEnd);
-                    }
-                    deleteRangeStart = page_id;
-                    deleteRangeEnd = page_id;
+            if (deleteRangeStart && deleteRangeEnd &&
+                page_id == *deleteRangeEnd + 1) {
+                deleteRangeEnd = page_id;
+            } else {
+                if (deleteRangeStart && deleteRangeEnd) {
+                    marked_for_deletion.emplace_back(*deleteRangeStart,
+                                                     *deleteRangeEnd);
                 }
+                deleteRangeStart = page_id;
+                deleteRangeEnd = page_id;
             }
 
             dbi.del(txn, key);
@@ -174,10 +165,22 @@ void reference_counter::decrement(
         }
     }
 
-    if (deleteRangeStart && deleteRangeEnd && marked_for_deletion) {
-        marked_for_deletion->get().emplace_back(*deleteRangeStart,
-                                                *deleteRangeEnd);
+    if (deleteRangeStart && deleteRangeEnd) {
+        marked_for_deletion.emplace_back(*deleteRangeStart, *deleteRangeEnd);
     }
+}
+
+size_t reference_counter::free_storage(
+    std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion) {
+    size_t freed_storage = 0;
+    for (auto range : marked_for_deletion) {
+        std::size_t del_offset = range.first * this->m_page_size;
+        std::size_t del_size =
+            (range.second - range.first) * this->m_page_size +
+            this->m_page_size;
+        freed_storage += this->m_cb(del_offset, del_size);
+    }
+    return freed_storage;
 }
 
 } // namespace uh::cluster
