@@ -8,7 +8,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 command_exception::command_exception()
-    : command_exception(status::bad_request, "InternalServerError",
+    : command_exception(status::internal_server_error, "InternalServerError",
                         "internal server error") {}
 
 command_exception::command_exception(status status, const std::string& code,
@@ -55,6 +55,10 @@ void throw_from_error(const error& e) {
     case error::invalid_bucket_name:
         throw command_exception(status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid characters");
+    case error::internal_network_error:
+        throw command_exception(status::internal_server_error,
+                                "InternalServerError",
+                                "downstream connection failed");
     default:
         throw command_exception();
     }
