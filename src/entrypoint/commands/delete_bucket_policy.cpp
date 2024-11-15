@@ -15,7 +15,8 @@ bool delete_bucket_policy::can_handle(const ep::http::request& req) {
 
 coro<response> delete_bucket_policy::handle(request& req) {
 
-    co_await m_dir.set_bucket_policy(req.bucket(), {});
+    auto dir = co_await m_dir.get();
+    co_await dir.set_bucket_policy(req.bucket(), {});
     co_return response(status::no_content);
 }
 

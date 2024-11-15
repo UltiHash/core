@@ -6,7 +6,8 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-coro<void> directory::put_object(const std::string& bucket, const object& obj) {
+coro<void> directory::instance::put_object(const std::string& bucket,
+                                           const object& obj) {
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -15,21 +16,19 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     auto span = std::span<char>(data);
 
     try {
-        auto dir = co_await m_db.get();
-        co_await dir->execv("CALL uh_put_small_obj($1, $2, $3, $4, $5, $6)",
-                            bucket, obj.name, span, obj.addr->data_size(),
-                            obj.etag, obj.mime);
+        co_await m_handle->execv("CALL uh_put_object($1, $2, $3, $4, $5, $6)",
+                                 bucket, obj.name, span, obj.addr->data_size(),
+                                 obj.etag, obj.mime);
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "bucket not found");
     }
 }
 
-coro<object> directory::get_object(const std::string& bucket,
-                                   const std::string& object_id) {
-    auto dir = co_await m_db.get();
-    auto row = co_await dir->execb(
-        "SELECT small::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
+coro<object> directory::instance::get_object(const std::string& bucket,
+                                             const std::string& object_id) {
+    auto row = co_await m_handle->execb(
+        "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
 
     if (!row) {
         throw command_exception(status::not_found, "NoSuchKey",
@@ -44,9 +43,9 @@ coro<object> directory::get_object(const std::string& bucket,
     address addr = to_address(*small);
 
     auto metadata =
-        co_await dir->execv("SELECT size, last_modified, etag, mime "
-                            "FROM uh_get_object($1, $2)",
-                            bucket, object_id);
+        co_await m_handle->execv("SELECT size, last_modified, etag, mime "
+                                 "FROM uh_get_object($1, $2)",
+                                 bucket, object_id);
 
     co_return object{.name = object_id,
                      .last_modified = *metadata->date(1),
@@ -56,13 +55,12 @@ coro<object> directory::get_object(const std::string& bucket,
                      .mime = metadata->string(3)};
 }
 
-coro<object> directory::head_object(const std::string& bucket,
-                                    const std::string& object_id) {
-    auto dir = co_await m_db.get();
+coro<object> directory::instance::head_object(const std::string& bucket,
+                                              const std::string& object_id) {
     auto metadata =
-        co_await dir->execv("SELECT size, last_modified, etag, mime "
-                            "FROM uh_get_object($1, $2)",
-                            bucket, object_id);
+        co_await m_handle->execv("SELECT size, last_modified, etag, mime "
+                                 "FROM uh_get_object($1, $2)",
+                                 bucket, object_id);
 
     if (!metadata) {
         throw command_exception(status::not_found, "NoSuchKey",
@@ -77,37 +75,55 @@ coro<object> directory::head_object(const std::string& bucket,
                      .mime = metadata->string(3)};
 }
 
-coro<void> directory::put_bucket(const std::string& bucket) {
+directory::instance::object_lock
+directory::instance::lock_object(const std::string& bucket,
+                                 const std::string& object_id) {
+    m_handle->raw_execv("CALL uh_lock_object($1, $2)", bucket, object_id);
+
+    return object_lock([this, bucket, object_id]() {
+        m_handle->raw_execv("CALL uh_unlock_object($1, $2)", bucket, object_id);
+    });
+}
+
+directory::instance::object_lock
+directory::instance::lock_object_shared(const std::string& bucket,
+                                        const std::string& object_id) {
+    m_handle->raw_execv("CALL uh_lock_object_shared($1, $2)", bucket,
+                        object_id);
+
+    return object_lock([this, bucket, object_id]() {
+        m_handle->raw_execv("CALL uh_unlock_object_shared($1, $2)", bucket,
+                            object_id);
+    });
+}
+
+coro<void> directory::instance::put_bucket(const std::string& bucket) {
     LOG_DEBUG() << "put_bucket(" << bucket << ")";
     validate_bucket_name(bucket);
 
-    auto dir = co_await m_db.get();
-
     try {
-        co_await dir->execv("CALL uh_create_bucket($1)", bucket);
+        co_await m_handle->execv("CALL uh_create_bucket($1)", bucket);
     } catch (const std::exception&) {
         throw command_exception(status::conflict, "BucketAlreadyExists",
                                 "The requested bucket name is not available.");
     }
 }
 
-coro<void> directory::bucket_exists(const std::string& bucket) {
-    auto dir = co_await m_db.get();
+coro<void> directory::instance::bucket_exists(const std::string& bucket) {
 
     try {
-        co_await dir->execv("SELECT uh_bucket_exists($1)", bucket);
+        co_await m_handle->execv("SELECT uh_bucket_exists($1)", bucket);
     } catch (const std::exception&) {
-        throw error_exception(error::bucket_not_found);
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 }
 
-coro<void> directory::delete_bucket(const std::string& bucket) {
+coro<void> directory::instance::delete_bucket(const std::string& bucket) {
     co_await bucket_exists(bucket);
 
-    auto dir = co_await m_db.get();
-
-    auto row =
-        co_await dir->execv("SELECT count(*) FROM uh_list_objects($1)", bucket);
+    auto row = co_await m_handle->execv(
+        "SELECT count(*) FROM uh_list_objects($1)", bucket);
 
     if (row->number(0) > 0) {
         throw command_exception(
@@ -115,33 +131,22 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
             "The bucket that you tried to delete is not empty.");
     }
 
-    co_await dir->execv("CALL uh_delete_bucket($1)", bucket);
+    co_await m_handle->execv("CALL uh_delete_bucket($1)", bucket);
 }
 
-coro<void> directory::delete_object(const std::string& bucket,
-                                    const std::string& object_id) {
-    auto dir = co_await m_db.get();
+coro<void> directory::instance::delete_object(const std::string& bucket,
+                                              const std::string& object_id) {
 
-    co_await dir->execv("CALL uh_delete_object($1, $2)", bucket, object_id);
+    co_await m_handle->execv("CALL uh_delete_object($1, $2)", bucket,
+                             object_id);
 }
 
-coro<void> directory::copy_object(const std::string& bucket_src,
-                                  const std::string& key_src,
-                                  const std::string& bucket_dst,
-                                  const std::string& key_dst) {
-    auto dir = co_await m_db.get();
-
-    co_await dir->execv("CALL uh_copy_object($1, $2, $3, $4)", bucket_src,
-                        key_src, bucket_dst, key_dst);
-}
-
-coro<std::vector<std::string>> directory::list_buckets() {
+coro<std::vector<std::string>> directory::instance::list_buckets() {
     std::vector<std::string> rv;
 
-    auto dir = co_await m_db.get();
-
-    for (auto row = co_await dir->exec("SELECT name FROM uh_list_buckets()");
-         row; row = co_await dir->next()) {
+    for (auto row =
+             co_await m_handle->exec("SELECT name FROM uh_list_buckets()");
+         row; row = co_await m_handle->next()) {
         rv.emplace_back(*row->string(0));
     }
 
@@ -149,11 +154,10 @@ coro<std::vector<std::string>> directory::list_buckets() {
 }
 
 coro<std::optional<std::string>>
-directory::get_bucket_policy(const std::string& bucket) {
-    auto dir = co_await m_db.get();
+directory::instance::get_bucket_policy(const std::string& bucket) {
 
     try {
-        auto row = co_await dir->execv(
+        auto row = co_await m_handle->execv(
             "SELECT policy FROM uh_bucket_policy($1)", bucket);
         co_return row->string(0);
     } catch (const std::exception& e) {
@@ -162,28 +166,27 @@ directory::get_bucket_policy(const std::string& bucket) {
     co_return std::nullopt;
 }
 
-coro<void> directory::set_bucket_policy(const std::string& bucket,
-                                        std::optional<std::string> policy) {
+coro<void>
+directory::instance::set_bucket_policy(const std::string& bucket,
+                                       std::optional<std::string> policy) {
     co_await bucket_exists(bucket);
 
-    auto dir = co_await m_db.get();
-    co_await dir->execv("CALL uh_bucket_set_policy($1, $2)", bucket, policy);
+    co_await m_handle->execv("CALL uh_bucket_set_policy($1, $2)", bucket,
+                             policy);
 }
 
-coro<std::vector<object>>
-directory::list_objects(const std::string& bucket,
-                        const std::optional<std::string>& prefix,
-                        const std::optional<std::string>& lower_bound) {
+coro<std::vector<object>> directory::instance::list_objects(
+    const std::string& bucket, const std::optional<std::string>& prefix,
+    const std::optional<std::string>& lower_bound) {
     co_await bucket_exists(bucket);
 
-    auto dir = co_await m_db.get();
     std::vector<object> rv;
 
-    auto row = co_await dir->execv(
+    auto row = co_await m_handle->execv(
         "SELECT id, name, size, last_modified, "
         "etag, mime FROM uh_list_objects($1, $2, $3)",
         bucket, prefix.value_or(""), lower_bound.value_or(""));
-    for (; row; row = co_await dir->next()) {
+    for (; row; row = co_await m_handle->next()) {
 
         rv.emplace_back(object{.name = *row->string(1),
                                .last_modified = *row->date(3),
@@ -196,17 +199,24 @@ directory::list_objects(const std::string& bucket,
     co_return rv;
 }
 
-coro<std::size_t> directory::data_size() {
+coro<std::size_t> directory::instance::data_size() {
     std::size_t rv = 0;
-    auto dir = co_await m_db.get();
 
     auto buckets = co_await list_buckets();
     for (const auto& bucket : buckets) {
-        auto row = co_await dir->execv("SELECT uh_bucket_size($1)", bucket);
+        auto row =
+            co_await m_handle->execv("SELECT uh_bucket_size($1)", bucket);
         rv += row->number(0).value_or(0);
     }
 
     co_return rv;
+}
+
+directory::instance::instance(pool<db::connection>::handle&& handle)
+    : m_handle(std::move(handle)) {}
+
+coro<directory::instance> directory::get() {
+    co_return instance(co_await m_db.get());
 }
 
 void directory::validate_bucket_name(const std::string& bucket_name) {
@@ -221,6 +231,39 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
         throw command_exception(status::bad_request, "InvalidBucketName",
                                 "bucket name has invalid characters");
     }
+}
+
+coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
+                                  global_data_view& gdv,
+                                  const std::string& bucket, object& obj) {
+    auto lock = dir.lock_object(bucket, obj.name);
+
+    std::optional<object> old;
+    try {
+        old = co_await dir.get_object(bucket, obj.name);
+    } catch (const command_exception&) {
+    }
+
+    std::optional<std::exception_ptr> error;
+    try {
+        co_await dir.put_object(bucket, obj);
+    } catch (...) {
+        error = std::current_exception();
+    }
+
+    lock.release();
+
+    if (error) {
+        co_await gdv.unlink(ctx, *obj.addr);
+        throw *error;
+    }
+
+    if (old && old->addr) {
+        co_await gdv.unlink(ctx, *old->addr);
+        co_return old->size;
+    }
+
+    co_return 0ull;
 }
 
 } // namespace uh::cluster

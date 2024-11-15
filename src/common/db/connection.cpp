@@ -27,6 +27,23 @@ void check_result(const PGresult* result) {
     }
 }
 
+void log_raised_message(void* arg, const char* message) {
+    connection* c = reinterpret_cast<connection*>(arg);
+    std::string msg = message;
+
+    if (msg.find("EXCEPTION") != std::string::npos) {
+        LOG_ERROR() << c->id() << msg;
+    } else if (msg.find("WARNING") != std::string::npos) {
+        LOG_WARN() << c->id() << msg;
+    } else if (msg.find("NOTICE") != std::string::npos) {
+        LOG_WARN() << c->id() << msg;
+    } else if (msg.find("INFO") != std::string::npos) {
+        LOG_INFO() << c->id() << msg;
+    } else if (msg.find("DEBUG") != std::string::npos) {
+        LOG_DEBUG() << c->id() << msg;
+    }
+}
+
 } // namespace
 
 connection::connection(boost::asio::io_context& ioc, const connstr& cs)
@@ -40,6 +57,8 @@ connection::connection(boost::asio::io_context& ioc, const connstr& cs)
     if (m_fd.native_handle() == -1) {
         throw std::runtime_error("illegal file descriptor for connection");
     }
+
+    PQsetNoticeProcessor(m_ptr.get(), log_raised_message, this);
 }
 
 coro<std::optional<row>> connection::exec(const std::string& query) {
@@ -47,6 +66,7 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
     co_await cancel();
 
+    LOG_DEBUG() << id() << ": exec(" << query << ")";
     if (!PQsendQuery(m_ptr.get(), query.c_str())) {
         throw_error_message();
     }
@@ -56,6 +76,8 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
 std::optional<row> connection::raw_exec(const std::string& query) {
     LOG_CORO_CONTEXT();
+    LOG_DEBUG() << id() << ": raw_exec(" << query << ")";
+
     m_result =
         std::shared_ptr<PGresult>(PQexec(m_ptr.get(), query.c_str()), PQclear);
     m_row = 0;
@@ -107,6 +129,13 @@ coro<void> connection::cancel() {
         result = PQgetResult(m_ptr.get());
         PQclear(result);
     } while (result != nullptr);
+}
+
+std::string connection::id() const {
+    std::stringstream s;
+    s << "[pg:" << std::hex << std::setfill('0') << std::setw(16)
+      << reinterpret_cast<std::size_t>(this) << "] ";
+    return s.str();
 }
 
 coro<void> connection::wait() {

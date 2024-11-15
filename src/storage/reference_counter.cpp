@@ -96,8 +96,9 @@ bool reference_counter::increment(const std::size_t offset,
     std::size_t start_page = offset / m_page_size;
     std::size_t end_page = (offset + size - 1) / m_page_size;
 
-    LOG_DEBUG() << "incrementing refcount at offset=" << offset
-                << ", size=" << size;
+    LOG_DEBUG() << "incrementing refcount at offset=" << std::hex << offset
+                << std::dec << ", size=" << size << ", pages=" << start_page
+                << "-" << end_page;
     for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
         std::string key(std::to_string(page_id));
         std::string_view value;
@@ -134,8 +135,9 @@ void reference_counter::decrement(
     std::size_t start_page = offset / this->m_page_size;
     std::size_t end_page = (offset + size - 1) / this->m_page_size;
 
-    LOG_DEBUG() << "decrementing refcount at offset=" << offset
-                << ", size=" << size;
+    LOG_DEBUG() << "decrementing refcount at offset=" << std::hex << offset
+                << std::dec << ", size=" << size << ", pages: " << start_page
+                << "-" << end_page;
     for (std::size_t page_id = start_page; page_id <= end_page; ++page_id) {
         std::string key(std::to_string(page_id));
         std::string_view value;
