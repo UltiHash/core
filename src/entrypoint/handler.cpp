@@ -26,7 +26,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         try {
             req = co_await m_factory.create(s);
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
-                        << *req;
+                       << *req;
 
             resp = co_await handle_request(s, *req, id);
             metric<success>::increase(1);
@@ -43,7 +43,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
             resp = make_response(command_exception(
-                status::bad_request, "BadRequest", "bad request"));
+                status::internal_server_error, "InternalServerError",
+                "internal server error"));
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
 

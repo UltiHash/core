@@ -80,12 +80,19 @@ public:
                     throw std::invalid_argument("Invalid message type!");
                 }
             } catch (const boost::system::system_error& e) {
+                LOG_ERROR()
+                    << "boost::system::system_error should be converted to "
+                       "error_exception with error::internal_network_error";
                 if (e.code() == boost::asio::error::eof) {
                     LOG_INFO() << remote.str() << " disconnected";
                     break;
                 }
                 err = error(error::unknown, e.what());
             } catch (const error_exception& e) {
+                if (*e.error() == error::internal_network_error) {
+                    LOG_INFO() << remote.str() << " disconnected";
+                    break;
+                }
                 err = e.error();
             } catch (const std::exception& e) {
                 err = error(error::unknown, e.what());
