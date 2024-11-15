@@ -1,3 +1,6 @@
+## [UNRELEASED]
+- Request downstream error to be treated as an internal error to allow the client to retry
+
 ## [1.1.0] 2024-11-11
 - Re-connect when losing connection to etcd
 - Support authentication against etcd
