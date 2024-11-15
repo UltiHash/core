@@ -65,6 +65,8 @@ coro<response> multipart::handle(request& req) {
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         resp.addr.data_size(), std::move(md5));
 
+    lock.release();
+
     if (existing_part) {
         co_await m_gdv.unlink(req.context(), existing_part->addr);
     }
