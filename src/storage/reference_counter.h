@@ -23,24 +23,14 @@ public:
                       const std::function<std::size_t(std::size_t offset,
                                                       std::size_t size)>& cb);
     /***
-     * Decrements the page reference counter to data regions specified in addr
-     * in a single transaction. In case addr points to an untracked page, the
-     * transaction is rolled back and a std::runtime exception is thrown.
-     * This call can safely be exported to be used by upstream services.
-     * @param addr
+     * Executes operations provided in the cmd_queue in a single transaction.
+     * In case an enqueued decrement operation attempts to decrement an
+     * untracked page, the transaction is rolled back and a std::runtime
+     * exception is thrown. This call is only intended to be used by the
+     * data store and should not be exported to be used by upstream services.
      * @return Disk space reclaimed in the context of this call
      */
-    std::size_t decrement(const address& addr);
-
-    /***
-     * Increments the page reference counter for the region specified by offset
-     * and size in a single transaction. This call is only intended to be used
-     * by the data store and may not be exposed to upstream services, as it
-     * initializes page counters if none were available previously.
-     * @param offset
-     * @param size
-     */
-    void increment(std::size_t offset, std::size_t size);
+    void execute(std::deque<refcount_cmd>& cmd_queue);
 
     /***
      * Increments the page reference counter for the regions specified by addr
@@ -54,14 +44,14 @@ public:
     address increment(const address& addr);
 
     /***
-     * Executes all enqueued operations in a single transaction.
-     * In case an enqueued decrement operation attempts to decrement an
-     * untracked page, the transaction is rolled back and a std::runtime
-     * exception is thrown. This call is only intended to be used by the
-     * data store and should not be exported to be used by upstream services.
+     * Decrements the page reference counter to data regions specified in addr
+     * in a single transaction. In case addr points to an untracked page, the
+     * transaction is rolled back and a std::runtime exception is thrown.
+     * This call can safely be exported to be used by upstream services.
+     * @param addr
      * @return Disk space reclaimed in the context of this call
      */
-    std::size_t execute(std::deque<refcount_cmd>& cmd_queue);
+    std::size_t decrement(const address& addr);
 
 private:
     lmdb::env m_env;
@@ -69,14 +59,13 @@ private:
     std::function<std::size_t(std::size_t offset, std::size_t size)> m_cb;
     ;
 
-    void increment(const std::size_t offset, const std::size_t size,
+    bool increment(const std::size_t offset, const std::size_t size,
+                   bool upstream, lmdb::txn& txn, lmdb::dbi& dbi);
+    void decrement(const std::size_t offset, const std::size_t size,
+                   std::optional<std::reference_wrapper<
+                       std::vector<std::pair<std::size_t, std::size_t>>>>
+                       marked_for_deletion,
                    lmdb::txn& txn, lmdb::dbi& dbi);
-    void decrement(
-        const std::size_t offset, const std::size_t size,
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
-        lmdb::txn& txn, lmdb::dbi& dbi);
-    size_t call_cb(
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion);
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_REFERENCE_COUNTER_H
