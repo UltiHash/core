@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:20240711 AS build
+FROM ghcr.io/ultihash/build-base:latest AS build
 
 COPY . /core
 WORKDIR /core
