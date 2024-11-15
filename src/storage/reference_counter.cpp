@@ -104,10 +104,13 @@ bool reference_counter::increment(const std::size_t offset,
         } else {
             encountered_untracked_page = true;
         }
-        incremented_kvs.emplace(std::move(key), std::to_string(current_value));
+        incremented_kvs.emplace(std::move(key),
+                                std::to_string(++current_value));
     }
 
     if (upstream && encountered_untracked_page) {
+        LOG_DEBUG() << "encountered untracked page(s) within offset range ("
+                    << std::hex << offset << "," << offset + size << "]";
         return true;
     } else {
         for (auto& kv : incremented_kvs) {
