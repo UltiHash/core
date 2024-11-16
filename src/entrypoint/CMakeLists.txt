@@ -1,5 +1,5 @@
 add_library(uh_entrypoint command_factory.cpp formats.cpp handler.cpp utils.cpp directory.cpp multipart_state.cpp service.cpp limits.cpp)
-target_link_libraries(uh_entrypoint PRIVATE uh_telemetry uh_commands uh_registry uh_http uh_service_interfaces uh_iam uh_types uh_utils uh_db uh_global_data uh_policy uh_network uh_deduplicator PUBLIC Boost::url)
+target_link_libraries(uh_entrypoint PUBLIC uh_telemetry uh_commands uh_registry uh_http uh_service_interfaces uh_iam uh_types uh_utils uh_db uh_global_data uh_policy uh_network uh_deduplicator Boost::url)
 add_subdirectory(commands)
 add_subdirectory(http)
 add_subdirectory(user)

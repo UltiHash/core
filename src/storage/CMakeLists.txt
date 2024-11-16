@@ -1,3 +1,3 @@
 add_library(uh_storage reference_counter.cpp data_store.cpp)
-target_link_libraries(uh_storage uh_telemetry uh_registry uh_types uh_utils uh_network lmdbxx lmdb)
+target_link_libraries(uh_storage uh_telemetry uh_registry uh_types uh_utils uh_network lmdbxx lmdb uh_storage_interfaces)
 add_subdirectory(interfaces)

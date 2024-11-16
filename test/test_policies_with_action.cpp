@@ -1,9 +1,9 @@
 #define BOOST_TEST_MODULE "policy with action"
 
+#include "entrypoint.h"
 #include "entrypoint/policy/parser.h"
 #include <boost/test/unit_test.hpp>
 #include <nlohmann/json.hpp>
-#include <test/entrypoint.h>
 
 // ------------- Tests Suites Follow --------------
 

@@ -23,7 +23,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-fPIC)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS log url unit_test_framework REQUIRED)
@@ -75,15 +75,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
-
-set(${PROJECT_NAME}_LINK_LIBRARIES 
-    Boost::url
-    Boost::log
-    Boost::filesystem
-OpenSSL::Crypto etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} PostgreSQL::PostgreSQL lmdb nlohmann_json)
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} )
-
 add_compile_options(-Wall -Werror)
 
 #
@@ -96,19 +87,11 @@ add_compile_options(-Wno-mismatched-new-delete)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
-file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-
-add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
-
-add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
-
 add_subdirectory(scripts)
+
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR})
+include_directories(${Boost_INCLUDE_DIRS})
 
 add_subdirectory(src bin)
 
@@ -118,12 +101,12 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
-# if(BUILD_EXPERIMENTS)
-#     message(STATUS "Building experiments")
-#     add_subdirectory(experiments)
-# endif()
-# if(BUILD_TOOLS)
-#     message(STATUS "Building tools")
-#     add_subdirectory(tools)
-# endif()
-#
+if(BUILD_EXPERIMENTS)
+    message(STATUS "Building experiments")
+    add_subdirectory(experiments)
+endif()
+if(BUILD_TOOLS)
+    message(STATUS "Building tools")
+    add_subdirectory(tools)
+endif()
+
