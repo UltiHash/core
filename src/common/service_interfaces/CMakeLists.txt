@@ -1,0 +1,2 @@
+add_library(uh_service_interfaces service_factory.cpp)
+target_link_libraries(uh_service_interfaces uh_utils uh_config uh_types uh_coroutines)

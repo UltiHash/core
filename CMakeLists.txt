@@ -26,13 +26,24 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
+find_package(Boost 1.80 COMPONENTS log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Git REQUIRED)
 find_package(PostgreSQL REQUIRED)
 
 find_path(LMDB_INCLUDE_DIR NAMES lmdb.h)
 find_library(LMDB_LIBRARY NAMES lmdb)
+
+if (NOT LMDB_INCLUDE_DIR OR NOT LMDB_LIBRARY)
+    message(FATAL_ERROR "LMDB not found. Ensure lmdb is installed and accessible.")
+endif ()
+
+# Create an Interface Library for LMDB
+add_library(lmdb INTERFACE)
+
+# Set include directories and libraries for the interface library
+target_include_directories(lmdb INTERFACE ${LMDB_INCLUDE_DIR})
+target_link_libraries(lmdb INTERFACE ${LMDB_LIBRARY})
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
@@ -66,8 +77,12 @@ endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES} ${LMDB_LIBRARY} nlohmann_json)
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_INCLUDE_DIRS} ${LMDB_INCLUDE_DIR})
+set(${PROJECT_NAME}_LINK_LIBRARIES 
+    Boost::url
+    Boost::log
+    Boost::filesystem
+OpenSSL::Crypto etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} PostgreSQL::PostgreSQL lmdb nlohmann_json)
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} )
 
 add_compile_options(-Wall -Werror)
 
@@ -95,18 +110,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIR
 
 add_subdirectory(scripts)
 
+add_subdirectory(src bin)
+
 # Unit tests
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
     add_subdirectory(test)
 endif()
-if(BUILD_EXPERIMENTS)
-    message(STATUS "Building experiments")
-    add_subdirectory(experiments)
-endif()
-if(BUILD_TOOLS)
-    message(STATUS "Building tools")
-    add_subdirectory(tools)
-endif()
-
+# if(BUILD_EXPERIMENTS)
+#     message(STATUS "Building experiments")
+#     add_subdirectory(experiments)
+# endif()
+# if(BUILD_TOOLS)
+#     message(STATUS "Building tools")
+#     add_subdirectory(tools)
+# endif()
+#

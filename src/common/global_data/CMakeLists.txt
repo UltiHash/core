@@ -1,0 +1,2 @@
+add_library(uh_global_data global_data_view.cpp)
+target_link_libraries(uh_global_data uh_utils uh_ec_groups uh_types)

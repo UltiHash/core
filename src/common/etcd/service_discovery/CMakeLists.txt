@@ -1,0 +1,2 @@
+add_library(uh_service_discovery INTERFACE)
+target_link_libraries(uh_service_discovery INTERFACE uh_service_interfaces)
