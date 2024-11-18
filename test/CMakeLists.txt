@@ -3,8 +3,10 @@ configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 function(uh_add_test name)
     add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
     target_compile_options(${PROJECT_NAME}_${name} PRIVATE -fno-inline)
-  target_link_libraries(${PROJECT_NAME}_${name} uh_test Boost::unit_test_framework ${ARGN})
-    target_include_directories(${PROJECT_NAME}_${name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(${PROJECT_NAME}_${name} uh_test
+                          Boost::unit_test_framework ${ARGN})
+    target_include_directories(${PROJECT_NAME}_${name}
+                               PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     add_test(NAME ${PROJECT_NAME}_${name} COMMAND ${PROJECT_NAME}_${name})
 endfunction()
 
@@ -37,7 +39,10 @@ add_library(uh_mock_entrypoint entrypoint.cpp)
 target_link_libraries(uh_mock_entrypoint uh_commands uh_policy)
 
 uh_add_test(test_policies uh_utils uh_mock_entrypoint nlohmann_json)
-uh_add_test(test_policies_with_action uh_policy uh_mock_entrypoint nlohmann_json)
-uh_add_test(test_policies_with_condition uh_policy uh_mock_entrypoint nlohmann_json)
-uh_add_test(test_policies_with_examples uh_policy uh_mock_entrypoint nlohmann_json)
+uh_add_test(test_policies_with_action uh_policy uh_mock_entrypoint
+            nlohmann_json)
+uh_add_test(test_policies_with_condition uh_policy uh_mock_entrypoint
+            nlohmann_json)
+uh_add_test(test_policies_with_examples uh_policy uh_mock_entrypoint
+            nlohmann_json)
 # uh_add_test(test_variables uh_mock_entrypoint)

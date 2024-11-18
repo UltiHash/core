@@ -1,2 +1,6 @@
-add_library(uh_dedupe_set fragment_set_element.cpp fragment_set_log.cpp fragment_set.cpp)
-target_link_libraries(uh_dedupe_set PRIVATE uh_utils uh_deduplicator PUBLIC uh_global_data uh_caches)
+add_library(uh_dedupe_set fragment_set_element.cpp fragment_set_log.cpp
+                          fragment_set.cpp)
+target_link_libraries(
+    uh_dedupe_set
+    PRIVATE uh_utils uh_deduplicator
+    PUBLIC uh_global_data uh_caches)
