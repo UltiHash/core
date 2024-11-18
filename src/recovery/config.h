@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <cstddef>
+
 namespace uh::cluster {
 
 struct recovery_config {

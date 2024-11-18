@@ -1,7 +1,8 @@
 #ifndef ENTRYPOINT_MULTIPART_STATE_H
 #define ENTRYPOINT_MULTIPART_STATE_H
 
-#include "common/db/db.h"
+#include "common/db/config.h"
+#include "common/db/connection.h"
 #include "common/types/common_types.h"
 #include "common/utils/pool.h"
 

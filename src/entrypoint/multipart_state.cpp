@@ -1,5 +1,6 @@
 #include "multipart_state.h"
 
+#include "common/db/db.h"
 #include "common/debug/debug.h"
 #include "common/telemetry/log.h"
 #include "entrypoint/http/command_exception.h"

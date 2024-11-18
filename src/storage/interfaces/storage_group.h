@@ -4,7 +4,6 @@
 
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
-#include "common/ec/reedsolomon_c.h"
 #include "common/etcd/ec_groups/status_watcher.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"

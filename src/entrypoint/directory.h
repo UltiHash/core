@@ -3,8 +3,8 @@
 
 #include "common/db/db.h"
 #include "common/global_data/global_data_view.h"
-#include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
+#include "common/utils/pool.h"
 #include "common/utils/scope_guard.h"
 
 #include <functional>

@@ -1,7 +1,6 @@
 #ifndef CORE_CLIENT_H
 #define CORE_CLIENT_H
 
-#include "common/utils/common.h"
 #include "common/utils/pool.h"
 #include "messenger.h"
 #include "tools.h"

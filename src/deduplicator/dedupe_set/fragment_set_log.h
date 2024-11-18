@@ -2,7 +2,6 @@
 #define UH_CLUSTER_FRAGMENT_SET_LOG_H
 
 #include "common/caches/plain_cache.h"
-#include "common/types/common_types.h"
 #include "deduplicator/config.h"
 #include "fragment_set_element.h"
 

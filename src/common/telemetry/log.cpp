@@ -2,6 +2,7 @@
 
 #include <config.h>
 
+#include "common/telemetry/otel_log_sink.h"
 #include <boost/core/null_deleter.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/make_shared.hpp>

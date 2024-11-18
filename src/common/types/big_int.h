@@ -5,6 +5,7 @@
 #include <functional>
 #include <iomanip>
 #include <iosfwd>
+#include <limits>
 #include <string>
 
 #include "zpp_bits.h"

@@ -2,14 +2,14 @@
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
 #include "common/debug/debug.h"
-#include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
-#include "common/utils/pointer_traits.h"
+// #include "common/telemetry/metrics.h"
+// #include "common/utils/pointer_traits.h"
 
 #include "common/coroutines/context.h"
 #include "common/utils/protocol_handler.h"
-#include "config.h"
-#include "data_store.h"
+// #include "config.h"
+// #include "data_store.h"
 #include "storage/interfaces/local_storage.h"
 #include <utility>
 

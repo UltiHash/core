@@ -6,6 +6,7 @@
 #include "fragment_set_element.h"
 
 #include <set>
+#include <shared_mutex>
 #include <utility>
 
 namespace uh::cluster {

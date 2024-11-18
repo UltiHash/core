@@ -12,7 +12,6 @@
 
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
 
-#include <condition_variable>
 #include <string>
 
 namespace uh::cluster {

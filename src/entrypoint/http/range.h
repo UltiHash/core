@@ -4,7 +4,6 @@
 #include <common/types/address.h>
 
 #include <list>
-#include <string>
 
 namespace uh::cluster::ep::http {
 

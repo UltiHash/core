@@ -2,6 +2,7 @@
 
 #include "common/telemetry/metrics.h"
 #include "common/utils/scope_guard.h"
+#include "handler.h"
 
 namespace uh::cluster::ep {
 

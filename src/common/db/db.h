@@ -1,7 +1,6 @@
 #ifndef CORE_COMMON_DB_DB_H
 #define CORE_COMMON_DB_DB_H
 
-#include "common/utils/pool.h"
 #include "config.h"
 #include "connection.h"
 

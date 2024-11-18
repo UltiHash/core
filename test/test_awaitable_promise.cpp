@@ -3,8 +3,6 @@
 #define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
 
 #include "common/coroutines/promise.h"
-#include "common/network/client.h"
-#include "common/network/server.h"
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------

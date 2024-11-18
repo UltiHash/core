@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "data_store tests"
 
-#include "common/types/common_types.h"
+#include "common/utils/common.h"
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "storage/data_store.h"

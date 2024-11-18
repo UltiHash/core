@@ -1,7 +1,6 @@
 #include "limits.h"
 
 #include "common/telemetry/log.h"
-#include "common/utils/error.h"
 
 #include <entrypoint/http/command_exception.h>
 

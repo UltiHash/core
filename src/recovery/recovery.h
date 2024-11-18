@@ -1,7 +1,6 @@
 #ifndef CORE_RECOVERY_H
 #define CORE_RECOVERY_H
 
-#include "common/etcd/ec_groups/ec_get_handler.h"
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/utils/io_context_runner.h"
