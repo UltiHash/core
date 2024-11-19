@@ -1,7 +1,6 @@
 #ifndef COMMON_TEST_CHECKS_H
 #define COMMON_TEST_CHECKS_H
 
-#include <boost/test/unit_test.hpp>
 #include <chrono>
 
 /**

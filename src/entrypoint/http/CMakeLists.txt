@@ -17,7 +17,7 @@ add_library(
 target_link_libraries(
     uh_http
     PRIVATE uh_telemetry uh_entrypoint
-    PUBLIC uh_user uh_types uh_utils uh_crypto uh_coroutines Boost::url
-           # boost::asio
-)
-# target_precompile_headers(uh_http PUBLIC <boost/asio.hpp> <boost/url.hpp>)
+    PUBLIC uh_user uh_types uh_utils uh_crypto uh_coroutines Boost::url)
+target_precompile_headers(uh_http PUBLIC <boost/beast.hpp>
+                          <boost/property_tree/ptree.hpp> <boost/url.hpp>)
+

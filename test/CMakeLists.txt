@@ -1,17 +1,26 @@
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 function(uh_add_test name)
-    add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
+    set(target_name "${PROJECT_NAME}_${name}")
+
+    add_executable(${target_name} ${name}.cpp)
     target_compile_options(
-        ${PROJECT_NAME}_${name}
-        PRIVATE -fno-inline -DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
-    # To compile asio with BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS option
-    target_precompile_headers(${PROJECT_NAME}_${name} PRIVATE <boost/asio.hpp>)
-    target_link_libraries(${PROJECT_NAME}_${name} uh_test uh_debug
+        ${target_name} PRIVATE -fno-inline
+                               -DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+
+    if(NOT DEFINED FIRST_TEST_TARGET)
+        target_precompile_headers(${target_name} PRIVATE <boost/asio.hpp>)
+        set_property(GLOBAL PROPERTY FIRST_TEST_TARGET ${target_name})
+    else()
+        get_property(first_target GLOBAL PROPERTY FIRST_TEST_TARGET)
+        target_precompile_headers(${target_name} REUSE_FROM ${first_target})
+    endif()
+
+    target_link_libraries(${target_name} uh_test uh_debug
                           Boost::unit_test_framework ${ARGN})
-    target_include_directories(${PROJECT_NAME}_${name}
+    target_include_directories(${target_name}
                                PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-    add_test(NAME ${PROJECT_NAME}_${name} COMMAND ${PROJECT_NAME}_${name})
+    add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
 uh_add_test(test_address uh_types)

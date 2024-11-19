@@ -4,10 +4,7 @@
 #include "common/telemetry/log.h"
 #include "common/utils/protocol_handler.h"
 #include <algorithm>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/use_awaitable.hpp>
+#include <boost/asio.hpp>
 #include <boost/config.hpp>
 #include <cstdlib>
 #include <memory>

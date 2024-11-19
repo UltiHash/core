@@ -15,6 +15,3 @@ target_link_libraries(
               uh_entrypoint
               uh_deduplicator
               uh_storage)
-
-add_executable(uh-cluster main.cpp)
-target_link_libraries(uh-cluster uh_libraries)

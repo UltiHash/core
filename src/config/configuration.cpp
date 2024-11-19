@@ -1,6 +1,5 @@
 #include "configuration.h"
 #include "config.h"
-#include <CLI/CLI.hpp>
 
 namespace uh::cluster {
 

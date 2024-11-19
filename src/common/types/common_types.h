@@ -4,7 +4,7 @@
 #include "address.h"
 #include "scoped_buffer.h"
 
-#include <boost/asio/awaitable.hpp>
+#include <boost/asio.hpp>
 #include <chrono>
 
 namespace uh::cluster {

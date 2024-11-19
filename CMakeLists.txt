@@ -11,6 +11,16 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(TIME_TRACE "Time trace" OFF)
+
+if(TIME_TRACE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-ftime-trace)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # gcc: use plugin https://github.com/royjacobson/externis
+        add_compile_options(-fplugin=externis)
+    endif()
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
@@ -81,7 +91,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-add_compile_options(-Wall -Werror)
+add_compile_options(-Wall -Winvalid-pch -Werror)
 
 #
 # GCC 13 and before issue warnings when using coroutines. Re-try with a newer
@@ -101,6 +111,9 @@ include_directories(${CMAKE_BINARY_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_subdirectory(src bin)
+
+add_executable(uh-cluster src/main.cpp)
+target_link_libraries(uh-cluster uh_libraries)
 
 # Unit tests
 if(BUILD_TESTS)

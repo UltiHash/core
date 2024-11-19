@@ -9,3 +9,4 @@ target_link_libraries(
            uh_entrypoint
            uh_deduplicator
            CLI11::CLI11)
+target_precompile_headers(uh_config PUBLIC <CLI/CLI.hpp>)

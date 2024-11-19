@@ -2,7 +2,7 @@
 
 #include "common/etcd/namespace.h"
 #include "common/etcd/registry/service_registry.h"
-#include <boost/asio/ip/host_name.hpp>
+#include <boost/asio.hpp>
 #include <boost/test/unit_test.hpp>
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
