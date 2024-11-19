@@ -90,7 +90,7 @@ BEGIN
         RAISE EXCEPTION 'Bucket with name % does not exist.', bucket;
     END IF;
 
-    EXECUTE 
+    EXECUTE
         'INSERT INTO __objects (bucket_id, name, address, size, etag, mime)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (bucket_id, name) DO UPDATE
@@ -110,9 +110,9 @@ CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
     RETURNS TABLE (address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN QUERY EXECUTE 
-        'SELECT address, size, last_modified, etag, mime 
-         FROM __objects 
+    RETURN QUERY EXECUTE
+        'SELECT address, size, last_modified, etag, mime
+         FROM __objects
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
     USING bucket, object;
 END;
@@ -157,8 +157,8 @@ LANGUAGE plpgsql AS $$
 DECLARE
     rows_deleted INT;
 BEGIN
-    EXECUTE 
-        'DELETE FROM __objects 
+    EXECUTE
+        'DELETE FROM __objects
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2'
     USING bucket, object;
 
@@ -190,7 +190,7 @@ BEGIN
 
     CALL uh_check_bucket(bucket_dst);
 
-    EXECUTE 
+    EXECUTE
         'INSERT INTO __objects (bucket_id, name, address, size, last_modified, etag, mime)
          VALUES ((SELECT id FROM __buckets WHERE name = $1), $2, $3, $4, $5, $6, $7)
          ON CONFLICT(bucket_id, name) DO UPDATE
@@ -258,7 +258,7 @@ BEGIN
         JOIN __buckets b ON o.bucket_id = b.id
         WHERE b.name = bucket
           AND o.name LIKE prefix || '%'
-          AND (lower_bound = '' OR 
+          AND (lower_bound = '' OR
               (o.name > lower_bound AND NOT starts_with(o.name, lower_bound)))
         ORDER BY o.name;
 END;
