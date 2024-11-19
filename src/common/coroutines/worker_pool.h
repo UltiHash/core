@@ -3,7 +3,6 @@
 
 #include "common/coroutines/promise.h"
 #include <exception>
-#include <memory>
 
 namespace uh::cluster {
 

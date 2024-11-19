@@ -2,8 +2,12 @@ configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 function(uh_add_test name)
     add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
-    target_compile_options(${PROJECT_NAME}_${name} PRIVATE -fno-inline)
-    target_link_libraries(${PROJECT_NAME}_${name} uh_test
+    target_compile_options(
+        ${PROJECT_NAME}_${name}
+        PRIVATE -fno-inline -DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+    # To compile asio with BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS option
+    target_precompile_headers(${PROJECT_NAME}_${name} PRIVATE <boost/asio.hpp>)
+    target_link_libraries(${PROJECT_NAME}_${name} uh_test uh_debug
                           Boost::unit_test_framework ${ARGN})
     target_include_directories(${PROJECT_NAME}_${name}
                                PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

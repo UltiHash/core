@@ -2,7 +2,6 @@
 #ifndef UH_CLUSTER_PLAIN_CACHE_H
 #define UH_CLUSTER_PLAIN_CACHE_H
 
-#include "common/types/scoped_buffer.h"
 #include <functional>
 #include <zpp_bits.h>
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/types/common_types.h" // to make coro type visible for users
 #include <boost/asio.hpp>
 #include <list>
 #include <thread>

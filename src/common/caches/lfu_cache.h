@@ -1,10 +1,8 @@
 #ifndef UH_CLUSTER_LFU_CACHE_H
 #define UH_CLUSTER_LFU_CACHE_H
 
-#include <forward_list>
 #include <functional>
 #include <list>
-#include <map>
 #include <optional>
 
 namespace uh::cluster {

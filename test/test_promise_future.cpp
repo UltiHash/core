@@ -1,5 +1,9 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
+#ifndef BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+#define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
+#endif
+
 #include "common/coroutines/promise.h"
 #include "common/test/coroutine.h"
 #include <boost/test/unit_test.hpp>

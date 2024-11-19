@@ -2,8 +2,7 @@
 #define UH_CLUSTER_LRU_CACHE_H
 
 #include <list>
-#include <map>
-#include <memory>
+#include <mutex>
 #include <optional>
 #include <unordered_map>
 

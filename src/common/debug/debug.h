@@ -5,7 +5,6 @@
 #include "config.h"
 
 #include <boost/algorithm/string.hpp>
-#include <iomanip>
 #include <ostream>
 #include <source_location>
 

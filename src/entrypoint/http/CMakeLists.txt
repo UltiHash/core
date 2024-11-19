@@ -20,3 +20,4 @@ target_link_libraries(
     PUBLIC uh_user uh_types uh_utils uh_crypto uh_coroutines Boost::url
            # boost::asio
 )
+# target_precompile_headers(uh_http PUBLIC <boost/asio.hpp> <boost/url.hpp>)

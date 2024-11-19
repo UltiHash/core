@@ -1,6 +1,5 @@
 #include "copy_object.h"
 #include "entrypoint/formats.h"
-#include "entrypoint/utils.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/url/url.hpp>

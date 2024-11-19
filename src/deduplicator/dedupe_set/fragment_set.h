@@ -5,6 +5,7 @@
 #include "common/global_data/global_data_view.h"
 #include "fragment_set_element.h"
 
+#include <forward_list>
 #include <set>
 #include <shared_mutex>
 #include <utility>
