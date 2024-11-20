@@ -32,7 +32,11 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_compile_options(-pthread) # made compile options same to use pch
+
+add_compile_options(-fPIC) # made compile options same to use pch
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
+# set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -114,6 +118,7 @@ add_subdirectory(src bin)
 
 add_executable(uh-cluster src/main.cpp)
 target_link_libraries(uh-cluster uh_libraries)
+target_precompile_headers(uh-cluster REUSE_FROM uh_precompile_headers)
 
 # Unit tests
 if(BUILD_TESTS)

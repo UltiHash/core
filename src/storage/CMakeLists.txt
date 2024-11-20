@@ -1,4 +1,4 @@
-add_library(uh_storage reference_counter.cpp data_store.cpp)
+add_library(uh_storage STATIC reference_counter.cpp data_store.cpp)
 target_link_libraries(
     uh_storage
     PRIVATE uh_telemetry
@@ -11,4 +11,6 @@ target_link_libraries(
            uh_utils
            uh_types
            uh_network)
+target_precompile_headers(uh_storage REUSE_FROM uh_precompile_headers)
+
 add_subdirectory(interfaces)

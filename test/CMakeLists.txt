@@ -4,9 +4,9 @@ function(uh_add_test name)
     set(target_name "${PROJECT_NAME}_${name}")
 
     add_executable(${target_name} ${name}.cpp)
-    target_compile_options(
-        ${target_name} PRIVATE -fno-inline
-                               -DBOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+    target_compile_options(${target_name} PRIVATE -fno-inline)
+    target_compile_definitions(
+        ${target_name} PRIVATE BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
 
     if(NOT DEFINED FIRST_TEST_TARGET)
         target_precompile_headers(${target_name} PRIVATE <boost/asio.hpp>)

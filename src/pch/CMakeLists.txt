@@ -1,0 +1,46 @@
+add_library(uh_precompile_headers STATIC pch.cpp)
+target_link_libraries(
+    uh_precompile_headers
+    PRIVATGE
+    magic_enum
+    zpp_bits
+    lmdbxx
+    lmdb
+    CLI11::CLI11
+    reedsolomon
+    opentelemetry_exporter_otlp_grpc_log
+    opentelemetry_exporter_otlp_grpc
+    opentelemetry_exporter_otlp_grpc_metrics
+    opentelemetry_exporter_ostream_metrics
+    etcd-cpp-api
+    Boost::url
+    Boost::filesystem
+    Boost::log)
+target_precompile_headers(
+    uh_precompile_headers
+    PRIVATE
+    <atomic>
+    <chrono>
+    <functional>
+    <iomanip>
+    <map>
+    <ostream>
+    <source_location>
+    <sstream>
+    <string>
+    <thread>
+    <typeinfo>
+    <vector>
+    <CLI/CLI.hpp>
+    <boost/algorithm/string.hpp>
+    <boost/asio.hpp>
+    <boost/beast.hpp>
+    <boost/log/trivial.hpp>
+    <boost/property_tree/ptree.hpp>
+    <boost/url.hpp>
+    <magic_enum/magic_enum.hpp>
+    <opentelemetry/sdk/metrics/meter_provider_factory.h>
+    <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h>
+    <opentelemetry/metrics/provider.h>
+    <opentelemetry/context/context.h>
+    <zpp_bits.h>)

@@ -12,3 +12,4 @@ target_link_libraries(
     uh_iam
     PRIVATE uh_utils uh_http uh_aws uh_policy
     PUBLIC uh_user)
+target_precompile_headers(uh_iam REUSE_FROM uh_precompile_headers)

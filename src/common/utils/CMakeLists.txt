@@ -11,6 +11,7 @@ add_library(
     random.cpp)
 target_link_libraries(
     uh_utils
+    # TODO: Check if these headers are private or public
     uh_telemetry
     uh_service_interfaces
     uh_types
@@ -18,3 +19,4 @@ target_link_libraries(
     Boost::url
     uh_types
     uh_etcd)
+target_precompile_headers(uh_utils REUSE_FROM uh_precompile_headers)

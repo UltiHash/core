@@ -4,3 +4,4 @@ target_link_libraries(
     uh_dedupe_set
     PRIVATE uh_utils uh_deduplicator
     PUBLIC uh_global_data uh_caches)
+target_precompile_headers(uh_dedupe_set REUSE_FROM uh_precompile_headers)

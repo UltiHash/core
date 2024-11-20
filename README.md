@@ -1,6 +1,6 @@
 # core
 
-## Profiling build process
+## Profiling build process of single file
 
 Prerequisites:
 
@@ -10,13 +10,26 @@ Prerequisites:
 Command:
 
 ```bash
-rm -rf Debug && \
-CC=/usr/bin/clang CXX=/usr/bin/clang++ \
-    cmake -G Ninja -S. -BDebug -DCMAKE_BUILD_TYPE=Debug -DTIME_TRACE=ON && \
-ClangBuildAnalyzer --start Debug && \
-time cmake --build Debug && \
-ClangBuildAnalyzer --stop Debug build-profile.bin && \
-ClangBuildAnalyzer --analyze build-profile.bin
+BTYPE=RelWithDebInfo; CLANG_OUTPUT=clang-profile.bin; NINJA_OUTPUT=ninja-profile.json;\
+    rm -rf ${BTYPE} && \
+    CC=/usr/bin/clang CXX=/usr/bin/clang++ \
+        cmake -G Ninja -S. -B${BTYPE} -DCMAKE_BUILD_TYPE=${BTYPE} -DTIME_TRACE=ON && \
+    ClangBuildAnalyzer --start ${BTYPE} && \
+    time cmake --build ${BTYPE} && \
+    ClangBuildAnalyzer --stop ${BTYPE} ${CLANG_OUTPUT} && \
+    ClangBuildAnalyzer --analyze ${CLANG_OUTPUT} \
+    ninjatracing ${BTYPE}/.ninja_log > ${NINJA_OUTPUT}
+```
+
+With GCC:
+
+
+```bash
+BTYPE=RelWithDebInfo; NINJA_OUTPUT=ninja-profile.json;\
+    rm -rf ${BTYPE} && \
+    cmake -G Ninja -S. -B${BTYPE} -DCMAKE_BUILD_TYPE=${BTYPE} && \
+    time cmake --build ${BTYPE} && \
+    ninjatracing ${BTYPE}/.ninja_log > ${NINJA_OUTPUT}
 ```
 
 With `-DTIME_TRACE=ON` option you can get json format time trace, 

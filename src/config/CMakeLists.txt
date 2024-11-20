@@ -1,4 +1,4 @@
-add_library(uh_config configuration.cpp)
+add_library(uh_config STATIC configuration.cpp)
 target_link_libraries(
     uh_config
     PUBLIC uh_telemetry
@@ -9,4 +9,3 @@ target_link_libraries(
            uh_entrypoint
            uh_deduplicator
            CLI11::CLI11)
-target_precompile_headers(uh_config PUBLIC <CLI/CLI.hpp>)

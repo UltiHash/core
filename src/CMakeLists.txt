@@ -1,3 +1,4 @@
+add_subdirectory(pch)
 add_subdirectory(config)
 add_subdirectory(common)
 add_subdirectory(entrypoint)

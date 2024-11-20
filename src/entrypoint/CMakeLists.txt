@@ -6,6 +6,7 @@ add_subdirectory(aws)
 
 add_library(
     uh_entrypoint
+    STATIC
     command_factory.cpp
     formats.cpp
     handler.cpp
@@ -18,7 +19,6 @@ target_link_libraries(
     uh_entrypoint
     PRIVATE uh_telemetry uh_commands uh_iam uh_debug
     PUBLIC Boost::url
-           # Boost::asio
            uh_deduplicator
            uh_registry
            uh_policy
@@ -32,3 +32,4 @@ target_link_libraries(
            uh_service_interfaces
            uh_global_data
            uh_user)
+target_precompile_headers(uh_entrypoint REUSE_FROM uh_precompile_headers)
