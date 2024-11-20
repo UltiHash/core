@@ -2,6 +2,8 @@
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
+#include <boost/asio.hpp>
+
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
@@ -25,8 +27,8 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     }
 }
 
-coro<object> directory::get_object(const std::string& bucket,
-                                   const std::string& object_id) {
+coro<directory::object_lock>
+directory::get_object(const std::string& bucket, const std::string& object_id) {
     auto handle = co_await m_db.get();
     auto row = co_await handle->execb(
         "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
@@ -41,19 +43,34 @@ coro<object> directory::get_object(const std::string& bucket,
         throw std::runtime_error("address data not defined");
     }
 
-    address addr = to_address(*small);
+    address addr = to_address(*addr_data);
 
     auto metadata =
-        co_await handle->execv("SELECT size, last_modified, etag, mime "
+        co_await handle->execv("SELECT size, last_modified, etag, mime, id "
                                "FROM uh_get_object($1, $2)",
                                bucket, object_id);
 
-    co_return object{.name = object_id,
-                     .last_modified = *metadata->date(1),
-                     .size = *metadata->size_type(0),
-                     .addr = std::move(addr),
-                     .etag = metadata->string(2),
-                     .mime = metadata->string(3)};
+    std::size_t id = *metadata->number(4);
+
+    co_await handle->execv("CALL uh_inc_reference($1)", id);
+
+    auto executor = co_await boost::asio::this_coro::executor;
+
+    auto cleanup = [id, this]() -> coro<void> {
+        auto h = co_await m_db.get();
+        co_await h->execv("CALL uh_dec_reference($1)", id);
+    };
+
+    co_return object_lock(
+        object{.name = object_id,
+               .last_modified = *metadata->date(1),
+               .size = *metadata->size_type(0),
+               .addr = std::move(addr),
+               .etag = metadata->string(2),
+               .mime = metadata->string(3)},
+        [id, e = std::move(executor), f = std::move(cleanup)]() {
+            auto d = boost::asio::co_spawn(e, f(), boost::asio::deferred);
+        });
 }
 
 coro<object> directory::head_object(const std::string& bucket,

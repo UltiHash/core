@@ -91,19 +91,23 @@ coro<response> get_object::handle(request& req) {
 
     response res;
 
-    object obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+
+    res.set("ETag", obj->etag);
+    res.set("Content-Type", obj->mime);
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
 
-        auto spec = ep::http::parse_range_header(*range, obj.addr->data_size());
+        auto spec =
+            ep::http::parse_range_header(*range, obj->addr->data_size());
 
         if (spec.ranges.size() != 1) {
             throw command_exception(status::not_implemented, "MultiRange",
                                     "no support for multiple ranges");
         }
 
-        auto addr = apply_range(*obj.addr, spec);
+        auto addr = apply_range(*obj->addr, spec);
         auto rejects = co_await m_storage.link(req.context(), addr);
         if (!rejects.empty()) {
             throw command_exception(status::internal_server_error,
@@ -113,7 +117,7 @@ coro<response> get_object::handle(request& req) {
         // TODO lock.release();
 
         LOG_DEBUG() << "range based access: header=" << *range
-                    << ", obj-addr=" << obj.addr->to_string()
+                    << ", obj-addr=" << obj->addr->to_string()
                     << ", range-addr: " << addr.to_string();
 
         const auto& r = spec.ranges.front();
@@ -124,7 +128,7 @@ coro<response> get_object::handle(request& req) {
             m_storage, std::move(addr), req.context()));
 
     } else {
-        auto rejects = co_await m_storage.link(req.context(), *obj.addr);
+        auto rejects = co_await m_storage.link(req.context(), *obj->addr);
         if (!rejects.empty()) {
             throw command_exception(status::internal_server_error,
                                     "Data Corrupted", "found corrupted data");
@@ -133,11 +137,9 @@ coro<response> get_object::handle(request& req) {
         // TODO lock.release();
 
         res.set_body(std::make_unique<local_read_handle>(
-            m_storage, std::move(*obj.addr), req.context()));
+            m_storage, std::move(*obj->addr), req.context()));
     }
 
-    res.set("ETag", obj.etag);
-    res.set("Content-Type", obj.mime);
     co_return res;
 }
 

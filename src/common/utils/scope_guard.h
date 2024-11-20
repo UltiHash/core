@@ -56,8 +56,8 @@ public:
 
 private:
     bool m_active = true;
-    fini m_f;
     value m_value;
+    fini m_f;
 };
 
 template <typename value, typename fini>

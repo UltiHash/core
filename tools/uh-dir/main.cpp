@@ -105,17 +105,17 @@ uh::cluster::coro<void> object_info(directory& dir, const std::string& bucket,
                                     const std::string& key) {
     auto object = co_await dir.get_object(bucket, key);
 
-    std::cout << "object: " << object.name << "\n"
-              << "last modified: " << imf_fixdate(object.last_modified) << "\n"
-              << "size: " << object.size << "\n"
-              << "mime: " << object.mime.value_or("N/A") << "\n"
-              << "etag: " << object.etag.value_or("N/A") << "\n";
+    std::cout << "object: " << object->name << "\n"
+              << "last modified: " << imf_fixdate(object->last_modified) << "\n"
+              << "size: " << object->size << "\n"
+              << "mime: " << object->mime.value_or("N/A") << "\n"
+              << "etag: " << object->etag.value_or("N/A") << "\n";
 
-    if (object.addr) {
-        std::cout << "\naddress data (size: " << object.addr->size()
-                  << ", datasize: " << object.addr->data_size() << ")\n";
-        for (std::size_t i = 0; i < object.addr->size(); ++i) {
-            auto fragment = object.addr->get(i);
+    if (object->addr) {
+        std::cout << "\naddress data (size: " << object->addr->size()
+                  << ", datasize: " << object->addr->data_size() << ")\n";
+        for (std::size_t i = 0; i < object->addr->size(); ++i) {
+            auto fragment = object->addr->get(i);
             std::cout << "  - " << std::hex << std::setfill('0')
                       << std::setw(16) << fragment.pointer.get_high() << ":"
                       << std::setw(16) << fragment.pointer.get_low() << " w/ "

@@ -19,10 +19,12 @@ public:
         : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
+    using object_lock = value_guard<object, std::function<void()>>;
+
     coro<void> put_object(const std::string& bucket, const object& obj);
 
-    coro<object> get_object(const std::string& bucket,
-                            const std::string& object_id);
+    coro<object_lock> get_object(const std::string& bucket,
+                                 const std::string& object_id);
 
     coro<object> head_object(const std::string& bucket,
                              const std::string& object_id);

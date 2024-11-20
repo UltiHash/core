@@ -85,13 +85,8 @@ coro<response> delete_objects::handle(request& req) {
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
-            try {
-                object obj = co_await m_dir.get_object(req.bucket(), *key);
-                co_await m_dir.delete_object(req.bucket(), *key);
-                co_await m_gdv.unlink(req.context(), obj.addr.value());
-            } catch (command_exception&) {
-            }
 
+            co_await m_dir.delete_object(req.bucket(), *key);
             success.emplace_back(*key);
 
         } catch (const error_exception& e) {
