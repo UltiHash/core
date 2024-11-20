@@ -92,8 +92,6 @@ coro<response> delete_objects::handle(request& req) {
                 object obj = co_await dir.get_object(req.bucket(), *key);
                 co_await dir.delete_object(req.bucket(), *key);
                 co_await m_gdv.unlink(req.context(), obj.addr.value());
-
-                m_limits.free_storage_size(obj.size);
             } catch (command_exception&) {
             }
 

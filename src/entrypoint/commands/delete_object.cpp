@@ -31,8 +31,6 @@ coro<response> delete_object::handle(request& req) {
     }
 
     if (obj && obj->addr) {
-        m_limits.free_storage_size(obj->size);
-
         try {
             co_await m_gdv.unlink(req.context(), *obj->addr);
         } catch (const error_exception& e) {

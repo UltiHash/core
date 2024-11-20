@@ -57,8 +57,6 @@ coro<response> copy_object::handle(request& req) {
                                          req.bucket(), obj);
     }
 
-    m_limits.free_storage_size(freed);
-
     boost::property_tree::ptree pt;
     put(pt, "CopyObjectResult.LastModified", iso8601_date(obj.last_modified));
     put(pt, "CopyObjectResult.ETag", obj.etag);

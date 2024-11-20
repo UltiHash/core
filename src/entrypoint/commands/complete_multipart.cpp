@@ -128,7 +128,6 @@ coro<response> complete_multipart::handle(request& req) {
             lock.release();
 
             if (old && old->addr) {
-                m_limits.free_storage_size(old->size);
                 co_await m_gdv.unlink(req.context(), *old->addr);
             }
         }

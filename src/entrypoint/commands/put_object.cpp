@@ -94,7 +94,6 @@ coro<response> put_object::handle(request& req) {
             auto dir = co_await m_dir.get();
             auto freed = co_await safe_put_object(req.context(), dir, m_gdv,
                                                   req.bucket(), obj);
-            m_limits.free_storage_size(freed);
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
@@ -104,7 +103,6 @@ coro<response> put_object::handle(request& req) {
         res.set_original_size(original_size);
         res.set_effective_size(resp.effective_size);
     } catch (const error_exception& e) {
-        m_limits.free_storage_size(content_length);
         LOG_ERROR() << req.peer() << " failed to get bucket `" << req.bucket()
                     << "`: " << e;
         throw_from_error(e.error());
