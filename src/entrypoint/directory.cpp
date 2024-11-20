@@ -53,11 +53,13 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
     std::size_t id = *metadata->number(4);
 
     co_await handle->execv("CALL uh_inc_reference($1)", id);
+    LOG_DEBUG() << "ref " << id;
 
     auto executor = co_await boost::asio::this_coro::executor;
 
     auto cleanup = [id, this]() -> coro<void> {
         auto h = co_await m_db.get();
+        LOG_DEBUG() << "deref " << id;
         co_await h->execv("CALL uh_dec_reference($1)", id);
     };
 

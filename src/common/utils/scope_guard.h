@@ -37,6 +37,13 @@ public:
         : m_value(std::move(v)),
           m_f(std::move(f)) {}
 
+    value_guard(value_guard&& vg)
+        : m_active(vg.m_active),
+          m_value(std::move(vg.m_value)),
+          m_f(std::move(vg.m_f)) {
+        vg.m_active = false;
+    }
+
     ~value_guard() {
         try {
             release();
