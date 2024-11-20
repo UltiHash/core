@@ -54,6 +54,16 @@ END
 $$;
 
 --
+-- Remove object by id
+--
+CREATE OR REPLACE PROCEDURE uh_delete_object_by_id(target_id BIGINT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    DELETE FROM __objects WHERE id = target_id;
+END
+$$;
+
+--
 -- Increment the reference for an object
 --
 CREATE OR REPLACE PROCEDURE uh_inc_reference(target_id BIGINT)
