@@ -8,7 +8,7 @@ garbage_collector::garbage_collector(boost::asio::io_context& ctx,
                                      directory& dir, global_data_view& gdv)
     : m_dir(dir),
       m_gdv(gdv) {
-    auto def = boost::asio::co_spawn(ctx, collect(), boost::asio::deferred);
+    boost::asio::co_spawn(ctx, collect(), boost::asio::detached);
 }
 
 coro<void> garbage_collector::collect() {

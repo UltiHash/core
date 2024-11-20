@@ -69,7 +69,7 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
                .etag = metadata->string(2),
                .mime = metadata->string(3)},
         [id, e = std::move(executor), f = std::move(cleanup)]() {
-            auto d = boost::asio::co_spawn(e, f(), boost::asio::deferred);
+            boost::asio::co_spawn(e, f(), boost::asio::detached);
         });
 }
 
