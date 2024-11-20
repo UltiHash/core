@@ -11,10 +11,11 @@ namespace {
 
 class local_read_handle : public uh::cluster::ep::http::body {
 public:
-    local_read_handle(global_data_view& storage, address&& addr, context& ctx)
+    local_read_handle(global_data_view& storage, directory::object_lock&& obj,
+                      context& ctx)
         : m_storage(storage),
-          m_addr(std::move(addr)),
-          m_size(m_addr.data_size()),
+          m_obj(std::move(obj)),
+          m_size(m_obj->addr->data_size()),
           m_ctx(ctx) {}
 
     ~local_read_handle() override {
@@ -30,8 +31,9 @@ public:
         std::size_t buffer_size = 0;
 
         address partial_addr;
-        while (m_addr_index < m_addr.size() and buffer_size < buffer.size()) {
-            const auto frag = m_addr.get(m_addr_index);
+        while (m_addr_index < m_obj->addr->size() and
+               buffer_size < buffer.size()) {
+            const auto frag = m_obj->addr->get(m_addr_index);
             if (frag.size + buffer_size > buffer.size()) {
                 break;
             }
@@ -43,10 +45,6 @@ public:
         co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
         m_total += buffer_size;
         m_size -= buffer_size;
-
-        if (m_size == 0) {
-            co_await m_storage.unlink(m_ctx, m_addr);
-        }
 
         co_return buffer_size;
     }
@@ -64,7 +62,7 @@ private:
     }
 
     global_data_view& m_storage;
-    const address m_addr;
+    directory::object_lock m_obj;
     size_t m_addr_index = 0;
 
     std::size_t m_size;
@@ -107,38 +105,16 @@ coro<response> get_object::handle(request& req) {
                                     "no support for multiple ranges");
         }
 
-        auto addr = apply_range(*obj->addr, spec);
-        auto rejects = co_await m_storage.link(req.context(), addr);
-        if (!rejects.empty()) {
-            throw command_exception(status::internal_server_error,
-                                    "Data Corrupted", "found corrupted data");
-        }
-
-        // TODO lock.release();
-
-        LOG_DEBUG() << "range based access: header=" << *range
-                    << ", obj-addr=" << obj->addr->to_string()
-                    << ", range-addr: " << addr.to_string();
+        obj->addr = apply_range(*obj->addr, spec);
+        LOG_DEBUG() << "range based access: header=" << *range;
 
         const auto& r = spec.ranges.front();
         res.set("Content-Range", "bytes " + std::to_string(r.start) + "-" +
                                      std::to_string(r.end) + "/*");
-
-        res.set_body(std::make_unique<local_read_handle>(
-            m_storage, std::move(addr), req.context()));
-
-    } else {
-        auto rejects = co_await m_storage.link(req.context(), *obj->addr);
-        if (!rejects.empty()) {
-            throw command_exception(status::internal_server_error,
-                                    "Data Corrupted", "found corrupted data");
-        }
-
-        // TODO lock.release();
-
-        res.set_body(std::make_unique<local_read_handle>(
-            m_storage, std::move(*obj->addr), req.context()));
     }
+
+    res.set_body(std::make_unique<local_read_handle>(m_storage, std::move(obj),
+                                                     req.context()));
 
     co_return res;
 }
