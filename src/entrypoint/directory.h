@@ -51,6 +51,14 @@ public:
                  const std::optional<std::string>& prefix,
                  const std::optional<std::string>& lower_bound);
 
+    struct to_delete {
+        std::size_t id;
+        address addr;
+    };
+    coro<std::optional<to_delete>> next_deleted();
+
+    coro<void> remove_object(std::size_t id);
+
     /**
      * Return amount of data stored in all buckets.
      */

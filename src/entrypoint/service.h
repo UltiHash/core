@@ -9,6 +9,7 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/garbage_collector.h"
 #include "entrypoint/http/request_factory.h"
 #include "entrypoint/limits.h"
 #include "handler.h"
@@ -48,6 +49,7 @@ private:
     user::db m_users;
     limits m_limits;
     server m_server;
+    garbage_collector m_gc;
 };
 
 } // namespace uh::cluster::ep

@@ -200,6 +200,28 @@ directory::list_objects(const std::string& bucket,
     co_return rv;
 }
 
+coro<std::optional<directory::to_delete>> directory::next_deleted() {
+    auto handle = co_await m_db.get();
+
+    auto row = co_await handle->execb(
+        "SELECT id, address FROM uh_next_deleted LIMIT 1");
+    if (!row) {
+        co_return std::nullopt;
+    }
+
+    to_delete rv;
+    rv.id = *row->number(0);
+    rv.addr = to_address(*row->data(1));
+
+    co_return rv;
+}
+
+coro<void> directory::remove_object(std::size_t id) {
+    auto handle = co_await m_db.get();
+
+    co_await handle->execv("CALL uh_delete_object_by_id($1)", id);
+}
+
 coro<std::size_t> directory::data_size() {
     std::size_t rv = 0;
 
