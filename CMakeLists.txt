@@ -32,11 +32,9 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-pthread) # made compile options same to use pch
-
 add_compile_options(-fPIC) # made compile options same to use pch
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
-# set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -113,6 +111,15 @@ add_subdirectory(scripts)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_BINARY_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
+
+# Force compile options same to use project-wise pch
+add_compile_options(-pthread) # made compile options same to use pch
+add_compile_definitions(BOOST_LOG_NO_LIB)
+add_compile_definitions(BOOST_URL_NO_LIB)
+add_compile_definitions(BOOST_FILESYSTEM_NO_LIB)
+add_compile_definitions(BOOST_THREAD_NO_LIB)
+get_target_property(definitions opentelemetry_api INTERFACE_COMPILE_DEFINITIONS)
+add_compile_definitions(${definitions})
 
 add_subdirectory(src bin)
 
