@@ -36,9 +36,9 @@ coro<object> directory::get_object(const std::string& bucket,
                                 "object not found");
     }
 
-    auto small = row->data(0);
-    if (!small) {
-        throw std::runtime_error("small not defined");
+    auto addr_data = row->data(0);
+    if (!addr_data) {
+        throw std::runtime_error("address data not defined");
     }
 
     address addr = to_address(*small);
