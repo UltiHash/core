@@ -19,61 +19,42 @@ public:
         : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
-    class instance {
-    public:
-        using object_lock = guard<std::function<void()>>;
+    using object_lock = guard<std::function<void()>>;
 
-        instance(instance&& other) = default;
-        instance(const instance&) = delete;
+    coro<void> put_object(const std::string& bucket, const object& obj);
 
-        coro<void> put_object(const std::string& bucket, const object& obj);
+    coro<object> get_object(const std::string& bucket,
+                            const std::string& object_id);
 
-        coro<object> get_object(const std::string& bucket,
-                                const std::string& object_id);
+    coro<object> head_object(const std::string& bucket,
+                             const std::string& object_id);
 
-        coro<object> head_object(const std::string& bucket,
-                                 const std::string& object_id);
+    coro<void> put_bucket(const std::string& bucket);
 
-        object_lock lock_object(const std::string& bucket,
-                                const std::string& object_id);
+    coro<void> bucket_exists(const std::string& bucket);
 
-        object_lock lock_object_shared(const std::string& bucket,
-                                       const std::string& object_id);
+    coro<void> delete_bucket(const std::string& bucket);
 
-        coro<void> put_bucket(const std::string& bucket);
+    coro<void> delete_object(const std::string& bucket,
+                             const std::string& object_id);
 
-        coro<void> bucket_exists(const std::string& bucket);
+    coro<std::vector<std::string>> list_buckets();
 
-        coro<void> delete_bucket(const std::string& bucket);
+    coro<std::optional<std::string>>
+    get_bucket_policy(const std::string& bucket);
 
-        coro<void> delete_object(const std::string& bucket,
-                                 const std::string& object_id);
+    coro<void> set_bucket_policy(const std::string& bucket,
+                                 std::optional<std::string> policy);
 
-        coro<std::vector<std::string>> list_buckets();
+    coro<std::vector<object>>
+    list_objects(const std::string& bucket,
+                 const std::optional<std::string>& prefix,
+                 const std::optional<std::string>& lower_bound);
 
-        coro<std::optional<std::string>>
-        get_bucket_policy(const std::string& bucket);
-
-        coro<void> set_bucket_policy(const std::string& bucket,
-                                     std::optional<std::string> policy);
-
-        coro<std::vector<object>>
-        list_objects(const std::string& bucket,
-                     const std::optional<std::string>& prefix,
-                     const std::optional<std::string>& lower_bound);
-
-        /**
-         * Return amount of data stored in all buckets.
-         */
-        coro<std::size_t> data_size();
-
-    private:
-        friend class directory;
-        instance(pool<db::connection>::handle&& handle);
-        pool<db::connection>::handle m_handle;
-    };
-
-    coro<instance> get();
+    /**
+     * Return amount of data stored in all buckets.
+     */
+    coro<std::size_t> data_size();
 
 private:
     pool<db::connection> m_db;
@@ -92,16 +73,15 @@ private:
  * address data and set it to empty.
  *
  * @param ctx the request context
- * @param dir a directory instance
+ * @param dir a directory
  * @param gdv reference to the global data view
  * @param bucket name of the bucket to work in
  * @param obj object specification to write, including object name
  *
  * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(context& ctx, directory::instance& dir,
-                           global_data_view& gdv, const std::string& bucket,
-                           object& obj);
+coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
+                           const std::string& bucket, object& obj);
 
 } // namespace uh::cluster
 

@@ -73,7 +73,7 @@ std::string multipart_etag(const upload_info& info) {
 complete_multipart::complete_multipart(directory& dir, global_data_view& gdv,
                                        multipart_state& uploads,
                                        limits& uhlimits)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_uploads(uploads),
       m_limits(uhlimits) {}
@@ -95,8 +95,8 @@ coro<response> complete_multipart::handle(request& req) {
     std::string etag;
 
     {
-        auto dir = co_await m_directory.get();
-        auto lock = dir.lock_object(req.bucket(), req.object_key());
+        // TODO lock upload auto lock = m_dir.lock_object(req.bucket(),
+        // req.object_key());
 
         info = co_await m_uploads.details(*req.query("uploadId"));
 
@@ -118,14 +118,14 @@ coro<response> complete_multipart::handle(request& req) {
         if (!info.completed) {
             std::optional<object> old;
             try {
-                old = co_await dir.get_object(req.bucket(), req.object_key());
+                old = co_await m_dir.get_object(req.bucket(), req.object_key());
             } catch (const command_exception&) {
             }
 
-            co_await dir.put_object(req.bucket(), obj);
+            co_await m_dir.put_object(req.bucket(), obj);
             co_await m_uploads.remove_upload(*req.query("uploadId"));
 
-            lock.release();
+            // TODO lock.release();
 
             if (old && old->addr) {
                 co_await m_gdv.unlink(req.context(), *old->addr);

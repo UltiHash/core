@@ -39,8 +39,7 @@ bool list_buckets::can_handle(const request& req) {
 
 coro<response> list_buckets::handle(request& req) {
     metric<entrypoint_list_buckets_req>::increase(1);
-    auto dir = co_await m_directory.get();
-    auto buckets = co_await dir.list_buckets();
+    auto buckets = co_await m_directory.list_buckets();
     co_return get_response(buckets);
 }
 

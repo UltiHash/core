@@ -57,8 +57,7 @@ bool put_object::can_handle(const request& req) {
 }
 
 coro<void> put_object::validate(const request& req) {
-    auto dir = co_await m_dir.get();
-    co_await dir.bucket_exists(req.bucket());
+    co_await m_dir.bucket_exists(req.bucket());
 }
 
 coro<response> put_object::handle(request& req) {
@@ -91,8 +90,7 @@ coro<response> put_object::handle(request& req) {
                                .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         {
-            auto dir = co_await m_dir.get();
-            co_await safe_put_object(req.context(), dir, m_gdv, req.bucket(),
+            co_await safe_put_object(req.context(), m_dir, m_gdv, req.bucket(),
                                      obj);
         }
 

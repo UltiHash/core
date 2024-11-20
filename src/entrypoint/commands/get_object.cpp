@@ -91,9 +91,7 @@ coro<response> get_object::handle(request& req) {
 
     response res;
 
-    auto dir = co_await m_dir.get();
-    auto lock = dir.lock_object_shared(req.bucket(), req.object_key());
-    object obj = co_await dir.get_object(req.bucket(), req.object_key());
+    object obj = co_await m_dir.get_object(req.bucket(), req.object_key());
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
@@ -112,7 +110,7 @@ coro<response> get_object::handle(request& req) {
                                     "Data Corrupted", "found corrupted data");
         }
 
-        lock.release();
+        // TODO lock.release();
 
         LOG_DEBUG() << "range based access: header=" << *range
                     << ", obj-addr=" << obj.addr->to_string()
@@ -132,7 +130,7 @@ coro<response> get_object::handle(request& req) {
                                     "Data Corrupted", "found corrupted data");
         }
 
-        lock.release();
+        // TODO lock.release();
 
         res.set_body(std::make_unique<local_read_handle>(
             m_storage, std::move(*obj.addr), req.context()));

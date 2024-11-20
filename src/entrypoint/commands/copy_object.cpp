@@ -10,7 +10,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 copy_object::copy_object(directory& dir, global_data_view& gdv, limits& limits)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_limits(limits) {}
 
@@ -28,10 +28,7 @@ coro<response> copy_object::handle(request& req) {
     object obj;
 
     {
-        auto dir = co_await m_directory.get();
-        auto lock = dir.lock_object_shared(src_bucket, src_key);
-
-        obj = co_await dir.get_object(src_bucket, src_key);
+        obj = co_await m_dir.get_object(src_bucket, src_key);
 
         if (auto ifmatch = req.header("x-amz-copy-source-if-match");
             ifmatch && *ifmatch != obj.etag) {
@@ -52,7 +49,8 @@ coro<response> copy_object::handle(request& req) {
         }
 
         obj.name = req.object_key();
-        co_await safe_put_object(req.context(), dir, m_gdv, req.bucket(), obj);
+        co_await safe_put_object(req.context(), m_dir, m_gdv, req.bucket(),
+                                 obj);
     }
 
     boost::property_tree::ptree pt;

@@ -7,7 +7,7 @@ namespace uh::cluster {
 
 delete_object::delete_object(directory& dir, global_data_view& gdv,
                              limits& uhlimits)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_limits(uhlimits) {}
 
@@ -23,11 +23,8 @@ coro<response> delete_object::handle(request& req) {
     std::optional<object> obj;
 
     {
-        auto dir = co_await m_directory.get();
-        auto lock = dir.lock_object(req.bucket(), req.object_key());
-
-        obj = co_await dir.get_object(req.bucket(), req.object_key());
-        co_await dir.delete_object(req.bucket(), req.object_key());
+        obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+        co_await m_dir.delete_object(req.bucket(), req.object_key());
     }
 
     if (obj && obj->addr) {

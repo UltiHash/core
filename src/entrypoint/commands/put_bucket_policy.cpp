@@ -27,8 +27,7 @@ coro<response> put_bucket_policy::handle(request& req) {
         buffer.resize(pos);
     } while (count == buffer_size);
 
-    auto dir = co_await m_dir.get();
-    co_await dir.set_bucket_policy(req.bucket(), std::move(buffer));
+    co_await m_dir.set_bucket_policy(req.bucket(), std::move(buffer));
     co_return response(status::no_content);
 }
 

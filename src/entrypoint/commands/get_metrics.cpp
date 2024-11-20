@@ -7,7 +7,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 get_metrics::get_metrics(directory& dir, global_data_view& gdv)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv) {}
 
 bool get_metrics::can_handle(const request& req) {
@@ -17,8 +17,7 @@ bool get_metrics::can_handle(const request& req) {
 
 coro<response> get_metrics::handle(request& req) {
     metric<entrypoint_get_metrics_req>::increase(1);
-    auto dir = co_await m_directory.get();
-    auto raw_data_size = co_await dir.data_size();
+    auto raw_data_size = co_await m_dir.data_size();
     auto effective_data_size = co_await m_gdv.get_used_space(req.context());
 
     response res;

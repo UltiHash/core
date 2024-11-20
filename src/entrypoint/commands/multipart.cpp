@@ -50,8 +50,8 @@ coro<response> multipart::handle(request& req) {
     response res;
     res.set("ETag", md5);
 
-    auto dir = co_await m_dir.get();
-    auto lock = dir.lock_object(req.bucket(), req.object_key());
+    // TODO lock upload auto lock = m_dir.lock_object(req.bucket(),
+    // req.object_key());
 
     std::optional<upload_info::part> existing_part;
     try {
@@ -65,7 +65,7 @@ coro<response> multipart::handle(request& req) {
         *query(req, "uploadId"), *query<std::size_t>(req, "partNumber"), resp,
         resp.addr.data_size(), std::move(md5));
 
-    lock.release();
+    // TODO lock.release();
 
     if (existing_part) {
         co_await m_gdv.unlink(req.context(), existing_part->addr);

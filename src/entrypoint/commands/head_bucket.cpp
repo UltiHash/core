@@ -7,7 +7,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 head_bucket::head_bucket(directory& dir)
-    : m_directory(dir) {}
+    : m_dir(dir) {}
 
 bool head_bucket::can_handle(const request& req) {
     return req.method() == verb::head && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -18,8 +18,7 @@ bool head_bucket::can_handle(const request& req) {
 coro<response> head_bucket::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
-    auto dir = co_await m_directory.get();
-    co_await dir.bucket_exists(req.bucket());
+    co_await m_dir.bucket_exists(req.bucket());
 
     co_return response{};
 }

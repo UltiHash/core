@@ -25,8 +25,8 @@ coro<response> abort_multipart::handle(request& req) {
     upload_info details;
 
     {
-        auto dir = co_await m_dir.get();
-        auto lock = dir.lock_object(req.bucket(), req.object_key());
+        // TODO lock upload auto lock = m_dir.lock_object(req.bucket(),
+        // req.object_key());
 
         details = co_await m_uploads.details(upload_id);
         co_await m_uploads.remove_upload(upload_id);
