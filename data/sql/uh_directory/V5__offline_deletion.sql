@@ -21,18 +21,6 @@ ALTER TABLE __objects
     ADD UNIQUE (bucket_id, name, version);
 
 --
--- Mark a bucket/object as deleted
---
-CREATE OR REPLACE PROCEDURE uh_mark_deleted(bucket TEXT, object TEXT)
-LANGUAGE plpgsql AS $$
-BEGIN
-    EXECUTE 'UPDATE __objects SET status = status_deleted() WHERE
-        bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2 ORDER BY id DESC LIMIT 1'
-        USING bucket, object;
-END
-$$;
-
---
 -- Get next object to delete
 --
 CREATE OR REPLACE FUNCTION uh_next_deleted() RETURNS TABLE(id BIGINT, address BYTEA)
