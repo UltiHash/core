@@ -25,7 +25,6 @@ coro<response> copy_object::handle(request& req) {
     url.set_encoded_path(*req.header("x-amz-copy-source"));
 
     auto [src_bucket, src_key] = extract_bucket_and_object(url);
-    std::size_t freed = 0ull;
     object obj;
 
     {
@@ -53,8 +52,7 @@ coro<response> copy_object::handle(request& req) {
         }
 
         obj.name = req.object_key();
-        freed = co_await safe_put_object(req.context(), dir, m_gdv,
-                                         req.bucket(), obj);
+        co_await safe_put_object(req.context(), dir, m_gdv, req.bucket(), obj);
     }
 
     boost::property_tree::ptree pt;

@@ -92,8 +92,8 @@ coro<response> put_object::handle(request& req) {
 
         {
             auto dir = co_await m_dir.get();
-            auto freed = co_await safe_put_object(req.context(), dir, m_gdv,
-                                                  req.bucket(), obj);
+            co_await safe_put_object(req.context(), dir, m_gdv, req.bucket(),
+                                     obj);
         }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(

@@ -233,16 +233,10 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
     }
 }
 
-coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
-                                  global_data_view& gdv,
-                                  const std::string& bucket, object& obj) {
+coro<void> safe_put_object(context& ctx, directory::instance& dir,
+                           global_data_view& gdv, const std::string& bucket,
+                           object& obj) {
     auto lock = dir.lock_object(bucket, obj.name);
-
-    std::optional<object> old;
-    try {
-        old = co_await dir.get_object(bucket, obj.name);
-    } catch (const command_exception&) {
-    }
 
     std::optional<std::exception_ptr> error;
     try {
@@ -257,13 +251,6 @@ coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
         co_await gdv.unlink(ctx, *obj.addr);
         throw *error;
     }
-
-    if (old && old->addr) {
-        co_await gdv.unlink(ctx, *old->addr);
-        co_return old->size;
-    }
-
-    co_return 0ull;
 }
 
 } // namespace uh::cluster
