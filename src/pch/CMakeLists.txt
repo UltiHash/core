@@ -13,7 +13,7 @@ target_link_libraries(
     opentelemetry_exporter_otlp_grpc_metrics
     opentelemetry_exporter_ostream_metrics
     etcd-cpp-api
-)
+    nlohmann_json)
 target_precompile_headers(
     uh_precompile_headers
     PRIVATE
@@ -74,4 +74,5 @@ target_precompile_headers(
     <opentelemetry/trace/provider.h>
     <opentelemetry/trace/scope.h>
     <opentelemetry/trace/tracer_provider.h>
+    <nlohmann/json.hpp>
     <zpp_bits.h>)
