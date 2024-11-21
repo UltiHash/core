@@ -206,7 +206,7 @@ coro<std::optional<directory::to_delete>> directory::next_deleted() {
     auto handle = co_await m_db.get();
 
     auto row = co_await handle->execb(
-        "SELECT id, address FROM uh_next_deleted LIMIT 1");
+        "SELECT id, address FROM uh_next_deleted() LIMIT 1");
     if (!row) {
         co_return std::nullopt;
     }
