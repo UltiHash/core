@@ -28,14 +28,14 @@ LANGUAGE plpgsql AS $$
 DECLARE target_id BIGINT;
 DECLARE target_address BYTEA;
 BEGIN
-    SELECT id, address FROM __objects WHERE status = status_deleted() AND refs = 0
+    SELECT o.id, o.address FROM __objects o WHERE status = status_deleted() AND refs = 0
         INTO target_id, target_address;
 
     IF NOT FOUND THEN
         RETURN;
     END IF;
 
-    UPDATE __objects SET status = status_collected WHERE id = target_id;
+    UPDATE __objects o SET status = status_collected() WHERE o.id = target_id;
 
     RETURN QUERY SELECT target_id, target_address;
 END
