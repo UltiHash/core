@@ -128,7 +128,7 @@ BEGIN
 
     GET DIAGNOSTICS rows_deleted = ROW_COUNT;
     IF rows_deleted = 0 THEN
-        RAISE EXCEPTION 'Object "%s" in bucket "%s" does not exist.', object, bucket;
+        RAISE EXCEPTION 'Object "%" in bucket "%" does not exist.', object, bucket;
     END IF;
 END;
 $$;
@@ -209,7 +209,7 @@ BEGIN
     WHERE b.name = bucket AND status = status_normal();
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Bucket "%s" does not exist in __buckets table', bucket;
+        RAISE EXCEPTION 'Bucket "%" does not exist in __buckets table', bucket;
     END IF;
 
     RETURN COALESCE(result, 0);
