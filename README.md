@@ -6,18 +6,20 @@ Prerequisites:
 
 * `sudo apt install ninja-build clang llvm`
 * [ClangBuildAnalyzer](https://github.com/aras-p/ClangBuildAnalyzer)
+* [externis](https://github.com/royjacobson/externis.git)
+    * Install gcc-13-plugin-dev & libfmt-dev before
 
 Command:
 
 ```bash
-BTYPE=RelWithDebInfo; CLANG_OUTPUT=clang-profile.bin; NINJA_OUTPUT=ninja-profile.json;\
+BTYPE=RelWithDebInfo; COMPILE_OUTPUT=clang-profile.bin; NINJA_OUTPUT=ninja-profile.json;\
     rm -rf ${BTYPE} && \
     CC=/usr/bin/clang CXX=/usr/bin/clang++ \
         cmake -G Ninja -S. -B${BTYPE} -DCMAKE_BUILD_TYPE=${BTYPE} -DTIME_TRACE=ON && \
     ClangBuildAnalyzer --start ${BTYPE} && \
     time cmake --build ${BTYPE} && \
-    ClangBuildAnalyzer --stop ${BTYPE} ${CLANG_OUTPUT} && \
-    ClangBuildAnalyzer --analyze ${CLANG_OUTPUT} \
+    ClangBuildAnalyzer --stop ${BTYPE} ${COMPILE_OUTPUT} && \
+    ClangBuildAnalyzer --analyze ${COMPILE_OUTPUT} && \
     ninjatracing ${BTYPE}/.ninja_log > ${NINJA_OUTPUT}
 ```
 
@@ -25,9 +27,9 @@ With GCC:
 
 
 ```bash
-BTYPE=RelWithDebInfo; NINJA_OUTPUT=ninja-profile.json;\
+BTYPE=RelWithDebInfo; GCC_OUTPUT=gcc-profile.bin; NINJA_OUTPUT=build-profile.json;\
     rm -rf ${BTYPE} && \
-    cmake -G Ninja -S. -B${BTYPE} -DCMAKE_BUILD_TYPE=${BTYPE} && \
+    cmake -G Ninja -S. -B${BTYPE} -DCMAKE_BUILD_TYPE=${BTYPE} -DTIME_TRACE=ON && \
     time cmake --build ${BTYPE} && \
     ninjatracing ${BTYPE}/.ninja_log > ${NINJA_OUTPUT}
 ```
