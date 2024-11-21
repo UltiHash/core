@@ -56,24 +56,29 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
     LOG_DEBUG() << "ref " << id;
 
     auto executor = co_await boost::asio::this_coro::executor;
+    promise<void> p;
+    future<void> f = p.get_future();
 
-    auto cleanup = [id, this]() -> coro<void> {
-        auto h = co_await m_db.get();
-        LOG_DEBUG() << "deref " << id;
-        co_await h->execv("CALL uh_dec_reference($1)", id);
-    };
+    boost::asio::co_spawn(
+        executor,
+        [f = std::move(f), this, id]() mutable -> coro<void> {
+            co_await f.get();
+            auto h = co_await m_db.get();
+            LOG_DEBUG() << "deref " << id;
+            co_await h->execv("CALL uh_dec_reference($1)", id);
+        },
+        boost::asio::detached);
 
-    co_return object_lock(
-        object{.name = object_id,
-               .last_modified = *metadata->date(1),
-               .size = *metadata->size_type(0),
-               .addr = std::move(addr),
-               .etag = metadata->string(2),
-               .mime = metadata->string(3)},
-        [id, e = std::move(executor), f = std::move(cleanup)]() {
-            boost::asio::co_spawn(e, f(), boost::asio::detached);
-        });
+    co_return object_lock(object{.name = object_id,
+                                 .last_modified = *metadata->date(1),
+                                 .size = *metadata->size_type(0),
+                                 .addr = std::move(addr),
+                                 .etag = metadata->string(2),
+                                 .mime = metadata->string(3)},
+                          unref{std::move(p)});
 }
+
+void directory::unref::operator()() { p.set_value(); }
 
 coro<object> directory::head_object(const std::string& bucket,
                                     const std::string& object_id) {

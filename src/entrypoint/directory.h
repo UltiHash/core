@@ -19,7 +19,13 @@ public:
         : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
-    using object_lock = value_guard<object, std::function<void()>>;
+    struct unref {
+        promise<void> p;
+
+        void operator()();
+    };
+
+    using object_lock = value_guard<object, unref>;
 
     coro<void> put_object(const std::string& bucket, const object& obj);
 
