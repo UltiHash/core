@@ -143,8 +143,14 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 coro<void> directory::delete_object(const std::string& bucket,
                                     const std::string& object_id) {
 
-    auto handle = co_await m_db.get();
-    co_await handle->execv("CALL uh_delete_object($1, $2)", bucket, object_id);
+    try {
+        auto handle = co_await m_db.get();
+        co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
+                               object_id);
+    } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchKey",
+                                "object not found");
+    }
 }
 
 coro<std::vector<std::string>> directory::list_buckets() {
