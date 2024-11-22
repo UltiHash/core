@@ -1,14 +1,16 @@
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 add_library(uh_test gdv_fixture.h entrypoint.cpp)
-target_link_libraries(uh_test ${PROJECT_NAME}_OBJECTS)
-target_include_directories(${PROJECT_NAME}_OBJECTS INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(uh_test PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(uh_test PUBLIC ${PROJECT_NAME}_SHARED)
 
 function(uh_add_test name)
     add_executable(${PROJECT_NAME}_${name} ${name}.cpp)
     target_compile_options(${PROJECT_NAME}_${name} PRIVATE -fno-inline)
-    target_link_libraries(${PROJECT_NAME}_${name} uh_test ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
-    target_include_directories(${PROJECT_NAME}_${name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(
+        ${PROJECT_NAME}_${name} uh_test)
+    target_include_directories(${PROJECT_NAME}_${name}
+                               PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     add_test(NAME ${PROJECT_NAME}_${name} COMMAND ${PROJECT_NAME}_${name})
 endfunction()
 
