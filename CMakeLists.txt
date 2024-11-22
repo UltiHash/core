@@ -93,9 +93,9 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     ${LMDB_LIBRARY}
     nlohmann_json)
 set(${PROJECT_NAME}_INCLUDE_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
     ${Boost_INCLUDE_DIRS}
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_INCLUDE_DIRS}
@@ -118,18 +118,18 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST}
-                                           ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME}_OBJECTS
-                           PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}_OBJECTS
-                      PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+
+add_library(${PROJECT_NAME}_SHARED SHARED $<TARGET_OBJECTS:uh_objects>)
+target_link_libraries(${PROJECT_NAME}_SHARED PUBLIC uh_objects)
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS
-                      ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_SHARED)
 target_include_directories(${PROJECT_NAME}
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME})
 
 add_subdirectory(scripts)
 
