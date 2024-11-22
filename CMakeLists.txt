@@ -20,6 +20,16 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
+
+if(ENABLE_BUILD_TIME_TRACE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-ftime-trace)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # gcc: use plugin https://github.com/royjacobson/externis
+        add_compile_options(-fplugin=externis)
+    endif()
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
@@ -32,6 +42,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options(-fPIC)
+add_link_options(-pie)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
@@ -111,6 +122,8 @@ add_compile_options(-Wall -Werror)
 #
 add_compile_options(-Wno-mismatched-new-delete)
 
+add_subdirectory(src/pch)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
@@ -121,6 +134,7 @@ list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_precompile_headers(uh_objects REUSE_FROM uh_precompile_headers)
 
 add_library(${PROJECT_NAME}_SHARED SHARED $<TARGET_OBJECTS:uh_objects>)
 target_link_libraries(${PROJECT_NAME}_SHARED PUBLIC uh_objects)
@@ -129,7 +143,7 @@ add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_SHARED)
 target_include_directories(${PROJECT_NAME}
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME})
+target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
 
