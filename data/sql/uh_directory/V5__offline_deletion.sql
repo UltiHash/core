@@ -20,6 +20,9 @@ ALTER TABLE __objects
     DROP CONSTRAINT __objects_bucket_id_name_key,
     ADD UNIQUE (bucket_id, name, version);
 
+ALTER TABLE __buckets
+    ADD COLUMN status INTEGER NOT NULL DEFAULT status_normal();
+
 --
 -- Get next object to delete
 --
@@ -109,6 +112,29 @@ BEGIN
          WHERE bucket_id = (SELECT id FROM __buckets WHERE name = $1) AND name = $2
          AND status = status_normal() ORDER BY id DESC'
     USING bucket, object;
+END;
+$$;
+
+--
+-- uh_delete_bucket(bucket): delete bucket from system
+--
+CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket TEXT)
+LANGUAGE plpgsql AS $$
+DECLARE object_count INT;
+BEGIN
+    SELECT count(1) INTO object_count FROM __objects
+    WHERE bucket_id = (SELECT id FROM __buckets WHERE name = bucket) AND status = status_normal();
+
+    IF object_count != 0 THEN
+        RAISE EXCEPTION 'Bucket "%" is not empty.', bucket;
+    END IF;
+
+    UPDATE __buckets SET status = status_deleted(), name = gen_random_uuid()
+        WHERE name = bucket;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" does not exist.', bucket;
+    END IF;
 END;
 $$;
 
@@ -206,7 +232,7 @@ BEGIN
     INTO result
     FROM __objects o
     JOIN __buckets b ON o.bucket_id = b.id
-    WHERE b.name = bucket AND status = status_normal();
+    WHERE b.name = bucket AND o.status = status_normal();
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Bucket "%" does not exist in __buckets table', bucket;
