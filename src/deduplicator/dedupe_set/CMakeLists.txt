@@ -1,7 +1,12 @@
-add_library(uh_dedupe_set fragment_set_element.cpp fragment_set_log.cpp
-                          fragment_set.cpp)
-target_link_libraries(
+add_static_and_shared(
     uh_dedupe_set
-    PRIVATE uh_utils uh_deduplicator
-    PUBLIC uh_global_data uh_caches)
-target_precompile_headers(uh_dedupe_set REUSE_FROM uh_precompile_headers)
+    SOURCES
+    fragment_set_element.cpp
+    fragment_set_log.cpp
+    fragment_set.cpp
+    PRIVATE
+    uh_utils
+    uh_deduplicator
+    PUBLIC
+    uh_global_data
+    uh_caches)

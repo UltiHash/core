@@ -1,4 +1,6 @@
 add_subdirectory(pch)
+set_project_precompiled_header_target(uh_precompile_headers)
+
 add_subdirectory(config)
 add_subdirectory(common)
 add_subdirectory(entrypoint)

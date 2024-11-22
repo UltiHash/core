@@ -1,6 +1,6 @@
-add_library(
+add_static_and_shared(
     uh_http
-    STATIC
+    SOURCES
     raw_body.cpp
     chunk_body_sha256.cpp
     command_exception.cpp
@@ -14,9 +14,14 @@ add_library(
     no_auth.cpp
     beast_utils.cpp
     request_factory.cpp
-    chunked_body.cpp)
-target_link_libraries(
-    uh_http
-    PRIVATE uh_telemetry uh_entrypoint
-    PUBLIC uh_user uh_types uh_utils uh_crypto uh_coroutines Boost::url)
-target_precompile_headers(uh_http REUSE_FROM uh_precompile_headers)
+    chunked_body.cpp
+    PRIVATE
+    uh_telemetry
+    uh_entrypoint
+    PUBLIC
+    uh_user
+    uh_types
+    uh_utils
+    uh_crypto
+    uh_coroutines
+    Boost::url)

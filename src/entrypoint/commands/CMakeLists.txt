@@ -1,6 +1,6 @@
-add_library(
+add_static_and_shared(
     uh_commands
-    STATIC
+    SOURCES
     multipart.cpp
     list_objects.cpp
     init_multipart.cpp
@@ -21,12 +21,9 @@ add_library(
     list_objects_v2.cpp
     delete_objects.cpp
     get_metrics.cpp
-    list_multipart.cpp)
-target_link_libraries(
-    uh_commands
+    list_multipart.cpp
     PRIVATE uh_utils uh_telemetry
     PUBLIC uh_service_interfaces uh_service_discovery uh_crypto uh_http
            uh_global_data uh_entrypoint)
-target_precompile_headers(uh_commands REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(iam)

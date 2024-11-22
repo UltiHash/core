@@ -11,4 +11,3 @@ target_link_libraries(
               uh_etcd
               uh_ec
               uh_coroutines)
-target_precompile_headers(uh_storage_interfaces REUSE_FROM uh_precompile_headers)

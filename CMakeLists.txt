@@ -130,6 +130,8 @@ add_compile_definitions(BOOST_THREAD_NO_LIB)
 get_target_property(definitions opentelemetry_api INTERFACE_COMPILE_DEFINITIONS)
 add_compile_definitions(${definitions})
 
+include(modules/AddStaticAndShared)
+
 add_subdirectory(src bin)
 
 add_executable(uh-cluster src/main.cpp)

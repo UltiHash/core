@@ -4,9 +4,9 @@ add_subdirectory(user)
 add_subdirectory(policy)
 add_subdirectory(aws)
 
-add_library(
+add_static_and_shared(
     uh_entrypoint
-    STATIC
+    SOURCES
     command_factory.cpp
     formats.cpp
     handler.cpp
@@ -14,22 +14,24 @@ add_library(
     directory.cpp
     multipart_state.cpp
     service.cpp
-    limits.cpp)
-target_link_libraries(
-    uh_entrypoint
-    PRIVATE uh_telemetry uh_commands uh_iam uh_debug
-    PUBLIC Boost::url
-           uh_deduplicator
-           uh_registry
-           uh_policy
-           uh_http
-           uh_types
-           uh_utils
-           uh_network
-           uh_db
-           uh_commands
-           uh_service_discovery
-           uh_service_interfaces
-           uh_global_data
-           uh_user)
-target_precompile_headers(uh_entrypoint REUSE_FROM uh_precompile_headers)
+    limits.cpp
+    PRIVATE
+    uh_telemetry
+    uh_commands
+    uh_iam
+    uh_debug
+    PUBLIC
+    Boost::url
+    uh_deduplicator
+    uh_registry
+    uh_policy
+    uh_http
+    uh_types
+    uh_utils
+    uh_network
+    uh_db
+    uh_commands
+    uh_service_discovery
+    uh_service_interfaces
+    uh_global_data
+    uh_user)

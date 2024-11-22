@@ -1,3 +1,8 @@
-add_library(uh_network STATIC tools.cpp)
-target_link_libraries(uh_network PUBLIC uh_utils uh_telemetry uh_types)
-target_precompile_headers(uh_network REUSE_FROM uh_precompile_headers)
+add_static_and_shared(
+    uh_network
+    SOURCES
+    tools.cpp
+    PUBLIC
+    uh_utils
+    uh_telemetry
+    uh_types)

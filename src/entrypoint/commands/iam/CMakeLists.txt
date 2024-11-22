@@ -1,5 +1,6 @@
-add_library(
-    uh_iam STATIC
+add_static_and_shared(
+    uh_iam
+    SOURCES
     list_user_policies.cpp
     get_user_policy.cpp
     delete_user_policy.cpp
@@ -7,9 +8,11 @@ add_library(
     delete_access_key.cpp
     put_user_policy.cpp
     delete_user.cpp
-    create_user.cpp)
-target_link_libraries(
-    uh_iam
-    PRIVATE uh_utils uh_http uh_aws uh_policy
-    PUBLIC uh_user)
-target_precompile_headers(uh_iam REUSE_FROM uh_precompile_headers)
+    create_user.cpp
+    PRIVATE
+    uh_utils
+    uh_http
+    uh_aws
+    uh_policy
+    PUBLIC
+    uh_user)

@@ -1,6 +1,4 @@
-add_library(uh_storage STATIC reference_counter.cpp data_store.cpp)
-target_link_libraries(
-    uh_storage
+add_static_and_shared(uh_storage SOURCES reference_counter.cpp data_store.cpp
     PRIVATE uh_telemetry
     PUBLIC uh_coroutines
            lmdbxx
@@ -11,6 +9,5 @@ target_link_libraries(
            uh_utils
            uh_types
            uh_network)
-target_precompile_headers(uh_storage REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(interfaces)
