@@ -45,6 +45,17 @@ END
 $$;
 
 --
+-- Remove deleted buckets
+--
+CREATE OR REPLACE PROCEDURE uh_clear_deleted_buckets()
+LANGUAGE plpgsql AS $$
+BEGIN
+    DELETE FROM __buckets b WHERE status = status_deleted()
+        AND NOT EXISTS (SELECT 1 FROM __objects o WHERE o.bucket_id = b.id);
+END
+$$;
+
+--
 -- Remove object by id
 --
 CREATE OR REPLACE PROCEDURE uh_delete_object_by_id(target_id BIGINT)

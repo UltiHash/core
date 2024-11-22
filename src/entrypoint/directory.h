@@ -63,6 +63,8 @@ public:
     };
     coro<std::optional<to_delete>> next_deleted();
 
+    coro<void> clear_buckets();
+
     coro<void> remove_object(std::size_t id);
 
     /**

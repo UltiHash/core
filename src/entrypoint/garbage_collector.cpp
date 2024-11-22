@@ -19,6 +19,7 @@ coro<void> garbage_collector::collect() {
     while (true) {
         auto to_delete = co_await m_dir.next_deleted();
         if (!to_delete) {
+            co_await m_dir.clear_buckets();
             timer.expires_from_now(POLL_INTERVALL);
             co_await timer.async_wait(boost::asio::use_awaitable);
             continue;

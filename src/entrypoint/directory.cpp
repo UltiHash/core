@@ -227,6 +227,11 @@ coro<std::optional<directory::to_delete>> directory::next_deleted() {
     co_return rv;
 }
 
+coro<void> directory::clear_buckets() {
+    auto handle = co_await m_db.get();
+    co_await handle->exec("CALL uh_clear_deleted_buckets();");
+}
+
 coro<void> directory::remove_object(std::size_t id) {
     auto handle = co_await m_db.get();
 
