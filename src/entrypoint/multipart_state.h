@@ -4,6 +4,7 @@
 #include "common/db/db.h"
 #include "common/types/common_types.h"
 #include "common/utils/pool.h"
+#include "common/utils/scope_guard.h"
 
 #include <map>
 
@@ -39,6 +40,14 @@ struct upload_info {
 class multipart_state {
 public:
     multipart_state(boost::asio::io_context& ioc, const db::config& cfg);
+
+    struct release_lock {
+        promise<void> p;
+        void operator()() { p.set_value(); }
+    };
+    using lock = guard<release_lock>;
+
+    coro<lock> lock_upload(const std::string& id);
 
     /**
      * Insert a new multipart upload and retrieve it's id.

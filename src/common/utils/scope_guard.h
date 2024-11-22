@@ -8,6 +8,12 @@ public:
     guard(fini f)
         : m_f(std::move(f)) {}
 
+    guard(guard&& g)
+        : m_active(g.m_active),
+          m_f(std::move(g.m_f)) {
+        g.m_active = false;
+    }
+
     ~guard() {
         try {
             release();
