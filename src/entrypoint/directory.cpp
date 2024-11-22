@@ -148,8 +148,6 @@ coro<void> directory::delete_object(const std::string& bucket,
         co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
                                object_id);
     } catch (const std::exception& e) {
-        throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
     }
 }
 
