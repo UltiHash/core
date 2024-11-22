@@ -2,6 +2,7 @@
 #include "common/coroutines/promise.h"
 #include "common/types/common_types.h"
 #include "common/utils/double_buffer.h"
+#include "entrypoint/formats.h"
 #include "string_body.h"
 #include <boost/property_tree/xml_parser.hpp>
 #include <sstream>
@@ -100,6 +101,8 @@ coro<void> write(asio::ip::tcp::socket& out, response&& res,
 
     res.set("Server", "UltiHash");
     res.set("x-amz-request-id", id);
+
+    res.set("Date", imf_fixdate(std::chrono::system_clock::now()));
 
     if (!res.header("Content-Length")) {
         res.set("Content-Length", body.length());
