@@ -234,21 +234,12 @@ $$;
 --
 -- Returns 0 if the bucket has no object
 --
-CREATE OR REPLACE FUNCTION uh_bucket_size(bucket TEXT)
-    RETURNS BIGINT
+DROP FUNCTION uh_bucket_size(bucket TEXT);
+CREATE OR REPLACE FUNCTION uh_data_size() RETURNS BIGINT
 LANGUAGE plpgsql AS $$
 DECLARE result BIGINT;
 BEGIN
-    SELECT SUM(o.size)
-    INTO result
-    FROM __objects o
-    JOIN __buckets b ON o.bucket_id = b.id
-    WHERE b.name = bucket AND o.status = status_normal();
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Bucket "%" does not exist in __buckets table', bucket;
-    END IF;
-
+    SELECT SUM(size) INTO result FROM __objects WHERE status = status_normal();
     RETURN COALESCE(result, 0);
 END;
 $$;

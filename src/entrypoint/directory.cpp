@@ -239,16 +239,9 @@ coro<void> directory::remove_object(std::size_t id) {
 }
 
 coro<std::size_t> directory::data_size() {
-    std::size_t rv = 0;
-
-    auto buckets = co_await list_buckets();
     auto handle = co_await m_db.get();
-    for (const auto& bucket : buckets) {
-        auto row = co_await handle->execv("SELECT uh_bucket_size($1)", bucket);
-        rv += row->number(0).value_or(0);
-    }
-
-    co_return rv;
+    auto row = co_await handle->execv("SELECT uh_data_size()");
+    return row->number(0).value_or(0);
 }
 
 void directory::validate_bucket_name(const std::string& bucket_name) {

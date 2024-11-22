@@ -11,9 +11,7 @@ static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
 
 coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
-    std::atomic<std::size_t> size = 0ull;
-
-    { size = co_await directory.data_size(); }
+    std::atomic<std::size_t> size = co_await directory.data_size();
     l.storage_size(size);
 
     metric<entrypoint_original_data_volume_gauge, byte,
@@ -32,8 +30,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
         timer.expires_from_now(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
 
-        { size = co_await directory.data_size(); }
-
+        size = co_await directory.data_size();
         l.storage_size(size);
     }
 }
