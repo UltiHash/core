@@ -4,17 +4,10 @@ function(uh_add_test name)
     set(target_name "${PROJECT_NAME}_${name}")
 
     add_executable(${target_name} ${name}.cpp)
-    target_compile_options(${target_name} PRIVATE -fno-inline)
     target_compile_definitions(
         ${target_name} PRIVATE BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
-
-    if(NOT DEFINED FIRST_TEST_TARGET)
-        target_precompile_headers(${target_name} PRIVATE <boost/asio.hpp>)
-        set_property(GLOBAL PROPERTY FIRST_TEST_TARGET ${target_name})
-    else()
-        get_property(first_target GLOBAL PROPERTY FIRST_TEST_TARGET)
-        target_precompile_headers(${target_name} REUSE_FROM ${first_target})
-    endif()
+    get_property(first_target GLOBAL PROPERTY FIRST_TEST_TARGET)
+    target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
 
     target_link_libraries(${target_name} uh_test uh_debug
                           Boost::unit_test_framework ${ARGN})

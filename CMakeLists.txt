@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
-    set(CMAKE_C_COMPILER_LAUNCHER
-        "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
-    )
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
-endif()
-
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib
                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
@@ -20,9 +11,21 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
-option(TIME_TRACE "Time trace" OFF)
+option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
+option(ENABLE_CCACHE "Use cache while compiling" ON)
 
-if(TIME_TRACE)
+if(ENABLE_CCACHE)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
+        set(CMAKE_C_COMPILER_LAUNCHER
+            "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
+        )
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+    endif()
+endif()
+
+if(ENABLE_BUILD_TIME_TRACE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         add_compile_options(-ftime-trace)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -111,6 +114,8 @@ add_compile_options(-Wall -Winvalid-pch -Werror)
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109224
 #
 add_compile_options(-Wno-mismatched-new-delete)
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)

@@ -31,13 +31,16 @@ BOOST_AUTO_TEST_CASE(test_increment_decrement) {
 
     BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
+    std::deque<reference_counter::refcount_cmd> cmd_queue;
+    cmd_queue.emplace_back(reference_counter::INCREMENT, 0, DEFAULT_PAGE_SIZE);
+    BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
     BOOST_CHECK(!delete_triggered);
     BOOST_CHECK_NO_THROW(refcounter.decrement(test_addr));
     BOOST_CHECK(delete_triggered);
     BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
+    cmd_queue.emplace_back(reference_counter::INCREMENT, 0, DEFAULT_PAGE_SIZE);
+    BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
 }
 
 BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
@@ -48,7 +51,10 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
                                      dummy_delete);
         BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
         BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-        BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
+        std::deque<reference_counter::refcount_cmd> cmd_queue;
+        cmd_queue.emplace_back(reference_counter::INCREMENT, 0,
+                               DEFAULT_PAGE_SIZE);
+        BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
     }
     {
         bool delete_triggered = false;
@@ -63,7 +69,10 @@ BOOST_AUTO_TEST_CASE(test_increment_restart_decrement) {
         BOOST_CHECK(delete_triggered);
         BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
         BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-        BOOST_CHECK_NO_THROW(refcounter.increment(0, DEFAULT_PAGE_SIZE));
+        std::deque<reference_counter::refcount_cmd> cmd_queue;
+        cmd_queue.emplace_back(reference_counter::INCREMENT, 0,
+                               DEFAULT_PAGE_SIZE);
+        BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
     }
 }
 
@@ -78,13 +87,16 @@ BOOST_AUTO_TEST_CASE(test_bulk_increment_decrement) {
             return 0;
         });
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, GIBI_BYTE));
+    std::deque<reference_counter::refcount_cmd> cmd_queue;
+    cmd_queue.emplace_back(reference_counter::INCREMENT, 0, GIBI_BYTE);
+    BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
     BOOST_CHECK(delete_triggered == 0);
     BOOST_CHECK_NO_THROW(refcounter.decrement(test_addr));
     BOOST_CHECK(delete_triggered == 1);
     BOOST_CHECK_THROW(refcounter.decrement(test_addr), std::exception);
     BOOST_CHECK(refcounter.increment(test_addr) == test_addr);
-    BOOST_CHECK_NO_THROW(refcounter.increment(0, GIBI_BYTE));
+    cmd_queue.emplace_back(reference_counter::INCREMENT, 0, GIBI_BYTE);
+    BOOST_CHECK_NO_THROW(refcounter.execute(cmd_queue));
 }
 
 } // end namespace uh::cluster

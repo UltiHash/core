@@ -133,7 +133,8 @@ private:
 
     static bool is_data_file(const std::filesystem::path& path);
 
-    void update_last_page_ref();
+    void update_last_page_ref(
+        std::deque<reference_counter::refcount_cmd>& refcount_commands);
 
     size_t internal_delete(std::size_t offset, std::size_t size);
 
