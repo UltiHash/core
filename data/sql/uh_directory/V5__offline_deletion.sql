@@ -71,7 +71,11 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_inc_reference(target_id BIGINT)
 LANGUAGE plpgsql AS $$
 BEGIN
-    UPDATE __objects SET refs = refs + 1 WHERE id = target_id;
+    UPDATE __objects SET refs = refs + 1 WHERE id = target_id AND status = status_normal();
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'object not found';
+    END IF;
 END
 $$;
 
