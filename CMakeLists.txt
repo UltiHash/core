@@ -126,10 +126,7 @@ add_library(${PROJECT_NAME}_SHARED SHARED $<TARGET_OBJECTS:uh_objects>)
 target_link_libraries(${PROJECT_NAME}_SHARED PUBLIC uh_objects)
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_SHARED)
-target_include_directories(${PROJECT_NAME}
-                           PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 
 add_subdirectory(scripts)
 
