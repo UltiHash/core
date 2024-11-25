@@ -20,7 +20,8 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
         [&ioc]() -> coro<void> {
             promise<int> p;
             auto f = p.get_future();
-            ioc.post([p = std::move(p)]() mutable { p.set_value(1); });
+            ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+                          std::move(p))]() mutable { p->set_value(1); });
             BOOST_TEST((co_await f.get()) == 1);
         },
         [](const std::exception_ptr& e) {
@@ -41,11 +42,12 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
         [&ioc]() -> coro<void> {
             promise<int> p;
             auto f = p.get_future();
-            ioc.post([p = std::move(p)]() mutable {
+            ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+                          std::move(p))]() mutable {
                 try {
                     throw std::exception{};
                 } catch (const std::exception& e) {
-                    p.set_exception(std::current_exception());
+                    p->set_exception(std::current_exception());
                 }
             });
             BOOST_CHECK_THROW((co_await f.get()), std::exception);
@@ -77,7 +79,9 @@ BOOST_AUTO_TEST_CASE(stress_test) {
             [&ioc, i, &failures]() -> coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
-                ioc.post([p = std::move(p), i]() mutable { p.set_value(i); });
+                ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+                              std::move(p)),
+                          i]() mutable { p->set_value(i); });
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
@@ -118,9 +122,10 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
             [i, &failures, &workers]() -> coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
-                boost::asio::post(workers, [p = std::move(p), i]() mutable {
-                    p.set_value(int(i));
-                });
+                boost::asio::post(
+                    workers, [p = std::make_shared<uh::cluster::promise<int>>(
+                                  std::move(p)),
+                              i]() mutable { p->set_value(int(i)); });
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
