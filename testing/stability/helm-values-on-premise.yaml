@@ -1,7 +1,7 @@
 global:
   image: $CORE_IMAGE
   imagePullPolicy: Always
-  imagePullSecrets:               
+  imagePullSecrets:
     - registry-credentials
   ultihashSecret:
     name: ultihash
@@ -59,7 +59,7 @@ entrypoint:
     kubernetes.io/hostname: opm-k8s-worker-01
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
   extraVolumeMounts:
-    - name: core-dump            
+    - name: core-dump
       mountPath: /tmp/core-dumps/
   extraVolumes:
     - name: core-dump
@@ -71,18 +71,18 @@ entrypoint:
 
 storage:
   replicas: 2
-  storageClass: local-path            
-  storageSize: 50Gi                  
+  storageClass: local-path
+  storageSize: 50Gi
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
   extraVolumeMounts:
-    - name: core-dump            
+    - name: core-dump
       mountPath: /tmp/core-dumps/
   extraVolumes:
     - name: core-dump
       hostPath:
-        path: /tmp/core-dumps/ 
+        path: /tmp/core-dumps/
 
 deduplicator:
   replicas: 2
@@ -92,12 +92,12 @@ deduplicator:
     kubernetes.io/hostname: opm-k8s-worker-01
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
   extraVolumeMounts:
-    - name: core-dump            
+    - name: core-dump
       mountPath: /tmp/core-dumps/
   extraVolumes:
     - name: core-dump
       hostPath:
-        path: /tmp/core-dumps/ 
+        path: /tmp/core-dumps/
 
 database:
   primary:
@@ -131,9 +131,9 @@ collector:
         name: ultihash
         key: token
   presets:
-    kubeletMetrics:              
-      enabled: false           
-  config:                         
+    kubeletMetrics:
+      enabled: false
+  config:
     exporters:
       otlphttp/uptrace:
         endpoint: http://opm-k8s-worker-04.ultihash.io
@@ -147,6 +147,10 @@ collector:
         metrics:
           receivers:
             - otlp
+	traces:
+          exporters:
+          - debug
+          - otlphttp/uptrace
 
 exporter:
   enabled: false
