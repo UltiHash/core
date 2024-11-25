@@ -2,8 +2,6 @@
 #include "common/utils/strings.h"
 #include "http/command_exception.h"
 
-#include <boost/asio.hpp>
-
 using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
@@ -259,7 +257,7 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
 }
 
 coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
-                           const std::string& bucket, object& obj) {
+                           const std::string& bucket, const object& obj) {
     std::optional<std::exception_ptr> error;
     try {
         co_await dir.put_object(bucket, obj);

@@ -37,6 +37,10 @@ template <typename fini> guard<fini> scope_guard(fini f) {
     return guard<fini>(std::move(f));
 }
 
+/**
+ * Guard that can store a value. Use to return a value with RAII
+ * cleanup.
+ */
 template <typename value, typename fini> class value_guard {
 public:
     value_guard(value v, fini f)

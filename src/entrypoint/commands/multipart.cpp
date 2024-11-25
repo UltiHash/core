@@ -56,8 +56,7 @@ coro<response> multipart::handle(request& req) {
     try {
         existing_part = co_await m_uploads.part_details(
             id, *query<std::size_t>(req, "partNumber"));
-    } catch (command_exception&) {
-        existing_part = std::nullopt;
+    } catch (const command_exception&) {
     }
 
     co_await m_uploads.append_upload_part_info(
