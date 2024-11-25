@@ -13,7 +13,7 @@ namespace uh::cluster {
 class multipart : public command {
 public:
     explicit multipart(roundrobin_load_balancer<deduplicator_interface>&,
-                       directory& dir, global_data_view&, multipart_state&);
+                       global_data_view&, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -25,7 +25,6 @@ public:
 
 private:
     roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
-    directory& m_dir;
     global_data_view& m_gdv;
     multipart_state& m_uploads;
 };

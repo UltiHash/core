@@ -27,7 +27,7 @@ response get_response(const request& req,
 } // namespace
 
 init_multipart::init_multipart(directory& dir, multipart_state& uploads)
-    : m_directory(dir),
+    : m_dir(dir),
       m_uploads(uploads) {}
 
 bool init_multipart::can_handle(const request& req) {
@@ -39,10 +39,7 @@ bool init_multipart::can_handle(const request& req) {
 coro<response> init_multipart::handle(request& req) {
     metric<entrypoint_init_multipart_req>::increase(1);
 
-    {
-        auto dir = co_await m_directory.get();
-        co_await dir.bucket_exists(req.bucket());
-    }
+    co_await m_dir.bucket_exists(req.bucket());
 
     const auto upload_id = co_await m_uploads.insert_upload(
         req.bucket(), req.object_key(), req.header("Content-Type"));

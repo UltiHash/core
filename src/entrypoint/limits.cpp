@@ -1,8 +1,6 @@
 #include "limits.h"
 
-#include "common/telemetry/log.h"
-#include "common/utils/error.h"
-
+#include <common/telemetry/log.h>
 #include <entrypoint/http/command_exception.h>
 
 using namespace uh::cluster::ep::http;
@@ -31,17 +29,6 @@ void limits::check_storage_size(std::size_t increment) {
 
         --m_warn_counter;
     }
-
-    m_data_storage_size = new_size;
-}
-
-void limits::free_storage_size(std::size_t decrement) {
-    std::size_t current = m_data_storage_size;
-    std::size_t desired;
-
-    do {
-        desired = current < decrement ? 0ull : current - decrement;
-    } while (!m_data_storage_size.compare_exchange_weak(current, desired));
 }
 
 } // namespace uh::cluster

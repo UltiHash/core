@@ -13,6 +13,27 @@ multipart_state::multipart_state(boost::asio::io_context& ioc,
     : m_db(ioc, connection_factory(ioc, cfg, cfg.multipart),
            cfg.multipart.count) {}
 
+coro<multipart_state::lock>
+multipart_state::lock_upload(const std::string& id) {
+    auto conn = co_await m_db.get();
+
+    co_await conn->execv("CALL uh_lock_upload($1)", id);
+
+    auto executor = co_await boost::asio::this_coro::executor;
+    promise<void> p;
+    future<void> f = p.get_future();
+
+    boost::asio::co_spawn(
+        executor,
+        [f = std::move(f), conn = std::move(conn), id]() mutable -> coro<void> {
+            co_await f.get();
+            co_await conn->execv("CALL uh_unlock_upload($1)", id);
+        },
+        boost::asio::detached);
+
+    co_return release_lock{std::move(p)};
+}
+
 coro<std::string>
 multipart_state::insert_upload(std::string bucket, std::string key,
                                std::optional<std::string> mime) {

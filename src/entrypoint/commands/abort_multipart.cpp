@@ -6,10 +6,9 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-abort_multipart::abort_multipart(directory& dir, multipart_state& uploads,
+abort_multipart::abort_multipart(multipart_state& uploads,
                                  global_data_view& gdv)
-    : m_dir(dir),
-      m_uploads(uploads),
+    : m_uploads(uploads),
       m_gdv(gdv) {}
 
 bool abort_multipart::can_handle(const request& req) {
@@ -25,8 +24,7 @@ coro<response> abort_multipart::handle(request& req) {
     upload_info details;
 
     {
-        auto dir = co_await m_dir.get();
-        auto lock = dir.lock_object(req.bucket(), req.object_key());
+        auto lock = co_await m_uploads.lock_upload(upload_id);
 
         details = co_await m_uploads.details(upload_id);
         co_await m_uploads.remove_upload(upload_id);

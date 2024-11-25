@@ -17,7 +17,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_directory;
+    directory& m_dir;
 };
 
 } // namespace uh::cluster

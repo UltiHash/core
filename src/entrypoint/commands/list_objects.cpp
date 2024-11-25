@@ -118,7 +118,7 @@ response get_response(const std::vector<object>& objects, const request& req) {
 } // namespace
 
 list_objects::list_objects(directory& dir)
-    : m_directory(dir) {}
+    : m_dir(dir) {}
 
 bool list_objects::can_handle(const request& req) {
     return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -132,9 +132,8 @@ coro<response> list_objects::handle(request& req) {
 
     std::vector<object> obj_list;
     try {
-        auto dir = co_await m_directory.get();
-        obj_list = co_await dir.list_objects(req.bucket(), req.query("prefix"),
-                                             req.query("marker"));
+        obj_list = co_await m_dir.list_objects(
+            req.bucket(), req.query("prefix"), req.query("marker"));
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");

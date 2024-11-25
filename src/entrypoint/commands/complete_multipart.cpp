@@ -73,7 +73,7 @@ std::string multipart_etag(const upload_info& info) {
 complete_multipart::complete_multipart(directory& dir, global_data_view& gdv,
                                        multipart_state& uploads,
                                        limits& uhlimits)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_uploads(uploads),
       m_limits(uhlimits) {}
@@ -92,13 +92,12 @@ coro<response> complete_multipart::handle(request& req) {
     buffer.resize(size);
 
     upload_info info;
+    std::string id = *req.query("uploadId");
     std::string etag;
 
     {
-        auto dir = co_await m_directory.get();
-        auto lock = dir.lock_object(req.bucket(), req.object_key());
-
-        info = co_await m_uploads.details(*req.query("uploadId"));
+        auto lock = co_await m_uploads.lock_upload(id);
+        info = co_await m_uploads.details(id);
 
         validate_internal(info, buffer.span());
 
@@ -116,21 +115,8 @@ coro<response> complete_multipart::handle(request& req) {
                    .mime = info.mime.value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
         if (!info.completed) {
-            std::optional<object> old;
-            try {
-                old = co_await dir.get_object(req.bucket(), req.object_key());
-            } catch (const command_exception&) {
-            }
-
-            co_await dir.put_object(req.bucket(), obj);
-            co_await m_uploads.remove_upload(*req.query("uploadId"));
-
-            lock.release();
-
-            if (old && old->addr) {
-                m_limits.free_storage_size(old->size);
-                co_await m_gdv.unlink(req.context(), *old->addr);
-            }
+            co_await m_dir.put_object(req.bucket(), obj);
+            co_await m_uploads.remove_upload(id);
         }
     }
 
