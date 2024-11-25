@@ -1,21 +1,8 @@
 add_library(uh_precompile_headers STATIC pch.cpp)
-target_link_libraries(
-    uh_precompile_headers
-    PRIVATGE
-    magic_enum
-    zpp_bits
-    lmdbxx
-    lmdb
-    CLI11::CLI11
-    reedsolomon
-    opentelemetry_exporter_otlp_grpc_log
-    opentelemetry_exporter_otlp_grpc
-    opentelemetry_exporter_otlp_grpc_metrics
-    opentelemetry_exporter_ostream_metrics
-    etcd-cpp-api
-    nlohmann_json
-    uh_debug
-    uh_telemetry)
+target_include_directories(uh_precompile_headers
+                           PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(uh_precompile_headers
+                      PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_precompile_headers(
     uh_precompile_headers
     PRIVATE
