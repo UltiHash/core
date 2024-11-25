@@ -11,11 +11,12 @@ add_static_and_shared(
     common.cpp
     random.cpp
     # TODO: Check if these headers are private or public
+    PRIVATE
+    Boost::url
+    Boost::log
     PUBLIC
-    uh_telemetry
+    uh_etcd
     uh_service_interfaces
     uh_types
-    uh_network
-    Boost::url
-    uh_types
-    uh_etcd)
+    uh_telemetry
+    uh_network)

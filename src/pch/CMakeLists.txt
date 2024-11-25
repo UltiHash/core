@@ -1,7 +1,7 @@
 add_library(uh_precompile_headers STATIC pch.cpp)
 target_link_libraries(
     uh_precompile_headers
-    PRIVATGE
+    PRIVATE
     magic_enum
     zpp_bits
     lmdbxx

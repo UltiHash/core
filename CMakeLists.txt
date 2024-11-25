@@ -46,8 +46,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options(-fPIC) # made compile options same to use pch
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
-set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
@@ -115,6 +113,7 @@ add_compile_options(-Wall -Winvalid-pch -Werror)
 #
 add_compile_options(-Wno-mismatched-new-delete)
 
+set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in

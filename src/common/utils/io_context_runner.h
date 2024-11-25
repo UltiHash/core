@@ -1,10 +1,9 @@
 #ifndef IO_CONTEXT_RUNNER_H
 #define IO_CONTEXT_RUNNER_H
+
 #include "common/telemetry/log.h"
 
-#include <boost/asio/executor_work_guard.hpp>
-#include <boost/asio/io_context.hpp>
-
+#include <boost/asio.hpp>
 #include <thread>
 
 namespace uh::cluster {

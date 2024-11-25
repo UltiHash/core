@@ -25,12 +25,9 @@ function(add_static_and_shared library_name)
     # Object Library
     set(object_library_name "${library_name}_object")
     add_library(${object_library_name} OBJECT ${ARGS_SOURCES})
-    target_link_libraries(
+    target_include_directories(
         ${object_library_name}
-        PRIVATE ${ARGS_PRIVATE}
-        PUBLIC ${ARGS_PUBLIC})
-    set_target_properties(${object_library_name}
-                          PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        PRIVATE $<TARGET_PROPERTY:${library_name},INCLUDE_DIRECTORIES>)
 
     if(PROJECT_PRECOMPILE_HEADER_TARGET)
         target_precompile_headers(${object_library_name} REUSE_FROM
