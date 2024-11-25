@@ -147,7 +147,7 @@ collector:
         metrics:
           receivers:
             - otlp
-	traces:
+        traces:
           exporters:
           - debug
           - otlphttp/uptrace
