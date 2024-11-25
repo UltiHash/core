@@ -340,10 +340,10 @@ size_t data_store::get_available_space() const noexcept {
 }
 
 data_store::alloc_t data_store::internal_allocate(size_t size) {
-    std::lock_guard<std::mutex> lock(m_allocate_mutex);
+    std::deque<reference_counter::refcount_cmd> refcount_commands;
+    std::unique_lock<std::mutex> lock(m_allocate_mutex);
 
     if (m_last_file_data_end + size > m_conf.max_file_size) [[unlikely]] {
-        sync();
         const auto offset = m_open_files.back().second + m_last_file_data_end;
         add_new_file(offset, m_conf.max_file_size);
         assert(offset == m_current_offset);
@@ -360,27 +360,33 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     m_current_offset += size;
     m_used_space += size;
 
-    m_refcounter.increment(local_pointer, size);
-    update_last_page_ref();
+    refcount_commands.emplace_back(reference_counter::INCREMENT, local_pointer,
+                                   size);
+    update_last_page_ref(refcount_commands);
+    lock.unlock();
+
+    m_refcounter.execute(refcount_commands);
 
     return alloc;
 }
-void data_store::update_last_page_ref() {
+
+void data_store::update_last_page_ref(
+    std::deque<reference_counter::refcount_cmd>& refcount_commands) {
     std::size_t last_page = m_current_offset / m_conf.page_size;
     if (m_locked_page.has_value()) {
         if (last_page != m_locked_page.value()) {
-            m_refcounter.increment(last_page * m_conf.page_size,
-                                   m_conf.page_size);
-            address addr;
-            addr.push({pointer_traits::get_global_pointer(
-                           m_locked_page.value() * m_conf.page_size,
-                           m_storage_id, m_data_store_id),
-                       m_conf.page_size});
-            m_refcounter.decrement(addr);
+            refcount_commands.emplace_back(reference_counter::INCREMENT,
+                                           last_page * m_conf.page_size,
+                                           m_conf.page_size);
+            refcount_commands.emplace_back(
+                reference_counter::DECREMENT,
+                m_locked_page.value() * m_conf.page_size, m_conf.page_size);
             m_locked_page = last_page;
         }
     } else {
-        m_refcounter.increment(last_page * m_conf.page_size, m_conf.page_size);
+        refcount_commands.emplace_back(reference_counter::INCREMENT,
+                                       last_page * m_conf.page_size,
+                                       m_conf.page_size);
         m_locked_page = last_page;
     }
 }
