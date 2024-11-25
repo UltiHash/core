@@ -147,9 +147,7 @@ target_include_directories(
         $<TARGET_PROPERTY:uh_precompile_headers,INTERFACE_INCLUDE_DIRECTORIES>)
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_shared)
-target_include_directories(${PROJECT_NAME}
-                           PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
