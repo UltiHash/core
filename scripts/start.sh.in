@@ -17,7 +17,7 @@ echo "*** removing old UH data"
 rm --recursive --force --verbose $UH_DATA/*
 
 echo "*** wipe etcd data"
-etcdctl del --from-key /
+ETCDCTL_API=3 etcdctl del --from-key /
 
 echo "*** starting services"
 log_dir=$BUILD_DIR/logs
