@@ -1,7 +1,6 @@
 #ifndef CORE_DATA_STORE_SERVICE_HANDLER_H
 #define CORE_DATA_STORE_SERVICE_HANDLER_H
 
-#include "common/debug/debug.h"
 #include "common/telemetry/metrics.h"
 #include "common/utils/common.h"
 #include "common/utils/pointer_traits.h"
@@ -36,8 +35,6 @@ public:
                 ctx = co_await m.recv_context(message_header);
                 auto span =
                     trace::scoped_span("received req", ctx.get_otel_context());
-
-                LOG_CORO_CONTEXT();
 
                 LOG_DEBUG() << remote.str() << ": received "
                             << magic_enum::enum_name(message_header.type);

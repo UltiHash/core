@@ -54,25 +54,6 @@ private:
 #define LOG_CONTEXT()
 #endif
 
-#define CORO_ID()                                                              \
-    int __coro_id;                                                             \
-    auto coro_id = [&__coro_id]() -> std::string {                             \
-        std::stringstream s;                                                   \
-        s << std::setfill('0') << std::setw(sizeof(size_t) * 2) << std::hex    \
-          << reinterpret_cast<size_t>(&__coro_id);                             \
-        return s.str();                                                        \
-    }
-
-#ifdef ENABLE_TRACE
-#define LOG_CORO_CONTEXT()                                                     \
-    CORO_ID();                                                                 \
-    context_logger __ctx(coro_id())
-#else
-#define LOG_CORO_CONTEXT()                                                     \
-    CORO_ID();                                                                 \
-    (void)coro_id()
-#endif
-
 inline std::string dbg_to_string(std::string v) { return v; }
 
 std::string dbg_to_string(auto v);

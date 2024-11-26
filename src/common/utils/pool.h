@@ -53,8 +53,6 @@ public:
     }
 
     coro<handle> get() {
-        LOG_CORO_CONTEXT();
-
         future<std::unique_ptr<resource>> f;
 
         {
@@ -83,8 +81,6 @@ private:
         if (!r) {
             return;
         }
-
-        LOG_CORO_CONTEXT();
 
         std::unique_lock<std::mutex> lk(*m_mutex);
 

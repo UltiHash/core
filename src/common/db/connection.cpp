@@ -62,8 +62,6 @@ connection::connection(boost::asio::io_context& ioc, const connstr& cs)
 }
 
 coro<std::optional<row>> connection::exec(const std::string& query) {
-    LOG_CORO_CONTEXT();
-
     co_await cancel();
 
     if (!PQsendQuery(m_ptr.get(), query.c_str())) {
@@ -74,8 +72,6 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 }
 
 std::optional<row> connection::raw_exec(const std::string& query) {
-    LOG_CORO_CONTEXT();
-
     m_result =
         std::shared_ptr<PGresult>(PQexec(m_ptr.get(), query.c_str()), PQclear);
     m_row = 0;
@@ -89,7 +85,6 @@ std::optional<row> connection::raw_exec(const std::string& query) {
 }
 
 coro<std::optional<row>> connection::next() {
-    LOG_CORO_CONTEXT();
     if (!m_result || m_row >= PQntuples(m_result.get())) {
 
         co_await wait();
@@ -118,7 +113,6 @@ coro<std::optional<row>> connection::next() {
 }
 
 coro<void> connection::cancel() {
-    LOG_CORO_CONTEXT();
     m_result.reset();
 
     PGresult* result = nullptr;
@@ -137,7 +131,6 @@ std::string connection::id() const {
 }
 
 coro<void> connection::wait() {
-    LOG_CORO_CONTEXT();
     while (PQisBusy(m_ptr.get())) {
         co_await m_fd.async_wait(
             boost::asio::posix::descriptor::wait_type::wait_read,
