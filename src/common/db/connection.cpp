@@ -66,7 +66,6 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
     co_await cancel();
 
-    LOG_DEBUG() << id() << ": exec(" << query << ")";
     if (!PQsendQuery(m_ptr.get(), query.c_str())) {
         throw_error_message();
     }
@@ -76,7 +75,6 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 
 std::optional<row> connection::raw_exec(const std::string& query) {
     LOG_CORO_CONTEXT();
-    LOG_DEBUG() << id() << ": raw_exec(" << query << ")";
 
     m_result =
         std::shared_ptr<PGresult>(PQexec(m_ptr.get(), query.c_str()), PQclear);
