@@ -1,0 +1,37 @@
+name: Parameterized Performance Test on AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      helm_chart_version:
+        description: 'Helm chart version to deploy (Example: 1.1.0)'
+        required: true
+      ec2_instance_type:
+        description: 'Type of the used EC2 instance'
+        default: 'r8g.4xlarge'
+      ec2_instance_count:
+        description: 'Number of deployed EC2 instances'
+        default: 1
+      deduplicator_volume_size:
+        description: 'Volume size provisioned PER deduplicator instance'
+        default: '100Gi'
+      storage_volume_size:
+        description: 'Volume size provisioned PER storage instance'
+        default: '1Ti'
+      database_volume_size:
+        description: 'Volume size provisioned for the database instance'
+        default: '100Gi'
+
+jobs:
+
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    steps:      
+      - name: Test
+        run: | 
+          echo "${{ github.event.inputs.helm_chart_version }}"
+          echo "${{ github.event.inputs.ec2_instance_type }}"
+          echo "${{ github.event.inputs.ec2_instance_count }}"
+          echo "${{ github.event.inputs.deduplicator_volume_size }}"
+          echo "${{ github.event.inputs.storage_volume_size }}"
+          echo "${{ github.event.inputs.database_volume_size }}"
