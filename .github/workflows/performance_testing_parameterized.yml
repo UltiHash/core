@@ -1,6 +1,7 @@
 name: Parameterized Performance Test on AWS
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       helm_chart_version:
