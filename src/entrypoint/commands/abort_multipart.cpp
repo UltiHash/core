@@ -24,10 +24,11 @@ coro<response> abort_multipart::handle(request& req) {
     upload_info details;
 
     {
-        auto lock = co_await m_uploads.lock_upload(upload_id);
+        auto instance = co_await m_uploads.get();
+        auto lock = co_await instance.lock_upload(upload_id);
 
-        details = co_await m_uploads.details(upload_id);
-        co_await m_uploads.remove_upload(upload_id);
+        details = co_await instance.details(upload_id);
+        co_await instance.remove_upload(upload_id);
     }
 
     for (const auto& part : details.parts) {

@@ -47,50 +47,63 @@ public:
     };
     using lock = guard<release_lock>;
 
-    coro<lock> lock_upload(const std::string& id);
+    class instance {
+    public:
+        coro<lock> lock_upload(const std::string& id);
 
-    /**
-     * Insert a new multipart upload and retrieve it's id.
-     */
-    coro<std::string> insert_upload(std::string bucket, std::string object_key,
-                                    std::optional<std::string> mime);
+        /**
+         * Insert a new multipart upload and retrieve it's id.
+         */
+        coro<std::string> insert_upload(std::string bucket,
+                                        std::string object_key,
+                                        std::optional<std::string> mime);
 
-    /**
-     * Retrieve a pointer to the upload info for a given id.
-     */
-    coro<upload_info> details(const std::string& id);
+        /**
+         * Retrieve a pointer to the upload info for a given id.
+         */
+        coro<upload_info> details(const std::string& id);
 
-    /**
-     * Retrieve part info for the given upload and part id
-     */
-    coro<upload_info::part> part_details(const std::string& upload_id,
-                                         uint16_t part_id);
+        /**
+         * Retrieve part info for the given upload and part id
+         */
+        coro<upload_info::part> part_details(const std::string& upload_id,
+                                             uint16_t part_id);
 
-    /**
-     * Set a part info for a given id.
-     */
-    coro<void> append_upload_part_info(const std::string& id, uint16_t part_id,
-                                       const dedupe_response& resp,
-                                       size_t data_size, std::string&& md5);
+        /**
+         * Set a part info for a given id.
+         */
+        coro<void> append_upload_part_info(const std::string& id,
+                                           uint16_t part_id,
+                                           const dedupe_response& resp,
+                                           size_t data_size, std::string&& md5);
 
-    /**
-     * Delete an upload with a given id
-     */
-    coro<void> remove_upload(const std::string& id);
+        /**
+         * Delete an upload with a given id
+         */
+        coro<void> remove_upload(const std::string& id);
 
-    /**
-     * Return a mapping of upload-id to object key for a given bucket.
-     */
-    coro<std::map<std::string, std::string>>
-    list_multipart_uploads(const std::string& bucket);
+        /**
+         * Return a mapping of upload-id to object key for a given bucket.
+         */
+        coro<std::map<std::string, std::string>>
+        list_multipart_uploads(const std::string& bucket);
+
+    private:
+        friend class multipart_state;
+
+        coro<void> clear_infos();
+
+        instance(pool<db::connection>::handle handle);
+        std::shared_ptr<pool<db::connection>::handle> m_handle;
+    };
+
+    coro<instance> get();
 
 private:
     pool<db::connection> m_db;
 
     /// Default grace period for deleted entries in seconds.
     static constexpr auto DEFAULT_TIMEOUT = 300;
-
-    coro<void> clear_infos(db::connection& conn);
 };
 
 } // namespace uh::cluster

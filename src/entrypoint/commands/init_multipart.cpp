@@ -41,8 +41,12 @@ coro<response> init_multipart::handle(request& req) {
 
     co_await m_dir.bucket_exists(req.bucket());
 
-    const auto upload_id = co_await m_uploads.insert_upload(
-        req.bucket(), req.object_key(), req.header("Content-Type"));
+    std::string upload_id;
+    {
+        auto instance = co_await m_uploads.get();
+        upload_id = co_await instance.insert_upload(
+            req.bucket(), req.object_key(), req.header("Content-Type"));
+    }
 
     co_return get_response(req, upload_id);
 }
