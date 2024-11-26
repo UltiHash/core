@@ -96,8 +96,9 @@ coro<response> complete_multipart::handle(request& req) {
     std::string etag;
 
     {
-        auto lock = co_await m_uploads.lock_upload(id);
-        info = co_await m_uploads.details(id);
+        auto instance = co_await m_uploads.get();
+        auto lock = co_await instance.lock_upload(id);
+        info = co_await instance.details(id);
 
         validate_internal(info, buffer.span());
 
@@ -116,7 +117,7 @@ coro<response> complete_multipart::handle(request& req) {
 
         if (!info.completed) {
             co_await m_dir.put_object(req.bucket(), obj);
-            co_await m_uploads.remove_upload(id);
+            co_await instance.remove_upload(id);
         }
     }
 
