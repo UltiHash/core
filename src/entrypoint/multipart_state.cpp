@@ -15,7 +15,7 @@ multipart_state::multipart_state(boost::asio::io_context& ioc,
 
 coro<multipart_state::lock>
 multipart_state::instance::lock_upload(const std::string& id) {
-    co_await m_handle->execv("CALL uh_lock_upload($1)", id);
+    co_await (*m_handle)->execv("CALL uh_lock_upload($1)", id);
 
     auto executor = co_await boost::asio::this_coro::executor;
     promise<void> p;
@@ -23,9 +23,9 @@ multipart_state::instance::lock_upload(const std::string& id) {
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id]() mutable -> coro<void> {
+        [f = std::move(f), handle = m_handle, id]() mutable -> coro<void> {
             co_await f.get();
-            co_await m_handle->execv("CALL uh_unlock_upload($1)", id);
+            co_await (*handle)->execv("CALL uh_unlock_upload($1)", id);
         },
         boost::asio::detached);
 
@@ -36,8 +36,8 @@ coro<std::string>
 multipart_state::instance::insert_upload(std::string bucket, std::string key,
                                          std::optional<std::string> mime) {
     LOG_CORO_CONTEXT();
-    auto row = co_await m_handle->execv("SELECT uh_create_upload($1, $2, $3)",
-                                        bucket, key, mime);
+    auto row = co_await (*m_handle)->execv(
+        "SELECT uh_create_upload($1, $2, $3)", bucket, key, mime);
 
     auto id = *row->string(0);
 
@@ -56,7 +56,7 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
     {
         std::optional<db::row> row;
         try {
-            row = co_await m_handle->execv(
+            row = co_await (*m_handle)->execv(
                 "SELECT bucket, key, erased_since, "
                 "mime, complete FROM uh_get_upload($1)",
                 id);
@@ -78,10 +78,11 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
         rv.mime = row->string(3);
     }
 
-    auto row = co_await m_handle->execv("SELECT part_id, size, effective_size, "
-                                        "etag FROM uh_get_upload_parts($1)",
-                                        id);
-    for (; row; row = co_await m_handle->next()) {
+    auto row =
+        co_await (*m_handle)->execv("SELECT part_id, size, effective_size, "
+                                    "etag FROM uh_get_upload_parts($1)",
+                                    id);
+    for (; row; row = co_await (*m_handle)->next()) {
         auto id = *row->number(0);
         std::size_t size = *row->number(1);
 
@@ -92,9 +93,9 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
     }
 
     {
-        auto row = co_await m_handle->execb(
+        auto row = co_await (*m_handle)->execb(
             "SELECT part_id, address FROM uh_get_upload_parts($1)", id);
-        for (; row; row = co_await m_handle->next()) {
+        for (; row; row = co_await (*m_handle)->next()) {
             rv.parts[*row->number(0)].addr = to_address(*row->data(1));
         }
     }
@@ -111,7 +112,7 @@ multipart_state::instance::part_details(const std::string& upload_id,
 
     upload_info::part rv;
     {
-        auto row = co_await m_handle->execv(
+        auto row = co_await (*m_handle)->execv(
             "SELECT size, etag FROM uh_get_upload_part($1, $2)", upload_id,
             part_id);
         if (!row) {
@@ -122,7 +123,7 @@ multipart_state::instance::part_details(const std::string& upload_id,
         rv.etag = *row->string(2);
     }
     {
-        auto row = co_await m_handle->execb(
+        auto row = co_await (*m_handle)->execb(
             "SELECT address FROM uh_get_upload_part($1, $2)", upload_id,
             part_id);
         if (!row) {
@@ -143,17 +144,17 @@ coro<void> multipart_state::instance::append_upload_part_info(
 
     auto data = to_buffer(resp.addr);
 
-    co_await m_handle->execv("CALL uh_put_multipart($1, $2, $3, $4, $5, $6)",
-                             id, part, data_size, resp.effective_size,
-                             std::span<char>(data), md5);
+    co_await (*m_handle)->execv("CALL uh_put_multipart($1, $2, $3, $4, $5, $6)",
+                                id, part, data_size, resp.effective_size,
+                                std::span<char>(data), md5);
 }
 
 coro<void> multipart_state::instance::remove_upload(const std::string& id) {
     LOG_CORO_CONTEXT();
     LOG_DEBUG() << "remove upload, id: " << id;
 
-    co_await m_handle->execv("CALL uh_complete_upload($1)", id);
-    co_await m_handle->execv("CALL uh_delete_upload($1)", id);
+    co_await (*m_handle)->execv("CALL uh_complete_upload($1)", id);
+    co_await (*m_handle)->execv("CALL uh_delete_upload($1)", id);
 
     co_await clear_infos();
 }
@@ -166,9 +167,9 @@ multipart_state::instance::list_multipart_uploads(const std::string& bucket) {
 
     std::map<std::string, std::string> rv;
 
-    auto row = co_await m_handle->execv(
+    auto row = co_await (*m_handle)->execv(
         "SELECT id, key FROM uh_get_uploads($1)", bucket);
-    for (; row; row = co_await m_handle->next()) {
+    for (; row; row = co_await (*m_handle)->next()) {
         rv[*row->string(0)] = *row->string(1);
     }
 
@@ -177,13 +178,14 @@ multipart_state::instance::list_multipart_uploads(const std::string& bucket) {
 
 coro<void> multipart_state::instance::clear_infos() {
     LOG_CORO_CONTEXT();
-    co_await m_handle->execv(
+    co_await (*m_handle)->execv(
         "CALL uh_clean_deleted(MAKE_INTERVAL(0, 0, 0, 0, 0, 0, $1))",
         DEFAULT_TIMEOUT);
 }
 
 multipart_state::instance::instance(pool<db::connection>::handle handle)
-    : m_handle(std::move(handle)) {}
+    : m_handle(
+          std::make_shared<pool<db::connection>::handle>(std::move(handle))) {}
 
 coro<multipart_state::instance> multipart_state::get() {
     auto handle = co_await m_db.get();

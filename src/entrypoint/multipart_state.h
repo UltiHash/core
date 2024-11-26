@@ -94,7 +94,7 @@ public:
         coro<void> clear_infos();
 
         instance(pool<db::connection>::handle handle);
-        pool<db::connection>::handle m_handle;
+        std::shared_ptr<pool<db::connection>::handle> m_handle;
     };
 
     coro<instance> get();
