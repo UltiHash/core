@@ -120,7 +120,7 @@ multipart_state::instance::part_details(const std::string& upload_id,
                                     "part id not found");
         }
         rv.size = *row->number(0);
-        rv.etag = *row->string(2);
+        rv.etag = *row->string(1);
     }
     {
         auto row = co_await (*m_handle)->execb(
