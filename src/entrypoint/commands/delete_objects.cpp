@@ -8,7 +8,7 @@ namespace uh::cluster {
 
 delete_objects::delete_objects(directory& dir, global_data_view& gdv,
                                limits& uhlimits)
-    : m_directory(dir),
+    : m_dir(dir),
       m_gdv(gdv),
       m_limits(uhlimits) {}
 
@@ -19,6 +19,7 @@ bool delete_objects::can_handle(const request& req) {
 }
 
 namespace {
+
 struct fail {
     std::string key;
     std::string code;
@@ -48,6 +49,7 @@ response get_response(const std::vector<std::string>& success,
 
     return res;
 }
+
 } // namespace
 
 coro<response> delete_objects::handle(request& req) {
@@ -75,8 +77,8 @@ coro<response> delete_objects::handle(request& req) {
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
     std::vector<fail> failure;
-    for (const auto& objct : object_nodes) {
-        auto key = objct.get().get_optional<std::string>("Key");
+    for (const auto& obj : object_nodes) {
+        auto key = obj.get().get_optional<std::string>("Key");
         if (!key) {
             throw command_exception(status::bad_request, "MalformedXML",
                                     "xml is invalid");
@@ -85,33 +87,12 @@ coro<response> delete_objects::handle(request& req) {
         try {
             LOG_DEBUG() << req.peer() << ": delete_objects::handle(): deleting "
                         << *key;
-            try {
-                auto dir = co_await m_directory.get();
-                auto lock = dir.lock_object(req.bucket(), *key);
 
-                object obj = co_await dir.get_object(req.bucket(), *key);
-                co_await dir.delete_object(req.bucket(), *key);
-                co_await m_gdv.unlink(req.context(), obj.addr.value());
-
-                m_limits.free_storage_size(obj.size);
-            } catch (command_exception&) {
-            }
-
+            co_await m_dir.delete_object(req.bucket(), *key);
             success.emplace_back(*key);
 
-        } catch (const error_exception& e) {
-            LOG_INFO() << req.peer() << ": Failed to delete the bucket "
-                       << bucket_id << ": " << e;
-            switch (*e.error()) {
-            case error::object_not_found:
-                failure.emplace_back(*key, "NoSuchKey");
-                break;
-            case error::bucket_not_found:
-                failure.emplace_back(*key, "NoSuchBucket");
-                break;
-            default:
-                failure.emplace_back(*key);
-            }
+        } catch (const std::exception& e) {
+            failure.emplace_back(*key, e.what());
         }
     }
 

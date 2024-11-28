@@ -11,12 +11,7 @@ static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
 
 coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
-    std::atomic<std::size_t> size = 0ull;
-
-    {
-        auto dir = co_await directory.get();
-        size = co_await dir.data_size();
-    }
+    std::atomic<std::size_t> size = co_await directory.data_size();
     l.storage_size(size);
 
     metric<entrypoint_original_data_volume_gauge, byte,
@@ -35,11 +30,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
         timer.expires_from_now(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
 
-        {
-            auto dir = co_await directory.get();
-            size = co_await dir.data_size();
-        }
-
+        size = co_await directory.data_size();
         l.storage_size(size);
     }
 }
@@ -80,7 +71,8 @@ service::service(const service_config& sc, entrypoint_config config)
                                    m_users),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory)),
-               m_ioc) {
+               m_ioc),
+      m_gc(m_ioc, m_directory, m_data_view) {
     m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
 
     co_spawn(

@@ -19,61 +19,58 @@ public:
         : m_db(ioc, connection_factory(ioc, cfg, cfg.directory),
                cfg.directory.count) {}
 
-    class instance {
-    public:
-        using object_lock = guard<std::function<void()>>;
+    struct unref {
+        promise<void> p;
 
-        instance(instance&& other) = default;
-        instance(const instance&) = delete;
-
-        coro<void> put_object(const std::string& bucket, const object& obj);
-
-        coro<object> get_object(const std::string& bucket,
-                                const std::string& object_id);
-
-        coro<object> head_object(const std::string& bucket,
-                                 const std::string& object_id);
-
-        object_lock lock_object(const std::string& bucket,
-                                const std::string& object_id);
-
-        object_lock lock_object_shared(const std::string& bucket,
-                                       const std::string& object_id);
-
-        coro<void> put_bucket(const std::string& bucket);
-
-        coro<void> bucket_exists(const std::string& bucket);
-
-        coro<void> delete_bucket(const std::string& bucket);
-
-        coro<void> delete_object(const std::string& bucket,
-                                 const std::string& object_id);
-
-        coro<std::vector<std::string>> list_buckets();
-
-        coro<std::optional<std::string>>
-        get_bucket_policy(const std::string& bucket);
-
-        coro<void> set_bucket_policy(const std::string& bucket,
-                                     std::optional<std::string> policy);
-
-        coro<std::vector<object>>
-        list_objects(const std::string& bucket,
-                     const std::optional<std::string>& prefix,
-                     const std::optional<std::string>& lower_bound);
-
-        /**
-         * Return amount of data stored in all buckets.
-         */
-        coro<std::size_t> data_size();
-
-    private:
-        friend class directory;
-        instance(pool<db::connection>::handle&& handle);
-        pool<db::connection>::handle m_handle;
+        void operator()();
     };
 
-    coro<instance> get();
+    using object_lock = value_guard<object, unref>;
+
+    coro<void> put_object(const std::string& bucket, const object& obj);
+
+    coro<object_lock> get_object(const std::string& bucket,
+                                 const std::string& object_id);
+
+    coro<object> head_object(const std::string& bucket,
+                             const std::string& object_id);
+
+    coro<void> put_bucket(const std::string& bucket);
+
+    coro<void> bucket_exists(const std::string& bucket);
+
+    coro<void> delete_bucket(const std::string& bucket);
+
+    coro<void> delete_object(const std::string& bucket,
+                             const std::string& object_id);
+
+    coro<std::vector<std::string>> list_buckets();
+
+    coro<std::optional<std::string>>
+    get_bucket_policy(const std::string& bucket);
+
+    coro<void> set_bucket_policy(const std::string& bucket,
+                                 std::optional<std::string> policy);
+
+    coro<std::vector<object>>
+    list_objects(const std::string& bucket,
+                 const std::optional<std::string>& prefix,
+                 const std::optional<std::string>& lower_bound);
+
+    struct to_delete {
+        std::size_t id;
+        address addr;
+    };
+    coro<std::optional<to_delete>> next_deleted();
+
+    coro<void> clear_buckets();
+
+    coro<void> remove_object(std::size_t id);
+
+    /**
+     * Return amount of data stored in all buckets.
+     */
+    coro<std::size_t> data_size();
 
 private:
     pool<db::connection> m_db;
@@ -92,16 +89,15 @@ private:
  * address data and set it to empty.
  *
  * @param ctx the request context
- * @param dir a directory instance
+ * @param dir a directory
  * @param gdv reference to the global data view
  * @param bucket name of the bucket to work in
  * @param obj object specification to write, including object name
  *
  * @return number of bytes reclaimed
  */
-coro<std::size_t> safe_put_object(context& ctx, directory::instance& dir,
-                                  global_data_view& gdv,
-                                  const std::string& bucket, object& obj);
+coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
+                           const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster
 
