@@ -1,7 +1,7 @@
 #ifndef CORE_STORAGE_STORAGE_HANDLER_H
 #define CORE_STORAGE_STORAGE_HANDLER_H
 
-#include <common/coroutines/context.h>
+#include <common/telemetry/context.h>
 #include <common/utils/protocol_handler.h>
 #include <storage/interfaces/local_storage.h>
 

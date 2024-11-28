@@ -1,7 +1,7 @@
-#ifndef CORE_MESSENGER_CORE_H
-#define CORE_MESSENGER_CORE_H
+#ifndef CORE_COMMON_NETWORK_MESSENGER_CORE_H
+#define CORE_COMMON_NETWORK_MESSENGER_CORE_H
 
-#include "common/coroutines/context.h"
+#include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
 #include "common/telemetry/traces.h"
@@ -298,4 +298,4 @@ private:
 
 } // end namespace uh::cluster
 
-#endif // CORE_MESSENGER_CORE_H
+#endif
