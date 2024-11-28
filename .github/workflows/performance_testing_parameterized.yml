@@ -32,7 +32,12 @@ jobs:
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    steps:      
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive      
+      
       - name: Output workflow parameters
         run: | 
           echo "${{ github.event.inputs.helm_chart_version }}"
@@ -73,7 +78,7 @@ jobs:
         env:
           EC2_INSTANCE_TYPE: "${{ github.event.inputs.ec2_instance_type }}"
         with:
-          input: testing/performance/parameterized/karpenter-node-pool
+          input: testing/performance/parameterized/karpenter-node-pool.yaml
           output: karpenter-node-pool.yaml
 
       - name: Generate Helm values
@@ -87,11 +92,6 @@ jobs:
         with:
           input: testing/performance/parameterized/ultihash-helm-values.yaml
           output: helm-values.yaml
-
-      - name: Output yaml files
-        run: |
-          cat helm-values.yaml
-          cat karpenter-node-pool.yaml
 
       - name: Provision the testing environment
         run: |
@@ -143,7 +143,7 @@ jobs:
           kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete -f karpenter-node-pool.yaml || true
+          kubectl delete nodepool parameterized-test || true
 
       
 
