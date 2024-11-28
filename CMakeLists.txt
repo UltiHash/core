@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
+    set(CMAKE_C_COMPILER_LAUNCHER
+        "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
+    )
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+endif()
+
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 

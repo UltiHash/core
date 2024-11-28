@@ -8,7 +8,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 head_object::head_object(directory& dir)
-    : m_directory(dir) {}
+    : m_dir(dir) {}
 
 bool head_object::can_handle(const request& req) {
     return req.method() == verb::head && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -20,8 +20,7 @@ coro<response> head_object::handle(request& req) {
     metric<entrypoint_head_object_req>::increase(1);
 
     try {
-        auto dir = co_await m_directory.get();
-        auto obj = co_await dir.head_object(req.bucket(), req.object_key());
+        auto obj = co_await m_dir.head_object(req.bucket(), req.object_key());
 
         response res;
         res.set("Content-Length", std::to_string(obj.size));

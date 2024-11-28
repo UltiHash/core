@@ -46,7 +46,13 @@ coro<response> list_multipart::handle(request& req) {
     metric<entrypoint_list_multipart_req>::increase(1);
     const std::string& bucket_name = req.bucket();
 
-    auto ongoing = co_await m_uploads.list_multipart_uploads(bucket_name);
+    std::map<std::string, std::string> ongoing;
+
+    {
+        auto instance = co_await m_uploads.get();
+        ongoing = co_await instance.list_multipart_uploads(bucket_name);
+    }
+
     if (ongoing.empty()) {
         throw command_exception(status::not_found, "NoMultiPartUploads",
                                 "no multipart uploads");
