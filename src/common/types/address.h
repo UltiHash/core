@@ -3,7 +3,11 @@
 
 #include "big_int.h"
 #include <cstdint>
-#include <zpp_bits.h>
+// #include <zpp_bits.h>
+
+namespace zpp::bits {
+template <std::size_t Count> struct members;
+}
 
 namespace uh::cluster {
 
@@ -100,17 +104,8 @@ struct address {
     std::vector<uint32_t> sizes;
 };
 
-inline std::vector<char> to_buffer(const address& addr) {
-    std::vector<char> data;
-    zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
-    return data;
-}
-
-inline address to_address(std::span<char> data) {
-    address addr;
-    zpp::bits::in{data, zpp::bits::size4b{}}(addr).or_throw();
-    return addr;
-}
+inline std::vector<char> to_buffer(const address& addr);
+inline address to_address(std::span<char> data);
 
 } // namespace uh::cluster
 

@@ -4,7 +4,6 @@ target_link_libraries(
     INTERFACE uh_recovery
               uh_ec_groups
               uh_service_discovery
-              uh_utils
               uh_storage
               uh_network
               uh_service_interfaces

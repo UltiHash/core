@@ -1,6 +1,5 @@
 #include "data_store.h"
 #include "common/telemetry/log.h"
-#include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
 #include <mutex>
 

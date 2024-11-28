@@ -6,7 +6,6 @@ add_static_and_shared(
     uh_dedupe_interfaces
     uh_storage_interfaces
     PUBLIC
-    uh_utils
     uh_config
     uh_types
     uh_coroutines)

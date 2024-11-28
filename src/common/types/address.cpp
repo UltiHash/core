@@ -1,6 +1,20 @@
 #include "address.h"
 
+#include <zpp_bits.h>
+
 namespace uh::cluster {
+
+inline std::vector<char> to_buffer(const address& addr) {
+    std::vector<char> data;
+    zpp::bits::out{data, zpp::bits::size4b{}}(addr).or_throw();
+    return data;
+}
+
+inline address to_address(std::span<char> data) {
+    address addr;
+    zpp::bits::in{data, zpp::bits::size4b{}}(addr).or_throw();
+    return addr;
+}
 
 std::string fragment::to_string() const {
     return pointer.to_string() + "[" + std::to_string(size) + "]";

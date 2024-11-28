@@ -1,7 +1,7 @@
 #ifndef CORE_PROTOCOL_HANDLER_H
 #define CORE_PROTOCOL_HANDLER_H
 
-#include "common/network/messenger.h"
+#include "common/types/common_types.h"
 
 namespace uh::cluster {
 

@@ -2,8 +2,6 @@
 
 #include "common/etcd/etcd_lock.h"
 #include "common/etcd/namespace.h"
-#include "common/utils/common.h"
-#include "common/utils/time_utils.h"
 #include <fstream>
 
 namespace uh::cluster {

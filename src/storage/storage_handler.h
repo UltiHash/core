@@ -3,8 +3,6 @@
 
 #include "common/debug/debug.h"
 #include "common/utils/common.h"
-// #include "common/telemetry/metrics.h"
-// #include "common/utils/pointer_traits.h"
 
 #include "common/coroutines/context.h"
 #include "common/utils/protocol_handler.h"

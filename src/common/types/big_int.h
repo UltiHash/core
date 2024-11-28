@@ -8,15 +8,15 @@
 #include <limits>
 #include <string>
 
-#include "zpp_bits.h"
+// #include "zpp_bits.h"
 
 namespace uh::cluster {
 
 class big_int {
     uint64_t num[2]; // 0 = high, 1 = low
 public:
-    using serialize = zpp::bits::members<1>;
-    friend zpp::bits::access;
+    // using serialize = zpp::bits::members<1>;
+    // friend zpp::bits::access;
 
     constexpr big_int() noexcept
         : num{0, 0} {}

@@ -35,42 +35,9 @@ function(add_static_and_shared library_name)
                                   ${PROJECT_PRECOMPILE_HEADER_TARGET})
     endif()
 
-    # Static Library
-    add_library(${library_name} STATIC $<TARGET_OBJECTS:${object_library_name}>)
+    add_library(${library_name} SHARED $<TARGET_OBJECTS:${object_library_name}>)
     target_link_libraries(
         ${library_name}
         PRIVATE ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
-
-    set(ARGS_PRIVATE_SHARED "")
-    foreach(item IN LISTS ARGS_PRIVATE)
-        if(item MATCHES "^uh_")
-            list(APPEND ARGS_PRIVATE_SHARED "${item}_shared")
-        else()
-            list(APPEND ARGS_PRIVATE_SHARED "${item}")
-        endif()
-    endforeach()
-
-    set(ARGS_PUBLIC_SHARED "")
-    foreach(item IN LISTS ARGS_PUBLIC)
-        if(item MATCHES "^uh_")
-            list(APPEND ARGS_PUBLIC_SHARED "${item}_shared")
-        else()
-            list(APPEND ARGS_PUBLIC_SHARED "${item}")
-        endif()
-    endforeach()
-
-    # Shared Library
-    set(shared_library_name "${library_name}_shared")
-    add_library(${shared_library_name} SHARED
-                $<TARGET_OBJECTS:${object_library_name}>)
-    target_link_libraries(
-        ${shared_library_name}
-        PRIVATE ${ARGS_PRIVATE_SHARED}
-        PUBLIC ${ARGS_PUBLIC_SHARED})
-    list(APPEND defined_targets "${library_name}_shared")
-
-    include(CMakePrintHelpers)
-    cmake_print_variables(ARGS_PRIVATE_SHARED ARGS_PUBLIC_SHARED)
-    message("here")
 endfunction()

@@ -3,8 +3,6 @@ add_static_and_shared(
     SOURCES
     service_registry.cpp
     service_id.cpp
-    PRIVATE
-    uh_utils
     PUBLIC
     uh_network
     uh_etcd)

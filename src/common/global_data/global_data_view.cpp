@@ -1,5 +1,6 @@
 #include "global_data_view.h"
 
+#include "common/telemetry/metrics.h"
 #include "common/utils/address_utils.h"
 
 namespace uh::cluster {

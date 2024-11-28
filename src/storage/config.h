@@ -2,9 +2,14 @@
 #define CORE_STORAGE_CONFIG_H
 
 #include "common/network/server.h"
-#include "data_store.h"
 
 namespace uh::cluster {
+
+struct data_store_config {
+    size_t max_file_size;
+    size_t max_data_store_size;
+    size_t page_size;
+};
 
 struct storage_config {
     server_config server = {

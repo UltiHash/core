@@ -83,7 +83,19 @@ constexpr size_t INPUT_CHUNK_SIZE = 64ul * MEBI_BYTE;
 
 constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
 
-const std::string& get_service_string(const role& service_role);
+inline static const std::map<uh::cluster::role, std::string>
+    abbreviation_by_role = {{uh::cluster::STORAGE_SERVICE, "storage"},
+                            {uh::cluster::DEDUPLICATOR_SERVICE, "deduplicator"},
+                            {uh::cluster::ENTRYPOINT_SERVICE, "entrypoint"},
+                            {uh::cluster::RECOVERY_SERVICE, "recovery"}};
+
+inline const std::string& get_service_string(const role& service_role) {
+    if (auto search = abbreviation_by_role.find(service_role);
+        search != abbreviation_by_role.end())
+        return search->second;
+    else
+        throw std::invalid_argument("invalid role");
+}
 
 } // end namespace uh::cluster
 

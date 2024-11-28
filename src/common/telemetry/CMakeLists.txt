@@ -8,7 +8,6 @@ add_static_and_shared(
     PRIVATE
     Boost::filesystem
     PUBLIC
-    uh_utils
     magic_enum
     opentelemetry_exporter_otlp_grpc_log
     opentelemetry_exporter_otlp_grpc

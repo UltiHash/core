@@ -7,8 +7,6 @@ add_static_and_shared(
     error.cpp
     misc.cpp
     temp_directory.cpp
-    host_utils.cpp
-    common.cpp
     random.cpp
     # TODO: Check if these headers are private or public
     PRIVATE

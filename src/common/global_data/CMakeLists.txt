@@ -2,8 +2,6 @@ add_static_and_shared(
     uh_global_data
     SOURCES
     global_data_view.cpp
-    PRIVATE
-    uh_utils
     PUBLIC
     uh_caches
     uh_service_discovery

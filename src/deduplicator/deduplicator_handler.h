@@ -1,9 +1,8 @@
 #ifndef CORE_DEDUPE_NODE_HANDLER_H
 #define CORE_DEDUPE_NODE_HANDLER_H
 
+#include "common/network/messenger.h"
 #include "common/utils/protocol_handler.h"
-#include "config.h"
-#include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
 
 namespace uh::cluster {

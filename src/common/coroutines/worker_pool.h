@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_WORKER_POOL_H
 #define UH_CLUSTER_WORKER_POOL_H
 
+#include "common/coroutines/context.h"
 #include "common/coroutines/promise.h"
 #include <exception>
 

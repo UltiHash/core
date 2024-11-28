@@ -4,6 +4,7 @@
 #include "reference_counter.h"
 
 #include "common/types/address.h"
+#include "storage/config.h"
 
 // #include "common/types/scoped_buffer.h"
 // #include "common/utils/common.h"
@@ -16,12 +17,6 @@
 // #include <unordered_set>
 
 namespace uh::cluster {
-
-struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
-};
 
 class data_store {
 

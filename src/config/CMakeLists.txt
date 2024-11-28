@@ -1,11 +1,10 @@
-add_library(uh_config STATIC configuration.cpp)
-target_link_libraries(
+add_static_and_shared(
     uh_config
-    PUBLIC uh_telemetry
-           uh_storage
-           uh_license
-           uh_utils
-           uh_db
-           uh_entrypoint
-           uh_deduplicator
-           CLI11::CLI11)
+    SOURCES
+    configuration.cpp
+    PUBLIC
+    # uh_db uh_etcd uh_license uh_telemetry uh_utils uh_deduplicator
+    # uh_entrypoint uh_storage
+    CLI11::CLI11
+    # uh_recovery
+)
