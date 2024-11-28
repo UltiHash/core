@@ -1,8 +1,8 @@
 #ifndef CORE_ENTRYPOINT_COMMANDS_IAM_CREATE_USER_H
 #define CORE_ENTRYPOINT_COMMANDS_IAM_CREATE_USER_H
 
+#include "entrypoint/http/user_db.h"
 #include <entrypoint/commands/command.h>
-#include <entrypoint/user/db.h>
 
 namespace uh::cluster::ep::iam {
 

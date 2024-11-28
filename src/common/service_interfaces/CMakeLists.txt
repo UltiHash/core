@@ -2,9 +2,6 @@ add_static_and_shared(
     uh_service_interfaces
     SOURCES
     service_factory.cpp
-    PRIVATE
-    uh_dedupe_interfaces
-    uh_storage_interfaces
     PUBLIC
     uh_config
     uh_types

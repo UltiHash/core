@@ -6,4 +6,5 @@ add_static_and_shared(
     uh_caches
     uh_service_discovery
     uh_ec_groups
-    uh_types)
+    uh_types
+    uh_etcd)

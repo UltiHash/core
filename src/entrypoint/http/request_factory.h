@@ -2,7 +2,7 @@
 #define CORE_ENTRYPOINT_HTTP_REQUEST_FACTORY_H
 
 #include "entrypoint/http/request.h"
-#include "entrypoint/user/db.h"
+#include "entrypoint/http/user_db.h"
 #include <boost/asio.hpp>
 
 #include <memory>

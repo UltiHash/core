@@ -11,6 +11,7 @@ add_static_and_shared(
     uh_registry
     uh_dedupe_interfaces
     uh_service_interfaces
+    uh_etcd
     uh_storage
     uh_types
     uh_utils

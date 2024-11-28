@@ -3,7 +3,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <span>
 #include <string_view>
 
 namespace uh::cluster {

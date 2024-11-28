@@ -1,8 +1,8 @@
 #ifndef CORE_ENTRYPOINT_COMMANDS_IAM_LIST_USER_POLICIES_H
 #define CORE_ENTRYPOINT_COMMANDS_IAM_LIST_USER_POLICIES_H
 
+#include "entrypoint/http/user_db.h"
 #include <entrypoint/commands/command.h>
-#include <entrypoint/user/db.h>
 
 namespace uh::cluster::ep::iam {
 

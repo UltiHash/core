@@ -6,7 +6,6 @@ add_static_and_shared(
     fragment_set.cpp
     PRIVATE
     uh_utils
-    uh_deduplicator
     PUBLIC
     uh_global_data
     uh_caches)

@@ -1,7 +1,6 @@
 add_static_and_shared(
     uh_utils
     SOURCES
-    address_utils.cpp
     strings.cpp
     xml_parser.cpp
     error.cpp
@@ -13,8 +12,9 @@ add_static_and_shared(
     Boost::url
     Boost::log
     PUBLIC
-    uh_etcd
-    uh_service_interfaces
-    uh_types
-    uh_telemetry
-    uh_network)
+    # uh_etcd
+    # uh_service_interfaces
+    # uh_types
+    # uh_telemetry
+    # uh_network
+)

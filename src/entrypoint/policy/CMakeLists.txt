@@ -9,7 +9,5 @@ add_static_and_shared(
     uh_telemetry
     nlohmann_json
     PUBLIC
-    uh_commands
     uh_http
-    uh_utils
-    uh_entrypoint)
+    uh_utils)

@@ -22,8 +22,14 @@ add_static_and_shared(
     delete_objects.cpp
     get_metrics.cpp
     list_multipart.cpp
-    PRIVATE uh_utils uh_telemetry
-    PUBLIC uh_service_interfaces uh_service_discovery uh_crypto uh_http
-           uh_global_data uh_entrypoint)
+    PRIVATE
+    uh_utils
+    uh_telemetry
+    PUBLIC
+    uh_service_interfaces
+    uh_service_discovery
+    uh_crypto
+    uh_http
+    uh_global_data)
 
 add_subdirectory(iam)

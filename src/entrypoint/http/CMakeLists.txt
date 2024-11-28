@@ -15,13 +15,13 @@ add_static_and_shared(
     beast_utils.cpp
     request_factory.cpp
     chunked_body.cpp
+    user_db.cpp
     PRIVATE
     uh_telemetry
-    uh_entrypoint
     PUBLIC
-    uh_user
     uh_types
     uh_utils
+    uh_db
     uh_crypto
     uh_coroutines
     Boost::url)

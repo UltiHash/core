@@ -7,9 +7,9 @@
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/http/user_db.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
-#include "entrypoint/user/db.h"
 
 namespace uh::cluster::ep {
 

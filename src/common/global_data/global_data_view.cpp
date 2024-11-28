@@ -1,7 +1,7 @@
 #include "global_data_view.h"
 
+#include "common/etcd/address_utils.h"
 #include "common/telemetry/metrics.h"
-#include "common/utils/address_utils.h"
 
 namespace uh::cluster {
 global_data_view::global_data_view(

@@ -7,7 +7,7 @@
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
-#include "entrypoint/user/user.h"
+#include "entrypoint/http/user.h"
 
 #include <map>
 #include <span>

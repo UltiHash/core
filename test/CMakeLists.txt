@@ -22,41 +22,45 @@ function(uh_add_test name)
     add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
-uh_add_test(test_address PRIVATE uh_types_shared)
-uh_add_test(test_big_int PRIVATE uh_types_shared)
-uh_add_test(test_scoped_buffer PRIVATE uh_types_shared)
+add_library(gdv_fixture INTERFACE)
+target_link_libraries(gdv_fixture INTERFACE uh_recovery uh_storage uh_utils
+                                            uh_global_data)
+
+uh_add_test(test_address PRIVATE uh_types)
+uh_add_test(test_big_int PRIVATE uh_types)
+uh_add_test(test_scoped_buffer PRIVATE uh_types)
 
 uh_add_test(test_awaitable_promise PRIVATE uh_coroutines)
 uh_add_test(test_promise_future PRIVATE uh_coroutines)
 
-uh_add_test(test_data_store PRIVATE uh_storage_shared)
-uh_add_test(test_reference_counter PRIVATE uh_storage_shared)
+uh_add_test(test_data_store PRIVATE uh_storage)
+uh_add_test(test_reference_counter PRIVATE uh_storage)
 
-uh_add_test(test_ec PRIVATE uh_ec uh_telemetry_shared)
+uh_add_test(test_ec PRIVATE uh_ec uh_telemetry)
 
-uh_add_test(test_fragment_set PRIVATE uh_dedupe_set_shared)
-uh_add_test(test_serialization PRIVATE uh_dedupe_set_shared)
+uh_add_test(test_fragment_set PRIVATE uh_dedupe_set gdv_fixture)
+uh_add_test(test_serialization PRIVATE uh_dedupe_set)
 
-uh_add_test(test_global_data_view PRIVATE uh_utils_shared)
-uh_add_test(test_pointer_traits PRIVATE uh_utils_shared)
-uh_add_test(test_pool PRIVATE uh_utils_shared)
-uh_add_test(test_strings PRIVATE uh_utils_shared)
-uh_add_test(test_xml_parser PRIVATE uh_utils_shared)
+uh_add_test(test_global_data_view PRIVATE uh_utils gdv_fixture)
+uh_add_test(test_pointer_traits PRIVATE uh_utils)
+uh_add_test(test_pool PRIVATE uh_utils)
+uh_add_test(test_strings PRIVATE uh_utils)
+uh_add_test(test_xml_parser PRIVATE uh_utils)
 
-uh_add_test(test_hash PRIVATE uh_crypto_shared)
+uh_add_test(test_hash PRIVATE uh_crypto)
 
-uh_add_test(test_http_range PRIVATE uh_http_shared)
+uh_add_test(test_http_range PRIVATE uh_http)
 
-uh_add_test(test_license PRIVATE uh_license_shared)
+uh_add_test(test_license PRIVATE uh_license)
 
 uh_add_test(test_lfu_cache PRIVATE uh_caches)
 uh_add_test(test_lru_cache PRIVATE uh_caches)
 uh_add_test(test_plain_cache PRIVATE uh_caches)
 
-uh_add_test(test_formats PRIVATE uh_entrypoint_shared)
+uh_add_test(test_formats PRIVATE uh_entrypoint)
 
-uh_add_test(test_service_registry PRIVATE uh_registry_shared)
-uh_add_test(test_services PRIVATE uh_registry_shared uh_service_discovery)
+uh_add_test(test_service_registry PRIVATE uh_registry)
+uh_add_test(test_services PRIVATE uh_registry uh_service_discovery)
 
 add_library(uh_mock_entrypoint SHARED entrypoint.cpp)
 target_link_libraries(uh_mock_entrypoint PRIVATE uh_commands uh_policy)

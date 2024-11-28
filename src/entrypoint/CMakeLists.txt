@@ -1,6 +1,5 @@
 add_subdirectory(commands)
 add_subdirectory(http)
-add_subdirectory(user)
 add_subdirectory(policy)
 add_subdirectory(aws)
 
@@ -20,18 +19,18 @@ add_static_and_shared(
     uh_commands
     uh_iam
     uh_debug
+    uh_ec
     PUBLIC
     Boost::url
     uh_deduplicator
     uh_registry
     uh_policy
     uh_http
+    uh_etcd
     uh_types
     uh_utils
     uh_network
     uh_db
-    uh_commands
     uh_service_discovery
     uh_service_interfaces
-    uh_global_data
-    uh_user)
+    uh_global_data)

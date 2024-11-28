@@ -4,7 +4,7 @@
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
 #include "entrypoint/formats.h"
-#include "entrypoint/user/db.h"
+#include "entrypoint/http/user_db.h"
 
 #include <ranges>
 

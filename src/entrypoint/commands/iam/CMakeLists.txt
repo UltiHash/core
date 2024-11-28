@@ -13,6 +13,4 @@ add_static_and_shared(
     uh_utils
     uh_http
     uh_aws
-    uh_policy
-    PUBLIC
-    uh_user)
+    uh_policy)

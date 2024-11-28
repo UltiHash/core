@@ -1,8 +1,8 @@
 #ifndef COMMON_UTILS_DOUBLE_BUFFER_H
 #define COMMON_UTILS_DOUBLE_BUFFER_H
 
-#include "common/types/scoped_buffer.h"
 #include <array>
+#include <vector>
 
 namespace uh::cluster {
 

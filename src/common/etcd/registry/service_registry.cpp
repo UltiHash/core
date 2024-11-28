@@ -1,6 +1,7 @@
 #include "service_registry.h"
 
 #include "common/utils/common.h"
+#include "common/utils/host_utils.h"
 
 using namespace boost::asio;
 

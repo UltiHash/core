@@ -1,6 +1,8 @@
 #ifndef COMMON_UTILS_SCOPE_GUARD_H
 #define COMMON_UTILS_SCOPE_GUARD_H
 
+#include <utility>
+
 namespace uh::cluster {
 
 template <typename fini> class guard {
