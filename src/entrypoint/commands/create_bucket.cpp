@@ -6,7 +6,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 create_bucket::create_bucket(directory& dir)
-    : m_directory(dir) {}
+    : m_dir(dir) {}
 
 bool create_bucket::can_handle(const request& req) {
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
@@ -17,9 +17,8 @@ bool create_bucket::can_handle(const request& req) {
 coro<response> create_bucket::handle(request& req) {
     metric<entrypoint_create_bucket_req>::increase(1);
     auto bucket_id = req.bucket();
-    auto dir = co_await m_directory.get();
     try {
-        co_await dir.put_bucket(bucket_id);
+        co_await m_dir.put_bucket(bucket_id);
     } catch (const error_exception& e) {
         LOG_ERROR() << "Failed to add the bucket " << bucket_id
                     << " to the directory: " << e;

@@ -19,11 +19,6 @@ public:
      */
     void check_storage_size(std::size_t increment);
 
-    /**
-     * Reduce internal storage size counter.
-     */
-    void free_storage_size(std::size_t decrement);
-
     // warn about a nearly reached size limit at this percentage
     static constexpr unsigned SIZE_LIMIT_WARNING_PERCENTAGE = 80;
     // number of files to upload between two warnings
