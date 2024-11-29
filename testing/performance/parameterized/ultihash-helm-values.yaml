@@ -4,12 +4,12 @@ global:
   ultihashSecret:
     name: ultihash
     key: license
-  logLevel: INFO
+  logLevel: WARNING
   telemetryExportInterval: 30000
 
 recovery:
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -19,7 +19,7 @@ recovery:
 etcd:
   replicaCount: 1
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -31,7 +31,7 @@ etcd:
 entrypoint:
   replicas: $EC2_INSTANCE_COUNT
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -66,7 +66,7 @@ storage:
             - storage
         topologyKey: kubernetes.io/hostname                  
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -88,7 +88,7 @@ deduplicator:
             - deduplicator
         topologyKey: kubernetes.io/hostname
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -98,7 +98,7 @@ deduplicator:
 database:
   primary:
     nodeSelector:
-      purpose: parameterized-test
+      purpose: parameterized-test-uh
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -111,7 +111,7 @@ database:
 
 databaseInit:
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -120,7 +120,7 @@ databaseInit:
 
 collector:
   nodeSelector:
-    purpose: parameterized-test
+    purpose: parameterized-test-uh
   tolerations:
     - key: "purpose"
       operator: "Equal"
