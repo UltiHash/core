@@ -11,7 +11,7 @@
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
-#include "storage/data_store.h"
+// #include "storage/data_store.h"
 
 #define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
 

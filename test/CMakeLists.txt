@@ -39,7 +39,7 @@ uh_add_test(test_reference_counter PRIVATE uh_storage)
 uh_add_test(test_ec PRIVATE uh_ec uh_telemetry)
 
 uh_add_test(test_fragment_set PRIVATE uh_dedupe_set gdv_fixture)
-uh_add_test(test_serialization PRIVATE uh_dedupe_set)
+uh_add_test(test_serialization PRIVATE uh_dedupe_set zpp_bits)
 
 uh_add_test(test_global_data_view PRIVATE uh_utils gdv_fixture)
 uh_add_test(test_pointer_traits PRIVATE uh_utils)
@@ -60,7 +60,7 @@ uh_add_test(test_plain_cache PRIVATE uh_caches)
 uh_add_test(test_formats PRIVATE uh_entrypoint)
 
 uh_add_test(test_service_registry PRIVATE uh_registry)
-uh_add_test(test_services PRIVATE uh_registry uh_service_discovery)
+uh_add_test(test_services PRIVATE uh_etcd)
 
 add_library(uh_mock_entrypoint SHARED entrypoint.cpp)
 target_link_libraries(uh_mock_entrypoint PRIVATE uh_commands uh_policy)
