@@ -44,8 +44,3 @@ BEGIN
 
 END
 $$;
-
---
--- Remove uh_copy_object
---
-DROP PROCEDURE uh_copy_object(bucket_src TEXT, object_src TEXT, bucket_dst TEXT, object_dst TEXT);
