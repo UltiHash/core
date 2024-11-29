@@ -8,9 +8,7 @@ namespace uh::cluster {
 
 delete_objects::delete_objects(directory& dir, global_data_view& gdv,
                                limits& uhlimits)
-    : m_dir(dir),
-      m_gdv(gdv),
-      m_limits(uhlimits) {}
+    : m_dir(dir) {}
 
 bool delete_objects::can_handle(const request& req) {
     return req.method() == verb::post && req.bucket() != RESERVED_BUCKET_NAME &&

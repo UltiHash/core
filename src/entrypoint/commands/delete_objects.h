@@ -20,8 +20,6 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_gdv;
-    limits& m_limits;
     static constexpr std::size_t MAXIMUM_DELETE_KEYS = 1000;
 };
 

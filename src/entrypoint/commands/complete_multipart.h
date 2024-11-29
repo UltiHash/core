@@ -22,7 +22,6 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_gdv;
     multipart_state& m_uploads;
     limits& m_limits;
 };
