@@ -36,9 +36,6 @@ on:
       tester_volume_size:
         description: 'Volume size provisioned for the test script'
         default: '1Ti'
-      tester_script_jobs:
-        description: 'Number of parallel jobs executed by the tester script'
-        default: '10'
 
 jobs:
 
@@ -90,7 +87,7 @@ jobs:
           RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
           TESTER_STORAGE_CLASS: "${{ github.event.inputs.tester_storage_class }}"
           TESTER_VOLUME_SIZE: "${{ github.event.inputs.tester_volume_size }}"
-          TESTER_SCRIPT_JOBS: "${{ github.event.inputs.tester_script_jobs }}"
+          TESTER_SCRIPT_JOBS: "10"
         with:
           input: testing/performance/parameterized/performance-tester.yaml
           output: performance-tester.yaml
