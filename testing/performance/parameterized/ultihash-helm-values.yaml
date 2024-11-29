@@ -4,7 +4,7 @@ global:
   ultihashSecret:
     name: ultihash
     key: license
-  logLevel: WARNING
+  logLevel: WARN
   telemetryExportInterval: 30000
 
 recovery:
