@@ -20,7 +20,7 @@ on:
         default: '100Gi'
       storage_volume_size:
         description: 'Volume size provisioned PER storage instance'
-        default: '1Ti'
+        default: '1200Gi'
       database_volume_size:
         description: 'Volume size provisioned for the database instance'
         default: '100Gi'
@@ -32,7 +32,7 @@ on:
         default: 'c6gn.16xlarge'
       tester_volume_size:
         description: 'Volume size provisioned for the test script'
-        default: '1Ti'
+        default: '1200Gi'
       generated_data_size:
         description: 'The size of the generated data in GiB'
         default: '1024'
