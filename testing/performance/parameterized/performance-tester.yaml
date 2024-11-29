@@ -42,6 +42,8 @@ spec:
           value: "$TESTER_SCRIPT_JOBS"
         - name: MULTIPART_CHUNK_SIZE
           value: "67108864"
+        - name: AMOUNT_GiB
+          value: "$GENERATED_DATA_SIZE"
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:

@@ -30,12 +30,12 @@ on:
       tester_ec2_instance_type:
         description: 'Type of the used EC2 instance to host the test script'
         default: 'c6gn.16xlarge'
-      tester_storage_class: 
-        description: 'Storage class used by the test script'
-        default: 'ebs-csi-gp2'
       tester_volume_size:
         description: 'Volume size provisioned for the test script'
         default: '1Ti'
+      generated_data_size:
+        description: 'The size of the generated data in GiB'
+        default: '1024'
 
 jobs:
 
@@ -85,8 +85,9 @@ jobs:
         uses: danielr1996/envsubst-action@1.0.0
         env:
           RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
-          TESTER_STORAGE_CLASS: "${{ github.event.inputs.tester_storage_class }}"
+          TESTER_STORAGE_CLASS: "${{ github.event.inputs.uh_storage_class }}"
           TESTER_VOLUME_SIZE: "${{ github.event.inputs.tester_volume_size }}"
+          GENERATED_DATA_SIZE: "${{ github.event.inputs.generated_data_size }}"
           TESTER_SCRIPT_JOBS: "10"
         with:
           input: testing/performance/parameterized/performance-tester.yaml
