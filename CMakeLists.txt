@@ -125,6 +125,8 @@ target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 add_library(${PROJECT_NAME}_SHARED SHARED $<TARGET_OBJECTS:uh_objects>)
 target_link_libraries(${PROJECT_NAME}_SHARED PUBLIC uh_objects)
 
+set(CMAKE_BUILD_RPATH "$ORIGIN")
+
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 
