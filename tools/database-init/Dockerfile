@@ -17,6 +17,8 @@ RUN apt-get update -y && \
     apt-get install -y openjdk-17-jdk postgresql-client libgrpc-dev libgrpc++-dev liblmdb-dev liblmdb++-dev  
 
 COPY --from=build /core/build/tools/uh-cluster-access-client /usr/local/bin
+COPY --from=build /core/build/tools/libuh-cluster_SHARED.so /usr/local/bin
+
 COPY --from=flyway /flyway /flyway
 
 WORKDIR /flyway
