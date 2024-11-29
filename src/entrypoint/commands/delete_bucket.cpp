@@ -6,7 +6,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 delete_bucket::delete_bucket(directory& dir)
-    : m_directory(dir) {}
+    : m_dir(dir) {}
 
 bool delete_bucket::can_handle(const request& req) {
     return req.method() == verb::delete_ &&
@@ -17,9 +17,8 @@ bool delete_bucket::can_handle(const request& req) {
 coro<response> delete_bucket::handle(request& req) {
     metric<entrypoint_delete_bucket_req>::increase(1);
 
-    auto dir = co_await m_directory.get();
     try {
-        co_await dir.delete_bucket(req.bucket());
+        co_await m_dir.delete_bucket(req.bucket());
     } catch (const error_exception& e) {
         LOG_INFO() << "Failed to delete the bucket " << req.bucket() << ":"
                    << e;

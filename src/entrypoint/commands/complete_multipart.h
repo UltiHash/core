@@ -21,8 +21,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_directory;
-    global_data_view& m_gdv;
+    directory& m_dir;
     multipart_state& m_uploads;
     limits& m_limits;
 };

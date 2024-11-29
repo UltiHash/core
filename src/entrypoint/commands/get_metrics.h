@@ -18,7 +18,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_directory;
+    directory& m_dir;
     global_data_view& m_gdv;
 };
 

@@ -146,6 +146,8 @@ target_include_directories(
     INTERFACE
         $<TARGET_PROPERTY:uh_precompile_headers,INTERFACE_INCLUDE_DIRECTORIES>)
 
+set(CMAKE_BUILD_RPATH "$ORIGIN")
+
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)

@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 class abort_multipart : public command {
 public:
-    abort_multipart(directory& dir, multipart_state&, global_data_view&);
+    abort_multipart(multipart_state&, global_data_view&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -19,7 +19,6 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_dir;
     multipart_state& m_uploads;
     global_data_view& m_gdv;
 };

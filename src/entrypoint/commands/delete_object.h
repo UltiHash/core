@@ -19,9 +19,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_directory;
-    global_data_view& m_gdv;
-    limits& m_limits;
+    directory& m_dir;
 };
 
 } // namespace uh::cluster
