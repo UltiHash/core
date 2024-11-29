@@ -17,13 +17,9 @@ $$;
 --
 -- Re-define uh_put_object
 --
-DROP PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT);
-
 CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
 LANGUAGE plpgsql AS $$
-DECLARE 
-    bucket_id BIGINT;
-    current_time TIMESTAMP;
+DECLARE bucket_id BIGINT;
 BEGIN
     SELECT id INTO bucket_id FROM __buckets WHERE name = bucket;
 
@@ -31,16 +27,11 @@ BEGIN
         RAISE EXCEPTION 'Bucket with name % does not exist.', bucket;
     END IF;
 
-    EXECUTE 
-        'INSERT INTO __objects (bucket_id, name, address, size, last_modified, etag, mime)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (bucket_id, name) DO UPDATE
-         SET address = EXCLUDED.address, 
-             size = EXCLUDED.size, 
-             last_modified = EXCLUDED.last_modified,
-             etag = EXCLUDED.etag, 
-             mime = EXCLUDED.mime'
-    USING bucket_id, object, address, size, ceiled_now(), etag, mime;
+    EXECUTE 'UPDATE __objects SET status = status_deleted() WHERE bucket_id = $1 AND name = $2'
+        USING bucket_id, object;
 
+    EXECUTE 'INSERT INTO __objects (bucket_id, name, address, size, last_modified, etag, mime)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)'
+        USING bucket_id, object, address, size, ceiled_now(), etag, mime;
 END
 $$;
