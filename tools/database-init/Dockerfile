@@ -4,7 +4,7 @@ COPY . /core
 WORKDIR /core
 
 RUN mkdir build \
-    && cmake -B build -DBUILD_TESTS=OFF -DBUILD_TOOLS=ON -DCMAKE_BUILD_TYPE=Release \
+    && CC=/usr/bin/gcc CXX=/usr/bin/g++ cmake -G Ninja -B build -DBUILD_TESTS=OFF -DBUILD_TOOLS=ON -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j $(nproc) --config Release
 
 FROM flyway/flyway:10.21 AS flyway
@@ -17,6 +17,8 @@ RUN apt-get update -y && \
     apt-get install -y openjdk-17-jdk postgresql-client libgrpc-dev libgrpc++-dev liblmdb-dev liblmdb++-dev  
 
 COPY --from=build /core/build/tools/uh-cluster-access-client /usr/local/bin
+COPY --from=build /core/build/libuh-cluster_shared.so /usr/local/bin
+
 COPY --from=flyway /flyway /flyway
 
 WORKDIR /flyway

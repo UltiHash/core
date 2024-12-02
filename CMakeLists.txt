@@ -1,16 +1,8 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
-    set(CMAKE_C_COMPILER_LAUNCHER
-        "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
-    )
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
-endif()
-
 add_subdirectory(lib)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib
+                    ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
 
 project(uh-cluster VERSION 1.1.0)
 
@@ -19,14 +11,33 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
+option(ENABLE_CCACHE "Use cache while compiling" ON)
+if(ENABLE_CCACHE)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
+        set(CMAKE_C_COMPILER_LAUNCHER
+            "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
+        )
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+    endif()
+endif()
+
+if(ENABLE_BUILD_TIME_TRACE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-ftime-trace)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # gcc: use plugin https://github.com/royjacobson/externis
+        add_compile_options(-fplugin=externis)
+    endif()
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
     copy-compile-commands ALL
     ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_BINARY_DIR}/compile_commands.json
-        ${CMAKE_CURRENT_LIST_DIR}
-    )
+    ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_CURRENT_LIST_DIR})
 
 message(STATUS "Building ${PROJECT_NAME}...")
 
@@ -35,7 +46,10 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
+find_package(
+    Boost 1.80
+    COMPONENTS thread log url unit_test_framework
+    REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Git REQUIRED)
 find_package(PostgreSQL REQUIRED)
@@ -59,14 +73,16 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
     message(STATUS "Reading git revision")
 
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_REVISION)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_REVISION)
     string(STRIP "${GIT_REVISION}" PROJECT_VCSID)
 
-    execute_process(COMMAND ${GIT_EXECUTABLE} remote get-url origin
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_REPOSITORY)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} remote get-url origin
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_REPOSITORY)
     string(STRIP "${GIT_REPOSITORY}" PROJECT_REPOSITORY)
 
     message(STATUS "Using revision ${PROJECT_REPOSITORY} -- ${PROJECT_VCSID}")
@@ -75,8 +91,27 @@ endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} etcd-cpp-api CLI11::CLI11 opentelemetry_exporter_otlp_grpc_log opentelemetry_exporter_otlp_grpc opentelemetry_exporter_otlp_grpc_metrics opentelemetry_exporter_ostream_metrics ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_LIBRARIES} ${LMDB_LIBRARY} nlohmann_json)
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS} ${PostgreSQL_INCLUDE_DIRS} ${LMDB_INCLUDE_DIR})
+set(${PROJECT_NAME}_LINK_LIBRARIES
+    ${Boost_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
+    etcd-cpp-api
+    CLI11::CLI11
+    opentelemetry_exporter_otlp_grpc_log
+    opentelemetry_exporter_otlp_grpc
+    opentelemetry_exporter_otlp_grpc_metrics
+    opentelemetry_exporter_ostream_metrics
+    ${${PROJECT_NAME}_INTERNAL_DEPS}
+    ${PostgreSQL_LIBRARIES}
+    ${LMDB_LIBRARY}
+    nlohmann_json)
+set(${PROJECT_NAME}_INCLUDE_DIRS
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
+    ${${PROJECT_NAME}_INTERNAL_DEPS}
+    ${PostgreSQL_INCLUDE_DIRS}
+    ${LMDB_INCLUDE_DIR})
 
 add_compile_options(-Wall -Werror)
 
@@ -88,19 +123,34 @@ add_compile_options(-Wall -Werror)
 #
 add_compile_options(-Wno-mismatched-new-delete)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+add_subdirectory(src/pch)
+
+add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_precompile_headers(uh_objects REUSE_FROM uh_precompile_headers)
+
+add_library(${PROJECT_NAME}_shared SHARED $<TARGET_OBJECTS:uh_objects>)
+target_link_libraries(${PROJECT_NAME}_shared PUBLIC uh_objects)
+target_include_directories(
+    ${PROJECT_NAME}_shared
+    INTERFACE
+        $<TARGET_PROPERTY:uh_precompile_headers,INTERFACE_INCLUDE_DIRECTORIES>)
+
+set(CMAKE_BUILD_RPATH "$ORIGIN")
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
 
@@ -118,4 +168,3 @@ if(BUILD_TOOLS)
     message(STATUS "Building tools")
     add_subdirectory(tools)
 endif()
-

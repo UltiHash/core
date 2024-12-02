@@ -74,7 +74,6 @@ complete_multipart::complete_multipart(directory& dir, global_data_view& gdv,
                                        multipart_state& uploads,
                                        limits& uhlimits)
     : m_dir(dir),
-      m_gdv(gdv),
       m_uploads(uploads),
       m_limits(uhlimits) {}
 

@@ -7,9 +7,7 @@ namespace uh::cluster {
 
 delete_object::delete_object(directory& dir, global_data_view& gdv,
                              limits& uhlimits)
-    : m_dir(dir),
-      m_gdv(gdv),
-      m_limits(uhlimits) {}
+    : m_dir(dir) {}
 
 bool delete_object::can_handle(const request& req) {
     return req.method() == verb::delete_ &&
