@@ -1,0 +1,163 @@
+global:
+  imagePullSecrets:               
+    - registry-credentials
+  ultihashSecret:
+    name: ultihash
+    key: license
+  logLevel: WARN
+  telemetryExportInterval: 30000
+
+recovery:
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  persistence:
+    size: 8Gi
+
+entrypoint:
+  replicas: $EC2_INSTANCE_COUNT
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - entrypoint
+        topologyKey: kubernetes.io/hostname
+
+  ingress:
+    enabled: false
+
+storage:
+  replicas: $EC2_INSTANCE_COUNT
+  storageClass: $UH_STORAGE_CLASS         
+  storageSize: $STORAGE_VOLUME_SIZE
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - storage
+        topologyKey: kubernetes.io/hostname                  
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+deduplicator:
+  replicas: $EC2_INSTANCE_COUNT
+  storageClass: $UH_STORAGE_CLASS
+  storageSize: $DEDUPLICATOR_VOLUME_SIZE
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - deduplicator
+        topologyKey: kubernetes.io/hostname
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+database:
+  primary:
+    nodeSelector:
+      purpose: parameterized-test-uh
+    tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+    persistence:
+      storageClass: $UH_STORAGE_CLASS
+      size: $DATABASE_VOLUME_SIZE
+
+databaseInit:
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+collector:
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
+  presets:
+    kubeletMetrics:              
+      enabled: false           
+  config:                         
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
+    receivers:
+      prometheus: null
+      kubeletstats: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+            - otlp
+
+exporter:
+  enabled: false
+                   
