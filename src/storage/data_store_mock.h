@@ -1,5 +1,4 @@
-#ifndef CORE_DATA_STORE_H
-#define CORE_DATA_STORE_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include "reference_counter.h"
@@ -24,11 +23,12 @@ struct data_store_config {
     size_t page_size;
 };
 
-class data_store : public abstract_data_store {
+class data_store_mock : public abstract_data_store {
 
 public:
-    data_store(data_store_config conf, const std::filesystem::path& working_dir,
-               uint32_t service_id, uint32_t data_store_id);
+    data_store_mock(data_store_config conf,
+                    const std::filesystem::path& working_dir,
+                    uint32_t service_id, uint32_t data_store_id);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -105,7 +105,7 @@ public:
 
     size_t id() const noexcept;
 
-    ~data_store();
+    ~data_store_mock();
 
 private:
     struct alloc_t {
@@ -144,15 +144,13 @@ private:
     const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
+    std::vector<std::pair<int, size_t>> m_open_files;
     std::atomic<size_t> m_current_offset{};
     std::atomic<size_t> m_used_space{};
     std::optional<std::size_t> m_locked_page = std::nullopt;
     std::mutex m_allocate_mutex;
     std::mutex m_sync_mutex;
     reference_counter m_refcounter;
-    std::vector<char> m_data;
 };
 
 } // end namespace uh::cluster
-
-#endif // CORE_DATA_STORE_H
