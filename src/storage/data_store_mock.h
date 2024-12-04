@@ -108,49 +108,12 @@ public:
     ~data_store_mock();
 
 private:
-    struct alloc_t {
-        int fd;
-        size_t seek;
-        uint128_t global_offset;
-    };
-
-    /**
-     * @brief Flushes modified files to disk.
-     * @throws std::exception corrupted storage
-     */
-    void sync();
-
-    alloc_t internal_allocate(size_t size);
-
-    [[nodiscard]] std::pair<int, long>
-    get_file_offset_pair(size_t pointer) const;
-
-    [[nodiscard]] size_t
-    fetch_used_space(const std::filesystem::path& last_file) const noexcept;
-
-    std::filesystem::path add_new_file(size_t offset, size_t file_size);
-
-    [[nodiscard]] std::string get_name(size_t offset) const;
-
-    static bool is_data_file(const std::filesystem::path& path);
-
-    void update_last_page_ref(
-        std::deque<reference_counter::refcount_cmd>& refcount_commands);
-
-    size_t internal_delete(std::size_t offset, std::size_t size);
-
-    size_t m_last_file_data_end{};
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
-    const std::filesystem::path m_root;
-    data_store_config m_conf;
-    std::vector<std::pair<int, size_t>> m_open_files;
     std::atomic<size_t> m_current_offset{};
     std::atomic<size_t> m_used_space{};
-    std::optional<std::size_t> m_locked_page = std::nullopt;
-    std::mutex m_allocate_mutex;
-    std::mutex m_sync_mutex;
-    reference_counter m_refcounter;
+
+    std::vector<char> m_data;
 };
 
 } // end namespace uh::cluster

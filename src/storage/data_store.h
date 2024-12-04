@@ -144,13 +144,13 @@ private:
     const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
+    std::vector<std::pair<int, size_t>> m_open_files;
     std::atomic<size_t> m_current_offset{};
     std::atomic<size_t> m_used_space{};
     std::optional<std::size_t> m_locked_page = std::nullopt;
     std::mutex m_allocate_mutex;
     std::mutex m_sync_mutex;
     reference_counter m_refcounter;
-    std::vector<char> m_data;
 };
 
 } // end namespace uh::cluster
