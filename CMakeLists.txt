@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
-    set(CMAKE_C_COMPILER_LAUNCHER
-        "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
-    )
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
-endif()
-
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib
                     ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
@@ -20,6 +11,27 @@ option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
+option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
+option(ENABLE_CCACHE "Use cache while compiling" ON)
+if(ENABLE_CCACHE)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        # https://ccache.dev/manual/4.9.1.html#_precompiled_headers
+        set(CMAKE_C_COMPILER_LAUNCHER
+            "${CCACHE_PROGRAM};namespace=uh-core;sloppiness=pch_defines,time_macros"
+        )
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_C_COMPILER_LAUNCHER})
+    endif()
+endif()
+
+if(ENABLE_BUILD_TIME_TRACE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-ftime-trace)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # gcc: use plugin https://github.com/royjacobson/externis
+        add_compile_options(-fplugin=externis)
+    endif()
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
@@ -111,6 +123,8 @@ add_compile_options(-Wall -Werror)
 #
 add_compile_options(-Wno-mismatched-new-delete)
 
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
@@ -118,17 +132,25 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
+add_subdirectory(src/pch)
+
 add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_precompile_headers(uh_objects REUSE_FROM uh_precompile_headers)
 
-add_library(${PROJECT_NAME}_SHARED SHARED $<TARGET_OBJECTS:uh_objects>)
-target_link_libraries(${PROJECT_NAME}_SHARED PUBLIC uh_objects)
+add_library(${PROJECT_NAME}_shared SHARED $<TARGET_OBJECTS:uh_objects>)
+target_link_libraries(${PROJECT_NAME}_shared PUBLIC uh_objects)
+target_include_directories(
+    ${PROJECT_NAME}_shared
+    INTERFACE
+        $<TARGET_PROPERTY:uh_precompile_headers,INTERFACE_INCLUDE_DIRECTORIES>)
 
 set(CMAKE_BUILD_RPATH "$ORIGIN")
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
 

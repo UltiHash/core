@@ -1,0 +1,167 @@
+name: Parameterized Performance Test on AWS
+
+env:
+  ENVIRONMENT_NAME: parameterized-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      helm_chart_version:
+        description: 'Helm chart version to deploy (Example: 1.1.0)'
+        required: true
+      ec2_instance_type:
+        description: 'Type of the used EC2 instance to host UltiHash cluster'
+        default: 'r8g.4xlarge'
+      ec2_instance_count:
+        description: 'Number of deployed EC2 instances'
+        default: 1
+      deduplicator_volume_size:
+        description: 'Volume size provisioned PER deduplicator instance'
+        default: '100Gi'
+      storage_volume_size:
+        description: 'Volume size provisioned PER storage instance'
+        default: '1200Gi'
+      database_volume_size:
+        description: 'Volume size provisioned for the database instance'
+        default: '100Gi'
+      uh_storage_class:
+        description: 'Storage class used by the UltiHash cluster'
+        default: 'ebs-csi-gp2'
+      tester_ec2_instance_type:
+        description: 'Type of the used EC2 instance to host the test script'
+        default: 'c6gn.16xlarge'
+      tester_volume_size:
+        description: 'Volume size provisioned for the test script'
+        default: '1200Gi'
+      generated_data_size:
+        description: 'The size of the generated data in GiB'
+        default: '1024'
+
+jobs:
+
+  deploy-and-test:
+    runs-on: lightweight-generic-jobs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive      
+      
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Generate the Karpenter node pools
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          EC2_INSTANCE_TYPE: "${{ github.event.inputs.ec2_instance_type }}"
+          TESTER_EC2_INSTANCE_TYPE: "${{ github.event.inputs.tester_ec2_instance_type }}"
+        with:
+          input: testing/performance/parameterized/karpenter-node-pools.yaml
+          output: karpenter-node-pools.yaml
+
+      - name: Generate the tester manifests
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
+          TESTER_STORAGE_CLASS: "${{ github.event.inputs.uh_storage_class }}"
+          TESTER_VOLUME_SIZE: "${{ github.event.inputs.tester_volume_size }}"
+          GENERATED_DATA_SIZE: "${{ github.event.inputs.generated_data_size }}"
+          TESTER_SCRIPT_JOBS: "10"
+        with:
+          input: testing/performance/parameterized/performance-tester.yaml
+          output: performance-tester.yaml
+
+      - name: Generate Helm values
+        uses: danielr1996/envsubst-action@1.0.0
+        env:
+          EC2_INSTANCE_COUNT: "${{ github.event.inputs.ec2_instance_count }}"
+          DEDUPLICATOR_VOLUME_SIZE : "${{ github.event.inputs.deduplicator_volume_size }}"
+          STORAGE_VOLUME_SIZE: "${{ github.event.inputs.storage_volume_size }}"
+          DATABASE_VOLUME_SIZE: "${{ github.event.inputs.database_volume_size }}"
+          UH_STORAGE_CLASS: "${{ github.event.inputs.uh_storage_class }}"
+        with:
+          input: testing/performance/parameterized/ultihash-helm-values.yaml
+          output: helm-values.yaml
+
+      - name: Provision the testing environment
+        run: |
+          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
+          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='registry.ultihash.io' --docker-username='github' --docker-password='${{ secrets.REGISTRY_USER }}'
+          kubectl create secret docker-registry ghcr-registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
+          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
+          kubectl apply -f karpenter-node-pools.yaml
+
+      - name: Install the UltiHash cluster
+        run: |
+          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/upgrade/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 25m --version ${{ github.event.inputs.helm_chart_version }}
+      
+      - name: Execute performance test against UltiHash
+        run: |
+          bash testing/performance/execute_job.sh performance-tester.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 3h
+
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - name: Install AWS CLI
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          arch: amd64
+
+      - name: Setup the AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          aws eks update-kubeconfig --name aws-core
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete nodepool parameterized-test-uh parameterized-test-tester || true
+
+      
+
+      
