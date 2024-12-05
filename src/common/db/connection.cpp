@@ -146,4 +146,44 @@ coro<void> connection::wait() {
     throw std::runtime_error(PQerrorMessage(m_ptr.get()));
 }
 
+void connection::append_args(std::span<char> s,
+                             std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>&) {
+    values.push_back(s.data());
+    lengths.push_back(s.size());
+    format.push_back(1);
+}
+
+void connection::append_args(std::string s, std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>& mem) {
+    auto& buffer = mem.emplace_back(std::move(s));
+    values.push_back(buffer.data());
+    lengths.push_back(buffer.size());
+    format.push_back(0);
+}
+
+void connection::append_args(std::string_view s,
+                             std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>&) {
+    values.push_back(s.data());
+    lengths.push_back(s.size());
+    format.push_back(0);
+}
+
+void connection::append_args(std::size_t n, std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>& mem) {
+    auto& buffer = mem.emplace_back(std::to_string(n));
+    values.push_back(buffer.data());
+    lengths.push_back(buffer.size());
+    format.push_back(0);
+}
+
 } // namespace uh::cluster::db
