@@ -27,6 +27,7 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 8Gi
+    storageClass: local-path
 
 entrypoint:
   replicas: $EC2_INSTANCE_COUNT
