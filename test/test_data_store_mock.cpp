@@ -3,7 +3,7 @@
 #include "common/types/common_types.h"
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
-#include "storage/data_store.h"
+#include "test/mock/storage/data_store_mock.h"
 #include <boost/test/unit_test.hpp>
 #include <random>
 #include <thread>
@@ -43,7 +43,7 @@ struct data_store_fixture {
     }
 
     [[nodiscard]] auto make_data_store() const {
-        return std::make_unique<data_store>(
+        return std::make_unique<data_store_mock>(
             make_data_store_config(), m_dir.path().string(), DATA_STORE_ID, 0);
     }
 
@@ -65,7 +65,7 @@ struct data_store_fixture {
     std::vector<shared_buffer<char>> test_data;
     shared_buffer<char> throwing_data;
 
-    std::unique_ptr<data_store> ds;
+    std::unique_ptr<data_store_mock> ds;
     std::size_t m_expected_used{};
     std::size_t m_expected_last_file_space{};
 };

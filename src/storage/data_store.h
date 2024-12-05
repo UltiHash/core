@@ -6,7 +6,7 @@
 
 #include "common/types/address.h"
 #include "common/utils/common.h"
-#include "storage/abstract_data_store.h"
+#include "storage/interfaces/data_store.h"
 
 #include <atomic>
 #include <condition_variable>
