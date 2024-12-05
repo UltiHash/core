@@ -1,6 +1,7 @@
 #ifndef UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 #define UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 
+#include "common/coroutines/context.h"
 #include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
 
