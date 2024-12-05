@@ -119,6 +119,8 @@ add_compile_options(-Wall -Werror)
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109224
 #
 add_compile_options(-Wno-mismatched-new-delete)
+add_compile_options(-Wno-odr)
+add_link_options(-Wno-odr)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
