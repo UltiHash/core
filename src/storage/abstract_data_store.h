@@ -5,6 +5,12 @@
 
 namespace uh::cluster {
 
+struct data_store_config {
+    size_t max_file_size;
+    size_t max_data_store_size;
+    size_t page_size;
+};
+
 struct abstract_data_store {
     virtual address write(const std::string_view& data) = 0;
 

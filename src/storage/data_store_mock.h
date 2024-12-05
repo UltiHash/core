@@ -17,12 +17,6 @@
 
 namespace uh::cluster {
 
-struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
-};
-
 class data_store_mock : public abstract_data_store {
 
 public:
@@ -110,8 +104,8 @@ public:
 private:
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
-    std::atomic<size_t> m_current_offset{};
-    std::atomic<size_t> m_used_space{};
+
+    data_store_config m_conf;
 
     std::vector<char> m_data;
 };
