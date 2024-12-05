@@ -1,9 +1,9 @@
 #ifndef UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 #define UH_CLUSTER_LOCAL_DEDUPLICATOR_H
 
-#include "common/coroutines/context.h"
 #include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
+#include "common/telemetry/context.h"
 
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "deduplicator/dedupe_logger.h"
