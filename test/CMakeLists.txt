@@ -12,7 +12,7 @@ function(uh_add_test test_name)
                                PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     target_precompile_headers(${PROJECT_NAME}_${test_name} REUSE_FROM
                               uh_precompile_headers)
-    add_test(test_name ${PROJECT_NAME}_${test_name}
+    add_test(${test_name} ${PROJECT_NAME}_${test_name}
              COMMAND ${PROJECT_NAME}_${test_name})
 endfunction()
 

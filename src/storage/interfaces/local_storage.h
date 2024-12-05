@@ -1,10 +1,12 @@
-
 #ifndef UH_CLUSTER_LOCAL_STORAGE_H
 #define UH_CLUSTER_LOCAL_STORAGE_H
 
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "storage/data_store.h"
+#include <common/service_interfaces/storage_interface.h>
+#include <common/telemetry/log.h>
+#include <list>
 #include <string_view>
 #include <utility>
 
@@ -198,7 +200,13 @@ private:
     std::atomic<double> m_load;
 
     [[nodiscard]] data_store& get_data_store(const uint128_t& pointer) const {
-        return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
+        auto data_store_id = pointer_traits::get_data_store_id(pointer);
+
+        if (data_store_id >= m_data_stores.size()) {
+            throw std::runtime_error("data store id out of range");
+        }
+
+        return *m_data_stores[data_store_id];
     }
 };
 

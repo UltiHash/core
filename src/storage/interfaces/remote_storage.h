@@ -62,9 +62,8 @@ struct remote_storage : public storage_interface {
 
     coro<address> link(context& ctx, const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        LOG_DEBUG() << ctx.peer() << ": sending STORAGE_LINK_REQ("
-                    << addr.to_string() << ") [" << m->local() << " -> "
-                    << m->peer() << "]";
+        LOG_DEBUG() << ctx.peer() << ": sending STORAGE_LINK_REQ ["
+                    << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_LINK_REQ, addr);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_address(message_header);
@@ -72,9 +71,8 @@ struct remote_storage : public storage_interface {
 
     coro<std::size_t> unlink(context& ctx, const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        LOG_DEBUG() << ctx.peer() << ": sending STORAGE_UNLINK_REQ("
-                    << addr.to_string() << ") [" << m->local() << " -> "
-                    << m->peer() << "]";
+        LOG_DEBUG() << ctx.peer() << ": sending STORAGE_UNLINK_REQ ["
+                    << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_UNLINK_REQ, addr);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_primitive<size_t>(message_header);

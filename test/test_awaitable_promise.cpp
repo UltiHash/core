@@ -168,8 +168,6 @@ private:
 };
 
 coro<void> handle(auto& counter) {
-    LOG_CORO_CONTEXT();
-
     for (int i = 0; i < 100000; i++) {
         promise<void> p;
         auto f = p.get_future();

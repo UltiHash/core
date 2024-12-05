@@ -1,6 +1,5 @@
 #include "fragmentation.h"
 
-#include "common/debug/debug.h"
 #include "config.h"
 
 #include <optional>
@@ -170,7 +169,6 @@ coro<void> fragmentation::merge_and_link_unstored(context& ctx,
 void fragmentation::flush_fragments_internal(fragment_set& set) {
 
     auto lock = set.lock();
-    LOG_CORO_CONTEXT();
 
     for (auto& frag : m_frags) {
         if (frag.type == STORED) {

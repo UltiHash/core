@@ -1,7 +1,7 @@
-#ifndef CORE_MESSENGER_H
-#define CORE_MESSENGER_H
+#ifndef CORE_COMMON_NETWORK_MESSENGER_H
+#define CORE_COMMON_NETWORK_MESSENGER_H
 
-#include "common/coroutines/context.h"
+#include "common/telemetry/context.h"
 #include "messenger_core.h"
 
 namespace uh::cluster {
@@ -148,4 +148,4 @@ public:
 
 } // end namespace uh::cluster
 
-#endif // CORE_MESSENGER_H
+#endif

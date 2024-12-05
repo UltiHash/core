@@ -1,6 +1,6 @@
 #include "garbage_collector.h"
 
-#include <common/coroutines/context.h>
+#include <common/telemetry/context.h>
 
 namespace uh::cluster::ep {
 

@@ -35,7 +35,6 @@ multipart_state::instance::lock_upload(const std::string& id) {
 coro<std::string>
 multipart_state::instance::insert_upload(std::string bucket, std::string key,
                                          std::optional<std::string> mime) {
-    LOG_CORO_CONTEXT();
     auto row = co_await (*m_handle)->execv(
         "SELECT uh_create_upload($1, $2, $3)", bucket, key, mime);
 
@@ -48,7 +47,6 @@ multipart_state::instance::insert_upload(std::string bucket, std::string key,
 }
 
 coro<upload_info> multipart_state::instance::details(const std::string& id) {
-    LOG_CORO_CONTEXT();
     LOG_DEBUG() << "get upload info, id: " << id;
 
     upload_info rv;
@@ -106,7 +104,6 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
 coro<upload_info::part>
 multipart_state::instance::part_details(const std::string& upload_id,
                                         uint16_t part_id) {
-    LOG_CORO_CONTEXT();
     LOG_DEBUG() << "get part info, upload_id: " << upload_id
                 << ", part_id: " << part_id;
 
@@ -138,7 +135,6 @@ multipart_state::instance::part_details(const std::string& upload_id,
 coro<void> multipart_state::instance::append_upload_part_info(
     const std::string& id, uint16_t part, const dedupe_response& resp,
     size_t data_size, std::string&& md5) {
-    LOG_CORO_CONTEXT();
 
     LOG_DEBUG() << "append upload part info, id: " << id << ", part: " << part;
 
@@ -150,7 +146,6 @@ coro<void> multipart_state::instance::append_upload_part_info(
 }
 
 coro<void> multipart_state::instance::remove_upload(const std::string& id) {
-    LOG_CORO_CONTEXT();
     LOG_DEBUG() << "remove upload, id: " << id;
 
     co_await (*m_handle)->execv("CALL uh_complete_upload($1)", id);
@@ -161,8 +156,6 @@ coro<void> multipart_state::instance::remove_upload(const std::string& id) {
 
 coro<std::map<std::string, std::string>>
 multipart_state::instance::list_multipart_uploads(const std::string& bucket) {
-    LOG_CORO_CONTEXT();
-
     LOG_DEBUG() << "list multipart uploads for bucket " << bucket;
 
     std::map<std::string, std::string> rv;
@@ -177,7 +170,6 @@ multipart_state::instance::list_multipart_uploads(const std::string& bucket) {
 }
 
 coro<void> multipart_state::instance::clear_infos() {
-    LOG_CORO_CONTEXT();
     co_await (*m_handle)->execv(
         "CALL uh_clean_deleted(MAKE_INTERVAL(0, 0, 0, 0, 0, 0, $1))",
         DEFAULT_TIMEOUT);
