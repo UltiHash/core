@@ -28,7 +28,7 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_size(m.m_read_size),
       m_write_size(m.m_write_size) {}
 
-coro<header> messenger_core::recv_header() {
+coro<messenger_core::header> messenger_core::recv_header() {
     header h;
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
@@ -53,7 +53,7 @@ coro<header> messenger_core::recv_header() {
     co_return h;
 }
 
-coro<void> messenger_core::recv_buffers(const header& h) {
+coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     if (h.size != m_read_size) [[unlikely]] {
         throw std::length_error(
             "The size of the buffers does not match with the header size!");
@@ -124,7 +124,7 @@ coro<void> messenger_core::send_error(context& ctx, const error& e) {
     co_await send_buffers(ctx, FAILURE);
 }
 
-coro<error> messenger_core::recv_error(const header& h) {
+coro<error> messenger_core::recv_error(const messenger_core::header& h) {
     uint32_t ec;
     std::string msg(h.size - sizeof(ec), 0);
     register_read_buffer(ec);
@@ -133,7 +133,7 @@ coro<error> messenger_core::recv_error(const header& h) {
     co_return error(ec, msg);
 }
 
-coro<context> messenger_core::recv_context(const header& h) {
+coro<context> messenger_core::recv_context(const messenger_core::header& h) {
     context c;
     if (h.ctx_size) {
         std::vector<char> otel_buf(h.ctx_size);
