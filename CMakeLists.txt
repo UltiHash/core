@@ -45,7 +45,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options(-fPIC)
 
-set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS OFF)
 find_package(
     Boost 1.80
     COMPONENTS thread log url unit_test_framework
