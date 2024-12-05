@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-add_subdirectory(third-party)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
-
 project(uh-cluster VERSION 1.1.0)
 
 option(BUILD_TESTS "Build unit tests" ON)
@@ -42,6 +39,9 @@ message(STATUS "Building ${PROJECT_NAME}...")
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
 set(Boost_USE_STATIC_LIBS OFF)
+
+add_subdirectory(third-party)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
     Boost 1.80
