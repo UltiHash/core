@@ -38,12 +38,7 @@ public:
 
     coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
-    coro<void> send_ds_write(context& ctx, const ds_write_request& req) {
-        register_write_buffer(req.ds_id);
-        register_write_buffer(req.pointer);
-        register_write_buffer(std::get<std::string_view>(req.data));
-        co_await send_buffers(ctx, STORAGE_DS_WRITE_REQ);
-    }
+    coro<void> send_ds_write(context& ctx, const ds_write_request& req);
 
     coro<ds_write_request> recv_ds_write(const header& message_header);
 
