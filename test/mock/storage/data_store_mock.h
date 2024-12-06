@@ -105,7 +105,8 @@ private:
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
-    const std::string m_logname = ".backup";
+    const std::string m_datafile = "data.backup";
+    const std::string m_refcountfile = "refcount.backup";
 
     data_store_config m_conf;
 

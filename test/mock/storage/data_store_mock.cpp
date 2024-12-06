@@ -26,13 +26,32 @@ data_store_mock::data_store_mock(data_store_config conf,
     if (!std::filesystem::exists(m_root)) {
         std::filesystem::create_directories(m_root);
     }
-    LOG_DEBUG() << m_root / m_logname;
-    std::ifstream ifs(m_root / m_logname, std::ios::binary);
-    if (ifs) {
-        m_data.assign(std::istreambuf_iterator<char>(ifs),
-                      std::istreambuf_iterator<char>());
+
+    {
+        std::ifstream ifs(m_root / m_datafile, std::ios::binary);
+        if (ifs) {
+            m_data.assign(std::istreambuf_iterator<char>(ifs),
+                          std::istreambuf_iterator<char>());
+        }
     }
-    LOG_DEBUG() << "size: " << m_data.size();
+    {
+        std::ifstream ifs(m_root / m_refcountfile, std::ios::binary);
+        if (ifs) {
+            size_t map_size;
+            ifs.read(reinterpret_cast<char*>(&map_size), sizeof(map_size));
+
+            for (size_t i = 0; i < map_size; ++i) {
+                fragment key;
+
+                ifs.read(reinterpret_cast<char*>(&key.pointer),
+                         sizeof(key.pointer));
+                ifs.read(reinterpret_cast<char*>(&key.size), sizeof(key.size));
+                int value;
+                ifs.read(reinterpret_cast<char*>(&value), sizeof(value));
+                m_refcounter[key] = value;
+            }
+        }
+    }
 }
 
 address data_store_mock::write(const std::string_view& data) {
@@ -119,6 +138,7 @@ address data_store_mock::link(const address& addr) {
         auto frag = addr.get(i);
         m_refcounter[frag]++;
     }
+
     return addr;
 }
 
@@ -137,12 +157,13 @@ size_t data_store_mock::unlink(const address& addr) {
         auto frag = addr.get(i);
         auto it = m_refcounter.find(frag);
         if (it == m_refcounter.end()) {
-            return std::numeric_limits<std::size_t>::max();
+            throw std::exception();
+            // return std::numeric_limits<std::size_t>::max();
         }
         if (--(it->second) == 0) {
-            std::fill(m_data.begin() +
-                          pointer_traits::get_pointer(frag.pointer),
-                      m_data.begin() + frag.size, 0);
+            auto pointer = pointer_traits::get_pointer(frag.pointer);
+            std::fill(m_data.begin() + pointer,
+                      m_data.begin() + pointer + frag.size, 0);
             m_refcounter.erase(it);
             size += frag.size;
         }
@@ -161,12 +182,23 @@ size_t data_store_mock::get_available_space() const noexcept {
 size_t data_store_mock::id() const noexcept { return m_data_store_id; }
 
 data_store_mock::~data_store_mock() {
-    std::ofstream ofs(m_root / m_logname, std::ios::binary);
+    {
+        std::ofstream ofs(m_root / m_datafile, std::ios::binary);
+        ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
+    }
+    {
+        std::ofstream ofs(m_root / m_refcountfile, std::ios::binary);
+        size_t map_size = m_refcounter.size();
+        ofs.write(reinterpret_cast<const char*>(&map_size), sizeof(map_size));
 
-    LOG_DEBUG() << "save size: " << m_data.size();
-    ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
-
-    std::unordered_map<fragment, int> m_refcounter;
+        for (const auto& [key, value] : m_refcounter) {
+            ofs.write(reinterpret_cast<const char*>(&key.pointer),
+                      sizeof(key.pointer));
+            ofs.write(reinterpret_cast<const char*>(&key.size),
+                      sizeof(key.size));
+            ofs.write(reinterpret_cast<const char*>(&value), sizeof(value));
+        }
+    }
 }
 
 } // end namespace uh::cluster

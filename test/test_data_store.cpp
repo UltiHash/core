@@ -16,6 +16,11 @@
 
 namespace uh::cluster {
 
+#define CHECK_EQUAL_FROM_OFFSET(read, offset, org)                             \
+    BOOST_CHECK_EQUAL_COLLECTIONS((read).begin() + offset,                     \
+                                  (read).begin() + offset + org.size(),        \
+                                  (org).begin(), (org).end())
+
 struct data_store_fixture {
 
     void fill_data() {
@@ -285,21 +290,19 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
-        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
-                                buffer1.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
-                                buffer2.data(), buffer2.size()) == 0);
-        BOOST_CHECK(
-            std::memcmp(read_buffer.data() + buffer1.size() + buffer2.size(),
-                        buffer3.data(), buffer3.size()) == 0);
+        size_t offset = 0;
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
+        offset += buffer1.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer2);
+        offset += buffer2.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
+        offset += buffer3.size();
     }
 
     ds->unlink(buffer2_address);
 
     {
         shared_buffer<char> read_buffer(full_address.data_size());
-        shared_buffer<char> zero_buffer(buffer2.size());
-        memset(zero_buffer.data(), 0, buffer2.size());
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
@@ -309,13 +312,15 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
-        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
-                                buffer1.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
-                                zero_buffer.data(), zero_buffer.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size() +
-                                    zero_buffer.size(),
-                                buffer3.data(), buffer3.size()) == 0);
+        size_t offset = 0;
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
+        shared_buffer<char> zero_buffer(buffer2.size());
+        memset(zero_buffer.data(), 0, buffer2.size());
+        offset += buffer1.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, zero_buffer);
+        offset += buffer2.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
+        offset += buffer3.size();
     }
 }
 
@@ -347,21 +352,19 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
-        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
-                                buffer1.size()) == 0);
-        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
-                                buffer2.data(), buffer2.size()) == 0);
-        BOOST_CHECK(
-            std::memcmp(read_buffer.data() + buffer1.size() + buffer2.size(),
-                        buffer3.data(), buffer3.size()) == 0);
+        size_t offset = 0;
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
+        offset += buffer1.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer2);
+        offset += buffer2.size();
+        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
+        offset += buffer3.size();
     }
 
     ds->unlink(buffer2_address);
 
     {
         shared_buffer<char> read_buffer(full_address.data_size());
-        shared_buffer<char> zero_buffer(DEFAULT_PAGE_SIZE);
-        memset(zero_buffer.data(), 0, DEFAULT_PAGE_SIZE);
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
@@ -371,6 +374,16 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
+        // size_t offset = 0;
+        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
+        shared_buffer<char> zero_buffer(buffer2.size());
+        memset(zero_buffer.data(), 0, buffer2.size());
+        // offset += buffer1.size();
+        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, zero_buffer);
+        // offset += buffer2.size();
+        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
+        // offset += buffer3.size();
+
         BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
                                 buffer1.size()) == 0);
         BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
