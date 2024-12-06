@@ -114,6 +114,7 @@ BOOST_AUTO_TEST_CASE(test_read) {
             t_read += read_size;
         }
 
+        BOOST_TEST(t_read == data.size());
         if (t_read != data.size()) {
             failures++;
         }
@@ -247,6 +248,7 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
     auto addr = ds->write(buffer.string_view());
     BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
+
     addr = ds->write(buffer.string_view());
     BOOST_TEST(addr.size() == 1);
     address illegal_addr;

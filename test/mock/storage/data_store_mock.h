@@ -104,10 +104,15 @@ public:
 private:
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
+    const std::filesystem::path m_root;
+    const std::string m_logname = ".backup";
 
     data_store_config m_conf;
 
     std::vector<char> m_data;
+    std::unordered_map<fragment, int> m_refcounter;
+
+    std::mutex m_mutex;
 };
 
 } // end namespace uh::cluster
