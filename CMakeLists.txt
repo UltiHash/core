@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-project(uh-cluster VERSION 1.1.0)
+project(uh-cluster VERSION 1.1.1)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
