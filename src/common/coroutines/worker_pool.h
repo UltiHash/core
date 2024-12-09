@@ -2,6 +2,7 @@
 #define UH_CLUSTER_WORKER_POOL_H
 
 #include "common/coroutines/promise.h"
+#include "common/telemetry/context.h"
 #include <exception>
 #include <memory>
 

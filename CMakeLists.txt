@@ -1,14 +1,9 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-add_subdirectory(lib)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib
-                    ${CMAKE_CURRENT_SOURCE_DIR}/lib/third-party/etcd-cpp-apiv3)
-
 project(uh-cluster VERSION 1.1.0)
 
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
-option(BUILD_EXPERIMENTS "Build experiments" OFF)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
 option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
@@ -42,10 +37,12 @@ add_custom_target(
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
-
 add_compile_options(-fPIC)
-
 set(Boost_USE_STATIC_LIBS ON)
+
+add_subdirectory(third-party)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
+
 find_package(
     Boost 1.80
     COMPONENTS thread log url unit_test_framework
@@ -122,6 +119,8 @@ add_compile_options(-Wall -Werror)
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109224
 #
 add_compile_options(-Wno-mismatched-new-delete)
+add_compile_options(-Wno-odr)
+add_link_options(-Wno-odr)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
@@ -159,10 +158,6 @@ if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
     add_subdirectory(test)
-endif()
-if(BUILD_EXPERIMENTS)
-    message(STATUS "Building experiments")
-    add_subdirectory(experiments)
 endif()
 if(BUILD_TOOLS)
     message(STATUS "Building tools")

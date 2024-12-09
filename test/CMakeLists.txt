@@ -1,3 +1,4 @@
+include_directories(${CMAKE_SOURCE_DIR}/third-party)
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
 
 add_library(uh_mockup_entrypoint SHARED gdv_fixture.h entrypoint.cpp)

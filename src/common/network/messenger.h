@@ -10,28 +10,11 @@ class messenger : public messenger_core {
 public:
     using messenger_core::messenger_core;
 
-    coro<address> recv_address(const header& message_header) {
-        address addr(address::allocated_elements(message_header.size));
-        register_read_buffer(addr.pointers);
-        register_read_buffer(addr.sizes);
-        co_await recv_buffers(message_header);
-        co_return std::move(addr);
-    }
+    coro<address> recv_address(const header& message_header);
 
-    coro<fragment> recv_fragment(const header& message_header) {
-        fragment frag;
-        register_read_buffer(frag.pointer.ref_data());
-        register_read_buffer(frag.size);
-        co_await recv_buffers(message_header);
-        co_return frag;
-    }
+    coro<fragment> recv_fragment(const header& message_header);
 
-    coro<uint128_t> recv_uint128_t(const header& message_header) {
-        uint128_t num;
-        register_read_buffer(num.ref_data());
-        co_await recv_buffers(message_header);
-        co_return num;
-    }
+    coro<uint128_t> recv_uint128_t(const header& message_header);
 
     template <typename T>
     requires std::is_arithmetic_v<T>
@@ -53,72 +36,24 @@ public:
         co_return res;
     }
 
-    coro<dedupe_response> recv_dedupe_response(const header& message_header) {
-        dedupe_response dedupe_resp;
-        register_read_buffer(dedupe_resp.effective_size);
-        dedupe_resp.addr = address(address::allocated_elements(
-            message_header.size - sizeof(dedupe_resp.effective_size)));
-        register_read_buffer(dedupe_resp.addr.pointers);
-        register_read_buffer(dedupe_resp.addr.sizes);
-        co_await recv_buffers(message_header);
-        co_return std::move(dedupe_resp);
-    }
+    coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
-    coro<void> send_ds_write(context& ctx, const ds_write_request& req) {
-        register_write_buffer(req.ds_id);
-        register_write_buffer(req.pointer);
-        register_write_buffer(std::get<std::string_view>(req.data));
-        co_await send_buffers(ctx, STORAGE_DS_WRITE_REQ);
-    }
+    coro<void> send_ds_write(context& ctx, const ds_write_request& req);
 
-    coro<ds_write_request> recv_ds_write(const header& message_header) {
-        ds_write_request req{
-            .data = unique_buffer<>(message_header.size -
-                                    sizeof(ds_write_request::ds_id) -
-                                    sizeof(ds_write_request::pointer))};
-        register_read_buffer(req.ds_id);
-        register_read_buffer(req.pointer);
-        const auto& buf = std::get<unique_buffer<>>(req.data);
-        register_read_buffer(buf.data(), buf.size());
-        co_await recv_buffers(message_header);
-        co_return req;
-    }
+    coro<ds_write_request> recv_ds_write(const header& message_header);
 
-    coro<void> send_ds_read(context& ctx, const ds_read_request& req) {
-        register_write_buffer(req.ds_id);
-        register_write_buffer(req.pointer);
-        register_write_buffer(req.size);
-        co_await send_buffers(ctx, STORAGE_DS_READ_REQ);
-    }
+    coro<void> send_ds_read(context& ctx, const ds_read_request& req);
 
-    coro<ds_read_request> recv_ds_read(const header& message_header) {
-        ds_read_request req;
-        register_read_buffer(req.ds_id);
-        register_read_buffer(req.pointer);
-        register_read_buffer(req.size);
-        co_await recv_buffers(message_header);
-        co_return req;
-    }
+    coro<ds_read_request> recv_ds_read(const header& message_header);
 
     coro<void> send_address(context& ctx, const message_type type,
-                            const address& addr) {
-        register_write_buffer(addr.pointers);
-        register_write_buffer(addr.sizes);
-        co_await send_buffers(ctx, type);
-    }
+                            const address& addr);
 
     coro<void> send_fragment(context& ctx, const message_type type,
-                             const fragment frag) {
-        register_write_buffer(frag.pointer.get_data(), 2);
-        register_write_buffer(frag.size);
-        co_await send_buffers(ctx, type);
-    }
+                             const fragment frag);
 
     coro<void> send_uint128_t(context& ctx, const message_type type,
-                              const uint128_t num) {
-        register_write_buffer(num.get_data(), 2);
-        co_await send_buffers(ctx, type);
-    }
+                              const uint128_t num);
 
     template <typename T>
     requires std::is_arithmetic_v<T>
@@ -129,12 +64,7 @@ public:
     }
 
     coro<void> send_dedupe_response(context& ctx,
-                                    const dedupe_response& dedupe_resp) {
-        register_write_buffer(dedupe_resp.effective_size);
-        register_write_buffer(dedupe_resp.addr.pointers);
-        register_write_buffer(dedupe_resp.addr.sizes);
-        co_await send_buffers(ctx, SUCCESS);
-    }
+                                    const dedupe_response& dedupe_resp);
 
     template <typename K, typename V>
     requires(std::is_arithmetic_v<K> and std::is_arithmetic_v<V>)

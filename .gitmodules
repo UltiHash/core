@@ -1,24 +1,24 @@
 [submodule "lib/third-party/zpp_bits"]
-	path = lib/third-party/zpp_bits
+	path = third-party/zpp_bits
 	url = https://github.com/eyalz800/zpp_bits.git
 [submodule "lib/third-party/etcd-cpp-apiv3"]
-	path = lib/third-party/etcd-cpp-apiv3
+	path = third-party/etcd-cpp-apiv3
 	url = https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3.git
 [submodule "lib/third-party/opentelemetry-cpp"]
-	path = lib/third-party/opentelemetry-cpp
+	path = third-party/opentelemetry-cpp
 	url = https://github.com/open-telemetry/opentelemetry-cpp
 [submodule "lib/third-party/magic_enum"]
-	path = lib/third-party/magic_enum
+	path = third-party/magic_enum
 	url = https://github.com/Neargye/magic_enum.git
 [submodule "lib/third-party/lmdbxx"]
-	path = lib/third-party/lmdbxx
+	path = third-party/lmdbxx
 	url = https://github.com/hoytech/lmdbxx.git
 [submodule "lib/third-party/reedsolomon-c"]
-	path = lib/third-party/reedsolomon-c
+	path = third-party/reedsolomon-c
 	url = https://github.com/jannson/reedsolomon-c
 [submodule "lib/third-party/nlohmann_json"]
-	path = lib/third-party/nlohmann_json
+	path = third-party/nlohmann_json
 	url = https://github.com/nlohmann/json
 [submodule "lib/third-party/CLI11"]
-	path = lib/third-party/CLI11
+	path = third-party/CLI11
 	url = https://github.com/CLIUtils/CLI11.git

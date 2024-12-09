@@ -5,8 +5,8 @@
 #include "common/etcd/namespace.h"
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
-#include "third-party/etcd-cpp-apiv3/etcd/SyncClient.hpp"
-#include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
+#include <etcd/SyncClient.hpp>
+#include <etcd/Watcher.hpp>
 
 namespace uh::cluster {
 

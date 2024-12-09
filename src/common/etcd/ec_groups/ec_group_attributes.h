@@ -2,8 +2,8 @@
 #define EC_GROUP_ATTRIBUTES_H
 #include "common/etcd/namespace.h"
 #include "common/utils/time_utils.h"
-#include "third-party/etcd-cpp-apiv3/etcd/Watcher.hpp"
 #include <etcd/SyncClient.hpp>
+#include <etcd/Watcher.hpp>
 #include <magic_enum/magic_enum.hpp>
 
 namespace uh::cluster {

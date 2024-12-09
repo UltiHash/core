@@ -3,7 +3,7 @@
 #include "common/types/common_types.h"
 #include "deduplicator/dedupe_set/fragment_set_log.h"
 #include <boost/test/unit_test.hpp>
-#include <third-party/zpp_bits/zpp_bits.h>
+#include <zpp_bits/zpp_bits.h>
 
 // ------------- Tests Suites Follow --------------
 
