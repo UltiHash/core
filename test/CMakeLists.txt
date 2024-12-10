@@ -19,8 +19,8 @@ function(uh_add_test name)
 
     add_executable(${target_name} ${name}.cpp)
     # target_compile_options(${target_name} PRIVATE -fno-inline)
-    # target_compile_definitions(
-    #     ${target_name} PRIVATE BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+    # target_compile_definitions( ${target_name} PRIVATE
+    # BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
 
     target_link_libraries(
         ${target_name}
@@ -40,20 +40,30 @@ uh_add_test(test_address)
 uh_add_test(test_awaitable_promise)
 uh_add_test(test_big_int)
 uh_add_test(test_data_store)
-uh_add_test(test_data_store_mock)
+uh_add_test(test_fake_data_store PRIVATE fake_storage)
+uh_add_test(test_ec)
+uh_add_test(test_fragment_set)
+uh_add_test(test_global_data_view)
+uh_add_test(test_hash)
+uh_add_test(test_http_range)
+uh_add_test(test_lfu_cache)
+uh_add_test(test_license)
+uh_add_test(test_lru_cache)
+uh_add_test(test_plain_cache)
+uh_add_test(test_pointer_traits)
+uh_add_test(test_formats)
+uh_add_test(test_pool)
+uh_add_test(test_promise_future)
+uh_add_test(test_reference_counter)
+uh_add_test(test_scoped_buffer)
+uh_add_test(test_serialization)
+uh_add_test(test_service_registry)
+uh_add_test(test_services)
+uh_add_test(test_strings)
+uh_add_test(test_xml_parser)
 
-uh_add_test(test_variables)
-target_link_libraries(${PROJECT_NAME}_test_variables
-                      PRIVATE uh_mockup_entrypoint)
-uh_add_test(test_policies)
-target_link_libraries(${PROJECT_NAME}_test_policies
-                      PRIVATE uh_mockup_entrypoint)
-uh_add_test(test_policies_with_action)
-target_link_libraries(${PROJECT_NAME}_test_policies_with_action
-                      PRIVATE uh_mockup_entrypoint)
-uh_add_test(test_policies_with_condition)
-target_link_libraries(${PROJECT_NAME}_test_policies_with_condition
-                      PRIVATE uh_mockup_entrypoint)
-uh_add_test(test_policies_with_examples)
-target_link_libraries(${PROJECT_NAME}_test_policies_with_examples
-                      PRIVATE uh_mockup_entrypoint)
+uh_add_test(test_variables PRIVATE uh_mockup_entrypoint)
+uh_add_test(test_policies PRIVATE uh_mockup_entrypoint)
+uh_add_test(test_policies_with_action PRIVATE uh_mockup_entrypoint)
+uh_add_test(test_policies_with_condition PRIVATE uh_mockup_entrypoint)
+uh_add_test(test_policies_with_examples PRIVATE uh_mockup_entrypoint)
