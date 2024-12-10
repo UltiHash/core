@@ -17,10 +17,26 @@ add_library(uh_mockup_entrypoint SHARED gdv_fixture.h entrypoint.cpp)
 target_link_libraries(uh_mockup_entrypoint PUBLIC ${PROJECT_NAME}_shared)
 target_precompile_headers(uh_mockup_entrypoint REUSE_FROM uh_precompile_headers)
 
-function(uh_add_test test_name)
-    add_executable(${PROJECT_NAME}_${test_name} ${test_name}.cpp)
-    target_link_libraries(${PROJECT_NAME}_${test_name}
-                          PRIVATE ${PROJECT_NAME}_shared fake_storage)
+function(uh_add_test name)
+    # Parse Arguments
+    set(options "")
+    set(multi_value_args PRIVATE PUBLIC)
+    cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
+                          "${multi_value_args}" ${ARGN})
+
+    set(target_name "${PROJECT_NAME}_${name}")
+
+    add_executable(${target_name} ${name}.cpp)
+    # target_compile_options(${target_name} PRIVATE -fno-inline)
+    # target_compile_definitions(
+    #     ${target_name} PRIVATE BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
+
+    target_link_libraries(
+        ${target_name}
+        PRIVATE ${PROJECT_NAME}_shared Boost::unit_test_framework
+                ${ARGS_PRIVATE}
+        PUBLIC ${ARGS_PUBLIC})
+
     target_include_directories(
         ${PROJECT_NAME}_${test_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
                                              ${CMAKE_CURRENT_SOURCE_DIR})

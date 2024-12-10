@@ -5,6 +5,9 @@ target_link_libraries(
     PRIVATE zpp_bits
             lmdbxx
             magic_enum
+            Boost::log
+            Boost::url
+            Boost::filesystem
             opentelemetry_exporter_otlp_grpc_log
             opentelemetry_exporter_otlp_grpc
             opentelemetry_exporter_otlp_grpc_metrics
@@ -18,6 +21,11 @@ target_link_libraries(
     PRIVATE zpp_bits
             lmdbxx
             magic_enum
+            reedsolomon
+            CLI11::CLI11
+            Boost::log
+            Boost::url
+            Boost::filesystem
             opentelemetry_exporter_otlp_grpc_log
             opentelemetry_exporter_otlp_grpc
             opentelemetry_exporter_otlp_grpc_metrics

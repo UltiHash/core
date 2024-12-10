@@ -81,7 +81,8 @@ coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
                                                  const address& addr) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &buffer](size_t, std::shared_ptr<storage_interface> dn,
+                        const address_info& info) -> coro<void> {
             co_await dn->read_address(ctx, buffer, info.addr,
                                       info.pointer_offsets);
         });
@@ -102,7 +103,8 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](auto id, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &addresses](size_t id, std::shared_ptr<storage_interface> dn,
+                           const address_info& info) -> coro<void> {
             addresses.emplace(id, co_await dn->link(ctx, info.addr));
         });
 
@@ -118,7 +120,8 @@ coro<std::size_t> global_data_view::unlink(context& ctx, const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+                             const address_info& info) -> coro<void> {
             freed_bytes += co_await dn->unlink(ctx, info.addr);
         });
     co_return freed_bytes;

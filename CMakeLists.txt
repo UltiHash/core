@@ -92,7 +92,9 @@ endif()
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
 set(${PROJECT_NAME}_LINK_LIBRARIES
-    ${Boost_LIBRARIES}
+    Boost::log
+    Boost::url
+    Boost::filesystem
     ${OPENSSL_LIBRARIES}
     etcd-cpp-api
     CLI11::CLI11

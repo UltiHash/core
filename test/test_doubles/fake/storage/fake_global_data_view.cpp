@@ -5,8 +5,10 @@
 namespace uh::cluster {
 fake_global_data_view::fake_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
+    service_maintainer<storage_interface>& storage_maintainer,
     fake_data_store& storage)
-    : m_io_service(ioc),
+    : global_data_view(config, ioc, storage_maintainer),
+      m_io_service(ioc),
       m_storage(storage) {}
 
 coro<address> fake_global_data_view::write(context& ctx,
@@ -21,40 +23,44 @@ fake_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
     shared_buffer<char> buffer(size);
-    const fragment frag{pointer, size};
-    boost::asio::co_spawn(m_io_service,
-                          m_storage.read_fragment(ctx, buffer.data(), frag),
-                          boost::asio::use_future)
-        .get();
+    m_storage.read(buffer.data(), pointer, size);
     return buffer;
 }
 
 coro<shared_buffer<>> fake_global_data_view::read(context& ctx,
                                                   const uint128_t& pointer,
                                                   size_t size) {
-    auto buffer = co_await m_storage.read(ctx, pointer, size);
+    shared_buffer<char> buffer(size);
+    m_storage.read(buffer.data(), pointer, size);
     co_return buffer;
 }
 
 coro<std::size_t> fake_global_data_view::read_address(context& ctx,
                                                       char* buffer,
                                                       const address& addr) {
-    co_return co_await m_storage.read_address(ctx, buffer, info.addr,
-                                              info.pointer_offsets);
+    auto size = 0u;
+    for (size_t i = 0; i < addr.size(); ++i) {
+        auto frag = addr.get(i);
+        m_storage.read(buffer, frag.pointer, frag.size);
+        buffer += frag.size;
+        size += frag.size;
+    }
+
+    co_return size;
 }
 
 coro<std::size_t> fake_global_data_view::get_used_space(context& ctx) {
-    co_return co_await m_storage.get_used_space(ctx);
+    co_return m_storage.get_used_space();
 }
 
 [[nodiscard]] coro<address> fake_global_data_view::link(context& ctx,
                                                         const address& addr) {
-    co_return co_await m_storage.link(ctx, info.addr);
+    co_return m_storage.link(addr);
 }
 
 coro<std::size_t> fake_global_data_view::unlink(context& ctx,
                                                 const address& addr) {
-    co_return co_await m_storage.unlink(ctx, info.addr);
+    co_return m_storage.unlink(addr);
 }
 
 [[nodiscard]] boost::asio::io_context&
@@ -66,6 +72,5 @@ fake_global_data_view::get_executor() const {
 fake_global_data_view::get_storage_service_connection_count() const noexcept {
     return 1;
 }
-fake_global_data_view::~fake_global_data_view() noexcept {}
 
 } // namespace uh::cluster

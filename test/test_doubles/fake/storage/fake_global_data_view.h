@@ -3,15 +3,16 @@
 #include "common/global_data/global_data_view.h"
 
 #include "fake_data_store.h"
-#include "gmock/gmock.h"
 
 namespace uh::cluster {
 
 class fake_global_data_view : public global_data_view {
 public:
-    fake_global_data_view(const global_data_view_config& config,
-                          boost::asio::io_context& ioc,
-                          fake_data_store& storage);
+    fake_global_data_view(
+        const global_data_view_config& config, boost::asio::io_context& ioc,
+        service_maintainer<storage_interface>& storage_maintainer,
+        fake_data_store& storage);
+
     coro<address> write(context& ctx, const std::string_view& data) override;
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;
@@ -31,7 +32,7 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    fake_data_store m_storage;
+    fake_data_store& m_storage;
 };
 
 } // namespace uh::cluster
