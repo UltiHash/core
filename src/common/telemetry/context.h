@@ -1,5 +1,5 @@
-#ifndef UH_CLUSTER_CONTEXT_H
-#define UH_CLUSTER_CONTEXT_H
+#ifndef CORE_COMMON_TELEMETRY_CONTEXT_H
+#define CORE_COMMON_TELEMETRY_CONTEXT_H
 
 #include <boost/asio.hpp>
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
@@ -10,9 +10,7 @@ namespace uh::cluster {
 
 struct context {
 
-    [[nodiscard]] const auto& get_otel_context() const noexcept {
-        return m_otel_ctx;
-    }
+    const auto& get_otel_context() const { return m_otel_ctx; }
 
     void set_otel_context(opentelemetry::context::Context context) {
         m_otel_ctx = std::move(context);
@@ -29,4 +27,5 @@ private:
 inline thread_local context CURRENT_CONTEXT;
 
 } // namespace uh::cluster
-#endif // UH_CLUSTER_CONTEXT_H
+
+#endif

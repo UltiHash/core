@@ -199,7 +199,13 @@ private:
     std::atomic<double> m_load;
 
     [[nodiscard]] data_store& get_data_store(const uint128_t& pointer) const {
-        return *m_data_stores[pointer_traits::get_data_store_id(pointer)];
+        auto data_store_id = pointer_traits::get_data_store_id(pointer);
+
+        if (data_store_id >= m_data_stores.size()) {
+            throw std::runtime_error("data store id out of range");
+        }
+
+        return *m_data_stores[data_store_id];
     }
 };
 

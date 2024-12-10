@@ -1,8 +1,7 @@
+#ifndef CORE_COMMON_SERVICE_INTERFACES_STORAGE_INTERFACE_H
+#define CORE_COMMON_SERVICE_INTERFACES_STORAGE_INTERFACE_H
 
-#ifndef UH_CLUSTER_STORAGE_INTERFACE_H
-#define UH_CLUSTER_STORAGE_INTERFACE_H
-
-#include "common/coroutines/context.h"
+#include "common/telemetry/context.h"
 #include "common/types/common_types.h"
 #include "common/types/scoped_buffer.h"
 #include "common/utils/common.h"
@@ -34,4 +33,4 @@ struct storage_interface {
 
 } // namespace uh::cluster
 
-#endif // UH_CLUSTER_STORAGE_INTERFACE_H
+#endif

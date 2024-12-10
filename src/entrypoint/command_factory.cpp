@@ -1,4 +1,5 @@
 #include "command_factory.h"
+#include <entrypoint/commands/get_ready.h>
 
 #include "commands/abort_multipart.h"
 #include "commands/complete_multipart.h"
@@ -160,6 +161,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     }
     if (delete_bucket_policy::can_handle(req)) {
         co_return std::make_unique<delete_bucket_policy>(m_directory);
+    }
+    if (get_ready::can_handle(req)) {
+        co_return std::make_unique<get_ready>(m_directory, m_gdv);
     }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",

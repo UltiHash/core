@@ -3,6 +3,7 @@
 
 #include "common/coroutines/context.h"
 #include "common/coroutines/promise.h"
+#include "common/telemetry/context.h"
 #include <exception>
 #include <memory>
 

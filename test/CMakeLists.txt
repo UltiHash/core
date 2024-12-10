@@ -1,5 +1,3 @@
-include(FetchContent)
-
 add_subdirectory(test_doubles)
 
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)

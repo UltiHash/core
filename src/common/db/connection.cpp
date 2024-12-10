@@ -62,11 +62,8 @@ connection::connection(boost::asio::io_context& ioc, const connstr& cs)
 }
 
 coro<std::optional<row>> connection::exec(const std::string& query) {
-    LOG_CORO_CONTEXT();
-
     co_await cancel();
 
-    LOG_DEBUG() << id() << ": exec(" << query << ")";
     if (!PQsendQuery(m_ptr.get(), query.c_str())) {
         throw_error_message();
     }
@@ -75,9 +72,6 @@ coro<std::optional<row>> connection::exec(const std::string& query) {
 }
 
 std::optional<row> connection::raw_exec(const std::string& query) {
-    LOG_CORO_CONTEXT();
-    LOG_DEBUG() << id() << ": raw_exec(" << query << ")";
-
     m_result =
         std::shared_ptr<PGresult>(PQexec(m_ptr.get(), query.c_str()), PQclear);
     m_row = 0;
@@ -91,7 +85,6 @@ std::optional<row> connection::raw_exec(const std::string& query) {
 }
 
 coro<std::optional<row>> connection::next() {
-    LOG_CORO_CONTEXT();
     if (!m_result || m_row >= PQntuples(m_result.get())) {
 
         co_await wait();
@@ -120,7 +113,6 @@ coro<std::optional<row>> connection::next() {
 }
 
 coro<void> connection::cancel() {
-    LOG_CORO_CONTEXT();
     m_result.reset();
 
     PGresult* result = nullptr;
@@ -139,7 +131,6 @@ std::string connection::id() const {
 }
 
 coro<void> connection::wait() {
-    LOG_CORO_CONTEXT();
     while (PQisBusy(m_ptr.get())) {
         co_await m_fd.async_wait(
             boost::asio::posix::descriptor::wait_type::wait_read,
@@ -153,6 +144,46 @@ coro<void> connection::wait() {
 
 [[noreturn]] void connection::throw_error_message() {
     throw std::runtime_error(PQerrorMessage(m_ptr.get()));
+}
+
+void connection::append_args(std::span<char> s,
+                             std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>&) {
+    values.push_back(s.data());
+    lengths.push_back(s.size());
+    format.push_back(1);
+}
+
+void connection::append_args(std::string s, std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>& mem) {
+    auto& buffer = mem.emplace_back(std::move(s));
+    values.push_back(buffer.data());
+    lengths.push_back(buffer.size());
+    format.push_back(0);
+}
+
+void connection::append_args(std::string_view s,
+                             std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>&) {
+    values.push_back(s.data());
+    lengths.push_back(s.size());
+    format.push_back(0);
+}
+
+void connection::append_args(std::size_t n, std::vector<const char*>& values,
+                             std::vector<int>& lengths,
+                             std::vector<int>& format,
+                             std::list<std::string>& mem) {
+    auto& buffer = mem.emplace_back(std::to_string(n));
+    values.push_back(buffer.data());
+    lengths.push_back(buffer.size());
+    format.push_back(0);
 }
 
 } // namespace uh::cluster::db

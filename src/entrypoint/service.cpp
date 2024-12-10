@@ -15,12 +15,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     l.storage_size(size);
 
     metric<entrypoint_original_data_volume_gauge, byte,
-           int64_t>::register_gauge_callback([&size]() {
-        auto s = size.load();
-        LOG_DEBUG() << "gauge_callback for original data: " << s;
-
-        return s;
-    });
+           int64_t>::register_gauge_callback([&size]() { return size.load(); });
     auto g = scope_guard([]() {
         metric<entrypoint_original_data_volume_gauge, byte,
                int64_t>::remove_gauge_callback();

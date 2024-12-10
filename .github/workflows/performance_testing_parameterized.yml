@@ -30,9 +30,9 @@ on:
       tester_ec2_instance_type:
         description: 'Type of the used EC2 instance to host the test script'
         default: 'c6gn.16xlarge'
-      tester_volume_size:
-        description: 'Volume size provisioned for the test script'
-        default: '1200Gi'
+      tester_script_jobs: 
+        description: 'Number of parallel jobs to run the tester script'
+        default: '10'
       generated_data_size:
         description: 'The size of the generated data in GiB'
         default: '1024'
@@ -86,9 +86,8 @@ jobs:
         env:
           RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
           TESTER_STORAGE_CLASS: "${{ github.event.inputs.uh_storage_class }}"
-          TESTER_VOLUME_SIZE: "${{ github.event.inputs.tester_volume_size }}"
           GENERATED_DATA_SIZE: "${{ github.event.inputs.generated_data_size }}"
-          TESTER_SCRIPT_JOBS: "10"
+          TESTER_SCRIPT_JOBS: "${{ github.event.inputs.tester_script_jobs }}"
         with:
           input: testing/performance/parameterized/performance-tester.yaml
           output: performance-tester.yaml
@@ -116,7 +115,7 @@ jobs:
       - name: Install the UltiHash cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/upgrade/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 25m --version ${{ github.event.inputs.helm_chart_version }}
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 25m --version ${{ github.event.inputs.helm_chart_version }}
       
       - name: Execute performance test against UltiHash
         run: |
@@ -157,7 +156,7 @@ jobs:
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete nodepool parameterized-test-uh parameterized-test-tester || true

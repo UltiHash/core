@@ -1,5 +1,5 @@
-#ifndef ENTRYPOINT_HTTP_GET_METRICS_H
-#define ENTRYPOINT_HTTP_GET_METRICS_H
+#ifndef ENTRYPOINT_HTTP_GET_READY_H
+#define ENTRYPOINT_HTTP_GET_READY_H
 
 #include "command.h"
 #include "common/global_data/global_data_view.h"
@@ -7,9 +7,9 @@
 
 namespace uh::cluster {
 
-class get_metrics : public command {
+class get_ready : public command {
 public:
-    get_metrics(directory&, global_data_view&);
+    get_ready(directory&, global_data_view&);
 
     static bool can_handle(const ep::http::request& req);
 

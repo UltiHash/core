@@ -7,9 +7,7 @@ CREATE OR REPLACE FUNCTION ceiled_now()
 RETURNS TIMESTAMP
 LANGUAGE plpgsql AS $$
 BEGIN
-    RETURN CURRENT_TIMESTAMP(0) +
-        CASE WHEN CURRENT_TIMESTAMP != CURRENT_TIMESTAMP(0)
-            THEN '1 second'::interval ELSE '0 second'::interval END;
+    RETURN CURRENT_TIMESTAMP(0) + '1 second'::interval;
 END;
 $$;
 
