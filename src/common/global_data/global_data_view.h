@@ -8,7 +8,6 @@
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "storage/interfaces/storage_group.h"
 
 namespace uh::cluster {
 
@@ -47,7 +46,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(context& ctx, const std::string_view& data);
+    virtual coro<address> write(context& ctx, const std::string_view& data);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.
@@ -60,8 +59,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size);
+    virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
+                                       size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -84,8 +83,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
-                                      size_t size);
+    virtual shared_buffer<char>
+    read_fragment(context& ctx, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -100,8 +99,8 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(context& ctx, char* buffer,
-                                   const address& addr);
+    virtual coro<std::size_t> read_address(context& ctx, char* buffer,
+                                           const address& addr);
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership
@@ -119,7 +118,7 @@ public:
      *
      * already been deleted and therefore can no longer be referenced.
      */
-    [[nodiscard]] coro<address> link(context& ctx, const address& addr);
+    [[nodiscard]] virtual coro<address> link(context& ctx, const address& addr);
 
     /**
      * @brief un-registers a reference to a storage region to release
@@ -131,7 +130,7 @@ public:
      * @return number of bytes freed in response to removing references.
      * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    coro<std::size_t> unlink(context& ctx, const address& addr);
+    virtual coro<std::size_t> unlink(context& ctx, const address& addr);
 
     /**
      * @brief Computes used space across all available storage service
@@ -139,7 +138,7 @@ public:
      * @param ctx open telemetry context
      * @return The used space across all available storage service instances.
      */
-    coro<std::size_t> get_used_space(context& ctx);
+    virtual coro<std::size_t> get_used_space(context& ctx);
 
     /**
      * @brief Provides access to the I/O context used by the global_data_view
@@ -147,7 +146,7 @@ public:
      * @return A reference to the boost::asio::io_context used by the
      * global_data_view
      */
-    [[nodiscard]] boost::asio::io_context& get_executor() const;
+    [[nodiscard]] virtual boost::asio::io_context& get_executor() const;
 
     /**
      * @brief Returns the configured number of connections maintained to each
@@ -156,10 +155,10 @@ public:
      * @return The configured number of connections maintained to each storage
      * service instance.
      */
-    [[nodiscard]] std::size_t
+    [[nodiscard]] virtual std::size_t
     get_storage_service_connection_count() const noexcept;
 
-    ~global_data_view() noexcept;
+    virtual ~global_data_view() noexcept;
 
 private:
     boost::asio::io_context& m_io_service;

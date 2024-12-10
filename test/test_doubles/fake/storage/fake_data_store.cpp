@@ -1,7 +1,6 @@
 
-#include "data_store_mock.h"
+#include "fake_data_store.h"
 #include "common/telemetry/log.h"
-#include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
 #include <algorithm>
 #include <fstream>
@@ -13,7 +12,7 @@ struct ds_file_info {
     std::size_t offset;
 };
 
-data_store_mock::data_store_mock(data_store_config conf,
+fake_data_store::fake_data_store(data_store_config conf,
                                  const std::filesystem::path& working_dir,
                                  uint32_t service_id, uint32_t data_store_id)
     : m_storage_id(service_id),
@@ -54,7 +53,7 @@ data_store_mock::data_store_mock(data_store_config conf,
     }
 }
 
-address data_store_mock::write(const std::string_view& data) {
+address fake_data_store::write(const std::string_view& data) {
 
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_data.size() + data.size() > m_conf.max_data_store_size or
@@ -73,7 +72,7 @@ address data_store_mock::write(const std::string_view& data) {
     return data_address;
 }
 
-void data_store_mock::manual_write(uint64_t internal_pointer,
+void fake_data_store::manual_write(uint64_t internal_pointer,
                                    const std::string_view& data) {
 
     address data_address;
@@ -86,11 +85,11 @@ void data_store_mock::manual_write(uint64_t internal_pointer,
                   data.cend());
 }
 
-void data_store_mock::manual_read(uint64_t pointer, size_t size, char* buffer) {
+void fake_data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
     std::memcpy(buffer, m_data.data() + pointer, size);
 }
 
-std::size_t data_store_mock::read(char* buffer, const uint128_t& global_pointer,
+std::size_t fake_data_store::read(char* buffer, const uint128_t& global_pointer,
                                   size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_data.size();
@@ -107,7 +106,7 @@ std::size_t data_store_mock::read(char* buffer, const uint128_t& global_pointer,
     return size;
 }
 
-std::size_t data_store_mock::read_up_to(
+std::size_t fake_data_store::read_up_to(
     char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
 
     const auto pointer = pointer_traits::get_pointer(global_pointer);
@@ -126,14 +125,7 @@ std::size_t data_store_mock::read_up_to(
     return size;
 }
 
-/**
- * @brief Creates a reference to one or multiple storage locations.
- * Invalid/non-existing fragments will be reported as rejected fragments
- * in a returned address.
- * @param address: storage locations that are to be referenced.
- * @return an address containing rejected fragments.
- */
-address data_store_mock::link(const address& addr) {
+address fake_data_store::link(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         m_refcounter[frag]++;
@@ -142,15 +134,7 @@ address data_store_mock::link(const address& addr) {
     return addr;
 }
 
-/**
- * @brief Removes a reference to one or multiple storage locations.
- * If a storage location is no longer referenced, it is deleted and the
- * space it was using is made available for reuse.
- * @param address: storage locations that are to be unreferenced.
- * @return number of bytes freed in response to removing references.
- * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
- */
-size_t data_store_mock::unlink(const address& addr) {
+size_t fake_data_store::unlink(const address& addr) {
     // auto addr.pointers
     size_t size = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
@@ -171,17 +155,17 @@ size_t data_store_mock::unlink(const address& addr) {
     return size;
 }
 
-uint64_t data_store_mock::get_used_space() const noexcept {
+uint64_t fake_data_store::get_used_space() const noexcept {
     return m_data.size();
 }
 
-size_t data_store_mock::get_available_space() const noexcept {
+size_t fake_data_store::get_available_space() const noexcept {
     return m_conf.max_data_store_size - m_data.size();
 }
 
-size_t data_store_mock::id() const noexcept { return m_data_store_id; }
+size_t fake_data_store::id() const noexcept { return m_data_store_id; }
 
-data_store_mock::~data_store_mock() {
+fake_data_store::~fake_data_store() {
     {
         std::ofstream ofs(m_root / m_datafile, std::ios::binary);
         ofs.write(reinterpret_cast<const char*>(m_data.data()), m_data.size());
