@@ -16,20 +16,20 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
     messenger m(std::move(s));
 
     for (;;) {
-        std::optional<error> err;
+
         context ctx;
+        std::optional<error> err;
 
         try {
-
             auto hdr = co_await m.recv_header();
             ctx = hdr.ctx.sub_context("deduplicator-handler-request");
             ctx.set_attribute("request-id", static_cast<unsigned>(hdr.type));
+
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 
             switch (hdr.type) {
             case DEDUPLICATOR_REQ:
-
                 co_await handle_dedupe(ctx, m, hdr);
                 break;
             default:
