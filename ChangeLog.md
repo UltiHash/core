@@ -1,4 +1,5 @@
 ## [UNRELEASED]
+- Fix broken return value in Content-Range for ranged get access
 
 ## [1.1.1] 2024-12-09
 - Request downstream error to be treated as an internal error to allow the client to retry
