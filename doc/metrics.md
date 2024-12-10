@@ -41,6 +41,8 @@ Each service measures the number of requests it receives and handles using monot
 - `entrypoint_list_objects_v2_req`: number of [`ListObjectsV2`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html) requests received
 - `entrypoint_multipart_req`: number of [`UploadPart`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html) requests received
 - `entrypoint_put_object_req`: number of [`PutObject`](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html) requests received
+- `entrypoint_get_metrics_req`: number of custom metrics requests received
+- `entrypoint_get_ready_req`: number of custom readiness probe requests received
 
 ### Common response messages
 
