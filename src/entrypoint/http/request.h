@@ -8,7 +8,6 @@
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
 #include <common/telemetry/context.h>
-#include <common/telemetry/traces.h>
 
 #include <map>
 #include <span>

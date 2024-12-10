@@ -1,6 +1,6 @@
 #include "common/license/license.h"
+#include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
-#include "common/telemetry/traces.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "deduplicator/deduplicator.h"
