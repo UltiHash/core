@@ -18,6 +18,7 @@ struct range_spec {
         std::size_t end = 0ull;
 
         std::size_t length() const;
+        std::string to_string() const;
     };
 
     std::list<range> ranges;
