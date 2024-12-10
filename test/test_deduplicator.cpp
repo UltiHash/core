@@ -1,9 +1,12 @@
 #define BOOST_TEST_MODULE "deduplicator tests"
 
+#include "common/test/coroutine.h"
 #include "common/utils/temp_directory.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
 #include "test_doubles/fake/storage/fake_global_data_view.h"
+#include "utils/random_string.h"
 
+#include <boost/asio.hpp>
 #include <boost/test/unit_test.hpp>
 
 #define MAX_DATA_STORE_SIZE_BYTES (4 * MEBI_BYTE)
@@ -12,7 +15,7 @@
 
 namespace uh::cluster {
 
-BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
+BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
 
     auto ioc = boost::asio::io_context(1);
     temp_directory dir;
@@ -24,6 +27,28 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
         fake_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
     auto data_view = fake_global_data_view(ioc, data_store);
     auto dedup = local_deduplicator({}, data_view);
+
+    context ctx;
+    auto data = generate_random_string(7);
+
+    auto f = [&]() -> coro<dedupe_response> {
+        co_return co_await dedup.deduplicate(ctx, data);
+    };
+    {
+        std::future<dedupe_response> res = spawn(f);
+        auto dedup_response = res.get();
+        BOOST_TEST(dedup_response.effective_size == data.size());
+    }
+    {
+        std::future<dedupe_response> res = spawn(f);
+        auto dedup_response = res.get();
+        BOOST_TEST(dedup_response.effective_size == data.size());
+    }
+    {
+        std::future<dedupe_response> res = spawn(f);
+        auto dedup_response = res.get();
+        BOOST_TEST(dedup_response.effective_size == data.size());
+    }
 }
 
 } // namespace uh::cluster
