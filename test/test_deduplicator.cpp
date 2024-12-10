@@ -3,7 +3,7 @@
 #include "common/test/coroutine.h"
 #include "common/utils/temp_directory.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
-#include "test_doubles/fake/storage/fake_global_data_view.h"
+#include "fakes/storage/fake_global_data_view.h"
 #include "utils/random_string.h"
 
 #include <boost/asio.hpp>
@@ -17,7 +17,6 @@ namespace uh::cluster {
 
 BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
 
-    auto ioc = boost::asio::io_context(1);
     temp_directory dir;
     auto config =
         data_store_config{.max_file_size = MAX_FILE_SIZE_BYTES,
@@ -25,7 +24,7 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
                           .page_size = DEFAULT_PAGE_SIZE};
     auto data_store =
         fake_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
-    auto data_view = fake_global_data_view(ioc, data_store);
+    auto data_view = fake_global_data_view(get_io_context(), data_store);
     auto dedup = local_deduplicator({}, data_view);
 
     context ctx;

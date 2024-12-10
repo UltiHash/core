@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/coroutines/context.h"
+#include "common/telemetry/context.h"
 #include "common/types/address.h"
 #include "common/types/big_int.h"
 #include "common/types/common_types.h"

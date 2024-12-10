@@ -20,6 +20,8 @@ public:
         return co_spawn(m_ctx, func(), boost::asio::use_future);
     }
 
+    auto& get_io_context() { return m_ctx; }
+
     ~coro_fixture() {
         m_work_guard.reset();
         m_ctx.stop();
