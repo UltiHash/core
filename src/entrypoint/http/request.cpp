@@ -13,13 +13,20 @@ request::request(beast::http::request<beast::http::empty_body> headers,
       m_body(std::move(body)),
       m_authenticated_user(std::move(user)),
       m_peer(peer),
-      m_ctx() {
+      m_ctx("http-request") {
     auto target = parse_request_target(m_req.target());
     m_params = std::move(target.params);
     m_path = std::move(target.path);
     m_bucket_id = std::move(target.bucket);
     m_object_key = std::move(target.object);
     m_ctx.peer() = m_peer;
+
+    m_ctx.set_attribute("client-ip", m_peer.address().to_string());
+    m_ctx.set_attribute("request-target", m_req.target());
+    m_ctx.set_attribute("request-user-id", m_authenticated_user.id);
+    m_ctx.set_attribute("request-user-name", m_authenticated_user.name);
+    m_ctx.set_attribute("request-bucket", m_bucket_id);
+    m_ctx.set_attribute("request-key", m_object_key);
 }
 
 request::request(partial_parse_result& req, std::unique_ptr<body> body)

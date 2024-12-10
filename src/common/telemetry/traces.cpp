@@ -69,25 +69,6 @@ opentelemetry::trace::Scope trace::scoped_span(
     return {tracer()->StartSpan(name, opt)};
 }
 
-opentelemetry::context::Context
-trace::deserialize_context(std::vector<char>&& buf) {
-    carrier c(std::move(buf));
-    auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::
-        GetGlobalPropagator();
-    auto empty_ctx = opentelemetry::context::Context();
-    auto new_context = prop->Extract(c, empty_ctx);
-    return new_context;
-}
-
-std::vector<char>
-trace::serialize_context(const opentelemetry::context::Context& context) {
-    carrier c;
-    auto prop = opentelemetry::context::propagation::GlobalTextMapPropagator::
-        GetGlobalPropagator();
-    prop->Inject(c, context);
-    return c.extract_buffer();
-}
-
 trace::~trace() {
     if (tracer_provider) {
 #ifdef OPENTELEMETRY_DEPRECATED_SDK_FACTORY

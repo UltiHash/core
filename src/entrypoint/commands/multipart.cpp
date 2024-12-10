@@ -32,6 +32,8 @@ coro<void> multipart::validate(const request& req) {
 }
 
 coro<response> multipart::handle(request& req) {
+    auto ctx = req.context().sub_context("handle-multipart");
+
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
@@ -49,6 +51,11 @@ coro<response> multipart::handle(request& req) {
     std::string id = *query(req, "uploadId");
     response res;
     res.set("ETag", md5);
+
+    ctx.set_attribute("multipart-uploadId",
+                      *query<std::size_t>(req, "partNumber"));
+    ctx.set_attribute("multipart-part-number",
+                      *query<std::size_t>(req, "partNumber"));
 
     std::optional<upload_info::part> existing_part;
 
