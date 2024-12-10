@@ -20,7 +20,7 @@ public:
 
     template <typename value>
     void set_attribute(const std::string& name, value v) {
-        m_span->SetAttribute(name, std::move(v));
+        m_span->span->SetAttribute(name, std::move(v));
     }
 
     std::vector<char> serialize() const;
@@ -32,11 +32,17 @@ public:
         opentelemetry::trace::TraceId::kSize +
         opentelemetry::trace::SpanId::kSize + 2;
 
+    struct span_wrap {
+        span_wrap(std::shared_ptr<opentelemetry::trace::Span> span);
+        ~span_wrap();
+        std::shared_ptr<opentelemetry::trace::Span> span;
+    };
+
 private:
     void require_span() const;
-    context(std::shared_ptr<opentelemetry::trace::Span> span);
+    context(std::shared_ptr<span_wrap> span);
 
-    std::shared_ptr<opentelemetry::trace::Span> m_span;
+    std::shared_ptr<span_wrap> m_span;
     boost::asio::ip::tcp::endpoint m_peer;
 };
 

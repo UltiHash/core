@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 namespace {
 
-std::shared_ptr<Span> deserialize(std::span<const char> buffer) {
+std::shared_ptr<context::span_wrap> deserialize(std::span<const char> buffer) {
     std::span<const uint8_t> uc_buf(
         reinterpret_cast<const uint8_t*>(&buffer[0]), buffer.size());
     std::size_t pos = 0ull;
@@ -33,7 +33,8 @@ std::shared_ptr<Span> deserialize(std::span<const char> buffer) {
 
     auto ctx = SpanContext(trace_id, span_id, TraceFlags(flags), remote);
 
-    return std::make_shared<DefaultSpan>(std::move(ctx));
+    return std::make_shared<context::span_wrap>(
+        std::make_shared<DefaultSpan>(std::move(ctx)));
 }
 
 std::shared_ptr<Tracer> get_tracer() {
@@ -44,14 +45,16 @@ std::shared_ptr<Tracer> get_tracer() {
 } // namespace
 
 context::context(const std::string& name)
-    : m_span(get_tracer()->StartSpan(name, StartSpanOptions{})) {}
+    : m_span(std::make_shared<span_wrap>(
+          get_tracer()->StartSpan(name, StartSpanOptions{}))) {}
 
 context::context(const std::vector<char>& buffer)
     : m_span(deserialize(buffer)) {}
 
 context context::sub_context(const std::string& name) {
     require_span();
-    return get_tracer()->StartSpan(name, {.parent = m_span->GetContext()});
+    return std::make_shared<span_wrap>(
+        get_tracer()->StartSpan(name, {.parent = m_span->span->GetContext()}));
 }
 
 std::vector<char> context::serialize() const {
@@ -60,7 +63,7 @@ std::vector<char> context::serialize() const {
         return rv;
     }
 
-    auto ctx = m_span->GetContext();
+    auto ctx = m_span->span->GetContext();
     std::size_t pos = 0ull;
 
     auto trace_id = ctx.trace_id().Id();
@@ -80,13 +83,18 @@ std::vector<char> context::serialize() const {
     return rv;
 }
 
+context::span_wrap::span_wrap(std::shared_ptr<opentelemetry::trace::Span> span)
+    : span(std::move(span)) {}
+
+context::span_wrap::~span_wrap() { span->End(); }
+
 void context::require_span() const {
     if (!m_span) {
         throw std::runtime_error("no span set");
     }
 }
 
-context::context(std::shared_ptr<opentelemetry::trace::Span> span)
+context::context(std::shared_ptr<span_wrap> span)
     : m_span(span) {}
 
 void initialize_traces_exporter(const std::string& endpoint) {
