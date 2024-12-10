@@ -42,7 +42,7 @@ private:
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
     roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
-    global_data_view m_data_view;
+    concrete_global_data_view m_data_view;
     directory m_directory;
 
     multipart_state m_uploads;

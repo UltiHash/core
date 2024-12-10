@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/global_data/global_data_view.h"
+#include "common/global_data/global_data_view_interface.h"
 
 #include "fake_data_store.h"
 
@@ -8,10 +8,8 @@ namespace uh::cluster {
 
 class fake_global_data_view : public global_data_view {
 public:
-    fake_global_data_view(
-        const global_data_view_config& config, boost::asio::io_context& ioc,
-        service_maintainer<storage_interface>& storage_maintainer,
-        fake_data_store& storage);
+    fake_global_data_view(boost::asio::io_context& ioc,
+                          fake_data_store& storage);
 
     coro<address> write(context& ctx, const std::string_view& data) override;
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
@@ -31,7 +29,7 @@ public:
     ~fake_global_data_view() noexcept = default;
 
 private:
-    boost::asio::io_context& m_io_service;
+    boost::asio::io_context& m_ioc;
     fake_data_store& m_storage;
 };
 

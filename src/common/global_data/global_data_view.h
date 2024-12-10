@@ -8,18 +8,19 @@
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
+#include "global_data_view_interface.h"
 
 namespace uh::cluster {
 
-class global_data_view {
+class concrete_global_data_view : public global_data_view {
 
 public:
     /**
      * @brief Constructs a global_data view.
      *
-     * The global_data_view introduces the abstraction of a flat address space
-     * that fragments can be written to and read from, hiding the interaction
-     * with individual storage service instances.
+     * The concrete_global_data_view introduces the abstraction of a flat
+     * address space that fragments can be written to and read from, hiding the
+     * interaction with individual storage service instances.
      *
      * @param config A constant reference to an instance of
      * global_data_view_config, providing all tunable configuration parameters.
@@ -28,7 +29,7 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    explicit global_data_view(
+    explicit concrete_global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
         service_maintainer<storage_interface>& storage_maintainer);
 
@@ -46,7 +47,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    virtual coro<address> write(context& ctx, const std::string_view& data);
+    coro<address> write(context& ctx, const std::string_view& data);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.
@@ -59,8 +60,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                                       size_t size);
+    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
+                               size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -83,8 +84,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    virtual shared_buffer<char>
-    read_fragment(context& ctx, const uint128_t& pointer, size_t size);
+    shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
+                                      size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -99,8 +100,8 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    virtual coro<std::size_t> read_address(context& ctx, char* buffer,
-                                           const address& addr);
+    coro<std::size_t> read_address(context& ctx, char* buffer,
+                                   const address& addr);
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership
@@ -118,7 +119,7 @@ public:
      *
      * already been deleted and therefore can no longer be referenced.
      */
-    [[nodiscard]] virtual coro<address> link(context& ctx, const address& addr);
+    [[nodiscard]] coro<address> link(context& ctx, const address& addr);
 
     /**
      * @brief un-registers a reference to a storage region to release
@@ -130,7 +131,7 @@ public:
      * @return number of bytes freed in response to removing references.
      * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    virtual coro<std::size_t> unlink(context& ctx, const address& addr);
+    coro<std::size_t> unlink(context& ctx, const address& addr);
 
     /**
      * @brief Computes used space across all available storage service
@@ -138,15 +139,16 @@ public:
      * @param ctx open telemetry context
      * @return The used space across all available storage service instances.
      */
-    virtual coro<std::size_t> get_used_space(context& ctx);
+    coro<std::size_t> get_used_space(context& ctx);
 
     /**
-     * @brief Provides access to the I/O context used by the global_data_view
+     * @brief Provides access to the I/O context used by the
+     * concrete_global_data_view
      * @param c open telemetry context
      * @return A reference to the boost::asio::io_context used by the
-     * global_data_view
+     * concrete_global_data_view
      */
-    [[nodiscard]] virtual boost::asio::io_context& get_executor() const;
+    [[nodiscard]] boost::asio::io_context& get_executor() const;
 
     /**
      * @brief Returns the configured number of connections maintained to each
@@ -155,10 +157,10 @@ public:
      * @return The configured number of connections maintained to each storage
      * service instance.
      */
-    [[nodiscard]] virtual std::size_t
+    [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 
-    virtual ~global_data_view() noexcept;
+    ~concrete_global_data_view() noexcept;
 
 private:
     boost::asio::io_context& m_io_service;

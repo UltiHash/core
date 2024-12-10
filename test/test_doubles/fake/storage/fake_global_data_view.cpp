@@ -3,13 +3,10 @@
 #include "common/utils/address_utils.h"
 
 namespace uh::cluster {
-fake_global_data_view::fake_global_data_view(
-    const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<storage_interface>& storage_maintainer,
-    fake_data_store& storage)
-    : global_data_view(config, ioc, storage_maintainer),
-      m_io_service(ioc),
-      m_storage(storage) {}
+fake_global_data_view::fake_global_data_view(boost::asio::io_context& ioc,
+                                             fake_data_store& storage)
+    : m_ioc{ioc},
+      m_storage{storage} {}
 
 coro<address> fake_global_data_view::write(context& ctx,
                                            const std::string_view& data) {
@@ -65,7 +62,7 @@ coro<std::size_t> fake_global_data_view::unlink(context& ctx,
 
 [[nodiscard]] boost::asio::io_context&
 fake_global_data_view::get_executor() const {
-    return m_io_service;
+    return m_ioc;
 }
 
 [[nodiscard]] std::size_t

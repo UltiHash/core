@@ -71,7 +71,7 @@ private:
     attached_service<storage> m_attached_storage;
     service_maintainer<storage_interface> m_storage_maintainer;
 
-    global_data_view m_data_view;
+    concrete_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;

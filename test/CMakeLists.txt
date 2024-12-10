@@ -1,14 +1,5 @@
 include(FetchContent)
 
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
-)
-set(gtest_build_tests OFF CACHE BOOL "" FORCE)
-set(gtest_build_samples OFF CACHE BOOL "" FORCE)
-set(gmock_build_tests OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
 add_subdirectory(test_doubles)
 
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h)
@@ -38,15 +29,13 @@ function(uh_add_test name)
         PUBLIC ${ARGS_PUBLIC})
 
     target_include_directories(
-        ${PROJECT_NAME}_${test_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
-                                             ${CMAKE_CURRENT_SOURCE_DIR})
-    target_precompile_headers(${PROJECT_NAME}_${test_name} REUSE_FROM
-                              uh_precompile_headers)
-    add_test(test_name ${PROJECT_NAME}_${test_name}
-             COMMAND ${PROJECT_NAME}_${test_name})
+        ${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
+                               ${CMAKE_CURRENT_SOURCE_DIR})
+    target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
+    add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
-uh_add_test(test_deduplicator)
+uh_add_test(test_deduplicator PRIVATE fake_global_data)
 uh_add_test(test_address)
 uh_add_test(test_awaitable_promise)
 uh_add_test(test_big_int)
