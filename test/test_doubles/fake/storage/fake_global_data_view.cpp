@@ -10,7 +10,7 @@ fake_global_data_view::fake_global_data_view(boost::asio::io_context& ioc,
 
 coro<address> fake_global_data_view::write(context& ctx,
                                            const std::string_view& data) {
-    co_return 0;
+    co_return m_storage.write(data);
 }
 
 shared_buffer<char>
