@@ -8,7 +8,7 @@ on:
 jobs:
 
   build-core:
-    runs-on: runner-test
+    runs-on: runner-test-dsdsds
     steps:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
@@ -45,7 +45,7 @@ jobs:
         run: bash testing/feature/test_services.sh ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
         
   build-database-init:
-    runs-on: runner-test
+    runs-on: runner-test-sddsds
     steps:
       - name: Define testing environment name
         run: echo "ENVIRONMENT_NAME=$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
