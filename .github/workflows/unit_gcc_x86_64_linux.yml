@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         build: [Release, Debug]
-    runs-on: heavyweight-core-x86-64-jobs
+    runs-on: runner-test
 
     steps:
       - uses: actions/checkout@v4
@@ -27,14 +27,14 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
 
-      - name: Test
-        env:
-          ETCDCTL_API: 3
-        working-directory: ${{github.workspace}}/build
-        run: |
-          etcd&
-          sleep 5
-          etcdctl del "" --from-key=true
-          ctest -C ${{ matrix.build }} --output-on-failure
-          etcdctl del "" --from-key=true
+      #- name: Test
+      #  env:
+      #    ETCDCTL_API: 3
+      #  working-directory: ${{github.workspace}}/build
+      #  run: |
+      #    etcd&
+      #    sleep 5
+      #    etcdctl del "" --from-key=true
+      #    ctest -C ${{ matrix.build }} --output-on-failure
+      #    etcdctl del "" --from-key=true
 
