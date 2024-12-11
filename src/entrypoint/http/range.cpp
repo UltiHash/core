@@ -10,6 +10,10 @@ std::size_t range_spec::range::length() const {
     return end < start ? 0 : end - start;
 }
 
+std::string range_spec::range::to_string() const {
+    return std::to_string(start) + "-" + std::to_string(end - 1);
+}
+
 range_spec parse_range_header(std::string_view header, std::size_t max) {
     auto equals = header.find('=');
     if (equals == std::string::npos) {
