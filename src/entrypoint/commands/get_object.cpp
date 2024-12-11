@@ -108,9 +108,11 @@ coro<response> get_object::handle(request& req) {
         obj->addr = apply_range(*obj->addr, spec);
         LOG_DEBUG() << "range based access: header=" << *range;
 
-        const auto& r = spec.ranges.front();
+        auto r = spec.ranges.front();
+        r.end = r.start + obj->addr->data_size();
 
-        res.set("Content-Range", "bytes " + r.to_string() + "/*");
+        res.set("Content-Range",
+                "bytes " + r.to_string() + "/" + std::to_string(obj->size));
     }
 
     res.set_body(std::make_unique<local_read_handle>(m_storage, std::move(obj),
