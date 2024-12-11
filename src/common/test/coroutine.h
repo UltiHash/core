@@ -8,7 +8,7 @@ namespace uh::cluster {
 
 class coro_fixture {
 public:
-    coro_fixture()
+    coro_fixture(std::size_t thread_count = 2)
         : m_ctx(thread_count),
           m_work_guard(m_ctx.get_executor()) {
         for (std::size_t i = 0ull; i < thread_count; ++i) {
@@ -30,8 +30,6 @@ public:
             t.join();
         }
     }
-
-    static constexpr std::size_t thread_count = 2;
 
 private:
     boost::asio::io_context m_ctx;

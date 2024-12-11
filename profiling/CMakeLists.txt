@@ -15,13 +15,13 @@ function(uh_add_profiler name)
     cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
                           "${multi_value_args}" ${ARGN})
 
-    set(target_name "${PROJECT_NAME}_${name}")
+    set(target_name "uh_${name}")
 
     add_executable(${target_name} ${name}.cpp)
 
     target_link_libraries(
         ${target_name}
-        PRIVATE ${PROJECT_NAME}_shared benchmark::benchmark ${ARGS_PRIVATE}
+        PRIVATE ${PROJECT_NAME}_shared benchmark::benchmark_main ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
     target_include_directories(
