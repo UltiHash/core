@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 project(uh-cluster VERSION 1.1.1)
 
 option(BUILD_TESTS "Build unit tests" ON)
-option(BUILD_PROFILERS "Build unit tests" ON)
+option(BUILD_PROFILERS "Build profilers" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
