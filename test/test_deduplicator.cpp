@@ -18,7 +18,7 @@ namespace uh::cluster {
 class dedup_coro_fixture : public coro_fixture {
 public:
     dedup_coro_fixture()
-        : coro_fixture(1) {}
+        : coro_fixture(2) {}
 };
 
 BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
