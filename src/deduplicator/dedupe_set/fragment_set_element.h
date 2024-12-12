@@ -64,7 +64,6 @@ public:
 
     [[nodiscard]] const std::string& prefix() const noexcept;
 
-    mutable fragment_state m_state = NORM;
     mutable std::atomic<int> m_hint_count = 0;
 
 private:

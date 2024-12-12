@@ -16,9 +16,7 @@ fragment_set::response fragment_set::find(const std::string_view& data) {
     auto res = m_set.lower_bound(f);
 
     response resp;
-    if (res->m_state != COLD) {
-        resp.hint.emplace(res);
-    }
+    resp.hint.emplace(res);
 
     if (res != m_set.cend()) [[likely]] {
         resp.high.emplace(fragment{res->pointer(), res->size()}, res->prefix());
@@ -71,19 +69,7 @@ std::lock_guard<std::shared_mutex> fragment_set::lock() {
 
 void fragment_set::remove(
     const std::set<fragment_set_element>::const_iterator& itr) {
-    if (itr->m_hint_count > 0) {
-        itr->m_state = COLD;
-        m_colds.emplace_front(itr);
-    } else {
-        m_set.erase(itr);
-    }
-    std::erase_if(m_colds, [this](const auto& item) {
-        if (item->m_hint_count == 0) {
-            m_set.erase(item);
-            return true;
-        }
-        return false;
-    });
+    m_set.erase(itr);
 }
 
 void fragment_set::erase(const fragment& set_element, bool header) {
