@@ -120,7 +120,6 @@ local_deduplicator::deduplicate_data(context& ctx, std::string_view data) {
 
         if (const auto size = std::max(match_low, match_high);
             size > m_dedupe_conf.min_fragment_size) {
-
             const auto& [frag, prefix] =
                 match_low > match_high ? *f.low : *f.high;
 

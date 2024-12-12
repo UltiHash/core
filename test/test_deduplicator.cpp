@@ -15,7 +15,18 @@
 
 namespace uh::cluster {
 
-BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
+class dedup_coro_fixture : public coro_fixture {
+public:
+    dedup_coro_fixture()
+        : coro_fixture(1) {}
+};
+
+BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
+    auto log_config = log::config{
+        .sinks = {log::sink_config{.type = log::sink_type::cout,
+                                   .level = boost::log::trivial::fatal,
+                                   .service_role = DEDUPLICATOR_SERVICE}}};
+    log::init(log_config);
 
     temp_directory dir;
     auto config =
@@ -28,7 +39,7 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
     auto dedup = local_deduplicator({}, data_view);
 
     context ctx;
-    auto data = generate_random_string(7);
+    auto data = generate_random_string(66);
 
     auto f = [&]() -> coro<dedupe_response> {
         co_return co_await dedup.deduplicate(ctx, data);
@@ -37,16 +48,19 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, coro_fixture) {
         std::future<dedupe_response> res = spawn(f);
         auto dedup_response = res.get();
         BOOST_TEST(dedup_response.effective_size == data.size());
+        BOOST_TEST(data_store.get_used_space() == data.size());
     }
     {
         std::future<dedupe_response> res = spawn(f);
         auto dedup_response = res.get();
-        BOOST_TEST(dedup_response.effective_size == data.size());
+        BOOST_TEST(dedup_response.effective_size == 0);
+        BOOST_TEST(data_store.get_used_space() == data.size());
     }
     {
         std::future<dedupe_response> res = spawn(f);
         auto dedup_response = res.get();
-        BOOST_TEST(dedup_response.effective_size == data.size());
+        BOOST_TEST(dedup_response.effective_size == 0);
+        BOOST_TEST(data_store.get_used_space() == data.size());
     }
 }
 
