@@ -56,7 +56,6 @@ fake_data_store::fake_data_store(data_store_config conf,
 
 address fake_data_store::write(const std::string_view& data) {
 
-    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_data.size() + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
         throw std::bad_alloc();
