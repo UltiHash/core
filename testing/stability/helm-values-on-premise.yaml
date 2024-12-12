@@ -44,6 +44,9 @@ stabilityTest:
 recovery:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=recovery
 
 etcd:
   replicaCount: 1
@@ -58,6 +61,9 @@ entrypoint:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=entrypoint
   extraVolumeMounts:
     - name: core-dump
       mountPath: /tmp/core-dumps/
@@ -75,6 +81,9 @@ storage:
   storageSize: 50Gi
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=storage
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
   extraVolumeMounts:
     - name: core-dump
@@ -90,6 +99,9 @@ deduplicator:
   storageSize: 4Gi
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=deduplicator
   # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
   extraVolumeMounts:
     - name: core-dump
