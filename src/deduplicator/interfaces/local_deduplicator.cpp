@@ -38,8 +38,7 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
       m_fragment_set(m_dedupe_conf.working_dir / "log",
                      m_dedupe_conf.set_capacity, storage),
       m_storage(storage),
-      m_dedupe_workers(m_dedupe_conf.worker_thread_count),
-      m_dedupe_logger(m_dedupe_conf.working_dir / "dedupe_log", 1000) {}
+      m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
 coro<dedupe_response>
 local_deduplicator::deduplicate(context& ctx, const std::string_view& data) {
@@ -94,7 +93,6 @@ coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
         pointer += common_size;
     } while (common_size == pursue_size);
 
-    m_dedupe_logger.log_pursue_deduplication(frag_size, frag_pointer);
     fragments.push_stored(frag_pointer, frag_size, data.substr(0, frag_size),
                           header);
 
@@ -106,10 +104,8 @@ coro<dedupe_response>
 local_deduplicator::deduplicate_data(context& ctx, std::string_view data) {
 
     LOG_DEBUG() << ctx.peer() << ": deduplicate_data: size=" << data.size();
-    fragmentation fragments(m_dedupe_logger);
+    fragmentation fragments;
     std::size_t offset = 0;
-    std::size_t non_dedupe_count = 0;
-    std::size_t dedupe_count = 0;
 
     while (!data.empty()) {
         auto f = co_await m_dedupe_workers.post_in_workers(
@@ -131,11 +127,8 @@ local_deduplicator::deduplicate_data(context& ctx, std::string_view data) {
                 fragments.push_stored(frag.pointer, size, data.substr(0, size),
                                       (offset == 0));
                 data = data.substr(size);
-                m_dedupe_logger.log_deduplication(size, prefix, frag.pointer,
-                                                  offset);
                 offset += size;
             }
-            dedupe_count++;
         } else {
             auto frag_size =
                 std::min(data.size(), m_dedupe_conf.max_fragment_size);
@@ -145,7 +138,6 @@ local_deduplicator::deduplicate_data(context& ctx, std::string_view data) {
 
             data = data.substr(frag_size);
             offset += frag_size;
-            non_dedupe_count++;
         }
     }
 
@@ -180,8 +172,6 @@ local_deduplicator::deduplicate_data(context& ctx, std::string_view data) {
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
 
-    m_dedupe_logger.log_stat(m_fragment_set.size(), dedupe_count,
-                             non_dedupe_count, result.effective_size, offset);
     LOG_DEBUG() << ctx.peer() << ": deduplicate_data finished";
     co_return result;
 }
