@@ -1,4 +1,4 @@
-#include "global_data_view.h"
+#include "concrete_global_data_view.h"
 
 #include "common/utils/address_utils.h"
 

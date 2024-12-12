@@ -3,7 +3,7 @@
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/global_data/global_data_view.h"
+#include "common/global_data/concrete_global_data_view.h"
 #include "common/network/server.h"
 #include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
