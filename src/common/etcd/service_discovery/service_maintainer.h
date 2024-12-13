@@ -3,8 +3,10 @@
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
 #include "common/etcd/namespace.h"
+#include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
+
 #include <etcd/SyncClient.hpp>
 #include <etcd/Watcher.hpp>
 

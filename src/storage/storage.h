@@ -2,12 +2,13 @@
 #define CORE_DATA_NODE_H
 
 #include <functional>
-#include <utility>
+#include <memory>
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
 #include "config.h"
+#include "config/configuration.h"
 #include "storage_handler.h"
 
 namespace uh::cluster {
