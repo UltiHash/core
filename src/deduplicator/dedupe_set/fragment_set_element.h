@@ -4,10 +4,6 @@
 #include "common/global_data/global_data_view.h"
 
 namespace uh::cluster {
-enum fragment_state : uint8_t {
-    NORM,
-    COLD,
-};
 class fragment_set_element {
 public:
     /**
