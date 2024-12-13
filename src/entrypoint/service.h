@@ -6,6 +6,7 @@
 #include "common/db/db.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
+#include "common/global_data/concrete_global_data_view.h"
 #include "config.h"
 #include "deduplicator/deduplicator.h"
 #include "entrypoint/directory.h"
@@ -42,7 +43,7 @@ private:
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
     roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
-    global_data_view m_data_view;
+    concrete_global_data_view m_data_view;
     directory m_directory;
 
     multipart_state m_uploads;

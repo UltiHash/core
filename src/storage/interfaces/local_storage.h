@@ -1,14 +1,13 @@
 #ifndef UH_CLUSTER_LOCAL_STORAGE_H
 #define UH_CLUSTER_LOCAL_STORAGE_H
 
+#include "common/service_interfaces/storage_interface.h"
+#include "common/telemetry/log.h"
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "storage/data_store.h"
-#include <common/service_interfaces/storage_interface.h>
-#include <common/telemetry/log.h>
 #include <list>
 #include <string_view>
-#include <utility>
 
 namespace uh::cluster {
 

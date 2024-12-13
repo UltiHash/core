@@ -6,6 +6,7 @@
 
 #include "common/types/address.h"
 #include "common/utils/common.h"
+#include "storage/interfaces/data_store.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -17,13 +18,7 @@
 
 namespace uh::cluster {
 
-struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
-};
-
-class data_store {
+class data_store : public abstract_data_store {
 
 public:
     data_store(data_store_config conf, const std::filesystem::path& working_dir,
