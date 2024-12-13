@@ -29,7 +29,6 @@ private:
     global_data_view& m_storage;
     worker_pool m_dedupe_workers;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
-    constexpr static std::size_t pieces_count = 1;
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_LOCAL_DEDUPLICATOR_H
