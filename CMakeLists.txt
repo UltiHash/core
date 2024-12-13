@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 project(uh-cluster VERSION 1.1.1)
 
 option(BUILD_TESTS "Build unit tests" ON)
+option(BUILD_PROFILERS "Build profilers" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
@@ -57,6 +58,8 @@ find_library(LMDB_LIBRARY NAMES lmdb)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
+include(CPM)
+
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
@@ -89,7 +92,9 @@ endif()
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
 set(${PROJECT_NAME}_LINK_LIBRARIES
-    ${Boost_LIBRARIES}
+    Boost::log
+    Boost::url
+    Boost::filesystem
     ${OPENSSL_LIBRARIES}
     etcd-cpp-api
     CLI11::CLI11
@@ -156,12 +161,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
+add_subdirectory(helpers)
 
 # Unit tests
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
     add_subdirectory(test)
+endif()
+if(BUILD_PROFILERS)
+    message(STATUS "Building profiling tools")
+    add_subdirectory(profiling)
 endif()
 if(BUILD_TOOLS)
     message(STATUS "Building tools")

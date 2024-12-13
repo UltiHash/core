@@ -1,9 +1,9 @@
-#include "global_data_view.h"
+#include "concrete_global_data_view.h"
 
 #include "common/utils/address_utils.h"
 
 namespace uh::cluster {
-global_data_view::global_data_view(
+concrete_global_data_view::concrete_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
     service_maintainer<storage_interface>& storage_maintainer)
     : m_io_service(ioc),
@@ -22,15 +22,15 @@ global_data_view::global_data_view(
     m_load_balancer.get();
 }
 
-coro<address> global_data_view::write(context& ctx,
-                                      const std::string_view& data) {
+coro<address> concrete_global_data_view::write(context& ctx,
+                                               const std::string_view& data) {
     const auto client = m_load_balancer.get();
     co_return co_await client->write(ctx, data);
 }
 
-shared_buffer<char> global_data_view::read_fragment(context& ctx,
-                                                    const uint128_t& pointer,
-                                                    const size_t size) {
+shared_buffer<char>
+concrete_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
+                                         const size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
@@ -55,8 +55,9 @@ shared_buffer<char> global_data_view::read_fragment(context& ctx,
     return buffer;
 }
 
-coro<shared_buffer<>>
-global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
+coro<shared_buffer<>> concrete_global_data_view::read(context& ctx,
+                                                      const uint128_t& pointer,
+                                                      size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");
@@ -77,17 +78,19 @@ global_data_view::read(context& ctx, const uint128_t& pointer, size_t size) {
     co_return buffer;
 }
 
-coro<std::size_t> global_data_view::read_address(context& ctx, char* buffer,
-                                                 const address& addr) {
+coro<std::size_t> concrete_global_data_view::read_address(context& ctx,
+                                                          char* buffer,
+                                                          const address& addr) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &buffer](size_t, std::shared_ptr<storage_interface> dn,
+                        const address_info& info) -> coro<void> {
             co_await dn->read_address(ctx, buffer, info.addr,
                                       info.pointer_offsets);
         });
 }
 
-coro<std::size_t> global_data_view::get_used_space(context& ctx) {
+coro<std::size_t> concrete_global_data_view::get_used_space(context& ctx) {
     auto nodes = m_basic_getter.get_services();
 
     size_t used = 0;
@@ -97,12 +100,13 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     co_return used;
 }
 
-[[nodiscard]] coro<address> global_data_view::link(context& ctx,
-                                                   const address& addr) {
+[[nodiscard]] coro<address>
+concrete_global_data_view::link(context& ctx, const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](auto id, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &addresses](size_t id, std::shared_ptr<storage_interface> dn,
+                           const address_info& info) -> coro<void> {
             addresses.emplace(id, co_await dn->link(ctx, info.addr));
         });
 
@@ -114,25 +118,29 @@ coro<std::size_t> global_data_view::get_used_space(context& ctx) {
     co_return rv;
 }
 
-coro<std::size_t> global_data_view::unlink(context& ctx, const address& addr) {
+coro<std::size_t> concrete_global_data_view::unlink(context& ctx,
+                                                    const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+        [&ctx, &freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+                             const address_info& info) -> coro<void> {
             freed_bytes += co_await dn->unlink(ctx, info.addr);
         });
     co_return freed_bytes;
 }
 
-[[nodiscard]] boost::asio::io_context& global_data_view::get_executor() const {
+[[nodiscard]] boost::asio::io_context&
+concrete_global_data_view::get_executor() const {
     return m_io_service;
 }
 
 [[nodiscard]] std::size_t
-global_data_view::get_storage_service_connection_count() const noexcept {
+concrete_global_data_view::get_storage_service_connection_count()
+    const noexcept {
     return m_config.storage_service_connection_count;
 }
-global_data_view::~global_data_view() noexcept {
+concrete_global_data_view::~concrete_global_data_view() noexcept {
     m_ec_maintainer.remove_monitor(m_load_balancer);
     m_ec_maintainer.remove_monitor(m_basic_getter);
     m_service_maintainer.remove_monitor(m_ec_maintainer);
