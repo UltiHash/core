@@ -60,7 +60,6 @@ private:
     const std::string m_refcountfile = "refcount.backup";
 
     std::atomic<size_t> m_current_offset{0};
-    // std::atomic<size_t> m_used_space{};
 
     data_store_config m_conf;
 

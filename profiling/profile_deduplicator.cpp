@@ -1,9 +1,9 @@
 #include "common/test/coroutine.h"
 #include "common/utils/common.h"
+#include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
 #include "fakes/storage/fake_global_data_view.h"
-#include "utils/random_string.h"
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>
@@ -54,7 +54,7 @@ protected:
 BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 (benchmark::State& state) {
 
-    std::string input_data = generate_random_string(state.range(0));
+    std::string input_data = random_string(state.range(0));
     auto f = [&]() -> coro<dedupe_response> {
         co_return co_await dedup->deduplicate(ctx, input_data);
     };
