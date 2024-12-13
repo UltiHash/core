@@ -3,7 +3,6 @@
 
 #include "common/global_data/global_data_view.h"
 #include "common/types/address.h"
-#include "dedupe_logger.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 
 #include <list>
@@ -19,7 +18,7 @@ namespace uh::cluster {
  */
 class fragmentation {
 public:
-    explicit fragmentation(dedupe_logger& dd_logger);
+    explicit fragmentation();
 
     /**
      * Push a new fragment that was uploaded before.
@@ -96,7 +95,6 @@ private:
 
     unique_buffer<char> unstored_to_buffer();
 
-    dedupe_logger& m_dedupe_logger;
     std::list<dd_fragment> m_frags;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;

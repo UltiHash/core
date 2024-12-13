@@ -6,9 +6,8 @@
 
 namespace uh::cluster {
 
-fragmentation::fragmentation(dedupe_logger& dd_logger)
-    : m_dedupe_logger(dd_logger),
-      m_effective_size(0ull),
+fragmentation::fragmentation()
+    : m_effective_size(0ull),
       m_unstored_size(0ull) {}
 
 void fragmentation::push_stored(uint128_t pointer, size_t size,
@@ -175,8 +174,6 @@ void fragmentation::flush_fragments_internal(fragment_set& set) {
             set.mark_deduplication({frag.stored_pointer, frag.stored_size});
             continue;
         }
-
-        m_dedupe_logger.log_non_deduplication(frag.addr.get(0));
 
         set.insert({frag.addr.pointers[0], frag.addr.pointers[1]},
                    frag.data.substr(0, frag.addr.sizes.front()), frag.header,
