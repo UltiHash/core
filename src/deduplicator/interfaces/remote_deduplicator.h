@@ -13,7 +13,7 @@ struct remote_deduplicator : public deduplicator_interface {
         : m_dedupe_service(std::move(dedupe_service)) {}
 
     coro<dedupe_response> deduplicate(context& ctx,
-                                      const std::string_view& data) override {
+                                      std::string_view data) override {
         auto m = co_await m_dedupe_service.acquire_messenger();
         m->register_write_buffer(data);
         co_await m->send_buffers(ctx, DEDUPLICATOR_REQ);

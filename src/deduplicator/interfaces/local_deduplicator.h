@@ -17,21 +17,18 @@ struct local_deduplicator : public deduplicator_interface {
     local_deduplicator(deduplicator_config config, global_data_view& storage);
 
     coro<dedupe_response> deduplicate(context& ctx,
-                                      const std::string_view& data) override;
+                                      std::string_view data) override;
 
 private:
     coro<size_t> pursue_pointer(context& ctx, std::string_view& data,
                                 uint128_t pointer, bool header,
                                 fragmentation& fragments);
 
-    coro<dedupe_response> deduplicate_data(context& ctx, std::string_view data);
-
     deduplicator_config m_dedupe_conf;
     fragment_set m_fragment_set;
     global_data_view& m_storage;
     worker_pool m_dedupe_workers;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
-    constexpr static std::size_t pieces_count = 2;
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_LOCAL_DEDUPLICATOR_H
