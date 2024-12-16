@@ -54,7 +54,8 @@ fake_data_store::fake_data_store(data_store_config conf,
     }
 }
 
-address fake_data_store::write(const std::string_view& data) {
+address fake_data_store::write(const std::string_view& data,
+                               const std::vector<std::size_t>& offsets) {
 
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_data.size() + data.size() > m_conf.max_data_store_size or

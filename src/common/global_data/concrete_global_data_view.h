@@ -46,7 +46,8 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(context& ctx, const std::string_view& data);
+    coro<address> write(context& ctx, const std::string_view& data,
+                        const std::vector<std::size_t>& offsets);
 
     /**
      * @brief reads the data starting from pointer, up to the given size.

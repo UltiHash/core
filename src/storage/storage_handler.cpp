@@ -101,7 +101,7 @@ coro<void> storage_handler::handle_write(context& ctx, messenger& m,
                                          const messenger::header& h) {
     write_request req = co_await m.recv_write(h);
     auto addr = co_await m_storage.write(
-        ctx, std::get<std::string_view>(req.data), req.offsets);
+        ctx, std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
     co_await m.send_address(ctx, SUCCESS, addr);
 }
 

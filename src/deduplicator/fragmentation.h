@@ -58,14 +58,6 @@ public:
 private:
     enum fragment_type { STORED, UNSTORED };
 
-    enum fragmentation_state {
-        DEDUPE_IN_PROGRESS,
-        HANDLED_REJECTED,
-        FLUSHED_STORAGE,
-        FLUSHED_FRAGMENT_SET,
-        MERGED_AND_LINKED_UNSTORED
-    };
-
     struct dd_fragment {
         // mandatory fields for both stored and unstored fragments
         fragment_type type;
@@ -94,7 +86,6 @@ private:
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
     address m_buffer_address;
-    fragmentation_state m_state = DEDUPE_IN_PROGRESS;
 };
 
 } // namespace uh::cluster

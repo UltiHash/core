@@ -11,7 +11,8 @@ public:
     fake_global_data_view(boost::asio::io_context& ioc,
                           fake_data_store& storage);
 
-    coro<address> write(context& ctx, const std::string_view& data) override;
+    coro<address> write(context& ctx, const std::string_view& data,
+                        const std::vector<std::size_t>& offsets) override;
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;
     shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
