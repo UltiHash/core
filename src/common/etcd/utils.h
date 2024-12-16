@@ -2,6 +2,7 @@
 #define CORE_COMMON_ETCD_UTILS_H
 
 #include <etcd/SyncClient.hpp>
+#include <etcd/Watcher.hpp>
 #include <memory>
 #include <optional>
 #include <string>
@@ -20,6 +21,13 @@ struct etcd_config {
  * Create etcd client
  */
 std::unique_ptr<::etcd::SyncClient> make_etcd_client(const etcd_config& cfg);
+
+/**
+ * a loop for initialized a watcher with auto-restart capability
+ */
+void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
+                        std::function<void(etcd::Response)> callback,
+                        std::shared_ptr<etcd::Watcher>& watcher);
 
 } // namespace uh::cluster
 
