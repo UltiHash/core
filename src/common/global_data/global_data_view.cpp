@@ -23,9 +23,10 @@ global_data_view::global_data_view(
 }
 
 coro<address> global_data_view::write(context& ctx,
-                                      const std::string_view& data) {
+                                      const std::string_view& data,
+                                      const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
-    co_return co_await client->write(ctx, data);
+    co_return co_await client->write(ctx, data, offsets);
 }
 
 shared_buffer<char> global_data_view::read_fragment(context& ctx,

@@ -52,12 +52,6 @@ public:
      */
     address make_address() const;
 
-    /**
-     *  Merge consecutive unstored fragments and link them against downstream
-     *  storage to maintain correct reference count information.
-     */
-    coro<void> merge_and_link_unstored(context& ctx, global_data_view& gdv);
-
     address get_stored_fragments() const;
 
     void handle_rejected_fragments(const address& addr, fragment_set& set);
@@ -98,6 +92,7 @@ private:
 
     dedupe_logger& m_dedupe_logger;
     std::list<dd_fragment> m_frags;
+    std::vector<std::size_t> m_offsets;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
     address m_buffer_address;

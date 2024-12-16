@@ -45,7 +45,8 @@ void storage_group::remove(size_t id, size_t group_nid) {
     return m_status == empty;
 }
 
-coro<address> storage_group::write(context& ctx, const std::string_view& data) {
+coro<address> storage_group::write(context& ctx, const std::string_view& data,
+                                   const std::vector<std::size_t>& offsets) {
 
     if (!is_healthy()) {
         throw std::runtime_error("unhealthy storage system");
@@ -54,8 +55,9 @@ coro<address> storage_group::write(context& ctx, const std::string_view& data) {
     auto res =
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
-            [&ctx, &encoded](size_t i, auto n) -> coro<address> {
-                co_return co_await n->write(ctx, encoded.get().at(i));
+            [&ctx, &encoded, &offsets](size_t i, auto n) -> coro<address> {
+                // TODO offsets need to be computed to match encoded EC data
+                co_return co_await n->write(ctx, encoded.get().at(i), offsets);
             },
             m_getter.get_services());
 
