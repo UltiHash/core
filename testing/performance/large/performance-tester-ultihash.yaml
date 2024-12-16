@@ -52,10 +52,3 @@ spec:
           name: input
         - mountPath: /output
           name: output
-  volumes:
-    - name: input
-      persistentVolumeClaim:
-        claimName: performance-test-input
-    - name: output
-      persistentVolumeClaim:
-        claimName: performance-test-output
