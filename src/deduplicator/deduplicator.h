@@ -3,7 +3,7 @@
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/global_data/global_data_view.h"
+#include "common/global_data/concrete_global_data_view.h"
 #include "common/network/server.h"
 #include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
@@ -71,7 +71,7 @@ private:
     attached_service<storage> m_attached_storage;
     service_maintainer<storage_interface> m_storage_maintainer;
 
-    global_data_view m_data_view;
+    concrete_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
     std::unique_ptr<service_registry::registration> m_registration;

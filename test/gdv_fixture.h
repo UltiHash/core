@@ -3,7 +3,7 @@
 
 #include "recovery/recovery.h"
 
-#include <common/global_data/global_data_view.h>
+#include <common/global_data/concrete_global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
 #include <storage/storage.h>
@@ -60,8 +60,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<global_data_view>(m_gdv_config, m_ioc,
-                                                   m_storage_services);
+        m_gdv = std::make_shared<concrete_global_data_view>(m_gdv_config, m_ioc,
+                                                            m_storage_services);
 
         m_threads.emplace_back([this, i] {
             try {

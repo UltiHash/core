@@ -87,6 +87,14 @@ public:
         return {(char*)(m_data_info->m_data_ptr),
                 m_data_info->m_size * sizeof(T)};
     }
+
+    T* begin() noexcept { return m_data_info->m_data_ptr; }
+    const T* begin() const noexcept { return m_data_info->m_data_ptr; }
+
+    T* end() noexcept { return m_data_info->m_data_ptr + m_data_info->m_size; }
+    const T* end() const noexcept {
+        return m_data_info->m_data_ptr + m_data_info->m_size;
+    }
 };
 
 template <typename T = char> using shared_buffer = scoped_buffer<T, true>;

@@ -29,8 +29,7 @@ fragment_set_element::fragment_set_element(const std::string_view& data,
       m_data(std::nullopt) {}
 
 fragment_set_element::fragment_set_element(fragment_set_element&& f) noexcept
-    : m_state(f.m_state),
-      m_storage(f.m_storage),
+    : m_storage(f.m_storage),
       m_pointer(f.m_pointer),
       m_size(f.m_size),
       m_prefix(std::move(f.m_prefix)),
