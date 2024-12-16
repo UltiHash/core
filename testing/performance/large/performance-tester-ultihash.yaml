@@ -16,11 +16,13 @@ spec:
       effect: "NoSchedule"
   containers:
     - name: performance-tester
-      image: ghcr.io/ultihash/core-performance-test:latest
+      image: ghcr.io/ultihash/core-performance-test:test
       imagePullPolicy: Always
       env:
         - name: TEST_TYPE
           value: $TEST_TYPE
+        - name: AMOUNT_GiB
+          value: "$AMOUNT_GiB"
         - name: S3_ENDPOINT_URL
           value: $S3_ENDPOINT_URL
         - name: S3_SOURCE_BUCKET
@@ -47,8 +49,3 @@ spec:
           value: "$TEST_NAME"
         - name: PROM_URL
           value: "$PROM_URL"
-      volumeMounts:
-        - mountPath: /input
-          name: input
-        - mountPath: /output
-          name: output
