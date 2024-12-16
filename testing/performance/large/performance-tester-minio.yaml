@@ -22,13 +22,13 @@ spec:
         - name: TEST_TYPE
           value: $TEST_TYPE
         - name: AMOUNT_GiB
-          value: $AMOUNT_GiB
+          value: "$AMOUNT_GiB"
         - name: S3_ENDPOINT_URL
-          value: $S3_ENDPOINT_URL
+          value: "$S3_ENDPOINT_URL"
         - name: S3_SOURCE_BUCKET
           value: $S3_SOURCE_BUCKET
         - name: S3_DESTINATION_BUCKET
-          value: $S3_DESTINATION_BUCKET
+          value: "$S3_DESTINATION_BUCKET"
         - name: READ_TIMEOUT
           value: "$READ_TIMEOUT"
         - name: JOBS
