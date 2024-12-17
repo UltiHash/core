@@ -46,7 +46,7 @@ jobs:
         run: |
           helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
@@ -55,22 +55,12 @@ jobs:
         run: |
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-          kubectl apply -f testing/performance/large/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
-
-      - name: Generate the manifest for the S3 data downloder
-        uses: danielr1996/envsubst-action@1.0.0
-        env:
-          S3_SOURCE_BUCKET: ultihash-performance-test-large-scale
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
-        with:
-          input: testing/performance/large/s3-data-downloader.yaml
-          output: s3-data-downloader.yaml
 
       - name: Generate the performance tester manifest for Minio
         uses: danielr1996/envsubst-action@1.0.0
         env:
           TEST_NAME: "large_performance_test_minio"
+          AMOUNT_GiB: "100"
           PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
           TEST_TYPE: MINIO
           S3_ENDPOINT_URL: "http://minio:9000"
@@ -82,12 +72,8 @@ jobs:
           READ_TIMEOUT: "600"
           JOBS: "10"
         with:
-          input: testing/performance/large/performance-tester.yaml
+          input: testing/performance/large/performance-tester-minio.yaml
           output: performance-tester-minio.yaml
-      
-      - name: Download the data corpora to the tester machine
-        run: |
-          bash testing/performance/execute_job.sh s3-data-downloader.yaml s3-data-downloader ${{ env.ENVIRONMENT_NAME }} 1h
 
       - name: Install the MinIO cluster
         run: |
@@ -134,7 +120,7 @@ jobs:
         run: |
           helm uninstall minio -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
