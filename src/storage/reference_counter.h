@@ -7,6 +7,7 @@
 #include <deque>
 #include <functional>
 #include <lmdbxx/lmdb++.h>
+#include <unordered_set>
 
 namespace uh::cluster {
 class reference_counter {
