@@ -30,7 +30,8 @@ public:
      */
     explicit concrete_global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
-        service_maintainer<storage_interface>& storage_maintainer);
+        service_maintainer<storage_interface>& storage_maintainer,
+        etcd::SyncClient& etcd_client);
 
     /**
      * @brief Sends write request to a storage service instance, does not

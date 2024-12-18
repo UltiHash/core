@@ -34,7 +34,8 @@ public:
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
-          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer),
+          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
+                      *m_etcd_client),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server,

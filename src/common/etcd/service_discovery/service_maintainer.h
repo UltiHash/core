@@ -20,31 +20,24 @@ template <typename service_interface> struct service_maintainer {
 
     service_maintainer(etcd::SyncClient& etcd_client,
                        service_factory<service_interface> service_factory)
-        : m_etcd_client(etcd_client),
-          m_service_factory(std::move(service_factory)) {
+        : m_service_factory(std::move(service_factory)) {
 
         initialize_watcher(
-            m_etcd_client,
-            get_service_root_path(service_interface::service_role),
+            etcd_client, get_service_root_path(service_interface::service_role),
             [this](const etcd::Response& response) {
                 return handle_state_changes(response);
             },
             m_watcher);
-        auto resp =
-            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this]() {
-                return m_etcd_client.ls(
-                    get_service_root_path(service_interface::service_role));
-            });
+        auto resp = wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [&]() {
+            return etcd_client.ls(
+                get_service_root_path(service_interface::service_role));
+        });
 
         auto vals = resp.values();
         auto keys = resp.keys();
         for (size_t i = 0; i < vals.size(); i++) {
             add(keys[i], vals[i].as_string());
         }
-    }
-
-    [[nodiscard]] etcd::SyncClient& get_etcd_client() const noexcept {
-        return m_etcd_client;
     }
 
     ~service_maintainer() { m_watcher->Cancel(); }
@@ -195,7 +188,6 @@ private:
         }
     }
 
-    etcd::SyncClient& m_etcd_client;
     std::shared_ptr<etcd::Watcher> m_watcher;
 
     std::mutex m_mutex;

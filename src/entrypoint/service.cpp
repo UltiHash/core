@@ -53,7 +53,8 @@ service::service(const service_config& sc, entrypoint_config config)
                           service_factory<deduplicator_interface>(
                               m_ioc, m_config.dedupe_node_connection_count,
                               m_attached_dedupe.get_local_service_interface())),
-      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer),
+      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
+                  *m_etcd_client),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
