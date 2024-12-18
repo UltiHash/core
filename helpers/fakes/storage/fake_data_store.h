@@ -3,6 +3,7 @@
 #include "common/types/address.h"
 #include "storage/interfaces/data_store.h"
 
+#include <atomic>
 #include <cstring>
 #include <filesystem>
 #include <mutex>
@@ -57,6 +58,8 @@ private:
     const std::filesystem::path m_root;
     const std::string m_datafile = "data.backup";
     const std::string m_refcountfile = "refcount.backup";
+
+    std::atomic<size_t> m_current_offset{0};
 
     data_store_config m_conf;
 
