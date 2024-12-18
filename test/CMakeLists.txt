@@ -31,6 +31,7 @@ function(uh_add_test name)
     add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
+uh_add_test(test_etcd PRIVATE etcd-cpp-api)
 uh_add_test(test_deduplicator PRIVATE uh_fake_global_data)
 uh_add_test(test_address)
 uh_add_test(test_awaitable_promise)

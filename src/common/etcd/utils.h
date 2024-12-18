@@ -25,9 +25,20 @@ std::unique_ptr<::etcd::SyncClient> make_etcd_client(const etcd_config& cfg);
 /**
  * a loop for initialized a watcher with auto-restart capability
  */
+void initialize_watcher(std::unique_ptr<etcd::SyncClient>& client,
+                        const std::string& prefix,
+                        std::function<void(etcd::Response)> callback,
+                        std::shared_ptr<etcd::Watcher>& watcher);
 void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
                         std::function<void(etcd::Response)> callback,
                         std::shared_ptr<etcd::Watcher>& watcher);
+void initialize_watcher(const etcd_config& cfg, const std::string& prefix,
+                        std::function<void(etcd::Response)> callback,
+                        std::shared_ptr<etcd::Watcher>& watcher);
+
+// std::function<void(std::exception_ptr)>
+// create_exception_handler(std::unique_ptr<etcd::SyncClient>& client,
+//                          const etcd_config& cfg);
 
 } // namespace uh::cluster
 
