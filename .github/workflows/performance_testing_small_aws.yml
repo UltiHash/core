@@ -110,7 +110,7 @@ jobs:
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
@@ -120,29 +120,12 @@ jobs:
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
-          kubectl apply -f testing/performance/small/performance-tester-pvcs.yaml -n ${{ env.ENVIRONMENT_NAME }}
-
-      - name: Generate the performance tester manifest for S3
-        uses: danielr1996/envsubst-action@1.0.0
-        env:
-          TEST_NAME: "small_performance_test_s3"
-          PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
-          TEST_TYPE: S3
-          S3_ENDPOINT_URL: https://s3.eu-central-1.amazonaws.com
-          S3_SOURCE_BUCKET: ultihash-performance-test-corpora-large-files
-          S3_DESTINATION_BUCKET: ultihash-performance-test-upload
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          READ_TIMEOUT: "600"
-          JOBS: "4"
-        with:
-          input: testing/performance/small/performance-tester-s3.yaml
-          output: performance-tester-s3.yaml
 
       - name: Generate the performance tester manifest for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
           TEST_NAME: "small_performance_test_ultihash"
+          AMOUNT_GiB: "100"
           PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
           TEST_TYPE: UH
           S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
@@ -163,10 +146,6 @@ jobs:
         with:
           input: testing/performance/small/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml
-      
-      - name: Execute the performance test against S3 
-        run: |
-          bash testing/performance/execute_job.sh performance-tester-s3.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
           
       - name: Install the UltiHash cluster
         run: |
@@ -212,12 +191,8 @@ jobs:
         run: |
           helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
           kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
+          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
         continue-on-error: true
-
-      - name: Cleanup after the S3 performance test
-        run: |
-          aws s3 rm s3://ultihash-performance-test-upload --recursive
       
