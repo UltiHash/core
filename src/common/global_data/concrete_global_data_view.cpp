@@ -22,10 +22,11 @@ concrete_global_data_view::concrete_global_data_view(
     m_load_balancer.get();
 }
 
-coro<address> concrete_global_data_view::write(context& ctx,
-                                               const std::string_view& data) {
+coro<address>
+concrete_global_data_view::write(context& ctx, const std::string_view& data,
+                                 const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
-    co_return co_await client->write(ctx, data);
+    co_return co_await client->write(ctx, data, offsets);
 }
 
 shared_buffer<char>

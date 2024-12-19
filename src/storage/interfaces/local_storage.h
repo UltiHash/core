@@ -33,18 +33,30 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(context& ctx, const std::string_view& data) override {
+    coro<address> write(context& ctx, const std::string_view& data,
+                        const std::vector<std::size_t>& offsets) override {
 
         load_monitor load(m_load);
-        const size_t part =
+        const size_t part_size =
             std::ceil(static_cast<double>(data.size()) /
                       static_cast<double>(m_data_stores.size()));
 
         address total_addr;
+        std::size_t offsets_idx = 0;
         for (size_t i = 0; i < m_data_stores.size(); ++i) {
-            const auto part_size = std::min(data.size() - i * part, part);
-            auto addr =
-                m_data_stores[i]->write(data.substr(i * part, part_size));
+            const std::size_t start_pos = i * part_size;
+            const std::size_t current_part_size =
+                std::min(data.size() - start_pos, part_size);
+            const std::string_view part =
+                data.substr(start_pos, current_part_size);
+
+            std::vector<std::size_t> local_offsets;
+            while (offsets_idx < offsets.size() &&
+                   offsets[offsets_idx] < start_pos + current_part_size) {
+                local_offsets.push_back(offsets[offsets_idx] - start_pos);
+                ++offsets_idx;
+            }
+            auto addr = m_data_stores[i]->write(part, local_offsets);
             total_addr.append(addr);
         }
         co_return total_addr;

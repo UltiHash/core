@@ -49,7 +49,7 @@ public:
 
     inline T* data() const noexcept { return m_data_info->m_data_ptr; }
 
-    inline constexpr void reserve(size_t size) {
+    inline constexpr void reserve(std::size_t size) {
         if (size > m_data_info->m_capacity) {
             m_data_info->m_data_ptr =
                 (T*)realloc(m_data_info->m_data_ptr, size * sizeof(T));

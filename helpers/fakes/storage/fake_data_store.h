@@ -37,7 +37,8 @@ public:
                     const std::filesystem::path& working_dir,
                     uint32_t service_id, uint32_t data_store_id);
 
-    address write(const std::string_view& data);
+    address write(const std::string_view& data,
+                  const std::vector<std::size_t>& offsets);
     void manual_write(uint64_t internal_pointer, const std::string_view& data);
     void manual_read(uint64_t pointer, size_t size, char* buffer);
     std::size_t read(char* buffer, const uint128_t& pointer, size_t size);

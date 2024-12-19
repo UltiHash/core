@@ -12,11 +12,14 @@ struct remote_storage : public storage_interface {
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
-    coro<address> write(context& ctx, const std::string_view& data) override {
+    coro<address> write(context& ctx, const std::string_view& data,
+                        const std::vector<std::size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
         LOG_DEBUG() << ctx.peer() << ": sending STORAGE_WRITE_REQ ["
                     << m->local() << " -> " << m->peer() << "]";
-        co_await m->send(ctx, STORAGE_WRITE_REQ, data);
+        write_request req = {.offsets = offsets, .data = data};
+
+        co_await m->send_write(ctx, req);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_address(message_header);
     }

@@ -58,7 +58,8 @@ fake_data_store::fake_data_store(data_store_config conf,
     }
 }
 
-address fake_data_store::write(const std::string_view& data) {
+address fake_data_store::write(const std::string_view& data,
+                               const std::vector<std::size_t>& offsets) {
 
     auto current_offset = m_current_offset.fetch_add(data.size());
     if (current_offset + data.size() > m_conf.max_data_store_size or

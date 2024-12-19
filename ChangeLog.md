@@ -1,4 +1,6 @@
 ## [UNRELEASED]
+- Modified `STORAGE_WRITE_REQ` message for more efficient interaction between deduplicator and storage
+- Improved efficiency of reference counting infrastructure in storage service
 - Fix broken return value in Content-Range for ranged get access
 
 ## [1.1.1] 2024-12-09

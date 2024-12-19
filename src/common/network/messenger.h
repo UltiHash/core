@@ -14,8 +14,6 @@ public:
 
     coro<fragment> recv_fragment(const header& message_header);
 
-    coro<uint128_t> recv_uint128_t(const header& message_header);
-
     template <typename T>
     requires std::is_arithmetic_v<T>
     coro<T> recv_primitive(const header& message_header) {
@@ -38,6 +36,10 @@ public:
 
     coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
+    coro<void> send_write(context& ctx, const write_request& req);
+
+    coro<write_request> recv_write(const header& message_header);
+
     coro<void> send_ds_write(context& ctx, const ds_write_request& req);
 
     coro<ds_write_request> recv_ds_write(const header& message_header);
@@ -51,9 +53,6 @@ public:
 
     coro<void> send_fragment(context& ctx, const message_type type,
                              const fragment frag);
-
-    coro<void> send_uint128_t(context& ctx, const message_type type,
-                              const uint128_t num);
 
     template <typename T>
     requires std::is_arithmetic_v<T>

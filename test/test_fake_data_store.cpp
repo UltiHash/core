@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
     long failures = 0;
 
     for (auto& data : test_data) {
-        ds->write(data.string_view());
+        ds->write(data.string_view(), {0});
 
         auto used_size = get_expected_used(data.size());
         BOOST_TEST(ds->get_used_space() == used_size);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(test_read) {
 
     long failures = 0;
     for (auto& data : test_data) {
-        auto address = ds->write(data.string_view());
+        auto address = ds->write(data.string_view(), {0});
         size_t t_read = 0;
         for (size_t i = 0; i < address.size(); i++) {
             const auto p = address.get(i);
@@ -135,14 +135,15 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     std::vector<address> addresses;
     for (auto& data : test_data) {
-        addresses.emplace_back(ds->write(data.string_view()));
+        addresses.emplace_back(ds->write(data.string_view(), {0}));
     }
     auto address = addresses[RND_ELEM];
     ds.reset();
 
     ds = make_data_store();
 
-    BOOST_CHECK_THROW(ds->write(throwing_data.string_view()), std::bad_alloc);
+    BOOST_CHECK_THROW(ds->write(throwing_data.string_view(), {0}),
+                      std::bad_alloc);
 
     char buf[MAX_FILE_SIZE_BYTES];
     size_t t_read = 0;
@@ -173,7 +174,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                                       test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
                     addresses.emplace_back(
-                        ds->write(test_data[k].string_view()));
+                        ds->write(test_data[k].string_view(), {0}));
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
@@ -234,7 +235,7 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
 
     std::vector<address> addresses;
     for (auto& data : test_data) {
-        addresses.emplace_back(ds->write(data.string_view()));
+        addresses.emplace_back(ds->write(data.string_view(), {0}));
         failures += read_address_compare(addresses.back(), data);
     }
 
@@ -251,10 +252,10 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
 
 BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
-    auto addr = ds->write(buffer.string_view());
+    auto addr = ds->write(buffer.string_view(), {0});
     BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
 
-    addr = ds->write(buffer.string_view());
+    addr = ds->write(buffer.string_view(), {0});
     BOOST_TEST(addr.size() == 1);
     address illegal_addr;
     illegal_addr.push({0, addr.data_size() / 2});
@@ -271,9 +272,9 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
     auto buffer3 = random_buffer(2 * DEFAULT_PAGE_SIZE);
 
     address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view());
-    auto buffer2_address = ds->write(buffer2.string_view());
-    auto buffer3_address = ds->write(buffer3.string_view());
+    auto buffer1_address = ds->write(buffer1.string_view(), {0});
+    auto buffer2_address = ds->write(buffer2.string_view(), {0});
+    auto buffer3_address = ds->write(buffer3.string_view(), {0});
     full_address.append(buffer1_address);
     full_address.append(buffer2_address);
     full_address.append(buffer3_address);
@@ -333,9 +334,9 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
     auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET);
 
     address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view());
-    auto buffer2_address = ds->write(buffer2.string_view());
-    auto buffer3_address = ds->write(buffer3.string_view());
+    auto buffer1_address = ds->write(buffer1.string_view(), {0});
+    auto buffer2_address = ds->write(buffer2.string_view(), {0});
+    auto buffer3_address = ds->write(buffer3.string_view(), {0});
     full_address.append(buffer1_address);
     full_address.append(buffer2_address);
     full_address.append(buffer3_address);
@@ -393,11 +394,11 @@ BOOST_AUTO_TEST_CASE(repeated_write_delete) {
 
     address buffer_address;
     for (std::size_t i = 0; i < 100; i++) {
-        buffer_address = ds->write(buffer.string_view());
+        buffer_address = ds->write(buffer.string_view(), {0});
         ds->unlink(buffer_address);
     }
 
-    buffer_address = ds->write(buffer.string_view());
+    buffer_address = ds->write(buffer.string_view(), {0});
 
     shared_buffer<char> read_buffer(buffer_address.data_size());
     size_t t_read = 0;

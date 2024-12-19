@@ -7,6 +7,7 @@
 #include <deque>
 #include <functional>
 #include <lmdbxx/lmdb++.h>
+#include <unordered_set>
 
 namespace uh::cluster {
 class reference_counter {
@@ -58,14 +59,13 @@ private:
     std::size_t m_page_size;
     std::function<std::size_t(std::size_t offset, std::size_t size)> m_cb;
 
-    bool increment(const std::size_t offset, const std::size_t size,
-                   bool upstream, lmdb::txn& txn, lmdb::dbi& dbi);
-    void decrement(
-        const std::size_t offset, const std::size_t size,
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion,
-        lmdb::txn& txn, lmdb::dbi& dbi);
-    size_t free_storage(
-        std::vector<std::pair<std::size_t, std::size_t>>& marked_for_deletion);
+    bool increment(std::size_t page_id, std::size_t count, bool upstream,
+                   lmdb::txn& txn, lmdb::dbi& dbi);
+    void decrement(std::size_t page_id, std::size_t count,
+                   std::unordered_set<std::size_t>& marked_for_deletion,
+                   lmdb::txn& txn, lmdb::dbi& dbi);
+    size_t free_storage(std::unordered_set<std::size_t>& pages_to_free);
+    std::pair<size_t, size_t> get_page_range(size_t offset, size_t size) const;
 };
 } // namespace uh::cluster
 #endif // UH_CLUSTER_REFERENCE_COUNTER_H
