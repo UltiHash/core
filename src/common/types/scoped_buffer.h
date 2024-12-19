@@ -49,7 +49,7 @@ public:
 
     inline T* data() const noexcept { return m_data_info->m_data_ptr; }
 
-    inline constexpr void reserve(size_t size) {
+    inline constexpr void reserve(std::size_t size) {
         if (size > m_data_info->m_capacity) {
             m_data_info->m_data_ptr =
                 (T*)realloc(m_data_info->m_data_ptr, size * sizeof(T));
@@ -86,6 +86,14 @@ public:
     string_view() const noexcept {
         return {(char*)(m_data_info->m_data_ptr),
                 m_data_info->m_size * sizeof(T)};
+    }
+
+    T* begin() noexcept { return m_data_info->m_data_ptr; }
+    const T* begin() const noexcept { return m_data_info->m_data_ptr; }
+
+    T* end() noexcept { return m_data_info->m_data_ptr + m_data_info->m_size; }
+    const T* end() const noexcept {
+        return m_data_info->m_data_ptr + m_data_info->m_size;
     }
 };
 

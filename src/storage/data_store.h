@@ -6,6 +6,7 @@
 
 #include "common/types/address.h"
 #include "common/utils/common.h"
+#include "storage/interfaces/data_store.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -17,13 +18,7 @@
 
 namespace uh::cluster {
 
-struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
-};
-
-class data_store {
+class data_store : public abstract_data_store {
 
 public:
     data_store(data_store_config conf, const std::filesystem::path& working_dir,
@@ -39,7 +34,8 @@ public:
      * @param data
      * @return  allocated address
      */
-    address write(const std::string_view& data);
+    address write(const std::string_view& data,
+                  const std::vector<std::size_t>& offsets);
 
     /**
      * Manually write the data directly to a specific internal pointer
@@ -119,7 +115,8 @@ private:
      */
     void sync();
 
-    alloc_t internal_allocate(size_t size);
+    alloc_t internal_allocate(size_t size,
+                              const std::vector<std::size_t>& offsets);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;

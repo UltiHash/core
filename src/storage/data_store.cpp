@@ -191,13 +191,14 @@ size_t data_store::fetch_used_space(
     return size + m_last_file_data_end;
 }
 
-address data_store::write(const std::string_view& data) {
+address data_store::write(const std::string_view& data,
+                          const std::vector<std::size_t>& offsets) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
 
-    auto alloc = internal_allocate(data.size());
+    auto alloc = internal_allocate(data.size(), offsets);
 
     long written = 0;
     while (written < static_cast<long>(data.size())) {
@@ -339,7 +340,9 @@ size_t data_store::get_available_space() const noexcept {
     return capacity;
 }
 
-data_store::alloc_t data_store::internal_allocate(size_t size) {
+data_store::alloc_t
+data_store::internal_allocate(size_t size,
+                              const std::vector<std::size_t>& offsets) {
     std::deque<reference_counter::refcount_cmd> refcount_commands;
     std::unique_lock<std::mutex> lock(m_allocate_mutex);
 
@@ -360,8 +363,12 @@ data_store::alloc_t data_store::internal_allocate(size_t size) {
     m_current_offset += size;
     m_used_space += size;
 
-    refcount_commands.emplace_back(reference_counter::INCREMENT, local_pointer,
-                                   size);
+    for (auto it = offsets.begin(); it != offsets.end(); it++) {
+        std::size_t frag_size =
+            std::next(it) == offsets.end() ? size - *it : *std::next(it) - *it;
+        refcount_commands.emplace_back(reference_counter::INCREMENT,
+                                       local_pointer + *it, frag_size);
+    }
     update_last_page_ref(refcount_commands);
     lock.unlock();
 

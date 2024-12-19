@@ -6,6 +6,7 @@
 #include "fragment_set_element.h"
 
 #include <set>
+#include <shared_mutex>
 #include <utility>
 
 namespace uh::cluster {
@@ -141,8 +142,6 @@ private:
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator> m_lfu;
     lfu_cache<uint128_t, std::set<fragment_set_element>::const_iterator>
         m_lfu_headers;
-
-    std::forward_list<std::set<fragment_set_element>::const_iterator> m_colds;
 };
 
 } // end namespace uh::cluster
