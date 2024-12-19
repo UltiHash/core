@@ -52,35 +52,47 @@ public:
      * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
      */
-    etcd_manager(const etcd_config& cfg)
-        : m_cfg{cfg} {
+    explicit etcd_manager(const etcd_config& cfg, int ttl = 30)
+        : m_cfg{cfg},
+          m_ttl{ttl} {
         m_client.reset(create_client(m_cfg));
-        m_lease = create_lease(*m_client);
-        m_keepalive.reset(
-            create_keepalive(*m_client, m_lease, get_exception_handler()));
+        m_lease = create_lease(*m_client, m_ttl);
+        m_keepalive.reset(create_keepalive(*m_client, m_lease,
+                                           get_exception_handler(), m_ttl));
     }
 
     /*
      * Save key value pair
      */
-    void put(const std::string& key, const std::string& value) {
+    void add(const std::string& key, const std::string& value) {
         m_key_value[key] = value;
         m_client->add(key, value, m_lease);
     }
 
+    etcd::Keys ls(const std::string& prefix = "/") {
+        return m_client->ls(prefix).keys();
+    }
+
+    void clear_all() {
+        m_key_value.clear();
+        for (const auto& key : ls()) {
+            m_client->rm(key);
+        }
+    }
+
     /*
-     * Watch given path recursively
+     * Watch given prefix recursively
      */
-    void watch(const std::string& path,
+    void watch(const std::string& prefix,
                std::function<void(etcd::Response)> callback) {
         watcher_entries.emplace_back(
-            path, callback,
-            std::make_unique<etcd::Watcher>(*m_client, path, callback, true));
+            prefix, callback,
+            std::make_unique<etcd::Watcher>(*m_client, prefix, callback, true));
     }
 
 private:
-    static constexpr int time_to_live = 30;
     const etcd_config& m_cfg;
+    int m_ttl;
     std::unique_ptr<etcd::SyncClient> m_client;
 
     int64_t m_lease;
@@ -88,7 +100,7 @@ private:
     std::map<std::string, std::string> m_key_value;
 
     struct watcher_entry {
-        std::string path;
+        std::string prefix;
         std::function<void(etcd::Response)> callback;
         std::unique_ptr<etcd::Watcher> watcher;
     };
@@ -103,7 +115,7 @@ private:
     void restore_watchers(void) {
         for (auto& e : watcher_entries) {
             e.watcher.reset(
-                new etcd::Watcher(*m_client, e.path, e.callback, true));
+                new etcd::Watcher(*m_client, e.prefix, e.callback, true));
         }
     }
 
@@ -119,17 +131,17 @@ private:
 
                 restore_watchers();
 
-                m_lease = create_lease(*m_client);
-                m_keepalive.reset(create_keepalive(*m_client, m_lease,
-                                                   get_exception_handler()));
+                m_lease = create_lease(*m_client, m_ttl);
+                m_keepalive.reset(create_keepalive(
+                    *m_client, m_lease, get_exception_handler(), m_ttl));
 
                 restore_key_values();
 
             } catch (const std::out_of_range& e) {
                 LOG_DEBUG() << "etcd lease expiry: " << e.what();
-                m_lease = create_lease(*m_client);
-                m_keepalive.reset(create_keepalive(*m_client, m_lease,
-                                                   get_exception_handler()));
+                m_lease = create_lease(*m_client, m_ttl);
+                m_keepalive.reset(create_keepalive(
+                    *m_client, m_lease, get_exception_handler(), m_ttl));
 
                 restore_key_values();
             }
@@ -143,7 +155,7 @@ private:
     static void wait_for_connection(etcd::SyncClient& client) {
         using namespace std::chrono_literals;
         while (!client.head().is_ok()) {
-            LOG_WARN() << "cannot connect to etcd. trying to reconnect";
+            LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
             std::this_thread::sleep_for(1s);
         }
     }
@@ -160,14 +172,14 @@ private:
         return client;
     }
 
-    static int64_t create_lease(etcd::SyncClient& client) {
-        return client.leasegrant(time_to_live).value().lease();
+    static int64_t create_lease(etcd::SyncClient& client, int ttl) {
+        return client.leasegrant(ttl).value().lease();
     }
-    static etcd::KeepAlive* create_keepalive(
-        etcd::SyncClient& client, int64_t lease,
-        std::function<void(std::exception_ptr)> exception_handler) {
-        return new etcd::KeepAlive(client, exception_handler, time_to_live,
-                                   lease);
+    static etcd::KeepAlive*
+    create_keepalive(etcd::SyncClient& client, int64_t lease,
+                     std::function<void(std::exception_ptr)> exception_handler,
+                     int ttl) {
+        return new etcd::KeepAlive(client, exception_handler, ttl, lease);
     }
 };
 

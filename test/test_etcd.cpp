@@ -5,9 +5,6 @@
 #include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
-#include <cstdlib>
-#include <functional>
-#include <thread>
 
 using namespace fakeit;
 using namespace std::chrono_literals;
