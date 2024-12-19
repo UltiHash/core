@@ -30,12 +30,12 @@ public:
             storage_cfg.server.port = 10000 + i;
             storage_cfg.m_data_store_roots = {
                 std::filesystem::path(service_cfg.working_dir) / "storage"};
-            m_storage_instances.emplace_back(
-                std::make_unique<storage>(service_cfg, storage_cfg));
+            m_storage_instances.emplace_back(std::make_unique<storage>(
+                m_etcd_client, service_cfg, storage_cfg));
         }
 
-        m_recovery =
-            std::make_unique<recovery>(service_config{}, recovery_config{});
+        m_recovery = std::make_unique<recovery>(m_etcd_client, service_config{},
+                                                recovery_config{});
         int i = 0;
 
         m_ioc.post([this] { m_recovery->run(); });
