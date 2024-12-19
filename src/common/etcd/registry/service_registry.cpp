@@ -81,17 +81,17 @@ service_registry::registration::~registration() {
 service_registry::registration::etcd_handle::etcd_handle(
     etcd::SyncClient& client, std::size_t ttl,
     const std::map<std::string, std::string>& kv_pairs)
-    : client(client),
-      lease(client.leasegrant(ttl).value().lease()),
-      keepalive(client, ttl, lease) {
+    : m_client(client),
+      lease(m_client.leasegrant(ttl).value().lease()),
+      keepalive(m_client, ttl, lease) {
 
     for (const auto& pair : kv_pairs)
-        client.add(pair.first, pair.second, lease);
+        m_client.add(pair.first, pair.second, lease);
 }
 
 service_registry::registration::etcd_handle::~etcd_handle() {
     try {
-        client.leaserevoke(lease);
+        m_client.leaserevoke(lease);
         keepalive.Cancel();
     } catch (const std::exception&) {
     }

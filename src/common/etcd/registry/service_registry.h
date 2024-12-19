@@ -42,7 +42,7 @@ public:
             ~etcd_handle();
             void check();
 
-            etcd::SyncClient& client;
+            etcd::SyncClient& m_client;
             int64_t lease;
             etcd::KeepAlive keepalive;
         };

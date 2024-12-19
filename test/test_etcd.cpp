@@ -2,6 +2,7 @@
 
 #include "common/etcd/utils.h"
 #include "fakeit/fakeit.hpp"
+#include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
 #include <cstdlib>
@@ -74,32 +75,6 @@ BOOST_FIXTURE_TEST_CASE(
     Verify(Method(mock, handle_state_changes)).Exactly(0);
 }
 
-bool has_sudo() { return std::system("which sudo > /dev/null 2>&1") == 0; }
-
-int run_with_optional_sudo(const std::string& command) {
-    std::string full_command = has_sudo() ? "sudo " + command : command;
-    return std::system(full_command.c_str());
-}
-
-// BOOST_FIXTURE_TEST_CASE(watcher_doesnt_work_when_etcd_stopped, fixture) {
-//
-//     auto etcd_client = make_etcd_client(cfg);
-//     etcd_client->set("test0", "initial_value");
-//     std::shared_ptr<etcd::Watcher> watcher;
-//     initialize_watcher(
-//         etcd_client, "test0",
-//         [&cb = mock.get()](const etcd::Response& response) {
-//             cb.handle_state_changes(response);
-//         },
-//         watcher);
-//
-//     BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl stop etcd"), 0);
-//     etcd_client->set("test0", "updated_value");
-//     std::this_thread::sleep_for(100ms);
-//     BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl start etcd"), 0);
-//
-//     Verify(Method(mock, handle_state_changes)).Exactly(0_Times);
-// }
 BOOST_FIXTURE_TEST_CASE(watcher_doesnt_work_when_etcd_stopped, fixture) {
 
     auto etcd_client = make_etcd_client(cfg);

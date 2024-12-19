@@ -36,6 +36,20 @@ void initialize_watcher(const etcd_config& cfg, const std::string& prefix,
                         std::function<void(etcd::Response)> callback,
                         std::shared_ptr<etcd::Watcher>& watcher);
 
+/**
+ * This class handles every access to etcd client, including error checking
+ * and reset client.
+ */
+class etcd_manager {
+public:
+    etcd_manager(const etcd_config& cfg)
+        : m_cfg{cfg} {
+        (void)(m_cfg);
+    }
+
+private:
+    const etcd_config& m_cfg;
+};
 // std::function<void(std::exception_ptr)>
 // create_exception_handler(std::unique_ptr<etcd::SyncClient>& client,
 //                          const etcd_config& cfg);

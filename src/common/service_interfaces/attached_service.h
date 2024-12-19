@@ -10,10 +10,10 @@ template <typename service> class attached_service {
 
 public:
     template <typename Conf>
-    attached_service(const service_config& sc,
+    attached_service(etcd::SyncClient& etcd_client, const service_config& sc,
                      const std::optional<Conf>& conf) {
         if (conf) {
-            m_attached_service.emplace(sc, *conf);
+            m_attached_service.emplace(etcd_client, sc, *conf);
             m_local_service_thread =
                 std::thread([this] { m_attached_service->run(); });
         }

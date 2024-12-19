@@ -12,9 +12,9 @@ namespace uh::cluster {
 
 class recovery {
 public:
-    recovery(const service_config& service, const recovery_config& sc)
-        : m_etcd_client(make_etcd_client(service.etcd_config)),
-          m_ioc(sc.thread_count),
+    recovery(etcd::SyncClient& etcd_client, const service_config& service,
+             const recovery_config& sc)
+        : m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, *m_etcd_client, true),
 
