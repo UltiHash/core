@@ -151,7 +151,7 @@ std::string etcd_manager::lock(const std::string& lock_key) {
         throw std::invalid_argument(
             "getting lock with lock_key " + lock_key +
             " failed, details: " + resp.error_message());
-    return resp.value().as_string();
+    return resp.lock_key();
 }
 
 void etcd_manager::unlock(const std::string& unlock_key) {
