@@ -59,15 +59,6 @@ service_registry::registration::registration(
           }
       }) {}
 
-void service_registry::registration::monitor(
-    etcd_service_attributes key, const std::function<std::string()>& func) {
-    auto key_base = get_attributes_path(m_service_role, m_id) +
-                    get_etcd_service_attribute_string(key);
-    std::lock_guard<std::mutex> lock(m_attributes_mutex);
-    m_monitored_attributes.emplace(key_base, func);
-    m_cv.notify_all();
-}
-
 service_registry::registration::~registration() {
     {
         std::unique_lock lk(m_attributes_mutex);
