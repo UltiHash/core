@@ -33,27 +33,28 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 
 } // namespace
 
-service::service(etcd::SyncClient& etcd_client, const service_config& sc,
+service::service(etcd_manager& etcd_manager, const service_config& sc,
                  entrypoint_config config)
     : m_config(std::move(config)),
       m_ioc(boost::asio::io_context(m_config.server.threads)),
-      m_service_id(get_service_id(
-          etcd_client, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
-      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, etcd_client),
+      m_service_id(get_service_id(etcd_manager,
+                                  get_service_string(ENTRYPOINT_SERVICE),
+                                  sc.working_dir)),
+      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, etcd_manager),
 
-      m_attached_storage(etcd_client, sc, m_config.m_attached_storage),
-      m_attached_dedupe(etcd_client, sc, m_config.m_attached_deduplicator),
+      m_attached_storage(etcd_manager, sc, m_config.m_attached_storage),
+      m_attached_dedupe(etcd_manager, sc, m_config.m_attached_deduplicator),
       m_storage_maintainer(
-          etcd_client,
+          etcd_manager,
           service_factory<storage_interface>(
               m_ioc, m_config.global_data_view.storage_service_connection_count,
               m_attached_storage.get_local_service_interface())),
-      m_dedupe_maintainer(etcd_client,
+      m_dedupe_maintainer(etcd_manager,
                           service_factory<deduplicator_interface>(
                               m_ioc, m_config.dedupe_node_connection_count,
                               m_attached_dedupe.get_local_service_interface())),
       m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
-                  etcd_client),
+                  etcd_manager),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
@@ -81,8 +82,7 @@ service::service(etcd::SyncClient& etcd_client, const service_config& sc,
 }
 
 void service::run() {
-    m_registration =
-        m_service_registry.register_service(m_server.get_server_config());
+    m_service_registry.register_service(m_server.get_server_config());
     m_server.run();
 }
 

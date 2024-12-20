@@ -4,7 +4,7 @@ namespace uh::cluster {
 
 storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                              size_t ec_nodes, size_t group_id,
-                             etcd::SyncClient& etcd, bool active_recovery)
+                             etcd_manager& etcd, bool active_recovery)
     : m_nodes(data_nodes + ec_nodes),
       m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
       m_ioc(ioc),
@@ -13,7 +13,28 @@ storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
         if (data_nodes == 1 and ec_nodes == 0) {
             m_status = healthy;
         } else {
-            m_status_watcher.emplace(m_attributes, m_status);
+            etcd.watch(
+                get_ec_group_attribute_path(m_attributes.group_id(),
+                                            EC_GROUP_STATUS),
+                [&status = m_status, &m = m_mutex](const etcd::Response& resp) {
+                    try {
+                        std::lock_guard<std::mutex> lk(m);
+
+                        switch (get_etcd_action_enum(resp.action())) {
+                        case etcd_action::create:
+                        case etcd_action::set:
+                            status =
+                                response_to_status(resp.value().as_string());
+                            break;
+                        case etcd_action::erase:
+                            break;
+                        }
+                    } catch (const std::exception& e) {
+                        LOG_WARN()
+                            << "error while handling status state change: "
+                            << e.what();
+                    }
+                });
         }
     } else {
         m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);

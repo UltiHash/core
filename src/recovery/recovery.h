@@ -12,15 +12,14 @@ namespace uh::cluster {
 
 class recovery {
 public:
-    recovery(etcd::SyncClient& etcd_client, const service_config& service,
+    recovery(etcd_manager& etcd_manager, const service_config& service,
              const recovery_config& sc)
         : m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, *m_etcd_client, true),
+          m_ec_maintainer(m_ioc, 1, 0, etcd_manager, true),
 
-          m_storage_maintainer(
-              *m_etcd_client,
-              service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+          m_storage_maintainer(etcd_manager, service_factory<storage_interface>(
+                                                 m_ioc, 1, nullptr)) {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
@@ -45,8 +44,6 @@ public:
     }
 
 private:
-    std::unique_ptr<etcd::SyncClient> m_etcd_client;
-
     boost::asio::io_context m_ioc;
     std::condition_variable m_cv;
     std::mutex m_mutex;

@@ -95,6 +95,7 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int ttl)
 }
 
 etcd_manager::~etcd_manager() {
+    m_client->leaserevoke(m_lease);
     m_healthchecker->Cancel();
     for (auto& e : watcher_entries) {
         e.watcher->Cancel();
@@ -104,21 +105,69 @@ etcd_manager::~etcd_manager() {
 /*
  * Save key value pair
  */
-int etcd_manager::put(const std::string& key, const std::string& value) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_key_value[key] = value;
+void etcd_manager::put(const std::string& key, const std::string& value) {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_key_value[key] = value;
+    }
     auto resp = m_client->put(key, value, m_lease);
-    return resp.error_code();
+    if (!resp.is_ok())
+        throw std::invalid_argument(
+            "setting the configuration parameter " + key +
+            " failed, details: " + resp.error_message());
 }
 
-etcd::Keys etcd_manager::ls(const std::string& prefix) {
-    return m_client->ls(prefix).keys();
+std::string etcd_manager::get(const std::string& key) {
+    auto resp = m_client->get(key);
+    if (!resp.is_ok())
+        throw std::invalid_argument(
+            "retrieval of configuration parameter " + key +
+            " failed, details: " + resp.error_message());
+    return resp.value().as_string();
 }
+
+etcd::Keys etcd_manager::keys(const std::string& prefix) {
+    return m_client->keys(prefix).keys();
+}
+
+std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
+    auto resp = m_client->ls(prefix);
+    auto keys = resp.keys();
+    std::map<std::string, std::string> ret;
+    for (auto i = 0u; i < keys.size(); ++i) {
+        ret[keys[i]] = resp.value(i).as_string();
+    }
+    return ret;
+}
+
+etcd_manager::lock_guard
+etcd_manager::get_lock_guard(const std::string& lock_key) {
+    return etcd_manager::lock_guard(this, lock_key);
+}
+
+std::string etcd_manager::lock(const std::string& lock_key) {
+    auto resp = m_client->lock_with_lease(lock_key, m_lease);
+    if (!resp.is_ok())
+        throw std::invalid_argument(
+            "getting lock with lock_key " + lock_key +
+            " failed, details: " + resp.error_message());
+    return resp.value().as_string();
+}
+
+void etcd_manager::unlock(const std::string& unlock_key) {
+    auto resp = m_client->unlock(unlock_key);
+    if (!resp.is_ok())
+        throw std::invalid_argument(
+            "releasing lock with unlock_key " + unlock_key +
+            " failed, details: " + resp.error_message());
+}
+
+void etcd_manager::rmdir(const std::string& prefix) { m_client->rmdir(prefix); }
 
 void etcd_manager::clear_all() {
     LOG_DEBUG() << "etcd_manager.clear_all() called";
     m_key_value.clear();
-    for (const auto& key : ls()) {
+    for (const auto& key : keys()) {
         m_client->rm(key);
     }
 }

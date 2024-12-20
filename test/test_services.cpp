@@ -13,8 +13,6 @@
 #include "common/utils/temp_directory.h"
 #include "storage/data_store.h"
 
-#define REGISTRY_ENDPOINT "http://127.0.0.1:2379"
-
 using namespace boost::asio;
 
 namespace uh::cluster {
@@ -22,7 +20,7 @@ namespace uh::cluster {
 struct fixture {
     temp_directory tmp;
     boost::asio::io_context ioc;
-    etcd::SyncClient etcd_client;
+    etcd_manager etcd;
     std::size_t service_id;
     storage_service_get_handler services;
     roundrobin_load_balancer<storage_interface> load_balancer;
@@ -30,13 +28,13 @@ struct fixture {
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
         return uh::cluster::service_maintainer<storage_interface>(
-            etcd_client, service_factory<storage_interface>(ioc, 2, nullptr));
+            etcd, service_factory<storage_interface>(ioc, 2, nullptr));
     }
 
     fixture()
-        : etcd_client(REGISTRY_ENDPOINT),
+        : etcd{},
           service_id(get_service_id(
-              etcd_client, get_service_string(storage_interface::service_role),
+              etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
         service_maintainer.add_monitor(services);
@@ -56,8 +54,8 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u); }
     }
@@ -70,8 +68,8 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         { WAIT_UNTIL_NO_THROW(1000, load_balancer.get()); }
     }
@@ -90,8 +88,8 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
         CHECK_STABLE(100, !has_result);
 
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(100, has_result);
 
@@ -107,9 +105,9 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        etcd::SyncClient etcd_client(REGISTRY_ENDPOINT);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        etcd_manager etcd;
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         fixture f;
         BOOST_CHECK(!f.services.get_services().empty());
@@ -123,8 +121,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, test_id, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, test_id, etcd);
+        sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
         BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
@@ -151,8 +149,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_services().size() == 1u);
         BOOST_CHECK_NO_THROW(services.get(uint128_t()));
@@ -160,8 +158,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 1, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 1, etcd);
+        sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_services().size() == 1u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
@@ -172,10 +170,10 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr1(STORAGE_SERVICE, 1, etcd_client);
-        auto reg1 = sr1.register_service({.port = 8081});
-        service_registry sr2(STORAGE_SERVICE, 3, etcd_client);
-        auto reg2 = sr2.register_service({.port = 8081});
+        service_registry sr1(STORAGE_SERVICE, 1, etcd);
+        sr1.register_service({.port = 8081});
+        service_registry sr2(STORAGE_SERVICE, 3, etcd);
+        sr2.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, services.get_services().size() == 2u);
         BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
@@ -192,8 +190,8 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, fixture) {
 
     {
         test::server svr("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, 0, etcd_client);
-        auto reg = sr.register_service({.port = 8081});
+        service_registry sr(STORAGE_SERVICE, 0, etcd);
+        sr.register_service({.port = 8081});
 
         WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
     }

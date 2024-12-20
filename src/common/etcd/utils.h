@@ -54,12 +54,34 @@ public:
     explicit etcd_manager(const etcd_config& cfg = {}, int ttl = 30);
     ~etcd_manager();
 
+    class lock_guard {
+    public:
+        explicit lock_guard(etcd_manager* manager, const std::string& lock_key)
+            : m_etcd_manager(manager),
+              m_unlock_key(manager->lock(lock_key)) {}
+
+        ~lock_guard() { m_etcd_manager->unlock(m_unlock_key); }
+
+    private:
+        etcd_manager* m_etcd_manager;
+        std::string m_unlock_key;
+    };
+
+    lock_guard get_lock_guard(const std::string& lock_key);
+
+    std::string lock(const std::string& lock_key);
+    void unlock(const std::string& unlock_key);
+
+    void rmdir(const std::string& prefix);
     /*
      * Save key value pair
      */
-    int put(const std::string& key, const std::string& value);
+    void put(const std::string& key, const std::string& value);
 
-    etcd::Keys ls(const std::string& prefix = "/");
+    std::string get(const std::string& key);
+
+    etcd::Keys keys(const std::string& prefix = "/");
+    std::map<std::string, std::string> ls(const std::string& prefix = "/");
 
     void clear_all();
 

@@ -14,21 +14,20 @@ namespace uh::cluster {
 
 class storage {
 public:
-    storage(etcd::SyncClient& etcd_client, const service_config& service,
+    storage(etcd_manager& etcd_manager, const service_config& service,
             const storage_config& sc)
-        : m_service_id(get_service_id(etcd_client,
+        : m_service_id(get_service_id(etcd_manager,
                                       get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
           m_ioc(sc.server.threads),
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
                                                     sc.m_data_store_roots)),
-          m_service_registry(STORAGE_SERVICE, m_service_id, etcd_client),
+          m_service_registry(STORAGE_SERVICE, m_service_id, etcd_manager),
           m_server(sc.server, std::make_unique<storage_handler>(*m_storage),
                    m_ioc) {}
 
     void run() {
-        m_registration =
-            m_service_registry.register_service(m_server.get_server_config());
+        m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
@@ -44,7 +43,6 @@ private:
     std::shared_ptr<local_storage> m_storage;
     service_registry m_service_registry;
     server m_server;
-    std::unique_ptr<service_registry::registration> m_registration;
 };
 } // end namespace uh::cluster
 #endif // CORE_DATA_NODE_H
