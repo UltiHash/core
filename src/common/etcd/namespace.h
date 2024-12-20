@@ -121,6 +121,7 @@ inline static std::string get_attribute_key(const std::string& path) {
     return std::filesystem::path(path).filename();
 }
 
+#include <iostream>
 inline static unsigned long
 get_announced_id(const std::string& announced_path) {
     const auto id = std::filesystem::path(announced_path).filename().string();

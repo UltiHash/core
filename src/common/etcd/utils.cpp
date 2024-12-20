@@ -120,9 +120,7 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
 std::string etcd_manager::get(const std::string& key) {
     auto resp = m_client->get(key);
     if (!resp.is_ok())
-        throw std::invalid_argument(
-            "retrieval of configuration parameter " + key +
-            " failed, details: " + resp.error_message());
+        return "";
     return resp.value().as_string();
 }
 
@@ -184,7 +182,7 @@ void etcd_manager::reset() {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         // Recreate etcd client to recover quickly (15s -> 1s)
-        if (m_client && m_healthchecker && m_healthchecker->Cancelled()) {
+        if (m_healthchecker && m_healthchecker->Cancelled()) {
             return;
         }
 

@@ -7,7 +7,6 @@
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
 #include <etcd/SyncClient.hpp>
-#include <etcd/Watcher.hpp>
 
 namespace uh::cluster {
 
@@ -34,7 +33,7 @@ template <typename service_interface> struct service_maintainer {
         }
     }
 
-    ~service_maintainer() { m_watcher->Cancel(); }
+    ~service_maintainer() {}
 
     void add_monitor(service_monitor<service_interface>& monitor) {
 
@@ -181,8 +180,6 @@ private:
             m_clients.erase(it);
         }
     }
-
-    std::shared_ptr<etcd::Watcher> m_watcher;
 
     std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
