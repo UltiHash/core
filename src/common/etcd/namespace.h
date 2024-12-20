@@ -8,6 +8,8 @@
 
 namespace uh::cluster {
 
+static constexpr const char* etcd_healthcheck = "/" NAMESPACE "/healthcheck/";
+
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
 static constexpr const char* etcd_ec_groups_key_prefix =

@@ -19,7 +19,10 @@ public:
 
 class fixture {
 public:
-    void setup() {}
+    void setup() {
+        run_with_optional_sudo("systemctl start etcd");
+        std::this_thread::sleep_for(1s);
+    }
 
     fixture() {
         When(Method(mock, handle_state_changes))
