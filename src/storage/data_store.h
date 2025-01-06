@@ -34,7 +34,8 @@ public:
      * @param data
      * @return  allocated address
      */
-    address write(const std::string_view& data);
+    address write(const std::string_view& data,
+                  const std::vector<std::size_t>& offsets);
 
     /**
      * Manually write the data directly to a specific internal pointer
@@ -114,7 +115,8 @@ private:
      */
     void sync();
 
-    alloc_t internal_allocate(size_t size);
+    alloc_t internal_allocate(size_t size,
+                              const std::vector<std::size_t>& offsets);
 
     [[nodiscard]] std::pair<int, long>
     get_file_offset_pair(size_t pointer) const;

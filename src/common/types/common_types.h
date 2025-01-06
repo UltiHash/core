@@ -31,6 +31,11 @@ struct ds_read_request {
     size_t size;
 };
 
+struct write_request {
+    std::vector<std::size_t> offsets;
+    std::variant<std::string_view, unique_buffer<>> data;
+};
+
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;
 
 struct object {

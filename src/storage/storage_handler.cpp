@@ -99,10 +99,9 @@ coro<void> storage_handler::handle(boost::asio::ip::tcp::socket s) {
 
 coro<void> storage_handler::handle_write(context& ctx, messenger& m,
                                          const messenger::header& h) {
-    unique_buffer<char> data(h.size);
-    m.register_read_buffer(data);
-    co_await m.recv_buffers(h);
-    auto addr = co_await m_storage.write(ctx, data.string_view());
+    write_request req = co_await m.recv_write(h);
+    auto addr = co_await m_storage.write(
+        ctx, std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
     co_await m.send_address(ctx, SUCCESS, addr);
 }
 

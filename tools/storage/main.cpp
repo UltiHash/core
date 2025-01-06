@@ -118,7 +118,7 @@ uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
     auto buffer = read_file(file);
 
     timer t;
-    auto addr = co_await svc.write(ctx, buffer);
+    auto addr = co_await svc.write(ctx, buffer, {0});
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;

@@ -105,9 +105,6 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
         fragments.flush_fragment_set(m_fragment_set);
     });
 
-    LOG_DEBUG() << ctx.peer() << ": merge and link unstored fragments";
-    co_await fragments.merge_and_link_unstored(ctx, m_storage);
-
     LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};

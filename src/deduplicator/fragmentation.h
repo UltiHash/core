@@ -51,26 +51,12 @@ public:
      */
     address make_address() const;
 
-    /**
-     *  Merge consecutive unstored fragments and link them against downstream
-     *  storage to maintain correct reference count information.
-     */
-    coro<void> merge_and_link_unstored(context& ctx, global_data_view& gdv);
-
     address get_stored_fragments() const;
 
     void handle_rejected_fragments(const address& addr, fragment_set& set);
 
 private:
     enum fragment_type { STORED, UNSTORED };
-
-    enum fragmentation_state {
-        DEDUPE_IN_PROGRESS,
-        HANDLED_REJECTED,
-        FLUSHED_STORAGE,
-        FLUSHED_FRAGMENT_SET,
-        MERGED_AND_LINKED_UNSTORED
-    };
 
     struct dd_fragment {
         // mandatory fields for both stored and unstored fragments
@@ -96,10 +82,10 @@ private:
     unique_buffer<char> unstored_to_buffer();
 
     std::list<dd_fragment> m_frags;
+    std::vector<std::size_t> m_offsets;
     std::size_t m_effective_size;
     std::size_t m_unstored_size;
     address m_buffer_address;
-    fragmentation_state m_state = DEDUPE_IN_PROGRESS;
 };
 
 } // namespace uh::cluster

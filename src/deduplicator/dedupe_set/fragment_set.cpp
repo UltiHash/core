@@ -69,7 +69,9 @@ std::lock_guard<std::shared_mutex> fragment_set::lock() {
 
 void fragment_set::remove(
     const std::set<fragment_set_element>::const_iterator& itr) {
-    m_set.erase(itr);
+    if (itr->m_hint_count == 0) {
+        m_set.erase(itr);
+    }
 }
 
 void fragment_set::erase(const fragment& set_element, bool header) {
