@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-gcc-x86_64-linux:
+  unit-asan-x86_64-linux:
     strategy:
       matrix:
         build: [Release, Debug]
