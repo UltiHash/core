@@ -103,6 +103,28 @@ BOOST_FIXTURE_TEST_CASE(does_unlocks_with_key_given_from_lock, fixture) {
     BOOST_TEST(resp_unlock.is_ok() == true);
 }
 
+BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
+                        fixture) {
+
+    auto lease = etcd_client.leasegrant(30).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
+    auto key = std::string("/foo/bar");
+    auto resp_lock = etcd_client.lock_with_lease(key, lease);
+
+    std::future<etcd::Response> future_lock2 =
+        std::async(std::launch::async,
+                   [&]() { return etcd_client.lock_with_lease(key, lease); });
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    BOOST_CHECK(future_lock2.wait_for(std::chrono::seconds(0)) ==
+                std::future_status::timeout);
+
+    auto resp_unlock = etcd_client.unlock(resp_lock.lock_key());
+    BOOST_TEST(resp_unlock.is_ok());
+    auto resp_lock2 = future_lock2.get();
+    BOOST_TEST(resp_lock2.is_ok());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace uh::cluster

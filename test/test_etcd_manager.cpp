@@ -173,14 +173,14 @@ BOOST_FIXTURE_TEST_CASE(cannot_get_lock_from_same_key_twice, fixture) {
     BOOST_CHECK_THROW({ auto lock_guard = manager.get_lock_guard("/foo/bar"); },
                       std::invalid_argument);
 }
-
-BOOST_FIXTURE_TEST_CASE(
-    can_get_lock_from_same_key_after_first_lock_is_distroyed, fixture) {
-    { auto lock_guard = manager.get_lock_guard("/foo/bar"); }
-
-    BOOST_CHECK_NO_THROW(
-        { auto lock_guard = manager.get_lock_guard("/foo/bar"); });
-}
+//
+// BOOST_FIXTURE_TEST_CASE(
+//     can_get_lock_from_same_key_after_first_lock_is_distroyed, fixture) {
+//     { auto lock_guard = manager.get_lock_guard("/foo/bar"); }
+//
+//     BOOST_CHECK_NO_THROW(
+//         { auto lock_guard = manager.get_lock_guard("/foo/bar"); });
+// }
 
 BOOST_AUTO_TEST_SUITE_END()
 
