@@ -1,4 +1,3 @@
-
 #include "fake_data_store.h"
 #include "common/telemetry/log.h"
 #include "common/utils/pointer_traits.h"
@@ -61,24 +60,27 @@ fake_data_store::fake_data_store(data_store_config conf,
 address fake_data_store::write(const std::string_view& data,
                                const std::vector<std::size_t>& offsets) {
 
-    auto current_offset = m_current_offset.fetch_add(data.size());
-    if (current_offset + data.size() > m_conf.max_data_store_size or
+    if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
         throw std::bad_alloc();
     }
+
+    auto current_offset = m_current_offset.fetch_add(data.size());
+    std::copy(data.cbegin(), data.cend(), m_data.begin() + current_offset);
+
     address data_address;
     data_address.push({.pointer = pointer_traits::get_global_pointer(
                            current_offset, m_storage_id, m_data_store_id),
                        .size = data.size()});
-
-    std::copy(data.cbegin(), data.cend(), m_data.begin() + current_offset);
     link(data_address);
     return data_address;
 }
 
 void fake_data_store::manual_write(uint64_t internal_pointer,
                                    const std::string_view& data) {
-
+    if (internal_pointer + data.size() > m_conf.max_data_store_size) {
+        throw std::out_of_range("internal_pointer is out of range");
+    }
     address data_address;
     data_address.push({.pointer = pointer_traits::get_global_pointer(
                            internal_pointer, m_storage_id, m_data_store_id),
@@ -132,10 +134,13 @@ address fake_data_store::link(const address& addr) {
     address new_fragments;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        if (!m_refcounter.contains(frag)) {
-            new_fragments.push(frag);
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            if (!m_refcounter.contains(frag)) {
+                new_fragments.push(frag);
+            }
+            m_refcounter[frag]++;
         }
-        m_refcounter[frag]++;
     }
 
     return new_fragments;
@@ -145,17 +150,20 @@ size_t fake_data_store::unlink(const address& addr) {
     size_t size = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        auto it = m_refcounter.find(frag);
-        if (it == m_refcounter.end()) {
-            throw std::exception();
-            // return std::numeric_limits<std::size_t>::max();
-        }
-        if (--(it->second) == 0) {
-            auto pointer = pointer_traits::get_pointer(frag.pointer);
-            std::fill(m_data.begin() + pointer,
-                      m_data.begin() + pointer + frag.size, 0);
-            m_refcounter.erase(it);
-            size += frag.size;
+        {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            auto it = m_refcounter.find(frag);
+            if (it == m_refcounter.end()) {
+                throw std::exception();
+                // return std::numeric_limits<std::size_t>::max();
+            }
+            if (--(it->second) == 0) {
+                auto pointer = pointer_traits::get_pointer(frag.pointer);
+                std::fill(m_data.begin() + pointer,
+                          m_data.begin() + pointer + frag.size, 0);
+                m_refcounter.erase(it);
+                size += frag.size;
+            }
         }
     }
     return size;
