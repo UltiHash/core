@@ -26,6 +26,7 @@ etcd:
       value: "testing"
       effect: "NoSchedule"
   persistence:
+    storageClass: $UH_STORAGE_CLASS
     size: 8Gi
 
 entrypoint:
@@ -72,6 +73,13 @@ storage:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  localVolumes:                       
+    - name: storage0      
+      hostPath: "/storage0"
+      containerPath: "/var/lib/uh/storage0"
+    - name: storage1      
+      hostPath: "/storage1"
+      containerPath: "/var/lib/uh/storage1"
 
 deduplicator:
   replicas: $EC2_INSTANCE_COUNT
