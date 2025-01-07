@@ -6,6 +6,7 @@
 #include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
+#include <memory>
 
 using namespace fakeit;
 using namespace std::chrono_literals;
@@ -26,46 +27,55 @@ public:
                                        .level = boost::log::trivial::debug,
                                        .service_role = DEDUPLICATOR_SERVICE}}};
         log::init(log_config);
+
+        std::this_thread::sleep_for(1s);
     }
 
-    fixture()
-        : manager{} {
+    fixture() {
         When(Method(mock, handle_state_changes))
             .AlwaysDo([](const etcd::Response&) {});
     }
 
-    ~fixture() {
-        manager.clear_all();
-        std::this_thread::sleep_for(1s);
-    }
+    ~fixture() { std::this_thread::sleep_for(1s); }
 
 protected:
     etcd_config cfg;
-    etcd_manager manager;
     etcd::Response response;
     Mock<callback_interface> mock;
 };
 
-BOOST_AUTO_TEST_SUITE(a_etcd_manager)
+BOOST_AUTO_TEST_SUITE(when_client_has_system_failure_a_etcd_manager)
 
-BOOST_FIXTURE_TEST_CASE(returns_the_written_value_through_get, fixture) {
+BOOST_FIXTURE_TEST_CASE(can_read_value_before_lease_time, fixture) {
+    auto manager =
+        std::make_unique<etcd_manager>(etcd_config{}, 10 /*seconds*/);
     const auto value = std::string("172.0.0.1");
-    manager.put("/test/a", value);
+    manager->put("/test/a", value);
+    std::this_thread::sleep_for(1s);
+    manager.reset();
+    std::this_thread::sleep_for(1s);
 
-    auto read = manager.get("/test/a");
-    BOOST_TEST(value == read);
+    manager.reset(new etcd_manager({}, 10));
+    std::this_thread::sleep_for(1s);
+    auto read = manager->get("/test/a");
+
+    BOOST_TEST(read == value);
+    manager->clear_all();
 }
 
-BOOST_FIXTURE_TEST_CASE(returns_all_keys_under_the_given_path, fixture) {
+BOOST_FIXTURE_TEST_CASE(cannot_read_value_after_lease_time, fixture) {
+    auto manager = std::make_unique<etcd_manager>(etcd_config{}, 2 /*second*/);
     const auto value = std::string("172.0.0.1");
-    auto keys = std::vector<std::string>{"/test/a", "/test/b"};
-    manager.put(keys[0], "0");
-    manager.put(keys[1], "1");
-
-    auto read = manager.keys("/test/");
-
-    BOOST_REQUIRE_EQUAL_COLLECTIONS(read.begin(), read.end(), keys.begin(),
-                                    keys.end());
+    manager->put("/test/a", value);
+    manager.reset();
+    // std::this_thread::sleep_for(1.2s);
+    //
+    std::this_thread::sleep_for(2.5s);
+    manager.reset(new etcd_manager({}, 2));
+    auto read = manager->get("/test/a");
+    //
+    BOOST_TEST(read == "");
+    manager->clear_all();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

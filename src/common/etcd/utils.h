@@ -51,9 +51,36 @@ public:
      * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
      */
-    explicit etcd_manager(const etcd_config& cfg = {}, int ttl = 30);
+    etcd_manager(const etcd_config& cfg = {}, int ttl = 30);
     ~etcd_manager();
 
+    /*
+     * Save key value pair
+     */
+    void put(const std::string& key, const std::string& value);
+
+    /*
+     * Retrieve methods
+     */
+    std::string get(const std::string& key);
+    std::vector<std::string> keys(const std::string& prefix = "/");
+    std::map<std::string, std::string> ls(const std::string& prefix = "/");
+
+    /*
+     * Remove methods
+     */
+    void rmdir(const std::string& prefix);
+    void clear_all();
+
+    /*
+     * Watch given prefix recursively
+     */
+    void watch(const std::string& prefix,
+               std::function<void(etcd::Response)> callback);
+
+    /*
+     * Lock methods
+     */
     class lock_guard {
     public:
         explicit lock_guard(etcd_manager* manager, const std::string& lock_key)
@@ -65,41 +92,25 @@ public:
     private:
         etcd_manager* m_etcd_manager;
         std::string m_unlock_key;
+
+        friend class etcd_manager;
     };
 
     lock_guard get_lock_guard(const std::string& lock_key);
 
+protected:
     std::string lock(const std::string& lock_key);
     void unlock(const std::string& unlock_key);
 
-    void rmdir(const std::string& prefix);
-    /*
-     * Save key value pair
-     */
-    void put(const std::string& key, const std::string& value);
-
-    std::string get(const std::string& key);
-
-    etcd::Keys keys(const std::string& prefix = "/");
-    std::map<std::string, std::string> ls(const std::string& prefix = "/");
-
-    void clear_all();
-
-    /*
-     * Watch given prefix recursively
-     */
-    void watch(const std::string& prefix,
-               std::function<void(etcd::Response)> callback);
-
 private:
     const etcd_config m_cfg;
-    int m_ttl;
+    int m_lease_second;
     std::unique_ptr<etcd::SyncClient> m_client;
     std::unique_ptr<etcd::Watcher> m_healthchecker;
 
     int64_t m_lease;
     std::unique_ptr<etcd::KeepAlive> m_keepalive;
-    std::map<std::string, std::string> m_key_value;
+    // std::map<std::string, std::string> m_key_value;
 
     struct watcher_entry {
         std::string prefix;
@@ -112,7 +123,7 @@ private:
 
     void reset();
 
-    void restore_key_values(void);
+    // void restore_key_values(void);
 
     void restore_watchers(void);
 

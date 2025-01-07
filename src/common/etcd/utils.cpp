@@ -2,6 +2,7 @@
 
 #include "common/telemetry/log.h"
 #include "namespace.h"
+#include <stdexcept>
 
 using namespace std::chrono_literals;
 
@@ -86,16 +87,14 @@ void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
     });
 }
 
-etcd_manager::etcd_manager(const etcd_config& cfg, int ttl)
+etcd_manager::etcd_manager(const etcd_config& cfg, int lease_second)
     : m_cfg{cfg},
-      m_ttl{ttl} {
-
-    m_client = create_client(m_cfg);
+      m_lease_second{lease_second} {
     reset();
 }
 
 etcd_manager::~etcd_manager() {
-    m_client->leaserevoke(m_lease);
+    // m_client->leaserevoke(m_lease);
     m_healthchecker->Cancel();
     for (auto& e : watcher_entries) {
         e.watcher->Cancel();
@@ -106,10 +105,10 @@ etcd_manager::~etcd_manager() {
  * Save key value pair
  */
 void etcd_manager::put(const std::string& key, const std::string& value) {
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_key_value[key] = value;
-    }
+    // {
+    //     std::lock_guard<std::mutex> lock(m_mutex);
+    //     m_key_value[key] = value;
+    // }
     auto resp = m_client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
@@ -164,7 +163,7 @@ void etcd_manager::rmdir(const std::string& prefix) { m_client->rmdir(prefix); }
 
 void etcd_manager::clear_all() {
     LOG_DEBUG() << "etcd_manager.clear_all() called";
-    m_key_value.clear();
+    // m_key_value.clear();
     for (const auto& key : keys()) {
         m_client->rm(key);
     }
@@ -189,9 +188,15 @@ void etcd_manager::reset() {
         m_client = create_client(m_cfg);
 
         // Initialization
-        m_lease = m_client->leasegrant(m_ttl).value().lease();
-        m_keepalive.reset(new etcd::KeepAlive(*m_client, m_ttl / 2, m_lease));
-        restore_key_values();
+        m_lease = m_client->leasegrant(m_lease_second).value().lease();
+        if (m_lease_second < 2) {
+            throw std::runtime_error("ttl(" + std::to_string(m_lease_second) +
+                                     ") should be bigger than 2, to make sure "
+                                     "keepalive is smaller than lease time");
+        }
+        m_keepalive.reset(
+            new etcd::KeepAlive(*m_client, m_lease_second / 2, m_lease));
+        // restore_key_values();
         restore_watchers();
 
         m_healthchecker.reset(
@@ -205,11 +210,11 @@ void etcd_manager::reset() {
     });
 }
 
-void etcd_manager::restore_key_values(void) {
-    for (const auto& [key, value] : m_key_value) {
-        m_client->put(key, value, m_lease);
-    }
-}
+// void etcd_manager::restore_key_values(void) {
+//     for (const auto& [key, value] : m_key_value) {
+//         m_client->put(key, value, m_lease);
+//     }
+// }
 
 void etcd_manager::restore_watchers(void) {
     for (auto& e : watcher_entries) {
