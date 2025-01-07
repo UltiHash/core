@@ -2,7 +2,6 @@
 
 #include "common/etcd/utils.h"
 #include "fakeit/fakeit.hpp"
-#include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
 
@@ -107,15 +106,16 @@ BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
                         fixture) {
 
     auto lease = etcd_client.leasegrant(30).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
     auto key = std::string("/foo/bar");
     auto resp_lock = etcd_client.lock_with_lease(key, lease);
 
     std::future<etcd::Response> future_lock2 =
-        std::async(std::launch::async,
-                   [&]() { return etcd_client.lock_with_lease(key, lease); });
+        std::async(std::launch::async, [&]() {
+            auto lease = etcd_client.leasegrant(30).value().lease();
+            return etcd_client.lock_with_lease(key, lease);
+        });
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     BOOST_CHECK(future_lock2.wait_for(std::chrono::seconds(0)) ==
                 std::future_status::timeout);
 

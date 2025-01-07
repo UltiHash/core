@@ -1,14 +1,10 @@
 #define BOOST_TEST_MODULE "etcd manager tests"
 
 #include "common/etcd/utils.h"
-#include "common/telemetry/log.h"
-#include "fakeit/fakeit.hpp"
-#include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
 #include <memory>
 
-using namespace fakeit;
 using namespace std::chrono_literals;
 
 namespace uh::cluster {
@@ -37,12 +33,11 @@ BOOST_AUTO_TEST_CASE(cannot_read_value_after_lease_time) {
     const auto value = std::string("172.0.0.1");
     manager->put("/test/a", value);
     manager.reset();
-    // std::this_thread::sleep_for(1.2s);
-    //
+
     std::this_thread::sleep_for(2.5s);
     manager.reset(new etcd_manager({}, 2));
     auto read = manager->get("/test/a");
-    //
+
     BOOST_TEST(read == "");
     manager->clear_all();
 }

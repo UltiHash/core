@@ -19,31 +19,15 @@ struct etcd_config {
     std::optional<std::string> password;
 };
 
-/**
- * Create etcd client
- */
-std::unique_ptr<::etcd::SyncClient> make_etcd_client(const etcd_config& cfg);
-
-/**
- * a loop for initialized a watcher with auto-restart capability
- */
-void initialize_watcher(std::unique_ptr<etcd::SyncClient>& client,
-                        const std::string& prefix,
-                        std::function<void(etcd::Response)> callback,
-                        std::shared_ptr<etcd::Watcher>& watcher);
-void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
-                        std::function<void(etcd::Response)> callback,
-                        std::shared_ptr<etcd::Watcher>& watcher);
-void initialize_watcher(const etcd_config& cfg, const std::string& prefix,
-                        std::function<void(etcd::Response)> callback,
-                        std::shared_ptr<etcd::Watcher>& watcher);
-
 using namespace std::chrono_literals;
+
 /**
  * This class handles all access to the etcd client, including error checking
  * and resetting the client.
  * Writing and reading should be managed in a single class, as every access
  * pattern should be reset when a problem occurs.
+ * This class does not save keys without lease.
+ * And it clears all resources with revoking used lease.
  */
 class etcd_manager {
 public:
@@ -96,7 +80,9 @@ public:
         friend class etcd_manager;
     };
 
-    [[nodiscard]] lock_guard get_lock_guard(const std::string& lock_key);
+    [[nodiscard]] lock_guard get_lock_guard(const std::string& lock_key) {
+        return etcd_manager::lock_guard(this, lock_key);
+    }
 
 protected:
     std::string lock(const std::string& lock_key);

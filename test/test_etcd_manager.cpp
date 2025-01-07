@@ -3,7 +3,6 @@
 #include "common/etcd/utils.h"
 #include "common/telemetry/log.h"
 #include "fakeit/fakeit.hpp"
-#include "utils/system.h"
 
 #include <boost/test/unit_test.hpp>
 #include <ranges>
@@ -167,20 +166,32 @@ BOOST_FIXTURE_TEST_CASE(
         { auto lock_guard = manager.get_lock_guard("/foo/bar"); });
 }
 
-BOOST_FIXTURE_TEST_CASE(cannot_get_lock_from_same_key_twice, fixture) {
-    auto lock_guard = manager.get_lock_guard("/foo/bar");
+BOOST_FIXTURE_TEST_CASE(
+    can_get_lock_from_same_key_after_first_lock_is_distroyed, fixture) {
+    { auto lock_guard = manager.get_lock_guard("/foo/bar"); }
 
-    BOOST_CHECK_THROW({ auto lock_guard = manager.get_lock_guard("/foo/bar"); },
-                      std::invalid_argument);
+    BOOST_CHECK_NO_THROW(
+        { auto lock_guard = manager.get_lock_guard("/foo/bar"); });
 }
-//
-// BOOST_FIXTURE_TEST_CASE(
-//     can_get_lock_from_same_key_after_first_lock_is_distroyed, fixture) {
-//     { auto lock_guard = manager.get_lock_guard("/foo/bar"); }
-//
-//     BOOST_CHECK_NO_THROW(
-//         { auto lock_guard = manager.get_lock_guard("/foo/bar"); });
-// }
+
+BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
+                        fixture) {
+
+    std::optional<std::future<void>> future;
+    {
+        auto lock_guard = manager.get_lock_guard("/foo/bar");
+
+        // Emulate second client
+        future = std::async(std::launch::async, []() {
+            etcd_manager manager;
+            auto lock_guard = manager.get_lock_guard("/foo/bar");
+        });
+
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        BOOST_CHECK(future->wait_for(std::chrono::seconds(0)) ==
+                    std::future_status::timeout);
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

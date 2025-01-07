@@ -8,85 +8,6 @@ using namespace std::chrono_literals;
 
 namespace uh::cluster {
 
-std::unique_ptr<etcd::SyncClient>
-make_etcd_client(const etcd_config& cfg = {}) {
-    while (true) {
-        try {
-            std::unique_ptr<etcd::SyncClient> client;
-            if (cfg.username && cfg.password) {
-                client = std::make_unique<etcd::SyncClient>(
-                    cfg.url, *cfg.username, *cfg.password);
-            } else {
-                client = std::make_unique<etcd::SyncClient>(cfg.url);
-            }
-
-            if (!client->head().is_ok()) {
-                LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
-                std::this_thread::sleep_for(1s);
-                continue;
-            }
-            return client;
-        } catch (const std::exception& e) {
-            LOG_DEBUG() << "cannot connect to etcd. trying to reconnect: "
-                        << e.what();
-            std::this_thread::sleep_for(1s);
-        }
-    }
-}
-
-void wait_for_connection(etcd::SyncClient& client) {
-    while (!client.head().is_ok()) {
-        LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
-        std::this_thread::sleep_for(1s);
-    }
-}
-
-void initialize_watcher(std::unique_ptr<etcd::SyncClient>& client,
-                        const std::string& prefix,
-                        std::function<void(etcd::Response)> callback,
-                        std::shared_ptr<etcd::Watcher>& watcher) {
-    client = make_etcd_client({});
-    wait_for_connection(*client);
-
-    if (watcher && watcher->Cancelled()) {
-        LOG_INFO() << "watcher's reconnect loop been cancelled";
-        return;
-    }
-    watcher.reset(
-        new etcd::Watcher(*client, prefix, callback, true /*recursive*/));
-
-    watcher->Wait([&client, prefix, callback,
-                   &watcher](bool cancelled) mutable {
-        if (cancelled) {
-            LOG_INFO() << "watcher's reconnect loop stopped as been cancelled";
-            return;
-        }
-        initialize_watcher(client, prefix, callback, watcher);
-    });
-}
-
-void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
-                        std::function<void(etcd::Response)> callback,
-                        std::shared_ptr<etcd::Watcher>& watcher) {
-    wait_for_connection(client);
-
-    if (watcher && watcher->Cancelled()) {
-        LOG_INFO() << "watcher's reconnect loop been cancelled";
-        return;
-    }
-    watcher.reset(
-        new etcd::Watcher(client, prefix, callback, true /*recursive*/));
-
-    watcher->Wait([&client, prefix, callback,
-                   &watcher](bool cancelled) mutable {
-        if (cancelled) {
-            LOG_INFO() << "watcher's reconnect loop stopped as been cancelled";
-            return;
-        }
-        initialize_watcher(client, prefix, callback, watcher);
-    });
-}
-
 etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
     : m_cfg{cfg},
       m_lease_timeout{lease_timeout} {
@@ -94,7 +15,7 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
 }
 
 etcd_manager::~etcd_manager() {
-    // m_client->leaserevoke(m_lease);
+    m_client->leaserevoke(m_lease);
     m_healthchecker->Cancel();
     for (auto& e : watcher_entries) {
         e.watcher->Cancel();
@@ -133,9 +54,18 @@ std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
     return ret;
 }
 
-etcd_manager::lock_guard
-etcd_manager::get_lock_guard(const std::string& lock_key) {
-    return etcd_manager::lock_guard(this, lock_key);
+void etcd_manager::rmdir(const std::string& prefix) noexcept {
+    m_client->rmdir(prefix, true);
+}
+
+void etcd_manager::clear_all() noexcept { rmdir("/"); }
+
+void etcd_manager::watch(const std::string& prefix,
+                         std::function<void(etcd::Response)> callback) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    watcher_entries.emplace_back(
+        prefix, callback,
+        std::make_unique<etcd::Watcher>(*m_client, prefix, callback, true));
 }
 
 std::string etcd_manager::lock(const std::string& lock_key) {
@@ -156,31 +86,18 @@ void etcd_manager::unlock(const std::string& unlock_key) {
             " failed, details: " + resp.error_message());
 }
 
-void etcd_manager::rmdir(const std::string& prefix) noexcept {
-    m_client->rmdir(prefix, true);
-}
-
-void etcd_manager::clear_all() noexcept { rmdir("/"); }
-
-void etcd_manager::watch(const std::string& prefix,
-                         std::function<void(etcd::Response)> callback) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    watcher_entries.emplace_back(
-        prefix, callback,
-        std::make_unique<etcd::Watcher>(*m_client, prefix, callback, true));
-}
-
+/*
+ * This function recreates etcd client to recover quickly (15s -> 1s)
+ */
 void etcd_manager::reset() {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        // Recreate etcd client to recover quickly (15s -> 1s)
         if (m_healthchecker && m_healthchecker->Cancelled()) {
             return;
         }
 
         m_client = create_client(m_cfg);
 
-        // Initialization
         m_lease = m_client->leasegrant(m_lease_timeout).value().lease();
         if (m_lease_timeout < 2) {
             throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
@@ -189,9 +106,7 @@ void etcd_manager::reset() {
         }
         m_keepalive.reset(
             new etcd::KeepAlive(*m_client, m_lease_timeout / 2, m_lease));
-        // restore_key_values();
         restore_watchers();
-
         m_healthchecker.reset(
             new etcd::Watcher(*m_client, etcd_healthcheck, {}, false));
     }
