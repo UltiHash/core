@@ -22,14 +22,14 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
 
         try {
             auto hdr = co_await m.recv_header();
-            ctx = hdr.ctx.sub_context("deduplicator-handler-request");
-            ctx.set_attribute("request-type", magic_enum::enum_name(hdr.type));
+            ctx = std::move(hdr.ctx);
 
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 
             switch (hdr.type) {
             case DEDUPLICATOR_REQ:
+                ctx = ctx.sub_context("deduplicator-dedupe");
                 co_await handle_dedupe(ctx, m, hdr);
                 break;
             default:

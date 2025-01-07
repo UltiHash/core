@@ -72,7 +72,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     auto cmd = co_await m_command_factory.create(req);
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
-    req.context().set_attribute("request-action", cmd->action_id());
+    req.context().set_name(cmd->action_id());
     co_await cmd->validate(req);
 
     LOG_DEBUG() << req.peer() << ": checking policies";

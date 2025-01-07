@@ -23,6 +23,8 @@ public:
         m_span->span->SetAttribute(name, std::move(v));
     }
 
+    void set_name(const std::string& name);
+
     std::vector<char> serialize() const;
 
     boost::asio::ip::tcp::endpoint& peer() { return m_peer; }

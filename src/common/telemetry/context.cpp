@@ -57,6 +57,10 @@ context context::sub_context(const std::string& name) {
         get_tracer()->StartSpan(name, {.parent = m_span->span->GetContext()}));
 }
 
+void context::set_name(const std::string& name) {
+    m_span->span->UpdateName(name);
+}
+
 std::vector<char> context::serialize() const {
     std::vector<char> rv(SERIALIZED_SIZE);
     if (!m_span) {
