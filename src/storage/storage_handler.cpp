@@ -28,7 +28,7 @@ coro<void> storage_handler::handle(boost::asio::ip::tcp::socket s) {
         try {
             auto hdr = co_await m.recv_header();
             ctx = hdr.ctx.sub_context("storage-handler-request");
-            ctx.set_attribute("request-id", static_cast<unsigned>(hdr.type));
+            ctx.set_attribute("request-type", magic_enum::enum_name(hdr.type));
 
             LOG_DEBUG() << remote.str() << ": received "
                         << magic_enum::enum_name(hdr.type);
