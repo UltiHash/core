@@ -13,40 +13,9 @@ using namespace std::chrono_literals;
 
 namespace uh::cluster {
 
-class callback_interface {
-public:
-    virtual ~callback_interface() = default;
-    virtual void handle_state_changes(const etcd::Response& response) = 0;
-};
-
-class fixture {
-public:
-    void setup() {
-        auto log_config = log::config{
-            .sinks = {log::sink_config{.type = log::sink_type::cout,
-                                       .level = boost::log::trivial::debug,
-                                       .service_role = DEDUPLICATOR_SERVICE}}};
-        log::init(log_config);
-
-        std::this_thread::sleep_for(1s);
-    }
-
-    fixture() {
-        When(Method(mock, handle_state_changes))
-            .AlwaysDo([](const etcd::Response&) {});
-    }
-
-    ~fixture() { std::this_thread::sleep_for(1s); }
-
-protected:
-    etcd_config cfg;
-    etcd::Response response;
-    Mock<callback_interface> mock;
-};
-
 BOOST_AUTO_TEST_SUITE(when_client_has_system_failure_a_etcd_manager)
 
-BOOST_FIXTURE_TEST_CASE(can_read_value_before_lease_time, fixture) {
+BOOST_AUTO_TEST_CASE(can_read_value_before_lease_time) {
     auto manager =
         std::make_unique<etcd_manager>(etcd_config{}, 10 /*seconds*/);
     const auto value = std::string("172.0.0.1");
@@ -63,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(can_read_value_before_lease_time, fixture) {
     manager->clear_all();
 }
 
-BOOST_FIXTURE_TEST_CASE(cannot_read_value_after_lease_time, fixture) {
+BOOST_AUTO_TEST_CASE(cannot_read_value_after_lease_time) {
     auto manager = std::make_unique<etcd_manager>(etcd_config{}, 2 /*second*/);
     const auto value = std::string("172.0.0.1");
     manager->put("/test/a", value);

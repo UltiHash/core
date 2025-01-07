@@ -87,9 +87,9 @@ void initialize_watcher(etcd::SyncClient& client, const std::string& prefix,
     });
 }
 
-etcd_manager::etcd_manager(const etcd_config& cfg, int lease_second)
+etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
     : m_cfg{cfg},
-      m_lease_second{lease_second} {
+      m_lease_timeout{lease_timeout} {
     reset();
 }
 
@@ -105,10 +105,6 @@ etcd_manager::~etcd_manager() {
  * Save key value pair
  */
 void etcd_manager::put(const std::string& key, const std::string& value) {
-    // {
-    //     std::lock_guard<std::mutex> lock(m_mutex);
-    //     m_key_value[key] = value;
-    // }
     auto resp = m_client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
@@ -123,7 +119,7 @@ std::string etcd_manager::get(const std::string& key) {
     return resp.value().as_string();
 }
 
-etcd::Keys etcd_manager::keys(const std::string& prefix) {
+std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
     return m_client->keys(prefix).keys();
 }
 
@@ -148,6 +144,7 @@ std::string etcd_manager::lock(const std::string& lock_key) {
         throw std::invalid_argument(
             "getting lock with lock_key " + lock_key +
             " failed, details: " + resp.error_message());
+    std::cout << resp.lock_key() << std::endl;
     return resp.lock_key();
 }
 
@@ -159,15 +156,11 @@ void etcd_manager::unlock(const std::string& unlock_key) {
             " failed, details: " + resp.error_message());
 }
 
-void etcd_manager::rmdir(const std::string& prefix) { m_client->rmdir(prefix); }
-
-void etcd_manager::clear_all() {
-    LOG_DEBUG() << "etcd_manager.clear_all() called";
-    // m_key_value.clear();
-    for (const auto& key : keys()) {
-        m_client->rm(key);
-    }
+void etcd_manager::rmdir(const std::string& prefix) noexcept {
+    m_client->rmdir(prefix, true);
 }
+
+void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
 void etcd_manager::watch(const std::string& prefix,
                          std::function<void(etcd::Response)> callback) {
@@ -188,14 +181,14 @@ void etcd_manager::reset() {
         m_client = create_client(m_cfg);
 
         // Initialization
-        m_lease = m_client->leasegrant(m_lease_second).value().lease();
-        if (m_lease_second < 2) {
-            throw std::runtime_error("ttl(" + std::to_string(m_lease_second) +
+        m_lease = m_client->leasegrant(m_lease_timeout).value().lease();
+        if (m_lease_timeout < 2) {
+            throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
                                      ") should be bigger than 2, to make sure "
                                      "keepalive is smaller than lease time");
         }
         m_keepalive.reset(
-            new etcd::KeepAlive(*m_client, m_lease_second / 2, m_lease));
+            new etcd::KeepAlive(*m_client, m_lease_timeout / 2, m_lease));
         // restore_key_values();
         restore_watchers();
 
@@ -209,12 +202,6 @@ void etcd_manager::reset() {
         reset();
     });
 }
-
-// void etcd_manager::restore_key_values(void) {
-//     for (const auto& [key, value] : m_key_value) {
-//         m_client->put(key, value, m_lease);
-//     }
-// }
 
 void etcd_manager::restore_watchers(void) {
     for (auto& e : watcher_entries) {

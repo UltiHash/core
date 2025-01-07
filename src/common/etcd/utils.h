@@ -51,7 +51,7 @@ public:
      * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
      */
-    etcd_manager(const etcd_config& cfg = {}, int ttl = 30);
+    etcd_manager(const etcd_config& cfg = {}, int lease_timeout = 30);
     ~etcd_manager();
 
     /*
@@ -69,8 +69,8 @@ public:
     /*
      * Remove methods
      */
-    void rmdir(const std::string& prefix);
-    void clear_all();
+    void rmdir(const std::string& prefix) noexcept;
+    void clear_all() noexcept;
 
     /*
      * Watch given prefix recursively
@@ -96,7 +96,7 @@ public:
         friend class etcd_manager;
     };
 
-    lock_guard get_lock_guard(const std::string& lock_key);
+    [[nodiscard]] lock_guard get_lock_guard(const std::string& lock_key);
 
 protected:
     std::string lock(const std::string& lock_key);
@@ -104,13 +104,12 @@ protected:
 
 private:
     const etcd_config m_cfg;
-    int m_lease_second;
+    int m_lease_timeout;
     std::unique_ptr<etcd::SyncClient> m_client;
     std::unique_ptr<etcd::Watcher> m_healthchecker;
 
     int64_t m_lease;
     std::unique_ptr<etcd::KeepAlive> m_keepalive;
-    // std::map<std::string, std::string> m_key_value;
 
     struct watcher_entry {
         std::string prefix;
@@ -122,8 +121,6 @@ private:
     std::mutex m_mutex;
 
     void reset();
-
-    // void restore_key_values(void);
 
     void restore_watchers(void);
 

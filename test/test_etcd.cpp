@@ -19,121 +19,88 @@ public:
 
 class fixture {
 public:
-    void setup() {
-        run_with_optional_sudo("systemctl start etcd");
-        std::this_thread::sleep_for(1s);
-    }
-
-    fixture() {
+    fixture()
+        : etcd_address{"http://127.0.0.1:2379"},
+          etcd_client{etcd_address} {
         When(Method(mock, handle_state_changes))
             .AlwaysDo([](const etcd::Response&) {});
     }
 
-    ~fixture() {}
+    ~fixture() { etcd_client.rmdir("/", true); }
 
 protected:
+    std::string etcd_address;
+    etcd::SyncClient etcd_client;
     etcd_config cfg;
     etcd::Response response;
     Mock<callback_interface> mock;
 };
 
-BOOST_AUTO_TEST_SUITE(MockCallbackTestSuite)
+BOOST_AUTO_TEST_SUITE(a_etcd_client)
 
-BOOST_FIXTURE_TEST_CASE(watcher_calls_callback_on_key_change, fixture) {
-    auto etcd_client = make_etcd_client(cfg);
-    etcd_client->set("test0", "initial_value");
+BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
+    etcd_client.set("test0", "initial_value");
     std::shared_ptr<etcd::Watcher> watcher;
-    initialize_watcher(
+    watcher.reset(new etcd::Watcher(
         etcd_client, "test0",
         [&cb = mock.get()](const etcd::Response& response) {
             cb.handle_state_changes(response);
         },
-        watcher);
+        true /*recursive*/));
 
-    etcd_client->set("test0", "updated_value");
+    etcd_client.set("test0", "updated_value");
     std::this_thread::sleep_for(100ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
 }
 
-BOOST_FIXTURE_TEST_CASE(
-    watcher_calls_callback_on_key_change_when_it_is_canceled, fixture) {
-    auto etcd_client = make_etcd_client(cfg);
-    etcd_client->set("test0", "initial_value");
+BOOST_FIXTURE_TEST_CASE(cannot_watch_changes_on_the_given_key_after_calcelation,
+                        fixture) {
+    etcd_client.set("test0", "initial_value");
     std::shared_ptr<etcd::Watcher> watcher;
-    initialize_watcher(
+    watcher.reset(new etcd::Watcher(
         etcd_client, "test0",
         [&cb = mock.get()](const etcd::Response& response) {
             cb.handle_state_changes(response);
         },
-        watcher);
+        true /*recursive*/));
 
     watcher->Cancel();
-    etcd_client->set("test0", "updated_value");
+    etcd_client.set("test0", "updated_value");
     std::this_thread::sleep_for(100ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(0);
 }
 
-BOOST_FIXTURE_TEST_CASE(watcher_doesnt_work_when_etcd_stopped, fixture) {
+BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
+    etcd_client.set("/foo/bar", "1");
 
-    auto etcd_client = make_etcd_client(cfg);
-    etcd_client->set("test0", "initial_value");
-    std::shared_ptr<etcd::Watcher> watcher;
-    initialize_watcher(
-        etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
-        watcher);
+    auto resp = etcd_client.get("/foo/bar");
 
-    try {
-        BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl stop etcd"), 0);
-        std::this_thread::sleep_for(1s);
-
-        etcd_client->set("test0", "updated_value");
-        std::this_thread::sleep_for(100ms);
-
-        BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl start etcd"), 0);
-        std::this_thread::sleep_for(1s);
-    } catch (...) {
-        run_with_optional_sudo("systemctl start etcd");
-        std::this_thread::sleep_for(1s);
-    }
-
-    Verify(Method(mock, handle_state_changes)).Exactly(0_Times);
+    BOOST_TEST(resp.is_ok() == true);
+    BOOST_TEST(resp.value().as_string() == "1");
 }
 
-BOOST_FIXTURE_TEST_CASE(watcher_handles_etcd_restart, fixture) {
+BOOST_FIXTURE_TEST_CASE(get_locks, fixture) {
+    auto lease = etcd_client.leasegrant(30).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
+    auto key = std::string("/foo/bar");
 
-    auto etcd_client = make_etcd_client(cfg);
-    etcd_client->set("test0", "initial_value");
-    std::shared_ptr<etcd::Watcher> watcher;
-    initialize_watcher(
-        etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
-        watcher);
+    auto resp = etcd_client.lock_with_lease(key, lease);
 
-    try {
-        BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl stop etcd"), 0);
-        std::this_thread::sleep_for(1s);
+    BOOST_TEST(resp.is_ok() == true);
+    BOOST_TEST(resp.lock_key().substr(0, key.size()) == key);
+}
 
-        etcd_client->set("test0", "updated_value");
-        std::this_thread::sleep_for(100ms);
+BOOST_FIXTURE_TEST_CASE(does_unlocks_with_key_given_from_lock, fixture) {
+    auto lease = etcd_client.leasegrant(30).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
+    auto key = std::string("/foo/bar");
 
-        BOOST_CHECK_EQUAL(run_with_optional_sudo("systemctl start etcd"), 0);
-        std::this_thread::sleep_for(1s);
+    auto resp_lock = etcd_client.lock_with_lease(key, lease);
+    auto resp_unlock = etcd_client.unlock(resp_lock.lock_key());
 
-        etcd_client->set("test0", "updated_value");
-        std::this_thread::sleep_for(100ms);
-    } catch (...) {
-        run_with_optional_sudo("systemctl start etcd");
-        std::this_thread::sleep_for(1s);
-    }
-
-    Verify(Method(mock, handle_state_changes)).Exactly(1_Times);
+    BOOST_TEST(resp_unlock.is_ok() == true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

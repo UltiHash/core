@@ -39,7 +39,7 @@ public:
 
     ~fixture() {
         manager.clear_all();
-        std::this_thread::sleep_for(1s);
+        std::this_thread::sleep_for(100ms);
     }
 
 protected:
@@ -53,7 +53,7 @@ protected:
 BOOST_AUTO_TEST_SUITE(when_etcd_has_system_failure_a_etcd_manager)
 
 BOOST_FIXTURE_TEST_CASE(
-    recover_previous_attached_watchers_to_watch_change_well_after_etcd_restarts,
+    recovers_previous_attached_watchers_to_watch_change_well_after_etcd_restarts,
     fixture) {
     manager.watch("/test_1",
                   [&cb = mock.get()](const etcd::Response& response) {
