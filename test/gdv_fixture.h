@@ -20,7 +20,7 @@ public:
               service_factory<storage_interface>(
                   m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
 
-    ~global_data_view_fixture() { teardown(); }
+    virtual ~global_data_view_fixture() { teardown(); }
 
     void setup() {
 
