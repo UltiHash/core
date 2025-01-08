@@ -82,7 +82,6 @@ BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(get_locks, fixture) {
     auto lease = etcd_client.leasegrant(30).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
     auto key = std::string("/foo/bar");
 
     auto resp = etcd_client.lock_with_lease(key, lease);
@@ -93,7 +92,6 @@ BOOST_FIXTURE_TEST_CASE(get_locks, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(does_unlocks_with_key_given_from_lock, fixture) {
     auto lease = etcd_client.leasegrant(30).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 15, lease);
     auto key = std::string("/foo/bar");
 
     auto resp_lock = etcd_client.lock_with_lease(key, lease);
