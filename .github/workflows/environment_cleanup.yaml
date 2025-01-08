@@ -1,14 +1,16 @@
 name: Environment Cleanup
 
 on:
-  delete:
+  pull_request:
+    types:
+      - closed
 
 jobs:
   cleanup:
     runs-on: lightweight-generic-jobs
     steps:
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=$(cat ${{ github.event_path }} | jq --raw-output '.ref' | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
