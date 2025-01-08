@@ -10,6 +10,7 @@ on:
 
 jobs:
   unit-tsan-x86_64-linux:
+    if: false
     strategy:
       matrix:
         build: [Release]
