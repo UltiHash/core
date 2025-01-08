@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-  push:
 
 env:
   ENVIRONMENT_NAME: s3a-testing-x86-64
