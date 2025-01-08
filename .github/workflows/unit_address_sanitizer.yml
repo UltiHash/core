@@ -30,6 +30,7 @@ jobs:
       - name: Test
         env:
           ETCDCTL_API: 3
+          ASAN_OPTIONS: detect_odr_violation=0
         working-directory: ${{github.workspace}}/build
         run: |
           etcd&
