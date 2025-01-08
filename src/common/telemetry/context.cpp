@@ -53,8 +53,11 @@ context::context(const std::vector<char>& buffer)
 
 context context::sub_context(const std::string& name) {
     require_span();
-    return std::make_shared<span_wrap>(
-        get_tracer()->StartSpan(name, {.parent = m_span->span->GetContext()}));
+    context rv(std::make_shared<span_wrap>(
+        get_tracer()->StartSpan(name, {.parent = m_span->span->GetContext()})));
+
+    rv.peer() = peer();
+    return rv;
 }
 
 void context::set_name(const std::string& name) {
