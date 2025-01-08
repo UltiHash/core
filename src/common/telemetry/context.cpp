@@ -52,7 +52,10 @@ context::context(const std::vector<char>& buffer)
     : m_span(deserialize(buffer)) {}
 
 context context::sub_context(const std::string& name) {
-    require_span();
+    if (!m_span) {
+        return context();
+    }
+
     context rv(std::make_shared<span_wrap>(
         get_tracer()->StartSpan(name, {.parent = m_span->span->GetContext()})));
 
@@ -96,12 +99,6 @@ context::span_wrap::span_wrap(std::shared_ptr<opentelemetry::trace::Span> span)
     : span(std::move(span)) {}
 
 context::span_wrap::~span_wrap() { span->End(); }
-
-void context::require_span() const {
-    if (!m_span) {
-        throw std::runtime_error("no span set");
-    }
-}
 
 context::context(std::shared_ptr<span_wrap> span)
     : m_span(span) {}

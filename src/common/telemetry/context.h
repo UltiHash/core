@@ -43,7 +43,6 @@ public:
     };
 
 private:
-    void require_span() const;
     context(std::shared_ptr<span_wrap> span);
 
     std::shared_ptr<span_wrap> m_span;
