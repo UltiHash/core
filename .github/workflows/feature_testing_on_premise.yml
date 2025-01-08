@@ -31,6 +31,8 @@ jobs:
       docker_images: ghcr.io/ultihash/cluster
       docker_tags: ${{needs.set-env-name.env-name}}
       platforms: linux/amd64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
         
   build-database-init:
     uses: ./.github/workflows/docker_build_template.yml
@@ -42,6 +44,8 @@ jobs:
       docker_images: ghcr.io/ultihash/database-init
       docker_tags: ${{needs.set-env-name.env-name}}
       platforms: linux/amd64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
