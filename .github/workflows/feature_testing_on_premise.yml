@@ -7,22 +7,8 @@ on:
 
 jobs:
 
-  set-env-name:
-    runs-on: lightweight-generic-jobs
-    outputs:
-      env-name: ${{ steps.set-env-name.outputs.env-name }}
-    steps:
-      - name: Set environment name
-        id: set-env-name
-        run: |
-          echo "ENVIRONMENT_NAME=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-          echo $ENVIRONMENT_NAME
-          echo "::set-output name=env-name::${ENVIRONMENT_NAME}"
-
   build-core:
     uses: ./.github/workflows/docker_build_template.yml 
-    needs: 
-      - set-env-name
     with:
       docker_context: .
       dockerfile_path: Dockerfile
@@ -30,20 +16,18 @@ jobs:
         BuildType=RelWithDebInfo
         DebugTools=True
       docker_images: ghcr.io/ultihash/cluster
-      docker_tags: ${{ github.event.pull_request.number }}
+      docker_tags: "pr-${{ github.event.pull_request.number }}"
       platforms: linux/amd64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
         
   build-database-init:
     uses: ./.github/workflows/docker_build_template.yml
-    needs: 
-      - set-env-name
     with:
       docker_context: .
       dockerfile_path: tools/database-init/Dockerfile
       docker_images: ghcr.io/ultihash/database-init
-      docker_tags: ${{needs.set-env-name.env-name}}
+      docker_tags: "pr-${{ github.event.pull_request.number }}"
       platforms: linux/amd64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
@@ -51,12 +35,12 @@ jobs:
   deploy-and-test:
     runs-on: lightweight-generic-jobs
     needs:
-      - set-env-name
       - build-core
       - build-database-init
     steps:
-      - name: Set the testing environment name
-        run: echo "ENVIRONMENT_NAME=${{needs.set-env-name.env-name}}" >> $GITHUB_ENV
+
+      - name: Define testing environment name
+        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
