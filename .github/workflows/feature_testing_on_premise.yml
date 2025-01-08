@@ -19,7 +19,7 @@ jobs:
           echo "::set-output name=env-name::$(echo ${{ github.head_ref }} | tr '_' '-' | tr '.' '-' | tr '[:upper:]' '[:lower:]')"
 
   build-core:
-    uses: .github/workflows/docker_build_template.yml
+    uses: ./.github/workflows/docker_build_template.yml 
     needs: 
       - set-env-name
     with:
@@ -33,7 +33,7 @@ jobs:
       platforms: linux/amd64
         
   build-database-init:
-    uses: .github/workflows/docker_build_template.yml
+    uses: ./.github/workflows/docker_build_template.yml
     needs: 
       - set-env-name
     with:
