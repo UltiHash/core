@@ -61,7 +61,9 @@ context context::sub_context(const std::string& name) {
 }
 
 void context::set_name(const std::string& name) {
-    m_span->span->UpdateName(name);
+    if (m_span) {
+        m_span->span->UpdateName(name);
+    }
 }
 
 std::vector<char> context::serialize() const {

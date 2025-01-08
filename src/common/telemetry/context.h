@@ -20,7 +20,9 @@ public:
 
     template <typename value>
     void set_attribute(const std::string& name, value v) {
-        m_span->span->SetAttribute(name, std::move(v));
+        if (m_span) {
+            m_span->span->SetAttribute(name, std::move(v));
+        }
     }
 
     void set_name(const std::string& name);
