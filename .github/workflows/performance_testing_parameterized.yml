@@ -41,6 +41,7 @@ jobs:
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
+    timeout-minutes: 3600
     steps:
       - uses: actions/checkout@v4
         with:
