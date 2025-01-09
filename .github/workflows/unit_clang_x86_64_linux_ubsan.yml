@@ -1,0 +1,46 @@
+name: Unit Tests UBSAN (Linux, clang, x86_64)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  unit-ubsan-x86_64-linux:
+    strategy:
+      matrix:
+        build: [Release]
+    runs-on: heavyweight-core-x86-64-jobs
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
+
+      - name: Configure CMake
+        env:
+          CC: /usr/bin/clang-18
+          CXX: /usr/bin/clang++-18
+          CXXFLAGS: -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-sanitize-recover=all
+          LDFLAGS: -fsanitize=address
+        run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
+
+      - name: Test
+        env:
+          ETCDCTL_API: 3
+          ASAN_OPTIONS: detect_odr_violation=0
+        working-directory: ${{github.workspace}}/build
+        run: |
+          etcd&
+          sleep 5
+          etcdctl del "" --from-key=true
+          ctest -C ${{ matrix.build }} --output-on-failure
+          etcdctl del "" --from-key=true
+
