@@ -94,7 +94,7 @@ protected:
 private:
     const etcd_config m_cfg;
     int m_lease_timeout;
-    std::unique_ptr<etcd::SyncClient> m_client;
+    std::atomic<std::shared_ptr<etcd::SyncClient>> m_client;
     std::unique_ptr<etcd::Watcher> m_healthchecker;
 
     int64_t m_lease;
@@ -116,7 +116,7 @@ private:
     /**************************************************************************
      * Static utilities
      */
-    static std::unique_ptr<etcd::SyncClient>
+    static std::shared_ptr<etcd::SyncClient>
     create_client(const etcd_config& cfg = {});
 };
 

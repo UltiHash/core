@@ -15,7 +15,8 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
 }
 
 etcd_manager::~etcd_manager() {
-    m_client->leaserevoke(m_lease);
+    auto client = m_client.load();
+    client->leaserevoke(m_lease);
     m_healthchecker->Cancel();
     for (auto& e : watcher_entries) {
         e.watcher->Cancel();
@@ -26,7 +27,8 @@ etcd_manager::~etcd_manager() {
  * Save key value pair
  */
 void etcd_manager::put(const std::string& key, const std::string& value) {
-    auto resp = m_client->put(key, value, m_lease);
+    auto client = m_client.load();
+    auto resp = client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "setting the configuration parameter " + key +
@@ -34,7 +36,8 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
 }
 
 std::string etcd_manager::get(const std::string& key) {
-    auto resp = m_client->get(key);
+    auto client = m_client.load();
+    auto resp = client->get(key);
     if (!resp.is_ok())
         return "";
     return resp.value().as_string();
@@ -42,18 +45,21 @@ std::string etcd_manager::get(const std::string& key) {
 
 std::optional<std::string>
 etcd_manager::return_key_if_exists(const std::string& key) const {
-    auto resp = m_client->get(key);
+    auto client = m_client.load();
+    auto resp = client->get(key);
     if (!resp.is_ok())
         return std::nullopt;
     return resp.value().key();
 }
 
 std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
-    return m_client->keys(prefix).keys();
+    auto client = m_client.load();
+    return client->keys(prefix).keys();
 }
 
 std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
-    auto resp = m_client->ls(prefix);
+    auto client = m_client.load();
+    auto resp = client->ls(prefix);
     auto keys = resp.keys();
     std::map<std::string, std::string> ret;
     for (auto i = 0u; i < keys.size(); ++i) {
@@ -62,24 +68,32 @@ std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
     return ret;
 }
 
-void etcd_manager::rm(const std::string& key) noexcept { m_client->rm(key); }
+void etcd_manager::rm(const std::string& key) noexcept {
+    auto client = m_client.load();
+    client->rm(key);
+}
 
 void etcd_manager::rmdir(const std::string& prefix) noexcept {
-    m_client->rmdir(prefix, true);
+    auto client = m_client.load();
+    client->rmdir(prefix, true);
 }
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
 void etcd_manager::watch(const std::string& prefix,
                          std::function<void(etcd::Response)> callback) {
+    auto client = m_client.load();
+
     std::lock_guard<std::mutex> lock(m_mutex);
+
     watcher_entries.emplace_back(
         prefix, callback,
-        std::make_unique<etcd::Watcher>(*m_client, prefix, callback, true));
+        std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
 }
 
 std::string etcd_manager::lock(const std::string& lock_key) {
-    auto resp = m_client->lock_with_lease(lock_key, m_lease);
+    auto client = m_client.load();
+    auto resp = client->lock_with_lease(lock_key, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "getting lock with lock_key " + lock_key +
@@ -89,7 +103,8 @@ std::string etcd_manager::lock(const std::string& lock_key) {
 }
 
 void etcd_manager::unlock(const std::string& unlock_key) {
-    auto resp = m_client->unlock(unlock_key);
+    auto client = m_client.load();
+    auto resp = client->unlock(unlock_key);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "releasing lock with unlock_key " + unlock_key +
@@ -101,24 +116,21 @@ void etcd_manager::unlock(const std::string& unlock_key) {
  */
 void etcd_manager::reset() {
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (m_healthchecker && m_healthchecker->Cancelled()) {
-            return;
-        }
+        auto client = create_client(m_cfg);
 
-        m_client = create_client(m_cfg);
-
-        m_lease = m_client->leasegrant(m_lease_timeout).value().lease();
+        m_lease = client->leasegrant(m_lease_timeout).value().lease();
         if (m_lease_timeout < 2) {
             throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
                                      ") should be bigger than 2, to make sure "
                                      "keepalive is smaller than lease time");
         }
         m_keepalive.reset(
-            new etcd::KeepAlive(*m_client, m_lease_timeout / 2, m_lease));
+            new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
         restore_watchers();
         m_healthchecker.reset(
-            new etcd::Watcher(*m_client, etcd_healthcheck, {}, false));
+            new etcd::Watcher(*client, etcd_healthcheck, {}, false));
+
+        m_client.store(client);
     }
     m_healthchecker->Wait([this](bool cancelled) mutable {
         if (cancelled) {
@@ -129,20 +141,22 @@ void etcd_manager::reset() {
 }
 
 void etcd_manager::restore_watchers(void) {
+    auto client = m_client.load();
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     for (auto& e : watcher_entries) {
-        e.watcher.reset(
-            new etcd::Watcher(*m_client, e.prefix, e.callback, true));
+        e.watcher.reset(new etcd::Watcher(*client, e.prefix, e.callback, true));
     }
 }
 
 /**************************************************************************
  * Static utilities
  */
-std::unique_ptr<etcd::SyncClient>
+std::shared_ptr<etcd::SyncClient>
 etcd_manager::create_client(const etcd_config& cfg) {
     while (true) {
         try {
-            std::unique_ptr<etcd::SyncClient> client;
+            std::shared_ptr<etcd::SyncClient> client;
             if (cfg.username && cfg.password) {
                 client = std::make_unique<etcd::SyncClient>(
                     cfg.url, *cfg.username, *cfg.password);
