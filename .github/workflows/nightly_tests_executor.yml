@@ -18,36 +18,36 @@ on:
 
 jobs:
 
-  build-core:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: Dockerfile
-      docker_build_args: |
-        BuildType=RelWithDebInfo
-        DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
-      docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
+  #build-core:
+  #  uses: ./.github/workflows/docker_build_template.yml 
+  #  with:
+   #   docker_context: .
+   #   dockerfile_path: Dockerfile
+   #   docker_build_args: |
+   #     BuildType=RelWithDebInfo
+   #     DebugTools=True
+   #   docker_images: ghcr.io/ultihash/cluster
+    #  docker_tags: nightly-build
+  #    platforms: linux/amd64,linux/arm64
+  #  secrets:
+  #    ghcr_token: ${{ secrets.PAT }}
     
-  build-database-init:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
-      docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
+  #build-database-init:
+  #  uses: ./.github/workflows/docker_build_template.yml 
+  #  with:
+  #    docker_context: .
+  #    dockerfile_path: tools/database-init/Dockerfile
+  #    docker_images: ghcr.io/ultihash/database-init
+  #    docker_tags: nightly-build
+  #    platforms: linux/amd64,linux/arm64
+  #  secrets:
+  #    ghcr_token: ${{ secrets.PAT }}
 
   feature-test-aarch64:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
@@ -58,9 +58,9 @@ jobs:
 
   pyspark-test-x86-64:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64')
@@ -71,9 +71,9 @@ jobs:
 
   s3a-test-x86-64:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64')
@@ -84,9 +84,9 @@ jobs:
 
   stability-test-x86-64:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
@@ -96,14 +96,14 @@ jobs:
           echo "stability-test-x86-64"
 
   vulnerability-scanning:
-    runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
+    #needs: 
+    #  - build-core
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning')
-    steps:
-      - name: Test
-        run: |
-          echo "vulnerability-scanning"
+    uses: ./.github/workflows/vulnerability_scanning.yml
+    with:
+      docker_image_tag: nightly-build
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
   
