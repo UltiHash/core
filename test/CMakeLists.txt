@@ -31,13 +31,10 @@ function(uh_add_test name)
     add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
-         # 10 - uh-cluster_test_fragment_set (Failed)
-         # 11 - uh-cluster_test_global_data_view (Failed)
-         # 25 - uh-cluster_test_service_registry (Failed)
-         # 26 - uh-cluster_test_services (Failed)
 uh_add_test(test_etcd PRIVATE etcd-cpp-api)
 uh_add_test(test_etcd_manager PRIVATE etcd-cpp-api)
-uh_add_test(test_etcd_manager_on_etcd_failure PRIVATE etcd-cpp-api)
+# uh_add_test(test_etcd_manager_on_etcd_failure PRIVATE etcd-cpp-api) #
+# commented out until we find a way to control etcd on CI env.
 uh_add_test(test_etcd_manager_on_client_failure PRIVATE etcd-cpp-api)
 uh_add_test(test_deduplicator PRIVATE uh_fake_global_data)
 uh_add_test(test_address)
