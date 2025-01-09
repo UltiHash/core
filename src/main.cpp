@@ -23,17 +23,16 @@ void execute_role(const config& c) {
     };
 
     try {
-        auto manager = etcd_manager(c.service.etcd_config);
+        auto etcd = etcd_manager(c.service.etcd_config);
         switch (c.role) {
         case STORAGE_SERVICE:
-            return start_service(storage(manager, c.service, c.storage));
+            return start_service(storage(etcd, c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
-            return start_service(
-                deduplicator(manager, c.service, c.deduplicator));
+            return start_service(deduplicator(etcd, c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
-            return start_service(ep::service(manager, c.service, c.entrypoint));
+            return start_service(ep::service(etcd, c.service, c.entrypoint));
         case RECOVERY_SERVICE:
-            return start_service(recovery(manager, c.service, c.recovery));
+            return start_service(recovery(etcd, c.service, c.recovery));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();

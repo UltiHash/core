@@ -26,8 +26,8 @@ static ec_status response_to_status(std::string response_value) {
 
 class ec_group_attributes {
 public:
-    ec_group_attributes(size_t gid, etcd_manager& manager)
-        : m_etcd_manager(manager),
+    ec_group_attributes(size_t gid, etcd_manager& etcd)
+        : m_etcd(etcd),
           m_gid(gid) {}
 
     ec_group_attributes(const ec_group_attributes&) = delete;
@@ -45,11 +45,11 @@ public:
                       std::string(magic_enum::enum_name(status)));
     }
 
-    void clear() { m_etcd_manager.rmdir(get_ec_group_path(m_gid)); }
+    void clear() { m_etcd.rmdir(get_ec_group_path(m_gid)); }
 
     std::optional<ec_status> get_status() {
         try {
-            return response_to_status(m_etcd_manager.get(
+            return response_to_status(m_etcd.get(
                 get_ec_group_attribute_path(m_gid, EC_GROUP_STATUS)));
         } catch (...) {
             return std::nullopt;
@@ -58,17 +58,15 @@ public:
 
     [[nodiscard]] size_t group_id() const noexcept { return m_gid; }
 
-    [[nodiscard]] etcd_manager& etcd_client() const noexcept {
-        return m_etcd_manager;
-    }
+    [[nodiscard]] etcd_manager& etcd_client() const noexcept { return m_etcd; }
 
 private:
     void set_attribute(etcd_ec_group_attributes attr,
                        const std::string& value) {
-        m_etcd_manager.put(get_ec_group_attribute_path(m_gid, attr), value);
+        m_etcd.put(get_ec_group_attribute_path(m_gid, attr), value);
     }
 
-    etcd_manager& m_etcd_manager;
+    etcd_manager& m_etcd;
     const size_t m_gid;
 };
 

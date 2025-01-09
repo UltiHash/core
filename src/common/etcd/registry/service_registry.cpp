@@ -9,10 +9,10 @@ using namespace boost::asio;
 namespace uh::cluster {
 
 service_registry::service_registry(uh::cluster::role role, std::size_t index,
-                                   etcd_manager& manager)
+                                   etcd_manager& etcd)
     : m_service_role(role),
       m_id(index),
-      m_etcd_manager(manager) {}
+      m_etcd(etcd) {}
 
 service_registry::~service_registry() {
     const std::string announced_key_base =
@@ -20,8 +20,8 @@ service_registry::~service_registry() {
     const std::string attribute_key_base =
         get_attributes_path(m_service_role, m_id);
 
-    m_etcd_manager.rmdir(announced_key_base);
-    m_etcd_manager.rmdir(attribute_key_base);
+    m_etcd.rmdir(announced_key_base);
+    m_etcd.rmdir(attribute_key_base);
 }
 
 [[nodiscard]] std::string service_registry::get_service_name() const {
@@ -48,9 +48,7 @@ void service_registry::register_service(const server_config& config) {
     };
 
     for (auto& [k, v] : kv_pairs) {
-        std::cout << "key: " << k << std::endl;
-        std::cout << "value: " << v << std::endl;
-        m_etcd_manager.put(k, v);
+        m_etcd.put(k, v);
     }
 }
 

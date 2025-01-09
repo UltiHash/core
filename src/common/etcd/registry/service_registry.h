@@ -11,7 +11,7 @@ class service_registry {
 
 public:
     service_registry(uh::cluster::role role, std::size_t index,
-                     etcd_manager& manager);
+                     etcd_manager& etcd);
 
     virtual ~service_registry();
 
@@ -24,7 +24,7 @@ private:
 
     const role m_service_role;
     const size_t m_id;
-    etcd_manager& m_etcd_manager;
+    etcd_manager& m_etcd;
 };
 
 } // namespace uh::cluster

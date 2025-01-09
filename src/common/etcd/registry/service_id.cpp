@@ -43,19 +43,18 @@ void write_id_to_disk(const std::filesystem::path& id_file, std::size_t id) {
     out.write(reinterpret_cast<const char*>(&id), sizeof(id));
 }
 
-std::string get(etcd_manager& manager, const std::string& key) {
+std::string get(etcd_manager& etcd, const std::string& key) {
 
-    return manager.get(key);
+    return etcd.get(key);
 }
 
-void set(etcd_manager& manager, const std::string& key,
-         const std::string& value) {
-    manager.put(key, value);
+void set(etcd_manager& etcd, const std::string& key, const std::string& value) {
+    etcd.put(key, value);
 }
 
 } // namespace
 
-std::size_t get_service_id(etcd_manager& manager, const std::string& service,
+std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
                            const std::filesystem::path& data_dir) {
 
     auto id_file = data_dir / service / IDENTITY_FILE_NAME;
@@ -68,18 +67,18 @@ std::size_t get_service_id(etcd_manager& manager, const std::string& service,
     std::string current_id_key = etcd_current_id_prefix_key + service;
     std::size_t current_id;
 
-    const auto lock = manager.get_lock_guard(etcd_global_lock_key);
+    const auto lock = etcd.get_lock_guard(etcd_global_lock_key);
 
     try {
-        current_id = std::stoull(get(manager, current_id_key));
+        current_id = std::stoull(get(etcd, current_id_key));
     } catch (const std::exception&) {
-        set(manager, current_id_key, std::to_string(0));
+        set(etcd, current_id_key, std::to_string(0));
         write_id_to_disk(id_file, 0);
         return 0;
     }
 
     current_id++;
-    set(manager, current_id_key, std::to_string(current_id));
+    set(etcd, current_id_key, std::to_string(current_id));
     write_id_to_disk(id_file, current_id);
     return current_id;
 }

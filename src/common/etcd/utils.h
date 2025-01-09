@@ -70,14 +70,14 @@ public:
      */
     class lock_guard {
     public:
-        explicit lock_guard(etcd_manager* manager, const std::string& lock_key)
-            : m_etcd_manager(manager),
-              m_unlock_key(manager->lock(lock_key)) {}
+        explicit lock_guard(etcd_manager* etcd, const std::string& lock_key)
+            : m_etcd(etcd),
+              m_unlock_key(etcd->lock(lock_key)) {}
 
-        ~lock_guard() { m_etcd_manager->unlock(m_unlock_key); }
+        ~lock_guard() { m_etcd->unlock(m_unlock_key); }
 
     private:
-        etcd_manager* m_etcd_manager;
+        etcd_manager* m_etcd;
         std::string m_unlock_key;
 
         friend class etcd_manager;
