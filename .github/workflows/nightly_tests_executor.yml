@@ -1,6 +1,7 @@
 name: Nightly Testing Workflow
 
 on:
+  push:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
