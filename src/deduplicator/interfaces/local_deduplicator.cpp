@@ -43,67 +43,86 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
 coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
                                                       std::string_view data) {
     LOG_DEBUG() << ctx.peer() << ": deduplicate: size=" << data.size();
+    ctx.set_attribute("data-size", data.size());
+
     fragmentation fragments;
     std::size_t offset = 0;
 
-    while (!data.empty()) {
-        auto f = co_await m_dedupe_workers.post_in_workers(
-            ctx, [this, &data] { return m_fragment_set.find(data); });
+    {
+        auto sub_ctx = ctx.sub_context("deduplicator-fragment-search");
+        while (!data.empty()) {
+            auto f = co_await m_dedupe_workers.post_in_workers(
+                sub_ctx, [this, &data] { return m_fragment_set.find(data); });
 
-        auto match_low = co_await match_size(ctx, m_storage, data, f.low);
-        auto match_high = co_await match_size(ctx, m_storage, data, f.high);
+            auto match_low =
+                co_await match_size(sub_ctx, m_storage, data, f.low);
+            auto match_high =
+                co_await match_size(sub_ctx, m_storage, data, f.high);
 
-        if (const auto size = std::max(match_low, match_high);
-            size > m_dedupe_conf.min_fragment_size) {
-            const auto& [frag, prefix] =
-                match_low > match_high ? *f.low : *f.high;
+            if (const auto size = std::max(match_low, match_high);
+                size > m_dedupe_conf.min_fragment_size) {
+                const auto& [frag, prefix] =
+                    match_low > match_high ? *f.low : *f.high;
 
-            // Add `&& size < data.size()`?
-            if (size == m_dedupe_conf.max_fragment_size) {
-                offset += co_await pursue_pointer(
-                    ctx, data, frag.pointer + m_dedupe_conf.max_fragment_size,
-                    (offset == 0), fragments);
+                // Add `&& size < data.size()`?
+                if (size == m_dedupe_conf.max_fragment_size) {
+                    offset += co_await pursue_pointer(
+                        sub_ctx, data,
+                        frag.pointer + m_dedupe_conf.max_fragment_size,
+                        (offset == 0), fragments);
+                } else {
+                    fragments.push_stored(frag.pointer, size,
+                                          data.substr(0, size), (offset == 0));
+                    data = data.substr(size);
+                    offset += size;
+                }
             } else {
-                fragments.push_stored(frag.pointer, size, data.substr(0, size),
-                                      (offset == 0));
-                data = data.substr(size);
-                offset += size;
+                auto frag_size =
+                    std::min(data.size(), m_dedupe_conf.max_fragment_size);
+
+                fragments.push_unstored(data.substr(0, frag_size),
+                                        (offset == 0), std::move(f.hint));
+
+                data = data.substr(frag_size);
+                offset += frag_size;
             }
-        } else {
-            auto frag_size =
-                std::min(data.size(), m_dedupe_conf.max_fragment_size);
-
-            fragments.push_unstored(data.substr(0, frag_size), (offset == 0),
-                                    std::move(f.hint));
-
-            data = data.substr(frag_size);
-            offset += frag_size;
         }
     }
 
-    auto stored_fragments = fragments.get_stored_fragments();
-    if (!stored_fragments.empty()) {
-        auto rejected = co_await m_storage.link(ctx, stored_fragments);
+    {
+        auto sub_ctx = ctx.sub_context("deduplicator-fragment-link");
+        auto stored_fragments = fragments.get_stored_fragments();
+        if (!stored_fragments.empty()) {
+            auto rejected = co_await m_storage.link(sub_ctx, stored_fragments);
 
-        if (!rejected.empty()) {
-            LOG_DEBUG() << ctx.peer() << ": " << rejected.size()
-                        << " fragments rejected, " << rejected.data_size()
-                        << " in bytes";
-            co_await m_dedupe_workers.post_in_workers(ctx, [this, &rejected,
-                                                            &fragments] {
-                fragments.handle_rejected_fragments(rejected, m_fragment_set);
-            });
-            LOG_DEBUG() << ctx.peer() << ": handle_rejected_fragments done";
+            if (!rejected.empty()) {
+                LOG_DEBUG() << sub_ctx.peer() << ": " << rejected.size()
+                            << " fragments rejected, " << rejected.data_size()
+                            << " in bytes";
+                co_await m_dedupe_workers.post_in_workers(
+                    sub_ctx, [this, &rejected, &fragments] {
+                        fragments.handle_rejected_fragments(rejected,
+                                                            m_fragment_set);
+                    });
+                LOG_DEBUG()
+                    << sub_ctx.peer() << ": handle_rejected_fragments done";
+            }
         }
     }
 
-    LOG_DEBUG() << ctx.peer() << ": flushing unstored data to storage";
-    co_await fragments.flush_storage(ctx, m_storage);
+    {
+        auto sub_ctx = ctx.sub_context("deduplicator-flush-storage");
+        LOG_DEBUG() << sub_ctx.peer() << ": flushing unstored data to storage";
+        co_await fragments.flush_storage(sub_ctx, m_storage);
+    }
 
-    LOG_DEBUG() << ctx.peer() << ": flushing fragments to fragment set";
-    co_await m_dedupe_workers.post_in_workers(ctx, [this, &fragments] {
-        fragments.flush_fragment_set(m_fragment_set);
-    });
+    {
+        auto sub_ctx = ctx.sub_context("deduplicator-flush-fragments");
+        LOG_DEBUG() << sub_ctx.peer() << ": flushing fragments to fragment set";
+        co_await m_dedupe_workers.post_in_workers(sub_ctx, [this, &fragments] {
+            fragments.flush_fragment_set(m_fragment_set);
+        });
+    }
 
     LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
     dedupe_response result{.effective_size = fragments.effective_size(),

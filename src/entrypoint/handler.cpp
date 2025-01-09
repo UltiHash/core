@@ -28,6 +28,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
                        << *req;
 
+            req->context().set_attribute("request-id", id);
+
             resp = co_await handle_request(s, *req, id);
             metric<success>::increase(1);
             keep_alive = true;
@@ -51,6 +53,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             resp = make_response(command_exception());
         }
 
+        req->context().set_attribute(
+            "response-code", static_cast<unsigned>(resp.base().result()));
+
         co_await write(s, std::move(resp), id);
         if (!keep_alive) {
             break;
@@ -67,6 +72,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     auto cmd = co_await m_command_factory.create(req);
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
+    req.context().set_name(cmd->action_id());
     co_await cmd->validate(req);
 
     LOG_DEBUG() << req.peer() << ": checking policies";
