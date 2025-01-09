@@ -44,17 +44,26 @@ jobs:
   #    ghcr_token: ${{ secrets.PAT }}
 
   feature-test-aarch64:
-    runs-on: lightweight-generic-jobs
     #needs: 
     #  - build-core
     #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
-    steps:
-      - name: Test
-        run: |
-          echo "feature-test-aarch64"
+    uses: ./.github/workflows/feature_testing_on_aws.yml
+    with:
+      env_name: feature-testing-aarch64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_lecense: ${{ secrets.UH_LICENSE }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
   pyspark-test-x86-64:
     runs-on: lightweight-generic-jobs
