@@ -40,6 +40,14 @@ std::string etcd_manager::get(const std::string& key) {
     return resp.value().as_string();
 }
 
+std::optional<std::string>
+etcd_manager::return_key_if_exists(const std::string& key) const {
+    auto resp = m_client->get(key);
+    if (!resp.is_ok())
+        return std::nullopt;
+    return resp.value().key();
+}
+
 std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
     return m_client->keys(prefix).keys();
 }
@@ -53,6 +61,8 @@ std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
     }
     return ret;
 }
+
+void etcd_manager::rm(const std::string& key) noexcept { m_client->rm(key); }
 
 void etcd_manager::rmdir(const std::string& prefix) noexcept {
     m_client->rmdir(prefix, true);

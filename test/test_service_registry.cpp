@@ -16,7 +16,6 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
     const auto port_address = 9200;
 
     auto etcd = etcd_manager();
-    service_registry registering_registry(STORAGE_SERVICE, index, etcd);
 
     {
         // check if the keys already exist or not
@@ -29,12 +28,13 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         const auto announced_path_registry =
             etcd.get(get_announced_path(STORAGE_SERVICE, index));
 
-        BOOST_CHECK(host.empty());
-        BOOST_CHECK(port.empty());
-        BOOST_CHECK(announced_path_registry.empty());
+        BOOST_TEST(host.empty());
+        BOOST_TEST(port.empty());
+        BOOST_TEST(announced_path_registry.empty());
     }
 
     {
+        service_registry registering_registry(STORAGE_SERVICE, index, etcd);
         // check for registry
         registering_registry.register_service({.port = port_address});
 
@@ -44,14 +44,15 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         const auto port = etcd.get(
             get_attributes_path(STORAGE_SERVICE, index) +
             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT));
-        const auto announced_etcd_path = std::filesystem::path(
-            etcd.get(get_announced_path(STORAGE_SERVICE, index)));
+        const auto announced_etcd_path = etcd.return_key_if_exists(
+            get_announced_path(STORAGE_SERVICE, index));
 
-        BOOST_CHECK(get_announced_id(announced_etcd_path) == index);
-        BOOST_CHECK(announced_etcd_path ==
-                    get_announced_path(STORAGE_SERVICE, index));
-        BOOST_CHECK(host == boost::asio::ip::host_name());
-        BOOST_CHECK(std::stoul(port) == port_address);
+        BOOST_TEST(get_announced_id(*announced_etcd_path) == index);
+        BOOST_TEST(host == boost::asio::ip::host_name());
+        BOOST_TEST(std::stoul(port) == port_address);
+        BOOST_TEST(announced_etcd_path.has_value());
+        BOOST_TEST(*announced_etcd_path ==
+                   get_announced_path(STORAGE_SERVICE, index));
     }
 
     {
@@ -62,12 +63,12 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         const auto port = etcd.get(
             get_attributes_path(STORAGE_SERVICE, index) +
             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT));
-        const auto announced_path_registry =
-            etcd.get(get_announced_path(STORAGE_SERVICE, index));
+        const auto announced_path_registry = etcd.return_key_if_exists(
+            get_announced_path(STORAGE_SERVICE, index));
 
-        BOOST_CHECK(host.empty());
-        BOOST_CHECK(port.empty());
-        BOOST_CHECK(announced_path_registry.empty());
+        BOOST_TEST(host.empty());
+        BOOST_TEST(port.empty());
+        BOOST_TEST(!announced_path_registry.has_value());
     }
 }
 

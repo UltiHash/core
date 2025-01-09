@@ -13,6 +13,8 @@ public:
     service_registry(uh::cluster::role role, std::size_t index,
                      etcd_manager& manager);
 
+    virtual ~service_registry();
+
     [[nodiscard]] std::string get_service_name() const;
 
     void register_service(const server_config& config);

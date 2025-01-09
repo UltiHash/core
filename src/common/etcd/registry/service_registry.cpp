@@ -14,15 +14,23 @@ service_registry::service_registry(uh::cluster::role role, std::size_t index,
       m_id(index),
       m_etcd_manager(manager) {}
 
+service_registry::~service_registry() {
+    const std::string announced_key_base =
+        get_announced_path(m_service_role, m_id);
+    const std::string attribute_key_base =
+        get_attributes_path(m_service_role, m_id);
+
+    m_etcd_manager.rmdir(announced_key_base);
+    m_etcd_manager.rmdir(attribute_key_base);
+}
+
 [[nodiscard]] std::string service_registry::get_service_name() const {
     return get_service_string(m_service_role) + "/" + std::to_string(m_id);
 }
 
 void service_registry::register_service(const server_config& config) {
-
     const std::string announced_key_base =
         get_announced_path(m_service_role, m_id);
-
     const std::string attribute_key_base =
         get_attributes_path(m_service_role, m_id);
 
@@ -40,6 +48,8 @@ void service_registry::register_service(const server_config& config) {
     };
 
     for (auto& [k, v] : kv_pairs) {
+        std::cout << "key: " << k << std::endl;
+        std::cout << "value: " << v << std::endl;
         m_etcd_manager.put(k, v);
     }
 }

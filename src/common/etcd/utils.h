@@ -47,12 +47,15 @@ public:
      * Retrieve methods
      */
     std::string get(const std::string& key);
+    std::optional<std::string>
+    return_key_if_exists(const std::string& key) const;
     std::vector<std::string> keys(const std::string& prefix = "/");
     std::map<std::string, std::string> ls(const std::string& prefix = "/");
 
     /*
      * Remove methods
      */
+    void rm(const std::string& key) noexcept;
     void rmdir(const std::string& prefix) noexcept;
     void clear_all() noexcept;
 
