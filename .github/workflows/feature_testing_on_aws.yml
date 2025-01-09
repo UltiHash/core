@@ -25,7 +25,7 @@ on:
         required: true
       aws_secret_access_key:
         required: true
-      uh_lecense:
+      uh_license:
         required: true
       monitoring_token:
         required: true
@@ -87,7 +87,7 @@ jobs:
         run: |
           kubectl create ns ${{ inputs.env_name }}
           kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ inputs.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
-          kubectl create secret generic ultihash  -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_lecense }}' --from-literal=token='${{ secrets.monitoring_token }}'
+          kubectl create secret generic ultihash  -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
           echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 15m
 
