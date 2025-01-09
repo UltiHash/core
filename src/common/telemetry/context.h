@@ -3,26 +3,53 @@
 
 #include <boost/asio.hpp>
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
+#include <opentelemetry/trace/span_context.h>
 
 #include <utility>
+#include <vector>
 
 namespace uh::cluster {
 
-struct context {
+class context {
+public:
+    context() = default;
+    context(const std::string& name);
+    context(const std::vector<char>& buffer);
 
-    const auto& get_otel_context() const { return m_otel_ctx; }
+    context sub_context(const std::string& name);
 
-    void set_otel_context(opentelemetry::context::Context context) {
-        m_otel_ctx = std::move(context);
+    template <typename value>
+    void set_attribute(const std::string& name, value v) {
+        if (m_span) {
+            m_span->span->SetAttribute(name, std::move(v));
+        }
     }
+
+    void set_name(const std::string& name);
+
+    std::vector<char> serialize() const;
 
     boost::asio::ip::tcp::endpoint& peer() { return m_peer; }
     const boost::asio::ip::tcp::endpoint& peer() const { return m_peer; }
 
+    static constexpr std::size_t SERIALIZED_SIZE =
+        opentelemetry::trace::TraceId::kSize +
+        opentelemetry::trace::SpanId::kSize + 2;
+
+    struct span_wrap {
+        span_wrap(std::shared_ptr<opentelemetry::trace::Span> span);
+        ~span_wrap();
+        std::shared_ptr<opentelemetry::trace::Span> span;
+    };
+
 private:
-    opentelemetry::context::Context m_otel_ctx;
+    context(std::shared_ptr<span_wrap> span);
+
+    std::shared_ptr<span_wrap> m_span;
     boost::asio::ip::tcp::endpoint m_peer;
 };
+
+void initialize_traces_exporter(const std::string& endpoint);
 
 inline thread_local context CURRENT_CONTEXT;
 

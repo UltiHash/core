@@ -30,11 +30,13 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
 
 coro<messenger_core::header> messenger_core::recv_header() {
     header h;
+    std::vector<char> ctx_buffer(context::SERIALIZED_SIZE);
+
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type},
             {&h.size, sizeof h.size},
-            {&h.ctx_size, sizeof h.ctx_size}};
+            boost::asio::buffer(ctx_buffer)};
 
         co_await boost::asio::async_read(m_socket, buffers,
                                          boost::asio::use_awaitable);
@@ -42,21 +44,26 @@ coro<messenger_core::header> messenger_core::recv_header() {
         throw create_internal_network_error("recv_header failed", e);
     }
 
-    if (h.type == FAILURE) [[unlikely]] {
+    h.ctx = context(ctx_buffer);
+    h.ctx.peer() = peer();
+
+    if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
         throw error_exception(e);
     }
 
-    if (h.type != SUCCESS)
+    if (h.type != SUCCESS) {
         measure_message_type(h.type);
+    }
 
     co_return h;
 }
 
 coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
-    if (h.size != m_read_size) [[unlikely]] {
+    if (h.size != m_read_size) {
         throw std::length_error(
-            "The size of the buffers does not match with the header size!");
+            "The size of the buffers does not match with the header size: " +
+            std::to_string(h.size) + " != " + std::to_string(m_read_size));
     }
 
     try {
@@ -71,7 +78,7 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
 }
 
 void messenger_core::reserve_write_buffers(size_t capacity) {
-    m_write_buffers.reserve(capacity + 4);
+    m_write_buffers.reserve(capacity + 3);
 }
 
 void messenger_core::reserve_read_buffers(size_t capacity) {
@@ -84,7 +91,6 @@ void messenger_core::reset_write_buffers() {
     m_write_buffers.emplace_back();
     m_write_buffers.emplace_back();
     m_write_buffers.emplace_back();
-    m_write_buffers.emplace_back();
 }
 
 void messenger_core::reset_read_buffers() {
@@ -93,18 +99,16 @@ void messenger_core::reset_read_buffers() {
 }
 
 coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
-
     try {
-        if (type == SUCCESS)
+        if (type == SUCCESS) {
             metric<success>::increase(1);
+        }
 
-        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
-        decltype(header::ctx_size) ctx_size = ctx_buf.size();
+        auto ctx_buf = ctx.serialize();
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
-        m_write_buffers[2] = {&ctx_size, sizeof ctx_size};
-        m_write_buffers[3] = boost::asio::buffer(ctx_buf);
+        m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
         co_await boost::asio::async_write(m_socket, m_write_buffers,
                                           boost::asio::use_awaitable);
@@ -133,35 +137,20 @@ coro<error> messenger_core::recv_error(const messenger_core::header& h) {
     co_return error(ec, msg);
 }
 
-coro<context> messenger_core::recv_context(const messenger_core::header& h) {
-    context c;
-    if (h.ctx_size) {
-        std::vector<char> otel_buf(h.ctx_size);
-        register_read_buffer(otel_buf);
-        co_await recv_buffers(h);
-        c.set_otel_context(trace::deserialize_context(std::move(otel_buf)));
-    }
-
-    c.peer() = m_socket.remote_endpoint();
-    co_return c;
-}
-
 coro<void> messenger_core::send(context& ctx, const message_type type,
                                 std::span<const char> data) {
     try {
-        if (type == SUCCESS)
+        if (type == SUCCESS) {
             metric<success>::increase(1);
+        }
 
-        auto ctx_buf = trace::serialize_context(ctx.get_otel_context());
-        decltype(header::ctx_size) ctx_size = ctx_buf.size();
-
-        const auto size = static_cast<size_type>(data.size());
+        auto ctx_buf = ctx.serialize();
+        auto size = static_cast<size_type>(data.size());
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},
             {&size, sizeof(size)},
-            {&ctx_size, sizeof ctx_size},
-            {ctx_buf.data(), ctx_buf.size()},
+            boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
         co_await boost::asio::async_write(m_socket, buffers,

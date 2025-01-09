@@ -16,20 +16,21 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
     messenger m(std::move(s));
 
     for (;;) {
-        std::optional<error> err;
+
         context ctx;
+        std::optional<error> err;
 
         try {
+            auto hdr = co_await m.recv_header();
+            ctx = std::move(hdr.ctx);
 
-            const auto message_header = co_await m.recv_header();
-            ctx = co_await m.recv_context(message_header);
             LOG_DEBUG() << remote.str() << " received "
-                        << magic_enum::enum_name(message_header.type);
+                        << magic_enum::enum_name(hdr.type);
 
-            switch (message_header.type) {
+            switch (hdr.type) {
             case DEDUPLICATOR_REQ:
-
-                co_await handle_dedupe(ctx, m, message_header);
+                ctx = ctx.sub_context("deduplicator-dedupe");
+                co_await handle_dedupe(ctx, m, hdr);
                 break;
             default:
                 throw std::invalid_argument("Invalid message type!");
@@ -51,6 +52,7 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
         } catch (const std::exception& e) {
             err = error(error::unknown, e.what());
         }
+
         if (err) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();

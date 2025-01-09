@@ -26,47 +26,56 @@ coro<void> storage_handler::handle(boost::asio::ip::tcp::socket s) {
         std::optional<error> err;
 
         try {
-            const auto message_header = co_await m.recv_header();
-            ctx = co_await m.recv_context(message_header);
-            auto span =
-                trace::scoped_span("received req", ctx.get_otel_context());
+            auto hdr = co_await m.recv_header();
+            ctx = std::move(hdr.ctx);
 
             LOG_DEBUG() << remote.str() << ": received "
-                        << magic_enum::enum_name(message_header.type);
+                        << magic_enum::enum_name(hdr.type);
 
-            switch (message_header.type) {
+            switch (hdr.type) {
             case STORAGE_WRITE_REQ:
-                co_await handle_write(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-write-req");
+                co_await handle_write(ctx, m, hdr);
                 break;
             case STORAGE_READ_REQ:
-                co_await handle_read(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-read-req");
+                co_await handle_read(ctx, m, hdr);
                 break;
             case STORAGE_READ_FRAGMENT_REQ:
-                co_await handle_read_fragment(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-read-fragment-req");
+                co_await handle_read_fragment(ctx, m, hdr);
                 break;
             case STORAGE_READ_ADDRESS_REQ:
-                co_await handle_read_address(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-read-address-req");
+                co_await handle_read_address(ctx, m, hdr);
                 break;
             case STORAGE_LINK_REQ:
-                co_await handle_link(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-link-req");
+                co_await handle_link(ctx, m, hdr);
                 break;
             case STORAGE_UNLINK_REQ:
-                co_await handle_unlink(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-unlink-req");
+                co_await handle_unlink(ctx, m, hdr);
                 break;
             case STORAGE_USED_REQ:
-                co_await handle_get_used(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-used-req");
+                co_await handle_get_used(ctx, m, hdr);
                 break;
             case STORAGE_DS_INFO_REQ:
-                co_await handle_ds_info(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-ds-info-req");
+                co_await handle_ds_info(ctx, m, hdr);
                 break;
             case STORAGE_INIT_DD_REQ:
-                co_await handle_init_dd(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-init-dd-req");
+                co_await handle_init_dd(ctx, m, hdr);
                 break;
             case STORAGE_DS_WRITE_REQ:
-                co_await handle_ds_write(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-ds-write-req");
+                co_await handle_ds_write(ctx, m, hdr);
                 break;
             case STORAGE_DS_READ_REQ:
-                co_await handle_ds_read(ctx, m, message_header);
+                ctx = ctx.sub_context("storage-ds-read-req");
+                co_await handle_ds_read(ctx, m, hdr);
                 break;
             default:
                 throw std::invalid_argument("Invalid message type!");

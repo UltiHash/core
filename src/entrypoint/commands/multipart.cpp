@@ -47,8 +47,12 @@ coro<response> multipart::handle(request& req) {
     auto md5 = to_hex(md5::from_buffer(buffer.span()));
 
     std::string id = *query(req, "uploadId");
+    std::size_t part_id = *query<std::size_t>(req, "partNumber");
     response res;
     res.set("ETag", md5);
+
+    req.context().set_attribute("multipart-uploadId", id);
+    req.context().set_attribute("multipart-part-number", part_id);
 
     std::optional<upload_info::part> existing_part;
 
@@ -57,14 +61,12 @@ coro<response> multipart::handle(request& req) {
         auto lock = co_await instance.lock_upload(id);
 
         try {
-            existing_part = co_await instance.part_details(
-                id, *query<std::size_t>(req, "partNumber"));
+            existing_part = co_await instance.part_details(id, part_id);
         } catch (const command_exception&) {
         }
 
         co_await instance.append_upload_part_info(
-            id, *query<std::size_t>(req, "partNumber"), resp,
-            resp.addr.data_size(), std::move(md5));
+            id, part_id, resp, resp.addr.data_size(), std::move(md5));
     }
 
     if (existing_part) {

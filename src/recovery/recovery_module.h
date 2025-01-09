@@ -46,7 +46,7 @@ private:
         std::vector<data_stat> stats{};
         std::size_t recover_size{};
         bool healthy = false;
-        context ctx{};
+        context ctx;
     };
 
     coro<void> recover(std::atomic<ec_status>& status) {
@@ -138,7 +138,7 @@ private:
     coro<recovery_info> check_recovery() {
 
         std::map<size_t, std::vector<size_t>> sizes;
-        context ctx;
+        context ctx(RECOVERY_INITIAL_CONTEXT_NAME);
         size_t i = 0;
 
         for (const auto& dn : m_getter.get_services()) {
@@ -154,7 +154,7 @@ private:
         recovery_info rinfo{.stats = {m_getter.size(), valid},
                             .recover_size = sizes.crbegin()->first,
                             .healthy = true,
-                            .ctx = ctx};
+                            .ctx = std::move(ctx)};
         if (sizes.size() == 2) {
             for (const auto& fail_index : sizes[0]) {
                 rinfo.stats[fail_index] = lost;
@@ -197,6 +197,8 @@ private:
 
         co_return maps.front();
     }
+
+    static constexpr const char* RECOVERY_INITIAL_CONTEXT_NAME = "recovery";
 
     storage_service_get_handler& m_getter;
     boost::asio::io_context& m_ioc;

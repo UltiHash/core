@@ -14,7 +14,7 @@ garbage_collector::garbage_collector(boost::asio::io_context& ctx,
 coro<void> garbage_collector::collect() {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
 
-    context ctx;
+    context ctx(EP_GC_INITIAL_CONTEXT_NAME);
 
     while (true) {
         auto to_delete = co_await m_dir.next_deleted();

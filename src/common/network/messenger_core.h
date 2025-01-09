@@ -4,7 +4,6 @@
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
-#include "common/telemetry/traces.h"
 #include "common/types/common_types.h"
 #include "common/types/scoped_buffer.h"
 #include "common/utils/common.h"
@@ -24,7 +23,8 @@ public:
     struct header {
         message_type type;
         size_type size;
-        uint32_t ctx_size;
+
+        context ctx;
     };
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
@@ -109,8 +109,6 @@ public:
     coro<void> send_error(context& ctx, const error& e);
 
     coro<error> recv_error(const header& h);
-
-    coro<context> recv_context(const header& h);
 
     coro<void> send(context& ctx, const message_type type,
                     std::span<const char> data);

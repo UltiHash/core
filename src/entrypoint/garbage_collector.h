@@ -15,6 +15,8 @@ public:
 
 private:
     static constexpr auto POLL_INTERVALL = std::chrono::seconds(5);
+    static constexpr const char* EP_GC_INITIAL_CONTEXT_NAME =
+        "ep-garbe-collector";
     coro<void> collect();
 
     directory& m_dir;
