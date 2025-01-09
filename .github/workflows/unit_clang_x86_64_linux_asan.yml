@@ -22,7 +22,12 @@ jobs:
           submodules: recursive
 
       - name: Configure CMake
-        run: CC=/usr/bin/clang-18 CXX=/usr/bin/clang++-18 CXXFLAGS=-fsanitize=address cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
+        env:
+          CC: /usr/bin/clang-18
+          CXX: /usr/bin/clang++-18
+          CXXFLAGS: -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls
+          LDFLAGS: -fsanitize=address
+        run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
