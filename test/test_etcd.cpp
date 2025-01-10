@@ -53,8 +53,8 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
 }
 
-BOOST_FIXTURE_TEST_CASE(cannot_watch_changes_on_the_given_key_after_calcelation,
-                        fixture) {
+BOOST_FIXTURE_TEST_CASE(
+    cannot_watch_changes_on_the_given_key_after_cancellation, fixture) {
     etcd_client.set("test0", "initial_value");
     std::shared_ptr<etcd::Watcher> watcher;
     watcher.reset(new etcd::Watcher(

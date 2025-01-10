@@ -161,13 +161,13 @@ BOOST_FIXTURE_TEST_CASE(watches_remove, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(
-    returns_lock_guard_and_its_distroyer_doesnt_throw_any_exception, fixture) {
+    returns_lock_guard_and_its_destroyer_doesnt_throw_any_exception, fixture) {
     BOOST_CHECK_NO_THROW(
         { auto lock_guard = etcd.get_lock_guard("/foo/bar"); });
 }
 
 BOOST_FIXTURE_TEST_CASE(
-    can_get_lock_from_same_key_after_first_lock_is_distroyed, fixture) {
+    can_get_lock_from_same_key_after_first_lock_is_destroyed, fixture) {
     { auto lock_guard = etcd.get_lock_guard("/foo/bar"); }
 
     BOOST_CHECK_NO_THROW(

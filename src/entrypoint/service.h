@@ -19,7 +19,7 @@ namespace uh::cluster::ep {
 
 class service {
 public:
-    service(etcd_manager& etcd_manager, const service_config& sc,
+    service(etcd_manager& etcd, const service_config& sc,
             entrypoint_config config);
 
     void run();

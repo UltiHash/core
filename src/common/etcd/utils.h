@@ -86,10 +86,6 @@ public:
         return etcd_manager::lock_guard(this, lock_key);
     }
 
-protected:
-    std::string lock(const std::string& lock_key);
-    void unlock(const std::string& unlock_key);
-
 private:
     const etcd_config m_cfg;
     int m_lease_timeout;
@@ -111,6 +107,9 @@ private:
     void reset();
 
     void restore_watchers(void);
+
+    std::string lock(const std::string& lock_key);
+    void unlock(const std::string& unlock_key);
 };
 
 } // namespace uh::cluster

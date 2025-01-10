@@ -119,9 +119,6 @@ BOOST_AUTO_TEST_CASE(finds_both_low_and_high_values_correctly) {
 
     auto [fragment_b, addr_b] = create_fragment('b', 4 * KIBI_BYTE);
     auto result_b = frag_set->find(fragment_b.string_view());
-    // frag_set->insert(addr_b.get(0).pointer,
-    //                  fragment_b.string_view().substr(0, addr_b.get(0).size),
-    //                  false, result_b.hint);
 
     BOOST_TEST(result_b.low.has_value());
     BOOST_TEST(result_b.low->second ==

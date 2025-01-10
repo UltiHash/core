@@ -12,14 +12,14 @@ namespace uh::cluster {
 
 class recovery {
 public:
-    recovery(etcd_manager& etcd_manager, const service_config& service,
+    recovery(etcd_manager& etcd, const service_config& service,
              const recovery_config& sc)
         : m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, etcd_manager, true),
+          m_ec_maintainer(m_ioc, 1, 0, etcd, true),
 
-          m_storage_maintainer(etcd_manager, service_factory<storage_interface>(
-                                                 m_ioc, 1, nullptr)) {
+          m_storage_maintainer(
+              etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
