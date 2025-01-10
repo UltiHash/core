@@ -8,13 +8,13 @@
 #include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
 #include "config.h"
-#include "storage_handler.h"
+#include "handler.h"
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
-class storage {
+class service {
 public:
-    storage(etcd_manager& etcd, const service_config& service,
+    service(etcd_manager& etcd, const service_config& service,
             const storage_config& sc)
         : m_service_id(get_service_id(etcd, get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
@@ -22,8 +22,7 @@ public:
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
                                                     sc.m_data_store_roots)),
           m_service_registry(STORAGE_SERVICE, m_service_id, etcd),
-          m_server(sc.server, std::make_unique<storage_handler>(*m_storage),
-                   m_ioc) {}
+          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
 
     void run() {
         m_service_registry.register_service(m_server.get_server_config());
@@ -43,5 +42,5 @@ private:
     service_registry m_service_registry;
     server m_server;
 };
-} // end namespace uh::cluster
+} // namespace uh::cluster::storage
 #endif // CORE_DATA_NODE_H

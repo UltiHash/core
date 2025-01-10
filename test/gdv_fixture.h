@@ -1,13 +1,13 @@
 #ifndef UH_CLUSTER_GDV_FIXTURE_H
 #define UH_CLUSTER_GDV_FIXTURE_H
 
-#include "recovery/recovery.h"
+#include "recovery/service.h"
 
 #include <common/etcd/utils.h>
 #include <common/global_data/concrete_global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
-#include <storage/storage.h>
+#include <storage/service.h>
 
 namespace uh::cluster {
 class global_data_view_fixture {
@@ -31,12 +31,12 @@ public:
             storage_cfg.server.port = 10000 + i;
             storage_cfg.m_data_store_roots = {
                 std::filesystem::path(service_cfg.working_dir) / "storage"};
-            m_storage_instances.emplace_back(
-                std::make_unique<storage>(m_etcd, service_cfg, storage_cfg));
+            m_storage_instances.emplace_back(std::make_unique<storage::service>(
+                m_etcd, service_cfg, storage_cfg));
         }
 
-        m_recovery = std::make_unique<recovery>(m_etcd, service_config{},
-                                                recovery_config{});
+        m_recovery = std::make_unique<recovery::service>(
+            m_etcd, service_config{}, recovery_config{});
         int i = 0;
 
         m_ioc.post([this] { m_recovery->run(); });
@@ -130,8 +130,8 @@ private:
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
-    std::unique_ptr<recovery> m_recovery;
-    std::vector<std::unique_ptr<storage>> m_storage_instances;
+    std::unique_ptr<recovery::service> m_recovery;
+    std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;
 };

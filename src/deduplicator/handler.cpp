@@ -1,15 +1,15 @@
-#include "deduplicator_handler.h"
+#include "handler.h"
 
 #include "common/utils/common.h"
 #include "fragmentation.h"
 #include <utility>
 
-namespace uh::cluster {
+namespace uh::cluster::deduplicator {
 
-deduplicator_handler::deduplicator_handler(local_deduplicator& local_dedupe)
+handler::handler(local_deduplicator& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
-coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
@@ -61,8 +61,8 @@ coro<void> deduplicator_handler::handle(boost::asio::ip::tcp::socket s) {
     }
 }
 
-coro<void> deduplicator_handler::handle_dedupe(context& ctx, messenger& m,
-                                               const messenger::header& h) {
+coro<void> handler::handle_dedupe(context& ctx, messenger& m,
+                                  const messenger::header& h) {
 
     if (h.size == 0) [[unlikely]] {
         throw std::length_error("Empty data sent do the dedupe node");
@@ -77,4 +77,4 @@ coro<void> deduplicator_handler::handle_dedupe(context& ctx, messenger& m,
     co_await m.send_dedupe_response(ctx, dedupe_resp);
 }
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::deduplicator

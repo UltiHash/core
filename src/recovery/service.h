@@ -8,12 +8,12 @@
 #include "config.h"
 #include "config/configuration.h"
 
-namespace uh::cluster {
+namespace uh::cluster::recovery {
 
-class recovery {
+class service {
 public:
-    recovery(etcd_manager& etcd, const service_config& service,
-             const recovery_config& sc)
+    service(etcd_manager& etcd, const service_config& service,
+            const recovery_config& sc)
         : m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, etcd, true),
@@ -54,5 +54,5 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 };
-} // end namespace uh::cluster
+} // namespace uh::cluster::recovery
 #endif // CORE_RECOVERY_H

@@ -1,4 +1,4 @@
-#include "storage_handler.h"
+#include "handler.h"
 
 #include "config.h"
 #include "data_store.h"
@@ -9,12 +9,12 @@
 
 #include <utility>
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
-storage_handler::storage_handler(local_storage& storage)
+handler::handler(local_storage& storage)
     : m_storage(storage) {}
 
-coro<void> storage_handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
@@ -106,16 +106,16 @@ coro<void> storage_handler::handle(boost::asio::ip::tcp::socket s) {
     }
 }
 
-coro<void> storage_handler::handle_write(context& ctx, messenger& m,
-                                         const messenger::header& h) {
+coro<void> handler::handle_write(context& ctx, messenger& m,
+                                 const messenger::header& h) {
     write_request req = co_await m.recv_write(h);
     auto addr = co_await m_storage.write(
         ctx, std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
     co_await m.send_address(ctx, SUCCESS, addr);
 }
 
-coro<void> storage_handler::handle_read(context& ctx, messenger& m,
-                                        const messenger::header& h) {
+coro<void> handler::handle_read(context& ctx, messenger& m,
+                                const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
     auto buffer = co_await m_storage.read(ctx, frag.pointer, frag.size);
@@ -123,8 +123,8 @@ coro<void> storage_handler::handle_read(context& ctx, messenger& m,
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
-coro<void> storage_handler::handle_read_fragment(context& ctx, messenger& m,
-                                                 const messenger::header& h) {
+coro<void> handler::handle_read_fragment(context& ctx, messenger& m,
+                                         const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
     unique_buffer<char> buffer(frag.size);
@@ -133,8 +133,8 @@ coro<void> storage_handler::handle_read_fragment(context& ctx, messenger& m,
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
-coro<void> storage_handler::handle_read_address(context& ctx, messenger& m,
-                                                const messenger::header& h) {
+coro<void> handler::handle_read_address(context& ctx, messenger& m,
+                                        const messenger::header& h) {
     const auto addr = co_await m.recv_address(h);
 
     unique_buffer<char> buffer(addr.data_size());
@@ -151,8 +151,8 @@ coro<void> storage_handler::handle_read_address(context& ctx, messenger& m,
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
-coro<void> storage_handler::handle_link(context& ctx, messenger& m,
-                                        const messenger::header& h) {
+coro<void> handler::handle_link(context& ctx, messenger& m,
+                                const messenger::header& h) {
 
     const auto addr = co_await m.recv_address(h);
     auto rejected_addr = co_await m_storage.link(ctx, addr);
@@ -160,8 +160,8 @@ coro<void> storage_handler::handle_link(context& ctx, messenger& m,
     co_await m.send_address(ctx, SUCCESS, rejected_addr);
 }
 
-coro<void> storage_handler::handle_unlink(context& ctx, messenger& m,
-                                          const messenger::header& h) {
+coro<void> handler::handle_unlink(context& ctx, messenger& m,
+                                  const messenger::header& h) {
 
     const auto addr = co_await m.recv_address(h);
     std::size_t freed_bytes = co_await m_storage.unlink(ctx, addr);
@@ -169,25 +169,25 @@ coro<void> storage_handler::handle_unlink(context& ctx, messenger& m,
     co_await m.send_primitive<size_t>(ctx, SUCCESS, freed_bytes);
 }
 
-coro<void> storage_handler::handle_get_used(context& ctx, messenger& m,
-                                            const messenger::header&) {
+coro<void> handler::handle_get_used(context& ctx, messenger& m,
+                                    const messenger::header&) {
     const auto used = co_await m_storage.get_used_space(ctx);
     co_await m.send_primitive<size_t>(ctx, SUCCESS, used);
 }
 
-coro<void> storage_handler::handle_ds_info(context& ctx, messenger& m,
-                                           const messenger::header&) {
+coro<void> handler::handle_ds_info(context& ctx, messenger& m,
+                                   const messenger::header&) {
     const auto map = co_await m_storage.get_ds_size_map(ctx);
     co_await m.send_map(ctx, SUCCESS, map);
 }
 
-coro<void> storage_handler::handle_init_dd(context& ctx, messenger& m,
-                                           const messenger::header&) {
+coro<void> handler::handle_init_dd(context& ctx, messenger& m,
+                                   const messenger::header&) {
     co_await m.send(ctx, SUCCESS, {});
 }
 
-coro<void> storage_handler::handle_ds_write(context& ctx, messenger& m,
-                                            const messenger::header& h) {
+coro<void> handler::handle_ds_write(context& ctx, messenger& m,
+                                    const messenger::header& h) {
     const auto req = co_await m.recv_ds_write(h);
     co_await m_storage.ds_write(
         ctx, req.ds_id, req.pointer,
@@ -195,8 +195,8 @@ coro<void> storage_handler::handle_ds_write(context& ctx, messenger& m,
     co_await m.send(ctx, SUCCESS, {});
 }
 
-coro<void> storage_handler::handle_ds_read(context& ctx, messenger& m,
-                                           const messenger::header& h) {
+coro<void> handler::handle_ds_read(context& ctx, messenger& m,
+                                   const messenger::header& h) {
     const auto req = co_await m.recv_ds_read(h);
     unique_buffer<> buf{req.size};
     co_await m_storage.ds_read(ctx, req.ds_id, req.pointer, req.size,
@@ -204,4 +204,4 @@ coro<void> storage_handler::handle_ds_read(context& ctx, messenger& m,
     co_await m.send(ctx, SUCCESS, buf.span());
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage

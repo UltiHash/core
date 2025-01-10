@@ -6,12 +6,12 @@
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
 
-namespace uh::cluster {
+namespace uh::cluster::deduplicator {
 
-class deduplicator_handler : public protocol_handler {
+class handler : public protocol_handler {
 
 public:
-    explicit deduplicator_handler(local_deduplicator& local_dedupe);
+    explicit handler(local_deduplicator& local_dedupe);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
@@ -22,6 +22,6 @@ private:
     local_deduplicator& m_local_dedupe;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::deduplicator
 
 #endif // CORE_DEDUPE_NODE_HANDLER_H

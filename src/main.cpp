@@ -4,11 +4,11 @@
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
-#include "deduplicator/deduplicator.h"
+#include "deduplicator/service.h"
 #include "entrypoint/service.h"
 #include "etcd/SyncClient.hpp"
-#include "recovery/recovery.h"
-#include "storage/storage.h"
+#include "recovery/service.h"
+#include "storage/service.h"
 
 using namespace uh;
 using namespace uh::cluster;
@@ -26,13 +26,15 @@ void execute_role(const config& c) {
         auto etcd = etcd_manager(c.service.etcd_config);
         switch (c.role) {
         case STORAGE_SERVICE:
-            return start_service(storage(etcd, c.service, c.storage));
+            return start_service(storage::service(etcd, c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
-            return start_service(deduplicator(etcd, c.service, c.deduplicator));
+            return start_service(
+                deduplicator::service(etcd, c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
             return start_service(ep::service(etcd, c.service, c.entrypoint));
         case RECOVERY_SERVICE:
-            return start_service(recovery(etcd, c.service, c.recovery));
+            return start_service(
+                recovery::service(etcd, c.service, c.recovery));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();

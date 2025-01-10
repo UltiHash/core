@@ -5,11 +5,11 @@
 #include <common/utils/protocol_handler.h>
 #include <storage/interfaces/local_storage.h>
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
-class storage_handler : public protocol_handler {
+class handler : public protocol_handler {
 public:
-    explicit storage_handler(local_storage& storage);
+    explicit handler(local_storage& storage);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
@@ -50,6 +50,6 @@ private:
     local_storage& m_storage;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage
 
 #endif

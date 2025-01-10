@@ -9,17 +9,17 @@
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "common/telemetry/log.h"
 #include "config.h"
-#include "deduplicator_handler.h"
-#include "storage/storage.h"
+#include "handler.h"
+#include "storage/service.h"
 #include <functional>
 #include <utility>
 
-namespace uh::cluster {
+namespace uh::cluster::deduplicator {
 
-class deduplicator {
+class service {
 public:
-    explicit deduplicator(etcd_manager& etcd, const service_config& sc,
-                          const deduplicator_config& config)
+    explicit service(etcd_manager& etcd, const service_config& sc,
+                     const deduplicator_config& config)
         : m_service_id(get_service_id(
               etcd, get_service_string(DEDUPLICATOR_SERVICE), sc.working_dir)),
           m_ioc(boost::asio::io_context(config.server.threads)),
@@ -35,8 +35,7 @@ public:
                       etcd),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
-          m_server(config.server,
-                   std::make_unique<deduplicator_handler>(*m_deduplicator),
+          m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
     void run() {
@@ -52,7 +51,7 @@ public:
 
     size_t id() const noexcept { return m_service_id; }
 
-    ~deduplicator() {
+    ~service() {
         LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
         m_ioc.stop();
     }
@@ -63,13 +62,13 @@ private:
 
     service_registry m_service_registry;
 
-    attached_service<storage> m_attached_storage;
+    attached_service<storage::service> m_attached_storage;
     service_maintainer<storage_interface> m_storage_maintainer;
 
     concrete_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
 };
-} // end namespace uh::cluster
+} // namespace uh::cluster::deduplicator
 
 #endif // CORE_DEDUPE_NODE_H
