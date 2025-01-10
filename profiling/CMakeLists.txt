@@ -28,7 +28,6 @@ function(uh_add_profiler name)
         ${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
                                ${CMAKE_CURRENT_SOURCE_DIR})
     target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
-    add_test(NAME ${target_name} COMMAND ${target_name})
 endfunction()
 
 uh_add_profiler(profile_deduplicator PRIVATE uh_fake_global_data)
