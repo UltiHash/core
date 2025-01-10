@@ -1,5 +1,4 @@
-#ifndef CORE_DEDUPE_NODE_H
-#define CORE_DEDUPE_NODE_H
+#pragma once
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
@@ -70,5 +69,3 @@ private:
     server m_server;
 };
 } // namespace uh::cluster::deduplicator
-
-#endif // CORE_DEDUPE_NODE_H

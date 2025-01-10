@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_SHA256_H
-#define CORE_ENTRYPOINT_HTTP_CHUNKED_BODY_SHA256_H
+#pragma once
 
 #include "chunked_body.h"
 #include "common/crypto/hash.h"
@@ -29,5 +28,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_DB_DB_H
-#define CORE_COMMON_DB_DB_H
+#pragma once
 
 #include "common/utils/pool.h"
 #include "config.h"
@@ -26,5 +25,3 @@ inline auto connection_factory(boost::asio::io_context& ioc, const config& cfg,
 }
 
 } // namespace uh::cluster::db
-
-#endif

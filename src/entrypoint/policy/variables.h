@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_VARIABLES_H
-#define CORE_ENTRYPOINT_VARIABLES_H
+#pragma once
 
 #include <common/utils/strings.h>
 
@@ -78,5 +77,3 @@ bool equals_wildcard(std::string_view pattern, std::string_view str,
 int64_t to_int(std::string_view s);
 
 } // namespace uh::cluster::ep::policy
-
-#endif

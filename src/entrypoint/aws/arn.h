@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_AWS_ARN_H
-#define CORE_ENTRYPOINT_AWS_ARN_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -27,5 +26,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::aws
-
-#endif

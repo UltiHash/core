@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_USER_DB_H
-#define CORE_ENTRYPOINT_USER_DB_H
+#pragma once
 
 #include "common/crypto/scrypt.h"
 #include "common/db/db.h"
@@ -124,5 +123,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::user
-
-#endif

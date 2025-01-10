@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_CRYPTO_SCRYPT_H
-#define CORE_COMMON_CRYPTO_SCRYPT_H
+#pragma once
 
 #include <memory>
 #include <openssl/kdf.h>
@@ -26,5 +25,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

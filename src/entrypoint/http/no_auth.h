@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_NO_AUTH_H
-#define CORE_ENTRYPOINT_HTTP_NO_AUTH_H
+#pragma once
 
 #include <common/types/common_types.h>
 
@@ -15,5 +14,3 @@ public:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

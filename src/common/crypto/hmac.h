@@ -1,5 +1,4 @@
-#ifndef COMMON_UTILS_HMAC_H
-#define COMMON_UTILS_HMAC_H
+#pragma once
 
 #include "common/crypto/hash.h"
 
@@ -45,5 +44,3 @@ using hmac_md5 = hmac<hash_algorithm::md5>;
 using hmac_sha256 = hmac<hash_algorithm::sha256>;
 
 } // namespace uh::cluster
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef COMMON_TEST_SERVER_H
-#define COMMON_TEST_SERVER_H
+#pragma once
 
 #include <boost/asio.hpp>
 
@@ -25,5 +24,3 @@ private:
 // ---------------------------------------------------------------------
 
 } // namespace uh::test
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CORE_DEDUPE_NODE_HANDLER_H
-#define CORE_DEDUPE_NODE_HANDLER_H
+#pragma once
 
 #include "common/utils/protocol_handler.h"
 #include "config.h"
@@ -23,5 +22,3 @@ private:
 };
 
 } // namespace uh::cluster::deduplicator
-
-#endif // CORE_DEDUPE_NODE_HANDLER_H

@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_POLICY_MATCHER_H
-#define CORE_ENTRYPOINT_POLICY_MATCHER_H
+#pragma once
 
 #include "variables.h"
 #include <functional>
@@ -50,5 +49,3 @@ bool match_any(const auto& list, auto pred) {
 }
 
 } // namespace uh::cluster::ep::policy
-
-#endif

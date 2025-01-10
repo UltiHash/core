@@ -1,5 +1,4 @@
-#ifndef EC_FACTORY_H
-#define EC_FACTORY_H
+#pragma once
 
 #include "no_ec.h"
 #include "reedsolomon_c.h"
@@ -20,5 +19,3 @@ struct ec_factory {
 };
 
 } // end namespace uh::cluster
-
-#endif // EC_FACTORY_H

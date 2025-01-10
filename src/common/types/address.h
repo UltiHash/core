@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_ADDRESS_H
-#define UH_CLUSTER_ADDRESS_H
+#pragma once
 
 #include "big_int.h"
 #include <cstdint>
@@ -121,5 +120,3 @@ template <> struct std::hash<uh::cluster::fragment> {
                std::hash<std::size_t>{}(frag.size);
     }
 };
-
-#endif // UH_CLUSTER_ADDRESS_H

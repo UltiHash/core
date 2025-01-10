@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_UTILS_XML_PARSER_H
-#define CORE_COMMON_UTILS_XML_PARSER_H
+#pragma once
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -45,5 +44,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

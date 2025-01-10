@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_POINTER_TRAITS_H
-#define UH_CLUSTER_POINTER_TRAITS_H
+#pragma once
 
 #include "common/types/big_int.h"
 #include <cstdint>
@@ -57,5 +55,3 @@ struct pointer_traits {
     }
 };
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_POINTER_TRAITS_H

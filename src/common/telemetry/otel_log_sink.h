@@ -1,5 +1,4 @@
-#ifndef UH_LOGGING_OTEL_LOG_SINK_H
-#define UH_LOGGING_OTEL_LOG_SINK_H
+#pragma once
 
 #include <boost/log/sinks/basic_sink_backend.hpp>
 
@@ -12,5 +11,3 @@ public:
 };
 
 } // namespace uh::log
-
-#endif // UH_LOGGING_OTEL_LOG_SINK_H

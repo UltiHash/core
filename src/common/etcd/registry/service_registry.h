@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_SERVICE_REGISTRY_H
-#define UH_CLUSTER_SERVICE_REGISTRY_H
+#pragma once
 
 #include "common/etcd/utils.h"
 #include "common/network/server.h"
@@ -28,5 +27,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_SERVICE_REGISTRY_H

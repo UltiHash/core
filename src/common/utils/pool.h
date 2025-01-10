@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_POOL_H
-#define CORE_COMMON_POOL_H
+#pragma once
 
 #include "common/coroutines/promise.h"
 #include "common/debug/debug.h"
@@ -102,5 +101,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

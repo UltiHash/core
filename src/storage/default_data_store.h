@@ -1,5 +1,4 @@
-#ifndef CORE_DATA_STORE_H
-#define CORE_DATA_STORE_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include "reference_counter.h"
@@ -151,5 +150,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // CORE_DATA_STORE_H

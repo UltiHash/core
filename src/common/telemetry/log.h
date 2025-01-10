@@ -1,5 +1,4 @@
-#ifndef UH_LOGGING_LOGGING_BOOST_H
-#define UH_LOGGING_LOGGING_BOOST_H
+#pragma once
 
 #pragma GCC diagnostic push
 
@@ -97,5 +96,3 @@ static boost::log::sources::severity_logger<boost::log::trivial::severity_level>
 } // namespace uh::log
 
 #pragma GCC diagnostic pop
-
-#endif

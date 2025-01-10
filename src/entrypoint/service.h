@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_SERVICE_H
-#define CORE_ENTRYPOINT_SERVICE_H
+#pragma once
 
 #include <functional>
 
@@ -53,5 +52,3 @@ private:
 };
 
 } // namespace uh::cluster::ep
-
-#endif // CORE_ENTRY_NODE_H

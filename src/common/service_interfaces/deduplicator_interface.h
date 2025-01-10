@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_SERVICE_INTERFACES_DEDUPLICATOR_INTERFACE_H
-#define CORE_COMMON_SERVICE_INTERFACES_DEDUPLICATOR_INTERFACE_H
+#pragma once
 
 #include "common/telemetry/context.h"
 #include "common/utils/common.h"
@@ -14,5 +13,3 @@ struct deduplicator_interface {
 };
 
 } // namespace uh::cluster
-
-#endif

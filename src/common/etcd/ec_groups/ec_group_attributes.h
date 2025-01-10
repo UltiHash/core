@@ -1,5 +1,4 @@
-#ifndef EC_GROUP_ATTRIBUTES_H
-#define EC_GROUP_ATTRIBUTES_H
+#pragma once
 #include "common/etcd/namespace.h"
 #include "common/etcd/utils.h"
 #include "common/utils/time_utils.h"
@@ -71,5 +70,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // EC_GROUP_ATTRIBUTES_H

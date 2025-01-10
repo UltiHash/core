@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_COMMANDS_IAM_GET_USER_POLICY_H
-#define CORE_ENTRYPOINT_COMMANDS_IAM_GET_USER_POLICY_H
+#pragma once
 
 #include <entrypoint/commands/command.h>
 #include <entrypoint/user/db.h>
@@ -20,5 +19,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::iam
-
-#endif

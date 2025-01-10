@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_LRU_CACHE_H
-#define UH_CLUSTER_LRU_CACHE_H
+#pragma once
 
 #include <list>
 #include <map>
@@ -92,5 +91,3 @@ public:
     }
 };
 } // end namespace uh::cluster
-
-#endif // UH_CLUSTER_LRU_CACHE_H

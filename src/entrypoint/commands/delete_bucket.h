@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HTTP_DELETE_BUCKET_H
-#define ENTRYPOINT_HTTP_DELETE_BUCKET_H
+#pragma once
 
 #include "command.h"
 #include "entrypoint/directory.h"
@@ -21,5 +20,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

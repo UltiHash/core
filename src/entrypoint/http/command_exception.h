@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_COMMAND_EXCEPTION_H
-#define CORE_ENTRYPOINT_HTTP_COMMAND_EXCEPTION_H
+#pragma once
 
 #include "common/utils/error.h"
 #include "response.h"
@@ -28,5 +27,3 @@ ep::http::response make_response(const command_exception& e);
 void throw_from_error(const error& e);
 
 } // namespace uh::cluster
-
-#endif

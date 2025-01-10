@@ -1,5 +1,4 @@
-#ifndef COMMON_TEST_CHECKS_H
-#define COMMON_TEST_CHECKS_H
+#pragma once
 
 #include <boost/test/unit_test.hpp>
 #include <chrono>
@@ -72,5 +71,3 @@
                  std::chrono::milliseconds(TIMEOUT_MS));                       \
         BOOST_CHECK(success);                                                  \
     } while (false)
-
-#endif

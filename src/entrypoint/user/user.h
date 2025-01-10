@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_USER_USER_H
-#define CORE_ENTRYPOINT_USER_USER_H
+#pragma once
 
 #include "common/types/common_types.h"
 #include "entrypoint/policy/policy.h"
@@ -32,5 +31,3 @@ struct user {
 };
 
 } // namespace uh::cluster::ep::user
-
-#endif

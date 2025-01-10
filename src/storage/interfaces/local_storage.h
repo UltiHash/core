@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_LOCAL_STORAGE_H
-#define UH_CLUSTER_LOCAL_STORAGE_H
+#pragma once
 
 #include "common/service_interfaces/storage_interface.h"
 #include "common/telemetry/log.h"
@@ -223,5 +222,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_LOCAL_STORAGE_H

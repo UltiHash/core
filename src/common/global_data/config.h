@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_CONFIG_H
-#define UH_CLUSTER_CONFIG_H
+#pragma once
 
 #include <cstdint>
 
@@ -13,4 +11,3 @@ struct global_data_view_config {
     std::size_t ec_parity_shards = 0;
 };
 } // namespace uh::cluster
-#endif // UH_CLUSTER_CONFIG_H

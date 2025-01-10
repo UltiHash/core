@@ -1,5 +1,4 @@
-#ifndef CORE_RECOVERY_H
-#define CORE_RECOVERY_H
+#pragma once
 
 #include "common/etcd/ec_groups/ec_get_handler.h"
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
@@ -55,4 +54,3 @@ private:
     service_maintainer<storage_interface> m_storage_maintainer;
 };
 } // namespace uh::cluster::recovery
-#endif // CORE_RECOVERY_H

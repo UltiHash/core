@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HTTP_LIST_MULTIPART_H
-#define ENTRYPOINT_HTTP_LIST_MULTIPART_H
+#pragma once
 
 #include "command.h"
 #include "entrypoint/multipart_state.h"
@@ -21,5 +20,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

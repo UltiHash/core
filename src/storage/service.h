@@ -1,5 +1,4 @@
-#ifndef CORE_DATA_NODE_H
-#define CORE_DATA_NODE_H
+#pragma once
 
 #include <functional>
 #include <utility>
@@ -43,4 +42,3 @@ private:
     server m_server;
 };
 } // namespace uh::cluster::storage
-#endif // CORE_DATA_NODE_H

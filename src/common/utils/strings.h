@@ -1,5 +1,4 @@
-#ifndef COMMON_UTILS_STRINGS_H
-#define COMMON_UTILS_STRINGS_H
+#pragma once
 
 #include <cstring>
 #include <ranges>
@@ -181,5 +180,3 @@ inline std::string operator+(std::string fst, std::string_view snd) {
 std::string unhex(std::string in);
 
 } // namespace uh::cluster
-
-#endif

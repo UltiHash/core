@@ -1,5 +1,4 @@
-#ifndef EC_CALCULATOR_H
-#define EC_CALCULATOR_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include "ec_interface.h"
@@ -125,5 +124,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // EC_CALCULATOR_H

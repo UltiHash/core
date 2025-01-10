@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_RANGE_H
-#define CORE_ENTRYPOINT_HTTP_RANGE_H
+#pragma once
 
 #include <common/types/address.h>
 
@@ -44,5 +43,3 @@ range_spec::range parse_range_spec(std::string_view header, std::size_t max);
 address apply_range(address addr, const range_spec& spec);
 
 } // namespace uh::cluster::ep::http
-
-#endif

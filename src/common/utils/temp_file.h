@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_TEMP_FILE_H
-#define UH_CLUSTER_TEMP_FILE_H
+#pragma once
 
 #include <filesystem>
 #include <string_view>
@@ -41,4 +39,3 @@ private:
 
     constexpr static std::string_view FILENAME_TEMPLATE = "tempfile-XXXXXX";
 };
-#endif // UH_CLUSTER_TEMP_FILE_H

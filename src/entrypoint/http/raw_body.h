@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_RAW_BODY_H
-#define CORE_ENTRYPOINT_HTTP_RAW_BODY_H
+#pragma once
 
 #include "beast_utils.h"
 #include "body.h"
@@ -21,5 +20,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

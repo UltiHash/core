@@ -1,5 +1,4 @@
-#ifndef CORE_STORAGE_CONFIG_H
-#define CORE_STORAGE_CONFIG_H
+#pragma once
 
 #include "common/network/server.h"
 #include "interfaces/data_store.h"
@@ -22,5 +21,3 @@ struct storage_config {
 };
 
 } // namespace uh::cluster
-
-#endif

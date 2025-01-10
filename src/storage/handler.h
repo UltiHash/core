@@ -1,5 +1,4 @@
-#ifndef CORE_STORAGE_STORAGE_HANDLER_H
-#define CORE_STORAGE_STORAGE_HANDLER_H
+#pragma once
 
 #include <common/telemetry/context.h>
 #include <common/utils/protocol_handler.h>
@@ -51,5 +50,3 @@ private:
 };
 
 } // namespace uh::cluster::storage
-
-#endif

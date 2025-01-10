@@ -1,5 +1,4 @@
-#ifndef NO_EC_H
-#define NO_EC_H
+#pragma once
 #include "ec_interface.h"
 
 namespace uh::cluster {
@@ -39,5 +38,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // NO_EC_H

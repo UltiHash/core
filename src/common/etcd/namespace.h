@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_NAMESPACE_H
-#define UH_CLUSTER_NAMESPACE_H
+#pragma once
 
 #define NAMESPACE "uh"
 
@@ -173,5 +172,3 @@ get_etcd_service_attribute_enum(const std::string& param) {
     throw std::invalid_argument("invalid etcd parameter");
 }
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_NAMESPACE_H
