@@ -14,6 +14,32 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
     reset();
 }
 
+void etcd_manager::reset() {
+    {
+        auto client = create_client(m_cfg);
+
+        m_lease = client->leasegrant(m_lease_timeout).value().lease();
+        if (m_lease_timeout < 2) {
+            throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
+                                     ") should be bigger than 2, to make sure "
+                                     "keepalive is smaller than lease time");
+        }
+        m_keepalive.reset(
+            new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
+        restore_watchers();
+        m_healthchecker.reset(
+            new etcd::Watcher(*client, etcd_healthcheck, {}, false));
+
+        m_client.store(client);
+    }
+    m_healthchecker->Wait([this](bool cancelled) mutable {
+        if (cancelled) {
+            return;
+        }
+        reset();
+    });
+}
+
 etcd_manager::~etcd_manager() {
     auto client = m_client.load();
     client->leaserevoke(m_lease);
@@ -31,7 +57,7 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
     auto resp = client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
-            "setting the configuration parameter " + key +
+            "setting configuration parameter " + key +
             " failed, details: " + resp.error_message());
 }
 
@@ -43,13 +69,10 @@ std::string etcd_manager::get(const std::string& key) {
     return resp.value().as_string();
 }
 
-std::optional<std::string>
-etcd_manager::return_key_if_exists(const std::string& key) const {
+bool etcd_manager::has(const std::string& key) {
     auto client = m_client.load();
     auto resp = client->get(key);
-    if (!resp.is_ok())
-        return std::nullopt;
-    return resp.value().key();
+    return resp.is_ok();
 }
 
 std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
@@ -109,35 +132,6 @@ void etcd_manager::unlock(const std::string& unlock_key) {
         throw std::invalid_argument(
             "releasing lock with unlock_key " + unlock_key +
             " failed, details: " + resp.error_message());
-}
-
-/*
- * This function recreates etcd client to recover quickly (15s -> 1s)
- */
-void etcd_manager::reset() {
-    {
-        auto client = create_client(m_cfg);
-
-        m_lease = client->leasegrant(m_lease_timeout).value().lease();
-        if (m_lease_timeout < 2) {
-            throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
-                                     ") should be bigger than 2, to make sure "
-                                     "keepalive is smaller than lease time");
-        }
-        m_keepalive.reset(
-            new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
-        restore_watchers();
-        m_healthchecker.reset(
-            new etcd::Watcher(*client, etcd_healthcheck, {}, false));
-
-        m_client.store(client);
-    }
-    m_healthchecker->Wait([this](bool cancelled) mutable {
-        if (cancelled) {
-            return;
-        }
-        reset();
-    });
 }
 
 void etcd_manager::restore_watchers(void) {
