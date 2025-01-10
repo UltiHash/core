@@ -1,0 +1,142 @@
+name: Nightly Testing Workflow
+
+on:
+  schedule:
+    - cron: '0 0 * * MON-FRI'
+  workflow_dispatch:
+    inputs:
+      test-to-execute:
+        type: choice
+        description: Choose the test to execute
+        options: 
+          - feature-test-aarch64
+          - pyspark-test-x86-64
+          - s3a-test-x86-64
+          - stability-test-x86-64
+          - vulnerability-scanning
+        required: true
+
+jobs:
+
+  build-core:
+    uses: ./.github/workflows/docker_build_template.yml 
+    with:
+      docker_context: .
+      dockerfile_path: Dockerfile
+      docker_build_args: |
+        BuildType=RelWithDebInfo
+        DebugTools=True
+      docker_images: ghcr.io/ultihash/cluster
+      docker_tags: nightly-build
+      platforms: linux/amd64,linux/arm64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+    
+  build-database-init:
+    uses: ./.github/workflows/docker_build_template.yml 
+    with:
+      docker_context: .
+      dockerfile_path: tools/database-init/Dockerfile
+      docker_images: ghcr.io/ultihash/database-init
+      docker_tags: nightly-build
+      platforms: linux/amd64,linux/arm64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+
+  feature-test-aarch64:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
+    uses: ./.github/workflows/feature_testing_on_aws.yml
+    with:
+      env_name: feature-testing-aarch64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
+
+  pyspark-test-x86-64:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64')
+    uses: ./.github/workflows/pyspark_testing_on_premise.yml
+    with:
+      env_name: pyspark-testing-x86-64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      uh_license: ${{ secrets.UH_LICENSE_1PB }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+
+  s3a-test-x86-64:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64')
+    uses: ./.github/workflows/s3a_testing_on_premise.yml
+    with:
+      env_name: s3a-testing-x86-64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      uh_license: ${{ secrets.UH_LICENSE_1PB }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+
+  stability-test-x86-64:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
+    uses: ./.github/workflows/stability_testing_on_premise.yml
+    with:
+      env_name: stability-testing-x86-64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      uh_license: ${{ secrets.UH_LICENSE_1PB }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+
+  vulnerability-scanning:
+    needs: 
+      - build-core
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning')
+    uses: ./.github/workflows/vulnerability_scanning.yml
+    with:
+      docker_image_tag: nightly-build
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+  

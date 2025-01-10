@@ -1,50 +1,41 @@
 name: PySpark Testing On Premise
 
 on:
-  schedule:
-    - cron: '0 0 * * MON-FRI'
-  workflow_dispatch:
-
-env:
-  ENVIRONMENT_NAME: pyspark-testing-x86-64
+  workflow_call:
+    inputs:
+      env_name:         
+        required: true
+        type: string
+      docker_image_tag: 
+        required: true
+        type: string
+      docker_registry:
+        required: true
+        type: string
+    secrets:
+      ghcr_token:
+        required: true
+      docker_registry_username:
+        required: true
+      docker_registry_password:
+        required: true
+      registry_token:
+        required: true
+      kubeconfig:
+        required: true
+      uh_license:
+        required: true
+      monitoring_token:
+        required: true
 
 jobs:
 
-  build-core:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: Dockerfile
-      docker_build_args: |
-        BuildType=RelWithDebInfo
-        DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
-      docker_tags: pyspark-testing-x86-64
-      platforms: linux/amd64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
-        
-  build-database-init:
-    uses: ./.github/workflows/docker_build_template.yml
-    with:
-      docker_context: .
-      dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
-      docker_tags: pyspark-testing-x86-64
-      platforms: linux/amd64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
-
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs:
-      - build-core
-      - build-database-init
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
+          token: ${{ secrets.ghcr_token }}
 
       - uses: azure/setup-kubectl@v3
         with:
@@ -53,7 +44,7 @@ jobs:
       - name: Download Kubeconfig
         run: |
           mkdir ~/.kube
-          echo '${{ secrets.KUBECONFIG }}' > ~/.kube/config
+          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
 
       - uses: azure/setup-helm@v4.0.0
         with:
@@ -62,8 +53,8 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
           BUCKET_NAME: datasets
         with:
           input: testing/pyspark/helm-values-on-premise.yaml
@@ -71,20 +62,48 @@ jobs:
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
-          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
-          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
-          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
+          kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete secrets -n ${{ inputs.env_name }} --all --force
+          kubectl delete ns ${{ inputs.env_name }}
         continue-on-error: true
 
       - name: Install the Helm chart
         run: |
-          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
-          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
-          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+          kubectl create ns ${{ inputs.env_name }}
+          kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ inputs.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
+          kubectl create secret generic ultihash -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
+          echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 15m
 
       - name: Run PySpark test
         run: |
-          helm test ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --filter name=${{ env.ENVIRONMENT_NAME }}-pyspark-test --logs --timeout 1h
+          helm test ${{ inputs.env_name }} -n ${{ inputs.env_name }} --filter name=${{ inputs.env_name }}-pyspark-test --logs --timeout 1h
+
+  cleanup:
+    runs-on: lightweight-generic-jobs
+    needs: deploy-and-test
+    if: ${{ always() }}
+    steps:
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.7
+
+      - name: Download Kubeconfig
+        run: |
+          mkdir ~/.kube
+          echo '${{ secrets.kubeconfig }}' > ~/.kube/config
+    
+      - uses: azure/setup-helm@v4.0.0
+        with:
+         version: v3.14.0
+
+      - name: Environment cleanup
+        run: |
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait
+          kubectl delete pods -n ${{ inputs.env_name }} --all --force
+          kubectl delete pvc -n ${{ inputs.env_name }} --all
+          kubectl delete secrets -n ${{ inputs.env_name }} --all --force
+          kubectl delete ns ${{ inputs.env_name }}
+        continue-on-error: true
