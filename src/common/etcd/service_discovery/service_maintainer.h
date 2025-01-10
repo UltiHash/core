@@ -33,8 +33,6 @@ template <typename service_interface> struct service_maintainer {
         }
     }
 
-    ~service_maintainer() {}
-
     void add_monitor(service_monitor<service_interface>& monitor) {
 
         std::lock_guard l(m_mutex);

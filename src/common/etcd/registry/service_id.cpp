@@ -43,15 +43,6 @@ void write_id_to_disk(const std::filesystem::path& id_file, std::size_t id) {
     out.write(reinterpret_cast<const char*>(&id), sizeof(id));
 }
 
-std::string get(etcd_manager& etcd, const std::string& key) {
-
-    return etcd.get(key);
-}
-
-void set(etcd_manager& etcd, const std::string& key, const std::string& value) {
-    etcd.put(key, value);
-}
-
 } // namespace
 
 std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
@@ -70,15 +61,15 @@ std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
     const auto lock = etcd.get_lock_guard(etcd_global_lock_key);
 
     try {
-        current_id = std::stoull(get(etcd, current_id_key));
+        current_id = std::stoull(etcd.get(current_id_key));
     } catch (const std::exception&) {
-        set(etcd, current_id_key, std::to_string(0));
+        etcd.put(current_id_key, std::to_string(0));
         write_id_to_disk(id_file, 0);
         return 0;
     }
 
     current_id++;
-    set(etcd, current_id_key, std::to_string(current_id));
+    etcd.put(current_id_key, std::to_string(current_id));
     write_id_to_disk(id_file, current_id);
     return current_id;
 }
