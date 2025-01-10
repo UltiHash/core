@@ -11,26 +11,57 @@ namespace uh::cluster {
 etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
     : m_cfg{cfg},
       m_lease_timeout{lease_timeout} {
+    if (m_lease_timeout < 2) {
+        throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
+                                 ") should be bigger than 2, to make sure "
+                                 "keepalive is smaller than lease time");
+    }
     reset();
 }
+
+/*
+ * Private utilities
+ */
+namespace {
+std::unique_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
+    while (true) {
+        try {
+            std::unique_ptr<etcd::SyncClient> client;
+            if (cfg.username && cfg.password) {
+                client = std::make_unique<etcd::SyncClient>(
+                    cfg.url, *cfg.username, *cfg.password);
+            } else {
+                client = std::make_unique<etcd::SyncClient>(cfg.url);
+            }
+
+            if (!client->head().is_ok()) {
+                LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
+                std::this_thread::sleep_for(1s);
+                continue;
+            }
+            return client;
+        } catch (const std::exception& e) {
+            LOG_DEBUG() << "cannot connect to etcd. trying to reconnect: "
+                        << e.what();
+            std::this_thread::sleep_for(1s);
+        }
+    }
+}
+} // namespace
 
 void etcd_manager::reset() {
     {
         auto client = create_client(m_cfg);
 
         m_lease = client->leasegrant(m_lease_timeout).value().lease();
-        if (m_lease_timeout < 2) {
-            throw std::runtime_error("ttl(" + std::to_string(m_lease_timeout) +
-                                     ") should be bigger than 2, to make sure "
-                                     "keepalive is smaller than lease time");
-        }
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
         restore_watchers();
         m_healthchecker.reset(
             new etcd::Watcher(*client, etcd_healthcheck, {}, false));
 
-        m_client.store(client);
+        m_client.store(std::shared_ptr<etcd::SyncClient>(std::move(client)),
+                       std::memory_order_release);
     }
     m_healthchecker->Wait([this](bool cancelled) mutable {
         if (cancelled) {
@@ -140,35 +171,6 @@ void etcd_manager::restore_watchers(void) {
 
     for (auto& e : watcher_entries) {
         e.watcher.reset(new etcd::Watcher(*client, e.prefix, e.callback, true));
-    }
-}
-
-/**************************************************************************
- * Static utilities
- */
-std::shared_ptr<etcd::SyncClient>
-etcd_manager::create_client(const etcd_config& cfg) {
-    while (true) {
-        try {
-            std::shared_ptr<etcd::SyncClient> client;
-            if (cfg.username && cfg.password) {
-                client = std::make_unique<etcd::SyncClient>(
-                    cfg.url, *cfg.username, *cfg.password);
-            } else {
-                client = std::make_unique<etcd::SyncClient>(cfg.url);
-            }
-
-            if (!client->head().is_ok()) {
-                LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
-                std::this_thread::sleep_for(1s);
-                continue;
-            }
-            return client;
-        } catch (const std::exception& e) {
-            LOG_DEBUG() << "cannot connect to etcd. trying to reconnect: "
-                        << e.what();
-            std::this_thread::sleep_for(1s);
-        }
     }
 }
 

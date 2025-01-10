@@ -111,12 +111,6 @@ private:
     void reset();
 
     void restore_watchers(void);
-
-    /**************************************************************************
-     * Static utilities
-     */
-    static std::shared_ptr<etcd::SyncClient>
-    create_client(const etcd_config& cfg = {});
 };
 
 } // namespace uh::cluster
