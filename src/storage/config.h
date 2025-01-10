@@ -2,7 +2,7 @@
 #define CORE_STORAGE_CONFIG_H
 
 #include "common/network/server.h"
-#include "data_store.h"
+#include "interfaces/data_store.h"
 
 namespace uh::cluster {
 

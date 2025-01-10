@@ -11,7 +11,7 @@
 #include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
-#include "storage/data_store.h"
+#include "storage/default_data_store.h"
 
 using namespace boost::asio;
 

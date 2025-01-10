@@ -4,7 +4,7 @@
 #include "recovery/service.h"
 
 #include <common/etcd/utils.h>
-#include <common/global_data/concrete_global_data_view.h>
+#include <common/global_data/default_global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
 #include <storage/service.h>
@@ -61,7 +61,7 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<concrete_global_data_view>(
+        m_gdv = std::make_shared<default_global_data_view>(
             m_gdv_config, m_ioc, m_storage_services, m_etcd);
 
         m_threads.emplace_back([this, i] {

@@ -4,7 +4,7 @@
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
-#include "fakes/storage/fake_global_data_view.h"
+#include "mock/storage/mock_global_data_view.h"
 
 #include <boost/asio.hpp>
 #include <boost/test/unit_test.hpp>
@@ -34,8 +34,8 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
                           .max_data_store_size = MAX_DATA_STORE_SIZE_BYTES,
                           .page_size = DEFAULT_PAGE_SIZE};
     auto data_store =
-        fake_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
-    auto data_view = fake_global_data_view(get_io_context(), data_store);
+        mock_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
+    auto data_view = mock_global_data_view(get_io_context(), data_store);
     auto dedup = local_deduplicator({}, data_view);
 
     context ctx;

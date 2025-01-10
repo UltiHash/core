@@ -11,13 +11,13 @@
 
 namespace uh::cluster {
 
-class concrete_global_data_view : public global_data_view {
+class default_global_data_view : public global_data_view {
 
 public:
     /**
      * @brief Constructs a global_data view.
      *
-     * The concrete_global_data_view introduces the abstraction of a flat
+     * The default_global_data_view introduces the abstraction of a flat
      * address space that fragments can be written to and read from, hiding the
      * interaction with individual storage service instances.
      *
@@ -28,7 +28,7 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    explicit concrete_global_data_view(
+    explicit default_global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
         service_maintainer<storage_interface>& storage_maintainer,
         etcd_manager& etcd);
@@ -144,10 +144,10 @@ public:
 
     /**
      * @brief Provides access to the I/O context used by the
-     * concrete_global_data_view
+     * default_global_data_view
      * @param c open telemetry context
      * @return A reference to the boost::asio::io_context used by the
-     * concrete_global_data_view
+     * default_global_data_view
      */
     [[nodiscard]] boost::asio::io_context& get_executor() const;
 
@@ -161,7 +161,7 @@ public:
     [[nodiscard]] std::size_t
     get_storage_service_connection_count() const noexcept;
 
-    ~concrete_global_data_view() noexcept;
+    ~default_global_data_view() noexcept;
 
 private:
     boost::asio::io_context& m_io_service;

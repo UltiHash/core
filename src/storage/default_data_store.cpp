@@ -1,4 +1,4 @@
-#include "data_store.h"
+#include "default_data_store.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
 #include "common/utils/pointer_traits.h"
@@ -19,15 +19,17 @@ ds_file_info parse_file_name(const std::string& filename) {
     return {std::stoul(id_str), std::stoul(offset_str)};
 }
 
-data_store::data_store(data_store_config conf,
-                       const std::filesystem::path& working_dir,
-                       uint32_t service_id, uint32_t data_store_id)
+default_data_store::default_data_store(data_store_config conf,
+                                       const std::filesystem::path& working_dir,
+                                       uint32_t service_id,
+                                       uint32_t data_store_id)
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
       m_root(working_dir / std::to_string(data_store_id)),
       m_conf(conf),
-      m_refcounter(m_root, m_conf.page_size,
-                   std::bind_front(&data_store::internal_delete, this)) {
+      m_refcounter(
+          m_root, m_conf.page_size,
+          std::bind_front(&default_data_store::internal_delete, this)) {
 
     m_open_files.reserve(2 * m_conf.max_data_store_size / m_conf.max_file_size +
                          1);
@@ -93,8 +95,9 @@ data_store::data_store(data_store_config conf,
                 << ": current_offset=" << m_current_offset;
 }
 
-std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
-                             size_t size) {
+std::size_t default_data_store::read(char* buffer,
+                                     const uint128_t& global_pointer,
+                                     size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
@@ -122,9 +125,8 @@ std::size_t data_store::read(char* buffer, const uint128_t& global_pointer,
     return tr;
 }
 
-std::size_t data_store::read_up_to(char* buffer,
-                                   const uh::cluster::uint128_t& global_pointer,
-                                   size_t size) {
+std::size_t default_data_store::read_up_to(
+    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
@@ -161,7 +163,7 @@ std::size_t data_store::read_up_to(char* buffer,
     return tr;
 }
 
-void data_store::sync() {
+void default_data_store::sync() {
 
     std::unique_lock<std::mutex> lock(m_sync_mutex);
 
@@ -178,7 +180,7 @@ void data_store::sync() {
     fdatasync(m_open_files.back().first);
 }
 
-size_t data_store::fetch_used_space(
+size_t default_data_store::fetch_used_space(
     const std::filesystem::path& last_file) const noexcept {
     auto size = 0ul;
     for (auto& f : std::filesystem::recursive_directory_iterator(m_root)) {
@@ -191,8 +193,8 @@ size_t data_store::fetch_used_space(
     return size + m_last_file_data_end;
 }
 
-address data_store::write(const std::string_view& data,
-                          const std::vector<std::size_t>& offsets) {
+address default_data_store::write(const std::string_view& data,
+                                  const std::vector<std::size_t>& offsets) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
         throw std::bad_alloc();
@@ -218,8 +220,8 @@ address data_store::write(const std::string_view& data,
     return data_address;
 }
 
-void data_store::manual_write(uint64_t internal_pointer,
-                              const std::string_view& data) {
+void default_data_store::manual_write(uint64_t internal_pointer,
+                                      const std::string_view& data) {
 
     const auto [fd, seek] = get_file_offset_pair(internal_pointer);
 
@@ -234,7 +236,8 @@ void data_store::manual_write(uint64_t internal_pointer,
     }
 }
 
-void data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
+void default_data_store::manual_read(uint64_t pointer, size_t size,
+                                     char* buffer) {
     const auto [fd, seek] = get_file_offset_pair(pointer);
     ssize_t tr = 0;
     do {
@@ -247,17 +250,17 @@ void data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
     } while (static_cast<size_t>(tr) < size);
 }
 
-address data_store::link(const address& addr) {
+address default_data_store::link(const address& addr) {
     return m_refcounter.increment(addr);
 }
 
-size_t data_store::unlink(const address& addr) {
+size_t default_data_store::unlink(const address& addr) {
     return m_refcounter.decrement(addr);
 }
 
-size_t data_store::id() const noexcept { return m_data_store_id; }
+size_t default_data_store::id() const noexcept { return m_data_store_id; }
 
-data_store::~data_store() {
+default_data_store::~default_data_store() {
     sync();
     for (const auto& open_file : m_open_files) {
         fsync(open_file.first);
@@ -265,7 +268,8 @@ data_store::~data_store() {
     }
 }
 
-std::pair<int, long> data_store::get_file_offset_pair(size_t pointer) const {
+std::pair<int, long>
+default_data_store::get_file_offset_pair(size_t pointer) const {
     auto f = std::upper_bound(
         m_open_files.cbegin(), m_open_files.cend(), std::pair{0, pointer},
         [](const auto& v1, const auto& v2) { return v1.second < v2.second; });
@@ -277,8 +281,8 @@ std::pair<int, long> data_store::get_file_offset_pair(size_t pointer) const {
     return {f->first, seek};
 }
 
-std::filesystem::path data_store::add_new_file(size_t offset,
-                                               size_t file_size) {
+std::filesystem::path default_data_store::add_new_file(size_t offset,
+                                                       size_t file_size) {
     const auto file_path = m_root / get_name(offset);
     const int fd = open(file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 
@@ -318,18 +322,20 @@ std::filesystem::path data_store::add_new_file(size_t offset,
     return file_path;
 }
 
-std::string data_store::get_name(size_t offset) const {
+std::string default_data_store::get_name(size_t offset) const {
     return "data_" + std::to_string(m_storage_id) + "_" +
            std::to_string(offset);
 }
 
-bool data_store::is_data_file(const std::filesystem::path& path) {
+bool default_data_store::is_data_file(const std::filesystem::path& path) {
     return path.filename().string().starts_with("data_");
 }
 
-uint64_t data_store::get_used_space() const noexcept { return m_used_space; }
+uint64_t default_data_store::get_used_space() const noexcept {
+    return m_used_space;
+}
 
-size_t data_store::get_available_space() const noexcept {
+size_t default_data_store::get_available_space() const noexcept {
     auto capacity = m_conf.max_data_store_size - m_used_space;
     try {
         auto space = std::filesystem::space(m_root);
@@ -340,9 +346,9 @@ size_t data_store::get_available_space() const noexcept {
     return capacity;
 }
 
-data_store::alloc_t
-data_store::internal_allocate(size_t size,
-                              const std::vector<std::size_t>& offsets) {
+default_data_store::alloc_t
+default_data_store::internal_allocate(size_t size,
+                                      const std::vector<std::size_t>& offsets) {
     std::deque<reference_counter::refcount_cmd> refcount_commands;
     std::unique_lock<std::mutex> lock(m_allocate_mutex);
 
@@ -377,7 +383,7 @@ data_store::internal_allocate(size_t size,
     return alloc;
 }
 
-void data_store::update_last_page_ref(
+void default_data_store::update_last_page_ref(
     std::deque<reference_counter::refcount_cmd>& refcount_commands) {
     std::size_t last_page = m_current_offset / m_conf.page_size;
     if (m_locked_page.has_value()) {
@@ -398,7 +404,8 @@ void data_store::update_last_page_ref(
     }
 }
 
-std::size_t data_store::internal_delete(std::size_t offset, std::size_t size) {
+std::size_t default_data_store::internal_delete(std::size_t offset,
+                                                std::size_t size) {
     std::size_t last_page_id = m_current_offset.load() / m_conf.page_size;
     std::size_t last_page_offset = last_page_id * m_conf.page_size;
     if (offset >= last_page_offset) {

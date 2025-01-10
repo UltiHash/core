@@ -30,4 +30,4 @@ function(uh_add_profiler name)
     target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
 endfunction()
 
-uh_add_profiler(profile_deduplicator PRIVATE uh_fake_global_data)
+uh_add_profiler(profile_deduplicator PRIVATE uh_mock_global_data)

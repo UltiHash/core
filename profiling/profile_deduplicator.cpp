@@ -3,7 +3,7 @@
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
 #include "deduplicator/interfaces/local_deduplicator.h"
-#include "fakes/storage/fake_global_data_view.h"
+#include "mock/storage/mock_global_data_view.h"
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>
@@ -28,9 +28,9 @@ public:
                                             (size_t)state.max_iterations *
                                             state.range(0) * 2,
                                         .page_size = DEFAULT_PAGE_SIZE};
-        data_store = std::make_unique<fake_data_store>(
+        data_store = std::make_unique<mock_data_store>(
             config, dir.path().string(), DATA_STORE_ID, 0);
-        data_view = std::make_unique<fake_global_data_view>(get_io_context(),
+        data_view = std::make_unique<mock_global_data_view>(get_io_context(),
                                                             *data_store);
 
         dedup = std::make_unique<local_deduplicator>(deduplicator_config{},
@@ -45,8 +45,8 @@ public:
 
 protected:
     temp_directory dir;
-    std::unique_ptr<fake_data_store> data_store;
-    std::unique_ptr<fake_global_data_view> data_view;
+    std::unique_ptr<mock_data_store> data_store;
+    std::unique_ptr<mock_global_data_view> data_view;
     std::unique_ptr<local_deduplicator> dedup;
     context ctx;
 };

@@ -18,11 +18,12 @@
 
 namespace uh::cluster {
 
-class data_store : public abstract_data_store {
+class default_data_store : public data_store {
 
 public:
-    data_store(data_store_config conf, const std::filesystem::path& working_dir,
-               uint32_t service_id, uint32_t data_store_id);
+    default_data_store(data_store_config conf,
+                       const std::filesystem::path& working_dir,
+                       uint32_t service_id, uint32_t data_store_id);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -100,7 +101,7 @@ public:
 
     size_t id() const noexcept;
 
-    ~data_store();
+    ~default_data_store();
 
 private:
     struct alloc_t {
