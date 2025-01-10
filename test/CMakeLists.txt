@@ -21,7 +21,7 @@ function(uh_add_test name)
     target_link_libraries(
         ${target_name}
         PRIVATE ${PROJECT_NAME}_shared Boost::unit_test_framework
-                uh_helper_utils ${ARGS_PRIVATE}
+                ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
     target_include_directories(
@@ -33,8 +33,6 @@ endfunction()
 
 uh_add_test(test_etcd PRIVATE etcd-cpp-api)
 uh_add_test(test_etcd_manager PRIVATE etcd-cpp-api)
-# uh_add_test(test_etcd_manager_on_etcd_failure PRIVATE etcd-cpp-api) #
-# commented out until we find a way to control etcd on CI env.
 uh_add_test(test_etcd_manager_on_client_failure PRIVATE etcd-cpp-api)
 uh_add_test(test_deduplicator PRIVATE uh_fake_global_data)
 uh_add_test(test_address)
