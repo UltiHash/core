@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         build: [Release]
-    runs-on: aws-heavyweight-core-x86-64-jobs
+    runs-on: heavyweight-core-x86-64-jobs
 
     steps:
       - uses: actions/checkout@v4
