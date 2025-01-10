@@ -23,10 +23,10 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
  * Private utilities
  */
 namespace {
-std::unique_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
+std::shared_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
     while (true) {
         try {
-            std::unique_ptr<etcd::SyncClient> client;
+            std::shared_ptr<etcd::SyncClient> client;
             if (cfg.username && cfg.password) {
                 client = std::make_unique<etcd::SyncClient>(
                     cfg.url, *cfg.username, *cfg.password);
@@ -57,13 +57,11 @@ void etcd_manager::reset() {
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
         restore_watchers();
-        m_healthchecker.reset(
-            new etcd::Watcher(*client, etcd_healthcheck, {}, false));
+        m_watchdog.reset(new etcd::Watcher(*client, etcd_watchdog, {}, false));
 
-        m_client.store(std::shared_ptr<etcd::SyncClient>(std::move(client)),
-                       std::memory_order_release);
+        m_client.store(client);
     }
-    m_healthchecker->Wait([this](bool cancelled) mutable {
+    m_watchdog->Wait([this](bool cancelled) mutable {
         if (cancelled) {
             return;
         }
@@ -74,7 +72,7 @@ void etcd_manager::reset() {
 etcd_manager::~etcd_manager() {
     auto client = m_client.load();
     client->leaserevoke(m_lease);
-    m_healthchecker->Cancel();
+    m_watchdog->Cancel();
     for (auto& e : watcher_entries) {
         e.watcher->Cancel();
     }

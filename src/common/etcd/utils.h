@@ -90,7 +90,7 @@ private:
     const etcd_config m_cfg;
     int m_lease_timeout;
     std::atomic<std::shared_ptr<etcd::SyncClient>> m_client;
-    std::unique_ptr<etcd::Watcher> m_healthchecker;
+    std::unique_ptr<etcd::Watcher> m_watchdog;
 
     int64_t m_lease;
     std::unique_ptr<etcd::KeepAlive> m_keepalive;
