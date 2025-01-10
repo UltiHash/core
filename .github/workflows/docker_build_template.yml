@@ -30,7 +30,7 @@ on:
 jobs:
 
   docker-build:
-    runs-on: heavyweight-generic-jobs
+    runs-on: aws-heavyweight-generic-jobs
     steps:
     - uses: actions/checkout@v4
       with:
