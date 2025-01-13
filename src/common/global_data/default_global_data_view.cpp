@@ -23,15 +23,15 @@ default_global_data_view::default_global_data_view(
 }
 
 coro<address>
-default_global_data_view::write(context& ctx, const std::string_view data,
+default_global_data_view::write(context& ctx, std::string_view data,
                                 const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
     co_return co_await client->write(ctx, data, offsets);
 }
 
-shared_buffer<char>
-default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
-                                        const size_t size) {
+shared_buffer<char> default_global_data_view::read_fragment(context& ctx,
+                                                            uint128_t pointer,
+                                                            const size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
@@ -56,9 +56,8 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     return buffer;
 }
 
-coro<shared_buffer<>> default_global_data_view::read(context& ctx,
-                                                     const uint128_t& pointer,
-                                                     size_t size) {
+coro<shared_buffer<>>
+default_global_data_view::read(context& ctx, uint128_t pointer, size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");

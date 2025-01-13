@@ -2,7 +2,7 @@ add_library(uh_mock_storage SHARED mock_data_store.cpp)
 target_include_directories(
     uh_mock_storage
     PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS}
-    PUBLIC ${CMAKE_SOURCE_DIR}/helpers)
+    PUBLIC ${CMAKE_SOURCE_DIR}/test)
 target_link_libraries(
     uh_mock_storage
     PRIVATE zpp_bits
@@ -20,7 +20,7 @@ add_library(uh_mock_global_data SHARED mock_global_data_view.cpp)
 target_include_directories(
     uh_mock_global_data
     PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS}
-    PUBLIC ${CMAKE_SOURCE_DIR}/helpers)
+    PUBLIC ${CMAKE_SOURCE_DIR}/test)
 target_link_libraries(
     uh_mock_global_data
     PRIVATE zpp_bits

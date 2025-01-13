@@ -14,7 +14,7 @@ struct ec_get_handler : public service_monitor<storage_group>,
         return m_getter.get(m_scheme.calc_group_id(id));
     }
 
-    std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
+    std::shared_ptr<storage_interface> get(uint128_t pointer) override {
         return get(m_scheme.calc_group_id(pointer));
     }
 

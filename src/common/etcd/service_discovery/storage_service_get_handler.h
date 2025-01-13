@@ -26,7 +26,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         m_clients.erase(id);
     }
 
-    std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
+    std::shared_ptr<storage_interface> get(uint128_t pointer) override {
         const auto id = pointer_traits::get_service_id(pointer);
         return get(id);
     }

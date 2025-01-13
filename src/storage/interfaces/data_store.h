@@ -12,17 +12,16 @@ struct data_store_config {
 };
 
 struct data_store {
-    virtual address write(const std::string_view data,
+    virtual address write(std::string_view data,
                           const std::vector<std::size_t>& offsets) = 0;
 
     virtual void manual_write(uint64_t internal_pointer,
-                              const std::string_view data) = 0;
+                              std::string_view data) = 0;
 
     virtual void manual_read(uint64_t pointer, size_t size, char* buffer) = 0;
 
-    virtual std::size_t read(char* buffer, const uint128_t& pointer,
-                             size_t size) = 0;
-    virtual std::size_t read_up_to(char* buffer, const uint128_t& pointer,
+    virtual std::size_t read(char* buffer, uint128_t pointer, size_t size) = 0;
+    virtual std::size_t read_up_to(char* buffer, uint128_t pointer,
                                    size_t size) = 0;
 
     virtual address link(const address& addr) = 0;

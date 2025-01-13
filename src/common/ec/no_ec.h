@@ -8,7 +8,7 @@ public:
     explicit no_ec(size_t data_nodes)
         : m_data_nodes(data_nodes) {}
 
-    [[nodiscard]] encoded encode(const std::string_view data) const override {
+    [[nodiscard]] encoded encode(std::string_view data) const override {
         encoded enc;
         const auto shard_size = (data.size() + m_data_nodes - 1) / m_data_nodes;
         std::vector<std::string_view> shards;

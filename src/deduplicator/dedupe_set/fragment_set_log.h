@@ -37,8 +37,8 @@ public:
         using serialize = zpp::bits::members<5>;
 
         log_entry() = default;
-        log_entry(set_operation set_op, const uint128_t& f_pointer,
-                  uint16_t f_size, const std::string& f_prefix)
+        log_entry(set_operation set_op, uint128_t f_pointer, uint16_t f_size,
+                  const std::string& f_prefix)
             : op{set_op},
               pointer{f_pointer},
               size{f_size},
@@ -46,7 +46,7 @@ public:
             memcpy(prefix, f_prefix.data(), prefix_size);
         }
 
-        log_entry(set_operation set_op, const uint128_t& f_pointer,
+        log_entry(set_operation set_op, uint128_t f_pointer,
                   uint16_t f_size = 0)
             : op{set_op},
               pointer{f_pointer},

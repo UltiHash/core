@@ -38,7 +38,7 @@ public:
     virtual void recover(const std::vector<std::string_view>& shards,
                          std::vector<data_stat>& stats) const = 0;
 
-    [[nodiscard]] virtual encoded encode(const std::string_view data) const = 0;
+    [[nodiscard]] virtual encoded encode(std::string_view data) const = 0;
     virtual ~ec_interface() = default;
 };
 

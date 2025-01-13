@@ -34,7 +34,7 @@ public:
      * @param data
      * @return  allocated address
      */
-    address write(const std::string_view data,
+    address write(std::string_view data,
                   const std::vector<std::size_t>& offsets);
 
     /**
@@ -42,7 +42,7 @@ public:
      * @param internal_pointer
      * @param data
      */
-    void manual_write(uint64_t internal_pointer, const std::string_view data);
+    void manual_write(uint64_t internal_pointer, std::string_view data);
 
     /**
      * Reading direcly from a data store
@@ -63,8 +63,8 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(char* buffer, const uint128_t& pointer, size_t size);
-    std::size_t read_up_to(char* buffer, const uint128_t& pointer, size_t size);
+    std::size_t read(char* buffer, uint128_t pointer, size_t size);
+    std::size_t read_up_to(char* buffer, uint128_t pointer, size_t size);
 
     /**
      * @brief Creates a reference to one or multiple storage locations.

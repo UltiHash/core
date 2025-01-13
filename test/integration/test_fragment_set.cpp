@@ -3,7 +3,7 @@
 #include "common/utils/temp_directory.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/dedupe_set/fragment_set_log.h"
-#include "gdv_fixture.h"
+#include "lib/util/gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------

@@ -7,10 +7,10 @@
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/test/checks.h"
-#include "common/test/server.h"
 #include "common/utils/common.h"
 #include "common/utils/temp_directory.h"
+#include "lib/util/checks.h"
+#include "lib/util/server.h"
 #include "storage/default_data_store.h"
 
 using namespace boost::asio;

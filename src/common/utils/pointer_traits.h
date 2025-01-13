@@ -12,7 +12,7 @@ struct pointer_traits {
      * @param global_pointer
      * @return data store id
      */
-    inline static uint32_t get_data_store_id(const uint128_t& global_pointer) {
+    inline static uint32_t get_data_store_id(uint128_t global_pointer) {
         return global_pointer.get_high() & 0xFFFFFFFF;
     }
 
@@ -21,7 +21,7 @@ struct pointer_traits {
      * @param global_pointer
      * @return internal data store pointer
      */
-    inline static size_t get_pointer(const uint128_t& global_pointer) {
+    inline static size_t get_pointer(uint128_t global_pointer) {
         return global_pointer.get_low();
     }
 
@@ -30,7 +30,7 @@ struct pointer_traits {
      * @param global_pointer
      * @return storage service id
      */
-    inline static uint32_t get_service_id(const uint128_t& global_pointer) {
+    inline static uint32_t get_service_id(uint128_t global_pointer) {
         return global_pointer.get_high() >> 32;
     }
 
