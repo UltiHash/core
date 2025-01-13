@@ -32,7 +32,7 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(context& ctx, const std::string_view& data,
+    coro<address> write(context& ctx, const std::string_view data,
                         const std::vector<std::size_t>& offsets) override {
 
         load_monitor load(m_load);
@@ -181,7 +181,7 @@ struct local_storage : public storage_interface {
     }
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                        const std::string_view& data) override {
+                        const std::string_view data) override {
         m_data_stores.at(ds_id)->manual_write(pointer, data);
         co_return;
     }

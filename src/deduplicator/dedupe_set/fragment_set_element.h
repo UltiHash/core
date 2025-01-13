@@ -24,7 +24,7 @@ public:
      * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
-    fragment_set_element(const std::string_view& data, std::string prefix,
+    fragment_set_element(const std::string_view data, std::string prefix,
                          global_data_view& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
@@ -35,7 +35,7 @@ public:
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
-    fragment_set_element(const std::string_view& data, const uint128_t& ptr,
+    fragment_set_element(const std::string_view data, const uint128_t& ptr,
                          std::string prefix, global_data_view& storage);
 
     /**
@@ -67,7 +67,7 @@ private:
     uint16_t m_size{};
     std::string m_prefix;
     std::optional<std::string_view> m_data{};
-    void catch_frag(const fragment_set_element& f, shared_buffer<char>& data,
-                    std::string_view& str, size_t size) const;
+    std::string_view catch_frag(const fragment_set_element& f,
+                                shared_buffer<char>& data, size_t size) const;
 };
 } // namespace uh::cluster

@@ -34,7 +34,7 @@ public:
      * @param data
      * @return  allocated address
      */
-    address write(const std::string_view& data,
+    address write(const std::string_view data,
                   const std::vector<std::size_t>& offsets);
 
     /**
@@ -42,7 +42,7 @@ public:
      * @param internal_pointer
      * @param data
      */
-    void manual_write(uint64_t internal_pointer, const std::string_view& data);
+    void manual_write(uint64_t internal_pointer, const std::string_view data);
 
     /**
      * Reading direcly from a data store

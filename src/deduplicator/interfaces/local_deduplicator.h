@@ -19,7 +19,7 @@ struct local_deduplicator : public deduplicator_interface {
                                       std::string_view data) override;
 
 private:
-    coro<size_t> pursue_pointer(context& ctx, std::string_view& data,
+    coro<size_t> pursue_pointer(context& ctx, std::string_view data,
                                 uint128_t pointer, bool header,
                                 fragmentation& fragments);
 

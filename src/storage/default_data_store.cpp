@@ -193,7 +193,7 @@ size_t default_data_store::fetch_used_space(
     return size + m_last_file_data_end;
 }
 
-address default_data_store::write(const std::string_view& data,
+address default_data_store::write(const std::string_view data,
                                   const std::vector<std::size_t>& offsets) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
@@ -221,7 +221,7 @@ address default_data_store::write(const std::string_view& data,
 }
 
 void default_data_store::manual_write(uint64_t internal_pointer,
-                                      const std::string_view& data) {
+                                      const std::string_view data) {
 
     const auto [fd, seek] = get_file_offset_pair(internal_pointer);
 
