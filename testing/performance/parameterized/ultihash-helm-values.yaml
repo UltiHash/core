@@ -154,9 +154,9 @@ collector:
   config:                         
     exporters:
       otlphttp/uptrace:
-        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
+        endpoint: https://collector.ultihash.io
         headers:
-          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
+          uptrace-dsn: https://${env:UH_EXPORTER_TOKEN}@collector.ultihash.io
     receivers:
       prometheus: null
       kubeletstats: null
