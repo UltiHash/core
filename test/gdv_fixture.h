@@ -3,6 +3,7 @@
 
 #include "recovery/recovery.h"
 
+#include <common/etcd/utils.h>
 #include <common/global_data/concrete_global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
@@ -12,14 +13,14 @@ namespace uh::cluster {
 class global_data_view_fixture {
 public:
     global_data_view_fixture()
-        : m_etcd_client("http://127.0.0.1:2379"),
+        : m_etcd(),
           m_service_cfg(make_service_config()),
           m_storage_services(
-              m_etcd_client,
+              m_etcd,
               service_factory<storage_interface>(
                   m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
 
-    ~global_data_view_fixture() { teardown(); }
+    virtual ~global_data_view_fixture() { teardown(); }
 
     void setup() {
 
@@ -31,11 +32,11 @@ public:
             storage_cfg.m_data_store_roots = {
                 std::filesystem::path(service_cfg.working_dir) / "storage"};
             m_storage_instances.emplace_back(
-                std::make_unique<storage>(service_cfg, storage_cfg));
+                std::make_unique<storage>(m_etcd, service_cfg, storage_cfg));
         }
 
-        m_recovery =
-            std::make_unique<recovery>(service_config{}, recovery_config{});
+        m_recovery = std::make_unique<recovery>(m_etcd, service_config{},
+                                                recovery_config{});
         int i = 0;
 
         m_ioc.post([this] { m_recovery->run(); });
@@ -60,8 +61,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<concrete_global_data_view>(m_gdv_config, m_ioc,
-                                                            m_storage_services);
+        m_gdv = std::make_shared<concrete_global_data_view>(
+            m_gdv_config, m_ioc, m_storage_services, m_etcd);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -109,7 +110,7 @@ public:
         m_temp_dirs.clear();
         std::string current_id_key =
             etcd_current_id_prefix_key + get_service_string(STORAGE_SERVICE);
-        m_etcd_client.rm(current_id_key);
+        m_etcd.clear_all();
     }
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
@@ -124,7 +125,7 @@ private:
 
     std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 2};
     std::vector<temp_directory> m_temp_dirs;
-    etcd::SyncClient m_etcd_client;
+    etcd_manager m_etcd;
     global_data_view_config m_gdv_config;
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;

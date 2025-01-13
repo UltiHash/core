@@ -1,9 +1,6 @@
 #include "service_id.h"
 
-#include "common/etcd/etcd_lock.h"
 #include "common/etcd/namespace.h"
-#include "common/utils/common.h"
-#include "common/utils/time_utils.h"
 #include <fstream>
 
 namespace uh::cluster {
@@ -46,37 +43,9 @@ void write_id_to_disk(const std::filesystem::path& id_file, std::size_t id) {
     out.write(reinterpret_cast<const char*>(&id), sizeof(id));
 }
 
-std::string get(etcd::SyncClient& client, const std::string& key) {
-
-    const auto response = wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
-                                           [&]() { return client.get(key); });
-
-    if (response.is_ok())
-        return response.value().as_string();
-    else
-        throw std::invalid_argument(
-            "retrieval of configuration parameter " + key +
-            " failed, details: " + response.error_message());
-}
-
-std::string set(etcd::SyncClient& client, const std::string& key,
-                const std::string& value) {
-
-    const auto response =
-        wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL,
-                         [&]() { return client.set(key, value); });
-
-    if (response.is_ok())
-        return response.value().as_string();
-    else
-        throw std::invalid_argument(
-            "setting the configuration parameter " + key +
-            " failed, details: " + response.error_message());
-}
-
 } // namespace
 
-std::size_t get_service_id(etcd::SyncClient& client, const std::string& service,
+std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
                            const std::filesystem::path& data_dir) {
 
     auto id_file = data_dir / service / IDENTITY_FILE_NAME;
@@ -89,21 +58,18 @@ std::size_t get_service_id(etcd::SyncClient& client, const std::string& service,
     std::string current_id_key = etcd_current_id_prefix_key + service;
     std::size_t current_id;
 
-    const auto lock =
-        wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [&]() {
-            return etcd_lock(client, etcd_global_lock_key);
-        });
+    const auto lock = etcd.get_lock_guard(etcd_global_lock_key);
 
     try {
-        current_id = std::stoull(get(client, current_id_key));
+        current_id = std::stoull(etcd.get(current_id_key));
     } catch (const std::exception&) {
-        set(client, current_id_key, std::to_string(0));
+        etcd.put(current_id_key, std::to_string(0));
         write_id_to_disk(id_file, 0);
         return 0;
     }
 
     current_id++;
-    set(client, current_id_key, std::to_string(current_id));
+    etcd.put(current_id_key, std::to_string(current_id));
     write_id_to_disk(id_file, current_id);
     return current_id;
 }

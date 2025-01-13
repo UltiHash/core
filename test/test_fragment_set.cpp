@@ -10,167 +10,148 @@
 
 namespace uh::cluster {
 
-void insert_a(shared_buffer<char>& fragment_a, address& addr_a,
-              fragment_set& frag_set) {
-    auto result_a = frag_set.find(fragment_a.string_view());
-    BOOST_CHECK(!result_a.low.has_value());
-    BOOST_CHECK(!result_a.high.has_value());
-    frag_set.insert(addr_a.get(0).pointer,
-                    fragment_a.string_view().substr(0, addr_a.get(0).size),
-                    false, result_a.hint);
-}
-
-void insert_a_again(shared_buffer<char>& fragment_a, address& addr_a,
-                    fragment_set& frag_set) {
-    auto result_a = frag_set.find(fragment_a.string_view());
-    BOOST_CHECK(!result_a.low.has_value());
-    BOOST_CHECK(result_a.high.has_value());
-    auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
-    memcpy(prefix_a.data(), result_a.high->second.data(),
-           result_a.high->second.size());
-    BOOST_CHECK(prefix_a.string_view() ==
-                fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_a.high->first.pointer == addr_a.get(0).pointer);
-    BOOST_CHECK(result_a.high->first.size == addr_a.get(0).size);
-    frag_set.insert(addr_a.get(0).pointer,
-                    fragment_a.string_view().substr(0, addr_a.get(0).size),
-                    false, result_a.hint);
-}
-
-void insert_c(shared_buffer<char>& fragment_a, address& addr_a,
-              shared_buffer<char>& fragment_c, address& addr_c,
-              fragment_set& frag_set) {
-    auto result_c = frag_set.find(fragment_c.string_view());
-    frag_set.insert(addr_c.get(0).pointer,
-                    fragment_c.string_view().substr(0, addr_c.get(0).size),
-                    false, result_c.hint);
-    BOOST_CHECK(result_c.low.has_value());
-    auto prefix_a = shared_buffer<char>(PREFIX_SIZE);
-    memcpy(prefix_a.data(), result_c.low->second.data(),
-           result_c.low->second.size());
-    BOOST_CHECK(prefix_a.string_view() ==
-                fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_c.low->first.pointer == addr_a.get(0).pointer);
-    BOOST_CHECK(result_c.low->first.size == addr_a.get(0).size);
-    BOOST_CHECK(!result_c.high.has_value());
-}
-
-void insert_b(shared_buffer<char>& fragment_a, address& addr_a,
-              shared_buffer<char>& fragment_b, address& addr_b,
-              shared_buffer<char>& fragment_c, address& addr_c,
-              fragment_set& frag_set) {
-    auto result_b = frag_set.find(fragment_b.string_view());
-    frag_set.insert(addr_b.get(0).pointer,
-                    fragment_b.string_view().substr(0, addr_b.get(0).size),
-                    false, result_b.hint);
-    BOOST_CHECK(result_b.low.has_value());
-    auto prefix_b_low = shared_buffer<char>(PREFIX_SIZE);
-    memcpy(prefix_b_low.data(), result_b.low->second.data(),
-           result_b.low->second.size());
-    BOOST_CHECK(prefix_b_low.string_view() ==
-                fragment_a.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_b.low->first.pointer == addr_a.get(0).pointer);
-    BOOST_CHECK(result_b.low->first.size == addr_a.get(0).size);
-    BOOST_CHECK(result_b.high.has_value());
-    auto prefix_b_high = shared_buffer<char>(PREFIX_SIZE);
-    memcpy(prefix_b_high.data(), result_b.high->second.data(),
-           result_b.high->second.size());
-    BOOST_CHECK(prefix_b_high.string_view() ==
-                fragment_c.string_view().substr(0, PREFIX_SIZE));
-    BOOST_CHECK(result_b.high->first.pointer == addr_c.get(0).pointer);
-    BOOST_CHECK(result_b.high->first.size == addr_c.get(0).size);
-}
-
-BOOST_FIXTURE_TEST_CASE(insert_find_basic, global_data_view_fixture) {
+struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
     context ctx;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
-    fragment_set frag_set(frag_set_log_path, 1000, *gdv);
+    std::shared_ptr<global_data_view> gdv;
+    std::shared_ptr<fragment_set> frag_set;
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_a.string_view(), {0}),
-                              boost::asio::use_future)
-            .get();
+    fragment_set_fixture() {}
 
-    shared_buffer<char> fragment_b(4 * KIBI_BYTE);
-    memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_b.string_view(), {0}),
-                              boost::asio::use_future)
-            .get();
+    void setup() {
+        global_data_view_fixture::setup();
+        gdv = get_global_data_view();
+        frag_set = std::make_shared<fragment_set>(tmp_dir.path() / "logfile",
+                                                  1000, *gdv);
+    }
 
-    shared_buffer<char> fragment_c(2 * KIBI_BYTE);
-    memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_c.string_view(), {0}),
-                              boost::asio::use_future)
-            .get();
+    std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
+                                                            std::size_t size) {
+        shared_buffer<char> fragment(size);
+        memset(fragment.data(), fill_char, size);
+        auto addr =
+            boost::asio::co_spawn(gdv->get_executor(),
+                                  gdv->write(ctx, fragment.string_view(), {0}),
+                                  boost::asio::use_future)
+                .get();
+        return {std::move(fragment), addr};
+    }
+    shared_buffer<char> read_prefix(const std::string& source,
+                                    std::size_t size) {
+        shared_buffer<char> prefix(size);
+        memcpy(prefix.data(), source.data(), size);
+        return prefix;
+    }
+};
 
-    insert_a(fragment_a, addr_a, frag_set);
-    insert_a_again(fragment_a, addr_a, frag_set);
-    insert_c(fragment_a, addr_a, fragment_c, addr_c, frag_set);
-    insert_b(fragment_a, addr_a, fragment_b, addr_b, fragment_c, addr_c,
-             frag_set);
+BOOST_FIXTURE_TEST_SUITE(a_fragment_set, fragment_set_fixture)
+
+BOOST_AUTO_TEST_CASE(finds_no_fragment_which_wasnt_inserted_yet) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
+
+    auto result_a = frag_set->find(fragment_a.string_view());
+
+    BOOST_TEST(!result_a.low.has_value());
+    BOOST_TEST(!result_a.high.has_value());
 }
 
-/*
-BOOST_FIXTURE_TEST_CASE(insert_find_rebuild, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    context ctx;
+BOOST_AUTO_TEST_CASE(inserts_new_value) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
 
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
+    frag_set->insert(addr_a.get(0).pointer,
+                     fragment_a.string_view().substr(0, addr_a.get(0).size),
+                     false, frag_set->find(fragment_a.string_view()).hint);
+    auto result_a = frag_set->find(fragment_a.string_view());
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
-    auto addr_a =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_a.string_view()),
-                              boost::asio::use_future)
-            .get();
-
-    shared_buffer<char> fragment_b(4 * KIBI_BYTE);
-    memset(fragment_b.data(), 'b', 4 * KIBI_BYTE);
-    auto addr_b =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_b.string_view()),
-                              boost::asio::use_future)
-            .get();
-
-    shared_buffer<char> fragment_c(2 * KIBI_BYTE);
-    memset(fragment_c.data(), 'c', 2 * KIBI_BYTE);
-    auto addr_c =
-        boost::asio::co_spawn(gdv->get_executor(),
-                              gdv->write(ctx, fragment_c.string_view()),
-                              boost::asio::use_future)
-            .get();
-
-    {
-        fragment_set frag_set(frag_set_log_path, 1000, *gdv);
-        insert_a(fragment_a, addr_a, frag_set);
-        insert_a_again(fragment_a, addr_a, frag_set);
-    }
-
-    // destruct frag set and reconstruct it again from frag_set_log_path
-    {
-        fragment_set frag_set(frag_set_log_path, 1000, *gdv);
-        insert_c(fragment_a, addr_a, fragment_c, addr_c, frag_set);
-    }
-
-    // destruct frag set and reconstruct it again from frag_set_log_path
-    {
-        fragment_set frag_set(frag_set_log_path, 1000, *gdv);
-        insert_b(fragment_a, addr_a, fragment_b, addr_b, fragment_c, addr_c,
-                 frag_set);
-    }
+    BOOST_TEST(!result_a.low.has_value());
+    BOOST_TEST(result_a.high.has_value());
+    BOOST_TEST(result_a.high->second.size() == PREFIX_SIZE);
+    BOOST_TEST(result_a.high->second ==
+               fragment_a.string_view().substr(0, PREFIX_SIZE));
+    BOOST_TEST(result_a.high->first.pointer == addr_a.get(0).pointer);
+    BOOST_TEST(result_a.high->first.size == addr_a.get(0).size);
 }
-*/
+
+BOOST_AUTO_TEST_CASE(handles_duplicate_insertion_correctly) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
+
+    for (int i = 0; i < 2; ++i) {
+        frag_set->insert(addr_a.get(0).pointer,
+                         fragment_a.string_view().substr(0, addr_a.get(0).size),
+                         false, frag_set->find(fragment_a.string_view()).hint);
+    }
+    auto result_a = frag_set->find(fragment_a.string_view());
+
+    BOOST_TEST(!result_a.low.has_value());
+    BOOST_TEST(result_a.high.has_value());
+    BOOST_TEST(result_a.high->second == fragment_a.string_view().substr(
+                                            0, result_a.high->second.size()));
+    BOOST_TEST(result_a.high->first.pointer == addr_a.get(0).pointer);
+    BOOST_TEST(result_a.high->first.size == addr_a.get(0).size);
+}
+
+BOOST_AUTO_TEST_CASE(finds_low_value_after_inserting_smaller_key) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
+    frag_set->insert(addr_a.get(0).pointer,
+                     fragment_a.string_view().substr(0, addr_a.get(0).size),
+                     false, frag_set->find(fragment_a.string_view()).hint);
+
+    auto [fragment_c, addr_c] = create_fragment('c', 2 * KIBI_BYTE);
+    auto result_c = frag_set->find(fragment_c.string_view());
+
+    BOOST_TEST(result_c.low.has_value());
+    BOOST_TEST(result_c.low->second ==
+               fragment_a.string_view().substr(0, result_c.low->second.size()));
+    BOOST_TEST(result_c.low->first.pointer == addr_a.get(0).pointer);
+    BOOST_TEST(result_c.low->first.size == addr_a.get(0).size);
+    BOOST_TEST(!result_c.high.has_value());
+}
+
+BOOST_AUTO_TEST_CASE(finds_both_low_and_high_values_correctly) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
+    auto [fragment_c, addr_c] = create_fragment('c', 2 * KIBI_BYTE);
+    frag_set->insert(addr_a.get(0).pointer,
+                     fragment_a.string_view().substr(0, addr_a.get(0).size),
+                     false, frag_set->find(fragment_a.string_view()).hint);
+    frag_set->insert(addr_c.get(0).pointer,
+                     fragment_c.string_view().substr(0, addr_c.get(0).size),
+                     false, frag_set->find(fragment_c.string_view()).hint);
+
+    auto [fragment_b, addr_b] = create_fragment('b', 4 * KIBI_BYTE);
+    auto result_b = frag_set->find(fragment_b.string_view());
+
+    BOOST_TEST(result_b.low.has_value());
+    BOOST_TEST(result_b.low->second ==
+               fragment_a.string_view().substr(0, result_b.low->second.size()));
+    BOOST_TEST(result_b.low->first.pointer == addr_a.get(0).pointer);
+    BOOST_TEST(result_b.low->first.size == addr_a.get(0).size);
+
+    BOOST_TEST(result_b.high.has_value());
+    BOOST_TEST(result_b.high->second == fragment_c.string_view().substr(
+                                            0, result_b.high->second.size()));
+    BOOST_TEST(result_b.high->first.pointer == addr_c.get(0).pointer);
+    BOOST_TEST(result_b.high->first.size == addr_c.get(0).size);
+}
+
+BOOST_AUTO_TEST_CASE(inserts_sandwitched_fragment) {
+    auto [fragment_a, addr_a] = create_fragment('a', 8 * KIBI_BYTE);
+    auto [fragment_c, addr_c] = create_fragment('c', 2 * KIBI_BYTE);
+    frag_set->insert(addr_a.get(0).pointer,
+                     fragment_a.string_view().substr(0, addr_a.get(0).size),
+                     false, frag_set->find(fragment_a.string_view()).hint);
+    frag_set->insert(addr_c.get(0).pointer,
+                     fragment_c.string_view().substr(0, addr_c.get(0).size),
+                     false, frag_set->find(fragment_c.string_view()).hint);
+
+    auto [fragment_b, addr_b] = create_fragment('b', 4 * KIBI_BYTE);
+    BOOST_REQUIRE_NO_THROW({
+        frag_set->insert(addr_b.get(0).pointer,
+                         fragment_b.string_view().substr(0, addr_b.get(0).size),
+                         false, frag_set->find(fragment_b.string_view()).hint);
+    });
+}
+
+BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
