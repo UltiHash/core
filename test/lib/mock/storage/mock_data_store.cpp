@@ -111,8 +111,9 @@ std::size_t mock_data_store::read(char* buffer, const uint128_t& global_pointer,
     return size;
 }
 
-std::size_t mock_data_store::read_up_to(
-    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
+std::size_t mock_data_store::read_up_to(char* buffer,
+                                        const uint128_t& global_pointer,
+                                        size_t size) {
 
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
