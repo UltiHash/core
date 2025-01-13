@@ -47,6 +47,9 @@ private:
     uh::cluster::error m_error;
 };
 
+std::string errno_message();
+[[noreturn]] void throw_from_errno(std::string msg);
+
 std::ostream& operator<<(std::ostream& out, const error& e);
 std::ostream& operator<<(std::ostream& out, const error_exception& e);
 
