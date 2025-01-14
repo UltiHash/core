@@ -20,7 +20,8 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
         [&ioc]() -> coro<void> {
             promise<int> p;
             auto f = p.get_future();
-            ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+            boost::asio::post(
+                ioc, [p = std::make_shared<uh::cluster::promise<int>>(
                           std::move(p))]() mutable { p->set_value(1); });
             BOOST_TEST((co_await f.get()) == 1);
         },
@@ -42,14 +43,15 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
         [&ioc]() -> coro<void> {
             promise<int> p;
             auto f = p.get_future();
-            ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+            boost::asio::post(
+                ioc, [p = std::make_shared<uh::cluster::promise<int>>(
                           std::move(p))]() mutable {
-                try {
-                    throw std::exception{};
-                } catch (const std::exception& e) {
-                    p->set_exception(std::current_exception());
-                }
-            });
+                    try {
+                        throw std::exception{};
+                    } catch (const std::exception& e) {
+                        p->set_exception(std::current_exception());
+                    }
+                });
             BOOST_CHECK_THROW((co_await f.get()), std::exception);
         },
         [](const std::exception_ptr& e) {
@@ -79,7 +81,8 @@ BOOST_AUTO_TEST_CASE(stress_test) {
             [&ioc, i, &failures]() -> coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
-                ioc.post([p = std::make_shared<uh::cluster::promise<int>>(
+                boost::asio::post(
+                    ioc, [p = std::make_shared<uh::cluster::promise<int>>(
                               std::move(p)),
                           i]() mutable { p->set_value(i); });
                 if ((co_await f.get()) != i) {
