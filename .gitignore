@@ -5,10 +5,11 @@ cmake-build-*/*
 .idea/*
 server-db/src/config.hpp
 server-agency/src/config.hpp
-.vscode
-testing/.venv
-testing/ceph_s3_test.conf
+/.vscode
+/testing/.venv
+/testing/ceph_s3_test.conf
 **/__pycache__/
-compile_commands.json
-^lib/
+/compile_commands.json
+/lib/
 *.un~
+/.cache/
