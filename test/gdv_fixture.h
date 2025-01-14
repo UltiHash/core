@@ -38,7 +38,7 @@ public:
             std::make_unique<recovery>(service_config{}, recovery_config{});
         int i = 0;
 
-        m_ioc.post([this] { m_recovery->run(); });
+        boost::asio::post(m_ioc, [this] { m_recovery->run(); });
         m_threads.emplace_back([this, i] {
             try {
                 m_ioc.run();
@@ -49,7 +49,7 @@ public:
         i++;
 
         for (const auto& node : m_storage_instances) {
-            m_ioc.post([&node] { node->run(); });
+            boost::asio::post(m_ioc, [&node] { node->run(); });
             m_threads.emplace_back([this, i] {
                 try {
                     m_ioc.run();

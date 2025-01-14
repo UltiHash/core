@@ -4,7 +4,7 @@ namespace uh::cluster {
 
 bool is_valid_ip(const std::string& ip) {
     try {
-        auto address = boost::asio::ip::address::from_string(ip);
+        auto address = boost::asio::ip::make_address(ip);
         return address.is_v4() || address.is_v6();
     } catch (const std::exception& e) {
         return false;
