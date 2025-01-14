@@ -41,7 +41,22 @@ data_file::data_file(const std::filesystem::path& root)
     read_metadata();
 }
 
+data_file::data_file(data_file&& other)
+    : m_fd(std::move(other.m_fd)),
+      m_meta_fd(std::move(other.m_meta_fd)),
+      m_pointer(other.m_pointer.load()),
+      m_used(other.m_used.load()),
+      m_filesize(std::move(other.m_filesize)),
+      m_path(std::move(other.m_path)) {
+
+    other.m_fd = -1;
+    other.m_meta_fd = -1;
+    other.m_used = 0ull;
+    other.m_pointer = 0ull;
+}
+
 data_file::~data_file() {
+
     if (m_fd != -1) {
         try {
             sync();
@@ -50,6 +65,12 @@ data_file::~data_file() {
         }
 
         if (close(m_fd) == -1) {
+            LOG_WARN() << "error closing file descriptor: " << errno_message();
+        }
+    }
+
+    if (m_meta_fd != -1) {
+        if (close(m_meta_fd) == -1) {
             LOG_WARN() << "error closing file descriptor: " << errno_message();
         }
     }
@@ -63,15 +84,21 @@ std::size_t data_file::write(std::size_t offset, std::span<const char> buffer) {
 }
 
 std::size_t data_file::read(std::size_t offset, std::span<char> buffer) {
+
+    if (m_pointer < offset) {
+        throw std::runtime_error("reading out of range");
+    }
+
     return safe_pread(
         m_fd, buffer.subspan(0, std::min(m_pointer - offset, buffer.size())),
         offset);
 }
 
 std::size_t data_file::alloc(std::size_t size) {
-    auto rv = m_pointer;
 
-    auto real_size = std::min(size, free());
+    std::size_t rv = m_pointer;
+    std::size_t real_size = std::min(size, m_filesize - rv);
+
     m_pointer += real_size;
     m_used += real_size;
 
@@ -79,10 +106,12 @@ std::size_t data_file::alloc(std::size_t size) {
 }
 
 void data_file::release(std::size_t offset, std::size_t size) {
+
     if (fallocate(m_fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, offset,
                   size)) {
         throw_from_errno("could not free space for " + m_path.string());
     }
+
     m_used -= size;
 }
 
@@ -101,6 +130,8 @@ std::size_t data_file::free() const { return filesize() - m_pointer; }
 
 std::size_t data_file::used_space() const { return m_used; }
 
+const std::filesystem::path& data_file::basename() const { return m_path; }
+
 data_file data_file::create(const std::filesystem::path& root,
                             std::size_t size) {
     auto data_path = root + EXTENSION_DATA_FILE;
@@ -114,6 +145,8 @@ data_file data_file::create(const std::filesystem::path& root,
         close(fd);
         throw_from_errno("cannot truncate data file");
     }
+
+    close(fd);
 
     auto meta_path = root + EXTENSION_META_FILE;
     metadata md{.pointer = 0ull, .used = 0ull, .filesize = size};

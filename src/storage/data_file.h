@@ -7,8 +7,6 @@
 
 namespace uh::cluster {
 
-/**
- */
 class data_file {
 public:
     /**
@@ -18,8 +16,12 @@ public:
      * ".data"` metadata will be stored in `root / ".meta"`.
      */
     data_file(const std::filesystem::path& root);
+    data_file(data_file&& other);
 
     ~data_file();
+
+    data_file(const data_file&) = delete;
+    data_file& operator=(const data_file&) = delete;
 
     /**
      * write data to given offset
@@ -39,7 +41,7 @@ public:
      * If `size > free()` this function will not return an error, however calls
      * to `write(offset, ...)` may write less bytes than allocated.
      *
-     * - moves the write pointer
+     * @note this function must not be used from concurrent threads
      */
     std::size_t alloc(std::size_t size);
 
@@ -60,6 +62,8 @@ public:
     /// size of data
     std::size_t used_space() const;
 
+    const std::filesystem::path& basename() const;
+
     /**
      * Create a new data_file at path.
      */
@@ -76,8 +80,8 @@ private:
     int m_fd;
     int m_meta_fd;
 
-    std::size_t m_pointer;
-    std::size_t m_used;
+    std::atomic<std::size_t> m_pointer;
+    std::atomic<std::size_t> m_used;
     std::size_t m_filesize;
     std::filesystem::path m_path;
 };

@@ -137,7 +137,6 @@ void reference_counter::decrement(
     }
 
     std::size_t current_value = lmdb::from_sv<std::size_t>(view);
-
     if (current_value <= count) {
         marked_for_deletion.emplace(page_id);
         dbi.del(txn, key);

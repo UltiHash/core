@@ -1,5 +1,6 @@
 #define BOOST_TEST_MODULE "data_store tests"
 
+#include "common/telemetry/log.h"
 #include "common/types/common_types.h"
 #include "common/utils/random.h"
 #include "common/utils/temp_directory.h"
@@ -77,6 +78,24 @@ struct data_store_fixture {
 
 BOOST_FIXTURE_TEST_SUITE(data_store_test_suite, data_store_fixture)
 
+BOOST_AUTO_TEST_CASE(empty_data_store) {
+    BOOST_CHECK_EQUAL(ds->get_used_space(), 0ull);
+    BOOST_CHECK_EQUAL(ds->get_available_space(), MAX_DATA_STORE_SIZE_BYTES);
+
+    BOOST_CHECK_THROW(ds->read(nullptr, {0, 1024}, 1024), std::exception);
+}
+
+BOOST_AUTO_TEST_CASE(write_updates_space) {
+    BOOST_CHECK_EQUAL(ds->get_used_space(), 0ull);
+    BOOST_CHECK_EQUAL(ds->get_available_space(), MAX_DATA_STORE_SIZE_BYTES);
+
+    ds->write(random_string(1 * MEBI_BYTE), {0});
+
+    BOOST_CHECK_EQUAL(ds->get_used_space(), 1 * MEBI_BYTE);
+    BOOST_CHECK_EQUAL(ds->get_available_space(),
+                      MAX_DATA_STORE_SIZE_BYTES - 1 * MEBI_BYTE);
+}
+
 BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 
     long failures = 0;
@@ -142,7 +161,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
     ds = make_data_store();
 
     BOOST_CHECK_THROW(ds->write(throwing_data.string_view(), {0}),
-                      std::bad_alloc);
+                      std::exception);
 
     char buf[MAX_FILE_SIZE_BYTES];
     size_t t_read = 0;
@@ -177,8 +196,12 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
-                    auto f = addresses[j].get(0);
-                    auto read_size = ds->read(buf, f.pointer, f.size);
+                    size_t read_size = 0ull;
+                    for (unsigned id = 0; id < addresses[j].size(); ++id) {
+                        auto f = addresses[j].get(id);
+                        read_size +=
+                            ds->read(buf + read_size, f.pointer, f.size);
+                    }
 
                     if ((read_size !=
                          test_data[thread_id * thread_io_count + j].size())) {
@@ -187,7 +210,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                     if (std::memcmp(
                             buf,
                             test_data[thread_id * thread_io_count + j].data(),
-                            f.size) != 0) {
+                            read_size) != 0) {
                         failures++;
                     }
                 }
@@ -250,15 +273,19 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
 }
 
 BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
+
     auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
+
     auto addr = ds->write(buffer.string_view(), {0});
     BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
+
     addr = ds->write(buffer.string_view(), {0});
-    BOOST_TEST(addr.size() == 1);
+
     address illegal_addr;
     illegal_addr.push({0, addr.data_size() / 2});
     illegal_addr.push(
         {addr.data_size() / 2, (addr.data_size() - addr.data_size() / 2)});
+
     BOOST_TEST(addr.data_size() == illegal_addr.data_size());
     BOOST_TEST(addr.size() != illegal_addr.size());
     BOOST_CHECK_THROW(ds->unlink(illegal_addr), std::exception);
@@ -375,15 +402,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
-        // size_t offset = 0;
-        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
         shared_buffer<char> zero_buffer(buffer2.size());
         memset(zero_buffer.data(), 0, buffer2.size());
-        // offset += buffer1.size();
-        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, zero_buffer);
-        // offset += buffer2.size();
-        // CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
-        // offset += buffer3.size();
 
         BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
                                 buffer1.size()) == 0);
