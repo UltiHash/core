@@ -29,7 +29,7 @@ std::condition_variable cv;
 
 void create_connections(const params& ps) {
     boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::address::from_string(ps.address), ps.port);
+        boost::asio::ip::make_address(ps.address), ps.port);
 
     for (int i = 0; i < ps.conns; ++i) {
         sockets.emplace_back(
