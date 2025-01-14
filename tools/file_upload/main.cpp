@@ -6,7 +6,7 @@
 #include <future>
 
 using namespace uh::cluster;
-using namespace boost::asio;
+namespace asio = boost::asio;
 
 struct config {
     std::filesystem::path path;
@@ -59,9 +59,9 @@ public:
 
 private:
     void worker() {
-        ip::tcp::endpoint endpoint(ip::address::from_string(m_conf.host),
-                                   m_conf.port);
-        ip::tcp::socket sock(m_ioc);
+        asio::ip::tcp::endpoint endpoint(asio::ip::make_address(m_conf.host),
+                                         m_conf.port);
+        asio::ip::tcp::socket sock(m_ioc);
         sock.connect(endpoint);
 
         ++m_running;
@@ -95,7 +95,8 @@ private:
         --m_running;
     }
 
-    void upload(const std::filesystem::path& file, ip::tcp::socket& sock) {
+    void upload(const std::filesystem::path& file,
+                asio::ip::tcp::socket& sock) {
 
         std::ifstream in(file);
         std::vector<char> buffer(m_conf.buffer_size);
@@ -108,20 +109,21 @@ private:
             }
 
             message_type type = DEDUPLICATOR_REQ;
-            std::vector<const_buffer> send_buffers{{&type, sizeof(type)},
-                                                   {&count, sizeof(count)},
-                                                   {buffer.data(), count}};
+            std::vector<asio::const_buffer> send_buffers{
+                {&type, sizeof(type)},
+                {&count, sizeof(count)},
+                {buffer.data(), count}};
             write(sock, send_buffers);
 
             messenger_core::header h{};
-            std::vector<mutable_buffer> recv_buffers{{&h.type, sizeof h.type},
-                                                     {&h.size, sizeof h.size}};
+            std::vector<asio::mutable_buffer> recv_buffers{
+                {&h.type, sizeof h.type}, {&h.size, sizeof h.size}};
             read(sock, recv_buffers);
 
             dedupe_response dedupe_resp;
             dedupe_resp.addr = address(address::allocated_elements(
                 h.size - sizeof(dedupe_resp.effective_size)));
-            std::vector<mutable_buffer> buffers{
+            std::vector<asio::mutable_buffer> buffers{
                 boost::asio::buffer(&dedupe_resp.effective_size,
                                     sizeof dedupe_resp.effective_size),
                 boost::asio::buffer(dedupe_resp.addr.pointers),
@@ -138,7 +140,7 @@ private:
         }
     }
 
-    io_context m_ioc;
+    asio::io_context m_ioc;
     std::mutex m_mtx_jobs;
     std::list<std::filesystem::path> m_jobs;
     std::atomic<size_t> m_total_size;

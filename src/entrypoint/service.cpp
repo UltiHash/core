@@ -23,7 +23,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     });
 
     while (true) {
-        timer.expires_from_now(LIMITS_UPDATE_INTERVAL);
+        timer.expires_after(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
 
         size = co_await directory.data_size();
