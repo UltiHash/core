@@ -4,6 +4,7 @@
 
 #include "common/telemetry/log.h"
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <map>
 #include <sstream>
@@ -102,7 +103,8 @@ private:
                 lock.unlock();
 
                 LOG_INFO() << stream.str();
-                sleep(m_interval_secs);
+                std::this_thread::sleep_for(
+                    std::chrono::seconds(m_interval_secs));
             }
         });
         m_watcher.detach();

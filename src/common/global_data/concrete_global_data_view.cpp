@@ -5,14 +5,14 @@
 namespace uh::cluster {
 concrete_global_data_view::concrete_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<storage_interface>& storage_maintainer)
+    service_maintainer<storage_interface>& storage_maintainer,
+    etcd_manager& etcd)
     : m_io_service(ioc),
       m_config(config),
       m_cache_l2(m_config.read_cache_capacity_l2),
       m_service_maintainer(storage_maintainer),
       m_ec_maintainer(m_io_service, m_config.ec_data_shards,
-                      m_config.ec_parity_shards,
-                      m_service_maintainer.get_etcd_client(), false),
+                      m_config.ec_parity_shards, etcd, false),
       m_basic_getter(m_config.ec_data_shards, m_config.ec_parity_shards) {
 
     m_service_maintainer.add_monitor(m_ec_maintainer);

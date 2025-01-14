@@ -107,6 +107,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     ${LMDB_LIBRARY}
     nlohmann_json)
 set(${PROJECT_NAME}_INCLUDE_DIRS
+    ${CMAKE_SOURCE_DIR}/third-party
     ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include

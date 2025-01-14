@@ -35,5 +35,4 @@ target_link_libraries(
             opentelemetry_exporter_otlp_grpc
             opentelemetry_exporter_otlp_grpc_metrics
             opentelemetry_exporter_ostream_metrics
-            uh_helper_utils
     PUBLIC uh_fake_storage)
