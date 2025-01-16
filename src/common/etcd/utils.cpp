@@ -151,7 +151,7 @@ void etcd_manager::watch(const std::string& prefix,
 std::string etcd_manager::lock(const std::string& lock_key) {
     auto client = m_client.load();
 
-    auto resp = client->lock(lock_key, 10);
+    auto resp = client->lock_with_lease(lock_key, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "getting lock with lock_key " + lock_key +

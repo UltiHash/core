@@ -80,9 +80,28 @@ BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
     BOOST_TEST(resp.value().as_string() == "1");
 }
 
-BOOST_FIXTURE_TEST_CASE(get_locks, fixture) {
-    auto lease = etcd_client.leasegrant(30).value().lease();
+BOOST_FIXTURE_TEST_CASE(gets_leasegrant, fixture) {
+    auto resp = etcd_client.leasegrant(2);
+
+    BOOST_TEST(resp.is_ok() == true);
+}
+
+BOOST_FIXTURE_TEST_CASE(fails_getting_lock_when_lease_is_invalidated, fixture) {
+    auto lease = etcd_client.leasegrant(2).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 10, lease);
     auto key = std::string("/foo/bar");
+    std::this_thread::sleep_for(3s);
+
+    auto resp = etcd_client.lock_with_lease(key, lease);
+
+    BOOST_TEST(resp.is_ok() == false);
+}
+//
+BOOST_FIXTURE_TEST_CASE(succeeds_getting_lock_with_valid_lease, fixture) {
+    auto lease = etcd_client.leasegrant(2).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 1, lease);
+    auto key = std::string("/foo/bar");
+    std::this_thread::sleep_for(3s);
 
     auto resp = etcd_client.lock_with_lease(key, lease);
 
@@ -90,17 +109,20 @@ BOOST_FIXTURE_TEST_CASE(get_locks, fixture) {
     BOOST_TEST(resp.lock_key().substr(0, key.size()) == key);
 }
 
-BOOST_FIXTURE_TEST_CASE(does_unlocks_with_key_given_from_lock, fixture) {
-    auto lease = etcd_client.leasegrant(30).value().lease();
+BOOST_FIXTURE_TEST_CASE(succeeds_unlocking_with_key_given_from_locking,
+                        fixture) {
+    auto lease = etcd_client.leasegrant(2).value().lease();
+    auto keepalive = etcd::KeepAlive(etcd_client, 1, lease);
     auto key = std::string("/foo/bar");
-
     auto resp_lock = etcd_client.lock_with_lease(key, lease);
+    std::this_thread::sleep_for(3s);
+
     auto resp_unlock = etcd_client.unlock(resp_lock.lock_key());
 
     BOOST_TEST(resp_unlock.is_ok() == true);
 }
 
-BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
+BOOST_FIXTURE_TEST_CASE(waits_on_second_lock_until_first_lock_is_unlocked,
                         fixture) {
 
     auto lease = etcd_client.leasegrant(30).value().lease();
