@@ -1,5 +1,4 @@
-#ifndef CORE_BIG_INT_H
-#define CORE_BIG_INT_H
+#pragma once
 
 #include <cstdint>
 #include <functional>
@@ -153,5 +152,3 @@ template <> struct std::hash<uh::cluster::big_int> {
         return hash_func(num.get_data()[0] + num.get_data()[1]);
     }
 };
-
-#endif // CORE_BIG_INT_H

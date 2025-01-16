@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_TYPES_H
-#define CORE_COMMON_TYPES_H
+#pragma once
 
 #include "address.h"
 #include "scoped_buffer.h"
@@ -66,5 +65,3 @@ template <typename T> using coro = boost::asio::awaitable<T>;
 template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 
 } // end namespace uh::cluster
-
-#endif // CORE_COMMON_TYPES_H

@@ -69,7 +69,7 @@ std::optional<::config> read_config(int argc, char** argv) {
 }
 
 uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
-                                  const uh::cluster::uint128_t& ptr,
+                                  uh::cluster::uint128_t ptr,
                                   std::size_t length,
                                   std::optional<std::string> outfile) {
     uh::cluster::context ctx;

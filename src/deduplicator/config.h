@@ -1,5 +1,4 @@
-#ifndef CORE_DEDUPLICATOR_CONFIG_H
-#define CORE_DEDUPLICATOR_CONFIG_H
+#pragma once
 
 #include "common/global_data/config.h"
 #include "common/network/server.h"
@@ -28,5 +27,3 @@ struct deduplicator_config {
 };
 
 } // namespace uh::cluster
-
-#endif

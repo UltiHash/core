@@ -1,5 +1,4 @@
-#ifndef COMMON_UTILS_HASH_H
-#define COMMON_UTILS_HASH_H
+#pragma once
 
 #include <memory>
 #include <openssl/evp.h>
@@ -54,5 +53,3 @@ using md5 = hash<hash_algorithm::md5>;
 using sha256 = hash<hash_algorithm::sha256>;
 
 } // namespace uh::cluster
-
-#endif

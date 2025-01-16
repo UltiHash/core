@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_SERVICE_FACTORY_H
-#define UH_CLUSTER_SERVICE_FACTORY_H
+#pragma once
 
 #include "attached_service.h"
 #include "common/utils/host_utils.h"
@@ -37,4 +35,3 @@ private:
 };
 
 } // namespace uh::cluster
-#endif // UH_CLUSTER_SERVICE_FACTORY_H

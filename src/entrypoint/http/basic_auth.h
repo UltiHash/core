@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_BASIC_AUTH_H
-#define CORE_ENTRYPOINT_HTTP_BASIC_AUTH_H
+#pragma once
 
 #include <entrypoint/http/request.h>
 #include <entrypoint/user/db.h>
@@ -13,5 +12,3 @@ public:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

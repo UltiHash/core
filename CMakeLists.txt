@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 project(uh-cluster VERSION 1.1.2)
 
 option(BUILD_TESTS "Build unit tests" ON)
-option(BUILD_PROFILERS "Build profilers" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
@@ -45,7 +44,7 @@ add_subdirectory(third-party)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
-    Boost 1.87
+    Boost 1.86
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -162,17 +161,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
-add_subdirectory(helpers)
 
 # Unit tests
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
     add_subdirectory(test)
-endif()
-if(BUILD_PROFILERS)
-    message(STATUS "Building profiling tools")
-    add_subdirectory(profiling)
 endif()
 if(BUILD_TOOLS)
     message(STATUS "Building tools")

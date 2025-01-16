@@ -1,5 +1,4 @@
-#ifndef CONFIG_CONFIG_H
-#define CONFIG_CONFIG_H
+#pragma once
 
 #include "common/db/config.h"
 #include "common/etcd/utils.h"
@@ -41,5 +40,3 @@ void configure(CLI::App& app, db::config& cfg);
 void configure(CLI::App& app, boost::log::trivial::severity_level& log_level);
 
 } // namespace uh::cluster
-
-#endif

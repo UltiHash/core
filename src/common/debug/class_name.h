@@ -1,5 +1,4 @@
-#ifndef UTILS_CLASS_NAME_H
-#define UTILS_CLASS_NAME_H
+#pragma once
 
 #include <string>
 #include <typeinfo>
@@ -24,5 +23,3 @@ template <typename T> std::string class_name() {
 }
 
 } // namespace uh::cluster
-
-#endif

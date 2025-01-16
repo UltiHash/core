@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_DB_CONFIG_H
-#define CORE_COMMON_DB_CONFIG_H
+#pragma once
 
 #include <string>
 
@@ -31,5 +30,3 @@ struct config {
 };
 
 } // namespace uh::cluster::db
-
-#endif

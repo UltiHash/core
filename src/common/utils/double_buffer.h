@@ -1,5 +1,4 @@
-#ifndef COMMON_UTILS_DOUBLE_BUFFER_H
-#define COMMON_UTILS_DOUBLE_BUFFER_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include <array>
@@ -27,5 +26,3 @@ private:
 using double_buffer = basic_double_buffer<char>;
 
 } // namespace uh::cluster
-
-#endif

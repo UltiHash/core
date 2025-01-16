@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_INIT_MULTIPART_H
-#define UH_CLUSTER_INIT_MULTIPART_H
+#pragma once
 
 #include "command.h"
 #include "entrypoint/directory.h"
@@ -23,5 +22,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_INIT_MULTIPART_H

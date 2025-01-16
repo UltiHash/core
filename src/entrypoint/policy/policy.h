@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_POLICY_POLICY_H
-#define CORE_ENTRYPOINT_POLICY_POLICY_H
+#pragma once
 
 #include "effect.h"
 #include "matcher.h"
@@ -26,5 +25,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::policy
-
-#endif

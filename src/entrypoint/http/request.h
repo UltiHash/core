@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_REQUEST_H
-#define CORE_ENTRYPOINT_HTTP_REQUEST_H
+#pragma once
 
 #include "beast_utils.h"
 #include "command_exception.h"
@@ -129,5 +128,3 @@ inline std::optional<bool> query<bool>(const request& req,
 std::ostream& operator<<(std::ostream& out, const request& req);
 
 } // namespace uh::cluster::ep::http
-
-#endif

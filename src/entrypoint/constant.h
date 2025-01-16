@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_CONSTANT_H
-#define CORE_ENTRYPOINT_CONSTANT_H
+#pragma once
 
 namespace uh::cluster::ep {
 
@@ -9,5 +8,3 @@ namespace uh::cluster::ep {
 constexpr const char* DEFAULT_OBJECT_CONTENT_TYPE = "binary/octet-stream";
 
 } // namespace uh::cluster::ep
-
-#endif

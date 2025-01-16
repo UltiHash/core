@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HANDLER_H
-#define ENTRYPOINT_HANDLER_H
+#pragma once
 
 #include "command_factory.h"
 #include "http/request_factory.h"
@@ -26,5 +25,3 @@ private:
 };
 
 } // end namespace uh::cluster::ep
-
-#endif // ENTRYPOINT_HANDLER_H

@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_REFERENCE_COUNTER_H
-#define UH_CLUSTER_REFERENCE_COUNTER_H
+#pragma once
 
 #include <filesystem>
 
@@ -68,4 +67,3 @@ private:
     std::pair<size_t, size_t> get_page_range(size_t offset, size_t size) const;
 };
 } // namespace uh::cluster
-#endif // UH_CLUSTER_REFERENCE_COUNTER_H

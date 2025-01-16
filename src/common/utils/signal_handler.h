@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_SIGNAL_HANDLER_H
-#define UH_CLUSTER_SIGNAL_HANDLER_H
+#pragma once
 
 #include <boost/asio.hpp>
 #include <csignal>
@@ -60,4 +59,3 @@ private:
 };
 
 } // namespace uh::cluster
-#endif // UH_CLUSTER_SIGNAL_HANDLER_H

@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_SERVICE_MAINTAINER_H
-#define UH_CLUSTER_SERVICE_MAINTAINER_H
+#pragma once
 
 #include "common/etcd/namespace.h"
 #include "common/etcd/service_discovery/service_monitor.h"
@@ -189,5 +187,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_SERVICE_MAINTAINER_H

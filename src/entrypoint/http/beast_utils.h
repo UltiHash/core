@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_BEAST_UTILS_H
-#define CORE_ENTRYPOINT_HTTP_BEAST_UTILS_H
+#pragma once
 
 #include "common/types/common_types.h"
 
@@ -53,5 +52,3 @@ parse_values_string(std::string_view values, char pair_separator = ',',
                     char field_separator = '=');
 
 } // namespace uh::cluster::ep::http
-
-#endif

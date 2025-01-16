@@ -1,5 +1,4 @@
-#ifndef CORE_PROTOCOL_HANDLER_H
-#define CORE_PROTOCOL_HANDLER_H
+#pragma once
 
 #include "common/network/messenger.h"
 
@@ -13,5 +12,3 @@ public:
 };
 
 } // namespace uh::cluster
-
-#endif // CORE_PROTOCOL_HANDLER_H

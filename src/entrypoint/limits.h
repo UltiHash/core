@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_LIMITS_H
-#define CORE_ENTRYPOINT_LIMITS_H
+#pragma once
 
 #include <atomic>
 
@@ -31,5 +30,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

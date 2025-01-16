@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_METRICS_H
-#define UH_CLUSTER_METRICS_H
+#pragma once
 
 #include "common/utils/common.h"
 
@@ -173,5 +172,3 @@ template <metric_type type> struct counter_guard {
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_METRICS_H

@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_FORMATS_H
-#define CORE_ENTRYPOINT_FORMATS_H
+#pragma once
 
 #include "common/types/common_types.h"
 
@@ -36,5 +35,3 @@ std::chrono::hours read_timezone(std::string_view str);
 } // namespace detail
 
 } // namespace uh::cluster
-
-#endif

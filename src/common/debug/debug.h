@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_COMMON_UTILS_DEBUG_H
-#define UH_CLUSTER_COMMON_UTILS_DEBUG_H
+#pragma once
 
 #include "common/telemetry/log.h"
 #include "config.h"
@@ -100,5 +99,3 @@ inline std::string dbg_to_string(auto v) { return std::to_string(v); }
 
 #define DUMP_VARS(DEST, ...)                                                   \
     DEST << std::source_location::current() FOR_EACH(_DUMP_VAR, __VA_ARGS__)
-
-#endif

@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_SERVICES_H
-#define UH_CLUSTER_SERVICES_H
+#pragma once
 
 #include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/storage_interface.h"
@@ -87,4 +85,3 @@ private:
 };
 
 } // namespace uh::cluster
-#endif // UH_CLUSTER_SERVICES_H

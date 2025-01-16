@@ -1,5 +1,4 @@
-#ifndef COMMON_UTILS_SCOPE_GUARD_H
-#define COMMON_UTILS_SCOPE_GUARD_H
+#pragma once
 
 namespace uh::cluster {
 
@@ -83,5 +82,3 @@ value_guard<value, fini> make_value_guard(value v, fini f) {
 }
 
 } // namespace uh::cluster
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HTTP_MULTIPART_H
-#define ENTRYPOINT_HTTP_MULTIPART_H
+#pragma once
 
 #include "command.h"
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
@@ -30,5 +29,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif
