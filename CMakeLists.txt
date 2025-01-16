@@ -45,7 +45,7 @@ add_subdirectory(third-party)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
-    Boost 1.80
+    Boost 1.87
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -107,6 +107,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     ${LMDB_LIBRARY}
     nlohmann_json)
 set(${PROJECT_NAME}_INCLUDE_DIRS
+    ${CMAKE_SOURCE_DIR}/third-party
     ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include

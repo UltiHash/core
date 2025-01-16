@@ -7,7 +7,7 @@ messenger_core::messenger_core(boost::asio::io_context& ioc,
                                const std::uint16_t port)
     : m_socket(ioc) {
     boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::address::from_string(ip_addr), port);
+        boost::asio::ip::make_address(ip_addr), port);
     try {
         m_socket.connect(endpoint);
     } catch (const std::exception& e) {

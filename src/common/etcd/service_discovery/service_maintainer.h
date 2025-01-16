@@ -3,10 +3,10 @@
 #define UH_CLUSTER_SERVICE_MAINTAINER_H
 
 #include "common/etcd/namespace.h"
+#include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/service_factory.h"
 #include "common/utils/time_utils.h"
 #include <etcd/SyncClient.hpp>
-#include <etcd/Watcher.hpp>
 
 namespace uh::cluster {
 
@@ -17,37 +17,21 @@ struct service_endpoint {
 
 template <typename service_interface> struct service_maintainer {
 
-    service_maintainer(etcd::SyncClient& etcd_client,
+    service_maintainer(etcd_manager& etcd,
                        service_factory<service_interface> service_factory)
-        : m_etcd_client(etcd_client),
-          m_watcher(
-              m_etcd_client,
-              get_service_root_path(service_interface::service_role),
-              [this](const etcd::Response& response) {
-                  return handle_state_changes(response);
-              },
-              true // recursive
-              ),
-          m_service_factory(std::move(service_factory)) {
+        : m_service_factory(std::move(service_factory)) {
 
-        auto resp =
-            wait_for_success(ETCD_TIMEOUT, ETCD_RETRY_INTERVAL, [this]() {
-                return m_etcd_client.ls(
-                    get_service_root_path(service_interface::service_role));
-            });
+        etcd.watch(get_service_root_path(service_interface::service_role),
+                   [this](const etcd::Response& response) {
+                       return handle_state_changes(response);
+                   });
+        auto key_vals =
+            etcd.ls(get_service_root_path(service_interface::service_role));
 
-        auto vals = resp.values();
-        auto keys = resp.keys();
-        for (size_t i = 0; i < vals.size(); i++) {
-            add(keys[i], vals[i].as_string());
+        for (auto& [key, val] : key_vals) {
+            add(key, val);
         }
     }
-
-    [[nodiscard]] etcd::SyncClient& get_etcd_client() const noexcept {
-        return m_etcd_client;
-    }
-
-    ~service_maintainer() { m_watcher.Cancel(); }
 
     void add_monitor(service_monitor<service_interface>& monitor) {
 
@@ -194,9 +178,6 @@ private:
             m_clients.erase(it);
         }
     }
-
-    etcd::SyncClient& m_etcd_client;
-    etcd::Watcher m_watcher;
 
     std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
