@@ -45,7 +45,7 @@ add_subdirectory(third-party)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
-    Boost 1.87
+    Boost 1.86
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
 find_package(OpenSSL REQUIRED)
