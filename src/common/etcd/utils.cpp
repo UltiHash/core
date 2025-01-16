@@ -53,7 +53,12 @@ void etcd_manager::reset() {
     {
         auto client = create_client(m_cfg);
 
-        m_lease = client->leasegrant(m_lease_timeout).value().lease();
+        auto lease_result = client->leasegrant(m_lease_timeout);
+        if (!lease_result.is_ok()) {
+            throw std::runtime_error("Failed to grant lease");
+        }
+        m_lease = lease_result.value().lease();
+
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
         restore_watchers();
@@ -145,6 +150,7 @@ void etcd_manager::watch(const std::string& prefix,
 
 std::string etcd_manager::lock(const std::string& lock_key) {
     auto client = m_client.load();
+
     auto resp = client->lock_with_lease(lock_key, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
