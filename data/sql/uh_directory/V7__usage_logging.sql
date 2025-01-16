@@ -338,8 +338,9 @@ $$;
 --
 -- Re-define uh_list_buckets()
 --
+DROP FUNCTION uh_list_buckets();
 CREATE OR REPLACE FUNCTION uh_list_buckets()
-    RETURNS TABLE(name text)
+    RETURNS TABLE(name VARCHAR(64))
 LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
