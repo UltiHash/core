@@ -1,7 +1,7 @@
 #include "fragment_set_element.h"
 
 namespace uh::cluster {
-fragment_set_element::fragment_set_element(uint128_t ptr, uint16_t size,
+fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
                                            std::string prefix,
                                            global_data_view& storage)
     : m_storage(storage),
@@ -10,14 +10,15 @@ fragment_set_element::fragment_set_element(uint128_t ptr, uint16_t size,
       m_prefix(std::move(prefix)),
       m_data(std::nullopt) {}
 
-fragment_set_element::fragment_set_element(std::string_view data,
+fragment_set_element::fragment_set_element(const std::string_view data,
                                            std::string prefix,
                                            global_data_view& storage)
     : fragment_set_element(data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
 
-fragment_set_element::fragment_set_element(std::string_view data, uint128_t ptr,
+fragment_set_element::fragment_set_element(const std::string_view data,
+                                           const uint128_t& ptr,
                                            std::string prefix,
                                            global_data_view& storage)
     : m_storage(storage),
@@ -63,7 +64,9 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
     return s1 < s2;
 }
 
-uint128_t fragment_set_element::pointer() const noexcept { return m_pointer; }
+const uint128_t& fragment_set_element::pointer() const noexcept {
+    return m_pointer;
+}
 
 uint16_t fragment_set_element::size() const noexcept { return m_size; }
 

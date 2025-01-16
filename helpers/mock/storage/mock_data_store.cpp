@@ -57,7 +57,7 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(std::string_view data,
+address mock_data_store::write(const std::string_view data,
                                const std::vector<std::size_t>& offsets) {
 
     if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
@@ -77,7 +77,7 @@ address mock_data_store::write(std::string_view data,
 }
 
 void mock_data_store::manual_write(uint64_t internal_pointer,
-                                   std::string_view data) {
+                                   const std::string_view data) {
     if (internal_pointer + data.size() > m_conf.max_data_store_size) {
         throw std::out_of_range("internal_pointer is out of range");
     }
@@ -94,7 +94,7 @@ void mock_data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
     std::memcpy(buffer, m_data.data() + pointer, size);
 }
 
-std::size_t mock_data_store::read(char* buffer, uint128_t global_pointer,
+std::size_t mock_data_store::read(char* buffer, const uint128_t& global_pointer,
                                   size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
@@ -111,9 +111,8 @@ std::size_t mock_data_store::read(char* buffer, uint128_t global_pointer,
     return size;
 }
 
-std::size_t mock_data_store::read_up_to(char* buffer,
-                                        uh::cluster::uint128_t global_pointer,
-                                        size_t size) {
+std::size_t mock_data_store::read_up_to(
+    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
 
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();

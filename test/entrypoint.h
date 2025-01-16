@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CORE_TEST_ENTRYPOINT_H
+#define CORE_TEST_ENTRYPOINT_H
 
 #include <entrypoint/commands/command.h>
 #include <entrypoint/policy/variables.h>
@@ -30,3 +31,5 @@ ep::policy::variables
 vars(std::initializer_list<std::pair<std::string, std::string>> v);
 
 } // namespace uh::cluster::test
+
+#endif

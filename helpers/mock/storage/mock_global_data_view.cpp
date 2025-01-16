@@ -9,14 +9,14 @@ mock_global_data_view::mock_global_data_view(boost::asio::io_context& ioc,
       m_storage{storage} {}
 
 coro<address>
-mock_global_data_view::write(context& ctx, std::string_view data,
+mock_global_data_view::write(context& ctx, const std::string_view data,
                              const std::vector<std::size_t>& offsets) {
     co_return m_storage.write(data, offsets);
 }
 
-shared_buffer<char> mock_global_data_view::read_fragment(context& ctx,
-                                                         uint128_t pointer,
-                                                         const size_t size) {
+shared_buffer<char>
+mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
+                                     const size_t size) {
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
@@ -25,8 +25,9 @@ shared_buffer<char> mock_global_data_view::read_fragment(context& ctx,
     return buffer;
 }
 
-coro<shared_buffer<>>
-mock_global_data_view::read(context& ctx, uint128_t pointer, size_t size) {
+coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
+                                                  const uint128_t& pointer,
+                                                  size_t size) {
     shared_buffer<char> buffer(size);
     m_storage.read(buffer.data(), pointer, size);
     co_return buffer;

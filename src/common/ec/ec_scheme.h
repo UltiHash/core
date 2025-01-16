@@ -15,7 +15,7 @@ struct ec_scheme {
         return node_id / m_group_size;
     }
 
-    [[nodiscard]] size_t calc_group_id(uint128_t global_pointer) const {
+    [[nodiscard]] size_t calc_group_id(const uint128_t& global_pointer) const {
         return calc_group_id(pointer_traits::get_service_id(global_pointer));
     }
 

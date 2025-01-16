@@ -95,7 +95,8 @@ default_data_store::default_data_store(data_store_config conf,
                 << ": current_offset=" << m_current_offset;
 }
 
-std::size_t default_data_store::read(char* buffer, uint128_t global_pointer,
+std::size_t default_data_store::read(char* buffer,
+                                     const uint128_t& global_pointer,
                                      size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
@@ -125,7 +126,7 @@ std::size_t default_data_store::read(char* buffer, uint128_t global_pointer,
 }
 
 std::size_t default_data_store::read_up_to(
-    char* buffer, uh::cluster::uint128_t global_pointer, size_t size) {
+    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
@@ -192,7 +193,7 @@ size_t default_data_store::fetch_used_space(
     return size + m_last_file_data_end;
 }
 
-address default_data_store::write(std::string_view data,
+address default_data_store::write(const std::string_view data,
                                   const std::vector<std::size_t>& offsets) {
     if (m_current_offset + data.size() > m_conf.max_data_store_size or
         data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
@@ -220,7 +221,7 @@ address default_data_store::write(std::string_view data,
 }
 
 void default_data_store::manual_write(uint64_t internal_pointer,
-                                      std::string_view data) {
+                                      const std::string_view data) {
 
     const auto [fd, seek] = get_file_offset_pair(internal_pointer);
 

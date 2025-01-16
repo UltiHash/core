@@ -28,8 +28,8 @@ fragment_set::response fragment_set::find(std::string_view data) {
     return resp;
 }
 
-void fragment_set::insert(uint128_t pointer, std::string_view data, bool header,
-                          const std::optional<hint_type>& hint) {
+void fragment_set::insert(const uint128_t& pointer, std::string_view data,
+                          bool header, const std::optional<hint_type>& hint) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
     fragment_set_element f{data, pointer, std::string(prefix), m_storage};
 

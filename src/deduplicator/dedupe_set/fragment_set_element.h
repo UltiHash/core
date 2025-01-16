@@ -13,8 +13,8 @@ public:
      * @param prefix Content of the prefix member
      * @param storage  A reference to the global_data_view to be used.
      */
-    fragment_set_element(uint128_t ptr, uint16_t size_, std::string prefix,
-                         global_data_view& storage);
+    fragment_set_element(const uint128_t& ptr, uint16_t size_,
+                         std::string prefix, global_data_view& storage);
 
     /**
      * Creates a fragment_set_element that holds the full fragment data, used
@@ -24,7 +24,7 @@ public:
      * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
-    fragment_set_element(std::string_view data, std::string prefix,
+    fragment_set_element(const std::string_view data, std::string prefix,
                          global_data_view& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
@@ -35,7 +35,7 @@ public:
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
-    fragment_set_element(std::string_view data, uint128_t ptr,
+    fragment_set_element(const std::string_view data, const uint128_t& ptr,
                          std::string prefix, global_data_view& storage);
 
     /**
@@ -53,7 +53,7 @@ public:
      */
     bool operator<(const fragment_set_element& f) const;
 
-    [[nodiscard]] uint128_t pointer() const noexcept;
+    [[nodiscard]] const uint128_t& pointer() const noexcept;
 
     [[nodiscard]] uint16_t size() const noexcept;
 

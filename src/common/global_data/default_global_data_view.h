@@ -47,7 +47,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, const std::string_view data,
                         const std::vector<std::size_t>& offsets);
 
     /**
@@ -61,7 +61,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(context& ctx, uint128_t pointer, size_t size);
+    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
+                               size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -84,7 +85,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(context& ctx, uint128_t pointer,
+    shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
                                       size_t size);
 
     /**

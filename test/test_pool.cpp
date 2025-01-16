@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE "generic pool tests"
 
+#include "common/test/checks.h"
 #include "common/utils/pool.h"
-#include "lib/util/checks.h"
 #include <boost/test/unit_test.hpp>
 
 using namespace boost::asio;

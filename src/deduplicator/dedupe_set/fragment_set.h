@@ -87,7 +87,7 @@ public:
      * @return A response structure containing the lexicographic neighbours of
      * #data as wall as an iterator used as a hint for the insert operation.
      */
-    response find(std::string_view data);
+    response find(const std::string_view data);
 
     /**
      * @brief Inserts the provided fragment into the fragment_set
@@ -100,7 +100,8 @@ public:
      * @param hint A constant reference to the std::set::const_iterator yielded
      * by the #find method
      */
-    void insert(uint128_t pointer, std::string_view data, bool header,
+    void insert(const uint128_t& pointer, const std::string_view data,
+                bool header,
                 const std::optional<hint_type>& hint = std::nullopt);
 
     /**

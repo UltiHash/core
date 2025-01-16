@@ -1,8 +1,8 @@
 #include <list>
 #define BOOST_TEST_MODULE "policy with condition"
 
+#include "entrypoint.h"
 #include "entrypoint/policy/parser.h"
-#include "lib/mock/entrypoint/entrypoint.h"
 #include <boost/test/unit_test.hpp>
 #include <nlohmann/json.hpp>
 

@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "entrypoint variables"
 
-#include "lib/mock/entrypoint/entrypoint.h"
+#include "entrypoint.h"
 #include <boost/test/unit_test.hpp>
 #include <common/types/common_types.h>
 #include <entrypoint/commands/command.h>
