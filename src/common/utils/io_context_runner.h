@@ -1,5 +1,4 @@
-#ifndef IO_CONTEXT_RUNNER_H
-#define IO_CONTEXT_RUNNER_H
+#pragma once
 #include "common/telemetry/log.h"
 
 #include <boost/asio/executor_work_guard.hpp>
@@ -56,5 +55,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // IO_CONTEXT_RUNNER_H

@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_MONITOR_H
-#define UH_CLUSTER_MONITOR_H
+#pragma once
 
 #include "common/telemetry/log.h"
 #include <atomic>
@@ -123,4 +121,3 @@ private:
     std::mutex m_mutex;
 };
 } // namespace uh::cluster
-#endif // UH_CLUSTER_MONITOR_H

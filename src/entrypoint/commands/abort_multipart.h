@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HTTP_ABORT_MULTIPART_H
-#define ENTRYPOINT_HTTP_ABORT_MULTIPART_H
+#pragma once
 
 #include "command.h"
 #include "common/global_data/global_data_view.h"
@@ -24,5 +23,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CORE_SERVER_H
-#define CORE_SERVER_H
+#pragma once
 
 #include "common/telemetry/log.h"
 #include "common/utils/protocol_handler.h"
@@ -157,5 +156,3 @@ private:
 //------------------------------------------------------------------------------
 
 } // namespace uh::cluster
-
-#endif // CORE_SERVER_H

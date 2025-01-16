@@ -1,5 +1,4 @@
-#ifndef EC_INTERFACE_H
-#define EC_INTERFACE_H
+#pragma once
 #include "common/types/scoped_buffer.h"
 
 #include <string_view>
@@ -45,5 +44,3 @@ public:
 };
 
 } // end namespace uh::cluster
-
-#endif // EC_INTERFACE_H

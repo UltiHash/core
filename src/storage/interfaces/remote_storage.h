@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_REMOTE_STORAGE_H
-#define UH_CLUSTER_REMOTE_STORAGE_H
+#pragma once
 
 #include "common/network/client.h"
 #include "common/service_interfaces/storage_interface.h"
@@ -122,5 +120,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_REMOTE_STORAGE_H

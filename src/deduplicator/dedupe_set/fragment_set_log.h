@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_FRAGMENT_SET_LOG_H
-#define UH_CLUSTER_FRAGMENT_SET_LOG_H
+#pragma once
 
 #include "common/caches/plain_cache.h"
 #include "common/types/common_types.h"
@@ -123,5 +122,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // UH_CLUSTER_FRAGMENT_SET_LOG_H

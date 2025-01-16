@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_GARBAGE_COLLECTOR_H
-#define CORE_ENTRYPOINT_GARBAGE_COLLECTOR_H
+#pragma once
 
 #include <boost/asio.hpp>
 #include <common/global_data/global_data_view.h>
@@ -24,5 +23,3 @@ private:
 };
 
 } // namespace uh::cluster::ep
-
-#endif

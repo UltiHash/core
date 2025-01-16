@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_COROUTINES_CORO_UTIL_H
-#define CORE_COMMON_COROUTINES_CORO_UTIL_H
+#pragma once
 
 #include "common/coroutines/promise.h"
 #include "common/types/common_types.h"
@@ -31,5 +30,3 @@ coro<std::vector<R>> run_for_all(boost::asio::io_context& ioc,
 }
 
 } // namespace uh::cluster
-
-#endif

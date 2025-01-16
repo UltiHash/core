@@ -1,5 +1,4 @@
-#ifndef STORAGE_GET_HANDLER_H
-#define STORAGE_GET_HANDLER_H
+#pragma once
 #include "common/service_interfaces/storage_interface.h"
 
 namespace uh::cluster {
@@ -19,5 +18,3 @@ struct storage_get_handler {
 };
 
 } // end namespace uh::cluster
-
-#endif // STORAGE_GET_HANDLER_H

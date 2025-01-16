@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_SCOPED_BUFFER_H
-#define UH_CLUSTER_SCOPED_BUFFER_H
+#pragma once
 
 #include <memory>
 #include <span>
@@ -101,4 +100,3 @@ template <typename T = char> using shared_buffer = scoped_buffer<T, true>;
 
 template <typename T = char> using unique_buffer = scoped_buffer<T, false>;
 } // namespace uh::cluster
-#endif // UH_CLUSTER_SCOPED_BUFFER_H

@@ -1,6 +1,4 @@
-
-#ifndef EC_SCHEME_H
-#define EC_SCHEME_H
+#pragma once
 
 #include "common/types/big_int.h"
 #include "common/utils/pointer_traits.h"
@@ -35,5 +33,3 @@ private:
     const size_t m_group_size;
 };
 } // namespace uh::cluster
-
-#endif // EC_SCHEME_H

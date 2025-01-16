@@ -1,5 +1,4 @@
-#ifndef CORE_DEDUPLICATOR_FRAGMENTATION_H
-#define CORE_DEDUPLICATOR_FRAGMENTATION_H
+#pragma once
 
 #include "common/global_data/global_data_view.h"
 #include "common/types/address.h"
@@ -89,5 +88,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

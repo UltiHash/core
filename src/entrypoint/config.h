@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_CONFIG_H
-#define CORE_ENTRYPOINT_CONFIG_H
+#pragma once
 
 #include "common/db/config.h"
 #include "common/global_data/config.h"
@@ -22,5 +21,3 @@ struct entrypoint_config {
 };
 
 } // namespace uh::cluster
-
-#endif

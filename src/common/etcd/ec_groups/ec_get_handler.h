@@ -1,6 +1,5 @@
+#pragma once
 
-#ifndef EC_GETTER_H
-#define EC_GETTER_H
 #include "common/ec/ec_scheme.h"
 #include "storage/interfaces/storage_group.h"
 
@@ -47,5 +46,3 @@ private:
     storage_service_get_handler m_getter;
 };
 } // namespace uh::cluster
-
-#endif // EC_GETTER_H

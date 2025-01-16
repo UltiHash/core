@@ -1,14 +1,13 @@
-#ifndef CORE_ENTRYPOINT_SERVICE_H
-#define CORE_ENTRYPOINT_SERVICE_H
+#pragma once
 
 #include <functional>
 
 #include "common/db/db.h"
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/global_data/concrete_global_data_view.h"
+#include "common/global_data/default_global_data_view.h"
 #include "config.h"
-#include "deduplicator/deduplicator.h"
+#include "deduplicator/service.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/garbage_collector.h"
 #include "entrypoint/http/request_factory.h"
@@ -35,14 +34,14 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    attached_service<storage> m_attached_storage;
-    attached_service<deduplicator> m_attached_dedupe;
+    attached_service<storage::service> m_attached_storage;
+    attached_service<deduplicator::service> m_attached_dedupe;
 
     service_maintainer<storage_interface> m_storage_maintainer;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
     roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
-    concrete_global_data_view m_data_view;
+    default_global_data_view m_data_view;
     directory m_directory;
 
     multipart_state m_uploads;
@@ -53,5 +52,3 @@ private:
 };
 
 } // namespace uh::cluster::ep
-
-#endif // CORE_ENTRY_NODE_H

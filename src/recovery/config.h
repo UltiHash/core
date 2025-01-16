@@ -1,5 +1,4 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
 
 namespace uh::cluster {
 
@@ -8,5 +7,3 @@ struct recovery_config {
 };
 
 } // end namespace uh::cluster
-
-#endif // CONFIG_H

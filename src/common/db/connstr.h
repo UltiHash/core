@@ -1,5 +1,4 @@
-#ifndef COMMON_DB_CONNSTR_H
-#define COMMON_DB_CONNSTR_H
+#pragma once
 
 #include "config.h"
 #include <ostream>
@@ -26,5 +25,3 @@ private:
 std::ostream& operator<<(std::ostream& out, const connstr& c);
 
 } // namespace uh::cluster::db
-
-#endif

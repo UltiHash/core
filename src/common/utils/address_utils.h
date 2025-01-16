@@ -1,5 +1,4 @@
-#ifndef ADDRESS_UTILS_H
-#define ADDRESS_UTILS_H
+#pragma once
 #include "common/etcd/service_discovery/storage_get_handler.h"
 #include "common/service_interfaces/storage_interface.h"
 
@@ -30,5 +29,3 @@ coro<size_t> perform_for_address(
     const std::vector<size_t>& existing_offsets = {});
 
 } // end namespace uh::cluster
-
-#endif // ADDRESS_UTILS_H

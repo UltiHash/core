@@ -1,5 +1,4 @@
-#ifndef CORE_CLIENT_H
-#define CORE_CLIENT_H
+#pragma once
 
 #include "common/utils/common.h"
 #include "common/utils/pool.h"
@@ -35,5 +34,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // CORE_CLIENT_H

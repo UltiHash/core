@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_SERVICE_INTERFACES_STORAGE_INTERFACE_H
-#define CORE_COMMON_SERVICE_INTERFACES_STORAGE_INTERFACE_H
+#pragma once
 
 #include "common/telemetry/context.h"
 #include "common/types/common_types.h"
@@ -33,5 +32,3 @@ struct storage_interface {
 };
 
 } // namespace uh::cluster
-
-#endif

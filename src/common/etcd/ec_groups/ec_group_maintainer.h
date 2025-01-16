@@ -1,5 +1,4 @@
-#ifndef EC_GROUP_MAINTAINER_H
-#define EC_GROUP_MAINTAINER_H
+#pragma once
 #include "common/ec/ec_scheme.h"
 #include "common/etcd/utils.h"
 #include "common/service_interfaces/storage_interface.h"
@@ -86,5 +85,3 @@ private:
     const bool m_active_recoverable_groups;
 };
 } // namespace uh::cluster
-
-#endif // EC_GROUP_MAINTAINER_H

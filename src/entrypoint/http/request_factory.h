@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_REQUEST_FACTORY_H
-#define CORE_ENTRYPOINT_HTTP_REQUEST_FACTORY_H
+#pragma once
 
 #include "entrypoint/http/request.h"
 #include "entrypoint/user/db.h"
@@ -20,5 +19,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

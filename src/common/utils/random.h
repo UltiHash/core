@@ -1,5 +1,4 @@
-#ifndef UTIL_RANDOM_H
-#define UTIL_RANDOM_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include <random>
@@ -40,5 +39,3 @@ std::string generate_unique_id();
 // ---------------------------------------------------------------------
 
 } // namespace uh::cluster
-
-#endif

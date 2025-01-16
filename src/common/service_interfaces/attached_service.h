@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_ATTACHED_SERVICE_H
-#define UH_CLUSTER_ATTACHED_SERVICE_H
+#pragma once
 
 #include "config/configuration.h"
 
@@ -36,5 +34,3 @@ private:
     std::thread m_local_service_thread;
 };
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_ATTACHED_SERVICE_H

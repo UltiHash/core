@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_H
-#define CORE_COMMON_H
+#pragma once
 
 #include "common/types/common_types.h"
 #include <map>
@@ -86,5 +85,3 @@ constexpr std::size_t DEFAULT_PAGE_SIZE = 8 * KIBI_BYTE;
 const std::string& get_service_string(const role& service_role);
 
 } // end namespace uh::cluster
-
-#endif // CORE_COMMON_H

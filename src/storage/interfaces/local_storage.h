@@ -1,11 +1,10 @@
-#ifndef UH_CLUSTER_LOCAL_STORAGE_H
-#define UH_CLUSTER_LOCAL_STORAGE_H
+#pragma once
 
 #include "common/service_interfaces/storage_interface.h"
 #include "common/telemetry/log.h"
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
-#include "storage/data_store.h"
+#include "storage/default_data_store.h"
 #include <list>
 #include <string_view>
 
@@ -29,7 +28,7 @@ struct local_storage : public storage_interface {
         size_t i = 0;
         for (const auto& path : paths) {
             m_data_stores.emplace_back(
-                std::make_unique<data_store>(config, path, index, i++));
+                std::make_unique<default_data_store>(config, path, index, i++));
         }
     }
 
@@ -206,11 +205,12 @@ struct local_storage : public storage_interface {
     double catch_load() { return m_load.exchange(0); }
 
 private:
-    std::vector<std::unique_ptr<data_store>> m_data_stores;
+    std::vector<std::unique_ptr<default_data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
     std::atomic<double> m_load;
 
-    [[nodiscard]] data_store& get_data_store(const uint128_t& pointer) const {
+    [[nodiscard]] default_data_store&
+    get_data_store(const uint128_t& pointer) const {
         auto data_store_id = pointer_traits::get_data_store_id(pointer);
 
         if (data_store_id >= m_data_stores.size()) {
@@ -222,5 +222,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_LOCAL_STORAGE_H

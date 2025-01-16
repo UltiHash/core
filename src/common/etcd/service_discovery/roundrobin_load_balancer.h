@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_STORAGE_LOAD_BALANCER_H
-#define UH_CLUSTER_STORAGE_LOAD_BALANCER_H
+#pragma once
 
 #include "common/etcd/service_discovery/service_monitor.h"
 #include "storage/interfaces/storage_group.h"
@@ -72,5 +70,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_STORAGE_LOAD_BALANCER_H
