@@ -9,7 +9,7 @@ mock_global_data_view::mock_global_data_view(boost::asio::io_context& ioc,
       m_storage{storage} {}
 
 coro<address>
-mock_global_data_view::write(context& ctx, const std::string_view data,
+mock_global_data_view::write(context& ctx, const std::string_view& data,
                              const std::vector<std::size_t>& offsets) {
     co_return m_storage.write(data, offsets);
 }

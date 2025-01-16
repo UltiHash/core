@@ -10,14 +10,14 @@ fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
       m_prefix(std::move(prefix)),
       m_data(std::nullopt) {}
 
-fragment_set_element::fragment_set_element(const std::string_view data,
+fragment_set_element::fragment_set_element(const std::string_view& data,
                                            std::string prefix,
                                            global_data_view& storage)
     : fragment_set_element(data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
 
-fragment_set_element::fragment_set_element(const std::string_view data,
+fragment_set_element::fragment_set_element(const std::string_view& data,
                                            const uint128_t& ptr,
                                            std::string prefix,
                                            global_data_view& storage)
@@ -39,15 +39,16 @@ fragment_set_element::fragment_set_element(fragment_set_element&& f) noexcept
     f.m_data = std::nullopt;
 }
 
-std::string_view fragment_set_element::catch_frag(const fragment_set_element& f,
-                                                  shared_buffer<char>& data,
-                                                  size_t size) const {
+void fragment_set_element::catch_frag(const fragment_set_element& f,
+                                      shared_buffer<char>& data,
+                                      std::string_view& str,
+                                      size_t size) const {
     if (f.m_data.has_value()) {
-        return f.m_data->substr(0, size);
+        str = f.m_data->substr(0, size);
     } else {
         data =
             m_storage.get().read_fragment(CURRENT_CONTEXT, f.m_pointer, size);
-        return data.string_view();
+        str = data.string_view();
     }
 }
 
@@ -59,8 +60,9 @@ bool fragment_set_element::operator<(const fragment_set_element& f) const {
 
     const auto size = std::min(this->m_size, f.m_size);
     shared_buffer<char> d1, d2;
-    auto s1 = catch_frag(*this, d1, size);
-    auto s2 = catch_frag(f, d2, size);
+    std::string_view s1, s2;
+    catch_frag(*this, d1, s1, size);
+    catch_frag(f, d2, s2, size);
     return s1 < s2;
 }
 

@@ -11,7 +11,7 @@ namespace uh::cluster {
 class global_data_view {
 
 public:
-    virtual coro<address> write(context& ctx, const std::string_view data,
+    virtual coro<address> write(context& ctx, const std::string_view& data,
                                 const std::vector<std::size_t>& offsets) = 0;
 
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,

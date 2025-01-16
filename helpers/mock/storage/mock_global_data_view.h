@@ -11,7 +11,7 @@ public:
     mock_global_data_view(boost::asio::io_context& ioc,
                           mock_data_store& storage);
 
-    coro<address> write(context& ctx, const std::string_view data,
+    coro<address> write(context& ctx, const std::string_view& data,
                         const std::vector<std::size_t>& offsets) override;
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;

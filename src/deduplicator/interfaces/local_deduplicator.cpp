@@ -133,7 +133,7 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
 }
 
 coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
-                                                std::string_view data,
+                                                std::string_view& data,
                                                 uint128_t pointer, bool header,
                                                 fragmentation& fragments) {
     std::size_t common_size;

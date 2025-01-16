@@ -35,7 +35,7 @@ template <hash_algorithm algo> struct hmac : public hmac_base {
     }
 
     static std::string from_string(const std::string& key,
-                                   const std::string_view s) {
+                                   const std::string_view& s) {
         return from_buffer(key, {s.begin(), s.size()});
     }
 };
