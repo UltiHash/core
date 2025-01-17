@@ -11,14 +11,14 @@ namespace uh::cluster::recovery {
 
 class service {
 public:
-    service(etcd_manager& etcd, const service_config& service,
-            const recovery_config& sc)
+    service(const service_config& service, const recovery_config& sc)
         : m_ioc(sc.thread_count),
+          m_etcd{service.etcd_config},
           m_ioc_runner(m_ioc, sc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, etcd, true),
+          m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
-              etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
@@ -40,10 +40,13 @@ public:
         m_cv.notify_all();
         m_storage_maintainer.remove_monitor(m_ec_maintainer);
         m_ioc_runner.stop();
+        m_etcd.stop();
+        m_ioc.stop();
     }
 
 private:
     boost::asio::io_context m_ioc;
+    etcd_manager m_etcd;
     std::condition_variable m_cv;
     std::mutex m_mutex;
     bool m_stopped = false;

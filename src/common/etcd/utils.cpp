@@ -74,7 +74,7 @@ void etcd_manager::reset() {
     });
 }
 
-etcd_manager::~etcd_manager() {
+void etcd_manager::stop() {
     auto client = m_client.load();
     m_watchdog->Cancel();
     for (auto& [k, e] : watcher_entries) {
@@ -82,6 +82,8 @@ etcd_manager::~etcd_manager() {
     }
     client->leaserevoke(m_lease);
 }
+
+etcd_manager::~etcd_manager() { stop(); }
 
 /*
  * Save key value pair

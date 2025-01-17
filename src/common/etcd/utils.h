@@ -38,6 +38,7 @@ public:
     etcd_manager(const etcd_config& cfg = {}, int lease_timeout = 30);
     ~etcd_manager();
 
+    void stop();
     /*
      * Save key value pair
      */
