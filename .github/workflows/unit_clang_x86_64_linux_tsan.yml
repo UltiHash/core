@@ -13,7 +13,7 @@ jobs:
     if: false
     strategy:
       matrix:
-        build: [Release]
+        build: [RelWithDebInfo]
     runs-on: heavyweight-core-x86-64-jobs
 
     steps:
