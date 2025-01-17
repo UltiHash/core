@@ -58,16 +58,14 @@ struct local_storage : public storage_interface {
             auto addr = m_data_stores[i]->write(part, local_offsets);
             total_addr.append(addr);
         }
+
         co_return total_addr;
     }
 
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
         load_monitor load(m_load);
-        LOG_DEBUG() << ctx.peer() << ": read fragment start(" << f.to_string()
-                    << ")";
         get_data_store(f.pointer).read(buffer, f.pointer, f.size);
-        LOG_DEBUG() << ctx.peer() << ": read fragment done";
         co_return;
     }
 
@@ -84,6 +82,7 @@ struct local_storage : public storage_interface {
     coro<void> read_address(context& ctx, char* buffer, const address& addr,
                             const std::vector<size_t>& offsets) override {
         load_monitor load(m_load);
+        LOG_DEBUG() << ctx.peer() << ": read addr start";
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
@@ -93,6 +92,7 @@ struct local_storage : public storage_interface {
                     "Could not read the data with the given size");
             }
         }
+        LOG_DEBUG() << ctx.peer() << ": read addr done";
         co_return;
     }
 

@@ -22,6 +22,7 @@ struct config {
     std::size_t offset;
     std::size_t length;
     std::optional<std::string> output_file;
+    bool no_output = false;
 
     std::string file;
 
@@ -45,6 +46,8 @@ std::optional<::config> read_config(int argc, char** argv) {
     sub_read->add_option("length", rv.length, "number of bytes to read");
     sub_read->add_option("-O,--output-file", rv.output_file,
                          "if set, dump to file");
+    sub_read->add_flag("-n,--no-output", rv.no_output,
+                       "do not output anything, only print throughput");
 
     auto* sub_write = app.add_subcommand("write", "write a buffer");
     sub_write->add_option("file", rv.file, "read buffer from file");
@@ -71,7 +74,8 @@ std::optional<::config> read_config(int argc, char** argv) {
 uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
                                   uh::cluster::uint128_t ptr,
                                   std::size_t length,
-                                  std::optional<std::string> outfile) {
+                                  std::optional<std::string> outfile,
+                                  bool no_output) {
     uh::cluster::context ctx;
 
     timer t;
@@ -79,35 +83,38 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
     auto time = t.passed();
     auto mb = length / MEBI_BYTE;
 
+    std::cout << "read " << length << " bytes from " << ptr << " ("
+              << (mb / time.count()) << " MB/s)\n";
+
     if (outfile) {
-        std::cout << "read " << length << " bytes from " << ptr << " ("
-                  << (mb / time.count()) << " MB/s)\n";
         std::ofstream out(*outfile);
         out.write(data.data(), data.size());
         std::cout << "contents have been written to " << *outfile << "\n";
     } else {
-        std::cout << "read " << length << " bytes from " << ptr << " ("
-                  << (mb / time.count()) << " MB/s):\n";
 
-        std::size_t index = 0;
-        do {
-            std::cout << (ptr + index) << "    ";
+        if (!no_output) {
+            std::size_t index = 0;
+            do {
+                std::cout << (ptr + index) << "    ";
 
-            std::string text = "";
+                std::string text = "";
 
-            auto count = std::min(16ul, data.size() - index);
-            for (auto x = 0ul; x < count; ++x, ++index) {
-                std::cout << std::hex << std::setw(2) << std::setfill('0')
-                          << static_cast<int>(data[index]) << " ";
+                auto count = std::min(16ul, data.size() - index);
+                for (auto x = 0ul; x < count; ++x, ++index) {
+                    std::cout << std::hex << std::setw(2) << std::setfill('0')
+                              << static_cast<unsigned>(data[index] & 0xff)
+                              << " ";
 
-                text += std::isprint(data[index]) ? std::string(1, data[index])
-                                                  : ".";
-            }
+                    text += std::isprint(data[index])
+                                ? std::string(1, data[index])
+                                : ".";
+                }
 
-            std::string indent((16ul - count) * 3, ' ');
-            std::cout << "    " << indent << "|" << text << "|"
-                      << "\n";
-        } while (index < data.size());
+                std::string indent((16ul - count) * 3, ' ');
+                std::cout << "    " << indent << "|" << text << "|"
+                          << "\n";
+            } while (index < data.size());
+        }
     }
 }
 
@@ -151,7 +158,7 @@ int main(int argc, char** argv) {
                 executor,
                 read_addr(storage,
                           uh::cluster::uint128_t(cfg->host_id, cfg->offset),
-                          cfg->length, cfg->output_file),
+                          cfg->length, cfg->output_file, cfg->no_output),
                 handler);
             break;
         case ::config::command::write:

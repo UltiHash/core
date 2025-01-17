@@ -50,6 +50,14 @@ const char* error_exception::what() const noexcept {
     return m_error.message().c_str();
 }
 
+std::string errno_message() {
+    return std::error_code(errno, std::system_category()).message();
+}
+
+[[noreturn]] void throw_from_errno(std::string msg) {
+    throw std::runtime_error(msg + ": " + errno_message());
+}
+
 std::ostream& operator<<(std::ostream& out, const error& e) {
     out << e.message() << " [" << e.code() << "]";
     return out;
