@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(block) {
         use_future)
         .get();
 
-    int pos = 0;
+    std::atomic<int> pos = 0;
 
     auto future = co_spawn(
         ctx,

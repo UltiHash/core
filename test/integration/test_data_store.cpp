@@ -609,6 +609,17 @@ BOOST_AUTO_TEST_CASE(repeated_write_delete) {
                 0);
 }
 
+BOOST_AUTO_TEST_CASE(deletion_space_reclaim) {
+
+    BOOST_CHECK_EQUAL(ds->get_used_space(), 0ull);
+    BOOST_CHECK_EQUAL(ds->get_available_space(), MAX_DATA_STORE_SIZE_BYTES);
+
+    ds->write(random_string(MAX_DATA_STORE_SIZE_BYTES / 4), {0});
+    BOOST_CHECK_EQUAL(ds->get_used_space(), MAX_DATA_STORE_SIZE_BYTES / 4);
+    BOOST_CHECK_EQUAL(ds->get_available_space(),
+                      3 * (MAX_DATA_STORE_SIZE_BYTES / 4));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // end namespace uh::cluster

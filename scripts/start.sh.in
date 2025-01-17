@@ -23,6 +23,8 @@ echo "*** starting services"
 log_dir=$BUILD_DIR/logs
 mkdir -p $log_dir
 
+export TSAN_OPTIONS="detect_odr_violation=0,suppressions=@PROJECT_SOURCE_DIR@/tsan-suppressions"
+
 export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
 for ((id = 0; id < $instances; ++id)); do
     mkdir -p $UH_DATA/storage-$id
