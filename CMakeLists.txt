@@ -8,6 +8,10 @@ option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
 option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
 option(ENABLE_CCACHE "Use cache while compiling" ON)
+option(ENABLE_TSAN "Enable thread-sanitizer" OFF)
+option(ENABLE_ASAN "Enable address sanitizer" OFF)
+option(ENABLE_UBSAN "Enable undefined sanitizer" OFF)
+
 if(ENABLE_CCACHE)
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
@@ -26,6 +30,29 @@ if(ENABLE_BUILD_TIME_TRACE)
         # gcc: use plugin https://github.com/royjacobson/externis
         add_compile_options(-fplugin=externis)
     endif()
+endif()
+
+if(ENABLE_TSAN)
+    if(ENABLE_ASAN OR ENABLE_UBSAN)
+        message(FATAL "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN")
+    endif()
+
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
+endif()
+
+if(ENABLE_ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
+
+if(ENABLE_UBSAN)
+    add_compile_options(-fsanitize=undefined)
+    add_link_options(-fsanitize=undefined)
+endif()
+
+if(ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_UBSAN)
+    add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

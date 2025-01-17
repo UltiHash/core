@@ -26,9 +26,7 @@ jobs:
         env:
           CC: /usr/bin/clang-18
           CXX: /usr/bin/clang++-18
-          CXXFLAGS: -fsanitize=thread -fno-omit-frame-pointer -fno-optimize-sibling-calls
-          LDFLAGS: -fsanitize=thread
-        run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
+        run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF -DENABLE_TSAN=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
