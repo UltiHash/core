@@ -2,8 +2,6 @@
 #include "common/etcd/namespace.h"
 #include "common/etcd/utils.h"
 #include "common/utils/time_utils.h"
-#include <etcd/SyncClient.hpp>
-#include <etcd/Watcher.hpp>
 #include <magic_enum/magic_enum.hpp>
 
 namespace uh::cluster {

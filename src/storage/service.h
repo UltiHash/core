@@ -7,20 +7,22 @@
 #include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
 #include "config.h"
+#include "config/configuration.h"
 #include "handler.h"
 
 namespace uh::cluster::storage {
 
 class service {
 public:
-    service(etcd_manager& etcd, const service_config& service,
-            const storage_config& sc)
-        : m_service_id(get_service_id(etcd, get_service_string(STORAGE_SERVICE),
+    service(const service_config& service, const storage_config& sc)
+        : m_ioc(sc.server.threads),
+          m_etcd{service.etcd_config},
+          m_service_id(get_service_id(m_etcd,
+                                      get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
-          m_ioc(sc.server.threads),
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
                                                     sc.m_data_store_roots)),
-          m_service_registry(STORAGE_SERVICE, m_service_id, etcd),
+          m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd),
           m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
 
     void run() {
@@ -35,8 +37,9 @@ public:
     std::shared_ptr<local_storage> get_local_interface() { return m_storage; }
 
 private:
-    std::size_t m_service_id;
     boost::asio::io_context m_ioc;
+    etcd_manager m_etcd;
+    std::size_t m_service_id;
     std::shared_ptr<local_storage> m_storage;
     service_registry m_service_registry;
     server m_server;
