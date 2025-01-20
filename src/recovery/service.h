@@ -38,8 +38,8 @@ public:
             m_stopped = true;
         }
         m_cv.notify_all();
-        m_ioc_runner.stop();
         m_storage_maintainer.remove_monitor(m_ec_maintainer);
+        m_ioc_runner.stop();
     }
 
 private:
