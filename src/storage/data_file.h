@@ -48,7 +48,7 @@ public:
     /**
      * Free `size` bytes of used space at the given `offset`.
      */
-    void release(std::size_t offset, std::size_t size);
+    std::size_t release(std::size_t offset, std::size_t size);
 
     /// persist changes to disk
     void sync();

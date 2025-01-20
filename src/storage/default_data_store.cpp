@@ -50,8 +50,9 @@ std::vector<data_file> load_files(const std::filesystem::path& root,
 } // namespace
 
 default_data_store::default_data_store(data_store_config conf,
-                       const std::filesystem::path& working_dir,
-                       uint32_t service_id, uint32_t data_store_id)
+                                       const std::filesystem::path& working_dir,
+                                       uint32_t service_id,
+                                       uint32_t data_store_id)
     : m_storage_id(service_id),
       m_data_store_id(data_store_id),
       m_root(working_dir / std::to_string(data_store_id)),
@@ -60,8 +61,9 @@ default_data_store::default_data_store(data_store_config conf,
       m_files(load_files(m_root, m_filesize)),
       m_file_count(m_files.size()),
       m_used_space(fetch_used_space()),
-      m_refcounter(m_root, m_conf.page_size,
-                   std::bind_front(&default_data_store::internal_delete, this)) {
+      m_refcounter(
+          m_root, m_conf.page_size,
+          std::bind_front(&default_data_store::internal_delete, this)) {
 
     if (m_filesize % m_conf.page_size != 0) {
         throw std::runtime_error(
@@ -79,15 +81,15 @@ default_data_store::default_data_store(data_store_config conf,
         [this] { return get_used_space(); });
 }
 
-std::size_t default_data_store::read(char* buffer, const uint128_t& global_pointer,
-                             size_t size) {
+std::size_t default_data_store::read(char* buffer,
+                                     const uint128_t& global_pointer,
+                                     size_t size) {
     // TODO what is the difference to read_up_to? Consult former implementation
     return read_up_to(buffer, global_pointer, size);
 }
 
-std::size_t default_data_store::read_up_to(char* buffer,
-                                   const uh::cluster::uint128_t& global_pointer,
-                                   size_t size) {
+std::size_t default_data_store::read_up_to(
+    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
     std::size_t rv = 0ull;
     auto pointer = global_pointer;
 
@@ -119,7 +121,7 @@ std::size_t default_data_store::fetch_used_space() const {
 }
 
 address default_data_store::write(const std::string_view& data,
-                          const std::vector<std::size_t>& offsets) {
+                                  const std::vector<std::size_t>& offsets) {
     std::span<const char> span(data.data(), data.size());
     auto allocation = allocate(span.size(), offsets);
 
@@ -145,13 +147,15 @@ address default_data_store::write(const std::string_view& data,
     return rv;
 }
 
-void default_data_store::manual_write(uint64_t pointer, const std::string_view& data) {
+void default_data_store::manual_write(uint64_t pointer,
+                                      const std::string_view& data) {
 
     auto loc = file_location(pointer);
     loc.file.write(loc.offset, std::span<const char>{data.data(), data.size()});
 }
 
-void default_data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
+void default_data_store::manual_read(uint64_t pointer, size_t size,
+                                     char* buffer) {
 
     auto loc = file_location(pointer);
     loc.file.read(loc.offset, std::span<char>{buffer, size});
@@ -208,7 +212,8 @@ size_t default_data_store::get_available_space() const noexcept {
 }
 
 std::list<default_data_store::alloc_t>
-default_data_store::allocate(size_t size, const std::vector<std::size_t>& offsets) {
+default_data_store::allocate(size_t size,
+                             const std::vector<std::size_t>& offsets) {
 
     std::unique_lock lock(m_mutex);
 
@@ -291,7 +296,8 @@ void default_data_store::update_last_page_ref(
     }
 }
 
-std::size_t default_data_store::internal_delete(std::size_t offset, std::size_t size) {
+std::size_t default_data_store::internal_delete(std::size_t offset,
+                                                std::size_t size) {
 
     std::size_t file_count = m_file_count;
     std::size_t curr_offs =
@@ -310,11 +316,18 @@ std::size_t default_data_store::internal_delete(std::size_t offset, std::size_t 
                 << " dropped to 0, deleting page (offset=" << offset
                 << ", size=" << size << ")";
 
-    auto loc = file_location(offset);
-    loc.file.release(loc.offset, size);
+    std::size_t rv = 0ull;
+    while (rv < size) {
+        auto loc = file_location(offset + rv);
+        auto count = loc.file.release(loc.offset, size - rv);
+        if (count == 0) {
+            break;
+        }
+        rv += count;
+    }
 
-    m_used_space -= size;
-    return size;
+    m_used_space -= rv;
+    return rv;
 }
 
 } // end namespace uh::cluster
