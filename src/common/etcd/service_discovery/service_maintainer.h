@@ -17,12 +17,13 @@ template <typename service_interface> struct service_maintainer {
 
     service_maintainer(etcd_manager& etcd,
                        service_factory<service_interface> service_factory)
-        : m_service_factory(std::move(service_factory)) {
+        : m_service_factory(std::move(service_factory)),
+          m_watch_guard{
+              etcd.watch(get_service_root_path(service_interface::service_role),
+                         [this](const etcd::Response& response) {
+                             return handle_state_changes(response);
+                         })} {
 
-        etcd.watch(get_service_root_path(service_interface::service_role),
-                   [this](const etcd::Response& response) {
-                       return handle_state_changes(response);
-                   });
         auto key_vals =
             etcd.ls(get_service_root_path(service_interface::service_role));
 
@@ -182,6 +183,7 @@ private:
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
+    etcd_manager::watch_guard m_watch_guard;
     std::list<std::reference_wrapper<service_monitor<service_interface>>>
         m_monitors;
 };

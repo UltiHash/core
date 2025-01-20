@@ -76,11 +76,11 @@ void etcd_manager::reset() {
 
 etcd_manager::~etcd_manager() {
     auto client = m_client.load();
-    client->leaserevoke(m_lease);
     m_watchdog->Cancel();
-    for (auto& e : watcher_entries) {
+    for (auto& [k, e] : watcher_entries) {
         e.watcher->Cancel();
     }
+    client->leaserevoke(m_lease);
 }
 
 /*
@@ -88,6 +88,7 @@ etcd_manager::~etcd_manager() {
  */
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
+
     auto resp = client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
@@ -114,11 +115,12 @@ std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
     return client->keys(prefix).keys();
 }
 
-std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
+std::unordered_map<std::string, std::string>
+etcd_manager::ls(const std::string& prefix) {
     auto client = m_client.load();
     auto resp = client->ls(prefix);
     auto keys = resp.keys();
-    std::map<std::string, std::string> ret;
+    std::unordered_map<std::string, std::string> ret;
     for (auto i = 0u; i < keys.size(); ++i) {
         ret[keys[i]] = resp.value(i).as_string();
     }
@@ -137,15 +139,39 @@ void etcd_manager::rmdir(const std::string& prefix) noexcept {
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
-void etcd_manager::watch(const std::string& prefix,
-                         std::function<void(etcd::Response)> callback) {
-    auto client = m_client.load();
-
+void etcd_manager::add_watcher(const std::string& prefix,
+                               std::function<void(etcd::Response)> callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    watcher_entries.emplace_back(
-        prefix, callback,
+    auto client = m_client.load();
+
+    if (watcher_entries.contains(prefix)) {
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " already exists");
+    }
+
+    watcher_entries[prefix] = watcher_entry(
+        callback,
         std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
+}
+
+void etcd_manager::remove_watcher(const std::string& prefix) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto client = m_client.load();
+
+    auto it = watcher_entries.find(prefix);
+    if (it == watcher_entries.end()) {
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " does not exist");
+    }
+
+    it->second.watcher->Cancel();
+
+    if (watcher_entries.erase(prefix) == 0) {
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " does not exist");
+    }
 }
 
 std::string etcd_manager::lock(const std::string& lock_key) {
@@ -169,11 +195,12 @@ void etcd_manager::unlock(const std::string& unlock_key) {
 }
 
 void etcd_manager::restore_watchers(void) {
-    auto client = m_client.load();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    for (auto& e : watcher_entries) {
-        e.watcher.reset(new etcd::Watcher(*client, e.prefix, e.callback, true));
+    auto client = m_client.load();
+
+    for (auto& [k, e] : watcher_entries) {
+        e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
     }
 }
 

@@ -59,6 +59,7 @@ private:
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
     ec_group_attributes m_attributes;
+    etcd_manager::watch_guard m_watch_guard;
     std::optional<recovery_module> m_rec_mod;
     std::mutex m_mutex;
 };
