@@ -54,6 +54,7 @@ constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
 constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
+constexpr const char* ENV_CFG_ENABLE_TRACES = "UH_TRACES_ENABLED";
 constexpr const char* ENV_CFG_DB_HOSTPORT = "UH_DB_HOSTPORT";
 constexpr const char* ENV_CFG_DB_DIRECTORY_CONNECTIONS =
     "UH_DB_DIRECTORY_CONNECTIONS";

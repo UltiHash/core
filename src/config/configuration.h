@@ -21,6 +21,7 @@ struct service_config {
     std::string telemetry_url;
     uh::cluster::license license;
     unsigned telemetry_interval = 1000;
+    bool enable_traces = false;
 };
 
 struct config {
