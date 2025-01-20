@@ -69,8 +69,6 @@ public:
         }
 
         watch_guard() = default;
-        watch_guard(const watch_guard&) = default;
-        watch_guard& operator=(const watch_guard&) = default;
         watch_guard(watch_guard&&) = default;
         watch_guard& operator=(watch_guard&&) = default;
 
@@ -105,8 +103,6 @@ public:
               m_unlock_key(m_etcd->lock(lock_key)) {}
 
         lock_guard() = default;
-        lock_guard(const lock_guard&) = default;
-        lock_guard& operator=(const lock_guard&) = default;
         lock_guard(lock_guard&&) = default;
         lock_guard& operator=(lock_guard&&) = default;
 
@@ -138,6 +134,14 @@ private:
     struct watcher_entry {
         std::function<void(etcd::Response)> callback;
         std::unique_ptr<etcd::Watcher> watcher;
+
+        watcher_entry() = default;
+        watcher_entry(watcher_entry&&) = default;
+        watcher_entry& operator=(watcher_entry&&) = default;
+        watcher_entry(std::function<void(etcd::Response)> cb,
+                      std::unique_ptr<etcd::Watcher> w)
+            : callback(std::move(cb)),
+              watcher(std::move(w)) {}
     };
     std::unordered_map<std::string, watcher_entry> watcher_entries;
 
