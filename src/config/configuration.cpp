@@ -49,6 +49,7 @@ make_log_config(const service_config& cfg,
                                          .service_role = service_role},
                         log::sink_config{.type = log::sink_type::otel,
                                          .otel_endpoint = cfg.telemetry_url,
+                                         .level = log_level,
                                          .service_role = service_role}}};
     }
     return lc;
