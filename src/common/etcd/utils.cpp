@@ -147,6 +147,7 @@ void etcd_manager::add_watcher(const std::string& prefix,
     auto client = m_client.load();
 
     if (watcher_entries.contains(prefix)) {
+        LOG_FATAL() << "watcher for prefix " << prefix << " already exists";
         throw std::invalid_argument("watcher for prefix " + prefix +
                                     " already exists");
     }
@@ -163,6 +164,7 @@ void etcd_manager::remove_watcher(const std::string& prefix) {
 
     auto it = watcher_entries.find(prefix);
     if (it == watcher_entries.end()) {
+        LOG_FATAL() << "watcher for prefix " << prefix << " does not exist";
         throw std::invalid_argument("watcher for prefix " + prefix +
                                     " does not exist");
     }
