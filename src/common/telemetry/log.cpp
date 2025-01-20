@@ -91,9 +91,11 @@ void initialize_otel_log_exporter(const sink_config& cfg) {
 boost::shared_ptr<logging::sinks::sink> make_sink(const sink_config& cfg) {
     if (cfg.type == sink_type::otel && !cfg.otel_endpoint.empty()) {
         initialize_otel_log_exporter(cfg);
-        return boost::make_shared<
-            logging::sinks::synchronous_sink<otel_log_sink>>(
-            boost::make_shared<otel_log_sink>());
+        auto sink =
+            boost::make_shared<logging::sinks::synchronous_sink<otel_log_sink>>(
+                boost::make_shared<otel_log_sink>());
+        sink->set_filter(logging::trivial::severity >= cfg.level);
+        return sink;
     } else {
         auto sink = boost::make_shared<logging::sinks::synchronous_sink<
             logging::sinks::text_ostream_backend>>();
