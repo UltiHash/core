@@ -62,8 +62,9 @@ public:
     public:
         watch_guard(etcd_manager* etcd, const std::string& prefix,
                     std::function<void(etcd::Response)> callback)
-            : m_etcd{etcd} {
-            m_index = m_etcd->add_watcher(prefix, callback);
+            : m_etcd{etcd},
+              m_prefix{prefix} {
+            m_etcd->add_watcher(prefix, callback);
         }
 
         watch_guard() = default;
@@ -73,13 +74,13 @@ public:
         watch_guard& operator=(watch_guard&&) = default;
 
         ~watch_guard() {
-            if (m_index >= 0)
-                m_etcd->remove_watcher(m_index);
+            if (!m_prefix.empty())
+                m_etcd->remove_watcher(m_prefix);
         }
 
     private:
         etcd_manager* m_etcd{nullptr};
-        int m_index{-1};
+        std::string m_prefix{};
 
         friend class etcd_manager;
     };
@@ -134,19 +135,18 @@ private:
     std::unique_ptr<etcd::KeepAlive> m_keepalive;
 
     struct watcher_entry {
-        std::string prefix;
         std::function<void(etcd::Response)> callback;
         std::unique_ptr<etcd::Watcher> watcher;
     };
-    std::vector<watcher_entry> watcher_entries;
+    std::unordered_map<std::string, watcher_entry> watcher_entries;
 
     std::mutex m_mutex;
 
     void reset();
 
-    int add_watcher(const std::string& prefix,
-                    std::function<void(etcd::Response)> callback);
-    void remove_watcher(int index);
+    void add_watcher(const std::string& prefix,
+                     std::function<void(etcd::Response)> callback);
+    void remove_watcher(const std::string& prefix);
     void restore_watchers(void);
 
     std::string lock(const std::string& lock_key);
