@@ -115,12 +115,11 @@ std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
     return client->keys(prefix).keys();
 }
 
-std::unordered_map<std::string, std::string>
-etcd_manager::ls(const std::string& prefix) {
+std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
     auto client = m_client.load();
     auto resp = client->ls(prefix);
     auto keys = resp.keys();
-    std::unordered_map<std::string, std::string> ret;
+    std::map<std::string, std::string> ret;
     for (auto i = 0u; i < keys.size(); ++i) {
         ret[keys[i]] = resp.value(i).as_string();
     }

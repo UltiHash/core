@@ -49,8 +49,7 @@ public:
     std::string get(const std::string& key);
     bool has(const std::string& key);
     std::vector<std::string> keys(const std::string& prefix = "/");
-    std::unordered_map<std::string, std::string>
-    ls(const std::string& prefix = "/");
+    std::map<std::string, std::string> ls(const std::string& prefix = "/");
 
     /*
      * Remove methods
