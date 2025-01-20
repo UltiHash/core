@@ -40,7 +40,6 @@ public:
         }
         m_cv.notify_all();
         m_storage_maintainer.remove_monitor(m_ec_maintainer);
-        m_etcd.stop();
     }
 
 private:

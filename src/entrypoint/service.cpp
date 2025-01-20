@@ -87,7 +87,6 @@ void service::run() {
 void service::stop() {
     LOG_INFO() << "stopping " << m_service_registry.get_service_name();
 
-    m_etcd.stop();
     m_server.stop();
 }
 

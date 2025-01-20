@@ -38,7 +38,6 @@ public:
     etcd_manager(const etcd_config& cfg = {}, int lease_timeout = 30);
     ~etcd_manager();
 
-    void stop();
     /*
      * Save key value pair
      */
@@ -61,13 +60,6 @@ public:
 
     class watch_guard {
     public:
-        watch_guard(etcd_manager* etcd, const std::string& prefix,
-                    std::function<void(etcd::Response)> callback)
-            : m_etcd{etcd},
-              m_prefix{prefix} {
-            m_etcd->add_watcher(prefix, callback);
-        }
-
         watch_guard() = default;
         watch_guard(watch_guard&&) = default;
         watch_guard& operator=(watch_guard&&) = default;
@@ -78,6 +70,13 @@ public:
         }
 
     private:
+        watch_guard(etcd_manager* etcd, const std::string& prefix,
+                    std::function<void(etcd::Response)> callback)
+            : m_etcd{etcd},
+              m_prefix{prefix} {
+            m_etcd->add_watcher(prefix, callback);
+        }
+
         etcd_manager* m_etcd{nullptr};
         std::string m_prefix{};
 
@@ -98,10 +97,6 @@ public:
      */
     class lock_guard {
     public:
-        explicit lock_guard(etcd_manager* etcd, const std::string& lock_key)
-            : m_etcd(etcd),
-              m_unlock_key(m_etcd->lock(lock_key)) {}
-
         lock_guard() = default;
         lock_guard(lock_guard&&) = default;
         lock_guard& operator=(lock_guard&&) = default;
@@ -112,6 +107,10 @@ public:
         }
 
     private:
+        lock_guard(etcd_manager* etcd, const std::string& lock_key)
+            : m_etcd(etcd),
+              m_unlock_key(m_etcd->lock(lock_key)) {}
+
         etcd_manager* m_etcd{nullptr};
         std::string m_unlock_key{};
 
@@ -143,7 +142,7 @@ private:
             : callback(std::move(cb)),
               watcher(std::move(w)) {}
     };
-    std::unordered_map<std::string, watcher_entry> watcher_entries;
+    std::unordered_map<std::string, watcher_entry> m_watcher_entries;
 
     std::mutex m_mutex;
 

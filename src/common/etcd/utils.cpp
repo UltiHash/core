@@ -74,16 +74,14 @@ void etcd_manager::reset() {
     });
 }
 
-void etcd_manager::stop() {
+etcd_manager::~etcd_manager() {
     auto client = m_client.load();
     m_watchdog->Cancel();
-    for (auto& [k, e] : watcher_entries) {
+    for (auto& [k, e] : m_watcher_entries) {
         e.watcher->Cancel();
     }
     client->leaserevoke(m_lease);
 }
-
-etcd_manager::~etcd_manager() { stop(); }
 
 /*
  * Save key value pair
@@ -146,13 +144,13 @@ void etcd_manager::add_watcher(const std::string& prefix,
 
     auto client = m_client.load();
 
-    if (watcher_entries.contains(prefix)) {
+    if (m_watcher_entries.contains(prefix)) {
         LOG_FATAL() << "watcher for prefix " << prefix << " already exists";
         throw std::invalid_argument("watcher for prefix " + prefix +
                                     " already exists");
     }
 
-    watcher_entries[prefix] = watcher_entry(
+    m_watcher_entries[prefix] = watcher_entry(
         callback,
         std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
 }
@@ -160,10 +158,8 @@ void etcd_manager::add_watcher(const std::string& prefix,
 void etcd_manager::remove_watcher(const std::string& prefix) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    auto client = m_client.load();
-
-    auto it = watcher_entries.find(prefix);
-    if (it == watcher_entries.end()) {
+    auto it = m_watcher_entries.find(prefix);
+    if (it == m_watcher_entries.end()) {
         LOG_FATAL() << "watcher for prefix " << prefix << " does not exist";
         throw std::invalid_argument("watcher for prefix " + prefix +
                                     " does not exist");
@@ -171,7 +167,7 @@ void etcd_manager::remove_watcher(const std::string& prefix) {
 
     it->second.watcher->Cancel();
 
-    if (watcher_entries.erase(prefix) == 0) {
+    if (m_watcher_entries.erase(prefix) == 0) {
         throw std::invalid_argument("watcher for prefix " + prefix +
                                     " does not exist");
     }
@@ -202,7 +198,7 @@ void etcd_manager::restore_watchers(void) {
 
     auto client = m_client.load();
 
-    for (auto& [k, e] : watcher_entries) {
+    for (auto& [k, e] : m_watcher_entries) {
         e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
     }
 }

@@ -44,10 +44,7 @@ public:
         m_server.run();
     }
 
-    void stop() {
-        m_etcd.stop();
-        m_server.stop();
-    }
+    void stop() { m_server.stop(); }
 
     std::shared_ptr<local_deduplicator> get_local_interface() {
         return m_deduplicator;
