@@ -105,14 +105,16 @@ std::size_t data_file::alloc(std::size_t size) {
     return rv;
 }
 
-void data_file::release(std::size_t offset, std::size_t size) {
+std::size_t data_file::release(std::size_t offset, std::size_t size) {
 
+    std::size_t count = std::min(m_filesize - offset, size);
     if (fallocate(m_fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, offset,
-                  size)) {
+                  count)) {
         throw_from_errno("could not free space for " + m_path.string());
     }
 
-    m_used -= size;
+    m_used -= count;
+    return count;
 }
 
 void data_file::sync() {
