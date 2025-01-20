@@ -14,7 +14,13 @@ public:
     service(const service_config& service, const recovery_config& sc)
         : m_ioc(sc.thread_count),
           m_ioc_runner(m_ioc, sc.thread_count),
-          m_etcd{service.etcd_config} {}
+          m_etcd{service.etcd_config},
+          m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
+          m_storage_maintainer(
+              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+
+        m_storage_maintainer.add_monitor(m_ec_maintainer);
+    }
 
     void run() {
         LOG_INFO() << "running recovery service";
@@ -32,6 +38,8 @@ public:
         }
         m_cv.notify_all();
 
+        m_storage_maintainer.remove_monitor(m_ec_maintainer);
+
         m_etcd.stop();
         m_ioc_runner.stop();
         m_ioc.stop();
@@ -41,6 +49,8 @@ private:
     boost::asio::io_context m_ioc;
     io_context_runner m_ioc_runner;
     etcd_manager m_etcd;
+    ec_group_maintainer m_ec_maintainer;
+    service_maintainer<storage_interface> m_storage_maintainer;
     std::condition_variable m_cv;
     std::mutex m_mutex;
     bool m_stopped = false;
