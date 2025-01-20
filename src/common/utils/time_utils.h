@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_TIMEOUT_H
-#define UH_CLUSTER_TIMEOUT_H
+#pragma once
 
 #include <chrono>
 #include <thread>
@@ -73,5 +72,3 @@ std::ostream& operator<<(std::ostream& out, const basic_timer<clock>& t) {
 using timer = basic_timer<std::chrono::steady_clock>;
 
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_TIMEOUT_H

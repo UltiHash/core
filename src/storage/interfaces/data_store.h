@@ -11,7 +11,7 @@ struct data_store_config {
     size_t page_size;
 };
 
-struct abstract_data_store {
+struct data_store {
     virtual address write(const std::string_view& data,
                           const std::vector<std::size_t>& offsets) = 0;
 
@@ -35,7 +35,7 @@ struct abstract_data_store {
 
     virtual size_t id() const noexcept = 0;
 
-    virtual ~abstract_data_store() = default;
+    virtual ~data_store() = default;
 };
 
 } // end namespace uh::cluster

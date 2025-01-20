@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_TELEMETRY_CONTEXT_H
-#define CORE_COMMON_TELEMETRY_CONTEXT_H
+#pragma once
 
 #include <boost/asio.hpp>
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
@@ -54,5 +53,3 @@ void initialize_traces_exporter(const std::string& endpoint);
 inline thread_local context CURRENT_CONTEXT;
 
 } // namespace uh::cluster
-
-#endif

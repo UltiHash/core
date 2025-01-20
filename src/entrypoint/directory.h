@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_ENTRYPOINT_DIRECTORY_H
-#define UH_CLUSTER_ENTRYPOINT_DIRECTORY_H
+#pragma once
 
 #include "common/db/db.h"
 #include "common/global_data/global_data_view.h"
@@ -100,5 +99,3 @@ coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
                            const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster
-
-#endif

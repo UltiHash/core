@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_HTTP_PUT_OBJECT_H
-#define ENTRYPOINT_HTTP_PUT_OBJECT_H
+#pragma once
 
 #include "command.h"
 #include "common/crypto/hash.h"
@@ -41,5 +40,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

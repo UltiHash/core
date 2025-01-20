@@ -1,5 +1,4 @@
-#ifndef PERFORMER_RECOVERY_MODULE_H
-#define PERFORMER_RECOVERY_MODULE_H
+#pragma once
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_interface.h"
 #include "common/etcd/ec_groups/ec_group_attributes.h"
@@ -207,5 +206,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // PERFORMER_RECOVERY_MODULE_H

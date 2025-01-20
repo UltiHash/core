@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_COMMANDS_COMMAND_H
-#define CORE_ENTRYPOINT_COMMANDS_COMMAND_H
+#pragma once
 
 #include "entrypoint/http/request.h"
 #include "entrypoint/http/response.h"
@@ -15,5 +14,3 @@ public:
 };
 
 } // end namespace uh::cluster
-
-#endif // COMMAND_H

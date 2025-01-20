@@ -1,5 +1,4 @@
-#ifndef COMMON_LICENSE_LICENSE_H
-#define COMMON_LICENSE_LICENSE_H
+#pragma once
 
 #include "common/utils/common.h"
 
@@ -24,5 +23,3 @@ struct license {
 license check_license(std::string_view license_code);
 
 } // namespace uh::cluster
-
-#endif

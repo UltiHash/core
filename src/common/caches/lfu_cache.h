@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_LFU_CACHE_H
-#define UH_CLUSTER_LFU_CACHE_H
+#pragma once
 
 #include <forward_list>
 #include <functional>
@@ -133,5 +132,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // UH_CLUSTER_LFU_CACHE_H

@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_POLICY_MATCHERS_H
-#define CORE_ENTRYPOINT_POLICY_MATCHERS_H
+#pragma once
 
 #include "entrypoint/formats.h"
 #include "matcher.h"
@@ -295,5 +294,3 @@ match_null(std::map<std::string, std::list<std::string>> strings) {
 }
 
 } // namespace uh::cluster::ep::policy
-
-#endif

@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_PLAIN_CACHE_H
-#define UH_CLUSTER_PLAIN_CACHE_H
+#pragma once
 
 #include "common/types/scoped_buffer.h"
 #include <functional>
@@ -40,4 +38,3 @@ public:
 };
 
 } // namespace uh::cluster
-#endif // UH_CLUSTER_PLAIN_CACHE_H

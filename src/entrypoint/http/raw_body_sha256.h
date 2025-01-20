@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_RAW_BODY_SHA256_H
-#define CORE_ENTRYPOINT_HTTP_RAW_BODY_SHA256_H
+#pragma once
 
 #include "raw_body.h"
 
@@ -20,5 +19,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

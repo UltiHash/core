@@ -1,5 +1,4 @@
-#ifndef EC_LOAD_BALANCER_H
-#define EC_LOAD_BALANCER_H
+#pragma once
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "storage/interfaces/storage_group.h"
 
@@ -86,5 +85,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif // EC_LOAD_BALANCER_H

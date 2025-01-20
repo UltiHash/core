@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_LOCAL_DEDUPLICATOR_H
-#define UH_CLUSTER_LOCAL_DEDUPLICATOR_H
+#pragma once
 
 #include "common/coroutines/worker_pool.h"
 #include "common/global_data/global_data_view.h"
@@ -31,4 +30,3 @@ private:
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
 };
 } // namespace uh::cluster
-#endif // UH_CLUSTER_LOCAL_DEDUPLICATOR_H

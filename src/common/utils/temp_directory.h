@@ -1,5 +1,4 @@
-#ifndef UTIL_TEMP_DIR_H
-#define UTIL_TEMP_DIR_H
+#pragma once
 
 #include <filesystem>
 
@@ -21,5 +20,3 @@ private:
 // ---------------------------------------------------------------------
 
 } // namespace uh::cluster
-
-#endif

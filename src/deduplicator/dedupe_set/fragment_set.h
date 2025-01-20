@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_FRAGMENT_SET_H
-#define UH_CLUSTER_FRAGMENT_SET_H
+#pragma once
 
 #include "common/caches/lfu_cache.h"
 #include "common/global_data/global_data_view.h"
@@ -145,5 +144,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // UH_CLUSTER_FRAGMENT_SET_H

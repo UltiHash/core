@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_RESPONSE_H
-#define CORE_ENTRYPOINT_HTTP_RESPONSE_H
+#pragma once
 
 #include "body.h"
 #include <boost/beast.hpp>
@@ -68,5 +67,3 @@ void put(boost::property_tree::ptree& tree, const std::string& key,
 }
 
 } // namespace uh::cluster::ep::http
-
-#endif

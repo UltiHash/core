@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_HTTP_STRING_BODY_H
-#define CORE_ENTRYPOINT_HTTP_STRING_BODY_H
+#pragma once
 
 #include "body.h"
 
@@ -19,5 +18,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::http
-
-#endif

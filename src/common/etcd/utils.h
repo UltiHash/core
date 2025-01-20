@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_ETCD_UTILS_H
-#define CORE_COMMON_ETCD_UTILS_H
+#pragma once
 
 #include <etcd/KeepAlive.hpp>
 #include <etcd/SyncClient.hpp>
@@ -113,5 +112,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_NETWORK_MESSENGER_H
-#define CORE_COMMON_NETWORK_MESSENGER_H
+#pragma once
 
 #include "common/telemetry/context.h"
 #include "messenger_core.h"
@@ -76,5 +75,3 @@ public:
 };
 
 } // end namespace uh::cluster
-
-#endif

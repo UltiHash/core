@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_POLICY_MODULE_H
-#define CORE_ENTRYPOINT_POLICY_MODULE_H
+#pragma once
 
 #include "effect.h"
 #include "entrypoint/commands/command.h"
@@ -29,5 +28,3 @@ private:
 };
 
 } // namespace uh::cluster::ep::policy
-
-#endif

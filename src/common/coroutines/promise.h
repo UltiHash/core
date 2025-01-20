@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_COROUTINES_PROMISE_H
-#define UH_CLUSTER_COROUTINES_PROMISE_H
+#pragma once
 
 #include "common/debug/debug.h"
 #include "common/types/common_types.h"
@@ -470,5 +469,3 @@ auto use_promise_cospawn(promise<result>&& p) {
     };
 }
 } // namespace uh::cluster
-
-#endif

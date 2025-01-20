@@ -1,6 +1,5 @@
+#pragma once
 
-#ifndef MAINTAINER_MONITOR_H
-#define MAINTAINER_MONITOR_H
 #include "common/etcd/namespace.h"
 
 #include <iostream>
@@ -21,5 +20,3 @@ template <typename service_interface> struct service_monitor {
     virtual ~service_monitor() = default;
 };
 } // namespace uh::cluster
-
-#endif // MAINTAINER_MONITOR_H

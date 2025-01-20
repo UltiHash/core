@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_DB_CONNECTION_H
-#define CORE_COMMON_DB_CONNECTION_H
+#pragma once
 
 #include "common/db/connstr.h"
 #include "common/telemetry/log.h"
@@ -176,5 +175,3 @@ private:
 };
 
 } // namespace uh::cluster::db
-
-#endif

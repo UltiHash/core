@@ -1,5 +1,4 @@
-#ifndef CORE_STORAGE_INTERFACES_STORAGE_GROUP_H
-#define CORE_STORAGE_INTERFACES_STORAGE_GROUP_H
+#pragma once
 
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
@@ -65,5 +64,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

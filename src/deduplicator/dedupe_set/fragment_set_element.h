@@ -1,5 +1,4 @@
-#ifndef UH_CLUSTER_FRAGMENT_SET_ELEMENT_H
-#define UH_CLUSTER_FRAGMENT_SET_ELEMENT_H
+#pragma once
 
 #include "common/global_data/global_data_view.h"
 
@@ -72,5 +71,3 @@ private:
                     std::string_view& str, size_t size) const;
 };
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_FRAGMENT_SET_ELEMENT_H

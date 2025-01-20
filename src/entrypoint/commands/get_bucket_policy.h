@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_COMMANDS_GET_BUCKET_POLICY_H
-#define CORE_ENTRYPOINT_COMMANDS_GET_BUCKET_POLICY_H
+#pragma once
 
 #include "command.h"
 #include "entrypoint/directory.h"
@@ -21,5 +20,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

@@ -1,6 +1,4 @@
-
-#ifndef UH_CLUSTER_REMOTE_DEDUPLICATOR_H
-#define UH_CLUSTER_REMOTE_DEDUPLICATOR_H
+#pragma once
 
 #include "common/network/client.h"
 #include "common/network/messenger_core.h"
@@ -26,5 +24,3 @@ private:
     client m_dedupe_service;
 };
 } // namespace uh::cluster
-
-#endif // UH_CLUSTER_REMOTE_DEDUPLICATOR_H

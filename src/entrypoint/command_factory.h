@@ -1,5 +1,4 @@
-#ifndef COMMAND_FACTORY_H
-#define COMMAND_FACTORY_H
+#pragma once
 
 #include "commands/command.h"
 #include "common/etcd/service_discovery/roundrobin_load_balancer.h"
@@ -50,5 +49,3 @@ private:
 };
 
 } // end namespace uh::cluster
-
-#endif // COMMAND_FACTORY_H

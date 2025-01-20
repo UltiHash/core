@@ -1,5 +1,4 @@
-#ifndef CORE_ENTRYPOINT_POLICY_PARSER_H
-#define CORE_ENTRYPOINT_POLICY_PARSER_H
+#pragma once
 
 #include "policy.h"
 #include <list>
@@ -16,5 +15,3 @@ public:
 };
 
 } // namespace uh::cluster::ep::policy
-
-#endif

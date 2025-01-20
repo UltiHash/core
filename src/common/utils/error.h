@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_ERROR_H
-#define CORE_COMMON_ERROR_H
+#pragma once
 
 #include <cstdint>
 #include <exception>
@@ -48,9 +47,10 @@ private:
     uh::cluster::error m_error;
 };
 
+std::string errno_message();
+[[noreturn]] void throw_from_errno(std::string msg);
+
 std::ostream& operator<<(std::ostream& out, const error& e);
 std::ostream& operator<<(std::ostream& out, const error_exception& e);
 
 } // namespace uh::cluster
-
-#endif

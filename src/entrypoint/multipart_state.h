@@ -1,5 +1,4 @@
-#ifndef ENTRYPOINT_MULTIPART_STATE_H
-#define ENTRYPOINT_MULTIPART_STATE_H
+#pragma once
 
 #include "common/db/db.h"
 #include "common/types/common_types.h"
@@ -107,5 +106,3 @@ private:
 };
 
 } // namespace uh::cluster
-
-#endif

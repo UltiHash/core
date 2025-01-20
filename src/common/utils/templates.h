@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_TEMPLATES_H
-#define CORE_COMMON_TEMPLATES_H
+#pragma once
 
 namespace uh::cluster {
 
@@ -17,5 +16,3 @@ void foreach (func f, const head& h, const tail&... t) {
 }
 
 } // namespace uh::cluster
-
-#endif

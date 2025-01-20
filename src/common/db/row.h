@@ -1,5 +1,4 @@
-#ifndef CORE_COMMON_DB_RESULT_H
-#define CORE_COMMON_DB_RESULT_H
+#pragma once
 
 #include "common/types/common_types.h"
 
@@ -33,5 +32,3 @@ private:
 };
 
 } // namespace uh::cluster::db
-
-#endif

@@ -3,12 +3,15 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 project(uh-cluster VERSION 1.1.2)
 
 option(BUILD_TESTS "Build unit tests" ON)
-option(BUILD_PROFILERS "Build profilers" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
 option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
 option(ENABLE_CCACHE "Use cache while compiling" ON)
+option(ENABLE_TSAN "Enable thread-sanitizer" OFF)
+option(ENABLE_ASAN "Enable address sanitizer" OFF)
+option(ENABLE_UBSAN "Enable undefined sanitizer" OFF)
+
 if(ENABLE_CCACHE)
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
@@ -29,6 +32,29 @@ if(ENABLE_BUILD_TIME_TRACE)
     endif()
 endif()
 
+if(ENABLE_TSAN)
+    if(ENABLE_ASAN OR ENABLE_UBSAN)
+        message(FATAL "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN")
+    endif()
+
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
+endif()
+
+if(ENABLE_ASAN)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
+
+if(ENABLE_UBSAN)
+    add_compile_options(-fsanitize=undefined)
+    add_link_options(-fsanitize=undefined)
+endif()
+
+if(ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_UBSAN)
+    add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
     copy-compile-commands ALL
@@ -45,7 +71,7 @@ add_subdirectory(third-party)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
-    Boost 1.87
+    Boost 1.86
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
 find_package(OpenSSL REQUIRED)
@@ -162,17 +188,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
-add_subdirectory(helpers)
 
 # Unit tests
 if(BUILD_TESTS)
     message(STATUS "Building unit tests")
     enable_testing()
     add_subdirectory(test)
-endif()
-if(BUILD_PROFILERS)
-    message(STATUS "Building profiling tools")
-    add_subdirectory(profiling)
 endif()
 if(BUILD_TOOLS)
     message(STATUS "Building tools")
