@@ -53,6 +53,8 @@ response get_response(const std::vector<std::string>& success,
 coro<response> delete_objects::handle(request& req) {
     metric<entrypoint_delete_objects_req>::increase(1);
 
+    co_await m_dir.bucket_exists(req.bucket());
+
     LOG_DEBUG() << req.peer() << ": delete_objects::handle(): content-length: "
                 << req.content_length();
 

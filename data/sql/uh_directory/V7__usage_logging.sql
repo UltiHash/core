@@ -138,7 +138,13 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_check_bucket(bucket TEXT)
     LANGUAGE plpgsql AS $$
 BEGIN
-    PERFORM 1 FROM buckets WHERE name = bucket;
+    PERFORM 1
+    FROM buckets b
+             LEFT JOIN bucket_status s ON b.id = s.bucket_id
+    WHERE b.name = bucket
+      AND s.bucket_id IS NULL
+    ORDER BY b.id DESC
+    LIMIT 1;
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Bucket "%s" does not exist in buckets table', bucket;
@@ -191,30 +197,13 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_delete_bucket(bucket TEXT)
     LANGUAGE plpgsql AS $$
 DECLARE
-    object_count INT;
-    rows_inserted INT;
     b_id BIGINT;
 BEGIN
     SELECT uh_get_bucket_id(bucket) INTO b_id;
 
-    SELECT count(1) INTO object_count
-    FROM objects o
-        LEFT JOIN object_status s ON o.id = s.object_id
-    WHERE o.bucket_id = b_id
-      AND s.object_id IS NULL;
-
-    IF object_count != 0 THEN
-        RAISE EXCEPTION 'Bucket "%" is not empty.', bucket;
-    END IF;
-
     INSERT INTO bucket_status (bucket_id, status)
     VALUES (b_id, status_deleted())
     ON CONFLICT DO NOTHING;
-
-    GET DIAGNOSTICS rows_inserted = ROW_COUNT;
-    IF rows_inserted = 0 THEN
-        RAISE EXCEPTION 'Bucket "%" is already in a deleted or collected state.', bucket;
-    END IF;
 END;
 $$;
 
@@ -226,12 +215,15 @@ CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, object TEXT)
     LANGUAGE plpgsql AS $$
 DECLARE
     obj_id BIGINT;
-    rows_inserted INT;
 BEGIN
     SELECT o.id INTO obj_id
     FROM objects o
+        LEFT JOIN object_status s ON o.id = s.object_id
     WHERE o.bucket_id = uh_get_bucket_id(bucket)
-      AND name = object;
+      AND o.name = object
+      AND s.object_id IS NULL
+    ORDER BY o.id DESC
+    LIMIT 1;
 
     IF obj_id IS NULL THEN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
@@ -240,11 +232,6 @@ BEGIN
     INSERT INTO object_status (object_id, status)
     VALUES (obj_id, status_deleted())
     ON CONFLICT DO NOTHING;
-
-    GET DIAGNOSTICS rows_inserted = ROW_COUNT;
-    IF rows_inserted = 0 THEN
-        RAISE EXCEPTION 'Object "%" in bucket "%" is already in a deleted or collected state.', object, bucket;
-    END IF;
 END;
 $$;
 

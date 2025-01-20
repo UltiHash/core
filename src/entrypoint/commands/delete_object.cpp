@@ -18,6 +18,7 @@ bool delete_object::can_handle(const request& req) {
 coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
 
+    co_await m_dir.bucket_exists(req.bucket());
     co_await m_dir.delete_object(req.bucket(), req.object_key());
 
     co_return response{};
