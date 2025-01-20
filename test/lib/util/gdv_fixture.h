@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UH_CLUSTER_GDV_FIXTURE_H
+#define UH_CLUSTER_GDV_FIXTURE_H
 
 #include "recovery/service.h"
 
@@ -30,12 +31,12 @@ public:
             storage_cfg.server.port = 10000 + i;
             storage_cfg.m_data_store_roots = {
                 std::filesystem::path(service_cfg.working_dir) / "storage"};
-            m_storage_instances.emplace_back(
-                std::make_unique<storage::service>(service_cfg, storage_cfg));
+            m_storage_instances.emplace_back(std::make_unique<storage::service>(
+                m_etcd, service_cfg, storage_cfg));
         }
 
-        m_recovery = std::make_unique<recovery::service>(service_config{},
-                                                         recovery_config{});
+        m_recovery = std::make_unique<recovery::service>(
+            m_etcd, service_config{}, recovery_config{});
         int i = 0;
 
         boost::asio::post(m_ioc, [this] { m_recovery->run(); });
@@ -136,3 +137,4 @@ private:
 };
 
 } // namespace uh::cluster
+#endif // UH_CLUSTER_GDV_FIXTURE_H

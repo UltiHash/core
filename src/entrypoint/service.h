@@ -18,7 +18,8 @@ namespace uh::cluster::ep {
 
 class service {
 public:
-    service(const service_config& sc, entrypoint_config config);
+    service(etcd_manager& etcd, const service_config& sc,
+            entrypoint_config config);
 
     void run();
 
@@ -28,8 +29,8 @@ public:
 
 private:
     entrypoint_config m_config;
+
     boost::asio::io_context m_ioc;
-    etcd_manager m_etcd;
     std::size_t m_service_id;
     service_registry m_service_registry;
 
