@@ -61,10 +61,12 @@ void etcd_manager::reset() {
 
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
-        restore_watchers();
+
         m_watchdog.reset(new etcd::Watcher(*client, etcd_watchdog, {}, false));
 
         m_client.store(client);
+
+        restore_watchers();
     }
     m_watchdog->Wait([this](bool cancelled) mutable {
         if (cancelled) {
