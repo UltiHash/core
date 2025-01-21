@@ -35,7 +35,7 @@ public:
         }
 
         m_coordinator = std::make_unique<coordinator::service>(
-            service_config{}, recovery_config{});
+            service_config{}, coordinator_config{});
         int i = 0;
 
         boost::asio::post(m_ioc, [this] { m_coordinator->run(); });
