@@ -6,7 +6,6 @@
 #include "config/configuration.h"
 #include "deduplicator/service.h"
 #include "entrypoint/service.h"
-#include "etcd/SyncClient.hpp"
 #include "recovery/service.h"
 #include "storage/service.h"
 
@@ -23,18 +22,16 @@ void execute_role(const config& c) {
     };
 
     try {
-        auto etcd = etcd_manager(c.service.etcd_config);
         switch (c.role) {
         case STORAGE_SERVICE:
-            return start_service(storage::service(etcd, c.service, c.storage));
+            return start_service(storage::service(c.service, c.storage));
         case DEDUPLICATOR_SERVICE:
             return start_service(
-                deduplicator::service(etcd, c.service, c.deduplicator));
+                deduplicator::service(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
-            return start_service(ep::service(etcd, c.service, c.entrypoint));
+            return start_service(ep::service(c.service, c.entrypoint));
         case RECOVERY_SERVICE:
-            return start_service(
-                recovery::service(etcd, c.service, c.recovery));
+            return start_service(recovery::service(c.service, c.recovery));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();

@@ -38,7 +38,7 @@ protected:
 BOOST_AUTO_TEST_SUITE(a_etcd_client)
 
 BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
-    etcd_client.set("test0", "initial_value");
+    etcd_client.put("test0", "initial_value");
     std::shared_ptr<etcd::Watcher> watcher;
     watcher.reset(new etcd::Watcher(
         etcd_client, "test0",
@@ -47,7 +47,7 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
         },
         true /*recursive*/));
 
-    etcd_client.set("test0", "updated_value");
+    etcd_client.put("test0", "updated_value");
     std::this_thread::sleep_for(100ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
@@ -55,7 +55,7 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(
     cannot_watch_changes_on_the_given_key_after_cancellation, fixture) {
-    etcd_client.set("test0", "initial_value");
+    etcd_client.put("test0", "initial_value");
     std::shared_ptr<etcd::Watcher> watcher;
     watcher.reset(new etcd::Watcher(
         etcd_client, "test0",
@@ -65,14 +65,14 @@ BOOST_FIXTURE_TEST_CASE(
         true /*recursive*/));
 
     watcher->Cancel();
-    etcd_client.set("test0", "updated_value");
+    etcd_client.put("test0", "updated_value");
     std::this_thread::sleep_for(100ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(0);
 }
 
 BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
-    etcd_client.set("/foo/bar", "1");
+    etcd_client.put("/foo/bar", "1");
 
     auto resp = etcd_client.get("/foo/bar");
 
@@ -86,6 +86,16 @@ BOOST_FIXTURE_TEST_CASE(gets_leasegrant, fixture) {
     BOOST_TEST(resp.is_ok() == true);
 }
 
+BOOST_FIXTURE_TEST_CASE(cannot_read_after_lease_expired, fixture) {
+    auto lease = etcd_client.leasegrant(2).value().lease();
+    etcd_client.put("/foo/bar", "1", lease);
+
+    std::this_thread::sleep_for(4s);
+    auto resp = etcd_client.get("/foo/bar");
+
+    BOOST_TEST(resp.is_ok() == false);
+}
+
 BOOST_FIXTURE_TEST_CASE(fails_getting_lock_when_lease_is_invalidated, fixture) {
     auto lease = etcd_client.leasegrant(2).value().lease();
     auto keepalive = etcd::KeepAlive(etcd_client, 10, lease);
@@ -96,7 +106,7 @@ BOOST_FIXTURE_TEST_CASE(fails_getting_lock_when_lease_is_invalidated, fixture) {
 
     BOOST_TEST(resp.is_ok() == false);
 }
-//
+
 BOOST_FIXTURE_TEST_CASE(succeeds_getting_lock_with_valid_lease, fixture) {
     auto lease = etcd_client.leasegrant(2).value().lease();
     auto keepalive = etcd::KeepAlive(etcd_client, 1, lease);

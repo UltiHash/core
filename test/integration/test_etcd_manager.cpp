@@ -114,9 +114,10 @@ BOOST_FIXTURE_TEST_CASE(clears_all, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_write, fixture) {
-    etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-        cb.handle_state_changes(response);
-    });
+    auto wm =
+        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
     std::this_thread::sleep_for(100ms);
@@ -126,9 +127,10 @@ BOOST_FIXTURE_TEST_CASE(watches_write, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(watch_rewrite, fixture) {
     etcd.put("/test/sub/a0", "172.0.0.1");
-    etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-        cb.handle_state_changes(response);
-    });
+    auto wm =
+        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
     std::this_thread::sleep_for(100ms);
@@ -138,9 +140,10 @@ BOOST_FIXTURE_TEST_CASE(watch_rewrite, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(watches_overwrite, fixture) {
     etcd.put("/test/sub/a0", "198.51.100.0");
-    etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-        cb.handle_state_changes(response);
-    });
+    auto wm =
+        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
     std::this_thread::sleep_for(100ms);
@@ -150,9 +153,10 @@ BOOST_FIXTURE_TEST_CASE(watches_overwrite, fixture) {
 
 BOOST_FIXTURE_TEST_CASE(watches_remove, fixture) {
     etcd.put("/test/sub/a0", "172.0.0.1");
-    etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-        cb.handle_state_changes(response);
-    });
+    auto wm =
+        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        });
 
     etcd.rmdir("/test");
     std::this_thread::sleep_for(100ms);
