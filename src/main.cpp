@@ -60,7 +60,9 @@ int main(int argc, char** argv) {
 
         initialize_metrics_exporter(config->service.telemetry_url,
                                     config->service.telemetry_interval);
-        initialize_traces_exporter(config->service.telemetry_url);
+        if (config->service.enable_traces) {
+            initialize_traces_exporter(config->service.telemetry_url);
+        }
 
         LOG_INFO() << "license loaded for " << config->service.license.customer
                    << " -- storage size: "
