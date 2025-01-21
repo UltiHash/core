@@ -5,7 +5,7 @@
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
-#include "recovery/recovery_module.h"
+#include "coordinator/recovery_module.h"
 
 namespace uh::cluster {
 

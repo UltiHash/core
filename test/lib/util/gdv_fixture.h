@@ -1,6 +1,6 @@
 #pragma once
 
-#include "recovery/service.h"
+#include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
 #include <common/global_data/default_global_data_view.h>

@@ -4,9 +4,9 @@
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
+#include "coordinator/service.h"
 #include "deduplicator/service.h"
 #include "entrypoint/service.h"
-#include "recovery/service.h"
 #include "storage/service.h"
 
 using namespace uh;
