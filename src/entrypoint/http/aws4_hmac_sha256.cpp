@@ -45,6 +45,7 @@ make_canonical_request_presign(partial_parse_result& req,
         if (field.first == "X-Amz-Signature") {
             continue;
         }
+
         canonical_query_set.emplace(uri_encode(field.first) + "=" +
                                     uri_encode(field.second));
     }
@@ -211,15 +212,15 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
 } // namespace
 
 coro<std::unique_ptr<request>>
-aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
+aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
+                         const std::string& auth) {
 
-    auto header = req.require("authorization");
-    std::size_t pos = header.find(' ');
+    std::size_t pos = auth.find(' ');
     if (pos == std::string::npos) {
         throw std::runtime_error("no algorithm separator");
     }
 
-    auto parsed = parse_values_string({header.begin() + pos + 1, header.end()});
+    auto parsed = parse_values_string({auth.begin() + pos + 1, auth.end()});
     if (!parsed.contains("Credential") || !parsed.contains("SignedHeaders") ||
         !parsed.contains("Signature")) {
         throw std::runtime_error("required fields are missing");
