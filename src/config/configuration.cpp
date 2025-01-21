@@ -285,7 +285,7 @@ std::optional<config> read_config(int argc, char** argv) {
             std::filesystem::path(rv.service.working_dir) / "deduplicator";
 
     } else if (sub_rk->parsed()) {
-        rv.role = RECOVERY_SERVICE;
+        rv.role = COORDINATOR_SERVICE;
     } else {
         throw std::runtime_error("unsupported sub command given");
     }

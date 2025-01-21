@@ -1,4 +1,3 @@
-#include "common/etcd/utils.h"
 #include "common/license/license.h"
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
@@ -30,7 +29,7 @@ void execute_role(const config& c) {
                 deduplicator::service(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
             return start_service(ep::service(c.service, c.entrypoint));
-        case RECOVERY_SERVICE:
+        case COORDINATOR_SERVICE:
             return start_service(recovery::service(c.service, c.recovery));
         }
     } catch (const std::exception& e) {
