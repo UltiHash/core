@@ -39,7 +39,7 @@ namenode:
       value: "testing"
       effect: "NoSchedule"
   nodeSelector:
-    purpose: parameterized-test-hdfs
+    purpose: hdfs-parameterized-test
 
 datanode:
   replicas: $EC2_INSTANCE_COUNT
@@ -51,4 +51,4 @@ datanode:
       value: "testing"
       effect: "NoSchedule"
   nodeSelector:
-    purpose: parameterized-test-hdfs
+    purpose: hdfs-parameterized-test

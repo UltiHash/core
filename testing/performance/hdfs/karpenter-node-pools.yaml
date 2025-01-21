@@ -6,7 +6,7 @@ spec:
   template:
     metadata:
       labels:
-        purpose: parameterized-test-hdfs
+        purpose: hdfs-parameterized-test
     spec:
       requirements:
         - key: karpenter.sh/capacity-type
