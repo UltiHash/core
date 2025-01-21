@@ -148,7 +148,3 @@ jobs:
           kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }}
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete nodepool parameterized-test-hdfs hdfs-parameterized-test-tester || true
-
-      
-
-      
