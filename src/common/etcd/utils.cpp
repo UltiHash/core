@@ -57,18 +57,11 @@ void etcd_manager::reset() {
         if (!lease_result.is_ok()) {
             throw std::runtime_error("Failed to grant lease");
         }
-
-        std::lock_guard<std::mutex> lock(m_mutex);
-
         m_lease = lease_result.value().lease();
 
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
-
-        for (auto& [k, e] : m_watcher_entries) {
-            e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
-        }
-
+        restore_watchers();
         m_watchdog.reset(new etcd::Watcher(*client, etcd_watchdog, {}, false));
 
         m_client.store(client);
@@ -198,6 +191,16 @@ void etcd_manager::unlock(const std::string& unlock_key) {
         throw std::invalid_argument(
             "releasing lock with unlock_key " + unlock_key +
             " failed, details: " + resp.error_message());
+}
+
+void etcd_manager::restore_watchers(void) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto client = m_client.load();
+
+    for (auto& [k, e] : m_watcher_entries) {
+        e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
+    }
 }
 
 } // namespace uh::cluster

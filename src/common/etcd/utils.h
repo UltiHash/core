@@ -151,6 +151,7 @@ private:
     void add_watcher(const std::string& prefix,
                      std::function<void(etcd::Response)> callback);
     void remove_watcher(const std::string& prefix);
+    void restore_watchers(void);
 
     std::string lock(const std::string& lock_key);
     void unlock(const std::string& unlock_key);
