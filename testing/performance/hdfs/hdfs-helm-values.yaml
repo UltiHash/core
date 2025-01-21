@@ -1,12 +1,11 @@
 global:
-  image: "apache/hadoop:$HADOOP_VERSION"
   replicationFaktor: 1
   blockSize: "$HDFS_BLOCK_SIZE"
 
 performanceTest:
   dataset:
     fileCount: $TEST_FILE_COUNT
-    fileSize: "$HDFS_BLOCK_SIZE"
+    fileSize: "$TEST_FILE_SIZE"
   test:
     threadCount: $TEST_THREAD_COUNT
     queueSize: $TEST_QUEUE_SIZE
