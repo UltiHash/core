@@ -1,0 +1,43 @@
+global:
+  image: "apache/hadoop:$HADOOP_VERSION"
+  replicationFaktor: 1
+  blockSize: "$HDFS_BLOCK_SIZE"
+
+performanceTest:
+  dataset:
+    fileCount: $TEST_FILE_COUNT
+    fileSize: "$HDFS_BLOCK_SIZE"
+  test:
+    threadCount: $TEST_THREAD_COUNT
+    queueSize: $TEST_QUEUE_SIZE
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: hdfs-parameterized-test-tester
+  storageClass: local-path
+
+namenode:
+  storageClass: $HDFS_STORAGE_CLASS
+  storageSize: 50Gi
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: parameterized-test-hdfs
+
+datanode:
+  replicas: $EC2_INSTANCE_COUNT
+  storageClass: $HDFS_STORAGE_CLASS
+  storageSize: $STORAGE_VOLUME_SIZE
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: parameterized-test-hdfs
