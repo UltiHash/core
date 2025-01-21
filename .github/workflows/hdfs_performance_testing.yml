@@ -99,6 +99,7 @@ jobs:
         run: |
           kubectl create ns ${{ env.ENVIRONMENT_NAME }}
           kubectl apply -f karpenter-node-pools.yaml
+          kubectl apply -f testing/performance/hdfs/tester-volumes.yaml
 
       - name: Install the HDFS cluster
         run: |
