@@ -32,6 +32,56 @@ bool include_header(const std::string& name,
 }
 
 std::string
+make_canonical_request_presign(partial_parse_result& req,
+                               const std::set<std::string_view>& signed_headers,
+                               const std::string& content_sha) {
+
+    auto url = parse_request_target(req.headers.target());
+
+    // for details, see
+    // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
+    std::set<std::string> canonical_query_set;
+    for (const auto& field : url.params) {
+        if (field.first == "X-Amz-Signature") {
+            continue;
+        }
+        canonical_query_set.emplace(uri_encode(field.first) + "=" +
+                                    uri_encode(field.second));
+    }
+
+    std::string canonical_query = join(canonical_query_set, "&");
+
+    std::map<std::string, std::string> canonical_headers_map;
+    for (const auto& header : req.headers) {
+        auto name = lowercase(header.name_string());
+
+        if (!include_header(name, signed_headers)) {
+            continue;
+        }
+
+        canonical_headers_map[std::move(name)] = trim(header.value());
+    }
+
+    std::string canonical_headers;
+    std::string signed_header_names;
+    bool first = true;
+
+    for (const auto& header : canonical_headers_map) {
+        if (!first) {
+            signed_header_names += ";";
+        }
+
+        canonical_headers += header.first + ":" + header.second + "\n";
+        signed_header_names += header.first;
+        first = false;
+    }
+
+    return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
+           "\n" + canonical_query + "\n" + canonical_headers + "\n" +
+           signed_header_names + "\n" + content_sha;
+}
+
+std::string
 make_canonical_request(partial_parse_result& req,
                        const std::set<std::string_view>& signed_headers,
                        const std::string& content_sha) {
@@ -76,6 +126,27 @@ make_canonical_request(partial_parse_result& req,
     return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
            signed_header_names + "\n" + content_sha;
+}
+
+std::string request_signature_presigned(
+    partial_parse_result& req, const aws4_signature_info& info,
+    const std::set<std::string_view>& signed_headers,
+    const std::string& signing_key, const std::string& content_sha) {
+
+    auto url = parse_request_target(req.headers.target());
+    auto canonical_request =
+        make_canonical_request_presign(req, signed_headers, content_sha);
+    LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
+
+    std::stringstream string_to_sign;
+    string_to_sign << "AWS4-HMAC-SHA256\n"
+                   << url.params["X-Amz-Date"] << "\n"
+                   << info.date << "/" << info.region << "/" << info.service
+                   << "/aws4_request\n"
+                   << to_hex(sha256::from_string(canonical_request));
+
+    LOG_DEBUG() << req.peer << ": string to sign: " << string_to_sign.str();
+    return to_hex(hmac_sha256::from_string(signing_key, string_to_sign.str()));
 }
 
 std::string request_signature(partial_parse_result& req,
@@ -201,6 +272,65 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req) {
         request_signature(req, info, signed_headers, signing_key, content_sha);
 
     if (signature != parsed["Signature"]) {
+        LOG_INFO() << req.peer << ": access denied: signature mismatch";
+        throw command_exception(status::forbidden, "AccessDenied",
+                                "Access Denied");
+    }
+
+    if (!body) {
+        body = make_body(req, std::move(info), std::move(signing_key),
+                         std::move(signature));
+    }
+
+    co_return std::make_unique<request>(std::move(req.headers), std::move(body),
+                                        std::move(user), std::move(req.peer));
+}
+
+coro<std::unique_ptr<request>>
+aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
+
+    auto url = parse_request_target(req.headers.target());
+
+    auto split_credentials = split(url.params["X-Amz-Credential"], '/');
+    if (split_credentials.size() != 5) {
+        throw std::runtime_error("wrong size of crendentials");
+    }
+
+    aws4_signature_info info{
+        .date = std::string(split_credentials[1]),
+        .region = std::string(split_credentials[2]),
+        .service = std::string(split_credentials[3]),
+    };
+
+    auto signed_headers = split<std::set<std::string_view>>(
+        url.params["X-Amz-SignedHeaders"], ';');
+    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
+    auto signing_key = make_signing_key(user.access_key->secret_key, info);
+
+    std::unique_ptr<body> body;
+    if (auto content_type = req.optional("content-type");
+        content_type.value_or("").starts_with(
+            "application/x-www-form-urlencoded")) {
+
+        auto length = std::stoul(req.optional("content-length").value_or("0"));
+        raw_body reader(req, length);
+
+        std::string buffer(length, 0);
+        auto size = co_await reader.read({&buffer[0], length});
+        if (size != length) {
+            throw std::runtime_error("cannot read content-length bytes");
+        }
+
+        sha256 hash;
+        hash.consume({&buffer[0], length});
+
+        body = std::make_unique<string_body>(std::move(buffer));
+    }
+
+    auto signature = request_signature_presigned(
+        req, info, signed_headers, signing_key, "UNSIGNED-PAYLOAD");
+
+    if (signature != url.params["X-Amz-Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");

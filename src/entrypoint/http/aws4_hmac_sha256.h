@@ -15,6 +15,9 @@ class aws4_hmac_sha256 {
 public:
     static coro<std::unique_ptr<request>> create(user::db& users,
                                                  partial_parse_result& req);
+
+    static coro<std::unique_ptr<request>>
+    create_from_url(user::db& users, partial_parse_result& req);
 };
 
 } // namespace uh::cluster::ep::http
