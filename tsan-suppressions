@@ -1,0 +1,13 @@
+#
+# Disable GRPC and Abseil library reports as they lack instrumentation
+#
+called_from_lib:libabsl_graphcycles_internal.so
+called_from_lib:libgpr.so
+called_from_lib:libgrpc.so
+called_from_lib:libgrpc++.so
+called_from_lib:libabsl_status.so
+
+#
+# Some data races for grpc::internal namespace are still reported
+#
+race:grpc::internal

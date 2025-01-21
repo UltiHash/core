@@ -1,19 +1,13 @@
 #pragma once
 
-#include "common/types/scoped_buffer.h"
 #include "reference_counter.h"
 
-#include "common/types/address.h"
-#include "common/utils/common.h"
-#include "storage/interfaces/data_store.h"
+#include <storage/data_file.h>
+#include <storage/interfaces/data_store.h>
 
 #include <atomic>
-#include <condition_variable>
-#include <cstring>
 #include <filesystem>
-#include <map>
-#include <memory_resource>
-#include <unordered_set>
+#include <mutex>
 
 namespace uh::cluster {
 
@@ -86,66 +80,61 @@ public:
     size_t unlink(const address& addr);
 
     /**
-     * @brief Gives out the current used space of the data store.
+     * @brief Returns the current used space of the data store.
      * @return size_t: the used space in the data store
      */
-    [[nodiscard]] size_t get_used_space() const noexcept;
+    size_t get_used_space() const noexcept;
 
     /**
-     * @brief Gives out the current available space in the data store. Available
+     * @brief Returns the current available space in the data store. Available
      * = allocated - used
      * @return size_t: the available space in the data store
      */
-    [[nodiscard]] size_t get_available_space() const noexcept;
+    size_t get_available_space() const noexcept;
 
     size_t id() const noexcept;
 
     ~default_data_store();
 
 private:
-    struct alloc_t {
-        int fd;
-        size_t seek;
-        uint128_t global_offset;
+    struct location {
+        data_file& file;
+        std::size_t offset;
     };
 
-    /**
-     * @brief Flushes modified files to disk.
-     * @throws std::exception corrupted storage
-     */
+    struct alloc_t {
+        location l;
+        std::size_t size;
+        std::size_t local;
+    };
+
     void sync();
 
-    alloc_t internal_allocate(size_t size,
-                              const std::vector<std::size_t>& offsets);
+    std::list<alloc_t> allocate(size_t size,
+                                const std::vector<std::size_t>& offsets);
 
-    [[nodiscard]] std::pair<int, long>
-    get_file_offset_pair(size_t pointer) const;
+    location file_location(size_t pointer);
 
-    [[nodiscard]] size_t
-    fetch_used_space(const std::filesystem::path& last_file) const noexcept;
-
-    std::filesystem::path add_new_file(size_t offset, size_t file_size);
-
-    [[nodiscard]] std::string get_name(size_t offset) const;
-
-    static bool is_data_file(const std::filesystem::path& path);
+    std::size_t fetch_used_space() const;
 
     void update_last_page_ref(
         std::deque<reference_counter::refcount_cmd>& refcount_commands);
 
     size_t internal_delete(std::size_t offset, std::size_t size);
 
-    size_t m_last_file_data_end{};
     const uint32_t m_storage_id;
     const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
-    std::vector<std::pair<int, size_t>> m_open_files;
-    std::atomic<size_t> m_current_offset{};
+    std::size_t m_filesize;
+
+    mutable std::mutex m_mutex;
+    std::vector<data_file> m_files;
+    std::atomic<std::size_t> m_file_count;
+
     std::atomic<size_t> m_used_space{};
+
     std::optional<std::size_t> m_locked_page = std::nullopt;
-    std::mutex m_allocate_mutex;
-    std::mutex m_sync_mutex;
     reference_counter m_refcounter;
 };
 

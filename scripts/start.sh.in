@@ -2,6 +2,7 @@
 
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=/var/lib/uh
+export UH_LOG_LEVEL=INFO
 
 instances=1
 if [ -n "$1" ];then
@@ -23,23 +24,25 @@ echo "*** starting services"
 log_dir=$BUILD_DIR/logs
 mkdir -p $log_dir
 
+export TSAN_OPTIONS="detect_odr_violation=0,suppressions=@PROJECT_SOURCE_DIR@/tsan-suppressions"
+
 export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
 for ((id = 0; id < $instances; ++id)); do
     mkdir -p $UH_DATA/storage-$id
-    $BUILD_DIR/uh-cluster -l DEBUG --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
+    $BUILD_DIR/uh-cluster --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=recovery"
-$BUILD_DIR/uh-cluster -l DEBUG recovery &> $log_dir/recovery.log &
+$BUILD_DIR/uh-cluster recovery &> $log_dir/recovery.log &
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 for ((id = 0; id < $instances; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
-    $BUILD_DIR/uh-cluster -l DEBUG --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
+    $BUILD_DIR/uh-cluster --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
-$BUILD_DIR/uh-cluster -l DEBUG entrypoint &> $log_dir/entrypoint.log &
+$BUILD_DIR/uh-cluster entrypoint &> $log_dir/entrypoint.log &
 
 echo "All services are running. Log files are written $log_dir and will"
 echo "not be removed after the script has finished."
