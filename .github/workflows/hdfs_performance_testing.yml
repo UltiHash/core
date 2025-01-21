@@ -4,6 +4,7 @@ env:
   ENVIRONMENT_NAME: hdfs-parameterized-test
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       hadoop_version:
