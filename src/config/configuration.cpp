@@ -49,6 +49,7 @@ make_log_config(const service_config& cfg,
                                          .service_role = service_role},
                         log::sink_config{.type = log::sink_type::otel,
                                          .otel_endpoint = cfg.telemetry_url,
+                                         .level = log_level,
                                          .service_role = service_role}}};
     }
     return lc;
@@ -98,6 +99,11 @@ void register_service(CLI::App& app, service_config& cfg) {
                    "interval of telemetry exports in milliseconds")
         ->default_val(cfg.telemetry_interval)
         ->envname(ENV_CFG_OTEL_EXPORT_INTERVAL);
+
+    app.add_flag("--enable-traces", cfg.enable_traces,
+                 "enable generation of traces")
+        ->default_val(cfg.enable_traces)
+        ->envname(ENV_CFG_ENABLE_TRACES);
 }
 
 void register_server(CLI::App& app, server_config& cfg) {

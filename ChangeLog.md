@@ -1,3 +1,8 @@
+## [Unreleased]
+
+- Consider configured log level in OTEL logging
+- Configure generation of traces via command line and environment
+
 ## [1.1.2] 2024-12-19
 - Modified `STORAGE_WRITE_REQ` message for more efficient interaction between deduplicator and storage
 - Improved efficiency of reference counting infrastructure in storage service
