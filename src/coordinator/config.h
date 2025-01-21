@@ -2,7 +2,7 @@
 
 namespace uh::cluster {
 
-struct recovery_config {
+struct coordinator_config {
     size_t thread_count = 4;
 };
 

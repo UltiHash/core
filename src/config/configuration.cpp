@@ -217,8 +217,8 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
     return rv;
 }
 
-CLI::App* sub_recovery(CLI::App& app, recovery_config& cfg) {
-    auto* rv = app.add_subcommand("recovery", "Run as recovery service");
+CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
+    auto* rv = app.add_subcommand("coordinator", "Run as coordinator service");
     rv->add_option("--thread-count", cfg.thread_count, "number of threads")
         ->default_val(cfg.thread_count);
     return rv;
@@ -235,7 +235,7 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_str = sub_storage(app, rv.storage);
     auto sub_ep = sub_entrypoint(app, rv.entrypoint);
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
-    auto sub_rk = sub_recovery(app, rv.recovery);
+    auto sub_rk = sub_coordinator(app, rv.coordinator);
 
     auto sub_dd_str =
         sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());

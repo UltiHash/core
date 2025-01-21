@@ -32,7 +32,7 @@ struct config {
     entrypoint_config entrypoint;
     storage_config storage;
     deduplicator_config deduplicator;
-    recovery_config recovery;
+    coordinator_config coordinator;
 };
 
 std::optional<config> read_config(int argc, char** argv);
