@@ -34,11 +34,11 @@ public:
                 std::make_unique<storage::service>(service_cfg, storage_cfg));
         }
 
-        m_recovery = std::make_unique<recovery::service>(service_config{},
-                                                         recovery_config{});
+        m_coordinator = std::make_unique<coordinator::service>(
+            service_config{}, recovery_config{});
         int i = 0;
 
-        boost::asio::post(m_ioc, [this] { m_recovery->run(); });
+        boost::asio::post(m_ioc, [this] { m_coordinator->run(); });
         m_threads.emplace_back([this, i] {
             try {
                 m_ioc.run();
@@ -83,9 +83,9 @@ public:
 
         m_storage_instances.clear();
 
-        if (m_recovery) {
-            m_recovery->stop();
-            m_recovery.reset();
+        if (m_coordinator) {
+            m_coordinator->stop();
+            m_coordinator.reset();
         }
 
         for (auto& thread : m_threads) {
@@ -129,7 +129,7 @@ private:
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
-    std::unique_ptr<recovery::service> m_recovery;
+    std::unique_ptr<coordinator::service> m_coordinator;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;

@@ -30,7 +30,7 @@ void execute_role(const config& c) {
         case ENTRYPOINT_SERVICE:
             return start_service(ep::service(c.service, c.entrypoint));
         case COORDINATOR_SERVICE:
-            return start_service(recovery::service(c.service, c.recovery));
+            return start_service(coordinator::service(c.service, c.recovery));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();
