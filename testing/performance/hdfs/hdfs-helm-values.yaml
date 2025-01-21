@@ -40,6 +40,17 @@ namenode:
       effect: "NoSchedule"
   nodeSelector:
     purpose: hdfs-parameterized-test
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - namenode
+            - datanode
+        topologyKey: kubernetes.io/hostname
 
 datanode:
   replicas: $EC2_INSTANCE_COUNT
@@ -52,3 +63,14 @@ datanode:
       effect: "NoSchedule"
   nodeSelector:
     purpose: hdfs-parameterized-test
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - namenode
+            - datanode
+        topologyKey: kubernetes.io/hostname

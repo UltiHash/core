@@ -14,7 +14,7 @@ on:
         default: "67108864" # 64 MiB
       ec2_instance_type:
         description: 'Type of the used EC2 instance to host HDFS cluster'
-        default: 'r8g.4xlarge'
+        default: 'r6a.4xlarge'
       ec2_instance_count:
         description: 'Number of deployed EC2 instances'
         default: 1
@@ -26,7 +26,7 @@ on:
         default: 'ebs-csi-gp2'
       tester_ec2_instance_type:
         description: 'Type of the used EC2 instance to host the test script'
-        default: 'c6gd.8xlarge'
+        default: 'c6id.8xlarge'
       test_file_count:
         description: "Number of files in the test dataset. Dataset size = test_file_count * hdfs_block_size"
         default: 500
@@ -103,8 +103,10 @@ jobs:
 
       - name: Install the HDFS cluster
         run: |
+          cat helm-values.yaml
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
           helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/hdfs -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+          sleep 120
       
       - name: Execute performance test against HDFS
         run: |
