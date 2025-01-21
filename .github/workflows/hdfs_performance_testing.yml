@@ -104,7 +104,7 @@ jobs:
       - name: Install the HDFS cluster
         run: |
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/hdfs -n ${{ env.ENVIRONMENT_NAME }} --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/hdfs -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
       
       - name: Execute performance test against HDFS
         run: |
