@@ -14,6 +14,7 @@ components and describes their purpose.
     licenses under `ROOT/data/licenses` for testing)
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified endpoint using OTLP via gRPC (format: "hostname:port")
 - `UH_WORKING_DIR` - configures the working directory for different services. In specific case of storage service, when multiple working directories are desired, they can be listed and separated by ":".
+- `UH_TRACES_ENABLED` - when set to `1`, UltiHash will generate traces and send them to the configured OTEL collector
 
 # Database Connection
 
