@@ -2,6 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: hdfs-test-input
+  namespace: hdfs-parameterized-test
 spec:
   storageClassName: local-path
   accessModes:
@@ -15,6 +16,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: hdfs-test-output
+  namespace: hdfs-parameterized-test
 spec:
   storageClassName: local-path
   accessModes:
