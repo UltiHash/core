@@ -7,7 +7,7 @@
 #include "config.h"
 #include "config/configuration.h"
 
-namespace uh::cluster::recovery {
+namespace uh::cluster::coordinator {
 
 class service {
 public:
@@ -54,4 +54,4 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 };
-} // namespace uh::cluster::recovery
+} // namespace uh::cluster::coordinator
