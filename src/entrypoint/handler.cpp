@@ -53,8 +53,10 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             resp = make_response(command_exception());
         }
 
-        req->context().set_attribute(
-            "response-code", static_cast<unsigned>(resp.base().result()));
+        if (req) {
+            req->context().set_attribute(
+                "response-code", static_cast<unsigned>(resp.base().result()));
+        }
 
         co_await write(s, std::move(resp), id);
         if (!keep_alive) {
