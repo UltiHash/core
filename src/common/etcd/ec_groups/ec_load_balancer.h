@@ -8,12 +8,7 @@ namespace uh::cluster {
 struct ec_load_balancer : public service_monitor<storage_group> {
     ec_load_balancer(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
-        : m_service_get_timeout{service_get_timeout} {
-#ifdef BOOST_TEST_MODULE
-        static_assert(timeout != SERVICE_GET_TIMEOUT,
-                      "Small timeout value is required");
-#endif
-    }
+        : m_service_get_timeout{service_get_timeout} {}
 
     void add_client(size_t,
                     const std::shared_ptr<storage_group>& client) override {

@@ -13,12 +13,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
                                      public storage_get_handler {
     storage_service_get_handler(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
-        : m_service_get_timeout{service_get_timeout} {
-#ifdef BOOST_TEST_MODULE
-        static_assert(timeout != SERVICE_GET_TIMEOUT,
-                      "Small timeout value is required");
-#endif
-    }
+        : m_service_get_timeout{service_get_timeout} {}
 
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& client) override {
