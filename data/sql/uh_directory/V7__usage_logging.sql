@@ -326,7 +326,7 @@ $$;
 DROP FUNCTION uh_list_buckets();
 CREATE OR REPLACE FUNCTION uh_list_buckets()
     RETURNS TABLE(name VARCHAR(64))
-LANGUAGE plpgsql AS $$
+    LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
         SELECT b.name
@@ -399,28 +399,29 @@ $$;
 --
 -- Re-define uh_next_deleted
 --
-CREATE OR REPLACE FUNCTION uh_next_deleted() RETURNS TABLE(id BIGINT, address BYTEA)
-LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION uh_next_deleted()
+    RETURNS TABLE(id BIGINT, address BYTEA)
+    LANGUAGE plpgsql AS $$
 DECLARE target_id BIGINT;
         target_address BYTEA;
 BEGIN
-SELECT o.id, o.address
-   INTO target_id, target_address
-   FROM object_status s
-      INNER JOIN objects o on o.id = s.object_id
-      LEFT JOIN object_refs r on s.object_id = r.object_id
-   WHERE s.status = status_deleted() AND r.object_id IS NULL
-   LIMIT 1;
+    SELECT o.id, o.address
+       INTO target_id, target_address
+       FROM object_status s
+          INNER JOIN objects o on o.id = s.object_id
+          LEFT JOIN object_refs r on s.object_id = r.object_id
+       WHERE s.status = status_deleted() AND r.object_id IS NULL
+       LIMIT 1;
 
-IF NOT FOUND THEN
-        RETURN;
-END IF;
+    IF NOT FOUND THEN
+       RETURN;
+    END IF;
 
-UPDATE object_status
-SET status = status_collected()
-WHERE o.id = target_id;
+    UPDATE object_status
+    SET status = status_collected()
+    WHERE o.id = target_id;
 
-RETURN QUERY SELECT target_id, target_address;
+    RETURN QUERY SELECT target_id, target_address;
 END
 $$;
 
@@ -428,23 +429,23 @@ $$;
 -- Re-define uh_put_object
 --
 CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
-LANGUAGE plpgsql AS $$
+    LANGUAGE plpgsql AS $$
 DECLARE b_id BIGINT;
         o_id BIGINT;
 BEGIN
-SELECT uh_get_bucket_id(bucket) INTO b_id;
+    SELECT uh_get_bucket_id(bucket) INTO b_id;
 
-SELECT o.id INTO o_id FROM objects o WHERE o.bucket_id = b_id AND name = object;
+    SELECT o.id INTO o_id FROM objects o WHERE o.bucket_id = b_id AND name = object;
 
-IF o_id IS NOT NULL THEN
-        INSERT INTO object_status (object_id, status)
-        VALUES (o_id, status_deleted())
-        ON CONFLICT DO NOTHING;
-END IF;
+    IF o_id IS NOT NULL THEN
+       INSERT INTO object_status (object_id, status)
+       VALUES (o_id, status_deleted())
+       ON CONFLICT DO NOTHING;
+    END IF;
 
-EXECUTE 'INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)'
-    USING b_id, object, address, size, ceiled_now(), etag, mime;
+    EXECUTE 'INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)'
+       USING b_id, object, address, size, ceiled_now(), etag, mime;
 END
 $$;
 
