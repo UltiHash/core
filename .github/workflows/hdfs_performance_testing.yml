@@ -4,7 +4,6 @@ env:
   ENVIRONMENT_NAME: hdfs-parameterized-test
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       hadoop_version:
@@ -30,7 +29,7 @@ on:
         default: 'c6gd.8xlarge'
       test_file_count:
         description: "Number of files in the test dataset. Dataset size = test_file_count * hdfs_block_size"
-        default: 5000
+        default: 500
       test_thread_count:
         description: "Number of threads to upload/download the dataset"
         default: 10
