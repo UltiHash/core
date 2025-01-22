@@ -8,7 +8,7 @@ namespace uh::cluster::ep::http {
 
 coro<std::unique_ptr<request>>
 basic_auth::create(boost::asio::ip::tcp::socket& s, user::db& users,
-                   partial_parse_result req) {
+                   raw_request req) {
 
     auto header = req.require("authorization");
     std::size_t pos = header.find(' ');

@@ -6,8 +6,8 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock,
-                           partial_parse_result& req, trailing_headers trailing)
+chunked_body::chunked_body(boost::asio::ip::tcp::socket& sock, raw_request& req,
+                           trailing_headers trailing)
     : m_socket(sock),
       m_buffer(),
       m_trailing(trailing) {

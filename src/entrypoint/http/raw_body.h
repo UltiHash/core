@@ -7,7 +7,7 @@ namespace uh::cluster::ep::http {
 
 class raw_body : public body {
 public:
-    raw_body(boost::asio::ip::tcp::socket& sock, partial_parse_result& req);
+    raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req);
 
     std::optional<std::size_t> length() const override;
 

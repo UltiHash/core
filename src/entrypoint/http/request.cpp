@@ -6,7 +6,7 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-request::request(partial_parse_result req, std::unique_ptr<body> body,
+request::request(raw_request req, std::unique_ptr<body> body,
                  ep::user::user user)
     : m_req(std::move(req.headers)),
       m_body(std::move(body)),

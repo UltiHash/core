@@ -6,7 +6,7 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
-std::size_t get_length(partial_parse_result& req) {
+std::size_t get_length(raw_request& req) {
 
     if (auto content_length = req.optional("content-length"); content_length) {
         return std::stoul(*content_length);
@@ -17,8 +17,7 @@ std::size_t get_length(partial_parse_result& req) {
 
 } // namespace
 
-raw_body::raw_body(boost::asio::ip::tcp::socket& sock,
-                   partial_parse_result& req)
+raw_body::raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req)
     : m_socket(sock),
       m_buffer(std::move(req.buffer)),
       m_length(get_length(req)) {}

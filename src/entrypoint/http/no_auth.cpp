@@ -6,7 +6,7 @@
 namespace uh::cluster::ep::http {
 
 coro<std::unique_ptr<request>> no_auth::create(boost::asio::ip::tcp::socket& s,
-                                               partial_parse_result req) {
+                                               raw_request req) {
 
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
         auto body = std::make_unique<chunked_body>(s, req);

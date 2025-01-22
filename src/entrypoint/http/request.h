@@ -16,8 +16,7 @@ namespace uh::cluster::ep::http {
 class request {
 public:
     request() = default;
-    request(partial_parse_result req, std::unique_ptr<body> body,
-            ep::user::user user);
+    request(raw_request req, std::unique_ptr<body> body, ep::user::user user);
 
     verb method() const;
 

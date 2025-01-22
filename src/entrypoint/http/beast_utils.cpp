@@ -7,8 +7,7 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-coro<partial_parse_result>
-partial_parse_result::read(asio::ip::tcp::socket& sock) {
+coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
 
     beast::http::request_parser<beast::http::empty_body> parser;
     beast::flat_buffer buffer;
@@ -21,11 +20,12 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
                           sock.remote_endpoint());
 }
 
-partial_parse_result partial_parse_result::from_string(
-    beast::http::request<beast::http::empty_body> headers,
-    beast::flat_buffer buffer, boost::asio::ip::tcp::endpoint peer) {
+raw_request
+raw_request::from_string(beast::http::request<beast::http::empty_body> headers,
+                         beast::flat_buffer buffer,
+                         boost::asio::ip::tcp::endpoint peer) {
 
-    partial_parse_result rv;
+    raw_request rv;
 
     rv.headers = std::move(headers);
     if (rv.headers.base().version() != 11) {
@@ -58,7 +58,7 @@ partial_parse_result partial_parse_result::from_string(
 }
 
 std::optional<std::string>
-partial_parse_result::optional(const std::string& name) const {
+raw_request::optional(const std::string& name) const {
 
     if (auto header = headers.find(name); header != headers.end()) {
         return header->value();
@@ -67,7 +67,7 @@ partial_parse_result::optional(const std::string& name) const {
     return {};
 }
 
-std::string partial_parse_result::require(const std::string& name) const {
+std::string raw_request::require(const std::string& name) const {
 
     auto header = headers.find(name);
     if (header == headers.end()) {

@@ -17,7 +17,7 @@ std::set<std::string> QUERY_IGNORE_URL = {"X-Amz-Signature"};
 std::set<std::string> QUERY_IGNORE_HEADER = {};
 
 coro<std::unique_ptr<string_body>>
-read_form_body(boost::asio::ip::tcp::socket& s, partial_parse_result& req) {
+read_form_body(boost::asio::ip::tcp::socket& s, raw_request& req) {
     auto content_type = req.optional("content-type");
     if (!content_type ||
         !content_type->starts_with("application/x-www-form-urlencoded")) {
@@ -53,7 +53,7 @@ bool include_header(const std::string& name,
            name.starts_with("x-amz-") || included.contains(name);
 }
 
-std::string make_canonical_request(partial_parse_result& req,
+std::string make_canonical_request(raw_request& req,
                                    const aws4_signature_info& info) {
 
     // for details, see
@@ -100,8 +100,7 @@ std::string make_canonical_request(partial_parse_result& req,
            signed_header_names + "\n" + info.content_sha;
 }
 
-std::string request_signature(partial_parse_result& req,
-                              const aws4_signature_info& info,
+std::string request_signature(raw_request& req, const aws4_signature_info& info,
                               const std::string& signing_key) {
 
     auto canonical_request = make_canonical_request(req, info);
@@ -119,7 +118,7 @@ std::string request_signature(partial_parse_result& req,
 }
 
 std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
-                                partial_parse_result& req,
+                                raw_request& req,
                                 const aws4_signature_info& info,
                                 std::string signing_key,
                                 std::string signature) {
@@ -158,7 +157,7 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
 
 coro<std::unique_ptr<request>>
 aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
-                         partial_parse_result req, const std::string& auth) {
+                         raw_request req, const std::string& auth) {
 
     std::size_t pos = auth.find(' ');
     if (pos == std::string::npos) {
@@ -223,7 +222,7 @@ aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
 
 coro<std::unique_ptr<request>>
 aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
-                                  user::db& users, partial_parse_result req) {
+                                  user::db& users, raw_request req) {
 
     auto split_credentials = split(req.params["X-Amz-Credential"], '/');
     if (split_credentials.size() != 5) {
