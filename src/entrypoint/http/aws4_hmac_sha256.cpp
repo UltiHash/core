@@ -40,11 +40,10 @@ coro<std::unique_ptr<string_body>> read_form_body(partial_parse_result& req) {
     co_return std::make_unique<string_body>(std::move(buffer));
 }
 
-std::string make_signing_key(std::string_view secret,
+std::string make_signing_key(const std::string& secret,
                              const aws4_signature_info& info) {
 
-    auto date_key =
-        hmac_sha256::from_string("AWS4" + std::string(secret), info.date);
+    auto date_key = hmac_sha256::from_string("AWS4" + secret, info.date);
     auto date_region_key = hmac_sha256::from_string(date_key, info.region);
     auto date_region_service_key =
         hmac_sha256::from_string(date_region_key, info.service);
