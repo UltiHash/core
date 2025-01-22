@@ -12,6 +12,7 @@ struct aws4_signature_info {
     std::set<std::string> signed_headers;
     std::string amz_date;
     std::string content_sha;
+    std::set<std::string>& query_ignore;
 };
 
 class aws4_hmac_sha256 {

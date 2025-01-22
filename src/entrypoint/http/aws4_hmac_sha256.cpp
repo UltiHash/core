@@ -13,6 +13,9 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
+std::set<std::string> QUERY_IGNORE_URL = {"X-Amz-Signature"};
+std::set<std::string> QUERY_IGNORE_HEADER = {};
+
 std::string make_signing_key(std::string_view secret,
                              const aws4_signature_info& info) {
 
@@ -31,55 +34,6 @@ bool include_header(const std::string& name,
            name.starts_with("x-amz-") || included.contains(name);
 }
 
-std::string make_canonical_request_presign(partial_parse_result& req,
-                                           const aws4_signature_info& info) {
-
-    auto url = parse_request_target(req.headers.target());
-
-    // for details, see
-    // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
-    std::set<std::string> canonical_query_set;
-    for (const auto& field : url.params) {
-        if (field.first == "X-Amz-Signature") {
-            continue;
-        }
-
-        canonical_query_set.emplace(uri_encode(field.first) + "=" +
-                                    uri_encode(field.second));
-    }
-
-    std::string canonical_query = join(canonical_query_set, "&");
-
-    std::map<std::string, std::string> canonical_headers_map;
-    for (const auto& header : req.headers) {
-        auto name = lowercase(header.name_string());
-
-        if (!include_header(name, info.signed_headers)) {
-            continue;
-        }
-
-        canonical_headers_map[std::move(name)] = trim(header.value());
-    }
-
-    std::string canonical_headers;
-    std::string signed_header_names;
-    bool first = true;
-
-    for (const auto& header : canonical_headers_map) {
-        if (!first) {
-            signed_header_names += ";";
-        }
-
-        canonical_headers += header.first + ":" + header.second + "\n";
-        signed_header_names += header.first;
-        first = false;
-    }
-
-    return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
-           "\n" + canonical_query + "\n" + canonical_headers + "\n" +
-           signed_header_names + "\n" + info.content_sha;
-}
-
 std::string make_canonical_request(partial_parse_result& req,
                                    const aws4_signature_info& info) {
 
@@ -89,6 +43,10 @@ std::string make_canonical_request(partial_parse_result& req,
     // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
     std::set<std::string> canonical_query_set;
     for (const auto& field : url.params) {
+        if (info.query_ignore.contains(field.first)) {
+            continue;
+        }
+
         canonical_query_set.emplace(uri_encode(field.first) + "=" +
                                     uri_encode(field.second));
     }
@@ -123,24 +81,6 @@ std::string make_canonical_request(partial_parse_result& req,
     return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
            signed_header_names + "\n" + info.content_sha;
-}
-
-std::string request_signature_presigned(partial_parse_result& req,
-                                        const aws4_signature_info& info,
-                                        const std::string& signing_key) {
-
-    auto canonical_request = make_canonical_request_presign(req, info);
-    LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
-
-    std::stringstream string_to_sign;
-    string_to_sign << "AWS4-HMAC-SHA256\n"
-                   << info.amz_date << "\n"
-                   << info.date << "/" << info.region << "/" << info.service
-                   << "/aws4_request\n"
-                   << to_hex(sha256::from_string(canonical_request));
-
-    LOG_DEBUG() << req.peer << ": string to sign: " << string_to_sign.str();
-    return to_hex(hmac_sha256::from_string(signing_key, string_to_sign.str()));
 }
 
 std::string request_signature(partial_parse_result& req,
@@ -255,7 +195,8 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
                              .signed_headers = split<std::set<std::string>>(
                                  parsed["SignedHeaders"], ';'),
                              .amz_date = req.require("x-amz-date"),
-                             .content_sha = std::move(content_sha)};
+                             .content_sha = std::move(content_sha),
+                             .query_ignore = QUERY_IGNORE_HEADER};
 
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
     auto signature = request_signature(req, info, signing_key);
@@ -311,12 +252,13 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
                              .signed_headers = split<std::set<std::string>>(
                                  url.params["X-Amz-SignedHeaders"], ';'),
                              .amz_date = url.params["X-Amz-Date"],
-                             .content_sha = "UNSIGNED-PAYLOAD"};
+                             .content_sha = "UNSIGNED-PAYLOAD",
+                             .query_ignore = QUERY_IGNORE_URL};
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
-    auto signature = request_signature_presigned(req, info, signing_key);
+    auto signature = request_signature(req, info, signing_key);
 
     if (signature != url.params["X-Amz-Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
