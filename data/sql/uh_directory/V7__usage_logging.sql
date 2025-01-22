@@ -16,15 +16,10 @@ CREATE TABLE object_status (
     status      INTEGER NOT NULL
 );
 
-CREATE TABLE object_usage (
-    object_id   BIGINT PRIMARY KEY REFERENCES __objects ON DELETE RESTRICT,
-    updated_at  TIMESTAMP NOT NULL DEFAULT now(),
-    delta       BIGINT NOT NULL
-);
-
 CREATE TABLE bucket_status (
     bucket_id   BIGINT PRIMARY KEY REFERENCES __buckets ON DELETE RESTRICT,
-    status      INTEGER NOT NULL
+    status      INTEGER NOT NULL,
+    deleted_at  TIMESTAMP DEFAULT now() NOT NULL
 );
 
 -- Migrate refs data from __objects table into object_refs table
