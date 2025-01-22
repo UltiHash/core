@@ -1,7 +1,10 @@
-## [Unreleased]
+## [1.2.0] 2025-01-21
 
 - Consider configured log level in OTEL logging
-- Configure generation of traces via command line and environment
+- Support generation of OTEL traces to improve debugging capabilities
+- Fixed a concurrency issue in storage
+- Improved cluster startup by polling for etcd connectivity
+- Fixed an issue that would prevent completely reclaiming storage of deleted objects
 
 ## [1.1.2] 2024-12-19
 - Modified `STORAGE_WRITE_REQ` message for more efficient interaction between deduplicator and storage

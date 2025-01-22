@@ -62,7 +62,6 @@ constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
-constexpr auto RECOVERY_WAIT_FOR_SERVICE_TIMEOUT = std::chrono::hours(1);
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
