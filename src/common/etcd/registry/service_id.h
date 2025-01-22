@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/etcd/utils.h"
-#include <etcd/SyncClient.hpp>
 #include <filesystem>
 
 namespace uh::cluster {

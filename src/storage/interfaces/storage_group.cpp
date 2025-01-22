@@ -13,7 +13,7 @@ storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
         if (data_nodes == 1 and ec_nodes == 0) {
             m_status = healthy;
         } else {
-            etcd.watch(
+            m_watch_guard = etcd.watch(
                 get_ec_group_attribute_path(m_attributes.group_id(),
                                             EC_GROUP_STATUS),
                 [&status = m_status, &m = m_mutex](const etcd::Response& resp) {

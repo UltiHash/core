@@ -61,10 +61,12 @@ void etcd_manager::reset() {
 
         m_keepalive.reset(
             new etcd::KeepAlive(*client, m_lease_timeout / 2, m_lease));
-        restore_watchers();
+
         m_watchdog.reset(new etcd::Watcher(*client, etcd_watchdog, {}, false));
 
         m_client.store(client);
+
+        restore_watchers();
     }
     m_watchdog->Wait([this](bool cancelled) mutable {
         if (cancelled) {
@@ -76,11 +78,11 @@ void etcd_manager::reset() {
 
 etcd_manager::~etcd_manager() {
     auto client = m_client.load();
-    client->leaserevoke(m_lease);
     m_watchdog->Cancel();
-    for (auto& e : watcher_entries) {
+    for (auto& [k, e] : m_watcher_entries) {
         e.watcher->Cancel();
     }
+    client->leaserevoke(m_lease);
 }
 
 /*
@@ -88,6 +90,7 @@ etcd_manager::~etcd_manager() {
  */
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
+
     auto resp = client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
@@ -137,15 +140,39 @@ void etcd_manager::rmdir(const std::string& prefix) noexcept {
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
-void etcd_manager::watch(const std::string& prefix,
-                         std::function<void(etcd::Response)> callback) {
-    auto client = m_client.load();
-
+void etcd_manager::add_watcher(const std::string& prefix,
+                               std::function<void(etcd::Response)> callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    watcher_entries.emplace_back(
-        prefix, callback,
+    auto client = m_client.load();
+
+    if (m_watcher_entries.contains(prefix)) {
+        LOG_FATAL() << "watcher for prefix " << prefix << " already exists";
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " already exists");
+    }
+
+    m_watcher_entries[prefix] = watcher_entry(
+        callback,
         std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
+}
+
+void etcd_manager::remove_watcher(const std::string& prefix) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_watcher_entries.find(prefix);
+    if (it == m_watcher_entries.end()) {
+        LOG_FATAL() << "watcher for prefix " << prefix << " does not exist";
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " does not exist");
+    }
+
+    it->second.watcher->Cancel();
+
+    if (m_watcher_entries.erase(prefix) == 0) {
+        throw std::invalid_argument("watcher for prefix " + prefix +
+                                    " does not exist");
+    }
 }
 
 std::string etcd_manager::lock(const std::string& lock_key) {
@@ -169,11 +196,12 @@ void etcd_manager::unlock(const std::string& unlock_key) {
 }
 
 void etcd_manager::restore_watchers(void) {
-    auto client = m_client.load();
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    for (auto& e : watcher_entries) {
-        e.watcher.reset(new etcd::Watcher(*client, e.prefix, e.callback, true));
+    auto client = m_client.load();
+
+    for (auto& [k, e] : m_watcher_entries) {
+        e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
     }
 }
 
