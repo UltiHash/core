@@ -76,6 +76,9 @@ private:
     uh::cluster::context m_ctx;
 };
 
+std::string get_bucket_id(const std::string& path);
+std::string get_object_key(const std::string& path);
+
 /**
  * query string access interface: The following functions allow type-safe
  * access to query parameters, giving the following guarantees:
