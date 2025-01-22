@@ -7,15 +7,15 @@
 #include "config.h"
 #include "config/configuration.h"
 
-namespace uh::cluster::recovery {
+namespace uh::cluster::coordinator {
 
 class service {
 public:
-    service(const service_config& service, const recovery_config& sc)
+    service(const service_config& service, const coordinator_config& cc)
         : m_etcd{service.etcd_config},
-          m_ioc(sc.thread_count),
+          m_ioc(cc.thread_count),
 
-          m_ioc_runner(m_ioc, sc.thread_count),
+          m_ioc_runner(m_ioc, cc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
@@ -25,7 +25,7 @@ public:
     }
 
     void run() {
-        LOG_INFO() << "running recovery service";
+        LOG_INFO() << "running coordinator service";
         while (!m_stopped) {
             std::unique_lock lock(m_mutex);
             m_cv.wait(lock, [this] { return m_stopped; });
@@ -33,7 +33,7 @@ public:
     }
 
     void stop() {
-        LOG_INFO() << "stopping recovery service";
+        LOG_INFO() << "stopping coordinator service";
         {
             std::lock_guard lock(m_mutex);
             m_stopped = true;
@@ -54,4 +54,4 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 };
-} // namespace uh::cluster::recovery
+} // namespace uh::cluster::coordinator

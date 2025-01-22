@@ -32,8 +32,8 @@ for ((id = 0; id < $instances; ++id)); do
     $BUILD_DIR/uh-cluster --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
 done
 
-export OTEL_RESOURCE_ATTRIBUTES="service.name=recovery"
-$BUILD_DIR/uh-cluster recovery &> $log_dir/recovery.log &
+export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
+$BUILD_DIR/uh-cluster coordinator &> $log_dir/coordinator.log &
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 for ((id = 0; id < $instances; ++id)); do
