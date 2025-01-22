@@ -24,12 +24,8 @@ read_form_body(boost::asio::ip::tcp::socket& s, partial_parse_result& req) {
         co_return std::unique_ptr<string_body>();
     }
 
-    std::size_t length = 0;
-    if (auto content_length = req.optional("content-length"); content_length) {
-        length = std::stoul(*content_length);
-    }
-
-    raw_body reader(s, req, length);
+    raw_body reader(s, req);
+    std::size_t length = *reader.length();
 
     std::string buffer(length, 0);
     auto size = co_await reader.read({&buffer[0], length});
@@ -127,11 +123,10 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
                                 const aws4_signature_info& info,
                                 std::string signing_key,
                                 std::string signature) {
-    auto length = std::stoul(req.optional("content-length").value_or("0"));
 
     if (info.content_sha == "UNSIGNED-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
-        return std::make_unique<raw_body>(s, req, length);
+        return std::make_unique<raw_body>(s, req);
     }
 
     if (info.content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
@@ -156,7 +151,7 @@ std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
     }
 
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
-    return std::make_unique<raw_body_sha256>(s, req, info.content_sha, length);
+    return std::make_unique<raw_body_sha256>(s, req, info.content_sha);
 }
 
 } // namespace

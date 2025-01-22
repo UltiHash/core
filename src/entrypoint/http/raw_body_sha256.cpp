@@ -6,8 +6,8 @@ namespace uh::cluster::ep::http {
 
 raw_body_sha256::raw_body_sha256(boost::asio::ip::tcp::socket& sock,
                                  partial_parse_result& req,
-                                 std::string signature, std::size_t length)
-    : raw_body(sock, req, length),
+                                 std::string signature)
+    : raw_body(sock, req),
       m_signature(std::move(signature)) {}
 
 coro<std::size_t> raw_body_sha256::read(std::span<char> dest) {

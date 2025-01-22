@@ -4,11 +4,24 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
+namespace {
+
+std::size_t get_length(partial_parse_result& req) {
+
+    if (auto content_length = req.optional("content-length"); content_length) {
+        return std::stoul(*content_length);
+    }
+
+    return 0ull;
+}
+
+} // namespace
+
 raw_body::raw_body(boost::asio::ip::tcp::socket& sock,
-                   partial_parse_result& req, std::size_t length)
+                   partial_parse_result& req)
     : m_socket(sock),
       m_buffer(std::move(req.buffer)),
-      m_length(length) {}
+      m_length(get_length(req)) {}
 
 std::optional<std::size_t> raw_body::length() const { return m_length; }
 

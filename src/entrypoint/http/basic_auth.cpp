@@ -31,9 +31,7 @@ basic_auth::create(boost::asio::ip::tcp::socket& s, user::db& users,
         co_return std::make_unique<request>(std::move(req), std::move(body),
                                             std::move(user));
     } else {
-        std::size_t length =
-            std::stoul(req.optional("content-length").value_or("0"));
-        auto body = std::make_unique<raw_body>(s, req, length);
+        auto body = std::make_unique<raw_body>(s, req);
         co_return std::make_unique<request>(std::move(req), std::move(body),
                                             std::move(user));
     }
