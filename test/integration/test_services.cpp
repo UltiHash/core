@@ -22,8 +22,8 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_service_get_handler services;
-    roundrobin_load_balancer<storage_interface> load_balancer;
+    storage_service_get_handler services{1s};
+    roundrobin_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
@@ -32,8 +32,7 @@ struct fixture {
     }
 
     fixture()
-        : etcd{},
-          service_id(get_service_id(
+        : service_id(get_service_id(
               etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
@@ -57,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
         service_registry sr(STORAGE_SERVICE, 0, etcd);
         sr.register_service({.port = 8081});
 
-        { WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u); }
+        WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
     }
 
     WAIT_UNTIL_CHECK(1000, services.get_services().empty());
@@ -71,7 +70,7 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
         service_registry sr(STORAGE_SERVICE, 0, etcd);
         sr.register_service({.port = 8081});
 
-        { WAIT_UNTIL_NO_THROW(1000, load_balancer.get()); }
+        WAIT_UNTIL_NO_THROW(1000, load_balancer.get());
     }
 }
 
