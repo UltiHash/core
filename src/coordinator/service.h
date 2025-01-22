@@ -3,11 +3,31 @@
 #include "common/etcd/ec_groups/ec_get_handler.h"
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
+#include "common/telemetry/log.h"
 #include "common/utils/io_context_runner.h"
 #include "config.h"
 #include "config/configuration.h"
+#include "fetch.h"
+
+#include <boost/asio/spawn.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 namespace uh::cluster::coordinator {
+
+coro<void> license_handler(boost::asio::io_context& io_context) {
+    while (true) {
+        boost::asio::steady_timer timer(io_context, 1s);
+        co_await timer.async_wait(boost::asio::use_awaitable);
+        try {
+            auto license =
+                co_await fetch_response_body(io_context, "example.com");
+            LOG_INFO() << "license: " << license;
+
+            // put license to etcd?
+        } catch (...) {
+        }
+    }
+}
 
 class service {
 public:
@@ -26,6 +46,10 @@ public:
 
     void run() {
         LOG_INFO() << "running coordinator service";
+
+        boost::asio::co_spawn(m_ioc, license_handler(m_ioc),
+                              boost::asio::detached);
+
         while (!m_stopped) {
             std::unique_lock lock(m_mutex);
             m_cv.wait(lock, [this] { return m_stopped; });
