@@ -34,7 +34,7 @@ featureTests:
       value: "testing"
       effect: "NoSchedule"
 
-recovery:
+coordinator:
   nodeSelector:
     purpose: feature-testing
   tolerations:
