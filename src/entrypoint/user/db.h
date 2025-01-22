@@ -15,7 +15,7 @@ public:
      *
      * @param key access key of the user
      */
-    coro<user> find_by_key(std::string key);
+    coro<user> find_by_key(std::string_view key);
 
     /**
      * Find a user using username only.

@@ -18,9 +18,8 @@ std::set<std::string> QUERY_IGNORE_HEADER = {};
 
 coro<std::unique_ptr<string_body>> read_form_body(partial_parse_result& req) {
     auto content_type = req.optional("content-type");
-
     if (!content_type ||
-        content_type->starts_with("application/x-www-form-urlencoded")) {
+        !content_type->starts_with("application/x-www-form-urlencoded")) {
         co_return std::unique_ptr<string_body>();
     }
 
@@ -157,8 +156,7 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
     }
 
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
-    return std::make_unique<raw_body_sha256>(req, std::move(info.content_sha),
-                                             length);
+    return std::make_unique<raw_body_sha256>(req, info.content_sha, length);
 }
 
 } // namespace
@@ -183,7 +181,7 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
+    auto user = co_await users.find_by_key(split_credentials[0]);
 
     std::string content_sha;
     if (auto content_sha_hdr = req.optional("x-amz-content-sha256");
@@ -220,8 +218,8 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
     }
 
     if (!body) {
-        body = make_body(req, std::move(info), std::move(signing_key),
-                         std::move(signature));
+        body =
+            make_body(req, info, std::move(signing_key), std::move(signature));
     }
 
     co_return std::make_unique<request>(std::move(req.headers), std::move(body),
@@ -247,7 +245,7 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
                              .content_sha = "UNSIGNED-PAYLOAD",
                              .query_ignore = QUERY_IGNORE_URL};
 
-    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
+    auto user = co_await users.find_by_key(split_credentials[0]);
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
     auto signature = request_signature(req, info, signing_key);
@@ -260,8 +258,8 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
 
     std::unique_ptr<body> body = co_await read_form_body(req);
     if (!body) {
-        body = make_body(req, std::move(info), std::move(signing_key),
-                         std::move(signature));
+        body =
+            make_body(req, info, std::move(signing_key), std::move(signature));
     }
 
     co_return std::make_unique<request>(std::move(req.headers), std::move(body),

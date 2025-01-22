@@ -21,7 +21,7 @@ db::db(boost::asio::io_context& ioc, const uh::cluster::db::config& cfg)
     : m_db(ioc, connection_factory(ioc, cfg, cfg.users), cfg.users.count),
       m_crypt({}) {}
 
-coro<user> db::find_by_key(std::string key) {
+coro<user> db::find_by_key(std::string_view key) {
     auto conn = co_await m_db.get();
 
     auto row = co_await conn->execv("SELECT id, username, secret_key, "
@@ -34,7 +34,7 @@ coro<user> db::find_by_key(std::string key) {
                                 "Access Denied");
     }
 
-    ep::user::key k{.id = key,
+    ep::user::key k{.id = std::string(key),
                     .secret_key = *row->string(2),
                     .session_token = row->string(3),
                     .expires = row->date(4)};
