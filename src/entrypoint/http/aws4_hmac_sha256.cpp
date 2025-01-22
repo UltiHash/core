@@ -26,14 +26,14 @@ std::string make_signing_key(std::string_view secret,
 }
 
 bool include_header(const std::string& name,
-                    const std::set<std::string_view>& included) {
+                    const std::set<std::string>& included) {
     return name == "host" || name == "content-md5" ||
            name.starts_with("x-amz-") || included.contains(name);
 }
 
 std::string
 make_canonical_request_presign(partial_parse_result& req,
-                               const std::set<std::string_view>& signed_headers,
+                               const std::set<std::string>& signed_headers,
                                const std::string& content_sha) {
 
     auto url = parse_request_target(req.headers.target());
@@ -82,10 +82,9 @@ make_canonical_request_presign(partial_parse_result& req,
            signed_header_names + "\n" + content_sha;
 }
 
-std::string
-make_canonical_request(partial_parse_result& req,
-                       const std::set<std::string_view>& signed_headers,
-                       const std::string& content_sha) {
+std::string make_canonical_request(partial_parse_result& req,
+                                   const std::set<std::string>& signed_headers,
+                                   const std::string& content_sha) {
 
     auto url = parse_request_target(req.headers.target());
 
@@ -129,14 +128,14 @@ make_canonical_request(partial_parse_result& req,
            signed_header_names + "\n" + content_sha;
 }
 
-std::string request_signature_presigned(
-    partial_parse_result& req, const aws4_signature_info& info,
-    const std::set<std::string_view>& signed_headers,
-    const std::string& signing_key, const std::string& content_sha) {
+std::string request_signature_presigned(partial_parse_result& req,
+                                        const aws4_signature_info& info,
+                                        const std::string& signing_key,
+                                        const std::string& content_sha) {
 
     auto url = parse_request_target(req.headers.target());
     auto canonical_request =
-        make_canonical_request_presign(req, signed_headers, content_sha);
+        make_canonical_request_presign(req, info.signed_headers, content_sha);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
@@ -152,12 +151,11 @@ std::string request_signature_presigned(
 
 std::string request_signature(partial_parse_result& req,
                               const aws4_signature_info& info,
-                              const std::set<std::string_view>& signed_headers,
                               const std::string& signing_key,
                               const std::string& content_sha) {
 
     auto canonical_request =
-        make_canonical_request(req, signed_headers, content_sha);
+        make_canonical_request(req, info.signed_headers, content_sha);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
@@ -235,10 +233,10 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
         .date = std::string(split_credentials[1]),
         .region = std::string(split_credentials[2]),
         .service = std::string(split_credentials[3]),
+        .signed_headers =
+            split<std::set<std::string>>(parsed["SignedHeaders"], ';'),
     };
 
-    auto signed_headers =
-        split<std::set<std::string_view>>(parsed["SignedHeaders"], ';');
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
@@ -269,8 +267,7 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
         body = std::make_unique<string_body>(std::move(buffer));
     }
 
-    auto signature =
-        request_signature(req, info, signed_headers, signing_key, content_sha);
+    auto signature = request_signature(req, info, signing_key, content_sha);
 
     if (signature != parsed["Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
@@ -297,14 +294,12 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    aws4_signature_info info{
-        .date = std::string(split_credentials[1]),
-        .region = std::string(split_credentials[2]),
-        .service = std::string(split_credentials[3]),
-    };
+    aws4_signature_info info{.date = std::string(split_credentials[1]),
+                             .region = std::string(split_credentials[2]),
+                             .service = std::string(split_credentials[3]),
+                             .signed_headers = split<std::set<std::string>>(
+                                 url.params["X-Amz-SignedHeaders"], ';')};
 
-    auto signed_headers = split<std::set<std::string_view>>(
-        url.params["X-Amz-SignedHeaders"], ';');
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
@@ -328,8 +323,8 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
         body = std::make_unique<string_body>(std::move(buffer));
     }
 
-    auto signature = request_signature_presigned(
-        req, info, signed_headers, signing_key, "UNSIGNED-PAYLOAD");
+    auto signature =
+        request_signature_presigned(req, info, signing_key, "UNSIGNED-PAYLOAD");
 
     if (signature != url.params["X-Amz-Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";

@@ -9,6 +9,7 @@ struct aws4_signature_info {
     std::string date;
     std::string region;
     std::string service;
+    std::set<std::string> signed_headers;
 };
 
 class aws4_hmac_sha256 {
