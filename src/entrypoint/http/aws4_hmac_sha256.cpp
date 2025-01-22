@@ -249,6 +249,13 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
                                 "Access Denied");
     }
 
+    req.params.erase("X-Amz-Algorithm");
+    req.params.erase("X-Amz-Credential");
+    req.params.erase("X-Amz-Date");
+    req.params.erase("X-Amz-Expires");
+    req.params.erase("X-Amz-Signature");
+    req.params.erase("X-Amz-SignedHeaders");
+
     std::unique_ptr<body> body = co_await read_form_body(s, req);
     if (!body) {
         body = make_body(s, req, info, std::move(signing_key),
