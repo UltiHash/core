@@ -2,7 +2,6 @@
 
 #include "common/telemetry/metrics.h"
 #include "common/utils/scope_guard.h"
-#include "etcd/SyncClient.hpp"
 
 namespace uh::cluster::ep {
 
@@ -33,26 +32,27 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 
 } // namespace
 
-service::service(etcd_manager& etcd, const service_config& sc,
-                 entrypoint_config config)
+service::service(const service_config& sc, entrypoint_config config)
     : m_config(std::move(config)),
       m_ioc(boost::asio::io_context(m_config.server.threads)),
-      m_service_id(get_service_id(etcd, get_service_string(ENTRYPOINT_SERVICE),
-                                  sc.working_dir)),
-      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, etcd),
+      m_etcd{sc.etcd_config},
+      m_service_id(get_service_id(
+          m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
+      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd),
 
-      m_attached_storage(etcd, sc, m_config.m_attached_storage),
-      m_attached_dedupe(etcd, sc, m_config.m_attached_deduplicator),
+      m_attached_storage(sc, m_config.m_attached_storage),
+      m_attached_dedupe(sc, m_config.m_attached_deduplicator),
       m_storage_maintainer(
-          etcd,
+          m_etcd,
           service_factory<storage_interface>(
               m_ioc, m_config.global_data_view.storage_service_connection_count,
               m_attached_storage.get_local_service_interface())),
-      m_dedupe_maintainer(etcd,
+      m_dedupe_maintainer(m_etcd,
                           service_factory<deduplicator_interface>(
                               m_ioc, m_config.dedupe_node_connection_count,
                               m_attached_dedupe.get_local_service_interface())),
-      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer, etcd),
+      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
+                  m_etcd),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
@@ -86,6 +86,7 @@ void service::run() {
 
 void service::stop() {
     LOG_INFO() << "stopping " << m_service_registry.get_service_name();
+
     m_server.stop();
 }
 

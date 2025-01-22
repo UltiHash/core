@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace uh::cluster {
@@ -57,26 +58,61 @@ public:
     void rmdir(const std::string& prefix) noexcept;
     void clear_all() noexcept;
 
+    class watch_guard {
+    public:
+        watch_guard() = default;
+        watch_guard(watch_guard&&) = default;
+        watch_guard& operator=(watch_guard&&) = default;
+
+        ~watch_guard() {
+            if (!m_prefix.empty())
+                m_etcd->remove_watcher(m_prefix);
+        }
+
+    private:
+        watch_guard(etcd_manager* etcd, const std::string& prefix,
+                    std::function<void(etcd::Response)> callback)
+            : m_etcd{etcd},
+              m_prefix{prefix} {
+            m_etcd->add_watcher(prefix, callback);
+        }
+
+        etcd_manager* m_etcd{nullptr};
+        std::string m_prefix{};
+
+        friend class etcd_manager;
+    };
+
     /*
      * Watch given prefix recursively
      */
-    void watch(const std::string& prefix,
-               std::function<void(etcd::Response)> callback);
+    [[nodiscard]] watch_guard
+    watch(const std::string& prefix,
+          std::function<void(etcd::Response)> callback) {
+        return watch_guard(this, prefix, callback);
+    }
 
     /*
      * Lock methods
      */
     class lock_guard {
     public:
-        explicit lock_guard(etcd_manager* etcd, const std::string& lock_key)
-            : m_etcd(etcd),
-              m_unlock_key(etcd->lock(lock_key)) {}
+        lock_guard() = default;
+        lock_guard(lock_guard&&) = default;
+        lock_guard& operator=(lock_guard&&) = default;
 
-        ~lock_guard() { m_etcd->unlock(m_unlock_key); }
+        ~lock_guard() {
+            if (!m_unlock_key.empty())
+                m_etcd->unlock(m_unlock_key);
+        }
 
     private:
-        etcd_manager* m_etcd;
-        std::string m_unlock_key;
+        lock_guard(etcd_manager* etcd, const std::string& lock_key)
+            : m_etcd(etcd),
+              m_unlock_key(m_etcd->lock(lock_key)) {}
+
+        etcd_manager* m_etcd{nullptr};
+        std::string m_unlock_key{};
 
         friend class etcd_manager;
     };
@@ -95,16 +131,26 @@ private:
     std::unique_ptr<etcd::KeepAlive> m_keepalive;
 
     struct watcher_entry {
-        std::string prefix;
         std::function<void(etcd::Response)> callback;
         std::unique_ptr<etcd::Watcher> watcher;
+
+        watcher_entry() = default;
+        watcher_entry(watcher_entry&&) = default;
+        watcher_entry& operator=(watcher_entry&&) = default;
+        watcher_entry(std::function<void(etcd::Response)> cb,
+                      std::unique_ptr<etcd::Watcher> w)
+            : callback(std::move(cb)),
+              watcher(std::move(w)) {}
     };
-    std::vector<watcher_entry> watcher_entries;
+    std::unordered_map<std::string, watcher_entry> m_watcher_entries;
 
     std::mutex m_mutex;
 
     void reset();
 
+    void add_watcher(const std::string& prefix,
+                     std::function<void(etcd::Response)> callback);
+    void remove_watcher(const std::string& prefix);
     void restore_watchers(void);
 
     std::string lock(const std::string& lock_key);

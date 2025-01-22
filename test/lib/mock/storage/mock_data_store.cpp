@@ -136,7 +136,7 @@ address mock_data_store::link(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         {
-            std::unique_lock<std::mutex> lock(m_mutex);
+            std::lock_guard<std::mutex> lock(m_mutex);
             if (!m_refcounter.contains(frag)) {
                 new_fragments.push(frag);
             }
@@ -152,7 +152,7 @@ size_t mock_data_store::unlink(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         {
-            std::unique_lock<std::mutex> lock(m_mutex);
+            std::lock_guard<std::mutex> lock(m_mutex);
             auto it = m_refcounter.find(frag);
             if (it == m_refcounter.end()) {
                 throw std::exception();

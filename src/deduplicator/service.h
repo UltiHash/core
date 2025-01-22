@@ -17,21 +17,23 @@ namespace uh::cluster::deduplicator {
 
 class service {
 public:
-    explicit service(etcd_manager& etcd, const service_config& sc,
+    explicit service(const service_config& sc,
                      const deduplicator_config& config)
-        : m_service_id(get_service_id(
-              etcd, get_service_string(DEDUPLICATOR_SERVICE), sc.working_dir)),
-          m_ioc(boost::asio::io_context(config.server.threads)),
-          m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, etcd),
-          m_attached_storage(etcd, sc, config.m_attached_storage),
+        : m_ioc(boost::asio::io_context(config.server.threads)),
+          m_etcd{sc.etcd_config},
+          m_service_id(get_service_id(m_etcd,
+                                      get_service_string(DEDUPLICATOR_SERVICE),
+                                      sc.working_dir)),
+          m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
+          m_attached_storage(sc, config.m_attached_storage),
           m_storage_maintainer(
-              etcd,
+              m_etcd,
               service_factory<storage_interface>(
                   m_ioc,
                   config.global_data_view.storage_service_connection_count,
                   m_attached_storage.get_local_service_interface())),
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
-                      etcd),
+                      m_etcd),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
@@ -50,14 +52,10 @@ public:
 
     size_t id() const noexcept { return m_service_id; }
 
-    ~service() {
-        LOG_DEBUG() << "terminating " << m_service_registry.get_service_name();
-        m_ioc.stop();
-    }
-
 private:
-    std::size_t m_service_id;
     boost::asio::io_context m_ioc;
+    etcd_manager m_etcd;
+    std::size_t m_service_id;
 
     service_registry m_service_registry;
 
