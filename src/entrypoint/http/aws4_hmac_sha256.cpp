@@ -16,6 +16,30 @@ namespace {
 std::set<std::string> QUERY_IGNORE_URL = {"X-Amz-Signature"};
 std::set<std::string> QUERY_IGNORE_HEADER = {};
 
+coro<std::unique_ptr<string_body>> read_form_body(partial_parse_result& req) {
+    auto content_type = req.optional("content-type");
+
+    if (!content_type ||
+        content_type->starts_with("application/x-www-form-urlencoded")) {
+        co_return std::unique_ptr<string_body>();
+    }
+
+    std::size_t length = 0;
+    if (auto content_length = req.optional("content-length"); content_length) {
+        length = std::stoul(*content_length);
+    }
+
+    raw_body reader(req, length);
+
+    std::string buffer(length, 0);
+    auto size = co_await reader.read({&buffer[0], length});
+    if (size != length) {
+        throw std::runtime_error("cannot read content-length bytes");
+    }
+
+    co_return std::make_unique<string_body>(std::move(buffer));
+}
+
 std::string make_signing_key(std::string_view secret,
                              const aws4_signature_info& info) {
 
@@ -169,24 +193,13 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
     }
 
     std::unique_ptr<body> body;
-    if (auto content_type = req.optional("content-type");
-        content_type.value_or("").starts_with(
-            "application/x-www-form-urlencoded")) {
-
-        auto length = std::stoul(req.optional("content-length").value_or("0"));
-        raw_body reader(req, length);
-
-        std::string buffer(length, 0);
-        auto size = co_await reader.read({&buffer[0], length});
-        if (size != length) {
-            throw std::runtime_error("cannot read content-length bytes");
-        }
-
+    auto form_body = co_await read_form_body(req);
+    if (form_body) {
         sha256 hash;
-        hash.consume({&buffer[0], length});
+        const auto& s = form_body->get_body();
+        hash.consume({s.data(), s.size()});
         content_sha = to_hex(hash.finalize());
-
-        body = std::make_unique<string_body>(std::move(buffer));
+        body = std::move(form_body);
     }
 
     aws4_signature_info info{.date = std::string(split_credentials[1]),
@@ -226,26 +239,6 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    std::unique_ptr<body> body;
-    if (auto content_type = req.optional("content-type");
-        content_type.value_or("").starts_with(
-            "application/x-www-form-urlencoded")) {
-
-        auto length = std::stoul(req.optional("content-length").value_or("0"));
-        raw_body reader(req, length);
-
-        std::string buffer(length, 0);
-        auto size = co_await reader.read({&buffer[0], length});
-        if (size != length) {
-            throw std::runtime_error("cannot read content-length bytes");
-        }
-
-        sha256 hash;
-        hash.consume({&buffer[0], length});
-
-        body = std::make_unique<string_body>(std::move(buffer));
-    }
-
     aws4_signature_info info{.date = std::string(split_credentials[1]),
                              .region = std::string(split_credentials[2]),
                              .service = std::string(split_credentials[3]),
@@ -266,6 +259,7 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
                                 "Access Denied");
     }
 
+    std::unique_ptr<body> body = co_await read_form_body(req);
     if (!body) {
         body = make_body(req, std::move(info), std::move(signing_key),
                          std::move(signature));
