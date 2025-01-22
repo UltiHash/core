@@ -31,10 +31,8 @@ bool include_header(const std::string& name,
            name.starts_with("x-amz-") || included.contains(name);
 }
 
-std::string
-make_canonical_request_presign(partial_parse_result& req,
-                               const std::set<std::string>& signed_headers,
-                               const std::string& content_sha) {
+std::string make_canonical_request_presign(partial_parse_result& req,
+                                           const aws4_signature_info& info) {
 
     auto url = parse_request_target(req.headers.target());
 
@@ -56,7 +54,7 @@ make_canonical_request_presign(partial_parse_result& req,
     for (const auto& header : req.headers) {
         auto name = lowercase(header.name_string());
 
-        if (!include_header(name, signed_headers)) {
+        if (!include_header(name, info.signed_headers)) {
             continue;
         }
 
@@ -79,12 +77,11 @@ make_canonical_request_presign(partial_parse_result& req,
 
     return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
-           signed_header_names + "\n" + content_sha;
+           signed_header_names + "\n" + info.content_sha;
 }
 
 std::string make_canonical_request(partial_parse_result& req,
-                                   const std::set<std::string>& signed_headers,
-                                   const std::string& content_sha) {
+                                   const aws4_signature_info& info) {
 
     auto url = parse_request_target(req.headers.target());
 
@@ -102,7 +99,7 @@ std::string make_canonical_request(partial_parse_result& req,
     for (const auto& header : req.headers) {
         auto name = lowercase(header.name_string());
 
-        if (!include_header(name, signed_headers)) {
+        if (!include_header(name, info.signed_headers)) {
             continue;
         }
 
@@ -125,15 +122,14 @@ std::string make_canonical_request(partial_parse_result& req,
 
     return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
-           signed_header_names + "\n" + content_sha;
+           signed_header_names + "\n" + info.content_sha;
 }
 
 std::string request_signature_presigned(partial_parse_result& req,
                                         const aws4_signature_info& info,
                                         const std::string& signing_key) {
 
-    auto canonical_request = make_canonical_request_presign(
-        req, info.signed_headers, info.content_sha);
+    auto canonical_request = make_canonical_request_presign(req, info);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
@@ -151,8 +147,7 @@ std::string request_signature(partial_parse_result& req,
                               const aws4_signature_info& info,
                               const std::string& signing_key) {
 
-    auto canonical_request =
-        make_canonical_request(req, info.signed_headers, info.content_sha);
+    auto canonical_request = make_canonical_request(req, info);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
