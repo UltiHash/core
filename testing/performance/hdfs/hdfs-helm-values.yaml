@@ -1,0 +1,75 @@
+global:
+  replicationFaktor: 1
+  blockSize: "$HDFS_BLOCK_SIZE"
+
+performanceTest:
+  dataset:
+    fileCount: $TEST_FILE_COUNT
+    fileSize: "$TEST_FILE_SIZE"
+  test:
+    threadCount: $TEST_THREAD_COUNT
+    queueSize: $TEST_QUEUE_SIZE
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: hdfs-parameterized-test-tester
+  extraVolumeMounts:
+    - name: hdfs-test-input
+      mountPath: "/opt/hadoop/dataset"
+    - name: hdfs-test-output
+      mountPath: "/opt/hadoop/download"
+  extraVolumes:
+    - name: hdfs-test-input
+      persistentVolumeClaim:
+        claimName: hdfs-test-input
+    - name: hdfs-test-output
+      persistentVolumeClaim:
+        claimName: hdfs-test-output
+
+namenode:
+  storageClass: $HDFS_STORAGE_CLASS
+  storageSize: 50Gi
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: hdfs-parameterized-test
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - namenode
+            - datanode
+        topologyKey: kubernetes.io/hostname
+
+datanode:
+  replicas: $EC2_INSTANCE_COUNT
+  storageClass: $HDFS_STORAGE_CLASS
+  storageSize: $STORAGE_VOLUME_SIZE
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  nodeSelector:
+    purpose: hdfs-parameterized-test
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: role
+            operator: In
+            values:
+            - namenode
+            - datanode
+        topologyKey: kubernetes.io/hostname
