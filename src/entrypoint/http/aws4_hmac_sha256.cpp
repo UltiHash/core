@@ -175,7 +175,7 @@ aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    auto user = co_await users.find_by_key(split_credentials[0]);
+    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
 
     std::string content_sha;
     if (auto content_sha_hdr = req.optional("x-amz-content-sha256");
@@ -238,7 +238,7 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
                              .content_sha = "UNSIGNED-PAYLOAD",
                              .query_ignore = QUERY_IGNORE_URL};
 
-    auto user = co_await users.find_by_key(split_credentials[0]);
+    auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
 
     auto signature = request_signature(req, info, signing_key);
