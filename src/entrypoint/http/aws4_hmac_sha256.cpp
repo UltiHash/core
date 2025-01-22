@@ -133,14 +133,13 @@ std::string request_signature_presigned(partial_parse_result& req,
                                         const std::string& signing_key,
                                         const std::string& content_sha) {
 
-    auto url = parse_request_target(req.headers.target());
     auto canonical_request =
         make_canonical_request_presign(req, info.signed_headers, content_sha);
     LOG_DEBUG() << req.peer << ": canonical request: " << canonical_request;
 
     std::stringstream string_to_sign;
     string_to_sign << "AWS4-HMAC-SHA256\n"
-                   << url.params["X-Amz-Date"] << "\n"
+                   << info.amz_date << "\n"
                    << info.date << "/" << info.region << "/" << info.service
                    << "/aws4_request\n"
                    << to_hex(sha256::from_string(canonical_request));
@@ -160,7 +159,7 @@ std::string request_signature(partial_parse_result& req,
 
     std::stringstream string_to_sign;
     string_to_sign << "AWS4-HMAC-SHA256\n"
-                   << req.require("x-amz-date") << "\n"
+                   << info.amz_date << "\n"
                    << info.date << "/" << info.region << "/" << info.service
                    << "/aws4_request\n"
                    << to_hex(sha256::from_string(canonical_request));
@@ -229,13 +228,12 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
         throw std::runtime_error("wrong size of crendentials");
     }
 
-    aws4_signature_info info{
-        .date = std::string(split_credentials[1]),
-        .region = std::string(split_credentials[2]),
-        .service = std::string(split_credentials[3]),
-        .signed_headers =
-            split<std::set<std::string>>(parsed["SignedHeaders"], ';'),
-    };
+    aws4_signature_info info{.date = std::string(split_credentials[1]),
+                             .region = std::string(split_credentials[2]),
+                             .service = std::string(split_credentials[3]),
+                             .signed_headers = split<std::set<std::string>>(
+                                 parsed["SignedHeaders"], ';'),
+                             .amz_date = req.require("x-amz-date")};
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
@@ -298,7 +296,8 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
                              .region = std::string(split_credentials[2]),
                              .service = std::string(split_credentials[3]),
                              .signed_headers = split<std::set<std::string>>(
-                                 url.params["X-Amz-SignedHeaders"], ';')};
+                                 url.params["X-Amz-SignedHeaders"], ';'),
+                             .amz_date = url.params["X-Amz-Date"]};
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
