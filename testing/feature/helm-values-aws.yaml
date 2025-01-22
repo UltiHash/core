@@ -34,7 +34,7 @@ featureTests:
       value: "testing"
       effect: "NoSchedule"
 
-recovery:
+coordinator:
   nodeSelector:
     purpose: feature-testing
   tolerations:
@@ -42,9 +42,6 @@ recovery:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
-  extraEnvs:
-    - name: OTEL_RESOURCE_ATTRIBUTES
-      value: service.name=coordinator
 
 etcd:
   replicaCount: 1

@@ -66,6 +66,10 @@ databaseInit:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-02
 
+coordinator:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-02
+
 storage:
   replicas: 1
   storageClass: local-path
