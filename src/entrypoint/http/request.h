@@ -16,11 +16,8 @@ namespace uh::cluster::ep::http {
 class request {
 public:
     request() = default;
-    request(boost::beast::http::request<boost::beast::http::empty_body> headers,
-            std::unique_ptr<body> body, ep::user::user user,
-            boost::asio::ip::tcp::endpoint peer);
-
-    request(partial_parse_result& req, std::unique_ptr<body> body);
+    request(partial_parse_result req, std::unique_ptr<body> body,
+            ep::user::user user);
 
     verb method() const;
 
@@ -75,7 +72,6 @@ private:
     std::string m_object_key{};
     std::map<std::string, std::string> m_params;
     std::string m_path;
-    std::string m_query;
 
     uh::cluster::context m_ctx;
 };

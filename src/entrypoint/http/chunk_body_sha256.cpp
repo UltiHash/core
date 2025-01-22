@@ -20,12 +20,13 @@ std::string make_prelude(partial_parse_result& req,
 
 } // namespace
 
-chunk_body_sha256::chunk_body_sha256(partial_parse_result& req,
+chunk_body_sha256::chunk_body_sha256(boost::asio::ip::tcp::socket& s,
+                                     partial_parse_result& req,
                                      const aws4_signature_info& info,
                                      const std::string& signing_key,
                                      const std::string& signature,
                                      chunked_body::trailing_headers trailing)
-    : chunked_body(req, trailing),
+    : chunked_body(s, req, trailing),
       m_prelude(make_prelude(req, info)),
       m_signing_key(signing_key),
       m_to_sign(m_prelude + signature + "\n" + SHA256_EMPTY_STRING + "\n") {}

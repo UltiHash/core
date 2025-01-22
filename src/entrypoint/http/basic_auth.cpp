@@ -6,8 +6,9 @@
 
 namespace uh::cluster::ep::http {
 
-coro<std::unique_ptr<request>> basic_auth::create(user::db& users,
-                                                  partial_parse_result& req) {
+coro<std::unique_ptr<request>>
+basic_auth::create(boost::asio::ip::tcp::socket& s, user::db& users,
+                   partial_parse_result req) {
 
     auto header = req.require("authorization");
     std::size_t pos = header.find(' ');
@@ -26,15 +27,15 @@ coro<std::unique_ptr<request>> basic_auth::create(user::db& users,
                                               std::string(creds[1]));
 
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
-        co_return std::make_unique<request>(
-            std::move(req.headers), std::make_unique<chunked_body>(req),
-            std::move(user), std::move(req.peer));
+        auto body = std::make_unique<chunked_body>(s, req);
+        co_return std::make_unique<request>(std::move(req), std::move(body),
+                                            std::move(user));
     } else {
-        co_return std::make_unique<request>(
-            std::move(req.headers),
-            std::make_unique<raw_body>(
-                req, std::stoul(req.optional("content-length").value_or("0"))),
-            std::move(user), std::move(req.peer));
+        std::size_t length =
+            std::stoul(req.optional("content-length").value_or("0"));
+        auto body = std::make_unique<raw_body>(s, req, length);
+        co_return std::make_unique<request>(std::move(req), std::move(body),
+                                            std::move(user));
     }
 }
 

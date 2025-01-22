@@ -5,18 +5,20 @@
 
 namespace uh::cluster::ep::http {
 
-coro<std::unique_ptr<request>> no_auth::create(partial_parse_result& req) {
+coro<std::unique_ptr<request>> no_auth::create(boost::asio::ip::tcp::socket& s,
+                                               partial_parse_result req) {
 
     if (req.optional("Transfer-Encoding").value_or("") == "chunked") {
+        auto body = std::make_unique<chunked_body>(s, req);
         co_return std::make_unique<request>(
-            std::move(req.headers), std::make_unique<chunked_body>(req),
-            user::user{.name = user::user::ANONYMOUS}, std::move(req.peer));
+            std::move(req), std::move(body),
+            user::user{.name = user::user::ANONYMOUS});
     } else {
+        auto body = std::make_unique<raw_body>(
+            s, req, std::stoul(req.optional("content-length").value_or("0")));
         co_return std::make_unique<request>(
-            std::move(req.headers),
-            std::make_unique<raw_body>(
-                req, std::stoul(req.optional("content-length").value_or("0"))),
-            user::user{.name = user::user::ANONYMOUS}, std::move(req.peer));
+            std::move(req), std::move(body),
+            user::user{.name = user::user::ANONYMOUS});
     }
 }
 

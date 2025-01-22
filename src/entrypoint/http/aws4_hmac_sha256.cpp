@@ -16,7 +16,8 @@ namespace {
 std::set<std::string> QUERY_IGNORE_URL = {"X-Amz-Signature"};
 std::set<std::string> QUERY_IGNORE_HEADER = {};
 
-coro<std::unique_ptr<string_body>> read_form_body(partial_parse_result& req) {
+coro<std::unique_ptr<string_body>>
+read_form_body(boost::asio::ip::tcp::socket& s, partial_parse_result& req) {
     auto content_type = req.optional("content-type");
     if (!content_type ||
         !content_type->starts_with("application/x-www-form-urlencoded")) {
@@ -28,7 +29,7 @@ coro<std::unique_ptr<string_body>> read_form_body(partial_parse_result& req) {
         length = std::stoul(*content_length);
     }
 
-    raw_body reader(req, length);
+    raw_body reader(s, req, length);
 
     std::string buffer(length, 0);
     auto size = co_await reader.read({&buffer[0], length});
@@ -59,12 +60,10 @@ bool include_header(const std::string& name,
 std::string make_canonical_request(partial_parse_result& req,
                                    const aws4_signature_info& info) {
 
-    auto url = parse_request_target(req.headers.target());
-
     // for details, see
     // https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
     std::set<std::string> canonical_query_set;
-    for (const auto& field : url.params) {
+    for (const auto& field : req.params) {
         if (info.query_ignore.contains(field.first)) {
             continue;
         }
@@ -100,7 +99,7 @@ std::string make_canonical_request(partial_parse_result& req,
         first = false;
     }
 
-    return std::string(req.headers.method_string()) + "\n" + url.encoded_path +
+    return std::string(req.headers.method_string()) + "\n" + req.encoded_path +
            "\n" + canonical_query + "\n" + canonical_headers + "\n" +
            signed_header_names + "\n" + info.content_sha;
 }
@@ -123,7 +122,8 @@ std::string request_signature(partial_parse_result& req,
     return to_hex(hmac_sha256::from_string(signing_key, string_to_sign.str()));
 }
 
-std::unique_ptr<body> make_body(partial_parse_result& req,
+std::unique_ptr<body> make_body(boost::asio::ip::tcp::socket& s,
+                                partial_parse_result& req,
                                 const aws4_signature_info& info,
                                 std::string signing_key,
                                 std::string signature) {
@@ -131,13 +131,13 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
 
     if (info.content_sha == "UNSIGNED-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using single-chunk unsigned body";
-        return std::make_unique<raw_body>(req, length);
+        return std::make_unique<raw_body>(s, req, length);
     }
 
     if (info.content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256";
         return std::make_unique<chunk_body_sha256>(
-            req, info, signing_key, std::move(signature),
+            s, req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::none);
     }
 
@@ -145,25 +145,25 @@ std::unique_ptr<body> make_body(partial_parse_result& req,
         LOG_DEBUG() << req.peer
                     << ": using chunked unsigned payload with trailer";
         return std::make_unique<chunked_body>(
-            req, chunked_body::trailing_headers::read);
+            s, req, chunked_body::trailing_headers::read);
     }
 
     if (info.content_sha == "STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER") {
         LOG_DEBUG() << req.peer << ": using chunked HMAC-SHA256 with trailer";
         return std::make_unique<chunk_body_sha256>(
-            req, info, signing_key, std::move(signature),
+            s, req, info, signing_key, std::move(signature),
             chunked_body::trailing_headers::read);
     }
 
     LOG_DEBUG() << req.peer << ": using single-chunk body with signed payload";
-    return std::make_unique<raw_body_sha256>(req, info.content_sha, length);
+    return std::make_unique<raw_body_sha256>(s, req, info.content_sha, length);
 }
 
 } // namespace
 
 coro<std::unique_ptr<request>>
-aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
-                         const std::string& auth) {
+aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
+                         partial_parse_result req, const std::string& auth) {
 
     std::size_t pos = auth.find(' ');
     if (pos == std::string::npos) {
@@ -190,7 +190,7 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
     }
 
     std::unique_ptr<body> body;
-    auto form_body = co_await read_form_body(req);
+    auto form_body = co_await read_form_body(s, req);
     if (form_body) {
         sha256 hash;
         const auto& s = form_body->get_body();
@@ -218,20 +218,19 @@ aws4_hmac_sha256::create(user::db& users, partial_parse_result& req,
     }
 
     if (!body) {
-        body =
-            make_body(req, info, std::move(signing_key), std::move(signature));
+        body = make_body(s, req, info, std::move(signing_key),
+                         std::move(signature));
     }
 
-    co_return std::make_unique<request>(std::move(req.headers), std::move(body),
-                                        std::move(user), std::move(req.peer));
+    co_return std::make_unique<request>(std::move(req), std::move(body),
+                                        std::move(user));
 }
 
 coro<std::unique_ptr<request>>
-aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
+aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
+                                  user::db& users, partial_parse_result req) {
 
-    auto url = parse_request_target(req.headers.target());
-
-    auto split_credentials = split(url.params["X-Amz-Credential"], '/');
+    auto split_credentials = split(req.params["X-Amz-Credential"], '/');
     if (split_credentials.size() != 5) {
         throw std::runtime_error("wrong size of crendentials");
     }
@@ -240,8 +239,8 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
                              .region = std::string(split_credentials[2]),
                              .service = std::string(split_credentials[3]),
                              .signed_headers = split<std::set<std::string>>(
-                                 url.params["X-Amz-SignedHeaders"], ';'),
-                             .amz_date = url.params["X-Amz-Date"],
+                                 req.params["X-Amz-SignedHeaders"], ';'),
+                             .amz_date = req.params["X-Amz-Date"],
                              .content_sha = "UNSIGNED-PAYLOAD",
                              .query_ignore = QUERY_IGNORE_URL};
 
@@ -250,20 +249,20 @@ aws4_hmac_sha256::create_from_url(user::db& users, partial_parse_result& req) {
 
     auto signature = request_signature(req, info, signing_key);
 
-    if (signature != url.params["X-Amz-Signature"]) {
+    if (signature != req.params["X-Amz-Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
 
-    std::unique_ptr<body> body = co_await read_form_body(req);
+    std::unique_ptr<body> body = co_await read_form_body(s, req);
     if (!body) {
-        body =
-            make_body(req, info, std::move(signing_key), std::move(signature));
+        body = make_body(s, req, info, std::move(signing_key),
+                         std::move(signature));
     }
 
-    co_return std::make_unique<request>(std::move(req.headers), std::move(body),
-                                        std::move(user), std::move(req.peer));
+    co_return std::make_unique<request>(std::move(req), std::move(body),
+                                        std::move(user));
 }
 
 } // namespace uh::cluster::ep::http

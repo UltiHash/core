@@ -17,16 +17,50 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
     co_await beast::http::async_read_header(sock, buffer, parser,
                                             asio::use_awaitable);
 
-    auto req = std::move(parser.get());
-    if (req.base().version() != 11) {
+    co_return from_string(std::move(parser.get()), std::move(buffer),
+                          sock.remote_endpoint());
+}
+
+partial_parse_result partial_parse_result::from_string(
+    beast::http::request<beast::http::empty_body> headers,
+    beast::flat_buffer buffer, boost::asio::ip::tcp::endpoint peer) {
+
+    partial_parse_result rv;
+
+    rv.headers = std::move(headers);
+    if (rv.headers.base().version() != 11) {
         throw std::runtime_error(
             "bad http version. support exists only for HTTP 1.1.\n");
     }
 
-    auto rv = partial_parse_result{sock, std::move(buffer), std::move(req)};
-    rv.peer = sock.remote_endpoint();
+    rv.buffer = std::move(buffer);
+    rv.peer = peer;
 
-    co_return rv;
+    const auto& target = rv.headers.target();
+    auto query_index = target.find('?');
+
+    boost::urls::url url;
+    if (query_index != std::string::npos) {
+        url.set_encoded_path(target.substr(0, query_index));
+        url.set_encoded_query(target.substr(query_index + 1));
+    } else {
+        url.set_encoded_path(target);
+    }
+
+    rv.path = url.path();
+    rv.encoded_path = url.encoded_path();
+
+    for (const auto& param : url.params()) {
+        rv.params[param.key] = param.value;
+    }
+
+    // TODO this is S3 responsibility and should not be handled here
+    auto keys = extract_bucket_and_object(url);
+
+    rv.bucket = std::move(std::get<0>(keys));
+    rv.object = std::move(std::get<1>(keys));
+
+    return rv;
 }
 
 std::optional<std::string>
@@ -47,32 +81,6 @@ std::string partial_parse_result::require(const std::string& name) const {
     }
 
     return header->value();
-}
-
-url_parsing_result parse_request_target(const std::string& target) {
-    auto query_index = target.find('?');
-
-    boost::urls::url url;
-    if (query_index != std::string::npos) {
-        url.set_encoded_path(target.substr(0, query_index));
-        url.set_encoded_query(target.substr(query_index + 1));
-    } else {
-        url.set_encoded_path(target);
-    }
-
-    auto keys = extract_bucket_and_object(url);
-
-    url_parsing_result rv;
-    rv.path = url.path();
-    rv.encoded_path = url.encoded_path();
-
-    for (const auto& param : url.params()) {
-        rv.params[param.key] = param.value;
-    }
-
-    rv.bucket = std::move(std::get<0>(keys));
-    rv.object = std::move(std::get<1>(keys));
-    return rv;
 }
 
 std::tuple<std::string, std::string>

@@ -18,10 +18,12 @@ struct aws4_signature_info {
 class aws4_hmac_sha256 {
 public:
     static coro<std::unique_ptr<request>>
-    create(user::db& users, partial_parse_result& req, const std::string& auth);
+    create(boost::asio::ip::tcp::socket& s, user::db& users,
+           partial_parse_result req, const std::string& auth);
 
     static coro<std::unique_ptr<request>>
-    create_from_url(user::db& users, partial_parse_result& req);
+    create_from_url(boost::asio::ip::tcp::socket& s, user::db& users,
+                    partial_parse_result req);
 };
 
 } // namespace uh::cluster::ep::http

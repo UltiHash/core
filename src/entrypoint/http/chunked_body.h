@@ -15,7 +15,7 @@ class chunked_body : public ep::http::body {
 public:
     enum class trailing_headers { none, read };
 
-    chunked_body(partial_parse_result& req,
+    chunked_body(boost::asio::ip::tcp::socket& sock, partial_parse_result& req,
                  trailing_headers trailing = trailing_headers::none);
 
     struct chunk_header {

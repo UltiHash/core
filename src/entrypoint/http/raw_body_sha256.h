@@ -8,7 +8,8 @@ namespace uh::cluster::ep::http {
 
 class raw_body_sha256 : public raw_body {
 public:
-    raw_body_sha256(partial_parse_result& req, std::string signature,
+    raw_body_sha256(boost::asio::ip::tcp::socket& sock,
+                    partial_parse_result& req, std::string signature,
                     std::size_t length);
 
     coro<std::size_t> read(std::span<char> dest) override;

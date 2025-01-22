@@ -20,22 +20,24 @@ coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
     if (auto auth = req.optional("Authorization"); auth) {
 
         if (auth->starts_with("AWS4-HMAC-SHA256 ")) {
-            co_return co_await aws4_hmac_sha256::create(m_users, req, *auth);
+            co_return co_await aws4_hmac_sha256::create(sock, m_users,
+                                                        std::move(req), *auth);
         }
 
         if (auth->starts_with("Basic ")) {
-            co_return co_await basic_auth::create(m_users, req);
+            co_return co_await basic_auth::create(sock, m_users,
+                                                  std::move(req));
         }
     }
 
-    auto url = parse_request_target(req.headers.target());
-    if (auto key = url.params.find("X-Amz-Algorithm");
-        key != url.params.end()) {
+    if (auto key = req.params.find("X-Amz-Algorithm");
+        key != req.params.end()) {
         LOG_DEBUG() << sock.remote_endpoint() << ": algorithm: " << key->second;
-        co_return co_await aws4_hmac_sha256::create_from_url(m_users, req);
+        co_return co_await aws4_hmac_sha256::create_from_url(sock, m_users,
+                                                             std::move(req));
     }
 
-    co_return co_await no_auth::create(req);
+    co_return co_await no_auth::create(sock, req);
 }
 
 } // namespace uh::cluster::ep::http

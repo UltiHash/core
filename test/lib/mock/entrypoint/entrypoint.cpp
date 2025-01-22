@@ -26,8 +26,10 @@ ep::http::request make_request(const std::string& code,
 
     parser.put(boost::asio::buffer(code), ec);
 
-    return request(parser.get(), std::make_unique<mock_body>(),
-                   user{.arn = principal}, boost::asio::ip::tcp::endpoint());
+    return request(
+        partial_parse_result::from_string(std::move(parser.get()),
+                                          boost::beast::flat_buffer(), {}),
+        std::make_unique<mock_body>(), user{.arn = principal});
 }
 
 variables vars(std::initializer_list<std::pair<std::string, std::string>> v) {
