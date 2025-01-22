@@ -54,12 +54,6 @@ partial_parse_result partial_parse_result::from_string(
         rv.params[param.key] = param.value;
     }
 
-    // TODO this is S3 responsibility and should not be handled here
-    auto keys = extract_bucket_and_object(url);
-
-    rv.bucket = std::move(std::get<0>(keys));
-    rv.object = std::move(std::get<1>(keys));
-
     return rv;
 }
 
@@ -81,24 +75,6 @@ std::string partial_parse_result::require(const std::string& name) const {
     }
 
     return header->value();
-}
-
-std::tuple<std::string, std::string>
-extract_bucket_and_object(boost::urls::url url) {
-    std::string bucket_id;
-    std::string object_key;
-
-    for (const auto& seg : url.segments()) {
-        if (bucket_id.empty())
-            bucket_id = seg;
-        else
-            object_key += seg + '/';
-    }
-
-    if (!object_key.empty())
-        object_key.pop_back();
-
-    return std::make_tuple(bucket_id, object_key);
 }
 
 std::map<std::string_view, std::string_view>

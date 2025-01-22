@@ -35,8 +35,6 @@ struct partial_parse_result {
     std::map<std::string, std::string> params;
     std::string path;
     std::string encoded_path;
-    std::string bucket;
-    std::string object;
 };
 
 /**

@@ -6,14 +6,33 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
+namespace {
+
+std::string get_bucket_id(const partial_parse_result& req) {
+    auto segments = split(req.path, '/');
+    return std::string(segments.size() >= 2 ? segments[1] : "");
+}
+
+std::string get_object_key(const partial_parse_result& req) {
+    auto segments = split(req.path, '/');
+    std::string key = segments.size() >= 3
+                          ? join(std::views::counted(segments.begin() + 2,
+                                                     segments.size() - 2),
+                                 "/")
+                          : "";
+    return std::string(key);
+}
+
+} // namespace
+
 request::request(partial_parse_result req, std::unique_ptr<body> body,
                  ep::user::user user)
     : m_req(std::move(req.headers)),
       m_body(std::move(body)),
       m_authenticated_user(std::move(user)),
       m_peer(req.peer),
-      m_bucket_id(std::move(req.bucket)),
-      m_object_key(std::move(req.object)),
+      m_bucket_id(get_bucket_id(req)),
+      m_object_key(get_object_key(req)),
       m_params(std::move(req.params)),
       m_path(std::move(req.path)),
       m_ctx("http-request") {
