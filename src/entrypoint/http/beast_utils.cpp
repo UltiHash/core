@@ -17,7 +17,7 @@ partial_parse_result::read(asio::ip::tcp::socket& sock) {
     co_await beast::http::async_read_header(sock, buffer, parser,
                                             asio::use_awaitable);
 
-    co_return from_string(std::move(parser.get()), std::move(buffer),
+    co_return from_string(parser.release(), std::move(buffer),
                           sock.remote_endpoint());
 }
 
