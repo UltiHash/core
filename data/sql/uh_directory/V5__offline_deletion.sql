@@ -214,7 +214,7 @@ END;
 $$;
 
 --
--- uh_list_objects(bucket, prefix): return all objects in `bucket` with a
+-- uh_list_objects(bucket, prefix, lower_bound): return all objects in `bucket` with a
 -- given `prefix` that are bigger than `lower_bound`
 --
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound TEXT)
