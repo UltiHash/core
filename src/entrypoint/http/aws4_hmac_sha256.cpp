@@ -178,11 +178,8 @@ aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
 
-    std::string content_sha;
-    if (auto content_sha_hdr = req.optional("x-amz-content-sha256");
-        content_sha_hdr) {
-        content_sha = *content_sha_hdr;
-    }
+    std::string content_sha =
+        req.optional("x-amz-content-sha256").value_or("UNSIGNED-PAYLOAD");
 
     std::unique_ptr<body> body;
     auto form_body = co_await read_form_body(s, req);
