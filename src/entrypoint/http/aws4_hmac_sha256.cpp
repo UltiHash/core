@@ -224,7 +224,7 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
 
     auto split_credentials = split(req.params["X-Amz-Credential"], '/');
     if (split_credentials.size() != 5) {
-        throw std::runtime_error("wrong size of crendentials");
+        throw std::runtime_error("wrong size of credentials");
     }
 
     aws4_signature_info info{.date = std::string(split_credentials[1]),
