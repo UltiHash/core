@@ -1,5 +1,7 @@
 #include "formats.h"
 
+#include <common/utils/strings.h>
+
 #include <chrono>
 #include <ctime>
 #include <stdexcept>
@@ -40,7 +42,7 @@ constexpr auto TM_YEAR_OFFSET = 1900;
 
 inline std::runtime_error create_time_format_error() {
     return std::runtime_error(R"(
-time format error: 
+time format error:
     - `2011-02-18T23:12:34-02:00` and `2011-02-18T23:12:34Z` formats are supported
     - Constaints should be less than `2270-01-01T00:00:00Z`)");
 }
@@ -56,6 +58,60 @@ utc_time read_iso8601_date(std::string_view str) {
     auto time = detail::read_local_date(date_str);
     auto offset = detail::read_timezone(tz_str);
     return time + offset;
+}
+
+utc_time read_iso8601_date_merged(std::string_view s) {
+    if (s.size() != 16 || s[8] != 'T' || s[15] != 'Z') {
+        throw std::runtime_error("malformed date");
+    }
+
+    std::size_t pos = 0;
+
+    int year = stoul(s.substr(0, 4), &pos);
+    if (pos != 4) {
+        throw std::runtime_error("malformed date");
+    }
+
+    int month = stoul(s.substr(4, 2), &pos);
+    if (pos != 2) {
+        throw std::runtime_error("malformed date");
+    }
+
+    int day = stoul(s.substr(6, 2), &pos);
+    if (pos != 2) {
+        throw std::runtime_error("malformed date");
+    }
+
+    int hour = stoul(s.substr(9, 2), &pos);
+    if (pos != 2) {
+        throw std::runtime_error("malformed date");
+    }
+
+    int minute = stoul(s.substr(11, 2), &pos);
+    if (pos != 2) {
+        throw std::runtime_error("malformed date");
+    }
+
+    int second = stoul(s.substr(13, 2), &pos);
+    if (pos != 2) {
+        throw std::runtime_error("malformed date");
+    }
+
+    return make_utc_time(year, month, day, hour, minute, second);
+}
+
+utc_time make_utc_time(int year, int month, int day, int hour, int min,
+                       int sec) {
+    std::tm t{};
+    t.tm_year = year - 1900;
+    t.tm_mon = month - 1;
+    t.tm_mday = day;
+
+    t.tm_hour = hour;
+    t.tm_min = min;
+    t.tm_sec = sec;
+
+    return utc_time::clock::from_time_t(timegm(&t));
 }
 
 namespace detail {
@@ -112,3 +168,12 @@ std::chrono::hours read_timezone(std::string_view sv) {
 } // namespace detail
 
 } // namespace uh::cluster
+
+namespace std {
+
+ostream& operator<<(ostream& out, const uh::cluster::utc_time& t) {
+    out << uh::cluster::iso8601_date(t);
+    return out;
+}
+
+} // namespace std
