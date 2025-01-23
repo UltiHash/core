@@ -444,3 +444,24 @@ BEGIN
 END
 $$;
 
+CREATE OR REPLACE FUNCTION uh_compute_usage(interval_start TIMESTAMP, interval_end TIMESTAMP)
+    RETURNS BIGINT
+    LANGUAGE plpgsql AS $$
+DECLARE
+    row RECORD;
+    byteseconds BIGINT;
+    interval_seconds BIGINT;
+BEGIN
+    byteseconds := 0;
+    FOR row in
+        SELECT o.size, o.last_modified, s.deleted_at
+        FROM objects o
+                 LEFT JOIN object_status s ON o.id = s.object_id
+        LOOP
+            interval_seconds := EXTRACT(EPOCH FROM LEAST(COALESCE(row.deleted_at, interval_end), interval_end) - GREATEST(row.last_modified, interval_start));
+            byteseconds := byteseconds + interval_seconds * row.size;
+        END LOOP;
+    byteseconds := byteseconds / 1024 / 1024 / 1024;
+    RETURN byteseconds;
+END;
+$$;
