@@ -6,6 +6,7 @@
 #include "string_body.h"
 #include <common/crypto/hmac.h>
 #include <common/utils/strings.h>
+#include <entrypoint/formats.h>
 #include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/request.h>
 
@@ -237,6 +238,13 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
                              .amz_date = req.params["X-Amz-Date"],
                              .content_sha = "UNSIGNED-PAYLOAD",
                              .query_ignore = QUERY_IGNORE_URL};
+
+    auto date = read_iso8601_date_merged(info.amz_date);
+    auto expires = std::chrono::seconds(stoul(req.params["X-Amz-Expires"]));
+    if (date + expires < utc_time::clock::now()) {
+        throw command_exception(status::forbidden, "AccessDenied",
+                                "Request has expired");
+    }
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
     auto signing_key = make_signing_key(user.access_key->secret_key, info);
