@@ -120,7 +120,7 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address default_data_store::write(const std::string_view& data,
+address default_data_store::write(std::string_view data,
                                   const std::vector<std::size_t>& offsets) {
     std::span<const char> span(data.data(), data.size());
     auto allocation = allocate(span.size(), offsets);
@@ -147,8 +147,7 @@ address default_data_store::write(const std::string_view& data,
     return rv;
 }
 
-void default_data_store::manual_write(uint64_t pointer,
-                                      const std::string_view& data) {
+void default_data_store::manual_write(uint64_t pointer, std::string_view data) {
 
     auto loc = file_location(pointer);
     loc.file.write(loc.offset, std::span<const char>{data.data(), data.size()});
