@@ -58,7 +58,7 @@ public:
         }
     }
 
-    [[nodiscard]] encoded encode(const std::string_view& data) const override {
+    encoded encode(std::string_view data) const override {
 
         const auto shard_size = (data.size() + m_data_nodes - 1) / m_data_nodes;
         const auto total_blocks = m_data_nodes + m_ec_nodes;

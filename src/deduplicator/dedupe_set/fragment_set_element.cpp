@@ -10,14 +10,14 @@ fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
       m_prefix(std::move(prefix)),
       m_data(std::nullopt) {}
 
-fragment_set_element::fragment_set_element(const std::string_view& data,
+fragment_set_element::fragment_set_element(std::string_view data,
                                            std::string prefix,
                                            global_data_view& storage)
     : fragment_set_element(data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
 
-fragment_set_element::fragment_set_element(const std::string_view& data,
+fragment_set_element::fragment_set_element(std::string_view data,
                                            const uint128_t& ptr,
                                            std::string prefix,
                                            global_data_view& storage)
