@@ -1,11 +1,11 @@
 #pragma once
 
-#include "beast_utils.h"
 #include "command_exception.h"
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
+#include "raw_request.h"
 #include <common/telemetry/context.h>
 
 #include <map>
