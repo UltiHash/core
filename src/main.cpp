@@ -1,12 +1,11 @@
-#include "common/etcd/utils.h"
 #include "common/license/license.h"
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
+#include "coordinator/service.h"
 #include "deduplicator/service.h"
 #include "entrypoint/service.h"
-#include "recovery/service.h"
 #include "storage/service.h"
 
 using namespace uh;
@@ -30,8 +29,9 @@ void execute_role(const config& c) {
                 deduplicator::service(c.service, c.deduplicator));
         case ENTRYPOINT_SERVICE:
             return start_service(ep::service(c.service, c.entrypoint));
-        case RECOVERY_SERVICE:
-            return start_service(recovery::service(c.service, c.recovery));
+        case COORDINATOR_SERVICE:
+            return start_service(
+                coordinator::service(c.service, c.coordinator));
         }
     } catch (const std::exception& e) {
         LOG_ERROR() << "Error in executing role: " << e.what();

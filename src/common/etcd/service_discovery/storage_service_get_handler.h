@@ -11,6 +11,9 @@ namespace uh::cluster {
 
 struct storage_service_get_handler : public service_monitor<storage_interface>,
                                      public storage_get_handler {
+    storage_service_get_handler(
+        std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
+        : m_service_get_timeout{service_get_timeout} {}
 
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& client) override {
@@ -35,7 +38,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         std::shared_ptr<storage_interface> cl;
 
         std::unique_lock lk(m_mutex);
-        if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT, [this, &id, &cl]() {
+        if (!m_cv.wait_for(lk, m_service_get_timeout, [this, &id, &cl]() {
                 if (auto v = m_clients.find(id); v != m_clients.cend()) {
                     cl = v->second;
                     return true;
@@ -79,6 +82,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
     [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
 
 private:
+    std::chrono::milliseconds m_service_get_timeout;
     std::mutex m_mutex;
     std::condition_variable m_cv;
     std::map<std::size_t, std::shared_ptr<storage_interface>> m_clients;

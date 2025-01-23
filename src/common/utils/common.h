@@ -1,7 +1,6 @@
 #pragma once
 
-#include "common/types/common_types.h"
-#include <map>
+#include <chrono>
 #include <string>
 
 namespace uh::cluster {
@@ -16,16 +15,10 @@ enum role : uint8_t {
     STORAGE_SERVICE,
     DEDUPLICATOR_SERVICE,
     ENTRYPOINT_SERVICE,
-    RECOVERY_SERVICE
+    COORDINATOR_SERVICE
 };
 
 inline role global_service_role;
-
-const std::map<std::string, role> role_by_abbreviation = {
-    {"storage", STORAGE_SERVICE},
-    {"deduplicator", DEDUPLICATOR_SERVICE},
-    {"entrypoint", ENTRYPOINT_SERVICE},
-    {"recovery", RECOVERY_SERVICE}};
 
 enum message_type : uint8_t {
 
@@ -69,7 +62,6 @@ constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
-constexpr auto RECOVERY_WAIT_FOR_SERVICE_TIMEOUT = std::chrono::hours(1);
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
