@@ -11,10 +11,9 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
                                       const std::string& username = "",
                                       const std::string& password = "");
 
-template <typename T, typename Task>
-coro<T> exponential_backoff(boost::asio::io_context& io_context, Task task)
-requires std::is_same_v<decltype(task()), coro<T>>
-{
+template <typename T>
+coro<T> exponential_backoff(boost::asio::io_context& io_context,
+                            std::function<coro<T>()> task) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(100, 200);
