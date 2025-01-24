@@ -1,7 +1,6 @@
 #pragma once
 
 #include "commands/command.h"
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
@@ -14,13 +13,13 @@
 namespace uh::cluster {
 
 struct command_factory {
-    command_factory(
-        boost::asio::io_context& ioc,
-        roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
-        directory& dir, multipart_state& uploads, entrypoint_config& config,
-        global_data_view& gdv, limits& uhlimits, ep::user::db& users)
+    command_factory(boost::asio::io_context& ioc,
+                    deduplicator_interface& dedupe, directory& dir,
+                    multipart_state& uploads, entrypoint_config& config,
+                    global_data_view& gdv, limits& uhlimits,
+                    ep::user::db& users)
         : m_ioc(ioc),
-          m_dedupe_services(dedupe_services),
+          m_dedupe(dedupe),
           m_directory(dir),
           m_uploads(uploads),
           m_config(config),
@@ -39,7 +38,7 @@ private:
     static constexpr std::size_t MAX_POST_QUERY_LENGTH = 64 * KIBI_BYTE;
 
     boost::asio::io_context& m_ioc;
-    roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
+    deduplicator_interface& m_dedupe;
     directory& m_directory;
     multipart_state& m_uploads;
     entrypoint_config& m_config;
