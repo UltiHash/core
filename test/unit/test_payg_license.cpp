@@ -4,7 +4,7 @@
 
 #include "test_config.h"
 
-#include <common/license/payg.h>
+#include <common/license/payg/payg.h>
 #include <common/utils/strings.h>
 
 using namespace uh::cluster;

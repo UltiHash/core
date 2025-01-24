@@ -1,6 +1,6 @@
 #include "test.h"
 
-#include "_util.h"
+#include "internal/util.h"
 
 #include <common/utils/common.h>
 #include <common/utils/strings.h>
@@ -31,7 +31,8 @@ license check_license(std::string_view license_code) {
     auto signature = base64_decode(sign_b64);
 
     if (!verify_license(data, signature)) {
-        throw std::runtime_error("signature of license could not be verified");
+        throw std::runtime_error(
+            "signature of test license could not be verified");
     }
 
     return parse(data);
