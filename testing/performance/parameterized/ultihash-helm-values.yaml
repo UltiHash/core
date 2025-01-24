@@ -80,6 +80,12 @@ storage:
     - name: storage1      
       hostPath: "/storage1"
       containerPath: "/var/lib/uh/storage1"
+    - name: storage2      
+      hostPath: "/storage2"
+      containerPath: "/var/lib/uh/storage2"
+    - name: storage3      
+      hostPath: "/storage3"
+      containerPath: "/var/lib/uh/storage3"
 
 deduplicator:
   replicas: $EC2_INSTANCE_COUNT
