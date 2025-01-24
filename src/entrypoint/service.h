@@ -1,20 +1,56 @@
 #pragma once
 
-#include <functional>
-
-#include "common/db/db.h"
-#include "common/etcd/registry/service_id.h"
-#include "common/etcd/registry/service_registry.h"
-#include "common/global_data/default_global_data_view.h"
 #include "config.h"
-#include "deduplicator/service.h"
-#include "entrypoint/directory.h"
-#include "entrypoint/garbage_collector.h"
-#include "entrypoint/http/request_factory.h"
-#include "entrypoint/limits.h"
-#include "handler.h"
+#include "multipart_state.h"
+
+#include <common/db/db.h>
+#include <common/etcd/registry/service_id.h>
+#include <common/etcd/registry/service_registry.h>
+#include <common/global_data/default_global_data_view.h>
+#include <deduplicator/service.h>
+#include <entrypoint/directory.h>
+#include <entrypoint/garbage_collector.h>
+#include <entrypoint/http/request_factory.h>
+#include <entrypoint/limits.h>
 
 namespace uh::cluster::ep {
+
+class payg_manager {
+public:
+    payg_manager(etcd_manager& etcd, std::atomic<std::size_t>& storage_cap)
+        : m_etcd{etcd} {
+
+        storage_cap.store(
+            m_etcd.get<std::size_t>(get_etcd_payg_license_key("storage_cap")));
+        m_wg = m_etcd.watch(get_etcd_payg_license_key("storage_cap"),
+                            [&](etcd::Response) {
+                                storage_cap.store(m_etcd.get<std::size_t>(
+                                    get_etcd_payg_license_key("storage_cap")));
+                            });
+    }
+
+private:
+    etcd_manager& m_etcd;
+    etcd_manager::watch_guard m_wg;
+};
+
+class license_manager {
+public:
+    license_manager(etcd_manager& etcd,
+                    const uh::cluster::license& test_license) {
+        if (test_license.max_data_store_size != 0) {
+            storage_cap.store(test_license.max_data_store_size);
+        } else {
+            m_payg_manager = std::make_unique<payg_manager>(etcd, storage_cap);
+        }
+    }
+
+    std::atomic<std::size_t>& get_storage_cap() { return storage_cap; }
+
+private:
+    std::unique_ptr<payg_manager> m_payg_manager;
+    std::atomic<std::size_t> storage_cap;
+};
 
 class service {
 public:
@@ -45,6 +81,7 @@ private:
 
     multipart_state m_uploads;
     user::db m_users;
+    license_manager m_license_manager;
     limits m_limits;
     server m_server;
     garbage_collector m_gc;

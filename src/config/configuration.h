@@ -2,7 +2,7 @@
 
 #include "common/db/config.h"
 #include "common/etcd/utils.h"
-#include "common/license/license.h"
+#include "common/license/test.h"
 #include "common/telemetry/log.h"
 #include "common/utils/common.h"
 #include "coordinator/config.h"
