@@ -48,13 +48,11 @@ coro<void> license_handler(boost::asio::io_context& io_context,
 })"};
 
     try {
-        auto str =
-            co_await exponential_backoff<std::string,
-                                         std::function<coro<std::string>()>>(
-                io_context, [&]() -> coro<std::string> {
-                    co_return co_await fetch_response_body(io_context, url,
-                                                           username, password);
-                });
+        auto str = co_await exponential_backoff<std::string>(
+            io_context, [&]() -> coro<std::string> {
+                co_return co_await fetch_response_body(io_context, url,
+                                                       username, password);
+            });
 
         // LOG_INFO() << "str: " << str;
         // TODO: remove below
