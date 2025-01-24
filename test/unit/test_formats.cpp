@@ -110,3 +110,27 @@ BOOST_DATA_TEST_CASE(read_iso8601_date_survive_on_random_test,
 
     BOOST_TEST(read_time == time);
 }
+
+BOOST_AUTO_TEST_CASE(read_iso8601_date_merged_test) {
+    BOOST_CHECK_EQUAL(
+        iso8601_date(read_iso8601_date_merged("20250123T121903Z")),
+        "2025-01-23T12:19:03Z");
+
+    BOOST_CHECK_EQUAL(read_iso8601_date_merged("20220830T123600Z"),
+                      make_utc_time(2022, 8, 30, 12, 36, 00));
+
+    BOOST_CHECK_EQUAL(read_iso8601_date_merged("18000830T143633Z"),
+                      make_utc_time(1800, 8, 30, 14, 36, 33));
+
+    BOOST_CHECK_THROW(read_iso8601_date_merged("20220830X123600Z"),
+                      std::runtime_error);
+
+    BOOST_CHECK_THROW(read_iso8601_date_merged("20220830T123600L"),
+                      std::runtime_error);
+
+    BOOST_CHECK_THROW(read_iso8601_date_merged("20220830T12360Z"),
+                      std::runtime_error);
+
+    BOOST_CHECK_THROW(read_iso8601_date_merged("20220830T12X600Z"),
+                      std::runtime_error);
+}

@@ -142,10 +142,6 @@ private:
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<std::string>& mem);
 
-    void append_args(std::string_view s, std::vector<const char*>& values,
-                     std::vector<int>& lengths, std::vector<int>& format,
-                     std::list<std::string>&);
-
     void append_args(std::size_t n, std::vector<const char*>& values,
                      std::vector<int>& lengths, std::vector<int>& format,
                      std::list<std::string>& mem);

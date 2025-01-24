@@ -8,7 +8,7 @@ namespace uh::cluster::ep::http {
 
 class chunk_body_sha256 : public chunked_body {
 public:
-    chunk_body_sha256(partial_parse_result& req,
+    chunk_body_sha256(boost::asio::ip::tcp::socket& s, raw_request& req,
                       const aws4_signature_info& info,
                       const std::string& signing_key,
                       const std::string& signature,
