@@ -13,7 +13,8 @@ CREATE TABLE object_refs (
 
 CREATE TABLE object_status (
     object_id   BIGINT PRIMARY KEY REFERENCES __objects ON DELETE RESTRICT,
-    status      INTEGER NOT NULL
+    status      INTEGER NOT NULL,
+    deleted_at  TIMESTAMP DEFAULT now() NOT NULL
 );
 
 CREATE TABLE bucket_status (
@@ -457,6 +458,7 @@ BEGIN
         SELECT o.size, o.last_modified, s.deleted_at
         FROM objects o
                  LEFT JOIN object_status s ON o.id = s.object_id
+        WHERE (s.status IS NULL OR (s.deleted_at >= interval_start AND s.deleted_at < interval_end))
         LOOP
             interval_seconds := EXTRACT(EPOCH FROM LEAST(COALESCE(row.deleted_at, interval_end), interval_end) - GREATEST(row.last_modified, interval_start));
             byteseconds := byteseconds + interval_seconds * row.size;
