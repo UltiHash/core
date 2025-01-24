@@ -7,7 +7,7 @@ global:
   logLevel: WARN
   telemetryExportInterval: 30000
 
-recovery:
+coordinator:
   nodeSelector:
     purpose: parameterized-test-uh
   tolerations:

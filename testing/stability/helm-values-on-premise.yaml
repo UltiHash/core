@@ -41,12 +41,9 @@ stabilityTest:
     pvcName: stability-test-output
     mountPath: /testing/test
 
-recovery:
+coordinator:
   nodeSelector:
     kubernetes.io/hostname: opm-k8s-worker-01
-  extraEnvs:
-    - name: OTEL_RESOURCE_ATTRIBUTES
-      value: service.name=recovery
 
 etcd:
   replicaCount: 1

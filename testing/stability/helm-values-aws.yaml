@@ -46,7 +46,7 @@ stabilityTest:
     pvcName: stability-test-output
     mountPath: /testing/test
 
-recovery:
+coordinator:
   nodeSelector:
     workload-type: directory
     purpose: performance-and-stability-testing

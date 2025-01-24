@@ -36,6 +36,10 @@ etcd:
     size: 5Gi
     storageClass: local-path
 
+coordinator:
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
 entrypoint:
   replicas: 1
   nodeSelector:
