@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 #include "common/license/test.h"
+=======
+#include "common/license/license.h"
+>>>>>>> master
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"

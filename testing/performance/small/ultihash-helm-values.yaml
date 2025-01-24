@@ -24,7 +24,7 @@ global:
        }
     }
 
-recovery:
+coordinator:
   nodeSelector:
     workload-type: directory
     purpose: performance-testing-small

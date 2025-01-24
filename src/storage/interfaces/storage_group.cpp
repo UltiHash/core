@@ -66,7 +66,7 @@ void storage_group::remove(size_t id, size_t group_nid) {
     return m_status == empty;
 }
 
-coro<address> storage_group::write(context& ctx, const std::string_view& data,
+coro<address> storage_group::write(context& ctx, std::string_view data,
                                    const std::vector<std::size_t>& offsets) {
 
     if (!is_healthy()) {
@@ -173,13 +173,12 @@ coro<std::map<size_t, size_t>> storage_group::get_ds_size_map(context& ctx) {
     return m_attributes.group_id();
 }
 
-coro<void> storage_group::ds_write(context& ctx, uint32_t ds_id,
-                                   uint64_t pointer, const std::string_view&) {
+coro<void> storage_group::ds_write(context&, uint32_t, uint64_t,
+                                   std::string_view) {
     throw std::runtime_error("unsupported operation in storage group");
 }
 
-coro<void> storage_group::ds_read(context& ctx, uint32_t ds_id,
-                                  uint64_t pointer, size_t size, char* buffer) {
+coro<void> storage_group::ds_read(context&, uint32_t, uint64_t, size_t, char*) {
     throw std::runtime_error("unsupported operation in storage group");
 }
 

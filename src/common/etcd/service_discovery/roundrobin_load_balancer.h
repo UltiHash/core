@@ -10,6 +10,10 @@ namespace uh::cluster {
 template <typename service_interface>
 struct roundrobin_load_balancer : public service_monitor<service_interface> {
 
+    roundrobin_load_balancer(
+        std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
+        : m_service_get_timeout{service_get_timeout} {}
+
     void add_client(size_t,
                     const std::shared_ptr<service_interface>& client) override {
         std::lock_guard l(m_mutex);
@@ -38,7 +42,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
 
         std::unique_lock lk(m_mutex);
 
-        if (!m_cv.wait_for(lk, SERVICE_GET_TIMEOUT,
+        if (!m_cv.wait_for(lk, m_service_get_timeout,
                            [this] { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +
@@ -61,6 +65,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
     [[nodiscard]] size_t size() const noexcept { return m_services.size(); }
 
 private:
+    std::chrono::milliseconds m_service_get_timeout;
     std::mutex m_mutex;
     std::condition_variable m_cv;
 
