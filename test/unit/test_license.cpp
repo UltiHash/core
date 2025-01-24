@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE "license tests"
 
-#include "common/license/license.h"
 #include <boost/test/unit_test.hpp>
+#include <common/license/test.h>
 
 #include <filesystem>
 #include <fstream>

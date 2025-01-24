@@ -1,7 +1,8 @@
 #include "service.h"
+#include "handler.h"
 
-#include "common/telemetry/metrics.h"
-#include "common/utils/scope_guard.h"
+#include <common/telemetry/metrics.h>
+#include <common/utils/scope_guard.h>
 
 namespace uh::cluster::ep {
 
@@ -57,7 +58,8 @@ service::service(const service_config& sc, entrypoint_config config)
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
       m_users(m_ioc, m_config.database),
-      m_limits(sc.license.max_data_store_size),
+      m_license_manager(m_etcd, sc.license),
+      m_limits(m_license_manager.get_storage_cap()),
       m_server(m_config.server,
                std::make_unique<handler>(
                    command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
