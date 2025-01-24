@@ -1,6 +1,5 @@
 #include "chunk_body_sha256.h"
 
-#include "beast_utils.h"
 #include "common/crypto/hmac.h"
 #include "common/telemetry/log.h"
 #include "common/utils/strings.h"
@@ -11,8 +10,7 @@ namespace uh::cluster::ep::http {
 
 namespace {
 
-std::string make_prelude(partial_parse_result& req,
-                         const aws4_signature_info& info) {
+std::string make_prelude(raw_request& req, const aws4_signature_info& info) {
     return "AWS4-HMAC-SHA256-PAYLOAD\n" + req.require("x-amz-date") + "\n" +
            std::string(info.date) + "/" + std::string(info.region) + "/" +
            std::string(info.service) + "/aws4_request\n";
@@ -20,12 +18,13 @@ std::string make_prelude(partial_parse_result& req,
 
 } // namespace
 
-chunk_body_sha256::chunk_body_sha256(partial_parse_result& req,
+chunk_body_sha256::chunk_body_sha256(boost::asio::ip::tcp::socket& s,
+                                     raw_request& req,
                                      const aws4_signature_info& info,
                                      const std::string& signing_key,
                                      const std::string& signature,
                                      chunked_body::trailing_headers trailing)
-    : chunked_body(req, trailing),
+    : chunked_body(s, req, trailing),
       m_prelude(make_prelude(req, info)),
       m_signing_key(signing_key),
       m_to_sign(m_prelude + signature + "\n" + SHA256_EMPTY_STRING + "\n") {}

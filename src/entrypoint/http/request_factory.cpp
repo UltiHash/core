@@ -13,24 +13,31 @@ request_factory::request_factory(user::db& users)
     : m_users(users) {}
 
 coro<std::unique_ptr<request>> request_factory::create(ip::tcp::socket& sock) {
-    auto req = co_await partial_parse_result::read(sock);
+    auto req = co_await raw_request::read(sock);
 
     LOG_DEBUG() << "pre-auth request: " << req.headers;
 
-    auto authorization = req.optional("Authorization");
-    if (!authorization) {
-        co_return co_await no_auth::create(req);
+    if (auto auth = req.optional("Authorization"); auth) {
+
+        if (auth->starts_with("AWS4-HMAC-SHA256 ")) {
+            co_return co_await aws4_hmac_sha256::create(sock, m_users,
+                                                        std::move(req), *auth);
+        }
+
+        if (auth->starts_with("Basic ")) {
+            co_return co_await basic_auth::create(sock, m_users,
+                                                  std::move(req));
+        }
     }
 
-    if (authorization->starts_with("AWS4-HMAC-SHA256 ")) {
-        co_return co_await aws4_hmac_sha256::create(m_users, req);
+    if (auto key = req.params.find("X-Amz-Algorithm");
+        key != req.params.end()) {
+        LOG_DEBUG() << sock.remote_endpoint() << ": algorithm: " << key->second;
+        co_return co_await aws4_hmac_sha256::create_from_url(sock, m_users,
+                                                             std::move(req));
     }
 
-    if (authorization->starts_with("Basic ")) {
-        co_return co_await basic_auth::create(m_users, req);
-    }
-
-    throw std::runtime_error("unsupported authentication scheme");
+    co_return co_await no_auth::create(sock, req);
 }
 
 } // namespace uh::cluster::ep::http

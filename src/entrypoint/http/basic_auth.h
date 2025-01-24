@@ -7,8 +7,8 @@ namespace uh::cluster::ep::http {
 
 class basic_auth {
 public:
-    static coro<std::unique_ptr<request>> create(user::db& users,
-                                                 partial_parse_result& req);
+    static coro<std::unique_ptr<request>>
+    create(boost::asio::ip::tcp::socket& s, user::db& users, raw_request req);
 };
 
 } // namespace uh::cluster::ep::http

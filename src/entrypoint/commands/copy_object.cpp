@@ -24,7 +24,9 @@ coro<response> copy_object::handle(request& req) {
     boost::urls::url url;
     url.set_encoded_path(*req.header("x-amz-copy-source"));
 
-    auto [src_bucket, src_key] = extract_bucket_and_object(url);
+    auto src_bucket = get_bucket_id(url.path());
+    auto src_key = get_object_key(url.path());
+
     auto obj = co_await m_dir.get_object(src_bucket, src_key);
 
     if (auto ifmatch = req.header("x-amz-copy-source-if-match");
