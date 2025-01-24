@@ -3,6 +3,7 @@
 #include <common/telemetry/metrics.h>
 #include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
+#include <deduplicator/interfaces/noop_deduplicator.h>
 
 namespace uh::cluster::ep {
 
@@ -35,15 +36,18 @@ std::unique_ptr<deduplicator_interface>
 make_deduplicator(const entrypoint_config& config, global_data_view& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
-    if (config.m_attached_storage) {
+    if (config.m_attached_deduplicator) {
+        LOG_INFO() << "using attached deduplicator";
         return std::make_unique<local_deduplicator>(
             *config.m_attached_deduplicator, storage);
     }
 
     if (config.noop_deduplicator) {
+        LOG_INFO() << "using noop deduplicator";
         return std::make_unique<noop_deduplicator>(storage);
     }
 
+    LOG_INFO() << "using remote deduplicator array";
     return std::make_unique<dedupe_array>(ioc, etcd,
                                           config.dedupe_node_connection_count);
 }
