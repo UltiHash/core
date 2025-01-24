@@ -57,7 +57,7 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(const std::string_view& data,
+address mock_data_store::write(std::string_view data,
                                const std::vector<std::size_t>& offsets) {
 
     if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
@@ -77,7 +77,7 @@ address mock_data_store::write(const std::string_view& data,
 }
 
 void mock_data_store::manual_write(uint64_t internal_pointer,
-                                   const std::string_view& data) {
+                                   std::string_view data) {
     if (internal_pointer + data.size() > m_conf.max_data_store_size) {
         throw std::out_of_range("internal_pointer is out of range");
     }
