@@ -41,12 +41,11 @@ jobs:
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    timeout-minutes: 3600
+    timeout-minutes: 48960  # 34 days
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive      
+          token: ${{ secrets.PAT }} 
       
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
@@ -120,7 +119,7 @@ jobs:
       
       - name: Execute performance test against UltiHash
         run: |
-          bash testing/performance/execute_job.sh performance-tester.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 60h
+          bash testing/performance/execute_job.sh performance-tester.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 816h
 
   cleanup:
     runs-on: lightweight-generic-jobs
@@ -161,7 +160,3 @@ jobs:
           kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
           kubectl delete nodepool parameterized-test-uh parameterized-test-tester || true
-
-      
-
-      
