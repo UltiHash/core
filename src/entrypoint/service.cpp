@@ -40,6 +40,10 @@ make_deduplicator(const entrypoint_config& config, global_data_view& storage,
             *config.m_attached_deduplicator, storage);
     }
 
+    if (config.noop_deduplicator) {
+        return std::make_unique<noop_deduplicator>(storage);
+    }
+
     return std::make_unique<dedupe_array>(ioc, etcd,
                                           config.dedupe_node_connection_count);
 }
