@@ -12,7 +12,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include <common/license/payg/publisher.h>
+#include <common/license/publisher.h>
 #include <common/license/test.h>
 #include <common/utils/strings.h>
 
