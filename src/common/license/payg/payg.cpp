@@ -1,8 +1,8 @@
 #include "payg.h"
 
-#include "_util.h"
 #include "common/etcd/namespace.h"
 
+#include <common/license/internal/util.h>
 #include <common/telemetry/log.h>
 #include <common/utils/strings.h>
 #include <nlohmann/json.hpp>
@@ -63,14 +63,16 @@ void broadcast(etcd_manager& etcd, const payg& license) {
              std::string(magic_enum::enum_name(license.license_type)));
     etcd.put(get_etcd_payg_license_key("storage_cap"),
              std::to_string(license.storage_cap));
-    etcd.put(get_etcd_payg_license_key("ec/enabled"),
-             license.ec.enabled ? "true" : "false");
+
     etcd.put(get_etcd_payg_license_key("ec/max_group_size"),
              std::to_string(license.ec.max_group_size));
-    etcd.put(get_etcd_payg_license_key("replication/enabled"),
-             license.replication.enabled ? "true" : "false");
+    etcd.put(get_etcd_payg_license_key("ec/enabled"),
+             license.ec.enabled ? "true" : "false");
+
     etcd.put(get_etcd_payg_license_key("replication/max_replicas"),
              std::to_string(license.replication.max_replicas));
+    etcd.put(get_etcd_payg_license_key("replication/enabled"),
+             license.replication.enabled ? "true" : "false");
 }
 
 } // namespace uh::cluster

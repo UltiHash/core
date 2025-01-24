@@ -125,45 +125,4 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
     co_return response_body;
 }
 
-coro<std::string> exponential_backoff(boost::asio::io_context& io_context,
-                                      std::function<coro<std::string>()> task) {
-    std::string rv;
-    int max_retries = 5;
-    int retry_count = 0;
-    int delay = 1; // initial delay in seconds
-
-    while (retry_count < max_retries) {
-        bool success = false;
-        try {
-            // TODO: What should we do when the license server is down
-            // for one hour? Should I clear license information on etcd?
-            rv = co_await task();
-            success = true;
-
-        } catch (const std::system_error& e) {
-            std::cout << "Caught system_error: " << e.what() << std::endl;
-            std::cout << "Error code: " << e.code() << std::endl;
-            std::cout << "Error message: " << e.code().message() << std::endl;
-            // TODO: Implement exponential backoff.
-            retry_count++;
-        } catch (const std::runtime_error& e) {
-            std::cout << "Caught runtime_error: " << e.what() << std::endl;
-        }
-
-        if (success) {
-            break;
-        }
-
-        if (retry_count < max_retries) {
-            boost::asio::steady_timer timer(io_context,
-                                            std::chrono::seconds(delay));
-            co_await timer.async_wait(boost::asio::use_awaitable);
-            delay *= 2; // exponential backoff
-        } else {
-            std::cerr << "Max retries reached. Exiting." << std::endl;
-        }
-    }
-    co_return rv;
-}
-
 } // namespace uh::cluster
