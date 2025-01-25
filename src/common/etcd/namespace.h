@@ -19,7 +19,7 @@ static constexpr const char* etcd_global_lock_key =
 static constexpr const char* etcd_current_id_prefix_key =
     "/" NAMESPACE "/config/class/cluster/current_id/";
 static constexpr const char* etcd_payg_license =
-    "/" NAMESPACE "/config/license/payg/";
+    "/" NAMESPACE "/config/license/payg";
 
 enum class etcd_action : uint8_t {
     create = 0,
@@ -172,10 +172,6 @@ get_etcd_service_attribute_enum(const std::string& param) {
     }
 
     throw std::invalid_argument("invalid etcd parameter");
-}
-
-inline std::string get_etcd_payg_license_key(const std::string& key) {
-    return etcd_payg_license + key;
 }
 
 } // namespace uh::cluster

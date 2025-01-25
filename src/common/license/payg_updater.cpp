@@ -1,8 +1,9 @@
-#include "publisher.h"
+#include "payg_updater.h"
 
 #include "internal/fetch.h"
+#include "internal/payg.h"
 
-#include "payg.h"
+#include "common/etcd/namespace.h"
 
 namespace uh::cluster {
 
@@ -25,8 +26,13 @@ coro<void> periodic_executor(boost::asio::io_context& io_context,
     }
 }
 
-coro<void> license_handler(boost::asio::io_context& io_context,
-                           etcd_manager& etcd) {
+namespace {
+void broadcast(etcd_manager& etcd, const std::string& license) {
+    etcd.put(etcd_payg_license, license);
+}
+} // namespace
+
+coro<void> publish(boost::asio::io_context& io_context, etcd_manager& etcd) {
     // TODO: replace url with https://<url>/v1/license
     // UH_CUSTOMER_ID and UH_ACCESS_TOKEN.
     const std::string url{"example.com"};
@@ -47,21 +53,23 @@ coro<void> license_handler(boost::asio::io_context& io_context,
     "signature": "Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw=="
 })"};
 
+    auto backoff = exponential_backoff<std::string>{io_context, 7, 100, 200};
     try {
-        auto str = co_await exponential_backoff<std::string>(
-            io_context, [&]() -> coro<std::string> {
+        auto str = co_await backoff.run(
+            [&]() -> coro<std::string> {
                 co_return co_await fetch_response_body(io_context, url,
                                                        username, password);
-            });
+            },
+            fetch_exception_handler);
 
         // LOG_INFO() << "str: " << str;
         // TODO: remove below
         str = dummy_license_string;
 
         // TODO: do not skip checking
-        auto license = check_payg_license(str);
+        auto handler = payg_handler(str);
 
-        broadcast(etcd, license);
+        broadcast(etcd, handler.to_string());
     } catch (const std::runtime_error& e) {
         std::cout << "License check failed: " << e.what() << std::endl;
     } catch (...) {

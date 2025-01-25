@@ -125,4 +125,17 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
     co_return response_body;
 }
 
+bool fetch_exception_handler(const std::exception& e) {
+    if (const auto* se = dynamic_cast<const std::system_error*>(&e)) {
+        std::cout << "Caught system_error: " << se->what() << std::endl;
+        std::cout << "Error code: " << se->code() << std::endl;
+        std::cout << "Error message: " << se->code().message() << std::endl;
+        return true;
+    } else if (const auto* re = dynamic_cast<const std::runtime_error*>(&e)) {
+        std::cout << "Caught runtime_error: " << re->what() << std::endl;
+        return false;
+    }
+    return false;
+}
+
 } // namespace uh::cluster

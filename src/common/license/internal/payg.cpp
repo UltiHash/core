@@ -1,7 +1,5 @@
 #include "payg.h"
 
-#include "common/etcd/namespace.h"
-
 #include <common/license/internal/util.h>
 #include <common/telemetry/log.h>
 #include <common/utils/strings.h>
@@ -57,22 +55,30 @@ payg check_payg_license(std::string_view license, bool skip_verify) {
     return rv;
 }
 
-void broadcast(etcd_manager& etcd, const payg& license) {
-    etcd.put(get_etcd_payg_license_key("customer_id"), license.customer_id);
-    etcd.put(get_etcd_payg_license_key("license_type"),
-             std::string(magic_enum::enum_name(license.license_type)));
-    etcd.put(get_etcd_payg_license_key("storage_cap"),
-             std::to_string(license.storage_cap));
+payg_handler::payg_handler(std::string_view json_str, bool skip_verify) {
+    auto j = nlohmann::json::parse(json_str);
 
-    etcd.put(get_etcd_payg_license_key("ec/max_group_size"),
-             std::to_string(license.ec.max_group_size));
-    etcd.put(get_etcd_payg_license_key("ec/enabled"),
-             license.ec.enabled ? "true" : "false");
+    if (!skip_verify) {
+        if (!j.contains("signature")) {
+            throw std::runtime_error("missing key: signature");
+        }
 
-    etcd.put(get_etcd_payg_license_key("replication/max_replicas"),
-             std::to_string(license.replication.max_replicas));
-    etcd.put(get_etcd_payg_license_key("replication/enabled"),
-             license.replication.enabled ? "true" : "false");
+        auto sign_b64 = j.at("signature").get<std::string>();
+        j.erase("signature");
+
+        m_compact_json = j.dump().substr(0);
+
+        auto signature = base64_decode(sign_b64);
+
+        if (!verify_license(m_compact_json, signature)) {
+            throw std::runtime_error(
+                "signature of license could not be verified");
+        }
+    } else {
+        m_compact_json = j.dump().substr(0);
+    }
+
+    m_payg = j.template get<payg>();
 }
 
 } // namespace uh::cluster

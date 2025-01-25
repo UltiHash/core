@@ -41,18 +41,11 @@ public:
     /*
      * Save key value pair
      */
-    template <typename T>
-    requires(std::same_as<T, std::size_t> || std::same_as<T, bool>)
-    void put(const std::string& key, const T& value);
-
     void put(const std::string& key, const std::string& value);
 
     /*
      * Retrieve methods
      */
-    template <typename T>
-    requires(std::same_as<T, std::size_t> || std::same_as<T, bool>)
-    T get(const std::string& key) const;
     std::string get(const std::string& key) const;
     bool has(const std::string& key) const;
     std::vector<std::string> keys(const std::string& prefix = "/") const;

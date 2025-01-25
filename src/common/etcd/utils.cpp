@@ -85,39 +85,6 @@ etcd_manager::~etcd_manager() {
     client->leaserevoke(m_lease);
 }
 
-/*
- * Save key value pair
- */
-namespace {
-template <typename T> std::string to_string(const T& value) {
-    if constexpr (std::is_same_v<T, bool>) {
-        return value ? "true" : "false";
-    } else if constexpr (std::is_same_v<T, std::size_t>) {
-        return std::to_string(value);
-    } else {
-        static_assert(false, "Unsupported type");
-        return "";
-    }
-}
-template <typename T> T from_string(const std::string& str) {
-    if constexpr (std::is_same_v<T, bool>) {
-        return str == "true";
-    } else if constexpr (std::is_same_v<T, std::size_t>) {
-        return static_cast<T>(std::stoi(str));
-    } else {
-        static_assert(false, "Unsupported type");
-        return T{};
-    }
-}
-} // namespace
-
-template <typename T>
-requires(std::same_as<T, std::size_t> || std::same_as<T, bool>)
-void etcd_manager::put(const std::string& key, const T& value) {
-    std::string str = to_string(value);
-    etcd_manager::put(key, str);
-}
-
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
 
@@ -128,12 +95,6 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
             " failed, details: " + resp.error_message());
 }
 
-template <typename T>
-requires(std::same_as<T, std::size_t> || std::same_as<T, bool>)
-T etcd_manager::get(const std::string& key) const {
-    std::string str = get(key);
-    return from_string<T>(str);
-}
 std::string etcd_manager::get(const std::string& key) const {
     auto client = m_client.load();
     auto resp = client->get(key);
@@ -241,14 +202,5 @@ void etcd_manager::restore_watchers(void) {
         e.watcher.reset(new etcd::Watcher(*client, k, e.callback, true));
     }
 }
-
-template std::size_t
-etcd_manager::get<std::size_t>(const std::string& key) const;
-template bool etcd_manager::get<bool>(const std::string& key) const;
-
-template void etcd_manager::put<std::size_t>(const std::string& key,
-                                             const std::size_t& value);
-template void etcd_manager::put<bool>(const std::string& key,
-                                      const bool& value);
 
 } // namespace uh::cluster

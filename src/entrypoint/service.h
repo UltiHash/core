@@ -20,13 +20,14 @@ public:
     payg_manager(etcd_manager& etcd, std::atomic<std::size_t>& storage_cap)
         : m_etcd{etcd} {
 
-        storage_cap.store(
-            m_etcd.get<std::size_t>(get_etcd_payg_license_key("storage_cap")));
-        m_wg = m_etcd.watch(get_etcd_payg_license_key("storage_cap"),
-                            [&](etcd::Response) {
-                                storage_cap.store(m_etcd.get<std::size_t>(
-                                    get_etcd_payg_license_key("storage_cap")));
-                            });
+        // storage_cap.store(
+        //     m_etcd.get<std::size_t>(get_etcd_payg_license_key("storage_cap")));
+        // m_wg = m_etcd.watch(get_etcd_payg_license_key("storage_cap"),
+        //                     [&](etcd::Response) {
+        //                         storage_cap.store(m_etcd.get<std::size_t>(
+        //                             get_etcd_payg_license_key("storage_cap")));
+        //                     });
+        (void)m_etcd;
     }
 
 private:
