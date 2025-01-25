@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE "payg watcher tests"
+#define BOOST_TEST_MODULE "payg updater/watcher tests"
 
 #include <boost/test/unit_test.hpp>
 
