@@ -38,6 +38,7 @@ class license_manager {
 public:
     license_manager(etcd_manager& etcd,
                     const uh::cluster::license& test_license) {
+        // FIXIT: We need a way to check test license's invalidity.
         if (test_license.max_data_store_size != 0) {
             storage_cap.store(test_license.max_data_store_size);
         } else {
