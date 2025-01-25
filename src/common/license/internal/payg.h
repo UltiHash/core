@@ -4,7 +4,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
 
-namespace uh::cluster {
+namespace uh::cluster::lic {
 
 struct payg {
     enum type { FREEMIUM, PREMIUM };
@@ -24,7 +24,9 @@ struct payg {
 
 class payg_handler {
 public:
-    explicit payg_handler(std::string_view json_str, bool skip_verify = false);
+    enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
+    explicit payg_handler(std::string_view json_str,
+                          verify option = verify::VERIFY);
     auto get() const { return m_payg; }
     auto to_string() const { return m_compact_json; }
 
@@ -35,4 +37,4 @@ private:
 
 payg check_payg_license(std::string_view license, bool skip_verify = false);
 
-} // namespace uh::cluster
+} // namespace uh::cluster::lic

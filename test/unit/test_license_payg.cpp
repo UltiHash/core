@@ -5,9 +5,8 @@
 #include "test_config.h"
 
 #include <common/license/internal/payg.h>
-#include <common/utils/strings.h>
 
-using namespace uh::cluster;
+using namespace uh::cluster::lic;
 
 BOOST_AUTO_TEST_SUITE(a_payg_license)
 
@@ -70,7 +69,8 @@ BOOST_AUTO_TEST_CASE(can_skip_validation) {
     }
 })";
 
-    BOOST_CHECK_NO_THROW(payg_handler sut(json_str, true));
+    BOOST_CHECK_NO_THROW(
+        payg_handler sut(json_str, payg_handler::verify::SKIP_VERIFY));
 }
 
 BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
@@ -84,8 +84,9 @@ BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
     },
 })";
 
-    BOOST_CHECK_THROW(payg_handler sut(json_str, true),
-                      nlohmann::json::parse_error);
+    BOOST_CHECK_THROW(
+        payg_handler sut(json_str, payg_handler::verify::SKIP_VERIFY),
+        nlohmann::json::parse_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
