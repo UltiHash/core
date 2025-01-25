@@ -22,8 +22,17 @@ struct payg {
     } replication;
 };
 
-payg check_payg_license(std::string_view license, bool skip_verify = false);
+class payg_handler {
+public:
+    explicit payg_handler(std::string_view json_str, bool skip_verify = false);
+    auto get() const { return m_payg; }
+    auto to_string() const { return m_compact_json; }
 
-void broadcast(etcd_manager& etcd, const payg& license);
+private:
+    payg m_payg;
+    std::string m_compact_json;
+};
+
+payg check_payg_license(std::string_view license, bool skip_verify = false);
 
 } // namespace uh::cluster

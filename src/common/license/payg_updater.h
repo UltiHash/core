@@ -9,7 +9,6 @@ coro<void> periodic_executor(boost::asio::io_context& io_context,
                              std::chrono::seconds interval,
                              std::function<coro<void>()> task);
 
-coro<void> license_handler(boost::asio::io_context& io_context,
-                           etcd_manager& etcd);
+coro<void> publish(boost::asio::io_context& io_context, etcd_manager& etcd);
 
 } // namespace uh::cluster

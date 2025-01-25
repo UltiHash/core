@@ -12,7 +12,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include <common/license/publisher.h>
+#include <common/license/payg_updater.h>
 #include <common/license/test.h>
 #include <common/utils/strings.h>
 
@@ -36,15 +36,14 @@ public:
     void run() {
         LOG_INFO() << "running coordinator service";
 
-        boost::asio::co_spawn(
-            m_ioc,
-            // TODO: replace 3s with 1h
-            periodic_executor(m_ioc, 3s,
-                              [&]() -> coro<void> {
-                                  co_return co_await license_handler(m_ioc,
-                                                                     m_etcd);
-                              }),
-            boost::asio::detached);
+        boost::asio::co_spawn(m_ioc,
+                              // TODO: replace 3s with 1h
+                              periodic_executor(m_ioc, 3s,
+                                                [&]() -> coro<void> {
+                                                    co_return co_await publish(
+                                                        m_ioc, m_etcd);
+                                                }),
+                              boost::asio::detached);
 
         while (!m_stopped) {
             std::unique_lock lock(m_mutex);
