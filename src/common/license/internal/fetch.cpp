@@ -10,7 +10,7 @@
 using boost::asio::use_awaitable;
 using boost::asio::ip::tcp;
 
-namespace uh::cluster {
+namespace uh::cluster::lic {
 
 class http_error_category : public std::error_category {
 public:
@@ -138,4 +138,4 @@ bool fetch_exception_handler(const std::exception& e) {
     return false;
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::lic

@@ -7,7 +7,7 @@
 
 using nlohmann::json;
 
-namespace uh::cluster {
+namespace uh::cluster::lic {
 
 NLOHMANN_JSON_SERIALIZE_ENUM(payg::type, //
                              {
@@ -55,10 +55,10 @@ payg check_payg_license(std::string_view license, bool skip_verify) {
     return rv;
 }
 
-payg_handler::payg_handler(std::string_view json_str, bool skip_verify) {
+payg_handler::payg_handler(std::string_view json_str, verify option) {
     auto j = nlohmann::json::parse(json_str);
 
-    if (!skip_verify) {
+    if (option == verify::VERIFY) {
         if (!j.contains("signature")) {
             throw std::runtime_error("missing key: signature");
         }
@@ -66,19 +66,21 @@ payg_handler::payg_handler(std::string_view json_str, bool skip_verify) {
         auto sign_b64 = j.at("signature").get<std::string>();
         j.erase("signature");
 
-        m_compact_json = j.dump().substr(0);
+        auto compact_json = j.dump();
 
         auto signature = base64_decode(sign_b64);
 
-        if (!verify_license(m_compact_json, signature)) {
+        if (!verify_license(compact_json, signature)) {
             throw std::runtime_error(
                 "signature of license could not be verified");
         }
+        m_compact_json = std::move(compact_json);
+
     } else {
-        m_compact_json = j.dump().substr(0);
+        m_compact_json = j.dump();
     }
 
     m_payg = j.template get<payg>();
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::lic

@@ -1,10 +1,13 @@
 #pragma once
 
+// TODO: move file!
+// use beast, or use existing implementation!
+
 #include <boost/asio.hpp>
 #include <common/types/common_types.h>
 #include <random>
 
-namespace uh::cluster {
+namespace uh::cluster::lic {
 
 coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
                                       const std::string& url,
@@ -77,4 +80,4 @@ private:
     int max_delay_;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::lic

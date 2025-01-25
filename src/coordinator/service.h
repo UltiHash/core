@@ -5,6 +5,7 @@
 
 #include <common/etcd/ec_groups/ec_group_maintainer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
+#include <common/license/internal/fetch.h>
 #include <common/telemetry/log.h>
 #include <common/utils/io_context_runner.h>
 #include <config/configuration.h>
@@ -28,7 +29,40 @@ public:
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
+
+          m_payg_updater{
+              m_ioc,
+              m_etcd, //
+
+              // [&]() -> coro<std::string> {
+              //     const std::string url{"example.com"};
+              //     const std::string username{""};
+              //     const std::string password{""};
+              //     co_return co_await lic::fetch_response_body(
+              //         m_ioc, url, username, password);
+              // }
+
+              [&]() -> coro<std::string> {
+                  static constexpr const char* json_literal = R"({
+                  "customer_id": "big corp xy",
+                  "license_type": "freemium",
+                  "storage_cap": 10240,
+                  "ec": {
+                      "enabled": true,
+                      "max_group_size": 10
+                  },
+                  "replication": {
+                      "enabled": true,
+                      "max_replicas": 3
+                  },
+                  "signature":
+                  "yg2DNf6iej5np/rQuM4mkp1xzByxxV6vHmHjrbimLyNndL+biWhajraNcp88mXB6iNy/EQ5Izx8H6Q7mggpxBg=="
+              })";
+                  co_return json_literal;
+              } //
+          }     //
+    {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
@@ -38,11 +72,7 @@ public:
 
         boost::asio::co_spawn(m_ioc,
                               // TODO: replace 3s with 1h
-                              periodic_executor(m_ioc, 3s,
-                                                [&]() -> coro<void> {
-                                                    co_return co_await publish(
-                                                        m_ioc, m_etcd);
-                                                }),
+                              m_payg_updater.periodic_update(3s),
                               boost::asio::detached);
 
         while (!m_stopped) {
@@ -72,5 +102,7 @@ private:
 
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
+
+    lic::payg_updater m_payg_updater;
 };
 } // namespace uh::cluster::coordinator

@@ -3,12 +3,24 @@
 #include <common/etcd/utils.h>
 #include <common/types/common_types.h>
 
-namespace uh::cluster {
+namespace uh::cluster::lic {
 
-coro<void> periodic_executor(boost::asio::io_context& io_context,
-                             std::chrono::seconds interval,
-                             std::function<coro<void>()> task);
+class payg_updater {
+public:
+    using callback_t = std::function<coro<std::string>()>;
+    payg_updater(boost::asio::io_context& ioc, etcd_manager& etcd,
+                 callback_t&& get_license)
+        : m_ioc{ioc},
+          m_etcd{etcd},
+          m_get_license{std::forward<callback_t>(get_license)} {}
 
-coro<void> publish(boost::asio::io_context& io_context, etcd_manager& etcd);
+    coro<void> update();
+    coro<void> periodic_update(std::chrono::seconds interval);
 
-} // namespace uh::cluster
+private:
+    boost::asio::io_context& m_ioc;
+    etcd_manager& m_etcd;
+    callback_t m_get_license;
+};
+
+} // namespace uh::cluster::lic

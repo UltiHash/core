@@ -71,6 +71,7 @@ public:
         }
 
     private:
+        // TODO: Perfect forward callback
         watch_guard(etcd_manager* etcd, const std::string& prefix,
                     std::function<void(etcd::Response)> callback)
             : m_etcd{etcd},
