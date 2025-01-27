@@ -59,9 +59,4 @@ coro<std::size_t> mock_global_data_view::unlink(context& ctx,
     co_return m_storage.unlink(addr);
 }
 
-[[nodiscard]] std::size_t
-mock_global_data_view::get_storage_service_connection_count() const noexcept {
-    return 1;
-}
-
 } // namespace uh::cluster

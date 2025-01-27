@@ -131,11 +131,6 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
     co_return freed_bytes;
 }
 
-[[nodiscard]] std::size_t
-default_global_data_view::get_storage_service_connection_count()
-    const noexcept {
-    return m_config.storage_service_connection_count;
-}
 default_global_data_view::~default_global_data_view() noexcept {
     m_ec_maintainer.remove_monitor(m_load_balancer);
     m_ec_maintainer.remove_monitor(m_basic_getter);

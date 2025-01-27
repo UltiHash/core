@@ -9,13 +9,15 @@ namespace uh::cluster {
 struct storage_interface {
     virtual coro<address> write(context& ctx, std::string_view,
                                 const std::vector<std::size_t>&) = 0;
+
     virtual coro<void> read_fragment(context& ctx, char* buffer,
                                      const fragment& f) = 0;
+
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                        size_t size) = 0;
+
     virtual coro<void> read_address(context& ctx, char* buffer,
                                     const address& addr,
-
                                     const std::vector<size_t>& offsets) = 0;
 
     virtual coro<address> link(context& ctx, const address& addr) = 0;

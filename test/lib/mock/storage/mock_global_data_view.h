@@ -22,8 +22,6 @@ public:
                                      const address& addr) override;
     coro<std::size_t> unlink(context& ctx, const address& addr) override;
     coro<std::size_t> get_used_space(context& ctx) override;
-    [[nodiscard]] std::size_t
-    get_storage_service_connection_count() const noexcept override;
 
     ~mock_global_data_view() noexcept = default;
 

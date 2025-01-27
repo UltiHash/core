@@ -142,16 +142,6 @@ public:
      */
     coro<std::size_t> get_used_space(context& ctx);
 
-    /**
-     * @brief Returns the configured number of connections maintained to each
-     * storage service instance.
-     * @param c open telemetry context
-     * @return The configured number of connections maintained to each storage
-     * service instance.
-     */
-    [[nodiscard]] std::size_t
-    get_storage_service_connection_count() const noexcept;
-
     ~default_global_data_view() noexcept;
 
 private:
