@@ -101,8 +101,8 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(context& ctx, char* buffer,
-                                   const address& addr);
+    coro<std::size_t> read_address(context& ctx, const address& addr,
+                                   std::span<char> buffer);
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership

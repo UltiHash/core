@@ -102,14 +102,14 @@ storage_group::read(context& ctx, const uint128_t& pointer, size_t size) {
     co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);
 }
 
-coro<void> storage_group::read_address(context& ctx, char* buffer,
-                                       const address& addr,
+coro<void> storage_group::read_address(context& ctx, const address& addr,
+                                       std::span<char> buffer,
                                        const std::vector<size_t>& offsets) {
 
     co_await perform_for_address(
         addr, m_getter, m_ioc,
-        [&ctx, &buffer](auto, auto dn, const auto& info) -> coro<void> {
-            co_await dn->read_address(ctx, buffer, info.addr,
+        [&ctx, buffer](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->read_address(ctx, info.addr, buffer,
                                       info.pointer_offsets);
         },
         offsets);

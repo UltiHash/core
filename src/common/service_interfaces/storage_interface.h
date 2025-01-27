@@ -16,8 +16,8 @@ struct storage_interface {
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                        size_t size) = 0;
 
-    virtual coro<void> read_address(context& ctx, char* buffer,
-                                    const address& addr,
+    virtual coro<void> read_address(context& ctx, const address& addr,
+                                    std::span<char> buffer,
                                     const std::vector<size_t>& offsets) = 0;
 
     virtual coro<address> link(context& ctx, const address& addr) = 0;

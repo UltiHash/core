@@ -32,13 +32,13 @@ coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
 }
 
 coro<std::size_t> mock_global_data_view::read_address(context& ctx,
-                                                      char* buffer,
-                                                      const address& addr) {
+                                                      const address& addr,
+                                                      std::span<char> buffer) {
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        m_storage.read(frag.pointer, {buffer, frag.size});
-        buffer += frag.size;
+        m_storage.read(frag.pointer, buffer.first(frag.size));
+        buffer = buffer.subspan(frag.size);
         size += frag.size;
     }
 

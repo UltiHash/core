@@ -67,15 +67,16 @@ struct local_storage : public storage_interface {
         co_return buf;
     }
 
-    coro<void> read_address(context& ctx, char* buffer, const address& addr,
+    coro<void> read_address(context& ctx, const address& addr,
+                            std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         LOG_DEBUG() << ctx.peer() << ": read addr start";
 
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
-                    .read(frag.pointer, {buffer + offsets[i], frag.size}) !=
-                frag.size) [[unlikely]] {
+                    .read(frag.pointer,
+                          buffer.subspan(offsets[i], frag.size)) != frag.size) {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
             }
@@ -188,11 +189,10 @@ struct local_storage : public storage_interface {
     }
 
 private:
-    std::vector<std::unique_ptr<default_data_store>> m_data_stores;
+    std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
 
-    [[nodiscard]] default_data_store&
-    get_data_store(const uint128_t& pointer) const {
+    data_store& get_data_store(const uint128_t& pointer) const {
         auto data_store_id = pointer_traits::get_data_store_id(pointer);
 
         if (data_store_id >= m_data_stores.size()) {

@@ -45,8 +45,8 @@ struct remote_storage : public storage_interface {
         co_return buffer;
     }
 
-    coro<void> read_address(context& ctx, char* buffer, const address& addr,
-
+    coro<void> read_address(context& ctx, const address& addr,
+                            std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
 
@@ -55,7 +55,8 @@ struct remote_storage : public storage_interface {
 
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
-            m->register_read_buffer(buffer + offsets.at(i), addr.sizes[i]);
+            m->register_read_buffer(buffer.data() + offsets.at(i),
+                                    addr.sizes[i]);
         }
 
         co_await m->recv_buffers(h);

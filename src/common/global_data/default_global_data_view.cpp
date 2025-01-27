@@ -79,14 +79,14 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
     co_return buffer;
 }
 
-coro<std::size_t> default_global_data_view::read_address(context& ctx,
-                                                         char* buffer,
-                                                         const address& addr) {
+coro<std::size_t>
+default_global_data_view::read_address(context& ctx, const address& addr,
+                                       std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &buffer](size_t, std::shared_ptr<storage_interface> dn,
-                        const address_info& info) -> coro<void> {
-            co_await dn->read_address(ctx, buffer, info.addr,
+        [&ctx, buffer](size_t, std::shared_ptr<storage_interface> dn,
+                       const address_info& info) -> coro<void> {
+            co_await dn->read_address(ctx, info.addr, buffer,
                                       info.pointer_offsets);
         });
 }
