@@ -68,8 +68,7 @@ void register_service(CLI::App& app, service_config& cfg) {
                return true;
            },
            "UltiHash license string")
-        ->envname(ENV_CFG_LICENSE)
-        ->required();
+        ->envname(ENV_CFG_LICENSE);
 
     group
         ->add_option("--registry,-r", cfg.etcd_config.url,
