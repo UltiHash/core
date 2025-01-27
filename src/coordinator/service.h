@@ -36,10 +36,15 @@ public:
               m_ioc,
               m_etcd, //
 
-              // TODO: use codes below and read infomation from environment
-              // variables using std::getenv(), UH_CUSTOMER_ID, UH_ACCESS_TOKEN
+              // TODO: How should we finalize this part before server is
+              // implemented?
+
+              // TODO: We can use codes below and read infomation from
+              // environment variables using std::getenv(), UH_CUSTOMER_ID,
+              // UH_ACCESS_TOKEN.
+
               // [&]() -> coro<std::string> {
-              //     const std::string url{"example.com"};
+              //     const std::string url{"<url>/v1/license"};
               //     const std::string username{""};
               //     const std::string password{""};
               //     co_return co_await fetch_response_body(
