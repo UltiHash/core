@@ -46,8 +46,7 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
     if (f.m_data.has_value()) {
         str = f.m_data->substr(0, size);
     } else {
-        data =
-            m_storage.get().read_fragment(CURRENT_CONTEXT, f.m_pointer, size);
+        data = m_storage.read_fragment(CURRENT_CONTEXT, f.m_pointer, size);
         str = data.string_view();
     }
 }
