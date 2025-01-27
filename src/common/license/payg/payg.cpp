@@ -7,15 +7,15 @@
 
 using nlohmann::json;
 
-namespace uh::cluster::lic {
+namespace uh::cluster {
 
-NLOHMANN_JSON_SERIALIZE_ENUM(payg::type, //
+NLOHMANN_JSON_SERIALIZE_ENUM(payg_license::type, //
                              {
-                                 {payg::FREEMIUM, "freemium"},
-                                 {payg::PREMIUM, "premium"},
+                                 {payg_license::FREEMIUM, "freemium"},
+                                 {payg_license::PREMIUM, "premium"},
                              })
 
-void to_json(json& j, const payg& p) {
+void to_json(json& j, const payg_license& p) {
     j = json{{"customer_id", p.customer_id},
              {"license_type", p.license_type},
              {"storage_cap", p.storage_cap},
@@ -27,7 +27,7 @@ void to_json(json& j, const payg& p) {
                {"max_replicas", p.replication.max_replicas}}}};
 }
 
-void from_json(const json& j, payg& p) {
+void from_json(const json& j, payg_license& p) {
     j.at("customer_id").get_to(p.customer_id);
     j.at("license_type").get_to(p.license_type);
     j.at("storage_cap").get_to(p.storage_cap);
@@ -37,7 +37,7 @@ void from_json(const json& j, payg& p) {
     j.at("replication").at("max_replicas").get_to(p.replication.max_replicas);
 }
 
-payg check_payg_license(std::string_view license, bool skip_verify) {
+payg_license check_payg_license(std::string_view license, bool skip_verify) {
     nlohmann::json j = nlohmann::json::parse(license);
     auto sign_b64 = j.at("signature").get<std::string>();
     j.erase("signature");
@@ -51,7 +51,7 @@ payg check_payg_license(std::string_view license, bool skip_verify) {
         throw std::runtime_error("signature of license could not be verified");
     }
 
-    auto rv = j.template get<payg>();
+    auto rv = j.template get<payg_license>();
     return rv;
 }
 
@@ -80,7 +80,7 @@ payg_handler::payg_handler(std::string_view json_str, verify option) {
         m_compact_json = j.dump();
     }
 
-    m_payg = j.template get<payg>();
+    m_license = j.template get<payg_license>();
 }
 
-} // namespace uh::cluster::lic
+} // namespace uh::cluster

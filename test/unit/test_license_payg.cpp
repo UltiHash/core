@@ -4,9 +4,9 @@
 
 #include "test_config.h"
 
-#include <common/license/internal/payg.h>
+#include <common/license/payg/payg.h>
 
-using namespace uh::cluster::lic;
+using namespace uh::cluster;
 
 BOOST_AUTO_TEST_SUITE(a_payg_license)
 
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(parses_license_to_payg) {
     auto license = sut.get();
 
     BOOST_CHECK_EQUAL(license.customer_id, "big corp xy");
-    BOOST_CHECK_EQUAL(license.license_type, payg::type::FREEMIUM);
+    BOOST_CHECK_EQUAL(license.license_type, payg_license::type::FREEMIUM);
     BOOST_CHECK_EQUAL(license.storage_cap, 10240);
     BOOST_CHECK_EQUAL(license.ec.enabled, true);
     BOOST_CHECK_EQUAL(license.ec.max_group_size, 10);

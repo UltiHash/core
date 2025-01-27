@@ -1,6 +1,6 @@
 #include "test.h"
 
-#include "internal/util.h"
+#include <common/license/internal/util.h>
 
 #include <common/utils/common.h>
 #include <common/utils/strings.h>

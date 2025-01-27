@@ -1,6 +1,6 @@
 #include "util.h"
 
-#include "license-public-key.inc"
+#include <common/license/internal/license-public-key.inc>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>

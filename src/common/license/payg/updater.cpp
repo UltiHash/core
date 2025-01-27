@@ -1,19 +1,18 @@
-#include "payg_updater.h"
+#include "updater.h"
 
-#include "fetch.h"
-#include "internal/payg.h"
+#include <common/license/payg/exp_backoff.h>
+#include <common/license/payg/payg.h>
 
-#include "common/etcd/namespace.h"
+#include <common/etcd/namespace.h>
 
-namespace uh::cluster::lic {
+namespace uh::cluster {
 
 coro<void> payg_updater::update() {
     // TODO: do DI for exp_backoff and fetch_exception_handler
     auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
     try {
         auto str = co_await backoff.run(
-            [&]() -> coro<std::string> { co_return co_await m_get_license(); },
-            m_exception_handler);
+            [&]() -> coro<std::string> { co_return co_await m_get_license(); });
 
         auto handler = payg_handler(str);
 
@@ -36,29 +35,6 @@ coro<void> payg_updater::periodic_update(std::chrono::seconds interval) {
 
         if (sleep_duration > 0s) {
             boost::asio::steady_timer timer(m_ioc, sleep_duration);
-            co_await timer.async_wait(boost::asio::use_awaitable);
-        }
-    }
-}
-
-} // namespace uh::cluster::lic
-
-namespace uh::cluster {
-
-coro<void> periodic_executor(boost::asio::io_context& io_context,
-                             std::chrono::seconds interval,
-                             std::function<coro<void>()> task) {
-    while (true) {
-        auto start_time = std::chrono::steady_clock::now();
-
-        co_await task();
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto elapsed_time = end_time - start_time;
-        auto sleep_duration = interval - elapsed_time;
-
-        if (sleep_duration > 0s) {
-            boost::asio::steady_timer timer(io_context, sleep_duration);
             co_await timer.async_wait(boost::asio::use_awaitable);
         }
     }
