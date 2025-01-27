@@ -12,7 +12,7 @@ using boost::asio::ip::tcp;
 
 namespace uh::cluster {
 
-// TODO: use beast, or use existing implementation!
+// TODO: use beast, or use existing implementation like libcurl.
 coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
                                       const std::string& url,
                                       const std::string& username,

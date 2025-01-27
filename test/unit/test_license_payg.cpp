@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE "internal/payg tests"
+#define BOOST_TEST_MODULE "payg_handler tests"
 
 #include <boost/test/unit_test.hpp>
 
