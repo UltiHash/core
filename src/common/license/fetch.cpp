@@ -12,35 +12,12 @@ using boost::asio::ip::tcp;
 
 namespace uh::cluster::lic {
 
-class http_error_category : public std::error_category {
-public:
-    const char* name() const noexcept override { return "http"; }
-
-    std::string message(int ev) const override {
-        switch (ev) {
-        case 200:
-            return "OK";
-        case 202:
-            return "Accepted";
-        case 401:
-            return "Unauthorized";
-        case 429:
-            return "Overloaded";
-        }
-        if (400 <= ev && ev < 500)
-            return "Bad Request";
-        if (500 <= ev && ev < 600)
-            return "Error on Backend";
-
-        return "Unknown";
-    }
-};
-
 const http_error_category& http_category() {
     static http_error_category instance;
     return instance;
 }
 
+// TODO: use beast, or use existing implementation!
 coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
                                       const std::string& url,
                                       const std::string& username,
@@ -125,17 +102,16 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
     co_return response_body;
 }
 
-bool fetch_exception_handler(const std::exception& e) {
+backoff_action fetch_exception_handler(const std::exception& e) {
     if (const auto* se = dynamic_cast<const std::system_error*>(&e)) {
         std::cout << "Caught system_error: " << se->what() << std::endl;
         std::cout << "Error code: " << se->code() << std::endl;
         std::cout << "Error message: " << se->code().message() << std::endl;
-        return true;
+        return backoff_action::RETRY;
     } else if (const auto* re = dynamic_cast<const std::runtime_error*>(&e)) {
         std::cout << "Caught runtime_error: " << re->what() << std::endl;
-        return false;
     }
-    return false;
+    return backoff_action::ABORT;
 }
 
 } // namespace uh::cluster::lic
