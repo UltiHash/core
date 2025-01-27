@@ -37,7 +37,7 @@ public:
               m_etcd, //
 
               // TODO: use codes below and read infomation from environment
-              // variables
+              // variables using std::getenv(), UH_CUSTOMER_ID, UH_ACCESS_TOKEN
               // [&]() -> coro<std::string> {
               //     const std::string url{"example.com"};
               //     const std::string username{""};
