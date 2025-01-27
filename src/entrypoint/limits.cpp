@@ -7,15 +7,20 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-limits::limits(std::atomic<std::size_t>& max_data_size)
-    : m_max_data_size(max_data_size),
-      m_data_storage_size(0ull) {}
+limits::limits()
+    : m_data_storage_cap{0ull},
+      m_data_storage_size{0ull} {}
 
-void limits::storage_size(std::size_t size) { m_data_storage_size = size; }
+void limits::set_storage_cap(std::size_t size) {
+    m_data_storage_cap.store(size);
+}
+void limits::set_storage_size(std::size_t size) {
+    m_data_storage_size.store(size);
+}
 
 void limits::check_storage_size(std::size_t increment) {
-    auto new_size = m_data_storage_size + increment;
-    auto max_data_size = m_max_data_size.load();
+    auto new_size = m_data_storage_size.load() + increment;
+    auto max_data_size = m_data_storage_cap.load();
     if (new_size > max_data_size) {
         throw command_exception(status::insufficient_storage,
                                 "StorageLimitExceeded", "insufficient storage");

@@ -6,12 +6,17 @@ namespace uh::cluster {
 
 class limits {
 public:
-    limits(std::atomic<std::size_t>& max_data_size);
+    limits();
 
     /**
      * Set storage size without checking.
      */
-    void storage_size(std::size_t size);
+    void set_storage_cap(std::size_t size);
+
+    /**
+     * Set storage size without checking.
+     */
+    void set_storage_size(std::size_t size);
 
     /**
      * Check internal storage size and increment the counter.
@@ -24,8 +29,8 @@ public:
     static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
 
 private:
-    std::atomic<std::size_t>& m_max_data_size;
-    std::size_t m_data_storage_size;
+    std::atomic<std::size_t> m_data_storage_cap;
+    std::atomic<std::size_t> m_data_storage_size;
     unsigned m_warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
 };
 
