@@ -24,7 +24,7 @@ struct storage_group : public storage_interface {
 
     [[nodiscard]] bool is_empty() const noexcept;
 
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
 
     coro<void> read_fragment(context& ctx, char* buffer,
@@ -47,7 +47,7 @@ struct storage_group : public storage_interface {
     [[nodiscard]] size_t group_id() const noexcept;
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                        std::string_view) override;
+                        std::span<const char>) override;
 
     coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                        size_t size, char* buffer) override;

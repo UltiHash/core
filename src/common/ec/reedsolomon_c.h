@@ -3,7 +3,7 @@
 #include "common/types/scoped_buffer.h"
 #include "ec_interface.h"
 
-#include <string_view>
+#include <span>
 #include <vector>
 
 extern "C" {
@@ -28,7 +28,7 @@ public:
           m_ec_nodes(ec_nodes),
           m_rs(get_rs()) {}
 
-    void recover(const std::vector<std::string_view>& shards,
+    void recover(const std::vector<std::span<const char>>& shards,
                  std::vector<data_stat>& stats) const override {
         if (shards.size() != m_ec_nodes + m_data_nodes and
             stats.size() != shards.size()) {
@@ -58,7 +58,7 @@ public:
         }
     }
 
-    encoded encode(std::string_view data) const override {
+    encoded encode(std::span<const char> data) const override {
 
         const auto shard_size = (data.size() + m_data_nodes - 1) / m_data_nodes;
         const auto total_blocks = m_data_nodes + m_ec_nodes;

@@ -31,7 +31,7 @@ messenger::recv_dedupe_response(const header& message_header) {
 }
 
 coro<void> messenger::send_write(context& ctx, const write_request& req) {
-    auto data = std::get<std::string_view>(req.data);
+    auto data = std::get<std::span<const char>>(req.data);
     const size_type data_size = static_cast<size_type>(data.size());
     register_write_buffer(data_size);
     register_write_buffer(data);
@@ -61,7 +61,7 @@ coro<write_request> messenger::recv_write(const header& message_header) {
 coro<void> messenger::send_ds_write(context& ctx, const ds_write_request& req) {
     register_write_buffer(req.ds_id);
     register_write_buffer(req.pointer);
-    register_write_buffer(std::get<std::string_view>(req.data));
+    register_write_buffer(std::get<std::span<const char>>(req.data));
     co_await send_buffers(ctx, STORAGE_DS_WRITE_REQ);
 }
 

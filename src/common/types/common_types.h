@@ -21,7 +21,7 @@ struct dedupe_response {
 struct ds_write_request {
     uint32_t ds_id;
     uint64_t pointer;
-    std::variant<std::string_view, unique_buffer<>> data;
+    std::variant<std::span<const char>, unique_buffer<>> data;
 };
 
 struct ds_read_request {
@@ -32,7 +32,7 @@ struct ds_read_request {
 
 struct write_request {
     std::vector<std::size_t> offsets;
-    std::variant<std::string_view, unique_buffer<>> data;
+    std::variant<std::span<const char>, unique_buffer<>> data;
 };
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;

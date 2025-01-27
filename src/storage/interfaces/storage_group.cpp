@@ -66,12 +66,13 @@ void storage_group::remove(size_t id, size_t group_nid) {
     return m_status == empty;
 }
 
-coro<address> storage_group::write(context& ctx, std::string_view data,
+coro<address> storage_group::write(context& ctx, std::span<const char> data,
                                    const std::vector<std::size_t>& offsets) {
 
     if (!is_healthy()) {
         throw std::runtime_error("unhealthy storage system");
     }
+
     auto encoded = m_ec_calc->encode(data);
     auto res =
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
@@ -174,7 +175,7 @@ coro<std::map<size_t, size_t>> storage_group::get_ds_size_map(context& ctx) {
 }
 
 coro<void> storage_group::ds_write(context&, uint32_t, uint64_t,
-                                   std::string_view) {
+                                   std::span<const char>) {
     throw std::runtime_error("unsupported operation in storage group");
 }
 

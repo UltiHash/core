@@ -6,7 +6,7 @@
 #include "common/utils/time_utils.h"
 #include "storage/default_data_store.h"
 #include <list>
-#include <string_view>
+#include <span>
 
 namespace uh::cluster {
 
@@ -32,7 +32,7 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
 
         load_monitor load(m_load);
@@ -46,8 +46,6 @@ struct local_storage : public storage_interface {
             const std::size_t start_pos = i * part_size;
             const std::size_t current_part_size =
                 std::min(data.size() - start_pos, part_size);
-            const std::string_view part =
-                data.substr(start_pos, current_part_size);
 
             std::vector<std::size_t> local_offsets;
             while (offsets_idx < offsets.size() &&
@@ -55,7 +53,9 @@ struct local_storage : public storage_interface {
                 local_offsets.push_back(offsets[offsets_idx] - start_pos);
                 ++offsets_idx;
             }
-            auto addr = m_data_stores[i]->write(part, local_offsets);
+
+            auto addr = m_data_stores[i]->write(
+                data.subspan(start_pos, current_part_size), local_offsets);
             total_addr.append(addr);
         }
 
@@ -180,7 +180,7 @@ struct local_storage : public storage_interface {
     }
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                        std::string_view data) override {
+                        std::span<const char> data) override {
         m_data_stores.at(ds_id)->manual_write(pointer, data);
         co_return;
     }
