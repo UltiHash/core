@@ -7,7 +7,7 @@ mock_global_data_view::mock_global_data_view(mock_data_store& storage)
     : m_storage{storage} {}
 
 coro<address>
-mock_global_data_view::write(context& ctx, std::string_view data,
+mock_global_data_view::write(context& ctx, std::span<const char> data,
                              const std::vector<std::size_t>& offsets) {
     co_return m_storage.write(data, offsets);
 }

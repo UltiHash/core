@@ -10,7 +10,7 @@ class mock_global_data_view : public global_data_view {
 public:
     mock_global_data_view(mock_data_store& storage);
 
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;

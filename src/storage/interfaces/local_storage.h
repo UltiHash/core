@@ -82,6 +82,7 @@ struct local_storage : public storage_interface {
                             const std::vector<size_t>& offsets) override {
         load_monitor load(m_load);
         LOG_DEBUG() << ctx.peer() << ": read addr start";
+
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
@@ -91,6 +92,7 @@ struct local_storage : public storage_interface {
                     "Could not read the data with the given size");
             }
         }
+
         LOG_DEBUG() << ctx.peer() << ": read addr done";
         co_return;
     }
