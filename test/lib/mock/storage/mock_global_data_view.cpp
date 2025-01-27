@@ -19,7 +19,7 @@ mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
     shared_buffer<char> buffer(size);
-    m_storage.read(buffer.data(), pointer, size);
+    m_storage.read(pointer, buffer.span());
     return buffer;
 }
 
@@ -27,7 +27,7 @@ coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
                                                   const uint128_t& pointer,
                                                   size_t size) {
     shared_buffer<char> buffer(size);
-    m_storage.read(buffer.data(), pointer, size);
+    m_storage.read(pointer, buffer.span());
     co_return buffer;
 }
 
@@ -37,7 +37,7 @@ coro<std::size_t> mock_global_data_view::read_address(context& ctx,
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        m_storage.read(buffer, frag.pointer, frag.size);
+        m_storage.read(frag.pointer, {buffer, frag.size});
         buffer += frag.size;
         size += frag.size;
     }

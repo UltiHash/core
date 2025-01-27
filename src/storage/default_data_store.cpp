@@ -81,22 +81,21 @@ default_data_store::default_data_store(data_store_config conf,
         [this] { return get_used_space(); });
 }
 
-std::size_t default_data_store::read(char* buffer,
-                                     const uint128_t& global_pointer,
-                                     size_t size) {
+std::size_t default_data_store::read(const uint128_t& global_pointer,
+                                     std::span<char> buffer) {
     // TODO what is the difference to read_up_to? Consult former implementation
-    return read_up_to(buffer, global_pointer, size);
+    return read_up_to(global_pointer, buffer);
 }
 
-std::size_t default_data_store::read_up_to(
-    char* buffer, const uh::cluster::uint128_t& global_pointer, size_t size) {
+std::size_t
+default_data_store::read_up_to(const uh::cluster::uint128_t& global_pointer,
+                               std::span<char> buffer) {
     std::size_t rv = 0ull;
     auto pointer = global_pointer;
 
-    while (rv < size) {
+    while (rv < buffer.size()) {
         auto loc = file_location(pointer_traits::get_pointer(pointer));
-        auto count =
-            loc.file.read(loc.offset, std::span<char>{buffer + rv, size - rv});
+        auto count = loc.file.read(loc.offset, buffer.subspan(rv));
         if (count == 0) {
             break;
         }
@@ -153,11 +152,10 @@ void default_data_store::manual_write(uint64_t pointer,
     loc.file.write(loc.offset, data);
 }
 
-void default_data_store::manual_read(uint64_t pointer, size_t size,
-                                     char* buffer) {
+void default_data_store::manual_read(uint64_t pointer, std::span<char> buffer) {
 
     auto loc = file_location(pointer);
-    loc.file.read(loc.offset, std::span<char>{buffer, size});
+    loc.file.read(loc.offset, buffer);
 }
 
 address default_data_store::link(const address& addr) {

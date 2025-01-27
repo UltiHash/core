@@ -18,12 +18,11 @@ struct data_store {
     virtual void manual_write(uint64_t internal_pointer,
                               std::span<const char> data) = 0;
 
-    virtual void manual_read(uint64_t pointer, size_t size, char* buffer) = 0;
-
-    virtual std::size_t read(char* buffer, const uint128_t& pointer,
-                             size_t size) = 0;
-    virtual std::size_t read_up_to(char* buffer, const uint128_t& pointer,
-                                   size_t size) = 0;
+    virtual void manual_read(uint64_t pointer, std::span<char> buffer) = 0;
+    virtual std::size_t read(const uint128_t& pointer,
+                             std::span<char> buffer) = 0;
+    virtual std::size_t read_up_to(const uint128_t& pointer,
+                                   std::span<char> buffer) = 0;
 
     virtual address link(const address& addr) = 0;
 

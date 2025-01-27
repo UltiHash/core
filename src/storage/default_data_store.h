@@ -44,7 +44,7 @@ public:
      * @param size
      * @param buffer
      */
-    void manual_read(uint64_t pointer, size_t size, char* buffer);
+    void manual_read(uint64_t pointer, std::span<char> buffer);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -57,8 +57,8 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(char* buffer, const uint128_t& pointer, size_t size);
-    std::size_t read_up_to(char* buffer, const uint128_t& pointer, size_t size);
+    std::size_t read(const uint128_t& pointer, std::span<char> buffer);
+    std::size_t read_up_to(const uint128_t& pointer, std::span<char> buffer);
 
     /**
      * @brief Creates a reference to one or multiple storage locations.

@@ -65,7 +65,7 @@ struct local_storage : public storage_interface {
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
         load_monitor load(m_load);
-        get_data_store(f.pointer).read(buffer, f.pointer, f.size);
+        get_data_store(f.pointer).read(f.pointer, {buffer, f.size});
         co_return;
     }
 
@@ -74,7 +74,7 @@ struct local_storage : public storage_interface {
         load_monitor load(m_load);
         shared_buffer<> buf(size);
         const auto read_size =
-            get_data_store(pointer).read_up_to(buf.data(), pointer, size);
+            get_data_store(pointer).read_up_to(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
@@ -86,7 +86,7 @@ struct local_storage : public storage_interface {
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
-                    .read(buffer + offsets[i], frag.pointer, frag.size) !=
+                    .read(frag.pointer, {buffer + offsets[i], frag.size}) !=
                 frag.size) [[unlikely]] {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
@@ -188,7 +188,7 @@ struct local_storage : public storage_interface {
 
     coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                        size_t size, char* buffer) override {
-        m_data_stores.at(ds_id)->manual_read(pointer, size, buffer);
+        m_data_stores.at(ds_id)->manual_read(pointer, {buffer, size});
         co_return;
     }
 

@@ -90,35 +90,34 @@ void mock_data_store::manual_write(uint64_t internal_pointer,
     std::copy(data.begin(), data.end(), m_data.begin() + internal_pointer);
 }
 
-void mock_data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
-    std::memcpy(buffer, m_data.data() + pointer, size);
+void mock_data_store::manual_read(uint64_t pointer, std::span<char> buffer) {
+    std::memcpy(buffer.data(), m_data.data() + pointer, buffer.size());
 }
 
-std::size_t mock_data_store::read(char* buffer, const uint128_t& global_pointer,
-                                  size_t size) {
+std::size_t mock_data_store::read(const uint128_t& global_pointer,
+                                  std::span<char> buffer) {
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
         pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
-        pointer + size > current_offset) {
+        pointer + buffer.size() > current_offset) {
         LOG_WARN() << "attempted to read data from the out-of-bounds offset="
                    << pointer << ", with current_offset=" << current_offset;
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::memcpy(buffer, m_data.data() + pointer, size);
-    return size;
+    std::memcpy(buffer.data(), m_data.data() + pointer, buffer.size());
+    return buffer.size();
 }
 
-std::size_t mock_data_store::read_up_to(char* buffer,
-                                        const uint128_t& global_pointer,
-                                        size_t size) {
+std::size_t mock_data_store::read_up_to(const uint128_t& global_pointer,
+                                        std::span<char> buffer) {
 
     const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
-    size = std::min(size, current_offset - pointer);
+    auto size = std::min(buffer.size(), current_offset - pointer);
 
     if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
         pointer_traits::get_data_store_id(global_pointer) != m_data_store_id) {
@@ -127,7 +126,7 @@ std::size_t mock_data_store::read_up_to(char* buffer,
         throw std::out_of_range("pointer is out of range");
     }
 
-    std::memcpy(buffer, m_data.data() + pointer, size);
+    std::memcpy(buffer.data(), m_data.data() + pointer, size);
     return size;
 }
 
