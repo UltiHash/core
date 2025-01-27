@@ -131,11 +131,6 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
     co_return freed_bytes;
 }
 
-[[nodiscard]] boost::asio::io_context&
-default_global_data_view::get_executor() const {
-    return m_io_service;
-}
-
 [[nodiscard]] std::size_t
 default_global_data_view::get_storage_service_connection_count()
     const noexcept {

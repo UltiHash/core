@@ -30,7 +30,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
         shared_buffer<char> fragment(size);
         memset(fragment.data(), fill_char, size);
         auto addr =
-            boost::asio::co_spawn(gdv->get_executor(),
+            boost::asio::co_spawn(get_executor(),
                                   gdv->write(ctx, fragment.string_view(), {0}),
                                   boost::asio::use_future)
                 .get();
@@ -164,7 +164,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
     auto addr_a =
-        boost::asio::co_spawn(gdv->get_executor(),
+        boost::asio::co_spawn(get_executor(),
                               gdv->write(ctx, fragment_a.string_view(), {0}),
                               boost::asio::use_future)
             .get();
@@ -176,7 +176,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
 
     auto addr_b =
-        boost::asio::co_spawn(gdv->get_executor(),
+        boost::asio::co_spawn(get_executor(),
                               gdv->write(ctx, fragment_b.string_view(), {0}),
                               boost::asio::use_future)
             .get();
@@ -187,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
     auto addr_c =
-        boost::asio::co_spawn(gdv->get_executor(),
+        boost::asio::co_spawn(get_executor(),
                               gdv->write(ctx, fragment_c.string_view(), {0}),
                               boost::asio::use_future)
             .get();

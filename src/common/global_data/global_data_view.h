@@ -29,8 +29,6 @@ public:
 
     virtual coro<std::size_t> get_used_space(context& ctx) = 0;
 
-    [[nodiscard]] virtual boost::asio::io_context& get_executor() const = 0;
-
     [[nodiscard]] virtual std::size_t
     get_storage_service_connection_count() const noexcept = 0;
 

@@ -3,10 +3,8 @@
 #include "common/utils/address_utils.h"
 
 namespace uh::cluster {
-mock_global_data_view::mock_global_data_view(boost::asio::io_context& ioc,
-                                             mock_data_store& storage)
-    : m_ioc{ioc},
-      m_storage{storage} {}
+mock_global_data_view::mock_global_data_view(mock_data_store& storage)
+    : m_storage{storage} {}
 
 coro<address>
 mock_global_data_view::write(context& ctx, std::string_view data,
@@ -59,11 +57,6 @@ coro<std::size_t> mock_global_data_view::get_used_space(context& ctx) {
 coro<std::size_t> mock_global_data_view::unlink(context& ctx,
                                                 const address& addr) {
     co_return m_storage.unlink(addr);
-}
-
-[[nodiscard]] boost::asio::io_context&
-mock_global_data_view::get_executor() const {
-    return m_ioc;
 }
 
 [[nodiscard]] std::size_t

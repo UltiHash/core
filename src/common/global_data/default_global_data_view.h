@@ -143,15 +143,6 @@ public:
     coro<std::size_t> get_used_space(context& ctx);
 
     /**
-     * @brief Provides access to the I/O context used by the
-     * default_global_data_view
-     * @param c open telemetry context
-     * @return A reference to the boost::asio::io_context used by the
-     * default_global_data_view
-     */
-    [[nodiscard]] boost::asio::io_context& get_executor() const;
-
-    /**
      * @brief Returns the configured number of connections maintained to each
      * storage service instance.
      * @param c open telemetry context
