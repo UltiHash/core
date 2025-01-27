@@ -8,7 +8,6 @@
 namespace uh::cluster {
 
 coro<void> payg_updater::update() {
-    // TODO: do DI for exp_backoff and fetch_exception_handler
     auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
     try {
         auto str = co_await backoff.run(
