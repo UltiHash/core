@@ -97,18 +97,4 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
     co_return response_body;
 }
 
-backoff_action fetch_exception_handler(const std::exception& e) {
-    if (const auto* se = dynamic_cast<const std::system_error*>(&e)) {
-        const auto& category =
-            dynamic_cast<const http_error_category&>(se->code().category());
-        int status_code = se->code().value();
-
-        LOG_DEBUG() << "Error code: " << status_code;
-        LOG_DEBUG() << "Error message: " << category.message(status_code);
-
-        return category.action(se->code().value());
-    }
-    return backoff_action::ABORT;
-}
-
 } // namespace uh::cluster
