@@ -24,8 +24,6 @@ public:
 
     void stop();
 
-    ~service() noexcept;
-
 private:
     entrypoint_config m_config;
     boost::asio::io_context m_ioc;
@@ -34,13 +32,10 @@ private:
     service_registry m_service_registry;
 
     attached_service<storage::service> m_attached_storage;
-    attached_service<deduplicator::service> m_attached_dedupe;
-
     service_maintainer<storage_interface> m_storage_maintainer;
-    service_maintainer<deduplicator_interface> m_dedupe_maintainer;
-    roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 
     default_global_data_view m_data_view;
+    std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 
     multipart_state m_uploads;

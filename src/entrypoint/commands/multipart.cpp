@@ -7,10 +7,9 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-multipart::multipart(
-    roundrobin_load_balancer<deduplicator_interface>& dedupe_services,
-    global_data_view& gdv, multipart_state& uploads)
-    : m_dedupe_services(dedupe_services),
+multipart::multipart(deduplicator_interface& dedupe, global_data_view& gdv,
+                     multipart_state& uploads)
+    : m_dedupe(dedupe),
       m_gdv(gdv),
       m_uploads(uploads) {}
 
@@ -40,8 +39,8 @@ coro<response> multipart::handle(request& req) {
 
     dedupe_response resp = {};
     if (!buffer.empty()) {
-        resp = co_await m_dedupe_services.get()->deduplicate(
-            req.context(), {buffer.data(), buffer.size()});
+        resp = co_await m_dedupe.deduplicate(req.context(),
+                                             {buffer.data(), buffer.size()});
     }
 
     auto md5 = to_hex(md5::from_buffer(buffer.span()));

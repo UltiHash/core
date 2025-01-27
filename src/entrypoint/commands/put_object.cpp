@@ -19,17 +19,16 @@ coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
     co_return read;
 }
 
-future<dedupe_response>
-upload(context& ctx, boost::asio::io_context& ioc,
-       roundrobin_load_balancer<deduplicator_interface>& dedup,
-       const std::vector<char>& buffer) {
+future<dedupe_response> upload(context& ctx, boost::asio::io_context& ioc,
+                               deduplicator_interface& dedup,
+                               const std::vector<char>& buffer) {
     promise<dedupe_response> p;
     auto f = p.get_future();
 
     if (!buffer.empty()) {
-        asio::co_spawn(
-            ioc, dedup.get()->deduplicate(ctx, {buffer.data(), buffer.size()}),
-            use_promise_cospawn(std::move(p)));
+        asio::co_spawn(ioc,
+                       dedup.deduplicate(ctx, {buffer.data(), buffer.size()}),
+                       use_promise_cospawn(std::move(p)));
     } else {
         p.set_value(dedupe_response());
     }
@@ -42,7 +41,7 @@ upload(context& ctx, boost::asio::io_context& ioc,
 put_object::put_object(boost::asio::io_context& ioc,
                        const entrypoint_config& conf, limits& uhlimits,
                        directory& dir, global_data_view& gdv,
-                       roundrobin_load_balancer<deduplicator_interface>& dedup)
+                       deduplicator_interface& dedup)
     : m_ioc(ioc),
       m_config(conf),
       m_dir(dir),
@@ -153,8 +152,8 @@ coro<dedupe_response> put_object::put_small_object(request& req,
         co_return dedupe_response();
     }
 
-    co_return co_await m_dedup.get()->deduplicate(
-        req.context(), {buffer.data(), buffer.size()});
+    co_return co_await m_dedup.deduplicate(req.context(),
+                                           {buffer.data(), buffer.size()});
 }
 
 std::string put_object::action_id() const { return "s3:PutObject"; }

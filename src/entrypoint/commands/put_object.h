@@ -2,7 +2,6 @@
 
 #include "command.h"
 #include "common/crypto/hash.h"
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "entrypoint/config.h"
@@ -14,8 +13,7 @@ namespace uh::cluster {
 class put_object : public command {
 public:
     put_object(boost::asio::io_context&, const entrypoint_config&, limits&,
-               directory&, global_data_view&,
-               roundrobin_load_balancer<deduplicator_interface>&);
+               directory&, global_data_view&, deduplicator_interface&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -36,7 +34,7 @@ private:
     directory& m_dir;
     global_data_view& m_gdv;
     limits& m_limits;
-    roundrobin_load_balancer<deduplicator_interface>& m_dedup;
+    deduplicator_interface& m_dedup;
 };
 
 } // namespace uh::cluster
