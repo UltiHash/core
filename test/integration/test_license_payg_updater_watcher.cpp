@@ -5,15 +5,14 @@
 #include "test_config.h"
 
 #include <common/etcd/namespace.h>
-#include <common/license/payg_updater.h>
-#include <common/license/payg_watcher.h>
+#include <common/license/payg/updater.h>
+#include <common/license/payg/watcher.h>
 #include <fakeit/fakeit.hpp>
 #include <lib/util/coroutine.h>
 
 using namespace fakeit;
 
 using namespace uh::cluster;
-using namespace uh::cluster::lic;
 using namespace boost::asio;
 
 class fixture : public coro_fixture {
@@ -68,8 +67,8 @@ BOOST_FIXTURE_TEST_SUITE(a_payg_watcher, fixture)
 BOOST_AUTO_TEST_CASE(returns_updated_license_through_callback) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    payg received_license;
-    payg_watcher sut{etcd, [&](const payg& license) {
+    payg_license received_license;
+    payg_watcher sut{etcd, [&](const payg_license& license) {
                          received_license = license;
                          promise.set_value();
                      }};
@@ -83,7 +82,8 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_callback) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     BOOST_CHECK_EQUAL(received_license.customer_id, "big corp xy");
-    BOOST_CHECK_EQUAL(received_license.license_type, payg::type::FREEMIUM);
+    BOOST_CHECK_EQUAL(received_license.license_type,
+                      payg_license::type::FREEMIUM);
     BOOST_CHECK_EQUAL(received_license.storage_cap, 10240);
     BOOST_CHECK_EQUAL(received_license.ec.enabled, true);
     BOOST_CHECK_EQUAL(received_license.ec.max_group_size, 10);
@@ -94,7 +94,8 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_callback) {
 BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    payg_watcher sut{etcd, [&](const payg& license) { promise.set_value(); }};
+    payg_watcher sut{etcd,
+                     [&](const payg_license& license) { promise.set_value(); }};
 
     auto updater = payg_updater(
         ioc, etcd, [&]() -> coro<std::string> { co_return json_literal; });
@@ -106,7 +107,8 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     }
     auto received_license = sut.get();
     BOOST_CHECK_EQUAL(received_license.customer_id, "big corp xy");
-    BOOST_CHECK_EQUAL(received_license.license_type, payg::type::FREEMIUM);
+    BOOST_CHECK_EQUAL(received_license.license_type,
+                      payg_license::type::FREEMIUM);
     BOOST_CHECK_EQUAL(received_license.storage_cap, 10240);
     BOOST_CHECK_EQUAL(received_license.ec.enabled, true);
     BOOST_CHECK_EQUAL(received_license.ec.max_group_size, 10);

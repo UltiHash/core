@@ -4,9 +4,9 @@
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
 
-namespace uh::cluster::lic {
+namespace uh::cluster {
 
-struct payg {
+struct payg_license {
     enum type { FREEMIUM, PREMIUM };
 
     std::string customer_id;
@@ -27,14 +27,15 @@ public:
     enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
     explicit payg_handler(std::string_view json_str,
                           verify option = verify::VERIFY);
-    auto get() const { return m_payg; }
+    auto get() const { return m_license; }
     auto to_string() const { return m_compact_json; }
 
 private:
-    payg m_payg;
+    payg_license m_license;
     std::string m_compact_json;
 };
 
-payg check_payg_license(std::string_view license, bool skip_verify = false);
+payg_license check_payg_license(std::string_view license,
+                                bool skip_verify = false);
 
-} // namespace uh::cluster::lic
+} // namespace uh::cluster

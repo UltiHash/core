@@ -1,16 +1,17 @@
 #pragma once
 
-#include "common/telemetry/log.h"
-#include "internal/payg.h"
+#include <common/license/payg/payg.h>
+
+#include <common/telemetry/log.h>
 
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 
-namespace uh::cluster::lic {
+namespace uh::cluster {
 
 class payg_watcher {
 public:
-    using callback_t = std::function<void(const payg& license)>;
+    using callback_t = std::function<void(const payg_license& license)>;
     payg_watcher(etcd_manager& etcd, callback_t&& callback)
         : m_etcd{etcd},
           m_callback{std::forward<callback_t>(callback)},
@@ -21,12 +22,12 @@ public:
             auto handler = payg_handler(m_etcd.get(etcd_payg_license),
                                         payg_handler::verify::SKIP_VERIFY);
             auto license = handler.get();
-            m_license.store(std::make_shared<payg>(license));
+            m_license.store(std::make_shared<payg_license>(license));
         } catch (nlohmann::json::parse_error& e) {
             LOG_ERROR() << "Invalid JSON string: " << e.what();
         }
     }
-    payg get() { return *m_license.load(); }
+    payg_license get() { return *m_license.load(); }
 
 private:
     void on_watch() {
@@ -35,17 +36,17 @@ private:
                                     payg_handler::verify::SKIP_VERIFY);
         LOG_INFO() << handler.to_string();
         auto license = handler.get();
-        m_license.store(std::make_shared<payg>(license));
+        m_license.store(std::make_shared<payg_license>(license));
         m_callback(license);
     }
 
     etcd_manager& m_etcd;
     callback_t m_callback;
     etcd_manager::watch_guard m_wg;
-    std::atomic<std::shared_ptr<payg>> m_license;
+    std::atomic<std::shared_ptr<payg_license>> m_license;
 };
 
-} // namespace uh::cluster::lic
+} // namespace uh::cluster
 
 // template <typename Struct, typename MemberType>
 // MemberType get_member_type(MemberType Struct::*);

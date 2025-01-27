@@ -10,12 +10,7 @@
 using boost::asio::use_awaitable;
 using boost::asio::ip::tcp;
 
-namespace uh::cluster::lic {
-
-const http_error_category& http_category() {
-    static http_error_category instance;
-    return instance;
-}
+namespace uh::cluster {
 
 // TODO: use beast, or use existing implementation!
 coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
@@ -104,14 +99,16 @@ coro<std::string> fetch_response_body(boost::asio::io_context& io_context,
 
 backoff_action fetch_exception_handler(const std::exception& e) {
     if (const auto* se = dynamic_cast<const std::system_error*>(&e)) {
-        std::cout << "Caught system_error: " << se->what() << std::endl;
-        std::cout << "Error code: " << se->code() << std::endl;
-        std::cout << "Error message: " << se->code().message() << std::endl;
-        return backoff_action::RETRY;
-    } else if (const auto* re = dynamic_cast<const std::runtime_error*>(&e)) {
-        std::cout << "Caught runtime_error: " << re->what() << std::endl;
+        const auto& category =
+            dynamic_cast<const http_error_category&>(se->code().category());
+        int status_code = se->code().value();
+
+        LOG_DEBUG() << "Error code: " << status_code;
+        LOG_DEBUG() << "Error message: " << category.message(status_code);
+
+        return category.action(se->code().value());
     }
     return backoff_action::ABORT;
 }
 
-} // namespace uh::cluster::lic
+} // namespace uh::cluster

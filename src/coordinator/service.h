@@ -5,7 +5,7 @@
 
 #include <common/etcd/ec_groups/ec_group_maintainer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
-#include <common/license/fetch.h>
+#include <common/license/payg/fetch.h>
 #include <common/telemetry/log.h>
 #include <common/utils/io_context_runner.h>
 #include <config/configuration.h>
@@ -13,7 +13,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include <common/license/payg_updater.h>
+#include <common/license/payg/updater.h>
 #include <common/license/test.h>
 #include <common/utils/strings.h>
 
@@ -31,19 +31,20 @@ public:
           m_storage_maintainer(
               m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
 
-          m_payg_updater{m_ioc,
-                         m_etcd, //
+          m_payg_updater{
+              m_ioc,
+              m_etcd, //
 
-                         // [&]() -> coro<std::string> {
-                         //     const std::string url{"example.com"};
-                         //     const std::string username{""};
-                         //     const std::string password{""};
-                         //     co_return co_await lic::fetch_response_body(
-                         //         m_ioc, url, username, password);
-                         // }
+              // [&]() -> coro<std::string> {
+              //     const std::string url{"example.com"};
+              //     const std::string username{""};
+              //     const std::string password{""};
+              //     co_return co_await fetch_response_body(
+              //         m_ioc, url, username, password);
+              // }
 
-                         [&]() -> coro<std::string> {
-                             static constexpr const char* json_literal = R"({
+              [&]() -> coro<std::string> {
+                  static constexpr const char* json_literal = R"({
                                  "customer_id": "big corp xy",
                                  "license_type": "freemium",
                                  "storage_cap": 10240,
@@ -58,11 +59,9 @@ public:
                                  "signature":
                                  "yg2DNf6iej5np/rQuM4mkp1xzByxxV6vHmHjrbimLyNndL+biWhajraNcp88mXB6iNy/EQ5Izx8H6Q7mggpxBg=="
                              })";
-                             co_return json_literal;
-                         }, //
-                         [](const std::exception& e) -> lic::backoff_action {
-                             return lic::fetch_exception_handler(e);
-                         }} //
+                  co_return json_literal;
+              } //
+          }     //
     {
 
         m_storage_maintainer.add_monitor(m_ec_maintainer);
@@ -104,6 +103,6 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 
-    lic::payg_updater m_payg_updater;
+    payg_updater m_payg_updater;
 };
 } // namespace uh::cluster::coordinator
