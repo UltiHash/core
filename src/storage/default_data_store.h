@@ -58,7 +58,6 @@ public:
      * @throws std::exception: corrupted storage
      */
     std::size_t read(const uint128_t& pointer, std::span<char> buffer);
-    std::size_t read_up_to(const uint128_t& pointer, std::span<char> buffer);
 
     /**
      * @brief Creates a reference to one or multiple storage locations.

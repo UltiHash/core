@@ -42,7 +42,6 @@ public:
     void manual_write(uint64_t internal_pointer, std::span<const char> data);
     void manual_read(uint64_t pointer, std::span<char> buffer);
     std::size_t read(const uint128_t& pointer, std::span<char> buffer);
-    std::size_t read_up_to(const uint128_t& pointer, std::span<char> buffer);
     address link(const address& addr);
     size_t unlink(const address& addr);
     [[nodiscard]] size_t get_used_space() const noexcept;

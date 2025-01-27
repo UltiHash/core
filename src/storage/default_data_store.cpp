@@ -83,13 +83,6 @@ default_data_store::default_data_store(data_store_config conf,
 
 std::size_t default_data_store::read(const uint128_t& global_pointer,
                                      std::span<char> buffer) {
-    // TODO what is the difference to read_up_to? Consult former implementation
-    return read_up_to(global_pointer, buffer);
-}
-
-std::size_t
-default_data_store::read_up_to(const uh::cluster::uint128_t& global_pointer,
-                               std::span<char> buffer) {
     std::size_t rv = 0ull;
     auto pointer = global_pointer;
 

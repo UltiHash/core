@@ -111,25 +111,6 @@ std::size_t mock_data_store::read(const uint128_t& global_pointer,
     return buffer.size();
 }
 
-std::size_t mock_data_store::read_up_to(const uint128_t& global_pointer,
-                                        std::span<char> buffer) {
-
-    const auto pointer = pointer_traits::get_pointer(global_pointer);
-    const auto current_offset = m_current_offset.load();
-
-    auto size = std::min(buffer.size(), current_offset - pointer);
-
-    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
-        pointer_traits::get_data_store_id(global_pointer) != m_data_store_id) {
-        LOG_WARN() << "attempted to read data from the out-of-bounds offset="
-                   << pointer << ", with current_offset=" << current_offset;
-        throw std::out_of_range("pointer is out of range");
-    }
-
-    std::memcpy(buffer.data(), m_data.data() + pointer, size);
-    return size;
-}
-
 address mock_data_store::link(const address& addr) {
     address new_fragments;
     for (size_t i = 0; i < addr.size(); ++i) {

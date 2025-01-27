@@ -73,8 +73,7 @@ struct local_storage : public storage_interface {
                                size_t size) override {
         load_monitor load(m_load);
         shared_buffer<> buf(size);
-        const auto read_size =
-            get_data_store(pointer).read_up_to(pointer, buf.span());
+        auto read_size = get_data_store(pointer).read(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
