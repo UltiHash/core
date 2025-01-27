@@ -26,9 +26,9 @@ public:
      * @affects get_available_space()
      *
      * @param data
-     * @return  allocated address
+     * @return allocated address
      */
-    address write(std::string_view data,
+    address write(std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
 
     /**
@@ -36,7 +36,7 @@ public:
      * @param internal_pointer
      * @param data
      */
-    void manual_write(uint64_t internal_pointer, std::string_view data);
+    void manual_write(uint64_t internal_pointer, std::span<const char> data);
 
     /**
      * Reading direcly from a data store

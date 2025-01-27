@@ -120,17 +120,16 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address default_data_store::write(std::string_view data,
+address default_data_store::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
-    std::span<const char> span(data.data(), data.size());
-    auto allocation = allocate(span.size(), offsets);
+    auto allocation = allocate(data.size(), offsets);
 
     address rv;
 
     std::size_t data_offs = 0ull;
     for (const auto& alloc : allocation) {
         auto count = alloc.l.file.write(alloc.l.offset,
-                                        span.subspan(data_offs, alloc.size));
+                                        data.subspan(data_offs, alloc.size));
 
         if (count != alloc.size) {
             throw std::runtime_error("could not complete buffer write");
@@ -147,10 +146,11 @@ address default_data_store::write(std::string_view data,
     return rv;
 }
 
-void default_data_store::manual_write(uint64_t pointer, std::string_view data) {
+void default_data_store::manual_write(uint64_t pointer,
+                                      std::span<const char> data) {
 
     auto loc = file_location(pointer);
-    loc.file.write(loc.offset, std::span<const char>{data.data(), data.size()});
+    loc.file.write(loc.offset, data);
 }
 
 void default_data_store::manual_read(uint64_t pointer, size_t size,

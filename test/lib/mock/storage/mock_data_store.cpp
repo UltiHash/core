@@ -57,7 +57,7 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(std::string_view data,
+address mock_data_store::write(std::span<const char> data,
                                const std::vector<std::size_t>& offsets) {
 
     if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
@@ -66,7 +66,7 @@ address mock_data_store::write(std::string_view data,
     }
 
     auto current_offset = m_current_offset.fetch_add(data.size());
-    std::copy(data.cbegin(), data.cend(), m_data.begin() + current_offset);
+    std::copy(data.begin(), data.end(), m_data.begin() + current_offset);
 
     address data_address;
     data_address.push({.pointer = pointer_traits::get_global_pointer(
@@ -77,7 +77,7 @@ address mock_data_store::write(std::string_view data,
 }
 
 void mock_data_store::manual_write(uint64_t internal_pointer,
-                                   std::string_view data) {
+                                   std::span<const char> data) {
     if (internal_pointer + data.size() > m_conf.max_data_store_size) {
         throw std::out_of_range("internal_pointer is out of range");
     }
@@ -87,7 +87,7 @@ void mock_data_store::manual_write(uint64_t internal_pointer,
                        .size = data.size()});
     link(data_address);
 
-    std::copy(data.cbegin(), data.cend(), m_data.begin() + internal_pointer);
+    std::copy(data.begin(), data.end(), m_data.begin() + internal_pointer);
 }
 
 void mock_data_store::manual_read(uint64_t pointer, size_t size, char* buffer) {
