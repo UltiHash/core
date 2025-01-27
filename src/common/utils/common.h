@@ -65,6 +65,8 @@ constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
+constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
+
 constexpr auto ETCD_TIMEOUT = std::chrono::seconds(300);
 constexpr auto ETCD_RETRY_INTERVAL = std::chrono::seconds(1);
 

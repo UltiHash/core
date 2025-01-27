@@ -7,6 +7,7 @@
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/license/payg/fetch.h>
 #include <common/telemetry/log.h>
+#include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
 #include <config/configuration.h>
 
@@ -35,6 +36,8 @@ public:
               m_ioc,
               m_etcd, //
 
+              // TODO: use codes below and read infomation from environment
+              // variables
               // [&]() -> coro<std::string> {
               //     const std::string url{"example.com"};
               //     const std::string username{""};
@@ -70,10 +73,9 @@ public:
     void run() {
         LOG_INFO() << "running coordinator service";
 
-        boost::asio::co_spawn(m_ioc,
-                              // TODO: replace 3s with 1h
-                              m_payg_updater.periodic_update(3s),
-                              boost::asio::detached);
+        boost::asio::co_spawn(
+            m_ioc, m_payg_updater.periodic_update(LICENSE_FETCH_PERIOD),
+            boost::asio::detached);
 
         while (!m_stopped) {
             std::unique_lock lock(m_mutex);
