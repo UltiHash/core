@@ -137,16 +137,8 @@ coro<void> handler::handle_read_address(context& ctx, messenger& m,
     const auto addr = co_await m.recv_address(h);
 
     unique_buffer<char> buffer(addr.data_size());
+    co_await m_storage.read(ctx, addr, buffer.span());
 
-    std::vector<size_t> offsets;
-    offsets.reserve(addr.size());
-    size_t offset = 0;
-    for (const auto fsize : addr.sizes) {
-        offsets.emplace_back(offset);
-        offset += fsize;
-    }
-
-    co_await m_storage.read_address(ctx, addr, buffer.span(), offsets);
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 

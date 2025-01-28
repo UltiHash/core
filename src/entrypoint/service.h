@@ -31,8 +31,8 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    attached_service<storage::service> m_attached_storage;
-    service_maintainer<storage_interface> m_storage_maintainer;
+    service_maintainer<distributed_storage, remote_factory>
+        m_storage_maintainer;
 
     default_global_data_view m_data_view;
     std::unique_ptr<deduplicator_interface> m_dedupe;

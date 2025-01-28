@@ -12,6 +12,7 @@
 #include "lib/util/checks.h"
 #include "lib/util/server.h"
 #include "storage/interfaces/data_store.h"
+#include "storage/interfaces/remote_storage.h"
 
 using namespace boost::asio;
 
@@ -23,12 +24,15 @@ struct fixture {
     etcd_manager etcd;
     std::size_t service_id;
     storage_service_get_handler services{1s};
-    roundrobin_load_balancer<storage_interface> load_balancer{1s};
-    uh::cluster::service_maintainer<storage_interface> service_maintainer;
+    roundrobin_load_balancer<distributed_storage> load_balancer{1s};
+    uh::cluster::service_maintainer<distributed_storage, remote_factory>
+        service_maintainer;
 
-    uh::cluster::service_maintainer<storage_interface> make_services() {
-        return uh::cluster::service_maintainer<storage_interface>(
-            etcd, service_factory<storage_interface>(ioc, 2, nullptr));
+    uh::cluster::service_maintainer<distributed_storage, remote_factory>
+    make_services() {
+        return uh::cluster::service_maintainer<distributed_storage,
+                                               remote_factory>(
+            etcd, remote_factory(ioc, 2));
     }
 
     fixture()

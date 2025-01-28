@@ -18,8 +18,8 @@ public:
           m_service_cfg(make_service_config()),
           m_storage_services(
               m_etcd,
-              service_factory<storage_interface>(
-                  m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
+              remote_factory(m_ioc,
+                             m_gdv_config.storage_service_connection_count)) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -138,7 +138,7 @@ private:
     std::vector<std::thread> m_threads;
     std::unique_ptr<coordinator::service> m_coordinator;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    service_maintainer<storage_interface> m_storage_services;
+    service_maintainer<distributed_storage, remote_factory> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;
 };
 

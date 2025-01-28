@@ -67,23 +67,28 @@ struct local_storage : public storage_interface {
         co_return buf;
     }
 
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer,
-                            const std::vector<size_t>& offsets) override {
+    coro<std::size_t> read(context& ctx, const address& addr,
+                           std::span<char> buffer) override {
         LOG_DEBUG() << ctx.peer() << ": read addr start";
+
+        std::size_t offs = 0ull;
 
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
-            if (get_data_store(frag.pointer)
-                    .read(frag.pointer,
-                          buffer.subspan(offsets[i], frag.size)) != frag.size) {
+
+            auto count =
+                get_data_store(frag.pointer)
+                    .read(frag.pointer, buffer.subspan(offs, frag.size));
+            if (count != frag.size) {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
             }
+
+            offs += count;
         }
 
         LOG_DEBUG() << ctx.peer() << ": read addr done";
-        co_return;
+        co_return offs;
     }
 
     coro<address> link(context& ctx, const address& addr) override {

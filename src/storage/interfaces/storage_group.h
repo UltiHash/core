@@ -6,17 +6,18 @@
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
 #include "coordinator/recovery_module.h"
+#include "distributed.h"
 
 namespace uh::cluster {
 
-struct storage_group : public storage_interface {
+struct storage_group : public distributed_storage {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                   size_t ec_nodes, size_t group_id, etcd_manager& etcd,
                   bool active_recovery);
 
     void insert(size_t id, size_t group_nid,
-                const std::shared_ptr<storage_interface>& node);
+                const std::shared_ptr<distributed_storage>& node);
 
     void remove(size_t id, size_t group_nid);
 
@@ -32,6 +33,9 @@ struct storage_group : public storage_interface {
 
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;
+
+    coro<std::size_t> read(context& ctx, const address& addr,
+                           std::span<char> buffer) override;
 
     coro<void> read_address(context& ctx, const address& addr,
                             std::span<char> buffer,
@@ -54,7 +58,7 @@ struct storage_group : public storage_interface {
                        size_t size, char* buffer) override;
 
 private:
-    std::vector<std::shared_ptr<storage_interface>> m_nodes;
+    std::vector<std::shared_ptr<distributed_storage>> m_nodes;
     storage_service_get_handler m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
