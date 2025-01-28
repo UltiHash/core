@@ -9,6 +9,7 @@ namespace uh::cluster {
 struct payg_license {
     enum type { FREEMIUM, PREMIUM };
 
+    std::string version{""};
     std::string customer_id;
     enum type license_type;
     std::size_t storage_cap;
@@ -20,6 +21,8 @@ struct payg_license {
         bool enabled;
         std::size_t max_replicas;
     } replication;
+
+    bool is_valid() const { return !version.empty(); }
 };
 
 class payg_handler {
@@ -34,8 +37,5 @@ private:
     payg_license m_license;
     std::string m_compact_json;
 };
-
-payg_license check_payg_license(std::string_view license,
-                                bool skip_verify = false);
 
 } // namespace uh::cluster
