@@ -7,7 +7,7 @@ noop_deduplicator::noop_deduplicator(global_data_view& storage)
 
 coro<dedupe_response> noop_deduplicator::deduplicate(context& ctx,
                                                      std::string_view data) {
-    auto addr = co_await m_storage.write(ctx, data, {});
+    auto addr = co_await m_storage.write(ctx, data, {0});
 
     co_return dedupe_response{.effective_size = data.size(),
                               .addr = std::move(addr)};
