@@ -31,7 +31,7 @@ export TSAN_OPTIONS="detect_odr_violation=0,suppressions=@PROJECT_SOURCE_DIR@/ts
 export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
 for ((id = 0; id < $instances; ++id)); do
     mkdir -p $UH_DATA/storage-$id
-    $BUILD_DIR/uh-cluster --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
+    $BUILD_DIR/uh-cluster --workdir $UH_DATA/storage-$id storage $UH_ARGS_SN --port $((9200 + id)) &> $log_dir/storage-$id.log &
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
@@ -40,11 +40,11 @@ $BUILD_DIR/uh-cluster coordinator &> $log_dir/coordinator.log &
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
 for ((id = 0; id < $instances; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
-    $BUILD_DIR/uh-cluster --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
+    $BUILD_DIR/uh-cluster --workdir $UH_DATA/deduplicator-$id deduplicator $UH_ARGS_DD --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
-$BUILD_DIR/uh-cluster entrypoint &> $log_dir/entrypoint.log &
+$BUILD_DIR/uh-cluster entrypoint $UH_ARGS_EP &> $log_dir/entrypoint.log &
 
 echo "All services are running. Log files are written $log_dir and will"
 echo "not be removed after the script has finished."
@@ -60,5 +60,9 @@ fi
 
 read
 
+echo "shutting down ..."
+
 kill $(jobs -p)
 wait $(jobs -p)
+
+echo "done"
