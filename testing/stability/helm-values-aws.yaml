@@ -73,7 +73,7 @@ etcd:
 entrypoint:
   replicas: 2
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: storage
     purpose: performance-and-stability-testing
   tolerations:
     - key: "purpose"
