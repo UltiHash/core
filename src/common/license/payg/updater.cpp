@@ -13,9 +13,12 @@ coro<void> payg_updater::update() {
         auto str = co_await backoff.run(
             [&]() -> coro<std::string> { co_return co_await m_get_license(); });
 
-        auto handler = payg_handler(str);
+        auto lic = payg_license::create_from_json(str);
 
-        m_etcd.put(etcd_payg_license, handler.to_string());
+        LOG_INFO() << "license loaded for " << lic.customer_id
+                   << " -- storage size: " << lic.storage_cap << " bytes";
+
+        m_etcd.put(etcd_payg_license, lic.to_json_string());
     } catch (const std::runtime_error& e) {
         std::cout << "License check failed: " << e.what() << std::endl;
     } catch (...) {

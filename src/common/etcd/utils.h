@@ -31,6 +31,7 @@ using namespace std::chrono_literals;
  */
 class etcd_manager {
 public:
+    using callback_t = std::function<void(const etcd::Response&)>;
     /*
      * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
@@ -73,10 +74,10 @@ public:
     private:
         // TODO: Perfect forward callback
         watch_guard(etcd_manager* etcd, const std::string& prefix,
-                    std::function<void(etcd::Response)> callback)
+                    callback_t&& callback)
             : m_etcd{etcd},
               m_prefix{prefix} {
-            m_etcd->add_watcher(prefix, callback);
+            m_etcd->add_watcher(prefix, std::forward<callback_t>(callback));
         }
 
         etcd_manager* m_etcd{nullptr};
@@ -88,10 +89,9 @@ public:
     /*
      * Watch given prefix recursively
      */
-    [[nodiscard]] watch_guard
-    watch(const std::string& prefix,
-          std::function<void(etcd::Response)> callback) {
-        return watch_guard(this, prefix, callback);
+    [[nodiscard]] watch_guard watch(const std::string& prefix,
+                                    callback_t&& callback) {
+        return watch_guard(this, prefix, std::forward<callback_t>(callback));
     }
 
     /*
@@ -150,8 +150,7 @@ private:
 
     void reset();
 
-    void add_watcher(const std::string& prefix,
-                     std::function<void(etcd::Response)> callback);
+    void add_watcher(const std::string& prefix, callback_t&& callback);
     void remove_watcher(const std::string& prefix);
     void restore_watchers(void);
 
