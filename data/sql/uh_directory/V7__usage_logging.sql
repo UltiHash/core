@@ -462,6 +462,12 @@ BEGIN
           AND (s.status IS NULL OR s.deleted_at >= interval_start)
         LOOP
             interval_seconds := EXTRACT(EPOCH FROM LEAST(COALESCE(row.deleted_at, interval_end), interval_end) - GREATEST(row.last_modified, interval_start));
+
+            IF interval_seconds < 0 THEN
+                RAISE NOTICE 'Interval seconds is negative: %, interval_start: %, interval_end: %, last_modified: %, deleted_at: %', interval_seconds, interval_start, interval_end, row.last_modified, row.deleted_at;
+                CONTINUE;
+            END IF;
+
             byteseconds := byteseconds + interval_seconds * row.size;
         END LOOP;
     byteseconds := byteseconds / 1024 / 1024 / 1024;
