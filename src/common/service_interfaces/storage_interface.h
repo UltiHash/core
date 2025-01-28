@@ -10,10 +10,6 @@ struct storage_interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
-    // TODO this is a subset of read(address)
-    virtual coro<std::size_t> read(context& ctx, const uint128_t& pointer,
-                                   std::span<char> buffer) = 0;
-
     virtual coro<std::size_t> read(context& ctx, const address& addr,
                                    std::span<char> buffer) = 0;
 

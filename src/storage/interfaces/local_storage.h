@@ -53,11 +53,6 @@ struct local_storage : public storage_interface {
         co_return total_addr;
     }
 
-    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
-                           std::span<char> buffer) override {
-        co_return get_data_store(pointer).read(pointer, buffer);
-    }
-
     coro<std::size_t> read(context& ctx, const address& addr,
                            std::span<char> buffer) override {
         LOG_DEBUG() << ctx.peer() << ": read addr start";

@@ -16,9 +16,6 @@ private:
     coro<void> handle_write(context& ctx, messenger& m,
                             const messenger::header& h);
 
-    coro<void> handle_read(context& ctx, messenger& m,
-                           const messenger::header& h);
-
     coro<void> handle_read_address(context& ctx, messenger& m,
                                    const messenger::header& h);
 

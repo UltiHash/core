@@ -91,11 +91,6 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     co_return addr;
 }
 
-coro<std::size_t> storage_group::read(context& ctx, const uint128_t& pointer,
-                                      std::span<char> buffer) {
-    co_return co_await m_getter.get(pointer)->read(ctx, pointer, buffer);
-}
-
 coro<std::size_t> storage_group::read(context& ctx, const address& addr,
                                       std::span<char> buffer) {
 
