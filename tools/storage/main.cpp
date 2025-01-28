@@ -79,7 +79,8 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
     uh::cluster::context ctx;
 
     timer t;
-    auto data = co_await svc.read(ctx, ptr, length);
+    std::vector<char> buffer(length);
+    co_await svc.read(ctx, ptr, buffer);
     auto time = t.passed();
     auto mb = length / MEBI_BYTE;
 
@@ -88,7 +89,7 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
 
     if (outfile) {
         std::ofstream out(*outfile);
-        out.write(data.data(), data.size());
+        out.write(buffer.data(), buffer.size());
         std::cout << "contents have been written to " << *outfile << "\n";
     } else {
 
@@ -99,21 +100,21 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
 
                 std::string text = "";
 
-                auto count = std::min(16ul, data.size() - index);
+                auto count = std::min(16ul, buffer.size() - index);
                 for (auto x = 0ul; x < count; ++x, ++index) {
                     std::cout << std::hex << std::setw(2) << std::setfill('0')
-                              << static_cast<unsigned>(data[index] & 0xff)
+                              << static_cast<unsigned>(buffer[index] & 0xff)
                               << " ";
 
-                    text += std::isprint(data[index])
-                                ? std::string(1, data[index])
+                    text += std::isprint(buffer[index])
+                                ? std::string(1, buffer[index])
                                 : ".";
                 }
 
                 std::string indent((16ul - count) * 3, ' ');
                 std::cout << "    " << indent << "|" << text << "|"
                           << "\n";
-            } while (index < data.size());
+            } while (index < buffer.size());
         }
     }
 }

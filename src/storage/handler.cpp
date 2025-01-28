@@ -117,8 +117,9 @@ coro<void> handler::handle_read(context& ctx, messenger& m,
                                 const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
-    auto buffer = co_await m_storage.read(ctx, frag.pointer, frag.size);
+    unique_buffer<char> buffer(frag.size);
 
+    co_await m_storage.read(ctx, frag.pointer, buffer.span());
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
@@ -127,8 +128,8 @@ coro<void> handler::handle_read_fragment(context& ctx, messenger& m,
     const auto frag = co_await m.recv_fragment(h);
 
     unique_buffer<char> buffer(frag.size);
-    co_await m_storage.read_fragment(ctx, buffer.data(), frag);
 
+    co_await m_storage.read_fragment(ctx, frag, buffer.span());
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
