@@ -1,7 +1,8 @@
 #pragma once
+
 #include "common/types/scoped_buffer.h"
 
-#include <string_view>
+#include <span>
 #include <vector>
 
 namespace uh::cluster {
@@ -12,8 +13,12 @@ enum data_stat : uint8_t {
 };
 
 struct encoded {
-    [[nodiscard]] const std::vector<std::string_view>& get() const noexcept {
+    [[nodiscard]] const std::vector<std::span<const char>>& get() const {
         return m_encoded;
+    }
+
+    std::span<const char> get(std::size_t index) const {
+        return m_encoded.at(index);
     }
 
     void set(const std::vector<const char*>& shard_ptrs,
@@ -25,20 +30,20 @@ struct encoded {
         m_shard_allocations = std::move(new_shards);
     }
 
-    void set(std::vector<std::string_view> shard_ptrs) {
+    void set(std::vector<std::span<const char>> shard_ptrs) {
         m_encoded = std::move(shard_ptrs);
     }
 
     std::vector<unique_buffer<char>> m_shard_allocations{};
-    std::vector<std::string_view> m_encoded;
+    std::vector<std::span<const char>> m_encoded;
 };
 
 class ec_interface {
 public:
-    virtual void recover(const std::vector<std::string_view>& shards,
+    virtual void recover(const std::vector<std::span<const char>>& shards,
                          std::vector<data_stat>& stats) const = 0;
 
-    virtual encoded encode(std::string_view data) const = 0;
+    virtual encoded encode(std::span<const char> data) const = 0;
     virtual ~ec_interface() = default;
 };
 

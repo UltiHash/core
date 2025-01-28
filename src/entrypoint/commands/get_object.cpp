@@ -42,7 +42,7 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(m_ctx, buffer.data(), partial_addr);
+        co_await m_storage.read_address(m_ctx, partial_addr, buffer);
         m_total += buffer_size;
         m_size -= buffer_size;
 

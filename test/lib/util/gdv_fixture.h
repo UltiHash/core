@@ -114,6 +114,8 @@ public:
 
     std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
 
+    boost::asio::io_context& get_executor() { return m_ioc; }
+
 private:
     service_config make_service_config() {
         service_config service_cfg;

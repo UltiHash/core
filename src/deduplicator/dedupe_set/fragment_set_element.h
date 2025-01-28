@@ -62,7 +62,7 @@ public:
     mutable std::atomic<int> m_hint_count = 0;
 
 private:
-    std::reference_wrapper<global_data_view> m_storage;
+    global_data_view& m_storage;
     uint128_t m_pointer{};
     uint16_t m_size{};
     std::string m_prefix;

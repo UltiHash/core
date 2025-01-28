@@ -6,17 +6,9 @@
 #include "common/utils/time_utils.h"
 #include "storage/default_data_store.h"
 #include <list>
-#include <string_view>
+#include <span>
 
 namespace uh::cluster {
-
-struct load_monitor {
-    explicit load_monitor(std::atomic<double>& load)
-        : m_load(load) {}
-    ~load_monitor() { m_load += m_timer.passed().count(); }
-    std::atomic<double>& m_load;
-    timer m_timer;
-};
 
 struct local_storage : public storage_interface {
 
@@ -32,10 +24,9 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
 
-        load_monitor load(m_load);
         const size_t part_size =
             std::ceil(static_cast<double>(data.size()) /
                       static_cast<double>(m_data_stores.size()));
@@ -46,8 +37,6 @@ struct local_storage : public storage_interface {
             const std::size_t start_pos = i * part_size;
             const std::size_t current_part_size =
                 std::min(data.size() - start_pos, part_size);
-            const std::string_view part =
-                data.substr(start_pos, current_part_size);
 
             std::vector<std::size_t> local_offsets;
             while (offsets_idx < offsets.size() &&
@@ -55,7 +44,9 @@ struct local_storage : public storage_interface {
                 local_offsets.push_back(offsets[offsets_idx] - start_pos);
                 ++offsets_idx;
             }
-            auto addr = m_data_stores[i]->write(part, local_offsets);
+
+            auto addr = m_data_stores[i]->write(
+                data.subspan(start_pos, current_part_size), local_offsets);
             total_addr.append(addr);
         }
 
@@ -64,40 +55,38 @@ struct local_storage : public storage_interface {
 
     coro<void> read_fragment(context& ctx, char* buffer,
                              const fragment& f) override {
-        load_monitor load(m_load);
-        get_data_store(f.pointer).read(buffer, f.pointer, f.size);
+        get_data_store(f.pointer).read(f.pointer, {buffer, f.size});
         co_return;
     }
 
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override {
-        load_monitor load(m_load);
         shared_buffer<> buf(size);
-        const auto read_size =
-            get_data_store(pointer).read_up_to(buf.data(), pointer, size);
+        auto read_size = get_data_store(pointer).read(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
 
-    coro<void> read_address(context& ctx, char* buffer, const address& addr,
+    coro<void> read_address(context& ctx, const address& addr,
+                            std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
-        load_monitor load(m_load);
         LOG_DEBUG() << ctx.peer() << ": read addr start";
+
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
             if (get_data_store(frag.pointer)
-                    .read(buffer + offsets[i], frag.pointer, frag.size) !=
-                frag.size) [[unlikely]] {
+                    .read(frag.pointer,
+                          buffer.subspan(offsets[i], frag.size)) != frag.size) {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
             }
         }
+
         LOG_DEBUG() << ctx.peer() << ": read addr done";
         co_return;
     }
 
     coro<address> link(context& ctx, const address& addr) override {
-        load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -130,7 +119,6 @@ struct local_storage : public storage_interface {
     }
 
     coro<std::size_t> unlink(context& ctx, const address& addr) override {
-        load_monitor load(m_load);
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -163,7 +151,6 @@ struct local_storage : public storage_interface {
     }
 
     coro<size_t> get_used_space(context& ctx) override {
-        load_monitor load(m_load);
 
         size_t used = 0;
         for (const auto& ds : m_data_stores) {
@@ -181,19 +168,18 @@ struct local_storage : public storage_interface {
     }
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                        std::string_view data) override {
+                        std::span<const char> data) override {
         m_data_stores.at(ds_id)->manual_write(pointer, data);
         co_return;
     }
 
     coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                        size_t size, char* buffer) override {
-        m_data_stores.at(ds_id)->manual_read(pointer, size, buffer);
+        m_data_stores.at(ds_id)->manual_read(pointer, {buffer, size});
         co_return;
     }
 
     size_t get_free_space() {
-        load_monitor load(m_load);
 
         size_t free = 0;
         for (const auto& ds : m_data_stores) {
@@ -202,15 +188,11 @@ struct local_storage : public storage_interface {
         return free;
     }
 
-    double catch_load() { return m_load.exchange(0); }
-
 private:
-    std::vector<std::unique_ptr<default_data_store>> m_data_stores;
+    std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
-    std::atomic<double> m_load;
 
-    [[nodiscard]] default_data_store&
-    get_data_store(const uint128_t& pointer) const {
+    data_store& get_data_store(const uint128_t& pointer) const {
         auto data_store_id = pointer_traits::get_data_store_id(pointer);
 
         if (data_store_id >= m_data_stores.size()) {
