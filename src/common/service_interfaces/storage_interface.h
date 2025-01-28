@@ -10,10 +10,6 @@ struct storage_interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
-    // TODO fragment is dedupe world
-    virtual coro<void> read_fragment(context& ctx, const fragment& f,
-                                     std::span<char> buffer) = 0;
-
     // TODO this is a subset of read(address)
     virtual coro<std::size_t> read(context& ctx, const uint128_t& pointer,
                                    std::span<char> buffer) = 0;

@@ -40,10 +40,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 ctx = ctx.sub_context("storage-read-req");
                 co_await handle_read(ctx, m, hdr);
                 break;
-            case STORAGE_READ_FRAGMENT_REQ:
-                ctx = ctx.sub_context("storage-read-fragment-req");
-                co_await handle_read_fragment(ctx, m, hdr);
-                break;
             case STORAGE_READ_ADDRESS_REQ:
                 ctx = ctx.sub_context("storage-read-address-req");
                 co_await handle_read_address(ctx, m, hdr);
@@ -120,16 +116,6 @@ coro<void> handler::handle_read(context& ctx, messenger& m,
     unique_buffer<char> buffer(frag.size);
 
     co_await m_storage.read(ctx, frag.pointer, buffer.span());
-    co_await m.send(ctx, SUCCESS, buffer.span());
-}
-
-coro<void> handler::handle_read_fragment(context& ctx, messenger& m,
-                                         const messenger::header& h) {
-    const auto frag = co_await m.recv_fragment(h);
-
-    unique_buffer<char> buffer(frag.size);
-
-    co_await m_storage.read_fragment(ctx, frag, buffer.span());
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 

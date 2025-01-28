@@ -28,7 +28,8 @@ enum metric_type {
     entrypoint_original_data_volume_gauge,
     storage_available_space_gauge,
     storage_used_space_gauge,
-    storage_read_fragment_req,
+    storage_read_fragment_req, // TODO to be removed: can we simply delete
+                               // entries from this enum?
     storage_read_address_req,
     storage_read_req,
     storage_write_req,
