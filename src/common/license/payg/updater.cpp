@@ -22,6 +22,7 @@ coro<void> payg_updater::update() {
     }
     co_return;
 }
+
 coro<void> payg_updater::periodic_update(std::chrono::seconds interval) {
     while (true) {
         auto start_time = std::chrono::steady_clock::now();

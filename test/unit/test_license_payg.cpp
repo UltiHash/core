@@ -18,71 +18,78 @@ BOOST_AUTO_TEST_CASE(throws_for_invalid_json_string) {
 
 BOOST_AUTO_TEST_CASE(throws_for_invalid_signature) {
     auto json_str = R"({
-    "customer_id": "big corp xy",
-    "license_type": "freemium",
-    "storage_cap": 10240,
-    "ec": {
-        "enabled": true,
-        "max_group_size": 10
-    },
-    "replication": {
-      "enabled": true,
-      "max_replicas": 3
-    },
-    "signature":
-        "123=="
-})";
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap": 10240,
+        "ec": {
+            "enabled": true,
+            "max_group_size": 10
+        },
+        "replication": {
+          "enabled": true,
+          "max_replicas": 3
+        },
+        "signature":
+            "123=="
+    })";
 
     BOOST_CHECK_THROW(payg_handler sut(json_str), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(throws_for_no_signature) {
     auto json_str = R"({
-    "customer_id": "big corp xy",
-    "license_type": "freemium",
-    "storage_cap": 10240,
-    "ec": {
-        "enabled": true,
-        "max_group_size": 10
-    },
-    "replication": {
-      "enabled": true,
-      "max_replicas": 3
-    }
-})";
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap": 10240,
+        "ec": {
+            "enabled": true,
+            "max_group_size": 10
+        },
+        "replication": {
+          "enabled": true,
+          "max_replicas": 3
+        }
+    })";
 
     BOOST_CHECK_THROW(payg_handler sut(json_str), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(can_skip_validation) {
     auto json_str = R"({
-    "customer_id": "big corp xy",
-    "license_type": "freemium",
-    "storage_cap": 10240,
-    "ec": {
-        "enabled": true,
-        "max_group_size": 10
-    },
-    "replication": {
-      "enabled": true,
-      "max_replicas": 3
-    }
-})";
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap": 10240,
+        "ec": {
+            "enabled": true,
+            "max_group_size": 10
+        },
+        "replication": {
+          "enabled": true,
+          "max_replicas": 3
+        }
+    })";
 
     BOOST_CHECK_NO_THROW(
         payg_handler sut(json_str, payg_handler::verify::SKIP_VERIFY));
+
+    payg_handler sut(json_str, payg_handler::verify::SKIP_VERIFY);
+    std::cout << sut.to_string() << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
     auto json_str = R"({
-    "customer_id": "big corp xy",
-    "license_type": "freemium",
-    "storage_cap": 10240,
-    "ec": {
-        "enabled": true,
-        "max_group_size": 10
-    },
-})";
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap": 10240,
+        "ec": {
+            "enabled": true,
+            "max_group_size": 10
+        },
+    })";
 
     BOOST_CHECK_THROW(
         payg_handler sut(json_str, payg_handler::verify::SKIP_VERIFY),
@@ -101,6 +108,7 @@ public:
         : sut{json_literal} {}
 
     static constexpr const char* json_literal = R"({
+        "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
         "storage_cap": 10240,
@@ -113,7 +121,7 @@ public:
             "max_replicas": 3
         },
         "signature": 
-        "yg2DNf6iej5np/rQuM4mkp1xzByxxV6vHmHjrbimLyNndL+biWhajraNcp88mXB6iNy/EQ5Izx8H6Q7mggpxBg=="
+        "wU8LnUXWavhYSK/xejVheVYoORaHPYGkYOeK3Y5HSwT8Nzo00cDGhwHoM2r0vRAgNMec5xWzJaIgUI2WhvDYBg=="
     })";
     payg_handler sut;
 };

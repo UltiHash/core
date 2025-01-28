@@ -30,6 +30,7 @@ public:
     // bool io_context_started;
 
     static constexpr const char* json_literal = R"({
+        "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
         "storage_cap": 10240,
@@ -42,10 +43,10 @@ public:
             "max_replicas": 3
         },
         "signature": 
-        "yg2DNf6iej5np/rQuM4mkp1xzByxxV6vHmHjrbimLyNndL+biWhajraNcp88mXB6iNy/EQ5Izx8H6Q7mggpxBg=="
+        "wU8LnUXWavhYSK/xejVheVYoORaHPYGkYOeK3Y5HSwT8Nzo00cDGhwHoM2r0vRAgNMec5xWzJaIgUI2WhvDYBg=="
     })";
     static constexpr const char* json_compact_literal =
-        R"({"customer_id":"big corp xy","ec":{"enabled":true,"max_group_size":10},"license_type":"freemium","replication":{"enabled":true,"max_replicas":3},"storage_cap":10240})";
+        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240,"ec":{"enabled":true,"max_group_size":10},"replication":{"enabled":true,"max_replicas":3}})";
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_payg_updater, fixture)
