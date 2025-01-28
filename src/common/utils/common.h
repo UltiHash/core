@@ -25,7 +25,6 @@ enum message_type : uint8_t {
     SUCCESS = 0,
     FAILURE = 1,
 
-    STORAGE_READ_FRAGMENT_REQ = 32,
     STORAGE_READ_ADDRESS_REQ = 33,
     STORAGE_READ_REQ = 34,
     STORAGE_WRITE_REQ = 35,
