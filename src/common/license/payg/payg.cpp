@@ -39,8 +39,7 @@ void from_json(const json& j, payg_license& p) {
     j.at("replication").at("max_replicas").get_to(p.replication.max_replicas);
 }
 
-payg_license payg_license::create_from_json(std::string_view json_str,
-                                            verify option) {
+payg_license payg_license::create(std::string_view json_str, verify option) {
     auto j = nlohmann::ordered_json::parse(json_str);
 
     auto rv = j.template get<payg_license>();
