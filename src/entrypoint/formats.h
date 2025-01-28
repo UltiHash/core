@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/types/common_types.h"
+#include <common/types/common_types.h>
 
+#include <iosfwd>
 #include <string>
 
 namespace uh::cluster {
@@ -27,6 +28,14 @@ std::string iso8601_date(const utc_time& ts);
  */
 utc_time read_iso8601_date(std::string_view str);
 
+/**
+ * Input a timestamp in ISO 8601 time format (YYYYMMDDTHHMMSSZ)
+ */
+utc_time read_iso8601_date_merged(std::string_view s);
+
+utc_time make_utc_time(int year, int month, int day, int hour, int min,
+                       int sec);
+
 namespace detail {
 
 utc_time read_local_date(std::string_view str);
@@ -35,3 +44,9 @@ std::chrono::hours read_timezone(std::string_view str);
 } // namespace detail
 
 } // namespace uh::cluster
+
+namespace std {
+
+ostream& operator<<(ostream& out, const uh::cluster::utc_time& t);
+
+}

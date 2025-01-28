@@ -179,4 +179,7 @@ inline std::string operator+(std::string fst, std::string_view snd) {
 
 std::string unhex(std::string in);
 
+std::size_t stoul(std::string_view s, std::size_t* pos = nullptr,
+                  int base = 10);
+
 } // namespace uh::cluster

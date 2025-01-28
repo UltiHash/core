@@ -1,7 +1,9 @@
 #include "service.h"
 
-#include "common/telemetry/metrics.h"
-#include "common/utils/scope_guard.h"
+#include <common/telemetry/metrics.h>
+#include <common/utils/scope_guard.h>
+#include <deduplicator/interfaces/dedupe_array.h>
+#include <deduplicator/interfaces/noop_deduplicator.h>
 
 namespace uh::cluster::ep {
 
@@ -30,6 +32,26 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     }
 }
 
+std::unique_ptr<deduplicator_interface>
+make_deduplicator(const entrypoint_config& config, global_data_view& storage,
+                  boost::asio::io_context& ioc, etcd_manager& etcd) {
+
+    if (config.m_attached_deduplicator) {
+        LOG_INFO() << "using attached deduplicator";
+        return std::make_unique<local_deduplicator>(
+            *config.m_attached_deduplicator, storage);
+    }
+
+    if (config.noop_deduplicator) {
+        LOG_INFO() << "using noop deduplicator";
+        return std::make_unique<noop_deduplicator>(storage);
+    }
+
+    LOG_INFO() << "using remote deduplicator array";
+    return std::make_unique<dedupe_array>(ioc, etcd,
+                                          config.dedupe_node_connection_count);
+}
+
 } // namespace
 
 service::service(const service_config& sc, entrypoint_config config)
@@ -41,18 +63,14 @@ service::service(const service_config& sc, entrypoint_config config)
       m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd),
 
       m_attached_storage(sc, m_config.m_attached_storage),
-      m_attached_dedupe(sc, m_config.m_attached_deduplicator),
       m_storage_maintainer(
           m_etcd,
           service_factory<storage_interface>(
               m_ioc, m_config.global_data_view.storage_service_connection_count,
               m_attached_storage.get_local_service_interface())),
-      m_dedupe_maintainer(m_etcd,
-                          service_factory<deduplicator_interface>(
-                              m_ioc, m_config.dedupe_node_connection_count,
-                              m_attached_dedupe.get_local_service_interface())),
       m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
                   m_etcd),
+      m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
@@ -60,15 +78,12 @@ service::service(const service_config& sc, entrypoint_config config)
       m_limits(sc.license.max_data_store_size),
       m_server(m_config.server,
                std::make_unique<handler>(
-                   command_factory(m_ioc, m_dedupe_load_balancer, m_directory,
-                                   m_uploads, m_config, m_data_view, m_limits,
-                                   m_users),
+                   command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
+                                   m_config, m_data_view, m_limits, m_users),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory)),
                m_ioc),
       m_gc(m_ioc, m_directory, m_data_view) {
-    m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
-
     co_spawn(
         m_ioc, update_limits(m_directory, m_limits), [](std::exception_ptr e) {
             try {
@@ -88,10 +103,6 @@ void service::stop() {
     LOG_INFO() << "stopping " << m_service_registry.get_service_name();
 
     m_server.stop();
-}
-
-service::~service() noexcept {
-    m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
 }
 
 } // namespace uh::cluster::ep

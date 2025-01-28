@@ -2,7 +2,7 @@
 
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=/var/lib/uh
-export UH_LOG_LEVEL=INFO
+export UH_LOG_LEVEL=DEBUG
 
 instances=1
 if [ -n "$1" ];then

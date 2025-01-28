@@ -1,13 +1,13 @@
 #pragma once
 
-#include "beast_utils.h"
 #include "body.h"
+#include "raw_request.h"
 
 namespace uh::cluster::ep::http {
 
 class raw_body : public body {
 public:
-    raw_body(partial_parse_result& req, std::size_t length);
+    raw_body(boost::asio::ip::tcp::socket& sock, raw_request& req);
 
     std::optional<std::size_t> length() const override;
 

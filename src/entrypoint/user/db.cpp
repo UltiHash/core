@@ -34,7 +34,7 @@ coro<user> db::find_by_key(std::string key) {
                                 "Access Denied");
     }
 
-    ep::user::key k{.id = key,
+    ep::user::key k{.id = std::move(key),
                     .secret_key = *row->string(2),
                     .session_token = row->string(3),
                     .expires = row->date(4)};

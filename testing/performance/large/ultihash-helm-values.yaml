@@ -45,9 +45,9 @@ etcd:
     storageClass: local-path
 
 entrypoint:
-  replicas: 2
+  replicas: 4
   nodeSelector:
-    workload-type: entrypoint
+    workload-type: storage
     purpose: performance-testing-large
   tolerations:
     - key: "purpose"
@@ -66,9 +66,9 @@ entrypoint:
         topologyKey: kubernetes.io/hostname 
   extraEnv:
     - name: UH_DB_DIRECTORY_CONNECTIONS
-      value: "10"
+      value: "5"
     - name: UH_DB_MULTIPART_CONNECTIONS
-      value: "10"
+      value: "5"
 
   ingress:
     enabled: false

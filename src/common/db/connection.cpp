@@ -166,16 +166,6 @@ void connection::append_args(std::string s, std::vector<const char*>& values,
     format.push_back(0);
 }
 
-void connection::append_args(std::string_view s,
-                             std::vector<const char*>& values,
-                             std::vector<int>& lengths,
-                             std::vector<int>& format,
-                             std::list<std::string>&) {
-    values.push_back(s.data());
-    lengths.push_back(s.size());
-    format.push_back(0);
-}
-
 void connection::append_args(std::size_t n, std::vector<const char*>& values,
                              std::vector<int>& lengths,
                              std::vector<int>& format,

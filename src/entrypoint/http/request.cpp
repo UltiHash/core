@@ -6,19 +6,17 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-request::request(beast::http::request<beast::http::empty_body> headers,
-                 std::unique_ptr<body> body, ep::user::user user,
-                 asio::ip::tcp::endpoint peer)
-    : m_req(std::move(headers)),
+request::request(raw_request req, std::unique_ptr<body> body,
+                 ep::user::user user)
+    : m_req(std::move(req.headers)),
       m_body(std::move(body)),
       m_authenticated_user(std::move(user)),
-      m_peer(peer),
+      m_peer(req.peer),
+      m_bucket_id(get_bucket_id(req.path)),
+      m_object_key(get_object_key(req.path)),
+      m_params(std::move(req.params)),
+      m_path(std::move(req.path)),
       m_ctx("http-request") {
-    auto target = parse_request_target(m_req.target());
-    m_params = std::move(target.params);
-    m_path = std::move(target.path);
-    m_bucket_id = std::move(target.bucket);
-    m_object_key = std::move(target.object);
     m_ctx.peer() = m_peer;
 
     m_ctx.set_attribute("client-ip", m_peer.address().to_string());
@@ -28,9 +26,6 @@ request::request(beast::http::request<beast::http::empty_body> headers,
     m_ctx.set_attribute("request-bucket", m_bucket_id);
     m_ctx.set_attribute("request-key", m_object_key);
 }
-
-request::request(partial_parse_result& req, std::unique_ptr<body> body)
-    : request(std::move(req.headers), std::move(body), {}, req.peer) {}
 
 http::verb request::method() const { return m_req.method(); }
 
@@ -94,6 +89,21 @@ uh::cluster::context& request::context() { return m_ctx; }
 
 const user::user& request::authenticated_user() const {
     return m_authenticated_user;
+}
+
+std::string get_bucket_id(const std::string& path) {
+    auto segments = split(path, '/');
+    return std::string(segments.size() >= 2 ? segments[1] : "");
+}
+
+std::string get_object_key(const std::string& path) {
+    auto segments = split(path, '/');
+    std::string key = segments.size() >= 3
+                          ? join(std::views::counted(segments.begin() + 2,
+                                                     segments.size() - 2),
+                                 "/")
+                          : "";
+    return std::string(key);
 }
 
 std::ostream& operator<<(std::ostream& out, const request& req) {

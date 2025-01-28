@@ -186,6 +186,10 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
 
+    rv->add_flag("--no-dedupe", cfg.noop_deduplicator,
+                 "disable deduplication and write directly to storage")
+        ->default_val(cfg.noop_deduplicator);
+
     configure(*rv, cfg.database);
 
     return rv;

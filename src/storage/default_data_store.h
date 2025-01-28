@@ -26,9 +26,9 @@ public:
      * @affects get_available_space()
      *
      * @param data
-     * @return  allocated address
+     * @return allocated address
      */
-    address write(std::string_view data,
+    address write(std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
 
     /**
@@ -36,7 +36,7 @@ public:
      * @param internal_pointer
      * @param data
      */
-    void manual_write(uint64_t internal_pointer, std::string_view data);
+    void manual_write(uint64_t internal_pointer, std::span<const char> data);
 
     /**
      * Reading direcly from a data store
@@ -44,7 +44,7 @@ public:
      * @param size
      * @param buffer
      */
-    void manual_read(uint64_t pointer, size_t size, char* buffer);
+    void manual_read(uint64_t pointer, std::span<char> buffer);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -57,8 +57,7 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(char* buffer, const uint128_t& pointer, size_t size);
-    std::size_t read_up_to(char* buffer, const uint128_t& pointer, size_t size);
+    std::size_t read(const uint128_t& pointer, std::span<char> buffer);
 
     /**
      * @brief Creates a reference to one or multiple storage locations.

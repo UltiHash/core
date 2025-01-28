@@ -7,15 +7,17 @@
 
 namespace uh::cluster {
 struct storage_interface {
-    virtual coro<address> write(context& ctx, std::string_view,
+    virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
+
     virtual coro<void> read_fragment(context& ctx, char* buffer,
                                      const fragment& f) = 0;
+
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                        size_t size) = 0;
-    virtual coro<void> read_address(context& ctx, char* buffer,
-                                    const address& addr,
 
+    virtual coro<void> read_address(context& ctx, const address& addr,
+                                    std::span<char> buffer,
                                     const std::vector<size_t>& offsets) = 0;
 
     virtual coro<address> link(context& ctx, const address& addr) = 0;
@@ -23,7 +25,7 @@ struct storage_interface {
     virtual coro<std::size_t> get_used_space(context& ctx) = 0;
     virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) = 0;
     virtual coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                                std::string_view) = 0;
+                                std::span<const char>) = 0;
     virtual coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                                std::size_t size, char* buffer) = 0;
 

@@ -10,7 +10,7 @@ struct remote_storage : public storage_interface {
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
         LOG_DEBUG() << ctx.peer() << ": sending STORAGE_WRITE_REQ ["
@@ -45,8 +45,8 @@ struct remote_storage : public storage_interface {
         co_return buffer;
     }
 
-    coro<void> read_address(context& ctx, char* buffer, const address& addr,
-
+    coro<void> read_address(context& ctx, const address& addr,
+                            std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
 
@@ -55,7 +55,8 @@ struct remote_storage : public storage_interface {
 
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
-            m->register_read_buffer(buffer + offsets.at(i), addr.sizes[i]);
+            m->register_read_buffer(buffer.data() + offsets.at(i),
+                                    addr.sizes[i]);
         }
 
         co_await m->recv_buffers(h);
@@ -94,7 +95,7 @@ struct remote_storage : public storage_interface {
     }
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                        std::string_view data) override {
+                        std::span<const char> data) override {
         auto m = co_await m_storage_service.acquire_messenger();
         ds_write_request req{.ds_id = ds_id, .pointer = pointer, .data = data};
         co_await m->send_ds_write(ctx, req);
