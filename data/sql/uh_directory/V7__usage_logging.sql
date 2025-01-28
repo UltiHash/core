@@ -458,7 +458,8 @@ BEGIN
         SELECT o.size, o.last_modified, s.deleted_at
         FROM objects o
                  LEFT JOIN object_status s ON o.id = s.object_id
-        WHERE (s.status IS NULL OR (s.deleted_at >= interval_start AND s.deleted_at < interval_end))
+        WHERE o.last_modified < interval_end
+          AND (s.status IS NULL OR s.deleted_at >= interval_start)
         LOOP
             interval_seconds := EXTRACT(EPOCH FROM LEAST(COALESCE(row.deleted_at, interval_end), interval_end) - GREATEST(row.last_modified, interval_start));
             byteseconds := byteseconds + interval_seconds * row.size;
