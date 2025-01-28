@@ -2,6 +2,7 @@
 
 #include "common/db/config.h"
 #include "common/etcd/utils.h"
+#include "common/license/payg/payg.h"
 #include "common/license/test.h"
 #include "common/telemetry/log.h"
 #include "common/utils/common.h"
@@ -19,7 +20,7 @@ struct service_config {
     uh::cluster::etcd_config etcd_config;
     std::string working_dir = "/var/lib/uh";
     std::string telemetry_url;
-    uh::cluster::license license;
+    uh::cluster::payg_license license;
     unsigned telemetry_interval = 1000;
     bool enable_traces = false;
 };

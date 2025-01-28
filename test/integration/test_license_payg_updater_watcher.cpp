@@ -65,38 +65,10 @@ BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_FIXTURE_TEST_SUITE(a_payg_watcher, fixture)
 
-BOOST_AUTO_TEST_CASE(returns_updated_license_through_callback) {
-    std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    payg_license received_license;
-    payg_watcher sut{etcd, [&](const payg_license& license) {
-                         received_license = license;
-                         promise.set_value();
-                     }};
-
-    auto updater = payg_updater(
-        ioc, etcd, [&]() -> coro<std::string> { co_return json_literal; });
-    co_spawn(ioc, updater.update(), use_future).get();
-
-    if (future.wait_for(std::chrono::seconds(5)) ==
-        std::future_status::timeout) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_CHECK_EQUAL(received_license.customer_id, "big corp xy");
-    BOOST_CHECK_EQUAL(received_license.license_type,
-                      payg_license::type::FREEMIUM);
-    BOOST_CHECK_EQUAL(received_license.storage_cap, 10240);
-    BOOST_CHECK_EQUAL(received_license.ec.enabled, true);
-    BOOST_CHECK_EQUAL(received_license.ec.max_group_size, 10);
-    BOOST_CHECK_EQUAL(received_license.replication.enabled, true);
-    BOOST_CHECK_EQUAL(received_license.replication.max_replicas, 3);
-}
-
 BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    payg_watcher sut{etcd,
-                     [&](const payg_license& license) { promise.set_value(); }};
+    auto sut = payg_watcher{etcd};
 
     auto updater = payg_updater(
         ioc, etcd, [&]() -> coro<std::string> { co_return json_literal; });

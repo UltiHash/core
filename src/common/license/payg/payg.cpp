@@ -39,8 +39,11 @@ void from_json(const json& j, payg_license& p) {
     j.at("replication").at("max_replicas").get_to(p.replication.max_replicas);
 }
 
-payg_handler::payg_handler(std::string_view json_str, verify option) {
+payg_license payg_license::create_from_json(std::string_view json_str,
+                                            verify option) {
     auto j = nlohmann::ordered_json::parse(json_str);
+
+    auto rv = j.template get<payg_license>();
 
     if (option == verify::VERIFY) {
         if (!j.contains("signature")) {
@@ -55,16 +58,15 @@ payg_handler::payg_handler(std::string_view json_str, verify option) {
         auto signature = base64_decode(sign_b64);
 
         if (!verify_license(compact_json, signature)) {
-            throw std::runtime_error(
-                "signature of license could not be verified");
+            throw std::runtime_error("signature of rv could not be verified");
         }
-        m_compact_json = std::move(compact_json);
+        rv.m_compact_json = std::move(compact_json);
 
     } else {
-        m_compact_json = j.dump();
+        rv.m_compact_json = j.dump();
     }
 
-    m_license = j.template get<payg_license>();
+    return rv;
 }
 
 } // namespace uh::cluster

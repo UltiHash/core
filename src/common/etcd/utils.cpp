@@ -139,7 +139,7 @@ void etcd_manager::rmdir(const std::string& prefix) noexcept {
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
 void etcd_manager::add_watcher(const std::string& prefix,
-                               std::function<void(etcd::Response)> callback) {
+                               callback_t&& callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto client = m_client.load();
@@ -150,9 +150,10 @@ void etcd_manager::add_watcher(const std::string& prefix,
                                     " already exists");
     }
 
-    m_watcher_entries[prefix] = watcher_entry(
-        callback,
-        std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
+    m_watcher_entries[prefix] =
+        watcher_entry(callback, std::make_unique<etcd::Watcher>(
+                                    *client, prefix,
+                                    std::forward<callback_t>(callback), true));
 }
 
 void etcd_manager::remove_watcher(const std::string& prefix) {
