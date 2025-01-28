@@ -72,6 +72,13 @@ storage:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  mountPaths:
+    - name: storage1 
+      containerPath: /var/lib/uh/storage1
+    - name: storage2 
+      containerPath: /var/lib/uh/storage2
+    - name: storage3 
+      containerPath: /var/lib/uh/storage3
 
 deduplicator:
   replicas: $EC2_INSTANCE_COUNT
