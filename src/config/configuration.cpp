@@ -61,7 +61,7 @@ void register_service(CLI::App& app, service_config& cfg) {
     app.add_option(
            "--license,-L",
            [&cfg](CLI::results_t res) {
-               cfg.license = payg_license::create_from_json(res[0]);
+               cfg.license = payg_license::create(res[0]);
                return true;
            },
            "UltiHash license json-string")

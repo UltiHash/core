@@ -1,4 +1,3 @@
-#include "common/license/test.h"
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"

@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE(throws_for_invalid_json_string) {
     static constexpr const char* json_literal =
         R"({"customer_id"? "big corp xy"})";
 
-    BOOST_CHECK_THROW(payg_license::create_from_json(json_literal),
+    BOOST_CHECK_THROW(payg_license::create(json_literal),
                       nlohmann::json::parse_error);
 }
 
@@ -36,8 +36,7 @@ BOOST_AUTO_TEST_CASE(throws_for_invalid_signature) {
             "123=="
     })";
 
-    BOOST_CHECK_THROW(payg_license::create_from_json(json_literal),
-                      std::runtime_error);
+    BOOST_CHECK_THROW(payg_license::create(json_literal), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(throws_for_no_signature) {
@@ -56,8 +55,7 @@ BOOST_AUTO_TEST_CASE(throws_for_no_signature) {
         }
     })";
 
-    BOOST_CHECK_THROW(payg_license::create_from_json(json_literal),
-                      std::runtime_error);
+    BOOST_CHECK_THROW(payg_license::create(json_literal), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(can_skip_validation) {
@@ -76,8 +74,8 @@ BOOST_AUTO_TEST_CASE(can_skip_validation) {
         }
     })";
 
-    BOOST_CHECK_NO_THROW(payg_license::create_from_json(
-        json_literal, payg_license::verify::SKIP_VERIFY));
+    BOOST_CHECK_NO_THROW(
+        payg_license::create(json_literal, payg_license::verify::SKIP_VERIFY));
 }
 
 BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
@@ -92,9 +90,9 @@ BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
         },
     })";
 
-    BOOST_CHECK_THROW(payg_license::create_from_json(
-                          json_literal, payg_license::verify::SKIP_VERIFY),
-                      nlohmann::json::parse_error);
+    BOOST_CHECK_THROW(
+        payg_license::create(json_literal, payg_license::verify::SKIP_VERIFY),
+        nlohmann::json::parse_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -106,7 +104,7 @@ class fixture {
 
 public:
     fixture()
-        : sut{payg_license::create_from_json(json_literal)} {}
+        : sut{payg_license::create(json_literal)} {}
 
     static constexpr const char* json_literal = R"({
         "version": "v1",
@@ -144,7 +142,7 @@ BOOST_AUTO_TEST_CASE(parses_license_to_payg) {
 }
 
 BOOST_AUTO_TEST_CASE(prints_out_compact_form_json_string) {
-    auto compact_json_str = sut.to_json_string();
+    auto compact_json_str = sut.to_string();
 
     BOOST_TEST(compact_json_str == json_compact_literal);
 }

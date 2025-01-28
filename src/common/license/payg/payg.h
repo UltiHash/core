@@ -26,10 +26,10 @@ struct payg_license {
 
     enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
 
-    static payg_license create_from_json(std::string_view json_str,
-                                         verify option = verify::VERIFY);
+    static payg_license create(std::string_view json_str,
+                               verify option = verify::VERIFY);
 
-    std::string to_json_string() const { return m_compact_json; };
+    std::string to_string() const { return m_compact_json; };
 
 private:
     bool is_valid() const { return !version.empty(); }

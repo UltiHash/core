@@ -1,22 +1,20 @@
 #pragma once
 
-#include "common/etcd/ec_groups/ec_get_handler.h"
 #include "config.h"
 
 #include <common/etcd/ec_groups/ec_group_maintainer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
-#include <common/license/payg/fetch.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
+#include <common/utils/strings.h>
 #include <config/configuration.h>
 
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include <common/license/payg/fetch.h>
 #include <common/license/payg/updater.h>
-#include <common/license/test.h>
-#include <common/utils/strings.h>
 
 namespace uh::cluster::coordinator {
 

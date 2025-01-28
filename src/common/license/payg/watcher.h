@@ -25,7 +25,7 @@ public:
                 << "The coordinator has not yet updated the license string";
         }
     }
-    payg_license& get() { return *m_license.load(); }
+    payg_license& get_license() { return *m_license.load(); }
 
 private:
     void on_watch(const etcd::Response& resp) {
@@ -36,9 +36,9 @@ private:
     }
 
     payg_license parse_and_save(std::string_view license_str) {
-        auto license = payg_license::create_from_json(
-            license_str, payg_license::verify::SKIP_VERIFY);
-        LOG_INFO() << license.to_json_string();
+        auto license = payg_license::create(license_str,
+                                            payg_license::verify::SKIP_VERIFY);
+        LOG_INFO() << license.to_string();
         m_license.store(std::make_shared<payg_license>(license));
         return license;
     }

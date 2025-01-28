@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
         std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto received_license = sut.get();
+    auto received_license = sut.get_license();
     BOOST_CHECK_EQUAL(received_license.customer_id, "big corp xy");
     BOOST_CHECK_EQUAL(received_license.license_type,
                       payg_license::type::FREEMIUM);
