@@ -42,7 +42,7 @@ storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
 }
 
 void storage_group::insert(size_t id, size_t group_nid,
-                           const std::shared_ptr<storage_interface>& node) {
+                           const std::shared_ptr<distributed_storage>& node) {
     m_nodes.at(group_nid) = node;
     m_getter.add_client(id, node);
     if (m_rec_mod) {
@@ -75,7 +75,7 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
 
     auto encoded = m_ec_calc->encode(data);
     auto res =
-        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+        co_await run_for_all<address, std::shared_ptr<distributed_storage>>(
             m_ioc,
             [&ctx, &encoded, &offsets](size_t i, auto n) -> coro<address> {
                 // TODO offsets need to be computed to match encoded EC data
@@ -100,6 +100,17 @@ coro<void> storage_group::read_fragment(context& ctx, char* buffer,
 coro<shared_buffer<>>
 storage_group::read(context& ctx, const uint128_t& pointer, size_t size) {
     co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);
+}
+
+coro<std::size_t> storage_group::read(context& ctx, const address& addr,
+                                      std::span<char> buffer) {
+
+    co_return co_await perform_for_address(
+        addr, m_getter, m_ioc,
+        [&ctx, buffer](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->read_address(ctx, info.addr, buffer,
+                                      info.pointer_offsets);
+        });
 }
 
 coro<void> storage_group::read_address(context& ctx, const address& addr,

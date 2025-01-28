@@ -1,11 +1,11 @@
 #pragma once
 
-#include "common/network/client.h"
-#include "common/service_interfaces/storage_interface.h"
+#include "distributed.h"
+#include <common/network/client.h>
 
 namespace uh::cluster {
 
-struct remote_storage : public storage_interface {
+struct remote_storage : public distributed_storage {
 
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
@@ -43,6 +43,17 @@ struct remote_storage : public storage_interface {
         m->register_read_buffer(buffer.data(), buffer.size());
         co_await m->recv_buffers(h);
         co_return buffer;
+    }
+
+    coro<std::size_t> read(context& ctx, const address& addr,
+                           std::span<char> buffer) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+
+        co_await m->send_address(ctx, STORAGE_READ_ADDRESS_REQ, addr);
+        const auto h = co_await m->recv_header();
+
+        m->register_read_buffer(buffer);
+        co_return co_await m->recv_buffers(h);
     }
 
     coro<void> read_address(context& ctx, const address& addr,
@@ -118,6 +129,18 @@ struct remote_storage : public storage_interface {
 
 private:
     client m_storage_service;
+};
+
+class remote_factory {
+public:
+    remote_factory(boost::asio::io_context& ioc, std::size_t connections);
+
+    std::shared_ptr<remote_storage> make_service(const std::string& hostname,
+                                                 uint16_t port, int);
+
+private:
+    boost::asio::io_context& m_ioc;
+    std::size_t m_connections;
 };
 
 } // namespace uh::cluster

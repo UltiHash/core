@@ -92,10 +92,10 @@ private:
                 pointer += size;
             }
 
-            co_await run_for_all<int, std::shared_ptr<storage_interface>>(
+            co_await run_for_all<int, std::shared_ptr<distributed_storage>>(
                 m_ioc,
                 [&](size_t id,
-                    std::shared_ptr<storage_interface> node) -> coro<int> {
+                    std::shared_ptr<distributed_storage> node) -> coro<int> {
                     co_await node->ds_read(rinfo.ctx, ds_id, ds_recovered_size,
                                            size, buf.data() + offsets.at(id));
                     co_return 0;
@@ -166,9 +166,9 @@ private:
 
     coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {
         const auto maps = co_await run_for_all<
-            std::map<size_t, size_t>, std::shared_ptr<storage_interface>>(
+            std::map<size_t, size_t>, std::shared_ptr<distributed_storage>>(
             m_ioc,
-            [&ctx = rinfo.ctx](size_t, std::shared_ptr<storage_interface> dn)
+            [&ctx = rinfo.ctx](size_t, std::shared_ptr<distributed_storage> dn)
                 -> coro<std::map<size_t, size_t>> {
                 if (!dn) {
                     throw std::runtime_error("inaccessible data service");

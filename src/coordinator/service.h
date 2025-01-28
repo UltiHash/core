@@ -15,6 +15,7 @@
 
 #include <common/license/backend_client.h>
 #include <common/license/license_updater.h>
+#include <storage/interfaces/remote_storage.h>
 
 namespace uh::cluster::coordinator {
 
@@ -27,8 +28,7 @@ public:
           m_ioc_runner(m_ioc, cc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
-          m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+          m_storage_maintainer(m_etcd, remote_factory(m_ioc, 1)) {
 
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE";
@@ -79,8 +79,8 @@ private:
     io_context_runner m_ioc_runner;
 
     ec_group_maintainer m_ec_maintainer;
-    service_maintainer<storage_interface> m_storage_maintainer;
-
     std::optional<license_updater> m_license_updater;
+    service_maintainer<distributed_storage, remote_factory>
+        m_storage_maintainer;
 };
 } // namespace uh::cluster::coordinator

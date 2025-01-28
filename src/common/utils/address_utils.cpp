@@ -37,7 +37,7 @@ extract_node_address_map(const address& addr,
 coro<size_t> perform_for_address(
     const address& addr, storage_get_handler& storage_get_handler,
     boost::asio::io_context& ioc,
-    std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
+    std::function<coro<void>(size_t, std::shared_ptr<distributed_storage>,
                              const address_info&)>
         fn,
     const std::vector<size_t>& existing_offsets) {

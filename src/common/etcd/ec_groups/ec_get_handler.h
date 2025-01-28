@@ -14,15 +14,16 @@ struct ec_get_handler : public service_monitor<storage_group>,
         : m_scheme(data_nodes, ec_nodes),
           m_getter{service_get_timeout} {}
 
-    std::shared_ptr<storage_interface> get(std::size_t id) override {
+    std::shared_ptr<distributed_storage> get(std::size_t id) override {
         return m_getter.get(m_scheme.calc_group_id(id));
     }
 
-    std::shared_ptr<storage_interface> get(const uint128_t& pointer) override {
+    std::shared_ptr<distributed_storage>
+    get(const uint128_t& pointer) override {
         return get(m_scheme.calc_group_id(pointer));
     }
 
-    std::vector<std::shared_ptr<storage_interface>> get_services() override {
+    std::vector<std::shared_ptr<distributed_storage>> get_services() override {
         return m_getter.get_services();
     }
 

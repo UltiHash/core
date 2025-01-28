@@ -5,7 +5,7 @@
 namespace uh::cluster {
 default_global_data_view::default_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<storage_interface>& storage_maintainer,
+    service_maintainer<distributed_storage, remote_factory>& storage_maintainer,
     etcd_manager& etcd)
     : m_io_service(ioc),
       m_config(config),
@@ -84,7 +84,7 @@ default_global_data_view::read_address(context& ctx, const address& addr,
                                        std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, buffer](size_t, std::shared_ptr<storage_interface> dn,
+        [&ctx, buffer](size_t, std::shared_ptr<distributed_storage> dn,
                        const address_info& info) -> coro<void> {
             co_await dn->read_address(ctx, info.addr, buffer,
                                       info.pointer_offsets);
@@ -106,7 +106,7 @@ default_global_data_view::link(context& ctx, const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](size_t id, std::shared_ptr<storage_interface> dn,
+        [&ctx, &addresses](size_t id, std::shared_ptr<distributed_storage> dn,
                            const address_info& info) -> coro<void> {
             addresses.emplace(id, co_await dn->link(ctx, info.addr));
         });
@@ -124,7 +124,7 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+        [&ctx, &freed_bytes](size_t, std::shared_ptr<distributed_storage> dn,
                              const address_info& info) -> coro<void> {
             freed_bytes += co_await dn->unlink(ctx, info.addr);
         });
