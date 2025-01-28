@@ -53,18 +53,15 @@ struct local_storage : public storage_interface {
         co_return total_addr;
     }
 
-    coro<void> read_fragment(context& ctx, char* buffer,
-                             const fragment& f) override {
-        get_data_store(f.pointer).read(f.pointer, {buffer, f.size});
+    coro<void> read_fragment(context& ctx, const fragment& f,
+                             std::span<char> buffer) override {
+        get_data_store(f.pointer).read(f.pointer, buffer);
         co_return;
     }
 
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size) override {
-        shared_buffer<> buf(size);
-        auto read_size = get_data_store(pointer).read(pointer, buf.span());
-        buf.resize(read_size);
-        co_return buf;
+    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+                           std::span<char> buffer) override {
+        co_return get_data_store(pointer).read(pointer, buffer);
     }
 
     coro<std::size_t> read(context& ctx, const address& addr,

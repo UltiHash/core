@@ -49,7 +49,7 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     const fragment frag{pointer, size};
     auto storage = m_basic_getter.get(pointer);
     boost::asio::co_spawn(m_io_service,
-                          storage->read_fragment(ctx, buffer.data(), frag),
+                          storage->read_fragment(ctx, frag, buffer.span()),
                           boost::asio::use_future)
         .get();
     m_cache_l2.put(pointer, buffer);
@@ -74,7 +74,9 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     auto storage = m_basic_getter.get(pointer);
-    auto buffer = co_await storage->read(ctx, pointer, size);
+
+    shared_buffer<char> buffer(size);
+    co_await storage->read(ctx, pointer, buffer.span());
     m_cache_l2.put(pointer, buffer);
     co_return buffer;
 }
