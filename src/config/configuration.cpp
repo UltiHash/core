@@ -224,15 +224,20 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
         ->envname(ENV_CFG_LICENSE_JSON)
         ->default_val(cfg.license);
 
-    app.add_option("--backend-host", cfg.backend_config.backend_host,
-                   "backend host")
-        ->envname(ENV_CFG_BACKEND_HOST);
-    app.add_option("--customer-id", cfg.backend_config.customer_id,
-                   "customer ID required to connect to the backend")
-        ->envname(ENV_CFG_CUSTOMER_ID);
-    app.add_option("--access-token", cfg.backend_config.access_token,
-                   "access token required to connect to the backend")
-        ->envname(ENV_CFG_ACCESS_TOKEN);
+    if (!cfg.license) {
+        app.add_option("--backend-host", cfg.backend_config.backend_host,
+                       "backend host")
+            ->envname(ENV_CFG_BACKEND_HOST)
+            ->required();
+        app.add_option("--customer-id", cfg.backend_config.customer_id,
+                       "customer ID required to connect to the backend")
+            ->envname(ENV_CFG_CUSTOMER_ID)
+            ->required();
+        app.add_option("--access-token", cfg.backend_config.access_token,
+                       "access token required to connect to the backend")
+            ->envname(ENV_CFG_ACCESS_TOKEN)
+            ->required();
+    }
     return rv;
 }
 
