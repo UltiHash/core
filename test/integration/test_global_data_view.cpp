@@ -17,10 +17,14 @@ static void fill_random(char* buf, size_t size) {
 BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     context ctx;
-    BOOST_CHECK_THROW(gdv->read_fragment(ctx,
-                                         std::numeric_limits<uint64_t>::max(),
-                                         8 * KIBI_BYTE),
-                      uh::cluster::error_exception);
+    BOOST_CHECK_THROW(
+        boost::asio::co_spawn(
+            get_executor(),
+            gdv->read_fragment(ctx, std::numeric_limits<uint64_t>::max(),
+                               8 * KIBI_BYTE),
+            boost::asio::use_future)
+            .get(),
+        uh::cluster::error_exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {

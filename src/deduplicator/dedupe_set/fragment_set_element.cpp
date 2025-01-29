@@ -1,27 +1,32 @@
 #include "fragment_set_element.h"
 
 namespace uh::cluster {
-fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
+fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
+                                           const uint128_t& ptr, uint16_t size,
                                            std::string prefix,
                                            global_data_view& storage)
-    : m_storage(storage),
+    : m_ioc(ioc),
+      m_storage(storage),
       m_pointer(ptr),
       m_size(size),
       m_prefix(std::move(prefix)),
       m_data(std::nullopt) {}
 
-fragment_set_element::fragment_set_element(std::string_view data,
+fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
+                                           std::string_view data,
                                            std::string prefix,
                                            global_data_view& storage)
-    : fragment_set_element(data, 0, std::move(prefix), storage) {
+    : fragment_set_element(ioc, data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
 
-fragment_set_element::fragment_set_element(std::string_view data,
+fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
+                                           std::string_view data,
                                            const uint128_t& ptr,
                                            std::string prefix,
                                            global_data_view& storage)
-    : m_storage(storage),
+    : m_ioc(ioc),
+      m_storage(storage),
       m_pointer(ptr),
       m_size(std::min(static_cast<size_t>(std::numeric_limits<uint16_t>::max()),
                       data.size())),
@@ -29,7 +34,8 @@ fragment_set_element::fragment_set_element(std::string_view data,
       m_data(std::nullopt) {}
 
 fragment_set_element::fragment_set_element(fragment_set_element&& f) noexcept
-    : m_storage(f.m_storage),
+    : m_ioc(f.m_ioc),
+      m_storage(f.m_storage),
       m_pointer(f.m_pointer),
       m_size(f.m_size),
       m_prefix(std::move(f.m_prefix)),
@@ -46,7 +52,14 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
     if (f.m_data.has_value()) {
         str = f.m_data->substr(0, size);
     } else {
-        data = m_storage.read_fragment(CURRENT_CONTEXT, f.m_pointer, size);
+        boost::asio::co_spawn(
+            m_ioc,
+            [&]() -> coro<void> {
+                data = co_await m_storage.read_fragment(CURRENT_CONTEXT,
+                                                        f.m_pointer, size);
+            },
+            boost::asio::use_future)
+            .get();
         str = data.string_view();
     }
 }
