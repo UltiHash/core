@@ -61,7 +61,6 @@ std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
     const auto lock = etcd.get_lock_guard(etcd_global_lock_key);
 
     try {
-        // TODO: check exception from stoull
         current_id = std::stoull(etcd.get(current_id_key));
     } catch (const std::exception&) {
         etcd.put(current_id_key, std::to_string(0));
