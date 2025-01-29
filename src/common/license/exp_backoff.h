@@ -53,20 +53,20 @@ public:
         std::function<backoff_action(const std::exception&)>;
     exponential_backoff(boost::asio::io_context& io_context, int max_retries,
                         int min_delay, int max_delay)
-        : io_context_(io_context),
-          max_retries_(max_retries),
-          min_delay_(min_delay),
-          max_delay_(max_delay) {}
+        : m_ioc(io_context),
+          m_max_retries(max_retries),
+          m_min_delay(min_delay),
+          m_max_delay(max_delay) {}
 
     coro<T> run(std::function<coro<T>()> task) {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(min_delay_, max_delay_);
+        std::uniform_int_distribution<> dis(m_min_delay, m_max_delay);
 
         int delay_ms = dis(gen);
 
         int retry_count = 0;
-        while (retry_count++ < max_retries_) {
+        while (retry_count++ < m_max_retries) {
             try {
                 auto rv = co_await task();
                 co_return rv;
@@ -87,7 +87,7 @@ public:
             }
 
             boost::asio::steady_timer timer(
-                io_context_, std::chrono::milliseconds(delay_ms));
+                m_ioc, std::chrono::milliseconds(delay_ms));
             co_await timer.async_wait(boost::asio::use_awaitable);
             delay_ms *= 2;
         }
@@ -96,10 +96,10 @@ public:
     }
 
 private:
-    boost::asio::io_context& io_context_;
-    int max_retries_;
-    int min_delay_;
-    int max_delay_;
+    boost::asio::io_context& m_ioc;
+    int m_max_retries;
+    int m_min_delay;
+    int m_max_delay;
 };
 
 } // namespace uh::cluster
