@@ -1,10 +1,10 @@
-#define BOOST_TEST_MODULE "payg/fetch tests"
+#define BOOST_TEST_MODULE "license/fetch tests"
 
 #include <boost/test/unit_test.hpp>
 
 #include "test_config.h"
 
-#include <common/license/payg/fetch.h>
+#include <common/license/backend_client.h>
 #include <common/types/common_types.h>
 #include <common/utils/strings.h>
 #include <lib/util/coroutine.h>
@@ -15,14 +15,7 @@
 #include <boost/url/parse.hpp>
 
 using namespace uh::cluster;
-
 using namespace boost::asio;
-
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace urls = boost::urls;
-namespace ssl = boost::asio::ssl;
-using tcp = boost::asio::ip::tcp;
 
 class fixture : public coro_fixture {
 public:
@@ -35,9 +28,9 @@ public:
 
 BOOST_FIXTURE_TEST_SUITE(a_fetch, fixture)
 
-BOOST_AUTO_TEST_CASE(parses_license_to_payg) {
-    auto future = co_spawn(ioc, fetch_response_body(ioc, "example.com", "", ""),
-                           use_future);
+BOOST_AUTO_TEST_CASE(works) {
+    auto future =
+        co_spawn(ioc, fetch_response_body(ioc, "example.com"), use_future);
     std::cout << future.get() << std::endl;
 }
 

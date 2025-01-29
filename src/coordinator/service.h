@@ -13,8 +13,8 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
-#include <common/license/payg/fetch.h>
-#include <common/license/payg/updater.h>
+#include <common/license/backend_client.h>
+#include <common/license/updater.h>
 
 namespace uh::cluster::coordinator {
 
@@ -28,57 +28,27 @@ public:
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
+              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
-          m_payg_updater{
-              m_ioc,
-              m_etcd, //
-
-              // TODO: How should we finalize this part before server is
-              // implemented?
-
-              // TODO: We can use codes below and read infomation from
-              // environment variables using std::getenv(), UH_CUSTOMER_ID,
-              // UH_ACCESS_TOKEN.
-
-              // [&]() -> coro<std::string> {
-              //     const std::string url{"<url>/v1/license"};
-              //     const std::string username{""};
-              //     const std::string password{""};
-              //     co_return co_await fetch_response_body(
-              //         m_ioc, url, username, password);
-              // }
-
-              [&]() -> coro<std::string> {
-                  static constexpr const char* json_literal = R"({
-                                 "customer_id": "big corp xy",
-                                 "license_type": "freemium",
-                                 "storage_cap": 10240,
-                                 "ec": {
-                                     "enabled": true,
-                                     "max_group_size": 10
-                                 },
-                                 "replication": {
-                                     "enabled": true,
-                                     "max_replicas": 3
-                                 },
-                                 "signature":
-                                 "yg2DNf6iej5np/rQuM4mkp1xzByxxV6vHmHjrbimLyNndL+biWhajraNcp88mXB6iNy/EQ5Izx8H6Q7mggpxBg=="
-                             })";
-                  co_return json_literal;
-              } //
-          }     //
-    {
-
+        if (service.license) {
+            m_license_updater.emplace(
+                m_ioc, m_etcd,
+                pseudo_backend_client(service.license.to_string()));
+            boost::asio::co_spawn( //
+                m_ioc, m_license_updater->update(), boost::asio::detached);
+        } else {
+            m_license_updater.emplace( //
+                m_ioc, m_etcd,         //
+                default_backend_client(cc.backend_config));
+            boost::asio::co_spawn(
+                m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
+                boost::asio::detached);
+        }
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
 
     void run() {
         LOG_INFO() << "running coordinator service";
-
-        boost::asio::co_spawn(
-            m_ioc, m_payg_updater.periodic_update(LICENSE_FETCH_PERIOD),
-            boost::asio::detached);
 
         while (!m_stopped) {
             std::unique_lock lock(m_mutex);
@@ -108,6 +78,6 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 
-    payg_updater m_payg_updater;
+    std::optional<license_updater> m_license_updater;
 };
 } // namespace uh::cluster::coordinator
