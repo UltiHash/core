@@ -17,23 +17,17 @@ namespace uh::cluster::deduplicator {
 
 class service {
 public:
-    explicit service(const service_config& sc,
-                     const deduplicator_config& config)
+    service(const service_config& sc, const deduplicator_config& config)
         : m_ioc(boost::asio::io_context(config.server.threads)),
           m_etcd{sc.etcd_config},
           m_service_id(get_service_id(m_etcd,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
-          m_storage_maintainer(
-              m_etcd,
-              remote_factory(
-                  m_ioc,
-                  config.global_data_view.storage_service_connection_count)),
-          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
-                      m_etcd),
+          m_storage(std::make_unique<default_global_data_view>(
+              config.global_data_view, m_ioc, m_etcd)),
           m_deduplicator(
-              std::make_shared<local_deduplicator>(m_ioc, config, m_data_view)),
+              std::make_unique<local_deduplicator>(m_ioc, config, *m_storage)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
@@ -44,10 +38,6 @@ public:
 
     void stop() { m_server.stop(); }
 
-    std::shared_ptr<local_deduplicator> get_local_interface() {
-        return m_deduplicator;
-    }
-
     size_t id() const noexcept { return m_service_id; }
 
 private:
@@ -56,12 +46,9 @@ private:
     std::size_t m_service_id;
 
     service_registry m_service_registry;
-
-    service_maintainer<distributed_storage, remote_factory>
-        m_storage_maintainer;
-
-    default_global_data_view m_data_view;
-    std::shared_ptr<local_deduplicator> m_deduplicator;
+    std::unique_ptr<storage_interface> m_storage;
+    std::unique_ptr<deduplicator_interface> m_deduplicator;
     server m_server;
 };
+
 } // namespace uh::cluster::deduplicator

@@ -11,7 +11,7 @@ namespace {
 
 class local_read_handle : public uh::cluster::ep::http::body {
 public:
-    local_read_handle(global_data_view& storage, directory::object_lock&& obj,
+    local_read_handle(storage_interface& storage, directory::object_lock&& obj,
                       context& ctx)
         : m_storage(storage),
           m_obj(std::move(obj)),

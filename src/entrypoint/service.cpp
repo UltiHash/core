@@ -34,7 +34,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 }
 
 std::unique_ptr<deduplicator_interface>
-make_deduplicator(const entrypoint_config& config, global_data_view& storage,
+make_deduplicator(const entrypoint_config& config, storage_interface& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
     if (config.m_attached_deduplicator) {
@@ -53,6 +53,13 @@ make_deduplicator(const entrypoint_config& config, global_data_view& storage,
                                           config.dedupe_node_connection_count);
 }
 
+std::unique_ptr<storage_interface> make_storage(const entrypoint_config& config,
+                                                boost::asio::io_context& ioc,
+                                                etcd_manager& etcd) {
+    return std::make_unique<default_global_data_view>(config.global_data_view,
+                                                      ioc, etcd);
+}
+
 } // namespace
 
 service::service(const service_config& sc, entrypoint_config config)
@@ -62,13 +69,8 @@ service::service(const service_config& sc, entrypoint_config config)
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
       m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd),
-
-      m_storage_maintainer(
-          m_etcd, remote_factory(m_ioc, m_config.global_data_view
-                                            .storage_service_connection_count)),
-      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
-                  m_etcd),
-      m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
+      m_storage(make_storage(m_config, m_ioc, m_etcd)),
+      m_dedupe(make_deduplicator(m_config, *m_storage, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
@@ -78,7 +80,7 @@ service::service(const service_config& sc, entrypoint_config config)
       m_server(m_config.server,
                std::make_unique<handler>(
                    command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
-                                   m_config, m_data_view, m_limits, m_users),
+                                   m_config, *m_storage, m_limits, m_users),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory)),
                m_ioc),
