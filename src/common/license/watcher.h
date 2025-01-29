@@ -22,6 +22,8 @@ public:
         auto license_str = m_etcd.get(etcd_license);
         if (!license_str.empty()) {
             parse_and_save(license_str);
+
+            LOG_INFO() << "License saved";
         } else {
             LOG_INFO()
                 << "The coordinator has not yet updated the license string";
@@ -31,10 +33,13 @@ public:
 
 private:
     void on_watch(const etcd::Response& resp) {
-        LOG_INFO() << "License updated";
+        LOG_INFO() << "Watcher has detected a license update";
 
         const auto& license_str = resp.value().as_string();
         parse_and_save(license_str);
+
+        LOG_INFO() << "Modified license saved";
+
         if (m_callback) {
             m_callback(license_str);
         }
@@ -42,7 +47,10 @@ private:
 
     void parse_and_save(std::string_view license_str) {
         auto lic = license::create(license_str, license::verify::SKIP_VERIFY);
-        LOG_INFO() << lic.to_string();
+
+        LOG_INFO() << "license loaded for " << lic.customer_id
+                   << " -- storage size: " << lic.storage_cap << " bytes";
+
         m_license.store(std::make_shared<license>(lic));
     }
 

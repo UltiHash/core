@@ -34,6 +34,9 @@ public:
                        << " -- storage size: " << lic.storage_cap << " bytes";
 
             m_etcd.put(etcd_license, lic.to_string());
+
+            LOG_DEBUG() << "License updated";
+
         } catch (const std::runtime_error& e) {
             LOG_ERROR() << "License check failed: " << e.what();
         } catch (...) {
