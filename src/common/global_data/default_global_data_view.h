@@ -12,7 +12,7 @@
 
 namespace uh::cluster {
 
-class default_global_data_view : public global_data_view {
+class default_global_data_view : public storage_interface {
 
 public:
     /**
@@ -29,11 +29,8 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    explicit default_global_data_view(
-        const global_data_view_config& config, boost::asio::io_context& ioc,
-        service_maintainer<distributed_storage, remote_factory>&
-            storage_maintainer,
-        etcd_manager& etcd);
+    default_global_data_view(const global_data_view_config& config,
+                             boost::asio::io_context& ioc, etcd_manager& etcd);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -50,21 +47,7 @@ public:
      * @return An #address the data has been written to.
      */
     coro<address> write(context& ctx, std::span<const char> data,
-                        const std::vector<std::size_t>& offsets);
-
-    /**
-     * @brief reads the data starting from pointer, up to the given size.
-     * It is allowed to return data that is smaller than the requested size if
-     * there is no more data left in the data store file.
-     *
-     * @param ctx traces context
-     * @param pointer A constant reference to a uint128_t, specifying the
-     * location of the size
-     * @param size A size_t specifying the size of the fragment.
-     * @return
-     */
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size);
+                        const std::vector<std::size_t>& offsets) override;
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -79,8 +62,8 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(context& ctx, const address& addr,
-                                   std::span<char> buffer);
+    coro<std::size_t> read(context& ctx, const address& addr,
+                           std::span<char> buffer) override;
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership
@@ -98,7 +81,7 @@ public:
      *
      * already been deleted and therefore can no longer be referenced.
      */
-    [[nodiscard]] coro<address> link(context& ctx, const address& addr);
+    coro<address> link(context& ctx, const address& addr) override;
 
     /**
      * @brief un-registers a reference to a storage region to release
@@ -110,7 +93,7 @@ public:
      * @return number of bytes freed in response to removing references.
      * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    coro<std::size_t> unlink(context& ctx, const address& addr);
+    coro<std::size_t> unlink(context& ctx, const address& addr) override;
 
     /**
      * @brief Computes used space across all available storage service
@@ -118,16 +101,15 @@ public:
      * @param ctx open telemetry context
      * @return The used space across all available storage service instances.
      */
-    coro<std::size_t> get_used_space(context& ctx);
+    coro<std::size_t> get_used_space(context& ctx) override;
 
     ~default_global_data_view() noexcept;
 
 private:
     boost::asio::io_context& m_io_service;
     global_data_view_config m_config;
-    lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
-    service_maintainer<distributed_storage, remote_factory>&
+    service_maintainer<distributed_storage, remote_factory>
         m_service_maintainer;
     ec_group_maintainer m_ec_maintainer;
     ec_load_balancer m_load_balancer;

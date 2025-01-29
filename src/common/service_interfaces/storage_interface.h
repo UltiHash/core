@@ -16,11 +16,18 @@ struct storage_interface {
     virtual coro<address> link(context& ctx, const address& addr) = 0;
     virtual coro<std::size_t> unlink(context& ctx, const address& addr) = 0;
     virtual coro<std::size_t> get_used_space(context& ctx) = 0;
-    virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) = 0;
+    virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) {
+        throw std::runtime_error("not implemented");
+    }
     virtual coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                                std::span<const char>) = 0;
+                                std::span<const char>) {
+        throw std::runtime_error("not implemented");
+    }
+
     virtual coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
-                               std::size_t size, char* buffer) = 0;
+                               std::size_t size, char* buffer) {
+        throw std::runtime_error("not implemented");
+    }
 
     virtual ~storage_interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;

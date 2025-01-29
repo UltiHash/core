@@ -5,12 +5,12 @@
 namespace uh::cluster {
 default_global_data_view::default_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<distributed_storage, remote_factory>& storage_maintainer,
     etcd_manager& etcd)
     : m_io_service(ioc),
       m_config(config),
-      m_cache_l2(m_config.read_cache_capacity_l2),
-      m_service_maintainer(storage_maintainer),
+      m_service_maintainer(
+          etcd, remote_factory(m_io_service,
+                               config.storage_service_connection_count)),
       m_ec_maintainer(m_io_service, m_config.ec_data_shards,
                       m_config.ec_parity_shards, etcd, false),
       m_basic_getter(m_config.ec_data_shards, m_config.ec_parity_shards) {
@@ -29,34 +29,9 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await client->write(ctx, data, offsets);
 }
 
-coro<shared_buffer<>> default_global_data_view::read(context& ctx,
-                                                     const uint128_t& pointer,
-                                                     size_t size) {
-
-    if (size == 0) {
-        throw std::runtime_error("Read size must be larger than zero");
-    }
-
-    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
-        if (cp->size() >= size) [[likely]] {
-            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            co_return cp.value();
-        }
-    }
-
-    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
-
-    auto storage = m_basic_getter.get(pointer);
-
-    shared_buffer<char> buffer(size);
-    co_await storage->read(ctx, fragment{pointer, size}, buffer.span());
-    m_cache_l2.put(pointer, buffer);
-    co_return buffer;
-}
-
-coro<std::size_t>
-default_global_data_view::read_address(context& ctx, const address& addr,
-                                       std::span<char> buffer) {
+coro<std::size_t> default_global_data_view::read(context& ctx,
+                                                 const address& addr,
+                                                 std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
         [&ctx, buffer](size_t, std::shared_ptr<distributed_storage> dn,
@@ -73,11 +48,12 @@ coro<std::size_t> default_global_data_view::get_used_space(context& ctx) {
     for (const auto& dn : nodes) {
         used += co_await dn->get_used_space(ctx);
     }
+
     co_return used;
 }
 
-[[nodiscard]] coro<address>
-default_global_data_view::link(context& ctx, const address& addr) {
+coro<address> default_global_data_view::link(context& ctx,
+                                             const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
