@@ -13,8 +13,9 @@ public:
      * @param prefix Content of the prefix member
      * @param storage  A reference to the global_data_view to be used.
      */
-    fragment_set_element(const uint128_t& ptr, uint16_t size_,
-                         std::string prefix, global_data_view& storage);
+    fragment_set_element(boost::asio::io_context& ioc, const uint128_t& ptr,
+                         uint16_t size_, std::string prefix,
+                         global_data_view& storage);
 
     /**
      * Creates a fragment_set_element that holds the full fragment data, used
@@ -24,8 +25,8 @@ public:
      * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
-    fragment_set_element(std::string_view data, std::string prefix,
-                         global_data_view& storage);
+    fragment_set_element(boost::asio::io_context& ioc, std::string_view data,
+                         std::string prefix, global_data_view& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
      * @param data The full content of the fragment, where only the prefix of 16
@@ -35,8 +36,9 @@ public:
      * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
-    fragment_set_element(std::string_view data, const uint128_t& ptr,
-                         std::string prefix, global_data_view& storage);
+    fragment_set_element(boost::asio::io_context& ioc, std::string_view data,
+                         const uint128_t& ptr, std::string prefix,
+                         global_data_view& storage);
 
     /**
      * Move-constructs a fragment_set_element
@@ -62,6 +64,7 @@ public:
     mutable std::atomic<int> m_hint_count = 0;
 
 private:
+    boost::asio::io_context& m_ioc;
     global_data_view& m_storage;
     uint128_t m_pointer{};
     uint16_t m_size{};

@@ -13,7 +13,8 @@ namespace uh::cluster {
 
 struct local_deduplicator : public deduplicator_interface {
 
-    local_deduplicator(deduplicator_config config, global_data_view& storage);
+    local_deduplicator(boost::asio::io_context& ioc, deduplicator_config config,
+                       global_data_view& storage);
 
     coro<dedupe_response> deduplicate(context& ctx,
                                       std::string_view data) override;
@@ -23,6 +24,7 @@ private:
                                 uint128_t pointer, bool header,
                                 fragmentation& fragments);
 
+    boost::asio::io_context& m_ioc;
     deduplicator_config m_dedupe_conf;
     fragment_set m_fragment_set;
     global_data_view& m_storage;

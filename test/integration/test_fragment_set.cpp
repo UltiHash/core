@@ -2,7 +2,6 @@
 
 #include "common/utils/temp_directory.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
-#include "deduplicator/dedupe_set/fragment_set_log.h"
 #include "lib/util/gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
 
@@ -21,8 +20,8 @@ struct fragment_set_fixture : public global_data_view_fixture {
     void setup() {
         global_data_view_fixture::setup();
         gdv = get_global_data_view();
-        frag_set = std::make_shared<fragment_set>(tmp_dir.path() / "logfile",
-                                                  1000, *gdv);
+        frag_set = std::make_shared<fragment_set>(
+            get_executor(), tmp_dir.path() / "logfile", 1000, *gdv);
     }
 
     std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
@@ -159,7 +158,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
 
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     auto gdv = get_global_data_view();
-    fragment_set frag_set(frag_set_log_path, 1000, *gdv);
+    fragment_set frag_set(get_executor(), frag_set_log_path, 1000, *gdv);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
@@ -201,13 +200,13 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
         0, std::min(PREFIX_SIZE, fragment_c.size()));
 
     fragment_set_element frag_element_a(
-        fragment_a.string_view().substr(0, addr_a.get(0).size),
+        get_executor(), fragment_a.string_view().substr(0, addr_a.get(0).size),
         addr_a.get(0).pointer, std::string(prefix_a), *gdv);
     fragment_set_element frag_element_b(
-        fragment_b.string_view().substr(0, addr_b.get(0).size),
+        get_executor(), fragment_b.string_view().substr(0, addr_b.get(0).size),
         addr_b.get(0).pointer, std::string(prefix_b), *gdv);
     fragment_set_element frag_element_c(
-        fragment_c.string_view().substr(0, addr_c.get(0).size),
+        get_executor(), fragment_c.string_view().substr(0, addr_c.get(0).size),
         addr_c.get(0).pointer, std::string(prefix_c), *gdv);
 
     // Since all fragments have identical prefix, calling operator< will be
@@ -215,25 +214,6 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     BOOST_CHECK(frag_element_a < frag_element_b);
     BOOST_CHECK(frag_element_a < frag_element_c);
     BOOST_CHECK(frag_element_b < frag_element_c);
-}
-
-BOOST_FIXTURE_TEST_CASE(insert_performance, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto log = fragment_set_log(frag_set_log_path);
-
-    fragment_set_log::log_entry entry(INSERT,
-                                      {0x6465647570, 0x6c69636174696f6e}, 13);
-
-    const auto start = std::chrono::steady_clock::now();
-    for (std::size_t i = 0; i < 10000000; i++) {
-        log.append(entry);
-    }
-    log.flush();
-    const auto duration = std::chrono::steady_clock::now() - start;
-    auto millis =
-        std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    LOG_INFO() << "Inserting 10,000,000 log entries took " << millis << "ms.";
 }
 
 } // namespace uh::cluster

@@ -40,7 +40,7 @@ make_deduplicator(const entrypoint_config& config, global_data_view& storage,
     if (config.m_attached_deduplicator) {
         LOG_INFO() << "using attached deduplicator";
         return std::make_unique<local_deduplicator>(
-            *config.m_attached_deduplicator, storage);
+            ioc, *config.m_attached_deduplicator, storage);
     }
 
     if (config.noop_deduplicator) {

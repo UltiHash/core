@@ -29,7 +29,7 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await client->write(ctx, data, offsets);
 }
 
-shared_buffer<char>
+coro<shared_buffer<char>>
 default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
                                         const size_t size) {
 
@@ -39,7 +39,7 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
         if (cp->size() >= size) [[likely]] {
             metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            return cp.value();
+            co_return cp.value();
         }
     }
 
@@ -47,13 +47,9 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
 
     shared_buffer<char> buffer(size);
     auto storage = m_basic_getter.get(pointer);
-    boost::asio::co_spawn(
-        m_io_service,
-        storage->read(ctx, fragment{pointer, size}, buffer.span()),
-        boost::asio::use_future)
-        .get();
+    co_await storage->read(ctx, fragment{pointer, size}, buffer.span());
     m_cache_l2.put(pointer, buffer);
-    return buffer;
+    co_return buffer;
 }
 
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,

@@ -36,7 +36,7 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
     auto data_store =
         mock_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
     auto data_view = mock_global_data_view(data_store);
-    auto dedup = local_deduplicator({}, data_view);
+    auto dedup = local_deduplicator(get_io_context(), {}, data_view);
 
     context ctx;
     auto data = random_string(66);

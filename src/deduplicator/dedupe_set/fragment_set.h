@@ -76,7 +76,8 @@ public:
      * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
      */
-    fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
+    fragment_set(boost::asio::io_context& ioc,
+                 const std::filesystem::path& set_log_path, size_t capacity,
                  global_data_view& storage);
 
     /**
@@ -131,6 +132,7 @@ public:
     std::lock_guard<std::shared_mutex> lock();
 
 private:
+    boost::asio::io_context& m_ioc;
     void remove(const std::set<fragment_set_element>::const_iterator& itr);
 
     global_data_view& m_storage;

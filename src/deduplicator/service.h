@@ -33,7 +33,7 @@ public:
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
                       m_etcd),
           m_deduplicator(
-              std::make_shared<local_deduplicator>(config, m_data_view)),
+              std::make_shared<local_deduplicator>(m_ioc, config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 

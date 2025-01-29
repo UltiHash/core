@@ -3,15 +3,17 @@
 
 namespace uh::cluster {
 
-fragment_set::fragment_set(const std::filesystem::path& set_log_path,
+fragment_set::fragment_set(boost::asio::io_context& ioc,
+                           const std::filesystem::path& set_log_path,
                            size_t capacity, global_data_view& storage)
-    : m_storage(storage),
+    : m_ioc(ioc),
+      m_storage(storage),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
       m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {}
 
 fragment_set::response fragment_set::find(std::string_view data) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
-    fragment_set_element f{data, std::string(prefix), m_storage};
+    fragment_set_element f{m_ioc, data, std::string(prefix), m_storage};
 
     std::shared_lock<std::shared_mutex> lock(m_mutex);
     auto res = m_set.lower_bound(f);
@@ -32,7 +34,8 @@ fragment_set::response fragment_set::find(std::string_view data) {
 void fragment_set::insert(const uint128_t& pointer, std::string_view data,
                           bool header, const std::optional<hint_type>& hint) {
     auto prefix = data.substr(0, std::min(PREFIX_SIZE, data.size()));
-    fragment_set_element f{data, pointer, std::string(prefix), m_storage};
+    fragment_set_element f{m_ioc, data, pointer, std::string(prefix),
+                           m_storage};
 
     metric<metric_type::deduplicator_set_fragment_counter>::increase(1);
     metric<metric_type::deduplicator_set_fragment_size_counter, byte>::increase(
