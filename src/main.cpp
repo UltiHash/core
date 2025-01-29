@@ -60,13 +60,6 @@ int main(int argc, char** argv) {
             initialize_traces_exporter(config->service.telemetry_url);
         }
 
-        if (config->service.license) {
-            LOG_INFO() << "license loaded for "
-                       << config->service.license.customer_id
-                       << " -- storage size: "
-                       << config->service.license.storage_cap << " bytes";
-        }
-
         execute_role(*config);
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";

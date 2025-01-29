@@ -23,6 +23,7 @@ public:
     coro<void> update() {
         auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
         try {
+            LOG_DEBUG() << "Fetching license ...";
             auto str = co_await backoff.run([&]() -> coro<std::string> {
                 co_return m_backend_client->get_license();
             });
@@ -34,7 +35,7 @@ public:
 
             m_etcd.put(etcd_license, lic.to_string());
         } catch (const std::runtime_error& e) {
-            std::cout << "License check failed: " << e.what() << std::endl;
+            LOG_ERROR() << "License check failed: " << e.what();
         } catch (...) {
         }
         co_return;
