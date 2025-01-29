@@ -74,10 +74,10 @@ public:
     private:
         // TODO: Perfect forward callback
         watch_guard(etcd_manager* etcd, const std::string& prefix,
-                    callback_t&& callback)
+                    callback_t callback)
             : m_etcd{etcd},
               m_prefix{prefix} {
-            m_etcd->add_watcher(prefix, std::forward<callback_t>(callback));
+            m_etcd->add_watcher(prefix, std::move(callback));
         }
 
         etcd_manager* m_etcd{nullptr};
@@ -90,8 +90,8 @@ public:
      * Watch given prefix recursively
      */
     [[nodiscard]] watch_guard watch(const std::string& prefix,
-                                    callback_t&& callback) {
-        return watch_guard(this, prefix, std::forward<callback_t>(callback));
+                                    callback_t callback) {
+        return watch_guard(this, prefix, std::move(callback));
     }
 
     /*
@@ -150,7 +150,7 @@ private:
 
     void reset();
 
-    void add_watcher(const std::string& prefix, callback_t&& callback);
+    void add_watcher(const std::string& prefix, callback_t callback);
     void remove_watcher(const std::string& prefix);
     void restore_watchers(void);
 
