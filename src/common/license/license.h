@@ -24,7 +24,7 @@ struct license {
     std::string to_string() const { return m_compact_json; };
 
 private:
-    bool is_valid() const { return !version.empty(); }
+    bool is_valid() const { return license_type != type::NONE; }
 
     std::string m_compact_json;
 };

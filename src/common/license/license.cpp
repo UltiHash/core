@@ -51,7 +51,8 @@ license license::create(std::string_view json_str, verify option) {
         auto signature = base64_decode(sign_b64);
 
         if (!verify_license(signature_removed, signature)) {
-            throw std::runtime_error("signature of rv could not be verified");
+            throw std::runtime_error(
+                "signature of license could not be verified");
         }
     }
 
