@@ -29,29 +29,6 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await client->write(ctx, data, offsets);
 }
 
-coro<shared_buffer<char>>
-default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
-                                        const size_t size) {
-
-    if (size == 0) {
-        throw std::runtime_error("Read fragment size must be larger than zero");
-    }
-    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
-        if (cp->size() >= size) [[likely]] {
-            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            co_return cp.value();
-        }
-    }
-
-    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
-
-    shared_buffer<char> buffer(size);
-    auto storage = m_basic_getter.get(pointer);
-    co_await storage->read(ctx, fragment{pointer, size}, buffer.span());
-    m_cache_l2.put(pointer, buffer);
-    co_return buffer;
-}
-
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,
                                                      const uint128_t& pointer,
                                                      size_t size) {
