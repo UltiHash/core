@@ -6,28 +6,20 @@
 
 namespace uh::cluster {
 
-struct payg_license {
+struct license {
     enum type { NONE, FREEMIUM, PREMIUM };
 
     std::string version;
     std::string customer_id;
     enum type license_type { NONE };
     std::size_t storage_cap{0};
-    struct ec {
-        bool enabled{false};
-        std::size_t max_group_size;
-    } ec;
-    struct replication {
-        bool enabled{false};
-        std::size_t max_replicas;
-    } replication;
 
     operator bool() const { return is_valid(); }
 
     enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
 
-    static payg_license create(std::string_view json_str,
-                               verify option = verify::VERIFY);
+    static license create(std::string_view json_str,
+                          verify option = verify::VERIFY);
 
     std::string to_string() const { return m_compact_json; };
 

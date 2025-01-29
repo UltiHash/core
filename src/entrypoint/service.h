@@ -7,7 +7,7 @@
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/global_data/default_global_data_view.h>
-#include <common/license/payg/watcher.h>
+#include <common/license/watcher.h>
 #include <deduplicator/service.h>
 #include <entrypoint/directory.h>
 #include <entrypoint/garbage_collector.h>
@@ -45,7 +45,7 @@ private:
 
     multipart_state m_uploads;
     user::db m_users;
-    payg_watcher m_license_watcher;
+    license_watcher m_license_watcher;
     limits m_limits;
     server m_server;
     garbage_collector m_gc;

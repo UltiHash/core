@@ -7,7 +7,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-limits::limits(payg_watcher& watcher)
+limits::limits(license_watcher& watcher)
     : m_watcher{watcher},
       m_data_storage_size{0ull} {}
 

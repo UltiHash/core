@@ -61,7 +61,7 @@ void register_service(CLI::App& app, service_config& cfg) {
     app.add_option(
            "--license,-L",
            [&cfg](CLI::results_t res) {
-               cfg.license = payg_license::create(res[0]);
+               cfg.license = license::create(res[0]);
                return true;
            },
            "UltiHash license json-string")
@@ -219,14 +219,14 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     rv->add_option("--thread-count", cfg.thread_count, "number of threads")
         ->default_val(cfg.thread_count);
 
-    app.add_option("--backend-domain", cfg.license.backend_domain,
-                   "UltiHash backend domain")
-        ->envname(ENV_CFG_BACKEND_DOMAIN);
-    app.add_option("--backend-domain", cfg.license.customer_id,
-                   "UltiHash backend domain")
+    app.add_option("--backend-host", cfg.backend_config.backend_host,
+                   "backend host")
+        ->envname(ENV_CFG_BACKEND_HOST);
+    app.add_option("--customer-id", cfg.backend_config.customer_id,
+                   "customer ID required to connect to the backend")
         ->envname(ENV_CFG_CUSTOMER_ID);
-    app.add_option("--backend-domain", cfg.license.access_token,
-                   "UltiHash backend domain")
+    app.add_option("--access-token", cfg.backend_config.access_token,
+                   "access token required to connect to the backend")
         ->envname(ENV_CFG_ACCESS_TOKEN);
     return rv;
 }
