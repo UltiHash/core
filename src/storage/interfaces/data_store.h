@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/types/address.h"
-#include <string_view>
+#include <common/types/address.h>
+#include <span>
 
 namespace uh::cluster {
 
@@ -12,18 +12,15 @@ struct data_store_config {
 };
 
 struct data_store {
-    virtual address write(std::string_view data,
+    virtual address write(std::span<const char> data,
                           const std::vector<std::size_t>& offsets) = 0;
 
     virtual void manual_write(uint64_t internal_pointer,
-                              std::string_view data) = 0;
+                              std::span<const char> data) = 0;
 
-    virtual void manual_read(uint64_t pointer, size_t size, char* buffer) = 0;
-
-    virtual std::size_t read(char* buffer, const uint128_t& pointer,
-                             size_t size) = 0;
-    virtual std::size_t read_up_to(char* buffer, const uint128_t& pointer,
-                                   size_t size) = 0;
+    virtual void manual_read(uint64_t pointer, std::span<char> buffer) = 0;
+    virtual std::size_t read(const uint128_t& pointer,
+                             std::span<char> buffer) = 0;
 
     virtual address link(const address& addr) = 0;
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "beast_utils.h"
 #include "command_exception.h"
 #include "common/types/common_types.h"
 #include "common/utils/strings.h"
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
+#include "raw_request.h"
 #include <common/telemetry/context.h>
 
 #include <map>
@@ -16,11 +16,7 @@ namespace uh::cluster::ep::http {
 class request {
 public:
     request() = default;
-    request(boost::beast::http::request<boost::beast::http::empty_body> headers,
-            std::unique_ptr<body> body, ep::user::user user,
-            boost::asio::ip::tcp::endpoint peer);
-
-    request(partial_parse_result& req, std::unique_ptr<body> body);
+    request(raw_request req, std::unique_ptr<body> body, ep::user::user user);
 
     verb method() const;
 
@@ -75,10 +71,12 @@ private:
     std::string m_object_key{};
     std::map<std::string, std::string> m_params;
     std::string m_path;
-    std::string m_query;
 
     uh::cluster::context m_ctx;
 };
+
+std::string get_bucket_id(const std::string& path);
+std::string get_object_key(const std::string& path);
 
 /**
  * query string access interface: The following functions allow type-safe

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "command.h"
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
 #include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "entrypoint/directory.h"
@@ -11,8 +10,7 @@ namespace uh::cluster {
 
 class multipart : public command {
 public:
-    explicit multipart(roundrobin_load_balancer<deduplicator_interface>&,
-                       global_data_view&, multipart_state&);
+    multipart(deduplicator_interface&, global_data_view&, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -23,7 +21,7 @@ public:
     std::string action_id() const override;
 
 private:
-    roundrobin_load_balancer<deduplicator_interface>& m_dedupe_services;
+    deduplicator_interface& m_dedupe;
     global_data_view& m_gdv;
     multipart_state& m_uploads;
 };

@@ -47,7 +47,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(context& ctx, std::string_view data,
+    coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets);
 
     /**
@@ -101,8 +101,8 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(context& ctx, char* buffer,
-                                   const address& addr);
+    coro<std::size_t> read_address(context& ctx, const address& addr,
+                                   std::span<char> buffer);
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership
@@ -141,25 +141,6 @@ public:
      * @return The used space across all available storage service instances.
      */
     coro<std::size_t> get_used_space(context& ctx);
-
-    /**
-     * @brief Provides access to the I/O context used by the
-     * default_global_data_view
-     * @param c open telemetry context
-     * @return A reference to the boost::asio::io_context used by the
-     * default_global_data_view
-     */
-    [[nodiscard]] boost::asio::io_context& get_executor() const;
-
-    /**
-     * @brief Returns the configured number of connections maintained to each
-     * storage service instance.
-     * @param c open telemetry context
-     * @return The configured number of connections maintained to each storage
-     * service instance.
-     */
-    [[nodiscard]] std::size_t
-    get_storage_service_connection_count() const noexcept;
 
     ~default_global_data_view() noexcept;
 

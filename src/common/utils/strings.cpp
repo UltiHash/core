@@ -4,6 +4,7 @@
 #include <boost/url.hpp>
 #include <boost/url/encode.hpp>
 #include <cctype>
+#include <charconv>
 #include <sstream>
 
 using namespace boost;
@@ -148,6 +149,18 @@ std::string unhex(std::string in) {
         }
 
         rv += static_cast<char>(xvalue(in[pos]) << 8 | xvalue(in[pos + 1]));
+    }
+
+    return rv;
+}
+
+std::size_t stoul(std::string_view s, std::size_t* pos, int base) {
+
+    std::size_t rv{};
+    auto r = std::from_chars(s.begin(), s.end(), rv, base);
+
+    if (pos) {
+        *pos = std::distance(s.begin(), r.ptr);
     }
 
     return rv;

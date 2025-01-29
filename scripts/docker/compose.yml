@@ -1,0 +1,124 @@
+services:
+  database:
+    image: bitnami/postgresql:16.3.0
+    environment:
+      POSTGRESQL_PASSWORD: uh
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  etcd:
+    image: bitnami/etcd:3.5.12
+    environment:
+      ALLOW_NONE_AUTHENTICATION: yes
+
+  database-init:
+    image: registry.ultihash.io/stable/database-init:1.2.0
+    depends_on:
+      - database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: uh
+      SUPER_USER_USERNAME: root
+      SUPER_USER_ACCESS_KEY_ID: FANCY-ROOT-KEY
+      SUPER_USER_SECRET_KEY: SECRET
+
+      DB_USER: postgres
+      DB_HOST: database
+      DB_PORT: 5432
+      PGPASSWORD: uh
+
+  storage:
+    image: registry.ultihash.io/stable/core:1.2.0
+    depends_on:
+       - etcd
+    environment:
+      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_TRACES_ENABLED: 1
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 storage"]
+
+  deduplicator:
+    image: registry.ultihash.io/stable/core:1.2.0
+    depends_on:
+      - etcd
+      - storage
+    environment:
+      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_TRACES_ENABLED: 1
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 10 && uh-cluster --registry etcd:2379 deduplicator"]
+
+  entrypoint:
+    image: registry.ultihash.io/stable/core:1.2.0
+    depends_on:
+      - etcd
+      - storage
+      - deduplicator
+    environment:
+      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LOG_LEVEL: INFO
+      UH_OTEL_ENDPOINT: http://otel:4317
+      UH_TRACES_ENABLED: 1
+      UH_DB_HOSTPORT: database:5432
+      UH_DB_USER: postgres
+      UH_DB_PASS: uh
+    volumes:
+      - ./policies.json:/etc/uh/policies.json
+    command: ["/usr/bin/bash", "-l", "-c", "sleep 15 && uh-cluster --registry etcd:2379 entrypoint"]
+    ports:
+      - 8080:8080
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.7
+    restart: on-failure
+    environment:
+      CLICKHOUSE_DB: uptrace
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'localhost:8123/ping']
+      interval: 1s
+      timeout: 1s
+      retries: 30
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+
+  uptrace:
+    image: 'uptrace/uptrace:1.7.7'
+    restart: on-failure
+    volumes:
+      - ./uptrace.yml:/etc/uptrace/uptrace.yml
+    ports:
+      - '14317:14317'
+      - '14318:14318'
+    depends_on:
+      - clickhouse
+      - database
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:0.118.0
+    restart: on-failure
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - '4317:4317'
+      - '4318:4318'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      - uptrace
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'

@@ -82,13 +82,13 @@ private:
             auto size =
                 std::min(RECOVERY_CHUNK_SIZE, ds_size - ds_recovered_size);
             std::vector<size_t> offsets;
-            std::vector<std::string_view> shards;
+            std::vector<std::span<const char>> shards;
             offsets.reserve(m_getter.size());
             shards.reserve(nodes.size());
             size_t pointer = 0;
             for (size_t i = 0; i < nodes.size(); i++) {
                 offsets.emplace_back(pointer);
-                shards.emplace_back(buf.string_view().substr(pointer, size));
+                shards.emplace_back(buf.span().subspan(pointer, size));
                 pointer += size;
             }
 

@@ -146,7 +146,7 @@ coro<void> handler::handle_read_address(context& ctx, messenger& m,
         offset += fsize;
     }
 
-    co_await m_storage.read_address(ctx, buffer.data(), addr, offsets);
+    co_await m_storage.read_address(ctx, addr, buffer.span(), offsets);
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
