@@ -188,7 +188,8 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
 
     rv->add_flag("--no-dedupe", cfg.noop_deduplicator,
                  "disable deduplication and write directly to storage")
-        ->default_val(cfg.noop_deduplicator);
+        ->default_val(cfg.noop_deduplicator)
+        ->envname(ENV_CFG_NO_DEDUPE);
 
     configure(*rv, cfg.database);
 
