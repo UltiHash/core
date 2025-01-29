@@ -55,8 +55,8 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
         boost::asio::co_spawn(
             m_ioc,
             [&]() -> coro<void> {
-                data = co_await m_storage.read_fragment(CURRENT_CONTEXT,
-                                                        f.m_pointer, size);
+                data =
+                    co_await m_storage.read(CURRENT_CONTEXT, f.m_pointer, size);
             },
             boost::asio::use_future)
             .get();

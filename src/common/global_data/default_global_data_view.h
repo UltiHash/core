@@ -67,30 +67,6 @@ public:
                                size_t size);
 
     /**
-     * @brief Retrieves fragment from storage services.
-     *
-     * The L2 read cache is consulted to see if it contains the requested
-     * fragment. Otherwise, a read request is issued to the storage service
-     * instance serving the address range the provided #pointer is in.
-     * - If the requested fragment can be served by a storage service, the
-     * fragment and its address are (re)-inserted into the L2
-     * read cache.
-     * - If no storage service can serve the fragment, a std::runtime_error
-     * exception is thrown
-     *
-     * The L2 read cache contains the
-     * entire content of a fragment at the price of a smaller cache capacity.
-     *
-     * @param ctx traces context
-     * @param pointer A constant reference to a uint128_t, specifying the
-     * location of the fragment.
-     * @param size A size_t specifying the size of the fragment.
-     * @return A shared_buffer<char> containing the fragment data.
-     */
-    coro<shared_buffer<char>>
-    read_fragment(context& ctx, const uint128_t& pointer, size_t size);
-
-    /**
      * @brief Retrieves the contents of an entire address from storage services.
      *
      * Retrieves content of an entire address by scattering read requests for
