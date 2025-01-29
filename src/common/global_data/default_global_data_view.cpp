@@ -23,7 +23,7 @@ default_global_data_view::default_global_data_view(
 }
 
 coro<address>
-default_global_data_view::write(context& ctx, std::string_view data,
+default_global_data_view::write(context& ctx, std::span<const char> data,
                                 const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
     co_return co_await client->write(ctx, data, offsets);
@@ -79,14 +79,14 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
     co_return buffer;
 }
 
-coro<std::size_t> default_global_data_view::read_address(context& ctx,
-                                                         char* buffer,
-                                                         const address& addr) {
+coro<std::size_t>
+default_global_data_view::read_address(context& ctx, const address& addr,
+                                       std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &buffer](size_t, std::shared_ptr<storage_interface> dn,
-                        const address_info& info) -> coro<void> {
-            co_await dn->read_address(ctx, buffer, info.addr,
+        [&ctx, buffer](size_t, std::shared_ptr<storage_interface> dn,
+                       const address_info& info) -> coro<void> {
+            co_await dn->read_address(ctx, info.addr, buffer,
                                       info.pointer_offsets);
         });
 }
@@ -131,16 +131,6 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
     co_return freed_bytes;
 }
 
-[[nodiscard]] boost::asio::io_context&
-default_global_data_view::get_executor() const {
-    return m_io_service;
-}
-
-[[nodiscard]] std::size_t
-default_global_data_view::get_storage_service_connection_count()
-    const noexcept {
-    return m_config.storage_service_connection_count;
-}
 default_global_data_view::~default_global_data_view() noexcept {
     m_ec_maintainer.remove_monitor(m_load_balancer);
     m_ec_maintainer.remove_monitor(m_basic_getter);

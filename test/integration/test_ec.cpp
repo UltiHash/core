@@ -11,6 +11,22 @@
 
 // ------------- Tests Suites Follow --------------
 
+namespace std {
+
+bool operator==(std::span<const char> a, std::span<const char> b) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+
+    return memcmp(a.data(), b.data(), a.size()) == 0;
+}
+
+bool operator!=(std::span<const char> a, std::span<const char> b) {
+    return !(a == b);
+}
+
+} // namespace std
+
 namespace uh::cluster {
 
 void fill_random(char* buf, size_t size) {
@@ -36,13 +52,13 @@ BOOST_AUTO_TEST_CASE(ec_basic) {
     shards.at(1) = s1;
     shards.at(3) = s3;
 
-    BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-    BOOST_CHECK(shards.at(3) != encoded.get().at(3));
+    BOOST_CHECK(shards.at(1) != encoded.get(1));
+    BOOST_CHECK(shards.at(3) != encoded.get(3));
     ec.recover(shards, stats);
 
     int i = 0;
     for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get().at(i++));
+        BOOST_CHECK(s == encoded.get(i++));
     }
 }
 
@@ -67,9 +83,9 @@ BOOST_AUTO_TEST_CASE(ec_basic_lost) {
     shards.at(3) = s3;
     shards.at(4) = s4;
 
-    BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-    BOOST_CHECK(shards.at(3) != encoded.get().at(3));
-    BOOST_CHECK(shards.at(4) != encoded.get().at(4));
+    BOOST_CHECK(shards.at(1) != encoded.get(1));
+    BOOST_CHECK(shards.at(3) != encoded.get(3));
+    BOOST_CHECK(shards.at(4) != encoded.get(4));
 
     BOOST_CHECK_THROW(ec.recover(shards, stats), std::runtime_error);
 }
@@ -91,14 +107,14 @@ BOOST_AUTO_TEST_CASE(two_times_ec) {
         shards.at(1) = s1;
         shards.at(3) = s3;
 
-        BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-        BOOST_CHECK(shards.at(3) != encoded.get().at(3));
+        BOOST_CHECK(shards.at(1) != encoded.get(1));
+        BOOST_CHECK(shards.at(3) != encoded.get(3));
 
         ec.recover(shards, stats);
 
         int i = 0;
         for (auto s : shards) {
-            BOOST_CHECK(s == encoded.get().at(i++));
+            BOOST_CHECK(s == encoded.get(i++));
         }
     }
 
@@ -117,14 +133,14 @@ BOOST_AUTO_TEST_CASE(two_times_ec) {
         shards.at(1) = s1;
         shards.at(3) = s3;
 
-        BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-        BOOST_CHECK(shards.at(3) != encoded.get().at(3));
+        BOOST_CHECK(shards.at(1) != encoded.get(1));
+        BOOST_CHECK(shards.at(3) != encoded.get(3));
 
         ec.recover(shards, stats);
 
         int i = 0;
         for (auto s : shards) {
-            BOOST_CHECK(s == encoded.get().at(i++));
+            BOOST_CHECK(s == encoded.get(i++));
         }
     }
 }
@@ -170,15 +186,15 @@ BOOST_AUTO_TEST_CASE(ec_non_divisable, *boost::unit_test::disabled()) {
     shards.at(3) = s3;
     shards.at(4) = s4;
 
-    BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-    BOOST_CHECK(shards.at(3) != encoded.get().at(3));
-    BOOST_CHECK(shards.at(4) != encoded.get().at(4));
+    BOOST_CHECK(shards.at(1) != encoded.get(1));
+    BOOST_CHECK(shards.at(3) != encoded.get(3));
+    BOOST_CHECK(shards.at(4) != encoded.get(4));
 
     ec.recover(shards, stats);
 
     int i = 0;
     for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get().at(i++));
+        BOOST_CHECK(s == encoded.get(i++));
     }
 }
 
@@ -205,15 +221,15 @@ BOOST_AUTO_TEST_CASE(large_data) {
     shards.at(3) = s3;
     shards.at(4) = s4;
 
-    BOOST_CHECK(shards.at(1) != encoded.get().at(1));
-    BOOST_CHECK(shards.at(3) != encoded.get().at(3));
-    BOOST_CHECK(shards.at(4) != encoded.get().at(4));
+    BOOST_CHECK(shards.at(1) != encoded.get(1));
+    BOOST_CHECK(shards.at(3) != encoded.get(3));
+    BOOST_CHECK(shards.at(4) != encoded.get(4));
 
     ec.recover(shards, stats);
 
     int i = 0;
     for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get().at(i++));
+        BOOST_CHECK(s == encoded.get(i++));
     }
 }
 

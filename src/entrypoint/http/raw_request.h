@@ -18,28 +18,24 @@ namespace beast = boost::beast;
 using verb = beast::http::verb;
 using status = beast::http::status;
 
-struct partial_parse_result {
-    static coro<partial_parse_result> read(boost::asio::ip::tcp::socket& sock);
+struct raw_request {
+    static coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
+    static raw_request
+    from_string(beast::http::request<beast::http::empty_body> header,
+                beast::flat_buffer buffer, boost::asio::ip::tcp::endpoint peer);
 
     std::optional<std::string> optional(const std::string& name) const;
     std::string require(const std::string& name) const;
 
-    boost::asio::ip::tcp::socket& socket;
     beast::flat_buffer buffer;
 
     beast::http::request<beast::http::empty_body> headers;
     boost::asio::ip::tcp::endpoint peer;
-};
 
-struct url_parsing_result {
     std::map<std::string, std::string> params;
     std::string path;
     std::string encoded_path;
-    std::string bucket;
-    std::string object;
 };
-
-url_parsing_result parse_request_target(const std::string& target);
 
 /**
  * Return bucket and object key.
