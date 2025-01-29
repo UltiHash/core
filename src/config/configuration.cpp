@@ -58,16 +58,6 @@ make_log_config(const service_config& cfg,
 void register_service(CLI::App& app, service_config& cfg) {
     auto group = app.add_option_group("service", "service configuration");
 
-    app.add_option(
-           "--license,-L",
-           [&cfg](CLI::results_t res) {
-               cfg.license = license::create(res[0]);
-               return true;
-           },
-           "UltiHash license json-string")
-        ->envname(ENV_CFG_LICENSE_JSON)
-        ->default_val(cfg.license);
-
     group
         ->add_option("--registry,-r", cfg.etcd_config.url,
                      "URL to etcd endpoint")
@@ -218,6 +208,16 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     auto* rv = app.add_subcommand("coordinator", "Run as coordinator service");
     rv->add_option("--thread-count", cfg.thread_count, "number of threads")
         ->default_val(cfg.thread_count);
+
+    app.add_option(
+           "--license,-L",
+           [&cfg](CLI::results_t res) {
+               cfg.license = license::create(res[0]);
+               return true;
+           },
+           "UltiHash license json-string")
+        ->envname(ENV_CFG_LICENSE_JSON)
+        ->default_val(cfg.license);
 
     app.add_option("--backend-host", cfg.backend_config.backend_host,
                    "backend host")

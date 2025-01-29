@@ -13,7 +13,7 @@ using boost::asio::ip::tcp;
 
 namespace uh::cluster {
 
-std::string default_backend_client::get_license() {
+std::string default_backend_client::get_license() const {
 
     cpr::Response r =
         cpr::Get(cpr::Url{"https://" + m_backend_host + "/v1/license"},

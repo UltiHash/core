@@ -35,7 +35,7 @@ public:
     })";
 
     static constexpr const char* json_compact_literal =
-        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240})";
+        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240,"signature":"YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="})";
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_license_updater, fixture)
@@ -56,7 +56,8 @@ BOOST_FIXTURE_TEST_SUITE(a_license_watcher, fixture)
 BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
-    auto sut = license_watcher{etcd};
+    auto sut =
+        license_watcher{etcd, [&](std::string_view) { promise.set_value(); }};
 
     auto updater =
         license_updater(ioc, etcd, pseudo_backend_client(json_literal));

@@ -86,7 +86,7 @@ public:
         "YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="
     })";
     static constexpr const char* json_compact_literal =
-        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240})";
+        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240,"signature":"YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="})";
 
     license sut;
 };

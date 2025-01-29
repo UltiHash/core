@@ -11,11 +11,13 @@ namespace uh::cluster {
 
 class license_watcher {
 public:
-    license_watcher(etcd_manager& etcd)
+    using callback_t = std::function<void(std::string_view)>;
+    license_watcher(etcd_manager& etcd, callback_t callback = nullptr)
         : m_etcd{etcd},
-          m_wg{m_etcd.watch(etcd_license, [this](const etcd::Response& resp) {
-              on_watch(resp);
-          })} {
+          m_wg{m_etcd.watch(
+              etcd_license,
+              [this](const etcd::Response& resp) { on_watch(resp); })},
+          m_callback{std::move(callback)} {
 
         auto license_str = m_etcd.get(etcd_license);
         if (!license_str.empty()) {
@@ -33,6 +35,9 @@ private:
 
         const auto& license_str = resp.value().as_string();
         parse_and_save(license_str);
+        if (m_callback) {
+            m_callback(license_str);
+        }
     }
 
     void parse_and_save(std::string_view license_str) {
@@ -44,6 +49,7 @@ private:
     etcd_manager& m_etcd;
     etcd_manager::watch_guard m_wg;
     std::atomic<std::shared_ptr<license>> m_license;
+    callback_t m_callback;
 };
 
 } // namespace uh::cluster

@@ -30,16 +30,16 @@ public:
           m_storage_maintainer(
               m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
-        if (service.license) {
+        if (cc.license) {
+            LOG_INFO() << "using license from UH_LICENSE_JSON";
             m_license_updater.emplace(
-                m_ioc, m_etcd,
-                pseudo_backend_client(service.license.to_string()));
+                m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
             boost::asio::co_spawn( //
                 m_ioc, m_license_updater->update(), boost::asio::detached);
         } else {
+            LOG_INFO() << "Start license_updater";
             m_license_updater.emplace( //
-                m_ioc, m_etcd,         //
-                default_backend_client(cc.backend_config));
+                m_ioc, m_etcd, default_backend_client(cc.backend_config));
             boost::asio::co_spawn(
                 m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
                 boost::asio::detached);

@@ -36,6 +36,8 @@ license license::create(std::string_view json_str, verify option) {
 
     auto rv = j.template get<license>();
 
+    auto compact_json = j.dump();
+
     if (option == verify::VERIFY) {
         if (!j.contains("signature")) {
             throw std::runtime_error("missing key: signature");
@@ -44,18 +46,16 @@ license license::create(std::string_view json_str, verify option) {
         auto sign_b64 = j.at("signature").get<std::string>();
         j.erase("signature");
 
-        auto compact_json = j.dump();
+        auto signature_removed = j.dump();
 
         auto signature = base64_decode(sign_b64);
 
-        if (!verify_license(compact_json, signature)) {
+        if (!verify_license(signature_removed, signature)) {
             throw std::runtime_error("signature of rv could not be verified");
         }
-        rv.m_compact_json = std::move(compact_json);
-
-    } else {
-        rv.m_compact_json = j.dump();
     }
+
+    rv.m_compact_json = std::move(compact_json);
 
     return rv;
 }
