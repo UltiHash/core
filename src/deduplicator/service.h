@@ -3,7 +3,6 @@
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
 #include "common/network/server.h"
-#include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "common/telemetry/log.h"
 #include "config.h"

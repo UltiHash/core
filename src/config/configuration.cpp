@@ -159,7 +159,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     auto* rv = app.add_subcommand("entrypoint", "Run as entrypoint service");
 
     register_server(*rv, cfg.server);
-    register_global_data_view(*rv, cfg.storage_interface);
+    register_global_data_view(*rv, cfg.cluster_storage);
 
     rv->add_option("--dedupe-connections", cfg.dedupe_node_connection_count,
                    "number of connections per deduplication service")
@@ -173,10 +173,23 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
                    "buffer size before sending data to deduplicators")
         ->default_val(cfg.buffer_size);
 
-    rv->add_flag("--no-dedupe", cfg.noop_deduplicator,
-                 "disable deduplication and write directly to storage")
-        ->default_val(cfg.noop_deduplicator)
-        ->envname(ENV_CFG_NO_DEDUPE);
+    std::map<std::string, dd_type> dd_types{{"local", dd_type::local},
+                                            {"cluster", dd_type::cluster},
+                                            {"null", dd_type::null}};
+    rv->add_option("--dedupe", cfg.deduplicator,
+                   "change type of deduplication: local, cluster or null")
+        ->transform(CLI::CheckedTransformer(dd_types, CLI::ignore_case))
+        ->default_val(cfg.deduplicator)
+        ->envname(ENV_CFG_DEDUPE_TYPE);
+
+    std::map<std::string, sn_type> sn_types{{"local", sn_type::local},
+                                            {"cluster", sn_type::cluster},
+                                            {"null", sn_type::null}};
+    rv->add_option("--storage", cfg.storage,
+                   "change type of storage: local, cluster or null")
+        ->transform(CLI::CheckedTransformer(sn_types, CLI::ignore_case))
+        ->default_val(cfg.storage)
+        ->envname(ENV_CFG_STORAGE_TYPE);
 
     configure(*rv, cfg.database);
 
@@ -253,11 +266,6 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_dd = sub_deduplicator(app, rv.deduplicator);
     auto sub_rk = sub_coordinator(app, rv.coordinator);
 
-    auto sub_dd_str =
-        sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
-    auto sub_en_dd = sub_deduplicator(
-        *sub_ep, rv.entrypoint.m_attached_deduplicator.emplace());
-
     register_service(app, rv.service);
 
     app.require_subcommand(1);
@@ -293,6 +301,17 @@ std::optional<config> read_config(int argc, char** argv) {
 
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
+        if (rv.entrypoint.deduplicator == dd_type::cluster &&
+            rv.entrypoint.storage != sn_type::cluster) {
+            throw std::runtime_error(
+                "cluster deduplication incompatible with storage type");
+        }
+
+        rv.entrypoint.local_storage.m_data_store_roots = working_dirs;
+        for (auto& p : rv.entrypoint.local_storage.m_data_store_roots) {
+            p /= "storage";
+        }
+
     } else if (sub_dd->parsed()) {
 
         rv.role = DEDUPLICATOR_SERVICE;
@@ -319,13 +338,6 @@ std::optional<config> read_config(int argc, char** argv) {
     }
 
     rv.log = make_log_config(rv.service, log_level, rv.role);
-
-    if (!sub_dd_str->parsed()) {
-        rv.deduplicator.m_attached_storage.reset();
-    }
-    if (!sub_en_dd->parsed()) {
-        rv.entrypoint.m_attached_deduplicator.reset();
-    }
 
     return rv;
 }
