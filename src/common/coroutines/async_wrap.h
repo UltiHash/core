@@ -14,9 +14,8 @@ auto async_wrap(CallbackAPI&& api, CompletionToken&& token, Args&&... args) {
 
             std::invoke(
                 api, std::forward<Args>(args)...,
-                [handler = std::move(handler), work = std::move(work)]
-                // [handler, work]
-                (ResponseType result) mutable {
+                [handler = std::move(handler),
+                 work = std::move(work)](ResponseType result) mutable {
                     auto alloc = boost::asio::get_associated_allocator(
                         handler, boost::asio::recycling_allocator<void>());
 

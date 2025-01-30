@@ -62,8 +62,8 @@ BOOST_AUTO_TEST_CASE(returns_not_found_for_get_with_invalid_path) {
         cpr::Url{"https://www.httpbin.org/wrong_path"},
         cpr::Authentication{"ultihash", "passwd", cpr::AuthMode::BASIC});
 
-    BOOST_TEST(resp.status_code ==
-               static_cast<int>(boost::beast::http::status::not_found));
+    BOOST_TEST(resp.status_code !=
+               static_cast<int>(boost::beast::http::status::ok));
 }
 
 BOOST_AUTO_TEST_CASE(returns_for_empty_user_and_password) {

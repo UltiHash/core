@@ -25,7 +25,7 @@ public:
         try {
             LOG_DEBUG() << "Fetching license ...";
             auto str = co_await backoff.run([&]() -> coro<std::string> {
-                co_return m_backend_client->get_license();
+                co_return co_await m_backend_client->get_license();
             });
 
             auto lic = license::create(str);
