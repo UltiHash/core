@@ -1,51 +1,44 @@
 name: Small-Sized Performance Testing AWS
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 2'
-
-env:
-  ENVIRONMENT_NAME: performance-testing-small-aarch64
+  workflow_call:
+    inputs:
+      env_name:         
+        required: true
+        type: string
+      docker_image_tag: 
+        required: true
+        type: string
+      docker_registry:
+        required: true
+        type: string
+    secrets:
+      ghcr_token:
+        required: true
+      docker_registry_username:
+        required: true
+      docker_registry_password:
+        required: true
+      registry_token:
+        required: true
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+      uh_license:
+        required: true
+      monitoring_token:
+        required: true
 
 jobs:
 
-  build-core:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: Dockerfile
-      docker_build_args: |
-          BuildType=RelWithDebInfo
-          DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
-      docker_tags: performance-testing-small-aarch64
-      platforms: linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
-
-  build-database-init:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
-      docker_tags: performance-testing-small-aarch64
-      platforms: linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
-
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    needs: 
-      - build-core
-      - build-database-init
     steps:
 
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
+          token: ${{ secrets.ghcr_token }}
       
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
@@ -55,8 +48,8 @@ jobs:
 
       - name: Setup the AWS credentials
         run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
@@ -74,18 +67,18 @@ jobs:
 
       - name: Delete the testing environment if exists
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
-          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait || true
+          kubectl delete pods --all --force -n ${{ inputs.env_name }} || true
+          kubectl delete pvc --all -n ${{ inputs.env_name }}
+          kubectl delete secrets --all -n ${{ inputs.env_name }} || true
+          kubectl delete ns ${{ inputs.env_name }} || true
         continue-on-error: true
       
       - name: Provision the testing environment
         run: |
-          kubectl create ns ${{ env.ENVIRONMENT_NAME }}
-          kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
-          kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_1PB }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_AWS }}'
+          kubectl create ns ${{ inputs.env_name }}
+          kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ vars.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
+          kubectl create secret generic ultihash -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
 
       - name: Generate the performance tester manifest for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
@@ -94,10 +87,10 @@ jobs:
           AMOUNT_GiB: "100"
           PROM_URL: "prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
           TEST_TYPE: UH
-          S3_ENDPOINT_URL: "http://${{ env.ENVIRONMENT_NAME }}-entrypoint:8080"
+          S3_ENDPOINT_URL: "http://${{ inputs.env_name }}-entrypoint:8080"
           S3_SOURCE_BUCKET: test
           S3_DESTINATION_BUCKET: test
-          RELEASE_NAME: ${{ env.ENVIRONMENT_NAME }}
+          RELEASE_NAME: ${{ inputs.env_name }}
           READ_TIMEOUT: "600"
           JOBS: "4"
         with:
@@ -107,20 +100,20 @@ jobs:
       - name: Generate Helm values for UltiHash
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
         with:
           input: testing/performance/small/ultihash-helm-values.yaml
           output: ultihash-helm-values.yaml
           
       - name: Install the UltiHash cluster
         run: |
-          echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ inputs.env_name }} --values ultihash-helm-values.yaml --wait --timeout 15m
 
       - name: Execute the performance test against UltiHash
         run: |
-          bash testing/performance/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ env.ENVIRONMENT_NAME }} 1h
+          bash testing/performance/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ inputs.env_name }} 1h
  
   cleanup:
     runs-on: lightweight-generic-jobs
@@ -136,8 +129,8 @@ jobs:
 
       - name: Setup the AWS credentials
         run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY}}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_KEY}}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.aws_access_key_id }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.aws_secret_access_key }}" >> $GITHUB_ENV
           echo "AWS_DEFAULT_REGION=eu-central-1" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
@@ -155,10 +148,10 @@ jobs:
 
       - name: Environment cleanup
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
-          kubectl delete pods --all --force -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete pvc --all -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete secrets --all -n ${{ env.ENVIRONMENT_NAME }} || true
-          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
+          helm uninstall ${{ inputs.env_name }} -n ${{ inputs.env_name }} --wait || true
+          kubectl delete pods --all --force -n ${{ inputs.env_name }} || true
+          kubectl delete pvc --all -n ${{ inputs.env_name }}
+          kubectl delete secrets --all -n ${{ inputs.env_name }} || true
+          kubectl delete ns ${{ inputs.env_name }} || true
         continue-on-error: true
       

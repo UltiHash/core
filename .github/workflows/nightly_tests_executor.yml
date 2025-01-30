@@ -13,6 +13,7 @@ on:
           - pyspark-test-x86-64
           - s3a-test-x86-64
           - stability-test-x86-64
+          - small-performance-test
           - vulnerability-scanning
         required: true
 
@@ -127,6 +128,28 @@ jobs:
       kubeconfig: ${{ secrets.KUBECONFIG }}
       uh_license: ${{ secrets.UH_LICENSE_1PB }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+  
+  small-performance-test:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test')
+    uses: ./.github/workflows/performance_testing_small_aws.yml
+    with:
+      env_name: performance-testing-small-aarch64
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE_1PB }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
   vulnerability-scanning:
     needs: 
