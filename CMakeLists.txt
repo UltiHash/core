@@ -34,7 +34,10 @@ endif()
 
 if(ENABLE_TSAN)
     if(ENABLE_ASAN OR ENABLE_UBSAN)
-        message(FATAL "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN")
+        message(
+            FATAL
+            "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN"
+        )
     endif()
 
     add_compile_options(-fsanitize=thread)
@@ -51,7 +54,9 @@ if(ENABLE_UBSAN)
     add_link_options(-fsanitize=undefined)
 endif()
 
-if(ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_UBSAN)
+if(ENABLE_TSAN
+   OR ENABLE_ASAN
+   OR ENABLE_UBSAN)
     add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
 endif()
 
