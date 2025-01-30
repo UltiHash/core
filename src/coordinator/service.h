@@ -38,19 +38,11 @@ public:
                 m_ioc, m_license_updater->update(), boost::asio::detached);
         } else {
             LOG_INFO() << "Start license_updater";
-            m_license_updater.emplace(
-                m_ioc, m_etcd,
-                pseudo_backend_client(
-                    R"({"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="})"));
-            boost::asio::co_spawn( //
-                m_ioc, m_license_updater->update(), boost::asio::detached);
-            // TODO: uncomment this when backend is ready
-            // m_license_updater.emplace( //
-            //     m_ioc, m_etcd, default_backend_client(cc.backend_config));
-            // boost::asio::co_spawn(
-            //     m_ioc,
-            //     m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
-            //     boost::asio::detached);
+            m_license_updater.emplace( //
+                m_ioc, m_etcd, default_backend_client(cc.backend_config));
+            boost::asio::co_spawn(
+                m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
+                boost::asio::detached);
         }
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
