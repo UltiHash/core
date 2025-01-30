@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(throws_for_invalid_signature) {
         "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
-        "storage_cap": 10240,
+        "storage_cap_gib": 10240,
         "signature":
             "123=="
     })";
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(throws_for_no_signature) {
         "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
-        "storage_cap": 10240
+        "storage_cap_gib": 10240
     })";
 
     BOOST_CHECK_THROW(license::create(json_literal), std::runtime_error);
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(can_skip_validation) {
         "version": "v1",
         "customer_id": "UltiHash-Test",
         "license_type": "freemium",
-        "storage_cap": 1048576
+        "storage_cap_gib": 1048576
     })";
 
     BOOST_CHECK_NO_THROW(
@@ -81,12 +81,12 @@ public:
         "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
-        "storage_cap": 10240,
+        "storage_cap_gib": 10240,
         "signature": 
-        "YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="
+        "cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="
     })";
     static constexpr const char* json_compact_literal =
-        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240,"signature":"YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="})";
+        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";
 
     license sut;
 };
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(parses_json_string_to_license) {
 
     BOOST_CHECK_EQUAL(sut.customer_id, "big corp xy");
     BOOST_CHECK_EQUAL(sut.license_type, license::type::FREEMIUM);
-    BOOST_CHECK_EQUAL(sut.storage_cap, 10240);
+    BOOST_CHECK_EQUAL(sut.storage_cap_gib, 10240);
 }
 
 BOOST_AUTO_TEST_CASE(prints_out_compact_form_json_string) {

@@ -31,7 +31,8 @@ public:
             auto lic = license::create(str);
 
             LOG_INFO() << "license loaded for " << lic.customer_id
-                       << " -- storage size: " << lic.storage_cap << " bytes";
+                       << " -- storage size: " << lic.storage_cap_gib
+                       << " bytes";
 
             m_etcd.put(etcd_license, lic.to_string());
 

@@ -12,7 +12,7 @@ struct license {
     std::string version;
     std::string customer_id;
     enum type license_type { NONE };
-    std::size_t storage_cap{0};
+    std::size_t storage_cap_gib{0};
 
     operator bool() const { return is_valid(); }
 
