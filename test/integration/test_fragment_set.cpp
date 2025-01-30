@@ -12,7 +12,6 @@ namespace uh::cluster {
 struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
     context ctx;
-    std::shared_ptr<storage_interface> gdv;
     std::shared_ptr<sn::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
@@ -20,8 +19,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
 
     void setup() {
         global_data_view_fixture::setup();
-        gdv = get_global_data_view();
-        cache = std::make_shared<sn::cache>(*gdv, 1000);
+        cache = std::make_shared<sn::cache>(gdv(), 1000);
         frag_set = std::make_shared<fragment_set>(
             get_executor(), tmp_dir.path() / "logfile", 1000, *cache);
     }
@@ -32,7 +30,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
         memset(fragment.data(), fill_char, size);
         auto addr =
             boost::asio::co_spawn(get_executor(),
-                                  gdv->write(ctx, fragment.string_view(), {0}),
+                                  gdv().write(ctx, fragment.string_view(), {0}),
                                   boost::asio::use_future)
                 .get();
         return {std::move(fragment), addr};
@@ -159,8 +157,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     context ctx;
 
     std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto gdv = get_global_data_view();
-    sn::cache c(*gdv, 1000);
+    sn::cache c(gdv(), 1000);
     fragment_set frag_set(get_executor(), frag_set_log_path, 1000, c);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
