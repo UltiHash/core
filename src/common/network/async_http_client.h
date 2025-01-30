@@ -15,12 +15,13 @@ namespace uh::cluster {
 
 class async_http_client {
 public:
-    async_http_client(auto&& username, auto&& password, cpr::AuthMode auth_type)
-        : m_username{std::forward<std::string>(username)},
-          m_password{std::forward<std::string>(password)},
+    async_http_client(std::string&& username, std::string&& password,
+                      cpr::AuthMode auth_type)
+        : m_username{std::move(username)},
+          m_password{std::move(password)},
           m_auth_type{auth_type} {}
 
-    async_http_client(std::string_view username, std::string_view password,
+    async_http_client(const std::string& username, const std::string& password,
                       cpr::AuthMode auth_type)
         : m_username{username},
           m_password{password},
