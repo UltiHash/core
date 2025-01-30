@@ -77,17 +77,6 @@ public:
     fixture()
         : sut{license::create(json_literal)} {}
 
-    static constexpr const char* json_literal = R"({
-        "version": "v1",
-        "customer_id": "big corp xy",
-        "license_type": "freemium",
-        "storage_cap_gib": 10240,
-        "signature": 
-        "cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="
-    })";
-    static constexpr const char* json_compact_literal =
-        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";
-
     license sut;
 };
 
