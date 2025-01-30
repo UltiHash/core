@@ -75,7 +75,7 @@ class fixture {
 
 public:
     fixture()
-        : sut{license::create(json_literal)} {}
+        : sut{license::create(test_license_string)} {}
 
     license sut;
 };
@@ -84,15 +84,15 @@ BOOST_FIXTURE_TEST_SUITE(a_initialized_license, fixture)
 
 BOOST_AUTO_TEST_CASE(parses_json_string_to_license) {
 
-    BOOST_CHECK_EQUAL(sut.customer_id, "big corp xy");
+    BOOST_CHECK_EQUAL(sut.customer_id, "UltiHash-Test");
     BOOST_CHECK_EQUAL(sut.license_type, license::type::FREEMIUM);
-    BOOST_CHECK_EQUAL(sut.storage_cap_gib, 10240);
+    BOOST_CHECK_EQUAL(sut.storage_cap_gib, 1048576);
 }
 
 BOOST_AUTO_TEST_CASE(prints_out_compact_form_json_string) {
     auto compact_json_str = sut.to_string();
 
-    BOOST_TEST(compact_json_str == json_compact_literal);
+    BOOST_TEST(compact_json_str == test_license_string);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

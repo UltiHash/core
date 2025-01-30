@@ -38,7 +38,7 @@ public:
 
         auto coordinator_cfg = coordinator_config{};
 
-        coordinator_cfg.license = license::create(json_compact_literal);
+        coordinator_cfg.license = license::create(test_license_string);
         m_coordinator = std::make_unique<coordinator::service>(service_config{},
                                                                coordinator_cfg);
         int i = 0;

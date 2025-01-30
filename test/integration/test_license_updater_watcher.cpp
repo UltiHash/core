@@ -29,12 +29,13 @@ public:
 BOOST_FIXTURE_TEST_SUITE(a_license_updater, fixture)
 
 BOOST_AUTO_TEST_CASE(updates_license_through_etcd) {
-    auto sut = license_updater(ioc, etcd, pseudo_backend_client(json_literal));
+    auto sut =
+        license_updater(ioc, etcd, pseudo_backend_client(test_license_string));
 
     auto future = co_spawn(ioc, sut.update(), use_future);
     future.get();
 
-    BOOST_TEST(etcd.get(etcd_license) == json_compact_literal);
+    BOOST_TEST(etcd.get(etcd_license) == test_license_string);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -48,7 +49,7 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
         license_watcher{etcd, [&](std::string_view) { promise.set_value(); }};
 
     auto updater =
-        license_updater(ioc, etcd, pseudo_backend_client(json_literal));
+        license_updater(ioc, etcd, pseudo_backend_client(test_license_string));
     co_spawn(ioc, updater.update(), use_future).get();
 
     if (future.wait_for(std::chrono::seconds(5)) ==
