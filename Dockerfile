@@ -25,6 +25,7 @@ RUN apt-get update \
     fi
 
 COPY --from=build /core/build/uh-cluster /usr/local/bin
+COPY --from=build /core/build/libuh-cluster_shared.so /usr/local/bin
 
 RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh

@@ -200,7 +200,12 @@ target_include_directories(
 set(CMAKE_BUILD_RPATH "$ORIGIN")
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_shared)
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+endif()
+
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
