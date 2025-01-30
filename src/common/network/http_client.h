@@ -40,7 +40,11 @@ inline const http_error_category& http_category() {
 
 class http_client {
 public:
-    http_client(std::string_view username, std::string_view password,
+    http_client(std::string&& username, std::string&& password,
+                cpr::AuthMode auth_type)
+        : m_async_client{std::move(username), std::move(password), auth_type} {}
+
+    http_client(const std::string& username, const std::string& password,
                 cpr::AuthMode auth_type)
         : m_async_client{username, password, auth_type} {}
 
