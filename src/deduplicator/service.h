@@ -25,7 +25,7 @@ public:
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
           m_storage(std::make_unique<default_global_data_view>(
-              config.global_data_view, m_ioc, m_etcd)),
+              config.storage_interface, m_ioc, m_etcd)),
           m_deduplicator(
               std::make_unique<local_deduplicator>(m_ioc, config, *m_storage)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),

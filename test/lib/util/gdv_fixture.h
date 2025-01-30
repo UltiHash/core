@@ -15,11 +15,7 @@ class global_data_view_fixture {
 public:
     global_data_view_fixture()
         : m_etcd(),
-          m_service_cfg(make_service_config()),
-          m_storage_services(
-              m_etcd,
-              remote_factory(m_ioc,
-                             m_gdv_config.storage_service_connection_count)) {}
+          m_service_cfg(make_service_config()) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -65,8 +61,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<default_global_data_view>(
-            m_gdv_config, m_ioc, m_storage_services, m_etcd);
+        m_gdv = std::make_shared<default_global_data_view>(m_gdv_config, m_ioc,
+                                                           m_etcd);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -77,7 +73,7 @@ public:
         });
 
         wait_for_true(ETCD_TIMEOUT, std::chrono::seconds(1), [this]() {
-            return m_storage_services.size() == m_storage_instances.size();
+            return m_gdv->services() == m_storage_instances.size();
         });
     }
 
@@ -117,7 +113,7 @@ public:
         m_etcd.clear_all();
     }
 
-    std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    std::shared_ptr<storage_interface> get_global_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -138,8 +134,7 @@ private:
     std::vector<std::thread> m_threads;
     std::unique_ptr<coordinator::service> m_coordinator;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    service_maintainer<distributed_storage, remote_factory> m_storage_services;
-    std::shared_ptr<global_data_view> m_gdv;
+    std::shared_ptr<default_global_data_view> m_gdv;
 };
 
 } // namespace uh::cluster

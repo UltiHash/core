@@ -18,7 +18,7 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_storage;
+    storage_interface& m_storage;
 };
 
 } // namespace uh::cluster

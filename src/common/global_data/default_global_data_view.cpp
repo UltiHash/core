@@ -82,6 +82,10 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
     co_return freed_bytes;
 }
 
+std::size_t default_global_data_view::services() const {
+    return m_service_maintainer.size();
+}
+
 default_global_data_view::~default_global_data_view() noexcept {
     m_ec_maintainer.remove_monitor(m_load_balancer);
     m_ec_maintainer.remove_monitor(m_basic_getter);

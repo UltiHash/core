@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <common/global_data/global_data_view.h>
+#include <common/service_interfaces/storage_interface.h>
 #include <common/types/common_types.h>
 #include <entrypoint/directory.h>
 
@@ -10,7 +10,7 @@ namespace uh::cluster::ep {
 class garbage_collector {
 public:
     garbage_collector(boost::asio::io_context& ctx, directory& dir,
-                      global_data_view& gdv);
+                      storage_interface& gdv);
 
 private:
     static constexpr auto POLL_INTERVALL = std::chrono::seconds(5);
@@ -19,7 +19,7 @@ private:
     coro<void> collect();
 
     directory& m_dir;
-    global_data_view& m_gdv;
+    storage_interface& m_gdv;
 };
 
 } // namespace uh::cluster::ep

@@ -17,7 +17,7 @@ struct deduplicator_config {
         .bind_address = "0.0.0.0",
     };
 
-    global_data_view_config global_data_view;
+    global_data_view_config storage_interface;
     std::filesystem::path working_dir = "/var/lib/uh/deduplicator";
     std::size_t min_fragment_size = 32ul;
     std::size_t max_fragment_size = DEFAULT_PAGE_SIZE;

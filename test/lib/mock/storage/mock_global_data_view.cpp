@@ -12,17 +12,8 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
     co_return m_storage.write(data, offsets);
 }
 
-coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
-                                                  const uint128_t& pointer,
-                                                  size_t size) {
-    shared_buffer<char> buffer(size);
-    m_storage.read(pointer, buffer.span());
-    co_return buffer;
-}
-
-coro<std::size_t> mock_global_data_view::read_address(context& ctx,
-                                                      const address& addr,
-                                                      std::span<char> buffer) {
+coro<std::size_t> mock_global_data_view::read(context& ctx, const address& addr,
+                                              std::span<char> buffer) {
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);

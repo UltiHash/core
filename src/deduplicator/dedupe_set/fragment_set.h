@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/caches/lfu_cache.h"
-#include "common/global_data/global_data_view.h"
 #include "fragment_set_element.h"
+#include <storage/cache.h>
 
 #include <set>
 #include <shared_mutex>
@@ -73,12 +73,12 @@ public:
      * contain the address and the prefix and not the full body of a fragment to
      * enable space-efficient prefix-lookup.
      * @param set_log_path A path specifying the location of the log file.
-     * @param storage The #global_data_view instance used for looking
+     * @param storage The #storage_interface instance used for looking
      * up full fragment content beyond the prefix.
      */
     fragment_set(boost::asio::io_context& ioc,
                  const std::filesystem::path& set_log_path, size_t capacity,
-                 global_data_view& storage);
+                 sn::cache& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
@@ -135,7 +135,7 @@ private:
     boost::asio::io_context& m_ioc;
     void remove(const std::set<fragment_set_element>::const_iterator& itr);
 
-    global_data_view& m_storage;
+    sn::cache& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
 

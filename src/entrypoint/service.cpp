@@ -56,7 +56,7 @@ make_deduplicator(const entrypoint_config& config, storage_interface& storage,
 std::unique_ptr<storage_interface> make_storage(const entrypoint_config& config,
                                                 boost::asio::io_context& ioc,
                                                 etcd_manager& etcd) {
-    return std::make_unique<default_global_data_view>(config.global_data_view,
+    return std::make_unique<default_global_data_view>(config.storage_interface,
                                                       ioc, etcd);
 }
 
@@ -84,7 +84,7 @@ service::service(const service_config& sc, entrypoint_config config)
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory)),
                m_ioc),
-      m_gc(m_ioc, m_directory, m_data_view) {
+      m_gc(m_ioc, m_directory, *m_storage) {
     co_spawn(
         m_ioc, update_limits(m_directory, m_limits), [](std::exception_ptr e) {
             try {
