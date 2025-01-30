@@ -12,13 +12,20 @@
 
 namespace uh::cluster {
 
-class default_global_data_view : public storage_interface {
+struct global_data_view_config {
+    std::size_t storage_service_connection_count = 16;
+    std::size_t read_cache_capacity_l2 = 400000ul;
+    std::size_t ec_data_shards = 1;
+    std::size_t ec_parity_shards = 0;
+};
+
+class global_data_view : public storage_interface {
 
 public:
     /**
      * @brief Constructs a global_data view.
      *
-     * The default_global_data_view introduces the abstraction of a flat
+     * The global_data_view introduces the abstraction of a flat
      * address space that fragments can be written to and read from, hiding the
      * interaction with individual storage service instances.
      *
@@ -29,8 +36,8 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    default_global_data_view(const global_data_view_config& config,
-                             boost::asio::io_context& ioc, etcd_manager& etcd);
+    global_data_view(const global_data_view_config& config,
+                     boost::asio::io_context& ioc, etcd_manager& etcd);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -108,7 +115,7 @@ public:
      */
     std::size_t services() const;
 
-    ~default_global_data_view() noexcept;
+    ~global_data_view() noexcept;
 
 private:
     boost::asio::io_context& m_io_service;
