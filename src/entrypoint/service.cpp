@@ -6,6 +6,7 @@
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
 #include <storage/interfaces/global_data_view.h>
+#include <storage/interfaces/null_storage.h>
 
 namespace uh::cluster::ep {
 
@@ -38,27 +39,45 @@ std::unique_ptr<deduplicator_interface>
 make_deduplicator(const entrypoint_config& config, storage_interface& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
-    if (config.m_attached_deduplicator) {
-        LOG_INFO() << "using attached deduplicator";
+    switch (config.deduplicator) {
+    case dd_type::local:
+        LOG_INFO() << "using deduplicator: local";
         return std::make_unique<local_deduplicator>(
-            ioc, *config.m_attached_deduplicator, storage);
-    }
+            ioc, config.local_deduplicator, storage);
 
-    if (config.noop_deduplicator) {
-        LOG_INFO() << "using noop deduplicator";
+    case dd_type::null:
+        LOG_INFO() << "using deduplicator: noop";
         return std::make_unique<noop_deduplicator>(storage);
+
+    case dd_type::cluster:
+        LOG_INFO() << "using deduplicator: cluster";
+        return std::make_unique<dedupe_array>(
+            ioc, etcd, config.dedupe_node_connection_count);
     }
 
-    LOG_INFO() << "using remote deduplicator array";
-    return std::make_unique<dedupe_array>(ioc, etcd,
-                                          config.dedupe_node_connection_count);
+    throw std::runtime_error("unknown deduplicator type");
 }
 
 std::unique_ptr<storage_interface> make_storage(const entrypoint_config& config,
                                                 boost::asio::io_context& ioc,
                                                 etcd_manager& etcd) {
-    return std::make_unique<global_data_view>(config.storage_interface, ioc,
-                                              etcd);
+    switch (config.storage) {
+    case sn_type::local:
+        LOG_INFO() << "using storage: local";
+        return std::make_unique<local_storage>(
+            0, config.local_storage.data_store,
+            config.local_storage.m_data_store_roots);
+
+    case sn_type::cluster:
+        LOG_INFO() << "using storage: cluster";
+        return std::make_unique<global_data_view>(config.cluster_storage, ioc,
+                                                  etcd);
+    case sn_type::null:
+        LOG_INFO() << "using storage: null";
+        return std::make_unique<null_storage>();
+    }
+
+    throw std::runtime_error("unknown storage type");
 }
 
 } // namespace
