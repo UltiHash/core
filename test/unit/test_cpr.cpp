@@ -1,4 +1,3 @@
-#include <boost/test/tools/old/interface.hpp>
 #define BOOST_TEST_MODULE "license tests"
 
 #include <boost/test/unit_test.hpp>

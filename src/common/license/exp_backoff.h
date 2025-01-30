@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/network/http_client.h>
 #include <common/telemetry/log.h>
 #include <common/types/common_types.h>
 #include <random>
@@ -7,45 +8,6 @@
 namespace uh::cluster {
 
 enum class backoff_action : uint8_t { RETRY, ABORT };
-
-class http_error_category : public std::error_category {
-public:
-    const char* name() const noexcept override { return "http"; }
-
-    std::string message(int ev) const override {
-        switch (ev) {
-        case 200:
-            return "OK";
-        case 202:
-            return "Accepted";
-        case 401:
-            return "Unauthorized";
-        case 429:
-            return "Overloaded";
-        }
-        if (400 <= ev && ev < 500)
-            return "Bad Request";
-        if (500 <= ev && ev < 600)
-            return "Error on Backend";
-
-        return "Unknown";
-    }
-
-    backoff_action action(int ev) const {
-        if (ev == 429)
-            return backoff_action::RETRY;
-
-        if (500 <= ev && ev < 600)
-            return backoff_action::RETRY;
-
-        return backoff_action::ABORT;
-    }
-};
-
-inline const http_error_category& http_category() {
-    static http_error_category instance;
-    return instance;
-}
 
 template <typename T> class exponential_backoff {
 public:
@@ -80,7 +42,7 @@ public:
                 LOG_DEBUG() << "Error code: " << status_code;
                 LOG_DEBUG() << "Error message: " << message;
 
-                if (category.action(se.code().value()) == backoff_action::ABORT)
+                if (action(se.code().value()) == backoff_action::ABORT)
                     throw;
             } catch (...) {
                 throw;
@@ -100,6 +62,16 @@ private:
     int m_max_retries;
     int m_min_delay;
     int m_max_delay;
+
+    static backoff_action action(int ev) {
+        if (ev == 429)
+            return backoff_action::RETRY;
+
+        if (500 <= ev && ev < 600)
+            return backoff_action::RETRY;
+
+        return backoff_action::ABORT;
+    }
 };
 
 } // namespace uh::cluster
