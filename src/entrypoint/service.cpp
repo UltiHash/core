@@ -5,6 +5,7 @@
 #include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
+#include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster::ep {
 
@@ -56,8 +57,8 @@ make_deduplicator(const entrypoint_config& config, storage_interface& storage,
 std::unique_ptr<storage_interface> make_storage(const entrypoint_config& config,
                                                 boost::asio::io_context& ioc,
                                                 etcd_manager& etcd) {
-    return std::make_unique<default_global_data_view>(config.storage_interface,
-                                                      ioc, etcd);
+    return std::make_unique<global_data_view>(config.storage_interface, ioc,
+                                              etcd);
 }
 
 } // namespace

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "config.h"
 #include "multipart_state.h"
 
@@ -13,6 +15,7 @@
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
+#include <common/service_interfaces/storage_interface.h>
 
 namespace uh::cluster::ep {
 

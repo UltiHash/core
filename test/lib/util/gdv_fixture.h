@@ -5,9 +5,9 @@
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
-#include <common/global_data/default_global_data_view.h>
 #include <common/utils/temp_directory.h>
 #include <config/configuration.h>
+#include <storage/interfaces/global_data_view.h>
 #include <storage/service.h>
 
 namespace uh::cluster {
@@ -61,8 +61,7 @@ public:
             i++;
         }
 
-        m_gdv = std::make_unique<default_global_data_view>(m_gdv_config, m_ioc,
-                                                           m_etcd);
+        m_gdv = std::make_unique<global_data_view>(m_gdv_config, m_ioc, m_etcd);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -134,7 +133,7 @@ private:
     std::vector<std::thread> m_threads;
     std::unique_ptr<coordinator::service> m_coordinator;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    std::unique_ptr<default_global_data_view> m_gdv;
+    std::unique_ptr<global_data_view> m_gdv;
 };
 
 } // namespace uh::cluster

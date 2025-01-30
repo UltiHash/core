@@ -2,15 +2,14 @@
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/global_data/default_global_data_view.h"
 #include "common/network/server.h"
 #include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "common/telemetry/log.h"
 #include "config.h"
 #include "handler.h"
-#include "storage/service.h"
 #include <functional>
+#include <storage/service.h>
 #include <utility>
 
 namespace uh::cluster::deduplicator {
@@ -24,8 +23,8 @@ public:
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
-          m_storage(std::make_unique<default_global_data_view>(
-              config.storage_interface, m_ioc, m_etcd)),
+          m_storage(std::make_unique<global_data_view>(config.storage_interface,
+                                                       m_ioc, m_etcd)),
           m_deduplicator(
               std::make_unique<local_deduplicator>(m_ioc, config, *m_storage)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
