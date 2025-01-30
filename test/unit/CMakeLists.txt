@@ -1,6 +1,8 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "unit")
 
 uh_add_test(test_address)
+uh_add_test(test_http_client)
+uh_add_test(test_async_http_client)
 uh_add_test(test_backend_client)
 uh_add_test(test_big_int)
 uh_add_test(test_cpr)
