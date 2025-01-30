@@ -91,6 +91,16 @@ set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
 include(CPM)
 
+cpmaddpackage(
+    NAME
+    cpr
+    GITHUB_REPOSITORY
+    libcpr/cpr
+    GIT_TAG
+    1.9.9
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF")
+
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
     add_definitions(-DLOG_DEDUPE_SET)
@@ -136,7 +146,8 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_LIBRARIES}
     ${LMDB_LIBRARY}
-    nlohmann_json)
+    nlohmann_json
+    cpr::cpr)
 set(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/third-party
     ${CMAKE_BINARY_DIR}
