@@ -6,7 +6,7 @@
 
 namespace uh::cluster::deduplicator {
 
-handler::handler(local_deduplicator& local_dedupe)
+handler::handler(deduplicator_interface& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {

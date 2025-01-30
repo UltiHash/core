@@ -17,10 +17,16 @@ static void fill_random(char* buf, size_t size) {
 BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     auto gdv = get_global_data_view();
     context ctx;
+
+    std::vector<char> buffer;
+
     BOOST_CHECK_THROW(
         boost::asio::co_spawn(
             get_executor(),
-            gdv->read(ctx, std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
+            gdv->read(
+                ctx,
+                fragment{std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE},
+                buffer),
             boost::asio::use_future)
             .get(),
         uh::cluster::error_exception);
@@ -43,7 +49,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
 
     unique_buffer<char> result_buffer(addr.data_size());
     boost::asio::co_spawn(get_executor(),
-                          gdv->read_address(ctx, addr, result_buffer.span()),
+                          gdv->read(ctx, addr, result_buffer.span()),
                           boost::asio::use_future)
         .get();
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());
@@ -58,12 +64,12 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
     addr.push({23, 42});
     auto result_buffer = unique_buffer<char>(addr.data_size());
 
-    BOOST_CHECK_THROW(boost::asio::co_spawn(
-                          get_executor(),
-                          gdv->read_address(ctx, addr, result_buffer.span()),
-                          boost::asio::use_future)
-                          .get(),
-                      uh::cluster::error_exception);
+    BOOST_CHECK_THROW(
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read(ctx, addr, result_buffer.span()),
+                              boost::asio::use_future)
+            .get(),
+        uh::cluster::error_exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
@@ -144,7 +150,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 
     auto result_buffer = unique_buffer<char>(addr.data_size());
     boost::asio::co_spawn(get_executor(),
-                          gdv->read_address(ctx, addr, result_buffer.span()),
+                          gdv->read(ctx, addr, result_buffer.span()),
                           boost::asio::use_future)
         .get();
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());

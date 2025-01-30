@@ -10,7 +10,7 @@
 //   3x: common.h 
 //   ...
 //
-// 95005 ms: /home/sungsik/Projects/core/src/common/global_data/global_data_view.h (included 40 times, avg 2375 ms), included via:
+// 95005 ms: /home/sungsik/Projects/core/src/common/global_data/storage_interface.h (included 40 times, avg 2375 ms), included via:
 //   3x: directory.h 
 //   3x: utils.h 
 //   2x: fragment_set.h 
@@ -23,9 +23,9 @@
 //   5x: configuration.h config.h server.h protocol_handler.h 
 //   4x: <direct include>
 //   3x: service_registry.h server.h protocol_handler.h 
-//   3x: utils.h global_data_view.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h server.h protocol_handler.h 
+//   3x: utils.h storage_interface.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h server.h protocol_handler.h 
 //   2x: fragment_set_log.h config.h server.h protocol_handler.h 
-//   2x: fragment_set.h global_data_view.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h server.h protocol_handler.h 
+//   2x: fragment_set.h storage_interface.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h server.h protocol_handler.h 
 //   ...
 //
 // 83088 ms: /home/sungsik/Projects/core/src/entrypoint/http/request.h (included 47 times, avg 1767 ms), included via:
@@ -67,17 +67,17 @@
 // 64625 ms: /home/sungsik/Projects/core/src/common/network/server.h (included 47 times, avg 1375 ms), included via:
 //   5x: configuration.h config.h 
 //   3x: service_registry.h 
-//   3x: utils.h global_data_view.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h 
+//   3x: utils.h storage_interface.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h 
 //   2x: fragment_set_log.h config.h 
-//   2x: fragment_set.h global_data_view.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h 
+//   2x: fragment_set.h storage_interface.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h 
 //   1x: gdv_fixture.h recovery.h service_maintainer.h service_factory.h attached_service.h configuration.h config.h 
 //   ...
 //
 // 59865 ms: /home/sungsik/Projects/core/src/config/configuration.h (included 44 times, avg 1360 ms), included via:
 //   5x: <direct include>
-//   3x: utils.h global_data_view.h service_maintainer.h service_factory.h attached_service.h 
-//   2x: fragment_set.h global_data_view.h service_maintainer.h service_factory.h attached_service.h 
-//   2x: fragment_set_log.h fragment_set_element.h global_data_view.h service_maintainer.h service_factory.h attached_service.h 
+//   3x: utils.h storage_interface.h service_maintainer.h service_factory.h attached_service.h 
+//   2x: fragment_set.h storage_interface.h service_maintainer.h service_factory.h attached_service.h 
+//   2x: fragment_set_log.h fragment_set_element.h storage_interface.h service_maintainer.h service_factory.h attached_service.h 
 //   1x: gdv_fixture.h recovery.h service_maintainer.h service_factory.h attached_service.h 
 //   1x: service_factory.h attached_service.h 
 //   ...
@@ -86,9 +86,9 @@
 //   4x: <direct include>
 //   3x: db.h pool.h 
 //   3x: utils.h roundrobin_load_balancer.h storage_group.h coro_util.h 
-//   2x: fragment_set.h global_data_view.h ec_get_handler.h storage_group.h coro_util.h 
+//   2x: fragment_set.h storage_interface.h ec_get_handler.h storage_group.h coro_util.h 
 //   2x: remote_deduplicator.h client.h pool.h 
-//   2x: fragment_set_log.h fragment_set_element.h global_data_view.h ec_get_handler.h storage_group.h cor
+//   2x: fragment_set_log.h fragment_set_element.h storage_interface.h ec_get_handler.h storage_group.h cor
 //   ...
 //
 // clang-format on

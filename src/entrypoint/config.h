@@ -18,7 +18,7 @@ struct entrypoint_config {
     std::optional<deduplicator_config> m_attached_deduplicator;
     std::optional<storage_config> m_attached_storage;
     db::config database;
-    global_data_view_config global_data_view;
+    global_data_view_config storage_interface;
 };
 
 } // namespace uh::cluster

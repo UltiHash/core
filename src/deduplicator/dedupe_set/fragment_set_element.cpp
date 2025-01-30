@@ -4,7 +4,7 @@ namespace uh::cluster {
 fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
                                            const uint128_t& ptr, uint16_t size,
                                            std::string prefix,
-                                           global_data_view& storage)
+                                           sn::cache& storage)
     : m_ioc(ioc),
       m_storage(storage),
       m_pointer(ptr),
@@ -15,7 +15,7 @@ fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
 fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
                                            std::string_view data,
                                            std::string prefix,
-                                           global_data_view& storage)
+                                           sn::cache& storage)
     : fragment_set_element(ioc, data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
@@ -24,7 +24,7 @@ fragment_set_element::fragment_set_element(boost::asio::io_context& ioc,
                                            std::string_view data,
                                            const uint128_t& ptr,
                                            std::string prefix,
-                                           global_data_view& storage)
+                                           sn::cache& storage)
     : m_ioc(ioc),
       m_storage(storage),
       m_pointer(ptr),

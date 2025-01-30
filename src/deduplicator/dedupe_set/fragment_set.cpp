@@ -5,7 +5,7 @@ namespace uh::cluster {
 
 fragment_set::fragment_set(boost::asio::io_context& ioc,
                            const std::filesystem::path& set_log_path,
-                           size_t capacity, global_data_view& storage)
+                           size_t capacity, sn::cache& storage)
     : m_ioc(ioc),
       m_storage(storage),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),

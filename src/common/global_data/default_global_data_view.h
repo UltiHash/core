@@ -5,9 +5,9 @@
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
 #include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
+#include "common/service_interfaces/storage_interface.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "global_data_view.h"
 #include "storage/interfaces/remote_storage.h"
 
 namespace uh::cluster {
@@ -102,6 +102,11 @@ public:
      * @return The used space across all available storage service instances.
      */
     coro<std::size_t> get_used_space(context& ctx) override;
+
+    /**
+     * Return number of services known to this GDV
+     */
+    std::size_t services() const;
 
     ~default_global_data_view() noexcept;
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "command.h"
-#include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
+#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
 
@@ -10,7 +10,7 @@ namespace uh::cluster {
 
 class multipart : public command {
 public:
-    multipart(deduplicator_interface&, global_data_view&, multipart_state&);
+    multipart(deduplicator_interface&, storage_interface&, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -22,7 +22,7 @@ public:
 
 private:
     deduplicator_interface& m_dedupe;
-    global_data_view& m_gdv;
+    storage_interface& m_gdv;
     multipart_state& m_uploads;
 };
 

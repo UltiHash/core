@@ -2,8 +2,8 @@
 
 #include "command.h"
 #include "common/crypto/hash.h"
-#include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
+#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"

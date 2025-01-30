@@ -1,7 +1,7 @@
 #pragma once
 
 #include "command.h"
-#include "common/global_data/global_data_view.h"
+#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 
@@ -9,7 +9,7 @@ namespace uh::cluster {
 
 class delete_object : public command {
 public:
-    delete_object(directory&, global_data_view&, limits&);
+    delete_object(directory&, storage_interface&, limits&);
 
     static bool can_handle(const ep::http::request& req);
 

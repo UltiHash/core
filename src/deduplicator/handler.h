@@ -10,7 +10,7 @@ namespace uh::cluster::deduplicator {
 class handler : public protocol_handler {
 
 public:
-    explicit handler(local_deduplicator& local_dedupe);
+    explicit handler(deduplicator_interface& local_dedupe);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
@@ -18,7 +18,7 @@ private:
     coro<void> handle_dedupe(context& ctx, messenger& m,
                              const messenger::header& h);
 
-    local_deduplicator& m_local_dedupe;
+    deduplicator_interface& m_local_dedupe;
 };
 
 } // namespace uh::cluster::deduplicator

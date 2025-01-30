@@ -159,7 +159,7 @@ CLI::App* sub_entrypoint(CLI::App& app, entrypoint_config& cfg) {
     auto* rv = app.add_subcommand("entrypoint", "Run as entrypoint service");
 
     register_server(*rv, cfg.server);
-    register_global_data_view(*rv, cfg.global_data_view);
+    register_global_data_view(*rv, cfg.storage_interface);
 
     rv->add_option("--dedupe-connections", cfg.dedupe_node_connection_count,
                    "number of connections per deduplication service")
@@ -188,7 +188,7 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
         app.add_subcommand("deduplicator", "Run as deduplicator service");
 
     register_server(*rv, cfg.server);
-    register_global_data_view(*rv, cfg.global_data_view);
+    register_global_data_view(*rv, cfg.storage_interface);
 
     rv->add_option("--worker-count", cfg.worker_thread_count,
                    "number of worker threads")
