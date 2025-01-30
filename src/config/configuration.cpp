@@ -298,7 +298,15 @@ std::optional<config> read_config(int argc, char** argv) {
 
     } else if (sub_rk->parsed()) {
         rv.role = COORDINATOR_SERVICE;
-        const auto& cfg = rv.coordinator;
+        auto& cfg = rv.coordinator;
+
+        {
+            // TODO: It's for test. Remove this.
+            static constexpr const char* license =
+                R"({"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="})";
+            cfg.license = license::create(license);
+        }
+
         if (!cfg.license && !cfg.backend_config) {
             LOG_INFO() << "license: " << cfg.license;
             LOG_INFO() << "backend_host: " << cfg.backend_config.backend_host;
