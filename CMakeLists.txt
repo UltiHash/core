@@ -216,6 +216,7 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
+
 if(BUILD_TOOLS)
     message(STATUS "Building tools")
     add_subdirectory(tools)
