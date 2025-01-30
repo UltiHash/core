@@ -29,13 +29,13 @@ public:
         "version": "v1",
         "customer_id": "big corp xy",
         "license_type": "freemium",
-        "storage_cap": 10240,
+        "storage_cap_gib": 10240,
         "signature": 
-        "YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="
+        "cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="
     })";
 
     static constexpr const char* json_compact_literal =
-        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap":10240,"signature":"YcLv4CtuxTpZ1N4bnRft0B8xKF1ecAaHCUJK9F4dy8VuL3wcRo9Mu2+LyVwSSeu2C4xgWnKO3WkAWUszAXy8Dw=="})";
+        R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_license_updater, fixture)
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
     auto received_lic = sut.get_license();
     BOOST_CHECK_EQUAL(received_lic.customer_id, "big corp xy");
     BOOST_CHECK_EQUAL(received_lic.license_type, license::type::FREEMIUM);
-    BOOST_CHECK_EQUAL(received_lic.storage_cap, 10240);
+    BOOST_CHECK_EQUAL(received_lic.storage_cap_gib, 10240);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

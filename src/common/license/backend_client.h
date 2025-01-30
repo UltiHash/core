@@ -19,6 +19,14 @@ public:
         std::string backend_host;
         std::string customer_id;
         std::string access_token;
+        operator bool() const { return is_valid(); }
+
+    private:
+        bool is_valid() const {
+            return !backend_host.empty() && //
+                   !customer_id.empty() &&  //
+                   !access_token.empty();
+        }
     };
 
     explicit default_backend_client(const config& config)

@@ -11,6 +11,7 @@ namespace uh::cluster {
 
 NLOHMANN_JSON_SERIALIZE_ENUM(license::type, //
                              {
+                                 {license::NONE, ""},
                                  {license::FREEMIUM, "freemium"},
                                  {license::PREMIUM, "premium"},
                              })
@@ -20,7 +21,7 @@ void to_json(json& j, const license& p) {
         {"version", p.version},
         {"customer_id", p.customer_id},
         {"license_type", p.license_type},
-        {"storage_cap", p.storage_cap},
+        {"storage_cap_gib", p.storage_cap_gib},
     };
 }
 
@@ -28,7 +29,7 @@ void from_json(const json& j, license& p) {
     j.at("version").get_to(p.version);
     j.at("customer_id").get_to(p.customer_id);
     j.at("license_type").get_to(p.license_type);
-    j.at("storage_cap").get_to(p.storage_cap);
+    j.at("storage_cap_gib").get_to(p.storage_cap_gib);
 }
 
 license license::create(std::string_view json_str, verify option) {
