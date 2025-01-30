@@ -2,6 +2,7 @@
 
 #include <boost/asio.hpp>
 #include <common/license/exp_backoff.h>
+#include <common/network/http_client.h>
 #include <common/types/common_types.h>
 
 namespace uh::cluster {
@@ -9,8 +10,8 @@ namespace uh::cluster {
 class backend_client {
 public:
     virtual ~backend_client() = default;
-    virtual std::string get_license() const = 0;
-    virtual void post_usage(std::string_view usage) = 0;
+    virtual coro<std::string> get_license() = 0;
+    virtual coro<void> post_usage(std::string_view usage) = 0;
 };
 
 class default_backend_client : public backend_client {
@@ -31,16 +32,22 @@ public:
 
     explicit default_backend_client(const config& config)
         : m_backend_host(config.backend_host),
-          m_customer_id(config.customer_id),
-          m_access_token(config.access_token) {}
+          m_http_client{config.customer_id, config.access_token,
+                        cpr::AuthMode::BASIC} {}
 
-    std::string get_license() const;
-    void post_usage(std::string_view usage);
+    coro<std::string> get_license() {
+        co_return co_await m_http_client.co_get("https://" + m_backend_host +
+                                                "/v1/license");
+    }
+    coro<void> post_usage(std::string_view usage) {
+        auto resp = co_await m_http_client.co_post(
+            "https://" + m_backend_host + "/v1/usage", usage.data());
+        co_return;
+    }
 
 private:
     const std::string& m_backend_host;
-    const std::string& m_customer_id;
-    const std::string& m_access_token;
+    http_client m_http_client;
 };
 
 class pseudo_backend_client : public backend_client {
@@ -48,8 +55,11 @@ public:
     pseudo_backend_client(std::string_view license_str)
         : m_license_str{license_str} {}
 
-    std::string get_license() const { return m_license_str; }
-    void post_usage(std::string_view usage) { (void)usage; }
+    coro<std::string> get_license() { co_return m_license_str; }
+    coro<void> post_usage(std::string_view usage) {
+        (void)usage;
+        co_return;
+    }
 
 private:
     const std::string m_license_str;

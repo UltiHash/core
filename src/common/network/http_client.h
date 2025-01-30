@@ -2,8 +2,10 @@
 
 #include <boost/asio.hpp>
 #include <common/network/async_http_client.h>
+#include <common/telemetry/log.h>
 #include <common/types/common_types.h>
 #include <string>
+#include <utility>
 
 namespace uh::cluster {
 
@@ -36,42 +38,39 @@ inline const http_error_category& http_category() {
     return instance;
 }
 
-// class http_client {
-// public:
-//     http_client(std::string username, std::string password,
-//                 cpr::AuthMode auth_type)
-//         : m_async_client{std::move(username), std::move(password), auth_type}
-//         {}
-//
-//     coro<std::string> co_post(const std::string& url, cpr::Body body) {
-//         auto response = co_await m_async_client.async_post(
-//             url, std::move(body), boost::asio::use_awaitable);
-//         handle_response(response);
-//         co_return response.text;
-//     }
-//
-//     coro<std::string> co_get(const std::string& url) {
-//         auto response = co_await m_async_client.async_get( //
-//             url, boost::asio::use_awaitable);
-//         handle_response(response);
-//         co_return response.text;
-//     }
-//
-// private:
-//     static void handle_response(const cpr::Response& resp) {
-//         std::error_code ec;
-//         if (resp.status_code == 0) {
-//             ec = std::make_error_code(std::errc::protocol_error);
-//         } else if (resp.status_code != 200) {
-//             ec = std::error_code(resp.status_code, http_category());
-//         }
-//
-//         if (ec) {
-//             throw std::system_error(ec, "HTTP request failed");
-//         }
-//     }
-//
-//     async_http_client m_async_client;
-// };
+class http_client {
+public:
+    http_client(std::string_view username, std::string_view password,
+                cpr::AuthMode auth_type)
+        : m_async_client{username, password, auth_type} {}
+
+    coro<std::string> co_post(std::string&& url, cpr::Body body) {
+        auto response = co_await m_async_client.async_post(
+            std::forward<std::string>(url), std::move(body),
+            boost::asio::use_awaitable);
+        handle_status_code(response.status_code);
+        co_return response.text;
+    }
+
+    coro<std::string> co_get(auto&& url) {
+        auto response = co_await m_async_client.async_get( //
+            std::forward<std::string>(url), boost::asio::use_awaitable);
+        handle_status_code(response.status_code);
+        co_return response.text;
+    }
+
+private:
+    static void handle_status_code(const long status_code) {
+        LOG_DEBUG() << "Status code: " << status_code;
+        if (status_code == 0) {
+            throw std::runtime_error("HTTP request failed");
+        } else if (status_code != 200) {
+            auto ec = std::error_code(status_code, http_category());
+            throw std::system_error(ec, "HTTP request failed");
+        }
+    }
+
+    async_http_client m_async_client;
+};
 
 } // namespace uh::cluster
