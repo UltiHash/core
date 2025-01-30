@@ -109,8 +109,8 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<init_multipart>(m_directory, m_uploads);
     }
     if (complete_multipart::can_handle(req)) {
-        co_return std::make_unique<complete_multipart>(m_directory, m_gdv,
-                                                       m_uploads, m_limits);
+        co_return std::make_unique<complete_multipart>(m_directory, m_uploads,
+                                                       m_limits);
     }
     if (list_objects_v2::can_handle(req)) {
         co_return std::make_unique<list_objects_v2>(m_directory);
@@ -140,11 +140,10 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<get_metrics>(m_directory, m_gdv);
     }
     if (delete_object::can_handle(req)) {
-        co_return std::make_unique<delete_object>(m_directory, m_gdv, m_limits);
+        co_return std::make_unique<delete_object>(m_directory);
     }
     if (delete_objects::can_handle(req)) {
-        co_return std::make_unique<delete_objects>(m_directory, m_gdv,
-                                                   m_limits);
+        co_return std::make_unique<delete_objects>(m_directory);
     }
     if (delete_bucket::can_handle(req)) {
         co_return std::make_unique<delete_bucket>(m_directory);

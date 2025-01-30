@@ -1,15 +1,13 @@
 #pragma once
 
 #include "command.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/directory.h"
-#include "entrypoint/limits.h"
 
 namespace uh::cluster {
 
 class delete_objects : public command {
 public:
-    delete_objects(directory&, storage_interface&, limits&);
+    delete_objects(directory&);
 
     static bool can_handle(const ep::http::request& req);
 
