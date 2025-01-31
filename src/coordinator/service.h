@@ -14,7 +14,7 @@
 #include <boost/asio/steady_timer.hpp>
 
 #include <common/license/backend_client.h>
-#include <common/license/updater.h>
+#include <common/license/license_updater.h>
 
 namespace uh::cluster::coordinator {
 

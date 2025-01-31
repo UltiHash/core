@@ -5,7 +5,7 @@
 #include <common/license/backend_client.h>
 #include <common/license/exp_backoff.h>
 #include <common/license/license.h>
-#include <common/license/updater.h>
+#include <common/license/license_updater.h>
 #include <common/types/common_types.h>
 
 namespace uh::cluster {
