@@ -1,8 +1,6 @@
 add_subdirectory(lib)
 add_subdirectory(performance)
 
-set(ENV_UH_LICENSE_JSON "$ENV{UH_LICENSE_JSON}")
-
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h @ONLY)
 add_library(uh_test_config INTERFACE)
 target_include_directories(uh_test_config INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
