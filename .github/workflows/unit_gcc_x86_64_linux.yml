@@ -21,6 +21,9 @@ jobs:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
+      - name: Set the license
+        run: echo "UH_LICENSE_JSON=${{ secrets.UH_LICENSE_JSON }}" >> $GITHUB_ENV
+
       - name: Configure CMake
         run: CC=/usr/bin/gcc CXX=/usr/bin/g++ cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
 
