@@ -17,6 +17,7 @@ public:
           m_wg{m_etcd.watch(
               etcd_license,
               [this](const etcd::Response& resp) { on_watch(resp); })},
+          m_license{std::make_shared<license>()},
           m_callback{std::move(callback)} {
 
         auto license_str = m_etcd.get(etcd_license);
