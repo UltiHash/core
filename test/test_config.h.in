@@ -1,6 +1,3 @@
 #define TEST_DATA_DIR "@CMAKE_SOURCE_DIR@/data"
 
-// TODO: Use environment variable to set license string
-// static constexpr const char* test_license_string = R"(@ENV_UH_LICENSE_JSON@)";
-
-static constexpr const char* test_license_string = R"({"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="})";
+static constexpr const char* test_license_string = R"(@ENV_UH_LICENSE_JSON@)";
