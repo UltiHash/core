@@ -34,13 +34,19 @@ coro<response> multipart::handle(request& req) {
     metric<entrypoint_multipart_req>::increase(1);
 
     unique_buffer<char> buffer(req.content_length());
-    auto size = co_await req.read_body(buffer.span());
-    buffer.resize(size);
+    {
+        auto load_body_ctx = req.context().sub_context("load_body");
+        auto size = co_await req.read_body(buffer.span());
+        buffer.resize(size);
+    }
 
     dedupe_response resp = {};
-    if (!buffer.empty()) {
-        resp = co_await m_dedupe.deduplicate(req.context(),
-                                             {buffer.data(), buffer.size()});
+    {
+        auto dedupe_ctx = req.context().sub_context("call_dedupe");
+        if (!buffer.empty()) {
+            resp = co_await m_dedupe.deduplicate(
+                req.context(), {buffer.data(), buffer.size()});
+        }
     }
 
     auto md5 = to_hex(md5::from_buffer(buffer.span()));
