@@ -24,6 +24,15 @@ components and describes their purpose.
 - `UH_NO_DEDUPE` - in entrypoint, do not send data through deduplicator but 
     write directly to storage instead.
 
+# Backend Connection
+
+> **NOTE:** These are ignored when a valid test license is provided through
+        `UH_LICENSE_JSON`.
+
+- `UH_BACKEND_HOST` - configure host of the backend service.
+- `UH_CUSTOMER_ID` - configure customer ID for the backend service.
+- `UH_ACCESS_TOKEN` - configure access token for the backend service.
+
 # Database Connection
 
 - `UH_DB_HOSTPORT` - configure host and port of the DBMS 
