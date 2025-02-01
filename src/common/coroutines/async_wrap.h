@@ -9,11 +9,12 @@ template <typename ResponseType, typename CallbackAPI, typename CompletionToken,
 auto async_wrap(CallbackAPI&& api, CompletionToken&& token, Args&&... args) {
     auto init =
         [](boost::asio::completion_handler_for<void(ResponseType)> auto handler,
-           CallbackAPI api, Args... args) {
+           CallbackAPI api, Args&&... args) {
             auto work = boost::asio::make_work_guard(handler);
 
             std::invoke(
                 api, std::forward<Args>(args)...,
+                // callback
                 [handler = std::move(handler),
                  work = std::move(work)](ResponseType result) mutable {
                     auto alloc = boost::asio::get_associated_allocator(

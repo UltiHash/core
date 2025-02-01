@@ -48,17 +48,16 @@ public:
                 cpr::AuthMode auth_type)
         : m_async_client{username, password, auth_type} {}
 
-    coro<std::string> co_post(std::string&& url, cpr::Body body) {
-        auto response = co_await m_async_client.async_post(
-            std::forward<std::string>(url), std::move(body),
-            boost::asio::use_awaitable);
+    coro<std::string> co_get(std::string url) {
+        auto response = co_await m_async_client.async_get( //
+            std::move(url), boost::asio::use_awaitable);
         handle_status_code(response.status_code);
         co_return response.text;
     }
 
-    coro<std::string> co_get(auto&& url) {
-        auto response = co_await m_async_client.async_get( //
-            std::forward<std::string>(url), boost::asio::use_awaitable);
+    coro<std::string> co_post(std::string url, cpr::Body body) {
+        auto response = co_await m_async_client.async_post(
+            std::move(url), std::move(body), boost::asio::use_awaitable);
         handle_status_code(response.status_code);
         co_return response.text;
     }
