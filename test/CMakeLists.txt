@@ -1,3 +1,10 @@
+file(DOWNLOAD 
+    https://raw.githubusercontent.com/yhirose/cpp-httplib/v0.18.5/httplib.h
+    ${CMAKE_BINARY_DIR}/test/httplib.h
+)
+add_library(httplib INTERFACE)
+target_include_directories(httplib INTERFACE ${CMAKE_BINARY_DIR}/test)
+
 add_subdirectory(lib)
 add_subdirectory(performance)
 
