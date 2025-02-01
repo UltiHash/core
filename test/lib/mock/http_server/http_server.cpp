@@ -2,8 +2,6 @@
 
 #include "test_config.h"
 
-#include <httplib.h>
-
 #include <boost/filesystem.hpp>
 #include <cpr/util.h>
 #include <iostream>
@@ -12,11 +10,10 @@
 
 class http_server::impl {
 public:
-    impl(int port, const std::string& user, const std::string& passwd)
-        : m_server(),
-          m_port(port),
-          m_user(user),
-          m_passwd(passwd) {
+    impl(const std::string& user, const std::string& passwd)
+        : m_server{},
+          m_user{user},
+          m_passwd{passwd} {
 
         m_server.set_logger([](const auto& req, const auto& res) {
             std::cout << "[LOG] " << req.method << " " << req.path << " -> "
@@ -26,7 +23,8 @@ public:
         m_thread = std::jthread([this]() {
             std::cout << "[INFO] Server running on https://localhost:" << m_port
                       << std::endl;
-            m_server.listen("0.0.0.0", m_port);
+            m_port = m_server.bind_to_any_port("0.0.0.0");
+            m_server.listen_after_bind();
         });
         m_server.wait_until_ready();
     }
@@ -41,8 +39,7 @@ public:
                                                    httplib::Response& res) {
             if (!check_auth(req, res))
                 return;
-            std::string response = handler();
-            res.set_content(response, "text/plain");
+            handler(res);
         });
     }
 
@@ -51,10 +48,11 @@ public:
                                                     httplib::Response& res) {
             if (!check_auth(req, res))
                 return;
-            std::string response = handler(req.body);
-            res.set_content(cpr::util::urlEncode(response), "text/plain");
+            handler(req, res);
         });
     }
+
+    int get_port() const { return m_port; }
 
 private:
     httplib::Server m_server;
@@ -78,9 +76,8 @@ private:
     }
 };
 
-http_server::http_server(int port, const std::string& user,
-                         const std::string& passwd)
-    : pImpl(std::make_unique<impl>(port, user, passwd)) {}
+http_server::http_server(const std::string& user, const std::string& passwd)
+    : pImpl(std::make_unique<impl>(user, passwd)) {}
 
 http_server::~http_server() = default;
 
@@ -92,3 +89,5 @@ void http_server::set_post_handler(const std::string& path,
                                    PostHandler handler) {
     pImpl->set_post_handler(path, handler);
 }
+
+int http_server::get_port() const { return pImpl->get_port(); }

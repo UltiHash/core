@@ -6,6 +6,7 @@
 
 #include <common/network/http_client.h>
 
+#include <lib/mock/http_server/http_server.h>
 #include <lib/util/coroutine.h>
 #include <nlohmann/json.hpp>
 
@@ -17,35 +18,44 @@ class fixture : public coro_fixture {
 public:
     fixture()
         : coro_fixture{1},
-          ioc{coro_fixture::get_io_context()} {}
+          ioc{coro_fixture::get_io_context()},
+          server("ultihash", "passwd"),
+          expected_license("sample_license"),
+          sut{"ultihash", "passwd", cpr::AuthMode::BASIC} {
+        server.set_get_handler("/v1/license", [&](httplib::Response& resp) {
+            resp.set_content(expected_license, "text/plain");
+        });
+        server.set_get_handler("/wrong_path", [&](httplib::Response& resp) {
+            resp.status = 404;
+            resp.set_content("Wrong path", "text/plain");
+        });
+    }
 
     io_context& ioc;
+    http_server server;
+    std::string expected_license;
+    uh::cluster::http_client sut;
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_http_client, fixture)
 
 BOOST_AUTO_TEST_CASE(can_get_response) {
-    auto sut =
-        uh::cluster::http_client{"ultihash", "passwd", cpr::AuthMode::BASIC};
-    json expected_json = {{"authenticated", true}, {"user", "ultihash"}};
-
     auto future = boost::asio::co_spawn(
-        ioc, sut.co_get("https://www.httpbin.org/basic-auth/ultihash/passwd"),
+        ioc,
+        sut.co_get("http://localhost:" + std::to_string(server.get_port()) +
+                   "/v1/license"),
         boost::asio::use_future);
 
-    std::string read_text;
-    BOOST_CHECK_NO_THROW(read_text = future.get());
-    BOOST_TEST(json::parse(read_text).dump() == expected_json.dump());
+    std::string read_license;
+    BOOST_CHECK_NO_THROW(read_license = future.get());
+    BOOST_TEST(read_license == expected_license);
 }
 
 BOOST_AUTO_TEST_CASE(returns_not_found_for_get_with_invalid_path) {
-    auto sut =
-        uh::cluster::http_client{"ultihash", "passwd", cpr::AuthMode::BASIC};
-    json expected_json = {
-        {"data", "The quick brown fox jumps over the lazy dog"}};
-
     auto future = boost::asio::co_spawn(
-        ioc, sut.co_get("https://www.httpbin.org/wrong_path"),
+        ioc,
+        sut.co_get("http://localhost:" + std::to_string(server.get_port()) +
+                   "/wrong_path"),
         boost::asio::use_future);
 
     std::string read_text;

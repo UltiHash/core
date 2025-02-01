@@ -48,7 +48,7 @@ public:
     template <typename CompletionToken>
     auto async_post(auto&& url, cpr::Body body, CompletionToken&& token) {
         return async_wrap<cpr::Response>(
-            [this](std::string&& url, cpr::Body body, auto callback) {
+            [this](auto&& url, cpr::Body body, auto callback) {
                 auto callback_ptr =
                     std::make_shared<decltype(callback)>(std::move(callback));
                 cpr::PostCallback(
