@@ -33,13 +33,16 @@ public:
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE_JSON";
             m_license_updater.emplace(
-                m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()),
-                license_updater::update_mode::once);
+                m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
+            boost::asio::co_spawn( //
+                m_ioc, m_license_updater->update(), boost::asio::detached);
         } else {
             LOG_INFO() << "Start license_updater";
             m_license_updater.emplace( //
-                m_ioc, m_etcd, default_backend_client(cc.backend_config),
-                license_updater::update_mode::periodic, LICENSE_FETCH_PERIOD);
+                m_ioc, m_etcd, default_backend_client(cc.backend_config));
+            boost::asio::co_spawn(
+                m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
+                boost::asio::detached);
         }
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
