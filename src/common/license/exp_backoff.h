@@ -14,16 +14,16 @@ public:
     using exception_handler =
         std::function<backoff_action(const std::exception&)>;
     exponential_backoff(boost::asio::io_context& io_context, int max_retries,
-                        int min_delay, int max_delay)
+                        int min_delay_ms, int max_delay_ms)
         : m_ioc(io_context),
           m_max_retries(max_retries),
-          m_min_delay(min_delay),
-          m_max_delay(max_delay) {}
+          m_min_delay_ms(min_delay_ms),
+          m_max_delay_ms(max_delay_ms) {}
 
     coro<T> run(std::function<coro<T>()> task) {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> dis(m_min_delay, m_max_delay);
+        std::uniform_int_distribution<> dis(m_min_delay_ms, m_max_delay_ms);
 
         int delay_ms = dis(gen);
 
@@ -60,8 +60,8 @@ public:
 private:
     boost::asio::io_context& m_ioc;
     int m_max_retries;
-    int m_min_delay;
-    int m_max_delay;
+    int m_min_delay_ms;
+    int m_max_delay_ms;
 
     static backoff_action action(int ev) {
         if (ev == 429)
