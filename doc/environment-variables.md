@@ -29,7 +29,7 @@ components and describes their purpose.
 > **NOTE:** These are ignored when a valid test license is provided through
         `UH_LICENSE_JSON`.
 
-- `UH_BACKEND_HOST` - configure host of the backend service.
+- `UH_BACKEND_HOST` - configure host of the backend service. Please fill domain name only like this: 'backend.ultihash.io'
 - `UH_CUSTOMER_ID` - configure customer ID for the backend service.
 - `UH_ACCESS_TOKEN` - configure access token for the backend service.
 
