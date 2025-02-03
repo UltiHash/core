@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(throws_last_unhandled_exception) {
     Verify(Method(mock, get_license)).Once();
 }
 
-BOOST_AUTO_TEST_CASE(does_not_handle_unauthorized_case) {
+BOOST_AUTO_TEST_CASE(aborts_execution_for_unauthorized_error) {
     exponential_backoff<std::string> backoff{ioc, 7, 1, 2};
 
     When(Method(mock, get_license))
