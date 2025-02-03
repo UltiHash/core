@@ -1,6 +1,6 @@
 #pragma once
-#include "common/etcd/service_discovery/storage_get_handler.h"
-#include "storage/interfaces/distributed.h"
+
+#include <common/etcd/service_discovery/storage_get_handler.h>
 
 namespace uh::cluster {
 
@@ -8,17 +8,6 @@ struct address_info {
     address addr;
     std::vector<size_t> pointer_offsets;
 };
-
-struct node_address_info {
-    std::unordered_map<std::shared_ptr<distributed_storage>, address_info>
-        node_info_map;
-    size_t data_size;
-};
-
-node_address_info
-extract_node_address_map(const address& addr,
-                         storage_get_handler& storage_get_handler,
-                         const std::vector<size_t>& existing_offsets = {});
 
 coro<size_t> perform_for_address(
     const address& addr, storage_get_handler& storage_get_handler,

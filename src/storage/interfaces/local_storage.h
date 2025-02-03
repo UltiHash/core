@@ -27,9 +27,8 @@ struct local_storage : public storage_interface {
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
 
-        const size_t part_size =
-            std::ceil(static_cast<double>(data.size()) /
-                      static_cast<double>(m_data_stores.size()));
+        size_t part_size = std::ceil(static_cast<double>(data.size()) /
+                                     static_cast<double>(m_data_stores.size()));
 
         address total_addr;
         std::size_t offsets_idx = 0;
