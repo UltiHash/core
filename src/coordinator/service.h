@@ -38,8 +38,11 @@ public:
                 m_ioc, m_license_updater->update(), boost::asio::detached);
         } else {
             LOG_INFO() << "Start license_updater";
+            const auto& bc = cc.backend_config;
             m_license_updater.emplace( //
-                m_ioc, m_etcd, default_backend_client(cc.backend_config));
+                m_ioc, m_etcd,
+                default_backend_client(bc.backend_host, bc.customer_id,
+                                       bc.access_token));
             boost::asio::co_spawn(
                 m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
                 boost::asio::detached);

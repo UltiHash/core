@@ -40,6 +40,10 @@ BOOST_AUTO_TEST_CASE(can_get_through_http_and_basic_auth_with_using_future) {
         "http://localhost:" + std::to_string(server.get_port()) + "/v1/license",
         use_future);
 
+    if (future.wait_for(std::chrono::seconds(2)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
     auto resp = future.get();
     BOOST_TEST(resp.status_code ==
                static_cast<int>(boost::beast::http::status::ok));

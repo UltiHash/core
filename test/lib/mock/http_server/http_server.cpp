@@ -16,14 +16,14 @@ public:
           m_passwd{passwd} {
 
         m_server.set_logger([](const auto& req, const auto& res) {
-            std::cout << "[LOG] " << req.method << " " << req.path << " -> "
-                      << res.status << std::endl;
+            std::cout << "[http_server] " << req.method << " " << req.path
+                      << " -> " << res.status << std::endl;
         });
 
         m_thread = std::jthread([this]() {
-            std::cout << "[INFO] Server running on https://localhost:" << m_port
-                      << std::endl;
             m_port = m_server.bind_to_any_port("0.0.0.0");
+            std::cout << "[http_server] Server running on http://localhost:"
+                      << m_port << std::endl;
             m_server.listen_after_bind();
         });
         m_server.wait_until_ready();
