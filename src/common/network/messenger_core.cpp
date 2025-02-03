@@ -38,8 +38,7 @@ coro<messenger_core::header> messenger_core::recv_header() {
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
 
-        co_await boost::asio::async_read(m_socket, buffers,
-                                         boost::asio::use_awaitable);
+        co_await boost::asio::async_read(m_socket, buffers);
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
     }
@@ -68,8 +67,7 @@ messenger_core::recv_buffers(const messenger_core::header& h) {
     }
 
     try {
-        auto rv = co_await boost::asio::async_read(m_socket, m_read_buffers,
-                                                   boost::asio::use_awaitable);
+        auto rv = co_await boost::asio::async_read(m_socket, m_read_buffers);
         m_read_buffers.clear();
         m_read_size = 0;
 
@@ -113,8 +111,7 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        co_await boost::asio::async_write(m_socket, m_write_buffers,
-                                          boost::asio::use_awaitable);
+        co_await boost::asio::async_write(m_socket, m_write_buffers);
     } catch (const std::exception& e) {
         throw create_internal_network_error("send_buffers failed", e);
     }
@@ -156,8 +153,7 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
             boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
-        co_await boost::asio::async_write(m_socket, buffers,
-                                          boost::asio::use_awaitable);
+        co_await boost::asio::async_write(m_socket, buffers);
     } catch (const std::exception& e) {
         throw create_internal_network_error("send failed", e);
     }
