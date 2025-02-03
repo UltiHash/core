@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/license/backend_client.h>
@@ -13,12 +15,22 @@ namespace uh::cluster {
 class license_updater {
 
 public:
+    enum class update_mode { once, periodic };
+
     template <typename T>
     license_updater(boost::asio::io_context& ioc, etcd_manager& etcd,
-                    T&& client)
+                    T&& client, update_mode mode,
+                    std::chrono::seconds interval = std::chrono::seconds{0})
         : m_ioc{ioc},
           m_etcd{etcd},
-          m_backend_client{std::make_unique<T>(std::forward<T>(client))} {}
+          m_backend_client{std::make_unique<T>(std::forward<T>(client))} {
+        if (mode == update_mode::once) {
+            boost::asio::co_spawn(m_ioc, update(), boost::asio::detached);
+        } else if (mode == update_mode::periodic) {
+            boost::asio::co_spawn(m_ioc, periodic_update(interval),
+                                  boost::asio::detached);
+        }
+    }
 
     coro<void> update() {
         auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
@@ -44,6 +56,7 @@ public:
         }
         co_return;
     }
+
     coro<void> periodic_update(std::chrono::seconds interval) {
         while (true) {
             auto start_time = std::chrono::steady_clock::now();
