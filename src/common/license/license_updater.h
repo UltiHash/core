@@ -20,6 +20,8 @@ public:
           m_etcd{etcd},
           m_backend_client{std::make_unique<T>(std::forward<T>(client))} {}
 
+    void start_update() {}
+
     coro<void> update() {
         auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
         try {

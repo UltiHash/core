@@ -22,6 +22,7 @@ public:
           server("ultihash", "passwd"),
           expected_license("sample_license"),
           sut{"ultihash", "passwd", cpr::AuthMode::BASIC} {
+
         server.set_get_handler("/v1/license", [&](httplib::Response& resp) {
             resp.set_content(expected_license, "text/plain");
         });
@@ -46,20 +47,43 @@ BOOST_AUTO_TEST_CASE(can_get_response) {
                    "/v1/license"),
         boost::asio::use_future);
 
+    if (future.wait_for(std::chrono::seconds(2)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("co_get is not finished in expiring time");
+    }
     std::string read_license;
     BOOST_CHECK_NO_THROW(read_license = future.get());
     BOOST_TEST(read_license == expected_license);
 }
 
-BOOST_AUTO_TEST_CASE(returns_not_found_for_get_with_invalid_path) {
+BOOST_AUTO_TEST_CASE(throws_system_error_for_invalid_path) {
     auto future = boost::asio::co_spawn(
         ioc,
         sut.co_get("http://localhost:" + std::to_string(server.get_port()) +
                    "/wrong_path"),
         boost::asio::use_future);
 
+    if (future.wait_for(std::chrono::seconds(2)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("co_get is not finished in expiring time");
+    }
     std::string read_text;
     BOOST_CHECK_THROW(read_text = future.get(), std::system_error);
+}
+
+BOOST_AUTO_TEST_CASE(throws_runtime_error_for_invalid_path) {
+    auto future = boost::asio::co_spawn(
+        ioc,
+        sut.co_get("http://-----host:" + std::to_string(server.get_port()) +
+                   "/wrong_path"),
+        boost::asio::use_future);
+
+    if (future.wait_for(std::chrono::seconds(2)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("co_get is not finished in expiring time");
+    }
+    std::string read_text;
+    BOOST_CHECK_THROW(read_text = future.get(), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

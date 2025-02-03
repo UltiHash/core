@@ -49,27 +49,33 @@ public:
         : m_async_client{username, password, auth_type} {}
 
     coro<std::string> co_get(std::string url) {
-        auto response = co_await m_async_client.async_get( //
+        auto r = co_await m_async_client.async_get( //
             std::move(url), boost::asio::use_awaitable);
-        handle_status_code(response.status_code);
-        co_return response.text;
+
+        handle_status_code(r.error, r.status_code);
+        co_return r.text;
     }
 
     coro<std::string> co_post(std::string url, cpr::Body body) {
-        auto response = co_await m_async_client.async_post(
+        auto r = co_await m_async_client.async_post(
             std::move(url), std::move(body), boost::asio::use_awaitable);
-        handle_status_code(response.status_code);
-        co_return response.text;
+        handle_status_code(r.error, r.status_code);
+        co_return r.text;
     }
 
 private:
-    static void handle_status_code(const long status_code) {
-        LOG_DEBUG() << "Status code: " << status_code;
-        if (status_code == 0) {
-            throw std::runtime_error("HTTP request failed");
-        } else if (status_code != 200) {
-            auto ec = std::error_code(status_code, http_category());
-            throw std::system_error(ec, "HTTP request failed");
+    static void handle_status_code(cpr::Error error, const long status_code) {
+
+        if (error) {
+            throw std::runtime_error(error.message);
+        } else {
+            LOG_DEBUG() << "Status code: " << status_code;
+            if (status_code == 0) {
+                throw std::runtime_error("HTTP request failed");
+            } else if (status_code != 200) {
+                auto ec = std::error_code(status_code, http_category());
+                throw std::system_error(ec, "HTTP request failed");
+            }
         }
     }
 
