@@ -32,20 +32,16 @@ public:
         }
     };
 
-    default_backend_client(const std::string& backend_host,
-                           const std::string& customer_id,
-                           const std::string& access_token,
-                           type type = type::https)
-        : m_backend_host(backend_host),
+    template <typename BackendHost, typename CustomerId, typename AccessToken>
+    requires std::convertible_to<BackendHost, std::string> &&
+                 std::convertible_to<CustomerId, std::string> &&
+                 std::convertible_to<AccessToken, std::string>
+    default_backend_client(BackendHost&& backend_host, CustomerId&& customer_id,
+                           AccessToken&& access_token, type type = type::https)
+        : m_backend_host(std::forward<BackendHost>(backend_host)),
           m_backend_type{type},
-          m_http_client{customer_id, access_token, cpr::AuthMode::BASIC} {}
-
-    default_backend_client(std::string&& backend_host,
-                           std::string&& customer_id,
-                           std::string&& access_token, type type = type::https)
-        : m_backend_host(std::move(backend_host)),
-          m_backend_type{type},
-          m_http_client{std::move(customer_id), std::move(access_token),
+          m_http_client{std::forward<CustomerId>(customer_id),
+                        std::forward<AccessToken>(access_token),
                         cpr::AuthMode::BASIC} {}
 
     coro<std::string> get_license() {
