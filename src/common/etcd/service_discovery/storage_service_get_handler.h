@@ -5,13 +5,14 @@
 #include "storage/interfaces/distributed.h"
 #include "storage_get_handler.h"
 
-#include <iostream>
 #include <ranges>
+
 namespace uh::cluster {
 
 struct storage_service_get_handler
     : public service_monitor<distributed_storage>,
       public storage_get_handler {
+
     storage_service_get_handler(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}
@@ -23,6 +24,7 @@ struct storage_service_get_handler
         m_clients.emplace(id, client);
         m_cv.notify_one();
     }
+
     void
     remove_client(size_t id,
                   const std::shared_ptr<distributed_storage>& client) override {
