@@ -12,8 +12,7 @@ class backend_client {
 public:
     virtual ~backend_client() = default;
     virtual coro<std::string> get_license() = 0;
-    virtual coro<std::string> post_usage(std::string&& usage) = 0;
-    virtual coro<std::string> post_usage(const std::string& usage) = 0;
+    virtual coro<std::string> post_usage(std::string usage) = 0;
 };
 
 class default_backend_client : public backend_client {
@@ -33,21 +32,13 @@ public:
         }
     };
 
-    explicit default_backend_client(const std::string& backend_host,
-                                    const std::string& customer_id,
-                                    const std::string& access_token,
+    explicit default_backend_client(auto&& backend_host, auto&& customer_id,
+                                    auto&& access_token,
                                     type type = type::https)
-        : m_backend_host(backend_host),
+        : m_backend_host(std::forward<std::string>(backend_host)),
           m_backend_type{type},
-          m_http_client{customer_id, access_token, cpr::AuthMode::BASIC} {}
-
-    explicit default_backend_client(std::string&& backend_host,
-                                    std::string&& customer_id,
-                                    std::string&& access_token,
-                                    type type = type::https)
-        : m_backend_host(std::move(backend_host)),
-          m_backend_type{type},
-          m_http_client{std::move(customer_id), std::move(access_token),
+          m_http_client{std::forward<std::string>(customer_id),
+                        std::forward<std::string>(access_token),
                         cpr::AuthMode::BASIC} {}
 
     coro<std::string> get_license() {
@@ -56,12 +47,7 @@ public:
         LOG_DEBUG() << "Fetching license from url: " << url;
         co_return co_await m_http_client.co_get(url);
     }
-    coro<std::string> post_usage(const std::string& usage) {
-        auto url = std::string(magic_enum::enum_name(m_backend_type)) + "://" +
-                   m_backend_host + "/v1/usage";
-        co_return co_await m_http_client.co_post(url, usage);
-    }
-    coro<std::string> post_usage(std::string&& usage) {
+    coro<std::string> post_usage(std::string usage) {
         auto url = std::string(magic_enum::enum_name(m_backend_type)) + "://" +
                    m_backend_host + "/v1/usage";
         co_return co_await m_http_client.co_post(url, std::move(usage));
@@ -79,8 +65,7 @@ public:
         : m_license_str{std::forward<decltype(license_str)>(license_str)} {}
 
     coro<std::string> get_license() { co_return m_license_str; }
-    coro<std::string> post_usage(const std::string& usage) { co_return usage; }
-    coro<std::string> post_usage(std::string&& usage) {
+    coro<std::string> post_usage(std::string usage) {
         co_return std::move(usage);
     }
 
