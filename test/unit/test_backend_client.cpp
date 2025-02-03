@@ -46,6 +46,7 @@ BOOST_AUTO_TEST_CASE(returns_license) {
     auto sut = default_backend_client{
         "localhost:" + std::to_string(server.get_port()), "ultihash", "passwd",
         default_backend_client::type::http};
+
     auto future =
         boost::asio::co_spawn(ioc, sut.get_license(), boost::asio::use_future);
 
@@ -62,6 +63,7 @@ BOOST_AUTO_TEST_CASE(pushs_usage) {
     auto sut = default_backend_client{
         "localhost:" + std::to_string(server.get_port()), "ultihash", "passwd",
         default_backend_client::type::http};
+
     auto future = boost::asio::co_spawn(ioc, sut.post_usage("my-usage"),
                                         boost::asio::use_future);
 
