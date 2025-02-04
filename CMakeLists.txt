@@ -186,19 +186,32 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
+#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/types/.*\\.cpp$")
+# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
+#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/telemetry/.*\\.cpp$")
+# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
+#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/.*\\.cpp$")
+# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
+#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/common\.cpp$")
+# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
+#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/utils\.cpp$")
+
+# types telemetry etcd address_utils common_utils)
+include(add_module)
 
 add_subdirectory(src)
 
-add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+add_library(uh_objects OBJECT ${SOURCE_FILE_LIST})
 target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(uh_objects PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_precompile_headers(uh_objects REUSE_FROM uh_precompile_headers)
 
 add_library(${PROJECT_NAME}_shared SHARED $<TARGET_OBJECTS:uh_objects>)
-target_link_libraries(${PROJECT_NAME}_shared PUBLIC uh_objects)
+target_link_libraries(
+    ${PROJECT_NAME}_shared PUBLIC uh_objects)
 target_include_directories(
     ${PROJECT_NAME}_shared
     INTERFACE

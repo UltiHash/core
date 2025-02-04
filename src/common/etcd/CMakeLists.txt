@@ -1,3 +1,12 @@
-add_library(etcd SHARED utils.cpp)
-target_link_libraries(etcd PUBLIC project_includes etcd-cpp-api telemetry)
-# target_precompile_headers(etcd REUSE_FROM uh_precompile_headers)
+add_module(
+    etcd
+    SOURCES
+    utils.cpp
+    INTERFACE
+    project_includes
+    etcd-cpp-api
+    PUBLIC_MODULE
+    telemetry)
+
+include(CMakePrintHelpers)
+cmake_print_properties(TARGETS zpp_bits PROPERTIES TYPE)
