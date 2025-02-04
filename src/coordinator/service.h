@@ -54,9 +54,6 @@ public:
                                     default_backend_client(bc.backend_host,
                                                            bc.customer_id,
                                                            bc.access_token));
-
-            boost::asio::co_spawn(m_ioc, m_usage_updater->hourly_update(),
-                                  boost::asio::detached);
         }
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
