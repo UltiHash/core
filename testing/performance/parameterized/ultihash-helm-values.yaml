@@ -74,6 +74,7 @@ storage:
       effect: "NoSchedule"
 
 deduplicator:
+  enabled: false
   replicas: $EC2_INSTANCE_COUNT
   storageClass: $UH_STORAGE_CLASS
   storageSize: $DEDUPLICATOR_VOLUME_SIZE
