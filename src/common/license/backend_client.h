@@ -49,6 +49,8 @@ public:
     coro<std::string> post_usage(std::string usage) {
         auto url = std::string(magic_enum::enum_name(m_backend_type)) + "://" +
                    m_backend_host + "/v1/usage";
+        LOG_DEBUG() << "Posting usage to url: " << url
+                    << "with usage: " << usage;
         co_return co_await m_http_client.co_post(url, std::move(usage));
     }
 
