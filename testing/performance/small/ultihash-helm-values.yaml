@@ -109,6 +109,7 @@ storage:
 
 
 deduplicator:
+  enabled: false
   replicas: 2
   storageClass: local-path
   storageSize: 10Gi
