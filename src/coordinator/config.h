@@ -9,6 +9,7 @@ struct coordinator_config {
     size_t thread_count = 1;
     uh::cluster::license license;
     default_backend_client::config backend_config;
+    db::config database_config;
 };
 
 } // end namespace uh::cluster
