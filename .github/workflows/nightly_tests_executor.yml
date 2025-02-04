@@ -109,9 +109,6 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   stability-test-x86-64:
-    needs: 
-      - build-core
-      - build-database-init
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
