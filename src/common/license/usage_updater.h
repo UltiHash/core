@@ -32,11 +32,9 @@ public:
             std::string json_str =
                 co_await generate_json(full_hour - 1h, full_hour);
             co_await backoff.run([&, json_str]() -> coro<std::string> {
-                co_return co_await m_backend_client->post_usage(json_str);
+                co_return co_await m_backend_client->post_usage(
+                    std::move(json_str));
             });
-
-            LOG_DEBUG() << "Usage data sent";
-
         } catch (const std::runtime_error& e) {
             LOG_ERROR() << "Sending usage data failed: " << e.what();
         } catch (...) {
