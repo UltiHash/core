@@ -8,18 +8,13 @@ namespace uh::cluster {
 template <typename service_interface> struct service_factory {
 
 public:
-    service_factory(boost::asio::io_context& ioc, int connections,
-                    std::shared_ptr<service_interface> local_service)
+    service_factory(boost::asio::io_context& ioc, int connections)
         : m_ioc(ioc),
-          m_connections(connections),
-          m_local_service(std::move(local_service)) {}
+          m_connections(connections) {}
 
     std::shared_ptr<service_interface> make_service(const std::string& hostname,
-                                                    uint16_t port, int pid) {
-        if (!m_local_service or hostname != get_host() or pid != getpid()) {
-            return make_remote_service(hostname, port);
-        }
-        return m_local_service;
+                                                    uint16_t port) {
+        return make_remote_service(hostname, port);
     }
 
     virtual ~service_factory() = default;
@@ -29,8 +24,7 @@ private:
     make_remote_service(const std::string& hostname, uint16_t port);
 
     boost::asio::io_context& m_ioc;
-    const int m_connections;
-    std::shared_ptr<service_interface> m_local_service;
+    int m_connections;
 };
 
 } // namespace uh::cluster
