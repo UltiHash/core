@@ -75,7 +75,6 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     req.context().set_name(cmd->action_id());
-    co_await cmd->validate(req);
 
     LOG_DEBUG() << req.peer() << ": checking policies";
     if (!req.authenticated_user().super_user &&
@@ -84,6 +83,8 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         throw command_exception(status::forbidden, "AccessDenied",
                                 "Access Denied");
     }
+
+    co_await cmd->validate(req);
 
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
