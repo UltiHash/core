@@ -1,6 +1,7 @@
 #pragma once
 
-#include "common/network/messenger.h"
+#include "common/types/common_types.h"
+#include <boost/asio/ip/tcp.hpp>
 
 namespace uh::cluster {
 

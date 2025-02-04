@@ -6,6 +6,7 @@
 
 #include <common/network/async_http_client.h>
 
+#include <boost/beast/http/status.hpp>
 #include <lib/util/coroutine.h>
 #include <nlohmann/json.hpp>
 

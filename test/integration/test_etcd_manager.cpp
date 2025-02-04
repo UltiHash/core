@@ -2,9 +2,10 @@
 
 #include "common/etcd/utils.h"
 #include "common/telemetry/log.h"
-#include "fakeit/fakeit.hpp"
+#include "fakeit.hpp"
 
 #include <boost/test/unit_test.hpp>
+#include <future>
 #include <ranges>
 
 using namespace fakeit;

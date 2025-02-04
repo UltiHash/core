@@ -5,6 +5,7 @@
 #include "test_config.h"
 
 #include <common/license/license.h>
+#include <nlohmann/json.hpp>
 
 using namespace uh::cluster;
 

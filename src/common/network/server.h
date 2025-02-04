@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/telemetry/log.h"
+#include "common/telemetry/metrics.h"
 #include "common/utils/protocol_handler.h"
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>

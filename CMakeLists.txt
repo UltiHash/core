@@ -132,10 +132,18 @@ endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
 
+add_library(boost_headers INTERFACE)
+target_include_directories(boost_headers INTERFACE ${Boost_INCLUDE_DIRS})
+
+add_library(project_includes INTERFACE)
+target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/src
+                                                      ${CMAKE_BINARY_DIR})
+
 set(${PROJECT_NAME}_LINK_LIBRARIES
     Boost::log
     Boost::url
     Boost::filesystem
+    boost_headers
     ${OPENSSL_LIBRARIES}
     etcd-cpp-api
     CLI11::CLI11
@@ -153,7 +161,6 @@ set(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include
-    ${Boost_INCLUDE_DIRS}
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_INCLUDE_DIRS}
     ${LMDB_INCLUDE_DIR})
@@ -183,7 +190,7 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-add_subdirectory(src/pch)
+add_subdirectory(src)
 
 add_library(uh_objects OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(uh_objects PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})

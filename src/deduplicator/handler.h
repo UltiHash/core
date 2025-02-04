@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/network/messenger.h"
 #include "common/utils/protocol_handler.h"
 #include "config.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
