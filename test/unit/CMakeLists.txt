@@ -1,8 +1,13 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "unit")
 
 uh_add_test(test_address)
+uh_add_test(test_http_client PRIVATE http_server)
+uh_add_test(test_async_http_client PRIVATE http_server)
+uh_add_test(test_backend_client PRIVATE http_server)
 uh_add_test(test_big_int)
+uh_add_test(test_cpr PRIVATE http_server)
 uh_add_test(test_data_file)
+uh_add_test(test_exp_backoff)
 uh_add_test(test_formats)
 uh_add_test(test_hash)
 uh_add_test(test_http_range)

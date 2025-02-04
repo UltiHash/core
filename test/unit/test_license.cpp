@@ -1,73 +1,98 @@
 #define BOOST_TEST_MODULE "license tests"
 
-#include "common/license/license.h"
 #include <boost/test/unit_test.hpp>
 
-#include <filesystem>
-#include <fstream>
-#include <test_config.h>
+#include "test_config.h"
+
+#include <common/license/license.h>
 
 using namespace uh::cluster;
 
-namespace {
+BOOST_AUTO_TEST_SUITE(a_license)
 
-std::filesystem::path LIC_1GB = TEST_DATA_DIR "/licenses/UltiHash-Test-1GB.lic";
-std::filesystem::path LIC_4TB = TEST_DATA_DIR "/licenses/UltiHash-Test-4TB.lic";
-std::filesystem::path LIC_128TB =
-    TEST_DATA_DIR "/licenses/UltiHash-Test-128TB.lic";
-std::filesystem::path LIC_1PB = TEST_DATA_DIR "/licenses/UltiHash-Test-1PB.lic";
+BOOST_AUTO_TEST_CASE(throws_for_invalid_json_string) {
+    static constexpr const char* json_literal =
+        R"({"customer_id"? "big corp xy"})";
 
-std::string read_file(const std::filesystem::path& path) {
-    std::ifstream in(path);
-
-    if (!in) {
-        throw std::runtime_error("cannot find " + path.string());
-    }
-
-    return {std::istreambuf_iterator<char>(in),
-            std::istreambuf_iterator<char>()};
+    BOOST_CHECK_THROW(license::create(json_literal),
+                      nlohmann::json::parse_error);
 }
 
-license read_license(const std::filesystem::path& path) {
+BOOST_AUTO_TEST_CASE(throws_for_invalid_signature) {
+    static constexpr const char* json_literal = R"({
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap_gib": 10240,
+        "signature":
+            "123=="
+    })";
 
-    return check_license(read_file(path));
+    BOOST_CHECK_THROW(license::create(json_literal), std::runtime_error);
 }
 
-BOOST_AUTO_TEST_CASE(sample_licenses) {
-    {
-        auto lic = read_license(LIC_1GB);
-        BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 1 * GIBI_BYTE);
-    }
-    {
-        auto lic = read_license(LIC_4TB);
-        BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 4 * TEBI_BYTE);
-    }
-    {
-        auto lic = read_license(LIC_128TB);
-        BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 128 * TEBI_BYTE);
-    }
-    {
-        auto lic = read_license(LIC_1PB);
-        BOOST_CHECK(lic.customer == "UltiHash-Test");
-        BOOST_CHECK(lic.max_data_store_size == 1 * PEBI_BYTE);
-    }
+BOOST_AUTO_TEST_CASE(throws_for_no_signature) {
+    static constexpr const char* json_literal = R"({
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+        "storage_cap_gib": 10240
+    })";
+
+    BOOST_CHECK_THROW(license::create(json_literal), std::runtime_error);
 }
 
-BOOST_AUTO_TEST_CASE(exception) {
-    { BOOST_CHECK_THROW(check_license(""), std::exception); }
-    {
-        auto code = read_file(LIC_1GB);
-        code[0] ^= 1;
-        BOOST_CHECK_THROW(check_license(code), std::exception);
-    }
-    {
-        auto code = read_file(LIC_1GB);
-        code[code.size() / 2] ^= 1;
-        BOOST_CHECK_THROW(check_license(code), std::exception);
-    }
+BOOST_AUTO_TEST_CASE(can_skip_validation) {
+    static constexpr const char* json_literal = R"({
+        "version": "v1",
+        "customer_id": "UltiHash-Test",
+        "license_type": "freemium",
+        "storage_cap_gib": 1048576
+    })";
+
+    BOOST_CHECK_NO_THROW(
+        license::create(json_literal, license::verify::SKIP_VERIFY));
 }
 
-} // namespace
+BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
+    static constexpr const char* json_literal = R"({
+        "version": "v1",
+        "customer_id": "big corp xy",
+        "license_type": "freemium",
+    })";
+
+    BOOST_CHECK_THROW(
+        license::create(json_literal, license::verify::SKIP_VERIFY),
+        nlohmann::json::parse_error);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+/*******************************************************************************
+ * Below, we are testing the license class with the correct JSON string.
+ */
+class fixture {
+
+public:
+    fixture()
+        : sut{license::create(test_license_string)} {}
+
+    license sut;
+};
+
+BOOST_FIXTURE_TEST_SUITE(a_initialized_license, fixture)
+
+BOOST_AUTO_TEST_CASE(parses_json_string_to_license) {
+
+    BOOST_CHECK_EQUAL(sut.customer_id, "big corp xy");
+    BOOST_CHECK_EQUAL(sut.license_type, license::type::FREEMIUM);
+    BOOST_CHECK_EQUAL(sut.storage_cap_gib, 10240);
+}
+
+BOOST_AUTO_TEST_CASE(prints_out_compact_form_json_string) {
+    auto compact_json_str = sut.to_string();
+
+    BOOST_TEST(compact_json_str == test_license_string);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

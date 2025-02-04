@@ -44,7 +44,10 @@ enum message_type : uint8_t {
 constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
 constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
-constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
+constexpr const char* ENV_CFG_LICENSE_JSON = "UH_LICENSE_JSON";
+constexpr const char* ENV_CFG_BACKEND_HOST = "UH_BACKEND_HOST";
+constexpr const char* ENV_CFG_CUSTOMER_ID = "UH_CUSTOMER_ID";
+constexpr const char* ENV_CFG_ACCESS_TOKEN = "UH_ACCESS_TOKEN";
 constexpr const char* ENV_CFG_OTEL_ENDPOINT = "UH_OTEL_ENDPOINT";
 constexpr const char* ENV_CFG_OTEL_EXPORT_INTERVAL = "UH_OTEL_INTERVAL";
 constexpr const char* ENV_CFG_ENABLE_TRACES = "UH_TRACES_ENABLED";
@@ -65,6 +68,8 @@ constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
+
+constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
 
 constexpr auto ETCD_TIMEOUT = std::chrono::seconds(300);
 constexpr auto ETCD_RETRY_INTERVAL = std::chrono::seconds(1);

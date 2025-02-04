@@ -85,9 +85,6 @@ etcd_manager::~etcd_manager() {
     client->leaserevoke(m_lease);
 }
 
-/*
- * Save key value pair
- */
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
 
@@ -98,7 +95,7 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
             " failed, details: " + resp.error_message());
 }
 
-std::string etcd_manager::get(const std::string& key) {
+std::string etcd_manager::get(const std::string& key) const {
     auto client = m_client.load();
     auto resp = client->get(key);
     if (!resp.is_ok())
@@ -106,18 +103,19 @@ std::string etcd_manager::get(const std::string& key) {
     return resp.value().as_string();
 }
 
-bool etcd_manager::has(const std::string& key) {
+bool etcd_manager::has(const std::string& key) const {
     auto client = m_client.load();
     auto resp = client->get(key);
     return resp.is_ok();
 }
 
-std::vector<std::string> etcd_manager::keys(const std::string& prefix) {
+std::vector<std::string> etcd_manager::keys(const std::string& prefix) const {
     auto client = m_client.load();
     return client->keys(prefix).keys();
 }
 
-std::map<std::string, std::string> etcd_manager::ls(const std::string& prefix) {
+std::map<std::string, std::string>
+etcd_manager::ls(const std::string& prefix) const {
     auto client = m_client.load();
     auto resp = client->ls(prefix);
     auto keys = resp.keys();
@@ -140,8 +138,7 @@ void etcd_manager::rmdir(const std::string& prefix) noexcept {
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
-void etcd_manager::add_watcher(const std::string& prefix,
-                               std::function<void(etcd::Response)> callback) {
+void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto client = m_client.load();
@@ -153,8 +150,8 @@ void etcd_manager::add_watcher(const std::string& prefix,
     }
 
     m_watcher_entries[prefix] = watcher_entry(
-        callback,
-        std::make_unique<etcd::Watcher>(*client, prefix, callback, true));
+        callback, std::make_unique<etcd::Watcher>(*client, prefix,
+                                                  std::move(callback), true));
 }
 
 void etcd_manager::remove_watcher(const std::string& prefix) {

@@ -13,3 +13,4 @@ server-agency/src/config.hpp
 /lib/
 *.un~
 /.cache/
+/cpm-package-lock.cmake

@@ -34,7 +34,7 @@ services:
     depends_on:
        - etcd
     environment:
-      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LICENSE_JSON: '{"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="}'
       UH_LOG_LEVEL: DEBUG
 
   deduplicator:
@@ -43,7 +43,7 @@ services:
       - etcd
       - storage
     environment:
-      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LICENSE_JSON: '{"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="}'
       UH_LOG_LEVEL: DEBUG
 
   entrypoint:
@@ -53,7 +53,7 @@ services:
       - storage
       - deduplicator
     environment:
-      UH_LICENSE: UltiHash-Test:1048576:Bplb7lZQIK+mIXyPZKRNRIjara5EqxrCz8M5FDlPfqDrlMppL43axS7Ccd9TyuL4v03zHsFzPOyW7k+L+uouBw==
+      UH_LICENSE_JSON: '{"version":"v1","customer_id":"UltiHash-Test","license_type":"freemium","storage_cap_gib":1048576,"signature":"E5ulpGbxd5F5mHQA8r0RKxK+nFUKc7dAMHHJxgrNsPEJuqhj54F6LfDx0RAY2vFNPvkYmkwNy8LvJIv9UqS1Bw=="}'
       UH_LOG_LEVEL: DEBUG
       UH_DB_HOSTPORT: database:5432
       UH_DB_USER: postgres

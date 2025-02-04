@@ -34,7 +34,10 @@ endif()
 
 if(ENABLE_TSAN)
     if(ENABLE_ASAN OR ENABLE_UBSAN)
-        message(FATAL "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN")
+        message(
+            FATAL
+            "ENABLE_TSAN is mutually exclusive with ENABLE_UBSAN and ENABLE_ASAN"
+        )
     endif()
 
     add_compile_options(-fsanitize=thread)
@@ -51,7 +54,9 @@ if(ENABLE_UBSAN)
     add_link_options(-fsanitize=undefined)
 endif()
 
-if(ENABLE_TSAN OR ENABLE_ASAN OR ENABLE_UBSAN)
+if(ENABLE_TSAN
+   OR ENABLE_ASAN
+   OR ENABLE_UBSAN)
     add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
 endif()
 
@@ -85,6 +90,16 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
 include(CPM)
+
+cpmaddpackage(
+    NAME
+    cpr
+    GITHUB_REPOSITORY
+    libcpr/cpr
+    GIT_TAG
+    1.9.9
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF")
 
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
@@ -131,7 +146,8 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_LIBRARIES}
     ${LMDB_LIBRARY}
-    nlohmann_json)
+    nlohmann_json
+    cpr::cpr)
 set(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/third-party
     ${CMAKE_BINARY_DIR}
@@ -184,7 +200,12 @@ target_include_directories(
 set(CMAKE_BUILD_RPATH "$ORIGIN")
 
 add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_shared)
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE uh_objects)
+endif()
+
 target_precompile_headers(${PROJECT_NAME} REUSE_FROM uh_precompile_headers)
 
 add_subdirectory(scripts)
@@ -195,6 +216,7 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif()
+
 if(BUILD_TOOLS)
     message(STATUS "Building tools")
     add_subdirectory(tools)

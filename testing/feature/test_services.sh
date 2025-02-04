@@ -18,8 +18,8 @@ for service in "${services[@]}"; do
   echo -n "$service : "
 
   for invalid_license in "${INVALID_LICENSE_KEY[@]}"; do
-    export UH_LICENSE=$invalid_license
-    if docker run --rm -e UH_LICENSE $DOCKER_IMAGE uh-cluster --registry mocked-etcd:1111 $service 2>&1 | \
+    export UH_LICENSE_JSON=$invalid_license
+    if docker run --rm -e UH_LICENSE_JSON $DOCKER_IMAGE uh-cluster --registry mocked-etcd:1111 $service 2>&1 | \
         grep -q -e "license loaded for"; then
       echo "failed"
       exit 1

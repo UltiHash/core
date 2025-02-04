@@ -42,6 +42,9 @@ coordinator:
       operator: "Equal"
       value: "testing"
       effect: "NoSchedule"
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=coordinator
 
 etcd:
   replicaCount: 1

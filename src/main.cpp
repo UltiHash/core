@@ -1,4 +1,3 @@
-#include "common/license/license.h"
 #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/utils/signal_handler.h"
@@ -60,10 +59,6 @@ int main(int argc, char** argv) {
         if (config->service.enable_traces) {
             initialize_traces_exporter(config->service.telemetry_url);
         }
-
-        LOG_INFO() << "license loaded for " << config->service.license.customer
-                   << " -- storage size: "
-                   << config->service.license.max_data_store_size << " bytes";
 
         execute_role(*config);
     } catch (const std::exception& e) {

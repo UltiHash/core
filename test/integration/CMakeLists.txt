@@ -1,6 +1,9 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "integration")
 
+uh_add_test(test_gdv_fixture) # It should be tested before using this fixture
+uh_add_test(test_async_http_client_with_https)
 uh_add_test(test_awaitable_promise)
+uh_add_test(test_cpr_with_https)
 uh_add_test(test_data_store)
 uh_add_test(test_deduplicator PRIVATE uh_mock_global_data)
 uh_add_test(test_ec)
@@ -9,6 +12,8 @@ uh_add_test(test_etcd_manager PRIVATE etcd-cpp-api)
 uh_add_test(test_etcd_manager_on_client_failure PRIVATE etcd-cpp-api)
 uh_add_test(test_fragment_set)
 uh_add_test(test_global_data_view)
+uh_add_test(test_http_client_with_https)
+uh_add_test(test_license_updater_watcher)
 uh_add_test(test_lru_cache)
 uh_add_test(test_mock_data_store PRIVATE uh_mock_storage)
 uh_add_test(test_reference_counter)

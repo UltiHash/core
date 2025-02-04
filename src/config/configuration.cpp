@@ -58,19 +58,6 @@ make_log_config(const service_config& cfg,
 void register_service(CLI::App& app, service_config& cfg) {
     auto group = app.add_option_group("service", "service configuration");
 
-    // Note: CLI11 does not allow reading environment variables for options
-    // that were added to a group
-    // (https://github.com/CLIUtils/CLI11/issues/1013).
-    app.add_option(
-           "--license,-L",
-           [&cfg](CLI::results_t res) {
-               cfg.license = check_license(res[0]);
-               return true;
-           },
-           "UltiHash license string")
-        ->envname(ENV_CFG_LICENSE)
-        ->required();
-
     group
         ->add_option("--registry,-r", cfg.etcd_config.url,
                      "URL to etcd endpoint")
@@ -226,6 +213,26 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     auto* rv = app.add_subcommand("coordinator", "Run as coordinator service");
     rv->add_option("--thread-count", cfg.thread_count, "number of threads")
         ->default_val(cfg.thread_count);
+
+    app.add_option(
+           "--license,-L",
+           [&cfg](CLI::results_t res) {
+               cfg.license = license::create(res[0]);
+               return true;
+           },
+           "UltiHash license json-string")
+        ->envname(ENV_CFG_LICENSE_JSON)
+        ->default_val(cfg.license);
+
+    app.add_option("--backend-host", cfg.backend_config.backend_host,
+                   "backend host")
+        ->envname(ENV_CFG_BACKEND_HOST);
+    app.add_option("--customer-id", cfg.backend_config.customer_id,
+                   "customer ID required to connect to the backend")
+        ->envname(ENV_CFG_CUSTOMER_ID);
+    app.add_option("--access-token", cfg.backend_config.access_token,
+                   "access token required to connect to the backend")
+        ->envname(ENV_CFG_ACCESS_TOKEN);
     return rv;
 }
 
@@ -291,6 +298,15 @@ std::optional<config> read_config(int argc, char** argv) {
 
     } else if (sub_rk->parsed()) {
         rv.role = COORDINATOR_SERVICE;
+        auto& cfg = rv.coordinator;
+
+        if (!cfg.license && !cfg.backend_config) {
+            LOG_INFO() << "license: " << cfg.license;
+            LOG_INFO() << "backend_host: " << cfg.backend_config.backend_host;
+            throw std::invalid_argument("Either a test license or backend "
+                                        "configuration must be provided.");
+        }
+
     } else {
         throw std::runtime_error("unsupported sub command given");
     }

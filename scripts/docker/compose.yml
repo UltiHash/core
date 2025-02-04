@@ -35,7 +35,7 @@ services:
     depends_on:
        - etcd
     environment:
-      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LICENSE_JSON: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1
@@ -47,7 +47,7 @@ services:
       - etcd
       - storage
     environment:
-      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LICENSE_JSON: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1
@@ -60,7 +60,7 @@ services:
       - storage
       - deduplicator
     environment:
-      UH_LICENSE: ${UH_LICENSE_STRING}
+      UH_LICENSE_JSON: ${UH_LICENSE_STRING}
       UH_LOG_LEVEL: INFO
       UH_OTEL_ENDPOINT: http://otel:4317
       UH_TRACES_ENABLED: 1

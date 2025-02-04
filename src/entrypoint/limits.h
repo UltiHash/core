@@ -1,17 +1,19 @@
 #pragma once
 
+#include <common/license/license_watcher.h>
+
 #include <atomic>
 
 namespace uh::cluster {
 
 class limits {
 public:
-    limits(std::size_t max_data_size);
+    limits(license_watcher& watcher);
 
     /**
      * Set storage size without checking.
      */
-    void storage_size(std::size_t size);
+    void set_storage_size(std::size_t size);
 
     /**
      * Check internal storage size and increment the counter.
@@ -24,7 +26,7 @@ public:
     static constexpr unsigned SIZE_LIMIT_WARNING_INTERVAL = 100;
 
 private:
-    std::size_t m_max_data_size;
+    license_watcher& m_watcher;
     std::atomic<std::size_t> m_data_storage_size;
     unsigned m_warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
 };

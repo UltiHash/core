@@ -1,5 +1,7 @@
 #pragma once
 
+#include "test_config.h"
+
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
@@ -34,8 +36,11 @@ public:
                 std::make_unique<storage::service>(service_cfg, storage_cfg));
         }
 
-        m_coordinator = std::make_unique<coordinator::service>(
-            service_config{}, coordinator_config{});
+        auto coordinator_cfg = coordinator_config{};
+
+        coordinator_cfg.license = license::create(test_license_string);
+        m_coordinator = std::make_unique<coordinator::service>(service_config{},
+                                                               coordinator_cfg);
         int i = 0;
 
         boost::asio::post(m_ioc, [this] { m_coordinator->run(); });

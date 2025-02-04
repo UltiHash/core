@@ -1,25 +1,32 @@
 #pragma once
 
-#include "common/utils/common.h"
-
-#include <string>
+#include <common/etcd/utils.h>
+#include <magic_enum/magic_enum.hpp>
+#include <string_view>
 
 namespace uh::cluster {
 
 struct license {
-    /// string identifying the customer
-    std::string customer;
+    enum type { NONE, FREEMIUM, PREMIUM };
 
-    /// maximum allowed data referenced by the directory
-    std::size_t max_data_store_size = 1 * TEBI_BYTE;
+    std::string version;
+    std::string customer_id;
+    enum type license_type { NONE };
+    std::size_t storage_cap_gib{0};
+
+    operator bool() const { return is_valid(); }
+
+    enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
+
+    static license create(std::string_view json_str,
+                          verify option = verify::VERIFY);
+
+    std::string to_string() const { return m_compact_json; };
+
+private:
+    bool is_valid() const { return license_type != type::NONE; }
+
+    std::string m_compact_json;
 };
-
-/**
- * Read and verify the license given by `license_code`.
- *
- * If valid, returns a `license` structure that contains all fields listed
- * in the license. Otherwise throws `std::runtime_error`.
- */
-license check_license(std::string_view license_code);
 
 } // namespace uh::cluster
