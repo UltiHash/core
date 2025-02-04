@@ -68,7 +68,7 @@ std::optional<int64_t> row::number(int col) {
         }
 
         memcpy(&result, data, sizeof(result));
-        result = htobe64(result);
+        result = be64toh(result);
     }; break;
 
     default:
