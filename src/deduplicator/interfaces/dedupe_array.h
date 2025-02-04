@@ -17,8 +17,6 @@ public:
                                       std::string_view data) override;
 
 private:
-    boost::asio::io_context& m_ioc;
-    etcd_manager& m_etcd;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
     roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 };
