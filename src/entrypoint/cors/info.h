@@ -7,9 +7,11 @@
 namespace uh::cluster::ep::cors {
 
 struct info {
-    std::string allowed_origin;
-
+    std::set<std::string> allowed_origins;
     std::set<http::verb> allowed_methods;
+    std::set<std::string> allowed_headers;
+    std::set<std::string> exposed_headers;
+    unsigned max_age_seconds;
 };
 
 } // namespace uh::cluster::ep::cors

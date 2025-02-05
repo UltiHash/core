@@ -10,7 +10,10 @@ namespace {
 info parse_corse_info(const boost::property_tree::ptree& tree) {
     info rv;
 
-    rv.allowed_origin = tree.get<std::string>("AllowedOrigin");
+    auto origins = tree.equal_range("AllowedOrigin");
+    for (auto it = origins.first; it != origins.second; ++it) {
+        rv.allowed_origins.insert(it->second.get_value<std::string>());
+    }
 
     auto methods = tree.equal_range("AllowedMethod");
     for (auto it = methods.first; it != methods.second; ++it) {
@@ -48,7 +51,9 @@ std::map<std::string, info> parser::parse(std::string code) {
     auto rules = conf->equal_range("CORSRule");
     for (auto it = rules.first; it != rules.second; ++it) {
         auto info = parse_corse_info(it->second);
-        rv[info.allowed_origin] = std::move(info);
+        for (const auto& key : info.allowed_origins) {
+            rv[key] = info;
+        }
     }
 
     return rv;

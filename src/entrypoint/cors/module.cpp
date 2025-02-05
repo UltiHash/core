@@ -23,6 +23,7 @@ coro<result> module::check(const http::request& request) const {
     if (request.method() == http::verb::options) {
         auto infos = parser::parse(*config);
         auto origin_info = infos.find(*origin);
+        // TODO check for asterisk origin
         if (origin_info == infos.end()) {
             co_return result{
                 .response = make_response(command_exception(
@@ -55,6 +56,7 @@ coro<result> module::check(const http::request& request) const {
 
     auto infos = parser::parse(*config);
     auto origin_info = infos.find(*origin);
+    // TODO check for asterisk origin
     if (origin_info == infos.end()) {
         co_return result{
             .response = make_response(command_exception(
