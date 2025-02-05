@@ -15,9 +15,9 @@ coro<result> module::check(const http::request& request) const {
     auto config = co_await m_directory.get_bucket_cors(request.bucket());
     if (!config) {
         co_return result{
-            .response = make_response(command_exception(
+            .response = error_response(
                 http::status::forbidden, "Forbidden",
-                "CORS Response: CORS is not enabled for this bucket"))};
+                "CORS Response: CORS is not enabled for this bucket")};
     }
 
     if (request.method() == http::verb::options) {
@@ -26,9 +26,9 @@ coro<result> module::check(const http::request& request) const {
         // TODO check for asterisk origin
         if (origin_info == infos.end()) {
             co_return result{
-                .response = make_response(command_exception(
+                .response = error_response(
                     http::status::forbidden, "Forbidden",
-                    "CORS Response: This CORS request is not allowed"))};
+                    "CORS Response: This CORS request is not allowed")};
         }
 
         auto response = http::response(http::status::no_content);
@@ -77,16 +77,16 @@ coro<result> module::check(const http::request& request) const {
     // TODO check for asterisk origin
     if (origin_info == infos.end()) {
         co_return result{
-            .response = make_response(command_exception(
+            .response = error_response(
                 http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
+                "CORS Response: This CORS request is not allowed")};
     }
 
     if (!origin_info->second.allowed_methods.contains(request.method())) {
         co_return result{
-            .response = make_response(command_exception(
+            .response = error_response(
                 http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
+                "CORS Response: This CORS request is not allowed")};
     }
 
     std::map<std::string, std::string> headers;
