@@ -6,6 +6,43 @@
 
 namespace uh::cluster::ep::cors {
 
+namespace {
+
+http::response options_response(const http::request& r, std::string origin,
+                                cors::info info) {
+
+    auto response = http::response(http::status::no_content);
+    response.set("Access-Control-Allow-Origin", std::move(origin));
+
+    if (auto acrh = r.header("Access-Control-Request-Headers"); acrh) {
+        auto rheaders = split<std::set<std::string>>(*acrh, ',');
+
+        std::set<std::string> intersection;
+        std::set_intersection(
+            rheaders.begin(), rheaders.end(), info.headers.begin(),
+            info.headers.end(),
+            std::inserter(intersection, intersection.begin()));
+
+        std::string headers = join(intersection, ",");
+        if (!headers.empty()) {
+            response.set("Access-Control-Allow-Headers", std::move(headers));
+        }
+    }
+
+    response.set("Access-Control-Max-Age", info.max_age_seconds);
+
+    auto verb_str = [](http::verb v) { return to_string(v); };
+    std::string methods =
+        join(info.methods | std::views::transform(verb_str), ",");
+    if (!methods.empty()) {
+        response.set("Access-Control-Allow-Methods", std::move(methods));
+    }
+
+    return response;
+}
+
+} // namespace
+
 module::module(directory& dir) :m_directory(dir) {}
 
 coro<result> module::check(const http::request& request) const {
@@ -34,45 +71,15 @@ coro<result> module::check(const http::request& request) const {
                 http::status::forbidden, "Forbidden",
                 "CORS Response: This CORS request is not allowed")};
     }
-    auto& info = origin_info->second;
+
+    const auto& info = origin_info->second;
 
     if (request.method() == http::verb::options) {
-        auto response = http::response(http::status::no_content);
-        response.set("Access-Control-Allow-Origin", *origin);
-        // TODO check with AWS documentation:
-        // response.set("Access-Control-Allow-Credentials", "");
-        if (auto request_headers =
-                request.header("Access-Control-Request-Headers");
-            request_headers) {
-            auto headers = split<std::set<std::string>>(*request_headers, ',');
-
-            std::set<std::string> intersection;
-            std::set_intersection(
-                headers.begin(), headers.end(), info.allowed_headers.begin(),
-                info.allowed_headers.end(),
-                std::inserter(intersection, intersection.begin()));
-
-            std::string allow_headers = join(intersection, ",");
-            if (!allow_headers.empty()) {
-                response.set("Access-Control-Allow-Headers",
-                             std::move(allow_headers));
-            }
-        }
-
-        response.set("Access-Control-Max-Age", info.max_age_seconds);
-
-        auto verb_str = [](http::verb v) { return to_string(v); };
-        std::string allowed_methods =
-            join(info.allowed_methods | std::views::transform(verb_str), ",");
-        if (!allowed_methods.empty()) {
-            response.set("Access-Control-Allow-Methods",
-                         std::move(allowed_methods));
-        }
-
-        co_return result{.response = std::move(response)};
+        co_return result{
+            .response = options_response(request, std::move(*origin), info)};
     }
 
-    if (!info.allowed_methods.contains(request.method())) {
+    if (!info.methods.contains(request.method())) {
         co_return result{
             .response = error_response(
                 http::status::forbidden, "Forbidden",

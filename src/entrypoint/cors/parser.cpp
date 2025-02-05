@@ -22,15 +22,15 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
     for (auto it = methods.first; it != methods.second; ++it) {
         auto method = it->second.get_value<std::string>();
         if (method == "DELETE") {
-            rv.allowed_methods.insert(http::verb::delete_);
+            rv.methods.insert(http::verb::delete_);
         } else if (method == "GET") {
-            rv.allowed_methods.insert(http::verb::get);
+            rv.methods.insert(http::verb::get);
         } else if (method == "HEAD") {
-            rv.allowed_methods.insert(http::verb::head);
+            rv.methods.insert(http::verb::head);
         } else if (method == "POST") {
-            rv.allowed_methods.insert(http::verb::post);
+            rv.methods.insert(http::verb::post);
         } else if (method == "PUT") {
-            rv.allowed_methods.insert(http::verb::put);
+            rv.methods.insert(http::verb::put);
         }
     }
 

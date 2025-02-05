@@ -32,15 +32,15 @@ BOOST_AUTO_TEST_CASE(reading_cors_example) {
     BOOST_CHECK(info.contains("http://www.example.com"));
 
     auto example_com = info["http://www.example.com"];
-    BOOST_CHECK(example_com.allowed_methods.contains(http::verb::delete_));
-    BOOST_CHECK(!example_com.allowed_methods.contains(http::verb::get));
-    BOOST_CHECK(!example_com.allowed_methods.contains(http::verb::head));
-    BOOST_CHECK(example_com.allowed_methods.contains(http::verb::post));
-    BOOST_CHECK(example_com.allowed_methods.contains(http::verb::put));
+    BOOST_CHECK(example_com.methods.contains(http::verb::delete_));
+    BOOST_CHECK(!example_com.methods.contains(http::verb::get));
+    BOOST_CHECK(!example_com.methods.contains(http::verb::head));
+    BOOST_CHECK(example_com.methods.contains(http::verb::post));
+    BOOST_CHECK(example_com.methods.contains(http::verb::put));
 
     BOOST_CHECK(info.contains("*"));
 
     auto wildcard = info["*"];
-    BOOST_CHECK(wildcard.allowed_methods.contains(http::verb::get));
-    BOOST_CHECK_EQUAL(wildcard.allowed_methods.size(), 1ull);
+    BOOST_CHECK(wildcard.methods.contains(http::verb::get));
+    BOOST_CHECK_EQUAL(wildcard.methods.size(), 1ull);
 }
