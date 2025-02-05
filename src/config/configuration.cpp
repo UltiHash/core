@@ -217,7 +217,11 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     app.add_option(
            "--license,-L",
            [&cfg](CLI::results_t res) {
-               cfg.license = license::create(res[0]);
+               try {
+                   cfg.license = license::create(res[0]);
+               } catch (const std::exception& e) {
+                   throw CLI::ValidationError(e.what());
+               }
                return true;
            },
            "UltiHash license json-string")
