@@ -35,10 +35,28 @@ coro<result> module::check(const http::request& request) const {
         response.set("Access-Control-Allow-Origin", *origin);
         // TODO check with AWS documentation:
         // response.set("Access-Control-Allow-Credentials", "");
-        // TODO when configured in CORS-Rule:
-        // response.set("Access-Control-Allow-Headers", "");
-        // TODO when configured in CORS-Rule:
-        // response.set("Access-Control-Max-Age", "");
+        if (auto request_headers =
+                request.header("Access-Control-Request-Headers");
+            request_headers) {
+            auto headers =
+                split<std::vector<std::string>>(*request_headers, ',');
+
+            std::string allow_headers;
+            for (const auto& header : headers) {
+                if (origin_info->second.allowed_headers.contains(header)) {
+                    allow_headers += header + ",";
+                }
+            }
+
+            if (!allow_headers.empty()) {
+                allow_headers.erase(allow_headers.size() - 1);
+                response.set("Access-Control-Allow-Headers",
+                             std::move(allow_headers));
+            }
+        }
+
+        response.set("Access-Control-Max-Age",
+                     origin_info->second.max_age_seconds);
 
         std::string allowed_methods;
         for (auto method : origin_info->second.allowed_methods) {
@@ -47,9 +65,9 @@ coro<result> module::check(const http::request& request) const {
 
         if (!allowed_methods.empty()) {
             allowed_methods.erase(allowed_methods.size() - 2);
+            response.set("Access-Control-Allow-Methods",
+                         std::move(allowed_methods));
         }
-
-        response.set("Access-Control-Allow-Methods", allowed_methods);
 
         co_return result{.response = std::move(response)};
     }
@@ -71,13 +89,14 @@ coro<result> module::check(const http::request& request) const {
                 "CORS Response: This CORS request is not allowed"))};
     }
 
-    co_return result{
-        .headers = std::map<std::string, std::string>{
-            {"Access-Control-Allow-Origin", *origin},
-            // { "Access-Control-Allow-Credentials", *origin }, TODO enable when
-            // configured in CORS-rule { "Access-Control-Expose-Headers",
-            // headers } TODO enable when configured in CORS-Rule
-        }};
+    std::map<std::string, std::string> headers;
+    headers["Access-Control-Allow-Origin"] = *origin;
+    if (origin_info->second.exposed_headers) {
+        headers["Access-Control-Expose-Headers"] =
+            *origin_info->second.exposed_headers;
+    }
+
+    co_return result{.headers = std::move(headers)};
 }
 
 } // namespace uh::cluster::ep::cors

@@ -31,6 +31,11 @@ info parse_corse_info(const boost::property_tree::ptree& tree) {
         }
     }
 
+    auto max_age_seconds = tree.get_optional<unsigned>("MaxAgeSeconds");
+    if (max_age_seconds) {
+        rv.max_age_seconds = std::move(max_age_seconds.value());
+    }
+
     return rv;
 }
 
