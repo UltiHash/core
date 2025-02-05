@@ -20,17 +20,20 @@ coro<result> module::check(const http::request& request) const {
                 "CORS Response: CORS is not enabled for this bucket")};
     }
 
-    if (request.method() == http::verb::options) {
-        auto infos = parser::parse(*config);
-        auto origin_info = infos.find(*origin);
-        // TODO check for asterisk origin
-        if (origin_info == infos.end()) {
-            co_return result{
-                .response = error_response(
-                    http::status::forbidden, "Forbidden",
-                    "CORS Response: This CORS request is not allowed")};
-        }
+    auto infos = parser::parse(*config);
+    auto origin_info = infos.find(*origin);
+    if (origin_info == infos.end()) {
+        origin_info = infos.find("*");
+    }
 
+    if (origin_info == infos.end()) {
+        co_return result{
+            .response = error_response(
+                http::status::forbidden, "Forbidden",
+                "CORS Response: This CORS request is not allowed")};
+    }
+
+    if (request.method() == http::verb::options) {
         auto response = http::response(http::status::no_content);
         response.set("Access-Control-Allow-Origin", *origin);
         // TODO check with AWS documentation:
@@ -70,16 +73,6 @@ coro<result> module::check(const http::request& request) const {
         }
 
         co_return result{.response = std::move(response)};
-    }
-
-    auto infos = parser::parse(*config);
-    auto origin_info = infos.find(*origin);
-    // TODO check for asterisk origin
-    if (origin_info == infos.end()) {
-        co_return result{
-            .response = error_response(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed")};
     }
 
     if (!origin_info->second.allowed_methods.contains(request.method())) {

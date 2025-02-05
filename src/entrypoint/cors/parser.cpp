@@ -7,14 +7,16 @@ namespace uh::cluster::ep::cors {
 
 namespace {
 
-info parse_corse_info(const boost::property_tree::ptree& tree) {
-    info rv;
+std::pair<std::set<std::string>, info>
+parse_corse_info(const boost::property_tree::ptree& tree) {
+    std::set<std::string> rv_origins;
 
     auto origins = tree.equal_range("AllowedOrigin");
     for (auto it = origins.first; it != origins.second; ++it) {
-        rv.allowed_origins.insert(it->second.get_value<std::string>());
+        rv_origins.insert(it->second.get_value<std::string>());
     }
 
+    info rv;
     auto methods = tree.equal_range("AllowedMethod");
     for (auto it = methods.first; it != methods.second; ++it) {
         auto method = it->second.get_value<std::string>();
@@ -36,7 +38,7 @@ info parse_corse_info(const boost::property_tree::ptree& tree) {
         rv.max_age_seconds = std::move(max_age_seconds.value());
     }
 
-    return rv;
+    return std::make_pair(std::move(rv_origins), rv);
 }
 
 } // namespace
@@ -55,8 +57,8 @@ std::map<std::string, info> parser::parse(std::string code) {
 
     auto rules = conf->equal_range("CORSRule");
     for (auto it = rules.first; it != rules.second; ++it) {
-        auto info = parse_corse_info(it->second);
-        for (const auto& key : info.allowed_origins) {
+        auto [origins, info] = parse_corse_info(it->second);
+        for (const auto& key : origins) {
             rv[key] = info;
         }
     }

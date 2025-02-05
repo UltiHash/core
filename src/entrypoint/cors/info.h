@@ -7,7 +7,6 @@
 namespace uh::cluster::ep::cors {
 
 struct info {
-    std::set<std::string> allowed_origins;
     std::set<http::verb> allowed_methods;
     std::set<std::string> allowed_headers;
     std::optional<std::string> exposed_headers;
