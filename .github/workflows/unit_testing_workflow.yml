@@ -21,6 +21,8 @@ on:
     secrets:
       ghcr_token:
         required: true
+      uh_license:
+        required: true
 
 jobs:
   unit-tests:
@@ -33,7 +35,7 @@ jobs:
           submodules: recursive
 
       - name: Set the license
-        run: echo "UH_LICENSE_JSON=${{ secrets.UH_LICENSE_JSON }}" >> $GITHUB_ENV
+        run: echo "UH_LICENSE_JSON=${{ secrets.uh_license }}" >> $GITHUB_ENV
 
       - name: Configure CMake
         env:
