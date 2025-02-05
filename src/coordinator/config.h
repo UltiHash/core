@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/db/config.h>
 #include <common/license/backend_client.h>
 #include <common/license/license.h>
 
