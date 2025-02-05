@@ -7,33 +7,33 @@ namespace uh::cluster::ep::cors {
 
 namespace {
 
-cors_info parse_corse_info(const boost::property_tree::ptree& tree) {
-    cors_info info;
+info parse_corse_info(const boost::property_tree::ptree& tree) {
+    info rv;
 
-    info.allowed_origin = tree.get<std::string>("AllowedOrigin");
+    rv.allowed_origin = tree.get<std::string>("AllowedOrigin");
 
     auto methods = tree.equal_range("AllowedMethod");
     for (auto it = methods.first; it != methods.second; ++it) {
         auto method = it->second.get_value<std::string>();
         if (method == "DELETE") {
-            info.allowed_delete = true;
+            rv.allowed_delete = true;
         } else if (method == "GET") {
-            info.allowed_get = true;
+            rv.allowed_get = true;
         } else if (method == "HEAD") {
-            info.allowed_head = true;
+            rv.allowed_head = true;
         } else if (method == "POST") {
-            info.allowed_post = true;
+            rv.allowed_post = true;
         } else if (method == "PUT") {
-            info.allowed_put = true;
+            rv.allowed_put = true;
         }
     }
 
-    return info;
+    return rv;
 }
 
 } // namespace
 
-std::map<std::string, cors_info> parser::parse(std::string code) {
+std::map<std::string, info> parser::parse(std::string code) {
     std::stringstream str(std::move(code));
     boost::property_tree::ptree tree;
     boost::property_tree::read_xml(str, tree);
@@ -43,7 +43,7 @@ std::map<std::string, cors_info> parser::parse(std::string code) {
         return {};
     }
 
-    std::map<std::string, cors_info> rv;
+    std::map<std::string, info> rv;
 
     auto rules = conf->equal_range("CORSRule");
     for (auto it = rules.first; it != rules.second; ++it) {
