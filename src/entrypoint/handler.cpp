@@ -73,6 +73,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                        request& req, const std::string& id) {
 
+    auto cors = co_await m_cors->check(req);
+    if (cors.response) {
+        co_return std::move(*cors.response);
+    }
+
     auto cmd = co_await m_command_factory.create(req);
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
@@ -87,7 +92,6 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     }
 
     co_await cmd->validate(req);
-    co_await m_cors->check(req);
 
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
@@ -96,7 +100,14 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     }
 
     LOG_DEBUG() << req.peer() << ": executing " << cmd->action_id();
-    co_return co_await cmd->handle(req);
+    auto response = co_await cmd->handle(req);
+    if (cors.headers) {
+        for (auto& hdr : *cors.headers) {
+            response.set(hdr.first, std::move(hdr.second));
+        }
+    }
+
+    co_return response;
 }
 
 } // namespace uh::cluster::ep
