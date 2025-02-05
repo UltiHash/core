@@ -44,6 +44,7 @@ jobs:
           # Set ENV for CMake
           echo "$CMAKE_ENV" | jq -r 'to_entries | .[] | "export " + .key + "=\"" + .value + "\""' >> cmake_env.sh
           source cmake_env.sh
+          cat cmake_env.sh
 
           # Configure CMake
           cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ inputs.target }} -DBUILD_TOOLS=OFF ${{ inputs.cmake_additional_args }}
@@ -59,6 +60,7 @@ jobs:
           # Set ENV for the test
           echo "$TEST_ENV" | jq -r 'to_entries | .[] | "export " + .key + "=\"" + .value + "\""' >> test_env.sh
           source test_env.sh
+          cat test_env.sh
 
           # Start the test
           etcd&
