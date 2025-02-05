@@ -1,5 +1,7 @@
 #pragma once
 
+#include <entrypoint/http/raw_request.h>
+#include <set>
 #include <string>
 
 namespace uh::cluster::ep::cors {
@@ -7,11 +9,7 @@ namespace uh::cluster::ep::cors {
 struct info {
     std::string allowed_origin;
 
-    bool allowed_delete = false;
-    bool allowed_get = false;
-    bool allowed_head = false;
-    bool allowed_post = false;
-    bool allowed_put = false;
+    std::set<http::verb> allowed_methods;
 };
 
 } // namespace uh::cluster::ep::cors

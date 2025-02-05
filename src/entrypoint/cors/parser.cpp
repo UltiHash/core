@@ -16,15 +16,15 @@ info parse_corse_info(const boost::property_tree::ptree& tree) {
     for (auto it = methods.first; it != methods.second; ++it) {
         auto method = it->second.get_value<std::string>();
         if (method == "DELETE") {
-            rv.allowed_delete = true;
+            rv.allowed_methods.insert(http::verb::delete_);
         } else if (method == "GET") {
-            rv.allowed_get = true;
+            rv.allowed_methods.insert(http::verb::get);
         } else if (method == "HEAD") {
-            rv.allowed_head = true;
+            rv.allowed_methods.insert(http::verb::head);
         } else if (method == "POST") {
-            rv.allowed_post = true;
+            rv.allowed_methods.insert(http::verb::post);
         } else if (method == "PUT") {
-            rv.allowed_put = true;
+            rv.allowed_methods.insert(http::verb::put);
         }
     }
 

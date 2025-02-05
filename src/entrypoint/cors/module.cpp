@@ -40,20 +40,8 @@ coro<result> module::check(const http::request& request) const {
         // response.set("Access-Control-Max-Age", "");
 
         std::string allowed_methods;
-        if (origin_info->second.allowed_get) {
-            allowed_methods += "GET, ";
-        }
-        if (origin_info->second.allowed_post) {
-            allowed_methods += "POST, ";
-        }
-        if (origin_info->second.allowed_put) {
-            allowed_methods += "PUT, ";
-        }
-        if (origin_info->second.allowed_head) {
-            allowed_methods += "HEAD, ";
-        }
-        if (origin_info->second.allowed_delete) {
-            allowed_methods += "DELETE, ";
+        for (auto method : origin_info->second.allowed_methods) {
+            allowed_methods += to_string(method) + ", ";
         }
 
         if (!allowed_methods.empty()) {
@@ -74,40 +62,7 @@ coro<result> module::check(const http::request& request) const {
                 "CORS Response: This CORS request is not allowed"))};
     }
 
-    if (request.method() == http::verb::get &&
-        !origin_info->second.allowed_get) {
-        co_return result{
-            .response = make_response(command_exception(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
-    }
-
-    if (request.method() == http::verb::put &&
-        !origin_info->second.allowed_put) {
-        co_return result{
-            .response = make_response(command_exception(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
-    }
-
-    if (request.method() == http::verb::head &&
-        !origin_info->second.allowed_head) {
-        co_return result{
-            .response = make_response(command_exception(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
-    }
-
-    if (request.method() == http::verb::post &&
-        !origin_info->second.allowed_post) {
-        co_return result{
-            .response = make_response(command_exception(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed"))};
-    }
-
-    if (request.method() == http::verb::delete_ &&
-        !origin_info->second.allowed_delete) {
+    if (!origin_info->second.allowed_methods.contains(request.method())) {
         co_return result{
             .response = make_response(command_exception(
                 http::status::forbidden, "Forbidden",
