@@ -5,7 +5,7 @@ add_module(common_utils SOURCES common.cpp)
 add_module(error_utils SOURCES error.cpp)
 add_module(host_utils SOURCES host_utils.cpp INTERFACE boost_headers)
 add_module(io_utils SOURCES io.cpp)
-add_module(misc_utils SOURCES misc.cpp INTERFACE project_includes)
+add_module(misc_utils SOURCES misc.cpp)
 add_module(
     random_utils
     SOURCES
