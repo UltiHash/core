@@ -3,7 +3,6 @@ add_module(
     SOURCES
     utils.cpp
     INTERFACE
-    project_includes
     etcd-cpp-api
     PUBLIC_MODULE
     telemetry)

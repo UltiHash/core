@@ -1,39 +1,27 @@
+add_module(address_utils SOURCES address_utils.cpp PUBLIC_MODULE telemetry
+           types)
+
+add_module(common_utils SOURCES common.cpp)
+add_module(error_utils SOURCES error.cpp)
+add_module(host_utils SOURCES host_utils.cpp INTERFACE boost_headers)
+add_module(io_utils SOURCES io.cpp)
+add_module(misc_utils SOURCES misc.cpp INTERFACE project_includes)
 add_module(
-    address_utils
+    random_utils
     SOURCES
-    address_utils.cpp
-    INTERFACE
-    project_includes
+    random.cpp
+    SETTING
+    boost_headers
     PUBLIC_MODULE
-    telemetry
     types)
-# add_library(address_utils SHARED address_utils.cpp)
-# target_include_directories(address_utils PUBLIC ${PROJECT_SOURCE_DIR}/src)
-# target_link_libraries(address_utils PUBLIC project_includes telemetry types)
-# target_precompile_headers(address_utils REUSE_FROM uh_precompile_headers)
-
 add_module(
-    common_utils
+    strings_utils
     SOURCES
-    common.cpp
-    INTERFACE
-    project_includes)
-# add_library(common_utils SHARED common.cpp)
-# target_link_libraries(common_utils PUBLIC project_includes)
-# target_precompile_headers(common_utils REUSE_FROM uh_precompile_headers)
+    strings.cpp
+    PRIVATE
+    Boost::url)
 
-# error.cpp
-#
-# host_utils.cpp
-#
-# io.cpp
-#
-# misc.cpp
-#
-# random.cpp
-#
-# strings.cpp
-#
-# temp_directory.cpp
-#
-# xml_parser.cpp
+# TODO: Move this to test/lib/util/
+add_module(temp_directory_utils SOURCES temp_directory.cpp PRIVATE random_utils)
+
+add_module(xml_parser_utils SOURCES xml_parser.cpp INTERFACE boost_headers)

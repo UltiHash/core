@@ -188,19 +188,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
 
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
-#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/types/.*\\.cpp$")
-# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
-#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/telemetry/.*\\.cpp$")
-# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
-#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/.*\\.cpp$")
-# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
-#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/common\.cpp$")
-# list(FILTER SOURCE_FILE_LIST EXCLUDE REGEX
-#      "${CMAKE_CURRENT_SOURCE_DIR}/src/common/etcd/utils\.cpp$")
 
-# types telemetry etcd address_utils common_utils)
 include(add_module)
+register_additional_interface(project_includes)
 
 add_subdirectory(src)
 
