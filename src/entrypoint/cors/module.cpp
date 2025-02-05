@@ -1,6 +1,8 @@
 #include "module.h"
 
 #include "parser.h"
+#include <common/utils/strings.h>
+#include <ranges>
 
 namespace uh::cluster::ep::cors {
 
@@ -32,6 +34,7 @@ coro<result> module::check(const http::request& request) const {
                 http::status::forbidden, "Forbidden",
                 "CORS Response: This CORS request is not allowed")};
     }
+    auto& info = origin_info->second;
 
     if (request.method() == http::verb::options) {
         auto response = http::response(http::status::no_content);
@@ -41,33 +44,27 @@ coro<result> module::check(const http::request& request) const {
         if (auto request_headers =
                 request.header("Access-Control-Request-Headers");
             request_headers) {
-            auto headers =
-                split<std::vector<std::string>>(*request_headers, ',');
+            auto headers = split<std::set<std::string>>(*request_headers, ',');
 
-            std::string allow_headers;
-            for (const auto& header : headers) {
-                if (origin_info->second.allowed_headers.contains(header)) {
-                    allow_headers += header + ",";
-                }
-            }
+            std::set<std::string> intersection;
+            std::set_intersection(
+                headers.begin(), headers.end(), info.allowed_headers.begin(),
+                info.allowed_headers.end(),
+                std::inserter(intersection, intersection.begin()));
 
+            std::string allow_headers = join(intersection, ",");
             if (!allow_headers.empty()) {
-                allow_headers.erase(allow_headers.size() - 1);
                 response.set("Access-Control-Allow-Headers",
                              std::move(allow_headers));
             }
         }
 
-        response.set("Access-Control-Max-Age",
-                     origin_info->second.max_age_seconds);
+        response.set("Access-Control-Max-Age", info.max_age_seconds);
 
-        std::string allowed_methods;
-        for (auto method : origin_info->second.allowed_methods) {
-            allowed_methods += to_string(method) + ", ";
-        }
-
+        auto verb_str = [](http::verb v) { return to_string(v); };
+        std::string allowed_methods =
+            join(info.allowed_methods | std::views::transform(verb_str), ",");
         if (!allowed_methods.empty()) {
-            allowed_methods.erase(allowed_methods.size() - 2);
             response.set("Access-Control-Allow-Methods",
                          std::move(allowed_methods));
         }
@@ -75,7 +72,7 @@ coro<result> module::check(const http::request& request) const {
         co_return result{.response = std::move(response)};
     }
 
-    if (!origin_info->second.allowed_methods.contains(request.method())) {
+    if (!info.allowed_methods.contains(request.method())) {
         co_return result{
             .response = error_response(
                 http::status::forbidden, "Forbidden",
@@ -84,9 +81,8 @@ coro<result> module::check(const http::request& request) const {
 
     std::map<std::string, std::string> headers;
     headers["Access-Control-Allow-Origin"] = *origin;
-    if (origin_info->second.exposed_headers) {
-        headers["Access-Control-Expose-Headers"] =
-            *origin_info->second.exposed_headers;
+    if (info.exposed_headers) {
+        headers["Access-Control-Expose-Headers"] = *info.exposed_headers;
     }
 
     co_return result{.headers = std::move(headers)};

@@ -2,6 +2,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <common/utils/strings.h>
 
 namespace uh::cluster::ep::cors {
 
@@ -32,6 +33,14 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
             rv.allowed_methods.insert(http::verb::put);
         }
     }
+
+    auto exposed = tree.equal_range("ExposedHeader");
+    rv.exposed_headers =
+        join(std::ranges::subrange(exposed.first, exposed.second) |
+                 std::views::transform([](auto& it) -> std::string {
+                     return it.second.template get_value<std::string>();
+                 }),
+             ",");
 
     auto max_age_seconds = tree.get_optional<unsigned>("MaxAgeSeconds");
     if (max_age_seconds) {
