@@ -83,7 +83,8 @@ service::service(const service_config& sc, entrypoint_config config)
                    command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
                                    m_config, m_data_view, m_limits, m_users),
                    http::request_factory(m_users),
-                   std::make_unique<policy::module>(m_directory)),
+                   std::make_unique<policy::module>(m_directory),
+                   std::make_unique<cors::module>(m_directory)),
                m_ioc),
       m_gc(m_ioc, m_directory, m_data_view) {
     co_spawn(

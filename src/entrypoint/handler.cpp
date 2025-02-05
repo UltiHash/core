@@ -7,10 +7,12 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster::ep {
 
 handler::handler(command_factory&& comm_factory, request_factory&& factory,
-                 std::unique_ptr<ep::policy::module> policy)
+                 std::unique_ptr<ep::policy::module> policy,
+                 std::unique_ptr<ep::cors::module> cors)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
-      m_policy(std::move(policy)) {}
+      m_policy(std::move(policy)),
+      m_cors(std::move(cors)) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
@@ -85,6 +87,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     }
 
     co_await cmd->validate(req);
+    co_await m_cors->check(req);
 
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
