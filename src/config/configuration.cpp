@@ -225,7 +225,7 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
                return true;
            },
            "UltiHash license json-string")
-        ->envname(ENV_CFG_LICENSE_JSON)
+        ->envname(ENV_CFG_LICENSE)
         ->default_val(cfg.license);
 
     app.add_option("--backend-host", cfg.backend_config.backend_host,

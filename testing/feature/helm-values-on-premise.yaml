@@ -40,7 +40,7 @@ coordinator:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
   extraEnv:
-    - name: UH_LICENSE_JSON
+    - name: UH_LICENSE
       valueFrom:
         secretKeyRef:  
           name: ultihash
@@ -51,7 +51,7 @@ entrypoint:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
   extraEnv:
-    - name: UH_LICENSE_JSON
+    - name: UH_LICENSE
       valueFrom:
         secretKeyRef:  
           name: ultihash
@@ -67,7 +67,7 @@ deduplicator:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
   extraEnv:
-    - name: UH_LICENSE_JSON
+    - name: UH_LICENSE
       valueFrom:
         secretKeyRef:  
           name: ultihash
@@ -94,7 +94,7 @@ storage:
   nodeSelector:
     kubernetes.io/hostname: $KUBERNETES_NODE
   extraEnv:
-    - name: UH_LICENSE_JSON
+    - name: UH_LICENSE
       valueFrom:
         secretKeyRef:  
           name: ultihash
