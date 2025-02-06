@@ -1,8 +1,11 @@
 #pragma once
 
+#include <common/caches/timed_cache.h>
 #include <entrypoint/directory.h>
 #include <entrypoint/http/request.h>
 #include <entrypoint/http/response.h>
+
+#include "info.h"
 
 #include <variant>
 
@@ -27,7 +30,12 @@ public:
     coro<result> check(const http::request& request) const;
 
 private:
+    coro<std::shared_ptr<std::map<std::string, info>>>
+    get_info(const std::string& bucket);
+
     directory& m_directory;
+    timed_cache<std::string, std::shared_ptr<std::map<std::string, info>>>
+        m_info_cache;
 };
 
 } // namespace uh::cluster::ep::cors

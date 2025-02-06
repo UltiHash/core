@@ -43,7 +43,8 @@ http::response options_response(const http::request& r, std::string origin,
 
 } // namespace
 
-module::module(directory& dir) :m_directory(dir) {}
+module::module(directory& dir) :m_directory(dir),
+    m_info_cache(std::chrono::seconds(300)) {}
 
 coro<result> module::check(const http::request& request) const {
     auto origin = request.header("origin");
@@ -93,6 +94,25 @@ coro<result> module::check(const http::request& request) const {
     }
 
     co_return result{.headers = std::move(headers)};
+}
+
+coro<std::shared_ptr<std::map<std::string, info>>>
+module::get_info(const std::string& bucket) {
+    if (auto cached = m_info_cache.get(bucket); cached) {
+        co_return *cached;
+    }
+
+    auto config = co_await m_directory.get_bucket_cors(bucket);
+    if (!config) {
+        throw command_exception(
+            http::status::forbidden, "Forbidden",
+            "CORS Response: CORS is not enabled for this bucket");
+    }
+
+    auto parsed =
+        std::make_shared<std::map<std::string, info>>(parser::parse(*config));
+    m_info_cache.put(bucket, parsed);
+    co_return parsed;
 }
 
 } // namespace uh::cluster::ep::cors
