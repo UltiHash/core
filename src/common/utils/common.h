@@ -44,7 +44,7 @@ enum message_type : uint8_t {
 constexpr const char* ENV_CFG_ENDPOINT_HOST = "UH_POD_IP";
 constexpr const char* UH_WORKING_DIR = "UH_WORKING_DIR";
 constexpr const char* ENV_CFG_LOG_LEVEL = "UH_LOG_LEVEL";
-constexpr const char* ENV_CFG_LICENSE_JSON = "UH_LICENSE_JSON";
+constexpr const char* ENV_CFG_LICENSE = "UH_LICENSE";
 constexpr const char* ENV_CFG_BACKEND_HOST = "UH_BACKEND_HOST";
 constexpr const char* ENV_CFG_CUSTOMER_ID = "UH_CUSTOMER_ID";
 constexpr const char* ENV_CFG_ACCESS_TOKEN = "UH_ACCESS_TOKEN";

@@ -91,7 +91,7 @@ set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
 
 include(CPM)
 
-cpmaddpackage(
+CPMAddPackage(
     NAME
     cpr
     GITHUB_REPOSITORY

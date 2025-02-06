@@ -10,9 +10,7 @@ components and describes their purpose.
     address is used to advertise the service in etcd.
 - `UH_LOG_LEVEL` - when set it overrides the default log level (INFO) and must
     be one of the following severity levels: DEBUG, INFO, WARN, ERROR, or FATAL.
-- `UH_LICENSE` - (DEPRECATED) must be filled with a valid UH license (use sample
-    licenses under `ROOT/data/licenses/text-DEPRECATED` for testing).
-- `UH_LICENSE_JSON` - (required) must be filled with a valid json-format UH 
+- `UH_LICENSE` - (required) must be filled with a valid json-format UH 
     license (use sample licenses under `ROOT/data/licenses` for testing).
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified 
     endpoint using OTLP via gRPC (format: "hostname:port")
@@ -27,7 +25,7 @@ components and describes their purpose.
 # Backend Connection
 
 > **NOTE:** These are ignored when a valid test license is provided through
-        `UH_LICENSE_JSON`.
+        `UH_LICENSE`.
 
 - `UH_BACKEND_HOST` - configure host of the backend service. Please fill domain name only like this: 'backend.ultihash.io'
 - `UH_CUSTOMER_ID` - configure customer ID for the backend service.
