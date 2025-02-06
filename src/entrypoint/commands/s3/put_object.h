@@ -1,12 +1,12 @@
 #pragma once
 
-#include "command.h"
 #include "common/crypto/hash.h"
 #include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "entrypoint/config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 

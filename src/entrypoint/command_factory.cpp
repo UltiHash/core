@@ -1,37 +1,37 @@
 #include "command_factory.h"
 
-#include "commands/abort_multipart.h"
-#include "commands/complete_multipart.h"
-#include "commands/copy_object.h"
-#include "commands/create_bucket.h"
-#include "commands/delete_bucket.h"
-#include "commands/delete_bucket_policy.h"
-#include "commands/delete_object.h"
-#include "commands/delete_objects.h"
-#include "commands/get_bucket_policy.h"
-#include "commands/get_object.h"
-#include "commands/head_bucket.h"
-#include "commands/head_object.h"
-#include "commands/init_multipart.h"
-#include "commands/list_buckets.h"
-#include "commands/list_multipart.h"
-#include "commands/list_objects.h"
-#include "commands/list_objects_v2.h"
-#include "commands/multipart.h"
-#include "commands/put_bucket_policy.h"
-#include "commands/put_object.h"
+#include <entrypoint/commands/s3/abort_multipart.h>
+#include <entrypoint/commands/s3/complete_multipart.h>
+#include <entrypoint/commands/s3/copy_object.h>
+#include <entrypoint/commands/s3/create_bucket.h>
+#include <entrypoint/commands/s3/delete_bucket.h>
+#include <entrypoint/commands/s3/delete_bucket_policy.h>
+#include <entrypoint/commands/s3/delete_object.h>
+#include <entrypoint/commands/s3/delete_objects.h>
+#include <entrypoint/commands/s3/get_bucket_policy.h>
+#include <entrypoint/commands/s3/get_object.h>
+#include <entrypoint/commands/s3/head_bucket.h>
+#include <entrypoint/commands/s3/head_object.h>
+#include <entrypoint/commands/s3/init_multipart.h>
+#include <entrypoint/commands/s3/list_buckets.h>
+#include <entrypoint/commands/s3/list_multipart.h>
+#include <entrypoint/commands/s3/list_objects.h>
+#include <entrypoint/commands/s3/list_objects_v2.h>
+#include <entrypoint/commands/s3/multipart.h>
+#include <entrypoint/commands/s3/put_bucket_policy.h>
+#include <entrypoint/commands/s3/put_object.h>
 
 #include <entrypoint/commands/uh/get_metrics.h>
 #include <entrypoint/commands/uh/get_ready.h>
 
-#include "commands/iam/create_access_key.h"
-#include "commands/iam/create_user.h"
-#include "commands/iam/delete_access_key.h"
-#include "commands/iam/delete_user.h"
-#include "commands/iam/delete_user_policy.h"
-#include "commands/iam/get_user_policy.h"
-#include "commands/iam/list_user_policies.h"
-#include "commands/iam/put_user_policy.h"
+#include <entrypoint/commands/iam/create_access_key.h>
+#include <entrypoint/commands/iam/create_user.h>
+#include <entrypoint/commands/iam/delete_access_key.h>
+#include <entrypoint/commands/iam/delete_user.h>
+#include <entrypoint/commands/iam/delete_user_policy.h>
+#include <entrypoint/commands/iam/get_user_policy.h>
+#include <entrypoint/commands/iam/list_user_policies.h>
+#include <entrypoint/commands/iam/put_user_policy.h>
 
 namespace uh::cluster {
 

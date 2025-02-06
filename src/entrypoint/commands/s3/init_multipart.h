@@ -1,13 +1,14 @@
 #pragma once
 
-#include "command.h"
+#include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class list_multipart : public command {
+class init_multipart : public command {
 public:
-    explicit list_multipart(multipart_state&);
+    explicit init_multipart(directory&, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -16,6 +17,7 @@ public:
     std::string action_id() const override;
 
 private:
+    directory& m_dir;
     multipart_state& m_uploads;
 };
 

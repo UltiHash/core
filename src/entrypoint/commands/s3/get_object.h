@@ -1,15 +1,14 @@
 #pragma once
 
-#include "command.h"
 #include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
-#include "entrypoint/limits.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class delete_objects : public command {
+class get_object : public command {
 public:
-    delete_objects(directory&, global_data_view&, limits&);
+    get_object(directory&, global_data_view&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -19,7 +18,7 @@ public:
 
 private:
     directory& m_dir;
-    static constexpr std::size_t MAXIMUM_DELETE_KEYS = 1000;
+    global_data_view& m_storage;
 };
 
 } // namespace uh::cluster

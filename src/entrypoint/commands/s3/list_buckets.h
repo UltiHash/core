@@ -1,13 +1,13 @@
 #pragma once
 
-#include "command.h"
 #include "entrypoint/directory.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class head_object : public command {
+class list_buckets : public command {
 public:
-    explicit head_object(directory&);
+    explicit list_buckets(directory&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -16,7 +16,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_dir;
+    directory& m_directory;
 };
 
 } // namespace uh::cluster

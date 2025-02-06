@@ -1,15 +1,17 @@
 #pragma once
 
-#include "command.h"
 #include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class abort_multipart : public command {
+class complete_multipart : public command {
 public:
-    abort_multipart(multipart_state&, global_data_view&);
+    complete_multipart(directory&, global_data_view&, multipart_state&,
+                       limits&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -18,8 +20,9 @@ public:
     std::string action_id() const override;
 
 private:
+    directory& m_dir;
     multipart_state& m_uploads;
-    global_data_view& m_gdv;
+    limits& m_limits;
 };
 
 } // namespace uh::cluster

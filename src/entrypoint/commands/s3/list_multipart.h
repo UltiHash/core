@@ -1,14 +1,13 @@
 #pragma once
 
-#include "command.h"
-#include "common/global_data/global_data_view.h"
-#include "entrypoint/directory.h"
+#include "entrypoint/multipart_state.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class get_object : public command {
+class list_multipart : public command {
 public:
-    get_object(directory&, global_data_view&);
+    explicit list_multipart(multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -17,8 +16,7 @@ public:
     std::string action_id() const override;
 
 private:
-    directory& m_dir;
-    global_data_view& m_storage;
+    multipart_state& m_uploads;
 };
 
 } // namespace uh::cluster

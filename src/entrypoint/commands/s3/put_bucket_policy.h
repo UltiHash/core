@@ -1,13 +1,13 @@
 #pragma once
 
-#include "command.h"
 #include "entrypoint/directory.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class list_objects_v2 : public command {
+class put_bucket_policy : public command {
 public:
-    explicit list_objects_v2(directory& dir);
+    put_bucket_policy(directory& dir);
 
     static bool can_handle(const ep::http::request& req);
 

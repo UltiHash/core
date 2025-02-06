@@ -1,13 +1,15 @@
 #pragma once
 
-#include "command.h"
+#include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
+#include "entrypoint/limits.h"
+#include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
-class delete_bucket_policy : public command {
+class delete_object : public command {
 public:
-    delete_bucket_policy(directory& dir);
+    delete_object(directory&, global_data_view&, limits&);
 
     static bool can_handle(const ep::http::request& req);
 
