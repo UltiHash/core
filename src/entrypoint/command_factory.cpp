@@ -5,6 +5,7 @@
 #include <entrypoint/commands/s3/copy_object.h>
 #include <entrypoint/commands/s3/create_bucket.h>
 #include <entrypoint/commands/s3/delete_bucket.h>
+#include <entrypoint/commands/s3/delete_bucket_cors.h>
 #include <entrypoint/commands/s3/delete_bucket_policy.h>
 #include <entrypoint/commands/s3/delete_object.h>
 #include <entrypoint/commands/s3/delete_objects.h>
@@ -169,6 +170,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     }
     if (get_bucket_cors::can_handle(req)) {
         co_return std::make_unique<get_bucket_cors>(m_directory);
+    }
+    if (delete_bucket_cors::can_handle(req)) {
+        co_return std::make_unique<delete_bucket_cors>(m_directory);
     }
 
     if (put_bucket_cors::can_handle(req)) {
