@@ -1,4 +1,6 @@
-cpmaddpackage(
+include(CPM)
+
+CPMAddPackage(
     NAME
     benchmark
     GITHUB_REPOSITORY
