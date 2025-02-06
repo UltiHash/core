@@ -1,6 +1,6 @@
 #include "get_ready.h"
 #include "config.h"
-#include "entrypoint/http/string_body.h"
+#include <entrypoint/http/string_body.h>
 
 using namespace uh::cluster::ep::http;
 

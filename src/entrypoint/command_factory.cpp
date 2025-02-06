@@ -1,5 +1,4 @@
 #include "command_factory.h"
-#include <entrypoint/commands/get_ready.h>
 
 #include "commands/abort_multipart.h"
 #include "commands/complete_multipart.h"
@@ -10,7 +9,6 @@
 #include "commands/delete_object.h"
 #include "commands/delete_objects.h"
 #include "commands/get_bucket_policy.h"
-#include "commands/get_metrics.h"
 #include "commands/get_object.h"
 #include "commands/head_bucket.h"
 #include "commands/head_object.h"
@@ -22,6 +20,9 @@
 #include "commands/multipart.h"
 #include "commands/put_bucket_policy.h"
 #include "commands/put_object.h"
+
+#include <entrypoint/commands/uh/get_metrics.h>
+#include <entrypoint/commands/uh/get_ready.h>
 
 #include "commands/iam/create_access_key.h"
 #include "commands/iam/create_user.h"

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "command.h"
-#include "common/global_data/global_data_view.h"
-#include "entrypoint/directory.h"
+#include <common/global_data/global_data_view.h>
+#include <entrypoint/commands/command.h>
+#include <entrypoint/directory.h>
 
 namespace uh::cluster {
 
