@@ -1,11 +1,8 @@
-add_module(
+add_library_bundle(
     etcd
     SOURCES
     utils.cpp
     INTERFACE
     etcd-cpp-api
-    PUBLIC_MODULE
+    PUBLIC_BUNDLE
     telemetry)
-
-include(CMakePrintHelpers)
-cmake_print_properties(TARGETS zpp_bits PROPERTIES TYPE)

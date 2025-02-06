@@ -1,27 +1,16 @@
-add_module(address_utils SOURCES address_utils.cpp PUBLIC_MODULE telemetry
-           types)
+# TODO: Now address_utils.cpp dependes on telemetry,
+#       and telemetry depends on common.cpp in utils folder.
+#       I couldn't bind these to into a single target.
+add_library_bundle(address_utils SOURCES address_utils.cpp PUBLIC_BUNDLE telemetry types)
 
-add_module(common_utils SOURCES common.cpp)
-add_module(error_utils SOURCES error.cpp)
-add_module(host_utils SOURCES host_utils.cpp INTERFACE boost_headers)
-add_module(io_utils SOURCES io.cpp)
-add_module(misc_utils SOURCES misc.cpp)
-add_module(
-    random_utils
-    SOURCES
-    random.cpp
-    SETTING
-    boost_headers
-    PUBLIC_MODULE
-    types)
-add_module(
+add_library_bundle(utils SOURCES common.cpp error.cpp host_utils.cpp io.cpp misc.cpp xml_parser.cpp random.cpp INTERFACE boost_headers)
+
+# I'm worring about Boost::url. It would be included here and entrypoint also.
+# Let's see what happens.
+add_library_bundle(
     strings_utils
     SOURCES
     strings.cpp
     PRIVATE
     Boost::url)
 
-# TODO: Move this to test/lib/util/
-add_module(temp_directory_utils SOURCES temp_directory.cpp PRIVATE random_utils)
-
-add_module(xml_parser_utils SOURCES xml_parser.cpp INTERFACE boost_headers)

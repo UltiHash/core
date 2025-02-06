@@ -1,4 +1,4 @@
-add_module(
+add_library_bundle(
     telemetry
     SOURCES
     context.cpp
@@ -14,5 +14,5 @@ add_module(
     opentelemetry_exporter_otlp_grpc
     opentelemetry_exporter_otlp_grpc_metrics
     opentelemetry_exporter_ostream_metrics
-    PUBLIC_MODULE
+    PUBLIC_BUNDLE
     common_utils)

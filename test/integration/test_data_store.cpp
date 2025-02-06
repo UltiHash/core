@@ -2,8 +2,8 @@
 
 #include "common/telemetry/log.h"
 #include "common/types/common_types.h"
-#include "common/utils/random.h"
-#include "common/utils/temp_directory.h"
+#include "lib/util/random.h"
+#include "lib/util/temp_directory.h"
 #include "storage/default_data_store.h"
 #include <boost/test/unit_test.hpp>
 #include <random>

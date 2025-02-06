@@ -189,7 +189,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-include(add_module)
+include(add_library_bundle)
 register_additional_interface(project_includes)
 
 add_subdirectory(src)
