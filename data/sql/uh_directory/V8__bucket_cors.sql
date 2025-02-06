@@ -6,13 +6,12 @@ ALTER TABLE buckets ADD COLUMN cors XML;
 --
 -- uh_get_bucket(bucket): get policy and cors for a bucket
 --
-CREATE OR REPLACE FUNCTION uh_get_bucket(bucket TEXT)
+CREATE OR REPLACE FUNCTION uh_get_bucket_cors(bucket TEXT)
     RETURNS TABLE(policy JSON, cors XML)
 LANGUAGE plpgsql AS $$
-DECLARE policy_record JSON;
 DECLARE cors_record XML;
 BEGIN
-    SELECT policy, cors INTO policy_record, cors_record
+    SELECT cors INTO cors_record
     FROM buckets
     WHERE name = bucket;
 
@@ -20,7 +19,7 @@ BEGIN
         RAISE EXCEPTION 'Bucket "%s" does not exist in buckets table', bucket;
     END IF;
 
-    RETURN QUERY SELECT policy_record, XMLSERIALIZE(DOCUMENT cors_record AS text);
+    RETURN QUERY SELECT XMLSERIALIZE(DOCUMENT cors_record AS text);
 END;
 $$;
 
