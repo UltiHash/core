@@ -1,5 +1,7 @@
 #!/bin/bash
 
+UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
+export UH_LICENSE
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=/var/lib/uh
 export UH_LOG_LEVEL=DEBUG

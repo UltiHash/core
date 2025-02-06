@@ -31,7 +31,7 @@ public:
               m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
 
         if (cc.license) {
-            LOG_INFO() << "using license from UH_LICENSE_JSON";
+            LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
                 m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
             boost::asio::co_spawn( //
