@@ -1,3 +1,5 @@
+include(CPM)
+
 CPMAddPackage(
     NAME
     benchmark
