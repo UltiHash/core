@@ -18,6 +18,7 @@
 #include <entrypoint/commands/s3/list_objects.h>
 #include <entrypoint/commands/s3/list_objects_v2.h>
 #include <entrypoint/commands/s3/multipart.h>
+#include <entrypoint/commands/s3/put_bucket_cors.h>
 #include <entrypoint/commands/s3/put_bucket_policy.h>
 #include <entrypoint/commands/s3/put_object.h>
 
@@ -164,6 +165,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     }
     if (get_ready::can_handle(req)) {
         co_return std::make_unique<get_ready>(m_directory, m_gdv);
+    }
+    if (put_bucket_cors::can_handle(req)) {
+        co_return std::make_unique<put_bucket_cors>(m_directory);
     }
 
     throw command_exception(ep::http::status::bad_request, "CommandNotFound",
