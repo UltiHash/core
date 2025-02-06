@@ -220,7 +220,7 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
                try {
                    cfg.license = license::create(res[0]);
                } catch (const std::exception& e) {
-                   throw CLI::ValidationError(e.what());
+                   return false;
                }
                return true;
            },
@@ -273,6 +273,9 @@ std::optional<config> read_config(int argc, char** argv) {
         app.parse(argc, argv);
     } catch (const CLI::Success& e) {
         app.exit(e);
+        return {};
+    } catch (const CLI::ParseError& e) {
+        std::cerr << "Parse error: " << e.what() << std::endl;
         return {};
     }
 
