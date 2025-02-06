@@ -33,7 +33,7 @@ public:
           m_usage{m_ioc, cc.database_config} {
 
         if (cc.license) {
-            LOG_INFO() << "using license from UH_LICENSE_JSON";
+            LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
                 m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
             boost::asio::co_spawn(m_ioc, m_license_updater->update(),

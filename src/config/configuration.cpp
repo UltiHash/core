@@ -217,11 +217,15 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     app.add_option(
            "--license,-L",
            [&cfg](CLI::results_t res) {
-               cfg.license = license::create(res[0]);
+               try {
+                   cfg.license = license::create(res[0]);
+               } catch (const std::exception& e) {
+                   return false;
+               }
                return true;
            },
            "UltiHash license json-string")
-        ->envname(ENV_CFG_LICENSE_JSON)
+        ->envname(ENV_CFG_LICENSE)
         ->default_val(cfg.license);
 
     app.add_option("--backend-host", cfg.backend_config.backend_host,
@@ -272,6 +276,9 @@ std::optional<config> read_config(int argc, char** argv) {
         app.parse(argc, argv);
     } catch (const CLI::Success& e) {
         app.exit(e);
+        return {};
+    } catch (const CLI::ParseError& e) {
+        std::cerr << "Parse error: " << e.what() << std::endl;
         return {};
     }
 
