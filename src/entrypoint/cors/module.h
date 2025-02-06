@@ -5,6 +5,7 @@
 #include <entrypoint/http/request.h>
 #include <entrypoint/http/response.h>
 
+#include "config.h"
 #include "info.h"
 
 #include <variant>
@@ -22,7 +23,7 @@ struct result {
 
 class module {
 public:
-    module(directory& dir);
+    module(const config& cfg, directory& dir);
 
     /**
      * Check the request using CORS configuration, return a cors::result.

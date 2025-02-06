@@ -43,8 +43,8 @@ http::response options_response(const http::request& r, std::string origin,
 
 } // namespace
 
-module::module(directory& dir) :m_directory(dir),
-    m_info_cache(std::chrono::seconds(300)) {}
+module::module(const config& cfg, directory& dir) :m_directory(dir),
+    m_info_cache(cfg.cache_retention) {}
 
 coro<result> module::check(const http::request& request) const {
     auto origin = request.header("origin");
