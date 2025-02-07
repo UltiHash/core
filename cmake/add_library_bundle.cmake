@@ -10,32 +10,26 @@ endfunction()
 # Declare object/static/shared library
 # Usage:
 # - SOURCES: list of source files
-# - SETTING: list of interfaces, which are used to build the library
-# - INTERFACE: list of interfaces, which should also be propagated to the dependents
 # - PRIVATE: list of libraries, which should be linked privately
 # - PUBLIC: list of libraries, which should be linked publicly
-# - PRIVATE_BUNDLE: list of library bundles, which should be linked privately 
+# - PRIVATE_BUNDLE: list of library bundles, which should be linked privately
 # - PUBLIC_BUNDLE: list of library bundles, which should be linked publicly
 function(add_library_bundle name)
     cmake_parse_arguments(
         ARGS "" ""
-        "SOURCES;SETTING;INTERFACE;PRIVATE;PUBLIC;PRIVATE_BUNDLE;PUBLIC_BUNDLE" ${ARGN})
+        "SOURCES;PRIVATE;PUBLIC;PRIVATE_BUNDLE;PUBLIC_BUNDLE" ${ARGN})
 
     add_library(${name}_object OBJECT ${ARGS_SOURCES})
     target_link_libraries(
         ${name}_object
-        PRIVATE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES} ${ARGS_PRIVATE}
-                ${ARGS_SETTING} ${ARGS_PRIVATE_BUNDLE}
-        PUBLIC ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE}
-        INTERFACE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES})
+        PRIVATE ${ARGS_PRIVATE} ${ARGS_PRIVATE_BUNDLE}
+        PUBLIC ${ADDITIONAL_INTERFACES} ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE})
 
     add_library(${name} STATIC $<TARGET_OBJECTS:${name}_object>)
     target_link_libraries(
         ${name}
-        PRIVATE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES} ${ARGS_PRIVATE}
-                ${ARGS_SETTING} ${ARGS_PRIVATE_BUNDLE}
-        PUBLIC ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE}
-        INTERFACE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES})
+        PRIVATE ${ARGS_PRIVATE} ${ARGS_PRIVATE_BUNDLE}
+        PUBLIC ${ADDITIONAL_INTERFACES} ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE})
 
     set(private_static)
     set(public_static)
@@ -59,10 +53,24 @@ function(add_library_bundle name)
     add_library(${name}_shared SHARED $<TARGET_OBJECTS:${name}_object>)
     target_link_libraries(
         ${name}_shared
-        PRIVATE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES} ${private_static}
-                ${ARGS_SETTING}
-        PUBLIC ${public_static} ${public_bundle_shared} 
-               # Exceptional visibility: every shared library should be propagated
-               ${private_bundle_shared} 
-        INTERFACE ${ARGS_INTERFACE} ${ADDITIONAL_INTERFACES})
+        PRIVATE ${ARGS_PRIVATE} ${ARGS_PRIVATE_BUNDLE}
+        PUBLIC ${ADDITIONAL_INTERFACES} ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE})
+
+    # We don't like to have external shared library as our dependency
+    foreach(dep ${PRIVATE})
+        get_target_property(DEP_LIBS ${dep} INTERFACE_LINK_LIBRARIES)
+        foreach(lib ${DEP_LIBS})
+            message(FATAL_ERROR "We have shared library as our dependency: ${lib}")
+            # target_link_libraries(${name}_shared PUBLIC $<IF:$<TARGET_PROPERTY:${lib},TYPE>,SHARED_LIBRARY,${lib},>)
+        endforeach()
+    endforeach()
+
+    # Expose shared libraries, even though they are PRIVATE
+    foreach(dep ${private_bundle_shared})
+        get_target_property(DEP_LIBS ${dep} INTERFACE_LINK_LIBRARIES)
+        foreach(lib ${DEP_LIBS})
+            target_link_libraries(${name}_shared PUBLIC $<IF:$<TARGET_PROPERTY:${lib},TYPE>,SHARED_LIBRARY,${lib},>)
+        endforeach()
+    endforeach()
+
 endfunction()
