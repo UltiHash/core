@@ -3,36 +3,10 @@
 #include "config.h"
 #include "log.h"
 
-#include <opentelemetry/context/propagation/global_propagator.h>
-#include <opentelemetry/context/propagation/text_map_propagator.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h>
-#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h>
-#include <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_options.h>
-#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
-#include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
-#include <opentelemetry/logs/log_record.h>
-#include <opentelemetry/logs/provider.h>
-#include <opentelemetry/metrics/meter.h>
-#include <opentelemetry/metrics/provider.h>
-#include <opentelemetry/nostd/shared_ptr.h>
-#include <opentelemetry/sdk/logs/logger_provider.h>
-#include <opentelemetry/sdk/logs/logger_provider_factory.h>
-#include <opentelemetry/sdk/logs/processor.h>
-#include <opentelemetry/sdk/logs/simple_log_record_processor_factory.h>
-#include <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h>
-#include <opentelemetry/sdk/metrics/meter_context_factory.h>
-#include <opentelemetry/sdk/metrics/meter_provider_factory.h>
-#include <opentelemetry/sdk/metrics/view/view_registry_factory.h>
-#include <opentelemetry/sdk/trace/processor.h>
-#include <opentelemetry/sdk/trace/simple_processor_factory.h>
-#include <opentelemetry/sdk/trace/tracer_provider.h>
 #include <opentelemetry/sdk/trace/tracer_provider_factory.h>
-#include <opentelemetry/std/shared_ptr.h>
-#include <opentelemetry/trace/propagation/http_trace_context.h>
 #include <opentelemetry/trace/provider.h>
-#include <opentelemetry/trace/scope.h>
-#include <opentelemetry/trace/tracer_provider.h>
 
 using namespace opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
