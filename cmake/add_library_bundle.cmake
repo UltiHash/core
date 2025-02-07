@@ -57,12 +57,16 @@ function(add_library_bundle name)
         PUBLIC ${ADDITIONAL_INTERFACES} ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE})
 
     # We don't like to have external shared library as our dependency
-    foreach(dep ${PRIVATE})
+    foreach(dep ${PUBLIC})
         get_target_property(DEP_LIBS ${dep} INTERFACE_LINK_LIBRARIES)
-        foreach(lib ${DEP_LIBS})
-            message(FATAL_ERROR "We have shared library as our dependency: ${lib}")
-            # target_link_libraries(${name}_shared PUBLIC $<IF:$<TARGET_PROPERTY:${lib},TYPE>,SHARED_LIBRARY,${lib},>)
-        endforeach()
+        if (DEP_LIBS)
+            message(FATAL_ERROR "We have shared library as our dependency: ${DEP_LIBS}")
+        endif()
+    endforeach()
+    foreach(dep ${PRIVATE})
+        if (DEP_LIBS)
+            message(FATAL_ERROR "We have shared library as our dependency: ${DEP_LIBS}")
+        endif()
     endforeach()
 
     # Expose shared libraries, even though they are PRIVATE
