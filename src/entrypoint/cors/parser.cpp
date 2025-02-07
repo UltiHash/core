@@ -4,6 +4,10 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <common/utils/strings.h>
 
+#include <common/utils/json.h>
+
+using nlohmann::json;
+
 namespace uh::cluster::ep::cors {
 
 namespace {
@@ -50,6 +54,30 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
     return std::make_pair(std::move(rv_origins), rv);
 }
 
+http::verb to_method(const json& js) {
+    return boost::beast::http::string_to_verb(js.get<std::string>());
+}
+
+std::pair<std::set<std::string>, info> parse_cors_spec(const json& js) {
+
+    auto origins = multi_element(require(js, "AllowedOrigins"), to_string);
+
+    info rv;
+    rv.headers = multi_element(optional(js, "AllowedHeaders"), to_string);
+    rv.methods = multi_element(require(js, "AllowedMethods"), to_method);
+
+    if (auto exposed = optional(js, "ExposeHeaders"); exposed) {
+        rv.exposed_headers =
+            join(multi_element(exposed->get(), to_string), ",");
+    }
+
+    if (auto max_age = optional(js, "MaxAgeSeconds"); max_age) {
+        rv.max_age_seconds = std::stoul(to_string(*max_age));
+    }
+
+    return std::make_pair(std::move(origins), std::move(rv));
+}
+
 } // namespace
 
 std::map<std::string, info> parser::parse(std::string code) {
@@ -69,6 +97,19 @@ std::map<std::string, info> parser::parse(std::string code) {
         auto [origins, info] = parse_corse_info(it->second);
         for (const auto& key : origins) {
             rv[key] = info;
+        }
+    }
+
+    return rv;
+}
+
+std::map<std::string, info> parser::parse_json(std::string code) {
+    auto js = json::parse(std::move(code));
+
+    std::map<std::string, info> rv;
+    for (const auto& elem : multi_element<std::list>(js, parse_cors_spec)) {
+        for (const auto& origin : elem.first) {
+            rv[origin] = elem.second;
         }
     }
 
