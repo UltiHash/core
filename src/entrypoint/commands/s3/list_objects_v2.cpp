@@ -128,7 +128,7 @@ bool list_objects_v2::can_handle(const request& req) {
     return req.method() == verb::get && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && req.object_key().empty() &&
            req.query("list-type") && *req.query("list-type") == "2" &&
-           !req.query("policy");
+           !req.query("policy") && !req.query("cors");
 }
 
 coro<response> list_objects_v2::handle(request& req) {
