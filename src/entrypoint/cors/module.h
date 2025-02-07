@@ -32,10 +32,11 @@ public:
 
 private:
     coro<std::shared_ptr<std::map<std::string, info>>>
-    get_info(const std::string& bucket);
+    get_info(const std::string& bucket) const;
 
     directory& m_directory;
-    timed_cache<std::string, std::shared_ptr<std::map<std::string, info>>>
+    mutable timed_cache<std::string,
+                        std::shared_ptr<std::map<std::string, info>>>
         m_info_cache;
 };
 

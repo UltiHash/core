@@ -52,21 +52,13 @@ coro<result> module::check(const http::request& request) const {
         co_return result{};
     }
 
-    auto config = co_await m_directory.get_bucket_cors(request.bucket());
-    if (!config) {
-        co_return result{
-            .response = error_response(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: CORS is not enabled for this bucket")};
+    auto infos = co_await get_info(request.bucket());
+    auto origin_info = infos->find(*origin);
+    if (origin_info == infos->end()) {
+        origin_info = infos->find("*");
     }
 
-    auto infos = parser::parse(*config);
-    auto origin_info = infos.find(*origin);
-    if (origin_info == infos.end()) {
-        origin_info = infos.find("*");
-    }
-
-    if (origin_info == infos.end()) {
+    if (origin_info == infos->end()) {
         co_return result{
             .response = error_response(
                 http::status::forbidden, "Forbidden",
@@ -88,7 +80,7 @@ coro<result> module::check(const http::request& request) const {
     }
 
     std::map<std::string, std::string> headers;
-    headers["Access-Control-Allow-Origin"] = *origin;
+    headers["Access-Control-Allow-Origin"] = origin_info->second.origin;
     if (info.exposed_headers) {
         headers["Access-Control-Expose-Headers"] = *info.exposed_headers;
     }
@@ -97,7 +89,7 @@ coro<result> module::check(const http::request& request) const {
 }
 
 coro<std::shared_ptr<std::map<std::string, info>>>
-module::get_info(const std::string& bucket) {
+module::get_info(const std::string& bucket) const {
     if (auto cached = m_info_cache.get(bucket); cached) {
         co_return *cached;
     }

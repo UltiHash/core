@@ -96,6 +96,7 @@ std::map<std::string, info> parser::parse(std::string code) {
     for (auto it = rules.first; it != rules.second; ++it) {
         auto [origins, info] = parse_corse_info(it->second);
         for (const auto& key : origins) {
+            info.origin = key;
             rv[key] = info;
         }
     }
