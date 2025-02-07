@@ -80,7 +80,7 @@ coro<result> module::check(const http::request& request) const {
     }
 
     std::map<std::string, std::string> headers;
-    headers["Access-Control-Allow-Origin"] = origin_info->second.origin;
+    headers["Access-Control-Allow-Origin"] = info.origin;
     if (info.exposed_headers) {
         headers["Access-Control-Expose-Headers"] = *info.exposed_headers;
     }
