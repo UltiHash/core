@@ -85,8 +85,8 @@ std::size_t data_file::write(std::size_t offset, std::span<const char> buffer) {
 
 std::size_t data_file::read(std::size_t offset, std::span<char> buffer) {
 
-    if (m_pointer < offset) {
-        throw std::runtime_error("reading out of range");
+    if (m_pointer <= offset) {
+        return 0ull;
     }
 
     return safe_pread(

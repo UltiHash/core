@@ -25,7 +25,9 @@ coro<shared_buffer<>> cache::read(context& ctx, uint128_t pointer,
     }
 
     shared_buffer<char> buffer(size);
-    co_await m_storage.read(ctx, fragment{pointer, size}, buffer.span());
+    auto count =
+        co_await m_storage.read(ctx, fragment{pointer, size}, buffer.span());
+    buffer.resize(count);
     m_lru.put(pointer, buffer);
     co_return buffer;
 }

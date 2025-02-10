@@ -64,12 +64,12 @@ struct local_storage : public sn::interface {
             auto count =
                 get_data_store(frag.pointer)
                     .read(frag.pointer, buffer.subspan(offs, frag.size));
-            if (count != frag.size) {
-                throw std::runtime_error(
-                    "Could not read the data with the given size");
-            }
 
             offs += count;
+
+            if (count != frag.size) {
+                break;
+            }
         }
 
         LOG_DEBUG() << ctx.peer() << ": read addr done";
