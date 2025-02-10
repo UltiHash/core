@@ -42,7 +42,13 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read(m_ctx, partial_addr, buffer);
+        auto size = co_await m_storage.read(m_ctx, partial_addr, buffer);
+        if (size != buffer_size) {
+            throw command_exception(
+                status::internal_server_error, "Read Error",
+                "data for the stored object could not be read");
+        }
+
         m_total += buffer_size;
         m_size -= buffer_size;
 

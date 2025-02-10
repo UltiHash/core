@@ -65,6 +65,9 @@ default_data_store::default_data_store(data_store_config conf,
           m_root, m_conf.page_size,
           std::bind_front(&default_data_store::internal_delete, this)) {
 
+    LOG_INFO() << "set up data store with data file size 0x" << std::hex
+               << std::setfill('0') << std::setw(16) << m_filesize;
+
     if (m_filesize % m_conf.page_size != 0) {
         throw std::runtime_error(
             "data store file size must be a multiple of ref-counter page size");
@@ -135,6 +138,7 @@ address default_data_store::write(std::span<const char> data,
     }
 
     sync();
+    LOG_DEBUG() << "wrote " << data_offs << " bytes to " << rv.to_string();
     return rv;
 }
 
