@@ -8,7 +8,7 @@ remote_factory::remote_factory(boost::asio::io_context& ioc,
       m_connections(connections) {}
 
 std::shared_ptr<remote_storage>
-remote_factory::make_service(const std::string& hostname, uint16_t port, int) {
+remote_factory::make_service(const std::string& hostname, uint16_t port) {
     return std::make_shared<remote_storage>(
         client(m_ioc, hostname, port, m_connections));
 }

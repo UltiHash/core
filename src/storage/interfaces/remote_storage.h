@@ -113,7 +113,7 @@ public:
     remote_factory(boost::asio::io_context& ioc, std::size_t connections);
 
     std::shared_ptr<remote_storage> make_service(const std::string& hostname,
-                                                 uint16_t port, int);
+                                                 uint16_t port);
 
 private:
     boost::asio::io_context& m_ioc;
