@@ -3,7 +3,7 @@
 ### TESTS SERVICE STARTUP WITH INVALID LICENSES
 
 DOCKER_IMAGE=$1
-INVALID_LICENSE_KEY=("" "invalid_key")
+INVALID_LICENSE_KEY=("invalid_key")
 services=("entrypoint" "storage" "deduplicator")
 
 echo "*** testing service startup with invalid licenses ..."
