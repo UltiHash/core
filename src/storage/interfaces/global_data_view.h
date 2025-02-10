@@ -4,8 +4,8 @@
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
 #include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "storage/interfaces/remote_storage.h"
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
@@ -16,7 +16,7 @@ struct global_data_view_config {
     std::size_t ec_parity_shards = 0;
 };
 
-class global_data_view : public storage_interface {
+class global_data_view : public sn::interface {
 
 public:
     global_data_view(const global_data_view_config& config,

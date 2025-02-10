@@ -1,14 +1,14 @@
 #pragma once
 
 #include <common/caches/lru_cache.h>
-#include <common/service_interfaces/storage_interface.h>
 #include <common/telemetry/metrics.h>
+#include <storage/interface.h>
 
 namespace uh::cluster::sn {
 
-class cache : public storage_interface {
+class cache : public sn::interface {
 public:
-    cache(storage_interface& storage, std::size_t capacity);
+    cache(sn::interface& storage, std::size_t capacity);
 
     coro<address> write(context& ctx, std::span<const char>,
                         const std::vector<std::size_t>&) override;
@@ -30,7 +30,7 @@ public:
                        std::size_t size, char* buffer) override;
 
 private:
-    storage_interface& m_storage;
+    sn::interface& m_storage;
     lru_cache<uint128_t, shared_buffer<char>> m_lru;
 };
 

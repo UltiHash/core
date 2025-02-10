@@ -9,12 +9,12 @@
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/license/license_watcher.h>
-#include <common/service_interfaces/storage_interface.h>
 #include <deduplicator/service.h>
 #include <entrypoint/directory.h>
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
+#include <storage/interface.h>
 #include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster::ep {
@@ -34,7 +34,7 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    std::unique_ptr<storage_interface> m_storage;
+    std::unique_ptr<sn::interface> m_storage;
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 

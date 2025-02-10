@@ -37,7 +37,7 @@ struct fixture {
 
     fixture()
         : service_id(get_service_id(
-              etcd, get_service_string(storage_interface::service_role),
+              etcd, get_service_string(sn::interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
         service_maintainer.add_monitor(services);

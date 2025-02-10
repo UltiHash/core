@@ -1,12 +1,12 @@
 #pragma once
 
-#include "common/service_interfaces/storage_interface.h"
+#include <storage/interface.h>
 
 #include "mock_data_store.h"
 
 namespace uh::cluster {
 
-class mock_global_data_view : public storage_interface {
+class mock_global_data_view : public sn::interface {
 public:
     mock_global_data_view(mock_data_store& storage);
 

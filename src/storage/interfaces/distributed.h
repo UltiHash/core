@@ -1,10 +1,10 @@
 #pragma once
 
-#include <common/service_interfaces/storage_interface.h>
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
-class distributed_storage : public storage_interface {
+class distributed_storage : public sn::interface {
 public:
     /**
      * Read from the storage service to specified regions of the buffer.

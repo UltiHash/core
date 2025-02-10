@@ -254,7 +254,7 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
     }
 }
 
-coro<void> safe_put_object(context& ctx, directory& dir, storage_interface& gdv,
+coro<void> safe_put_object(context& ctx, directory& dir, sn::interface& gdv,
                            const std::string& bucket, const object& obj) {
     std::optional<std::exception_ptr> error;
     try {
