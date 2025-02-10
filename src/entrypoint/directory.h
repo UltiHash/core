@@ -51,6 +51,11 @@ public:
     coro<void> set_bucket_policy(const std::string& bucket,
                                  std::optional<std::string> policy);
 
+    coro<std::optional<std::string>> get_bucket_cors(const std::string& bucket);
+
+    coro<void> set_bucket_cors(const std::string& bucket,
+                               std::optional<std::string> cors);
+
     coro<std::vector<object>>
     list_objects(const std::string& bucket,
                  const std::optional<std::string>& prefix,
