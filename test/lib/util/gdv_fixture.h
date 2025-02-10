@@ -112,7 +112,7 @@ public:
         m_etcd.clear_all();
     }
 
-    storage_interface& gdv() { return *m_gdv; }
+    sn::interface& gdv() { return *m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 

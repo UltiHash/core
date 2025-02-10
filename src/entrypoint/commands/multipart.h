@@ -2,15 +2,15 @@
 
 #include "command.h"
 #include "common/service_interfaces/deduplicator_interface.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
 class multipart : public command {
 public:
-    multipart(deduplicator_interface&, storage_interface&, multipart_state&);
+    multipart(deduplicator_interface&, sn::interface&, multipart_state&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -22,7 +22,7 @@ public:
 
 private:
     deduplicator_interface& m_dedupe;
-    storage_interface& m_gdv;
+    sn::interface& m_gdv;
     multipart_state& m_uploads;
 };
 

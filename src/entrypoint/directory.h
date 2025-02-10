@@ -4,7 +4,7 @@
 #include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
 #include "common/utils/scope_guard.h"
-#include <common/service_interfaces/storage_interface.h>
+#include <storage/interface.h>
 
 #include <functional>
 
@@ -95,7 +95,7 @@ private:
  *
  * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(context& ctx, directory& dir, storage_interface& gdv,
+coro<void> safe_put_object(context& ctx, directory& dir, sn::interface& gdv,
                            const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster

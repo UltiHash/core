@@ -36,7 +36,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 }
 
 std::unique_ptr<deduplicator_interface>
-make_deduplicator(const entrypoint_config& config, storage_interface& storage,
+make_deduplicator(const entrypoint_config& config, sn::interface& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
     switch (config.deduplicator) {
@@ -58,9 +58,9 @@ make_deduplicator(const entrypoint_config& config, storage_interface& storage,
     throw std::runtime_error("unknown deduplicator type");
 }
 
-std::unique_ptr<storage_interface> make_storage(const entrypoint_config& config,
-                                                boost::asio::io_context& ioc,
-                                                etcd_manager& etcd) {
+std::unique_ptr<sn::interface> make_storage(const entrypoint_config& config,
+                                            boost::asio::io_context& ioc,
+                                            etcd_manager& etcd) {
     switch (config.storage) {
     case sn_type::local:
         LOG_INFO() << "using storage: local";

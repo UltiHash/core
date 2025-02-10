@@ -201,7 +201,7 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
         app.add_subcommand("deduplicator", "Run as deduplicator service");
 
     register_server(*rv, cfg.server);
-    register_global_data_view(*rv, cfg.storage_interface);
+    register_global_data_view(*rv, cfg.storage);
 
     rv->add_option("--worker-count", cfg.worker_thread_count,
                    "number of worker threads")

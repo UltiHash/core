@@ -2,11 +2,11 @@
 
 #include "commands/command.h"
 #include "common/service_interfaces/deduplicator_interface.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "config.h"
 #include "directory.h"
 #include "limits.h"
 #include "multipart_state.h"
+#include <storage/interface.h>
 
 #include <entrypoint/user/db.h>
 
@@ -16,8 +16,7 @@ struct command_factory {
     command_factory(boost::asio::io_context& ioc,
                     deduplicator_interface& dedupe, directory& dir,
                     multipart_state& uploads, entrypoint_config& config,
-                    storage_interface& gdv, limits& uhlimits,
-                    ep::user::db& users)
+                    sn::interface& gdv, limits& uhlimits, ep::user::db& users)
         : m_ioc(ioc),
           m_dedupe(dedupe),
           m_directory(dir),
@@ -42,7 +41,7 @@ private:
     directory& m_directory;
     multipart_state& m_uploads;
     entrypoint_config& m_config;
-    storage_interface& m_gdv;
+    sn::interface& m_gdv;
     limits& m_limits;
     ep::user::db& m_users;
 };

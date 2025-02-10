@@ -1,14 +1,14 @@
 #pragma once
 
 #include "command.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "entrypoint/directory.h"
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
 class get_metrics : public command {
 public:
-    get_metrics(directory&, storage_interface&);
+    get_metrics(directory&, sn::interface&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -18,7 +18,7 @@ public:
 
 private:
     directory& m_dir;
-    storage_interface& m_gdv;
+    sn::interface& m_gdv;
 };
 
 } // namespace uh::cluster

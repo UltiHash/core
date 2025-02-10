@@ -1,12 +1,13 @@
 #pragma once
 
-#include "common/telemetry/context.h"
-#include "common/types/common_types.h"
-#include "common/types/scoped_buffer.h"
-#include "common/utils/common.h"
+#include <common/telemetry/context.h>
+#include <common/types/common_types.h>
+#include <common/types/scoped_buffer.h>
+#include <common/utils/common.h>
 
-namespace uh::cluster {
-struct storage_interface {
+namespace uh::cluster::sn {
+
+struct interface {
     /**
      * Write `buffer` to the storage, return the address it was stored at.
      *
@@ -72,8 +73,8 @@ struct storage_interface {
         throw std::runtime_error("not implemented");
     }
 
-    virtual ~storage_interface() = default;
+    virtual ~interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::sn

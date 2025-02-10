@@ -1,16 +1,16 @@
 #pragma once
 
-#include "common/service_interfaces/storage_interface.h"
 #include "common/telemetry/log.h"
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
 #include "storage/default_data_store.h"
 #include <list>
 #include <span>
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
-struct local_storage : public storage_interface {
+struct local_storage : public sn::interface {
 
     local_storage(uint32_t index, const data_store_config& config,
                   const std::list<std::filesystem::path>& paths)

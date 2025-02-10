@@ -1,8 +1,6 @@
 #include "utils.h"
-#include "entrypoint/http/command_exception.h"
 
 namespace uh::cluster {
-namespace http = boost::beast::http; // from <boost/beast/http.hpp>
 
 std::vector<collapsed_objects>
 retrieval::collapse(const std::vector<object>& objects,

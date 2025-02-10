@@ -2,7 +2,7 @@
 
 namespace uh::cluster::sn {
 
-cache::cache(storage_interface& storage, std::size_t capacity)
+cache::cache(sn::interface& storage, std::size_t capacity)
     : m_storage(storage),
       m_lru(capacity) {}
 

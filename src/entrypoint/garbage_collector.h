@@ -1,16 +1,16 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <common/service_interfaces/storage_interface.h>
 #include <common/types/common_types.h>
 #include <entrypoint/directory.h>
+#include <storage/interface.h>
 
 namespace uh::cluster::ep {
 
 class garbage_collector {
 public:
     garbage_collector(boost::asio::io_context& ctx, directory& dir,
-                      storage_interface& gdv);
+                      sn::interface& gdv);
 
 private:
     static constexpr auto POLL_INTERVALL = std::chrono::seconds(5);
@@ -19,7 +19,7 @@ private:
     coro<void> collect();
 
     directory& m_dir;
-    storage_interface& m_gdv;
+    sn::interface& m_gdv;
 };
 
 } // namespace uh::cluster::ep

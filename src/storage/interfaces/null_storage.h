@@ -1,10 +1,10 @@
 #pragma once
 
-#include "common/service_interfaces/storage_interface.h"
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
-struct null_storage : public storage_interface {
+struct null_storage : public sn::interface {
 
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {

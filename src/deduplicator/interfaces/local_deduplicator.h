@@ -4,18 +4,18 @@
 #include "common/telemetry/context.h"
 
 #include "common/service_interfaces/deduplicator_interface.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "deduplicator/config.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/fragmentation.h"
-#include "storage/cache.h"
+#include <storage/cache.h>
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
 struct local_deduplicator : public deduplicator_interface {
 
     local_deduplicator(boost::asio::io_context& ioc, deduplicator_config config,
-                       storage_interface& storage);
+                       sn::interface& storage);
 
     coro<dedupe_response> deduplicate(context& ctx,
                                       std::string_view data) override;
