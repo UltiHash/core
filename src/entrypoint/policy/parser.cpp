@@ -2,9 +2,9 @@
 
 #include "matcher.h"
 #include "matchers.h"
+#include <common/utils/json.h>
 
 #include <functional>
-#include <nlohmann/json.hpp>
 #include <set>
 #include <string>
 
@@ -14,28 +14,7 @@ namespace uh::cluster::ep::policy {
 
 namespace {
 
-const json& require(const json& j, std::string_view key) {
-    auto it = j.find(key);
-    if (it == j.end()) {
-        throw std::runtime_error("required key `" + std::string(key) +
-                                 "` not found");
-    }
-
-    return *it;
-}
-
-std::optional<std::reference_wrapper<const json>>
-optional(const json& j, std::string_view key) {
-
-    auto it = j.find(key);
-    if (it == j.end()) {
-        return {};
-    }
-
-    return *it;
-}
-
-constexpr int MAX_VALUEFIELD_LEN = 200;
+constexpr int MAX_VALUEFIELD_LEN = 200; // FIXME why 200 chars
 
 std::string to_string(const json& element) {
     auto ret = element.get<std::string>();
@@ -44,21 +23,8 @@ std::string to_string(const json& element) {
     return ret;
 }
 
-template <class container>
-auto multi_element(const json& element, auto reader) {
-    if (!element.is_array()) {
-        return container{reader(element)};
-    }
-
-    container rv;
-    for (const auto& sub : element) {
-        rv.insert(rv.end(), reader(sub));
-    }
-    return rv;
-}
-
 std::set<std::string> string_or_set(const json& element) {
-    return multi_element<std::set<std::string>>(element, to_string);
+    return multi_element(element, to_string);
 }
 
 effect get_effect(const json& stmt) {
@@ -128,8 +94,7 @@ std::map<std::string, std::list<std::string>>
 condition_parameter(const json& condition) {
     std::map<std::string, std::list<std::string>> rv;
     for (const auto& elem : condition.items()) {
-        rv[elem.key()] =
-            multi_element<std::list<std::string>>(elem.value(), to_string);
+        rv[elem.key()] = multi_element<std::list>(elem.value(), to_string);
     }
     return rv;
 }
@@ -313,7 +278,7 @@ std::list<policy> parser::parse(const std::string& code) {
     }
 
     const auto& statements = require(js, "Statement");
-    return multi_element<std::list<policy>>(statements, parse_policy);
+    return multi_element<std::list>(statements, parse_policy);
 }
 
 } // namespace uh::cluster::ep::policy

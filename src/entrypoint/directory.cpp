@@ -181,6 +181,28 @@ coro<void> directory::set_bucket_policy(const std::string& bucket,
     co_await handle->execv("CALL uh_bucket_set_policy($1, $2)", bucket, policy);
 }
 
+coro<void> directory::set_bucket_cors(const std::string& bucket,
+                                      std::optional<std::string> cors) {
+    co_await bucket_exists(bucket);
+
+    auto handle = co_await m_db.get();
+    co_await handle->execv("CALL uh_bucket_set_cors($1, $2)", bucket, cors);
+}
+
+coro<std::optional<std::string>>
+directory::get_bucket_cors(const std::string& bucket) {
+
+    try {
+        auto handle = co_await m_db.get();
+        auto row = co_await handle->execv("SELECT cors FROM uh_bucket_cors($1)",
+                                          bucket);
+        co_return row->string(0);
+    } catch (const std::exception& e) {
+    }
+
+    co_return std::nullopt;
+}
+
 coro<std::vector<object>>
 directory::list_objects(const std::string& bucket,
                         const std::optional<std::string>& prefix,
