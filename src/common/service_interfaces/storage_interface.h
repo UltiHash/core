@@ -10,9 +10,6 @@ struct storage_interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
-    virtual coro<void> read_fragment(context& ctx, char* buffer,
-                                     const fragment& f) = 0;
-
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                        size_t size) = 0;
 

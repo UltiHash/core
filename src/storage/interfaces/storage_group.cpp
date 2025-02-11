@@ -91,12 +91,6 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     co_return addr;
 }
 
-coro<void> storage_group::read_fragment(context& ctx, char* buffer,
-                                        const fragment& f) {
-    auto cl = m_getter.get(f.pointer);
-    co_await cl->read_fragment(ctx, buffer, f);
-}
-
 coro<shared_buffer<>>
 storage_group::read(context& ctx, const uint128_t& pointer, size_t size) {
     co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);

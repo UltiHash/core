@@ -27,9 +27,6 @@ struct storage_group : public storage_interface {
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
 
-    coro<void> read_fragment(context& ctx, char* buffer,
-                             const fragment& f) override;
-
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;
 

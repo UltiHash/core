@@ -36,11 +36,8 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
 
-    shared_buffer<char> buffer(size);
-    const fragment frag{pointer, size};
     auto storage = m_basic_getter.get(pointer);
-    co_await storage->read_fragment(ctx, buffer.data(), frag);
-    co_return buffer;
+    co_return co_await storage->read(ctx, pointer, size);
 }
 
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,

@@ -22,18 +22,6 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_address(message_header);
     }
 
-    coro<void> read_fragment(context& ctx, char* buffer,
-                             const fragment& frag) override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_fragment(ctx, STORAGE_READ_FRAGMENT_REQ, frag);
-        const auto h = co_await m->recv_header();
-        if (h.size != frag.size) [[unlikely]] {
-            throw std::runtime_error("Incomplete fragment");
-        }
-        m->register_read_buffer(buffer, frag.size);
-        co_await m->recv_buffers(h);
-    }
-
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override {
         auto m = co_await m_storage_service.acquire_messenger();
