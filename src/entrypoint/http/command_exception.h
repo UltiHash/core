@@ -23,6 +23,8 @@ private:
 };
 
 ep::http::response make_response(const command_exception& e);
+ep::http::response error_response(ep::http::status status, std::string code,
+                                  std::string reason);
 
 void throw_from_error(const error& e);
 

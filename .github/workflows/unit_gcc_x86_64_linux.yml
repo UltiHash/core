@@ -1,8 +1,6 @@
 name: Unit Tests (Linux, GCC, x86_64)
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
     branches:
       - "*"
@@ -12,32 +10,21 @@ jobs:
   unit-gcc-x86_64-linux:
     strategy:
       matrix:
-        build: [Release, Debug]
-    runs-on: heavyweight-core-x86-64-jobs
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
-
-      - name: Set the license
-        run: echo "UH_LICENSE=${{ secrets.UH_LICENSE }}" >> $GITHUB_ENV
-
-      - name: Configure CMake
-        run: CC=/usr/bin/gcc CXX=/usr/bin/g++ cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF
-
-      - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
-
-      - name: Test
-        env:
-          ETCDCTL_API: 3
-        working-directory: ${{github.workspace}}/build
-        run: |
-          etcd&
-          sleep 5
-          etcdctl del "" --from-key=true
-          ctest -C ${{ matrix.build }} --output-on-failure
-          etcdctl del "" --from-key=true
+        target: [Release, Debug]
+    uses: ./.github/workflows/unit_testing_workflow.yml
+    with: 
+       target: ${{ matrix.target }}
+       runs_on: heavyweight-core-x86-64-jobs
+       cmake_env: >
+        {
+          "CC": "/usr/bin/gcc",
+          "CXX": "/usr/bin/g++"
+        }
+       test_env: >
+        {
+          "ETCDCTL_API": "3"
+        }
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
 

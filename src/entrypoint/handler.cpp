@@ -7,10 +7,12 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster::ep {
 
 handler::handler(command_factory&& comm_factory, request_factory&& factory,
-                 std::unique_ptr<ep::policy::module> policy)
+                 std::unique_ptr<ep::policy::module> policy,
+                 std::unique_ptr<ep::cors::module> cors)
     : m_command_factory(comm_factory),
       m_factory(std::move(factory)),
-      m_policy(std::move(policy)) {}
+      m_policy(std::move(policy)),
+      m_cors(std::move(cors)) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
@@ -71,11 +73,15 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                        request& req, const std::string& id) {
 
+    auto cors = co_await m_cors->check(req);
+    if (cors.response) {
+        co_return std::move(*cors.response);
+    }
+
     auto cmd = co_await m_command_factory.create(req);
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     req.context().set_name(cmd->action_id());
-    co_await cmd->validate(req);
 
     LOG_DEBUG() << req.peer() << ": checking policies";
     if (!req.authenticated_user().super_user &&
@@ -85,6 +91,8 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                 "Access Denied");
     }
 
+    co_await cmd->validate(req);
+
     if (auto expect = req.header("expect");
         expect && *expect == "100-continue") {
         LOG_INFO() << req.peer() << ": sending 100 CONTINUE";
@@ -92,7 +100,14 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     }
 
     LOG_DEBUG() << req.peer() << ": executing " << cmd->action_id();
-    co_return co_await cmd->handle(req);
+    auto response = co_await cmd->handle(req);
+    if (cors.headers) {
+        for (auto& hdr : *cors.headers) {
+            response.set(hdr.first, std::move(hdr.second));
+        }
+    }
+
+    co_return response;
 }
 
 } // namespace uh::cluster::ep

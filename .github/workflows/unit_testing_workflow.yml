@@ -1,0 +1,68 @@
+name: Unit Testing Workflow
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      runs_on:         
+        required: true
+        type: string
+      cmake_env:
+        required: true
+        type: string
+      cmake_additional_args:
+        required: false
+        type: string
+      test_env:
+        required: true
+        type: string
+    secrets:
+      ghcr_token:
+        required: true
+      uh_license:
+        required: true
+
+jobs:
+  unit-tests:
+    runs-on: ${{ inputs.runs_on }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ghcr_token }}
+          submodules: recursive
+
+      - name: Set the license
+        run: echo "UH_LICENSE_JSON=${{ secrets.uh_license }}" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        env:
+          CMAKE_ENV: ${{ inputs.cmake_env }}
+        run: |
+          # Set ENV for CMake
+          echo "$CMAKE_ENV" | jq -r 'to_entries | .[] | "export " + .key + "=\"" + .value + "\""' >> cmake_env.sh
+          source cmake_env.sh
+
+          # Configure CMake
+          cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ inputs.target }} -DBUILD_TOOLS=OFF ${{ inputs.cmake_additional_args }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{ inputs.target }} --parallel $(nproc)
+      
+      - name: Test
+        env:
+          TEST_ENV: ${{ inputs.test_env }}
+        working-directory: ${{github.workspace}}/build
+        run: |
+          # Set ENV for the test
+          echo "$TEST_ENV" | jq -r 'to_entries | .[] | "export " + .key + "=\"" + .value + "\""' >> test_env.sh
+          source test_env.sh
+
+          # Start the test
+          etcd&
+          sleep 5
+          etcdctl del "" --from-key=true
+          ctest -C ${{ inputs.target }} --output-on-failure
+          etcdctl del "" --from-key=true

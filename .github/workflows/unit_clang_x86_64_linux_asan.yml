@@ -1,8 +1,6 @@
 name: Unit Tests ASAN (Linux, clang, x86_64)
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
     branches:
       - "*"
@@ -12,33 +10,23 @@ jobs:
   unit-asan-x86_64-linux:
     strategy:
       matrix:
-        build: [RelWithDebInfo]
-    runs-on: heavyweight-core-x86-64-jobs
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-          submodules: recursive
-
-      - name: Configure CMake
-        env:
-          CC: /usr/bin/clang-18
-          CXX: /usr/bin/clang++-18
-        run: cmake -G Ninja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DBUILD_TOOLS=OFF -DENABLE_ASAN=ON
-
-      - name: Build
-        run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build }} --parallel $(nproc)
-
-      - name: Test
-        env:
-          ETCDCTL_API: 3
-          ASAN_OPTIONS: detect_odr_violation=0
-        working-directory: ${{github.workspace}}/build
-        run: |
-          etcd&
-          sleep 5
-          etcdctl del "" --from-key=true
-          ctest -C ${{ matrix.build }} --output-on-failure
-          etcdctl del "" --from-key=true
+        target: [RelWithDebInfo]
+    uses: ./.github/workflows/unit_testing_workflow.yml
+    with: 
+       target: ${{ matrix.target }}
+       runs_on: heavyweight-core-x86-64-jobs
+       cmake_env: >
+        {
+          "CC": "/usr/bin/clang-18",
+          "CXX": "/usr/bin/clang++-18"
+        }
+       cmake_additional_args: -DENABLE_ASAN=ON
+       test_env: >
+        {
+          "ETCDCTL_API": "3",
+          "ASAN_OPTIONS": "detect_odr_violation=0"
+        }
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
 
