@@ -12,6 +12,7 @@ namespace uh::cluster {
 struct fragment_set_fixture : public global_data_view_fixture {
     context ctx;
     std::shared_ptr<global_data_view> gdv;
+    std::shared_ptr<dd::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
     fragment_set_fixture() {}
@@ -19,7 +20,8 @@ struct fragment_set_fixture : public global_data_view_fixture {
     void setup() {
         global_data_view_fixture::setup();
         gdv = get_global_data_view();
-        frag_set = std::make_shared<fragment_set>(1000, *gdv);
+        cache = std::make_shared<dd::cache>(*gdv, 1000ull);
+        frag_set = std::make_shared<fragment_set>(1000, *cache);
     }
 
     std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
@@ -154,7 +156,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     context ctx;
 
     auto gdv = get_global_data_view();
-    fragment_set frag_set(1000, *gdv);
+    dd::cache cache(*gdv, 1000ull);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
@@ -197,13 +199,13 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
 
     fragment_set_element frag_element_a(
         fragment_a.string_view().substr(0, addr_a.get(0).size),
-        addr_a.get(0).pointer, std::string(prefix_a), *gdv);
+        addr_a.get(0).pointer, std::string(prefix_a), cache);
     fragment_set_element frag_element_b(
         fragment_b.string_view().substr(0, addr_b.get(0).size),
-        addr_b.get(0).pointer, std::string(prefix_b), *gdv);
+        addr_b.get(0).pointer, std::string(prefix_b), cache);
     fragment_set_element frag_element_c(
         fragment_c.string_view().substr(0, addr_c.get(0).size),
-        addr_c.get(0).pointer, std::string(prefix_c), *gdv);
+        addr_c.get(0).pointer, std::string(prefix_c), cache);
 
     // Since all fragments have identical prefix, calling operator< will be
     // forced to consult gdv to get full body

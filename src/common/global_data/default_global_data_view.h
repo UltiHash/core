@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common/caches/lru_cache.h"
 #include "common/etcd/ec_groups/ec_get_handler.h"
 #include "common/etcd/ec_groups/ec_group_maintainer.h"
 #include "common/etcd/ec_groups/ec_load_balancer.h"
@@ -37,11 +36,6 @@ public:
      * @brief Sends write request to a storage service instance, does not
      * guarantee persistence.
      *
-     * Sends write request to a storage service instance. Upon successful
-     * completion of the request, the fragment (#data) and its resulting address
-     * are stored in the L1 cache. CAUTION: writes are only guaranteed to be
-     * persistent after sync has been called.
-     *
      * @param ctx traces context
      * @param data A constant reference to a std::string_view holding the data
      * to be written.
@@ -67,17 +61,8 @@ public:
     /**
      * @brief Retrieves fragment from storage services.
      *
-     * The L2 read cache is consulted to see if it contains the requested
-     * fragment. Otherwise, a read request is issued to the storage service
-     * instance serving the address range the provided #pointer is in.
-     * - If the requested fragment can be served by a storage service, the
-     * fragment and its address are (re)-inserted into the L2
-     * read cache.
-     * - If no storage service can serve the fragment, a std::runtime_error
-     * exception is thrown
-     *
-     * The L2 read cache contains the
-     * entire content of a fragment at the price of a smaller cache capacity.
+     * A read request is issued to the storage service instance serving the
+     * address range the provided #pointer is in.
      *
      * @param ctx traces context
      * @param pointer A constant reference to a uint128_t, specifying the
@@ -93,7 +78,6 @@ public:
      *
      * Retrieves content of an entire address by scattering read requests for
      * each fragment to storage service instances for improved read performance.
-     * This method entirely bypasses the read caches.
      *
      * @param ctx open telemetry context
      * @param[out] buffer A char buffer that the retrieved data is written to.
@@ -147,7 +131,6 @@ public:
 private:
     boost::asio::io_context& m_io_service;
     global_data_view_config m_config;
-    lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
     service_maintainer<storage_interface>& m_service_maintainer;
     ec_group_maintainer m_ec_maintainer;

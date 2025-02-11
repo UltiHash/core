@@ -9,7 +9,6 @@ default_global_data_view::default_global_data_view(
     etcd_manager& etcd)
     : m_io_service(ioc),
       m_config(config),
-      m_cache_l2(m_config.read_cache_capacity_l2),
       m_service_maintainer(storage_maintainer),
       m_ec_maintainer(m_io_service, m_config.ec_data_shards,
                       m_config.ec_parity_shards, etcd, false),
@@ -36,14 +35,6 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
     }
-    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
-        if (cp->size() >= size) [[likely]] {
-            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            return cp.value();
-        }
-    }
-
-    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     shared_buffer<char> buffer(size);
     const fragment frag{pointer, size};
@@ -52,7 +43,6 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
                           storage->read_fragment(ctx, buffer.data(), frag),
                           boost::asio::use_future)
         .get();
-    m_cache_l2.put(pointer, buffer);
     return buffer;
 }
 
@@ -64,19 +54,8 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
         throw std::runtime_error("Read size must be larger than zero");
     }
 
-    if (const auto cp = m_cache_l2.get(pointer); cp.has_value()) {
-        if (cp->size() >= size) [[likely]] {
-            metric<metric_type::gdv_l2_cache_hit_counter>::increase(1);
-            co_return cp.value();
-        }
-    }
-
-    metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
-
     auto storage = m_basic_getter.get(pointer);
-    auto buffer = co_await storage->read(ctx, pointer, size);
-    m_cache_l2.put(pointer, buffer);
-    co_return buffer;
+    co_return co_await storage->read(ctx, pointer, size);
 }
 
 coro<std::size_t>
