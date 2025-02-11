@@ -12,17 +12,6 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
     co_return m_storage.write(data, offsets);
 }
 
-coro<shared_buffer<char>>
-mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
-                                     const size_t size) {
-    if (size == 0) {
-        throw std::runtime_error("Read fragment size must be larger than zero");
-    }
-    shared_buffer<char> buffer(size);
-    m_storage.read(pointer, buffer.span());
-    co_return buffer;
-}
-
 coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
                                                   const uint128_t& pointer,
                                                   size_t size) {

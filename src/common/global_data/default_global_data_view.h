@@ -59,21 +59,6 @@ public:
                                size_t size);
 
     /**
-     * @brief Retrieves fragment from storage services.
-     *
-     * A read request is issued to the storage service instance serving the
-     * address range the provided #pointer is in.
-     *
-     * @param ctx traces context
-     * @param pointer A constant reference to a uint128_t, specifying the
-     * location of the fragment.
-     * @param size A size_t specifying the size of the fragment.
-     * @return A shared_buffer<char> containing the fragment data.
-     */
-    coro<shared_buffer<char>>
-    read_fragment(context& ctx, const uint128_t& pointer, size_t size);
-
-    /**
      * @brief Retrieves the contents of an entire address from storage services.
      *
      * Retrieves content of an entire address by scattering read requests for

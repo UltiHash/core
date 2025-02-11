@@ -28,18 +28,6 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await client->write(ctx, data, offsets);
 }
 
-coro<shared_buffer<char>>
-default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
-                                        const size_t size) {
-
-    if (size == 0) {
-        throw std::runtime_error("Read fragment size must be larger than zero");
-    }
-
-    auto storage = m_basic_getter.get(pointer);
-    co_return co_await storage->read(ctx, pointer, size);
-}
-
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,
                                                      const uint128_t& pointer,
                                                      size_t size) {

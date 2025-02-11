@@ -6,6 +6,7 @@
 #include "common/utils/common.h"
 
 namespace uh::cluster {
+
 struct storage_interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;

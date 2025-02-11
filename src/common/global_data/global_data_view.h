@@ -17,9 +17,6 @@ public:
     virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                        size_t size) = 0;
 
-    virtual coro<shared_buffer<char>>
-    read_fragment(context& ctx, const uint128_t& pointer, size_t size) = 0;
-
     virtual coro<std::size_t> read_address(context& ctx, const address& addr,
                                            std::span<char> buffer) = 0;
 

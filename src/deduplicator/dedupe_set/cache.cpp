@@ -23,9 +23,8 @@ shared_buffer<> cache::read(context& ctx, const uint128_t& pointer,
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
-    auto future =
-        boost::asio::co_spawn(m_ioc, m_gdv.read_fragment(ctx, pointer, size),
-                              boost::asio::use_future);
+    auto future = boost::asio::co_spawn(m_ioc, m_gdv.read(ctx, pointer, size),
+                                        boost::asio::use_future);
 
     auto buffer = future.get();
     m_lru.put(pointer, buffer);
