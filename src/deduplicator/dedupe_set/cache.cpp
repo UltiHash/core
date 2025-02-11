@@ -4,8 +4,10 @@
 
 namespace uh::cluster::dd {
 
-cache::cache(global_data_view& gdv, std::size_t capacity)
-    : m_gdv(gdv),
+cache::cache(boost::asio::io_context& ioc, global_data_view& gdv,
+             std::size_t capacity)
+    : m_ioc(ioc),
+      m_gdv(gdv),
       m_lru(capacity) {}
 
 shared_buffer<> cache::read(context& ctx, const uint128_t& pointer,
@@ -21,13 +23,19 @@ shared_buffer<> cache::read(context& ctx, const uint128_t& pointer,
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
-    auto buffer = m_gdv.read_fragment(ctx, pointer, size);
+    auto future =
+        boost::asio::co_spawn(m_ioc, m_gdv.read_fragment(ctx, pointer, size),
+                              boost::asio::use_future);
+
+    auto buffer = future.get();
     m_lru.put(pointer, buffer);
     return buffer;
 }
 
 coro<shared_buffer<>> cache::read(context& ctx, const uint128_t& pointer,
                                   size_t size, cache::use_coro) {
+
+    (void)m_ioc;
 
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");

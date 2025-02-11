@@ -70,8 +70,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
-                                      size_t size);
+    coro<shared_buffer<char>>
+    read_fragment(context& ctx, const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.

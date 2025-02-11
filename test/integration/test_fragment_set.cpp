@@ -20,7 +20,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
     void setup() {
         global_data_view_fixture::setup();
         gdv = get_global_data_view();
-        cache = std::make_shared<dd::cache>(*gdv, 1000ull);
+        cache = std::make_shared<dd::cache>(get_executor(), *gdv, 1000ull);
         frag_set = std::make_shared<fragment_set>(1000, *cache);
     }
 
@@ -156,7 +156,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     context ctx;
 
     auto gdv = get_global_data_view();
-    dd::cache cache(*gdv, 1000ull);
+    dd::cache cache(get_executor(), *gdv, 1000ull);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);

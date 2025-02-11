@@ -28,7 +28,7 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await client->write(ctx, data, offsets);
 }
 
-shared_buffer<char>
+coro<shared_buffer<char>>
 default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
                                         const size_t size) {
 
@@ -39,11 +39,8 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     shared_buffer<char> buffer(size);
     const fragment frag{pointer, size};
     auto storage = m_basic_getter.get(pointer);
-    boost::asio::co_spawn(m_io_service,
-                          storage->read_fragment(ctx, buffer.data(), frag),
-                          boost::asio::use_future)
-        .get();
-    return buffer;
+    co_await storage->read_fragment(ctx, buffer.data(), frag);
+    co_return buffer;
 }
 
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,

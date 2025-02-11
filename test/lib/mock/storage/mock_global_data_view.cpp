@@ -12,7 +12,7 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
     co_return m_storage.write(data, offsets);
 }
 
-shared_buffer<char>
+coro<shared_buffer<char>>
 mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
                                      const size_t size) {
     if (size == 0) {
@@ -20,7 +20,7 @@ mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     }
     shared_buffer<char> buffer(size);
     m_storage.read(pointer, buffer.span());
-    return buffer;
+    co_return buffer;
 }
 
 coro<shared_buffer<>> mock_global_data_view::read(context& ctx,

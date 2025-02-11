@@ -32,11 +32,12 @@ coro<size_t> match_size(context& ctx, global_data_view& storage,
 
 } // namespace
 
-local_deduplicator::local_deduplicator(deduplicator_config config,
+local_deduplicator::local_deduplicator(boost::asio::io_context& ioc,
+                                       deduplicator_config config,
                                        global_data_view& storage)
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
-      m_cache(m_storage, config.global_data_view.read_cache_capacity_l2),
+      m_cache(ioc, m_storage, config.global_data_view.read_cache_capacity_l2),
       m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
       m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
