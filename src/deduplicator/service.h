@@ -2,7 +2,6 @@
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/global_data/default_global_data_view.h"
 #include "common/network/server.h"
 #include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
@@ -11,6 +10,7 @@
 #include "handler.h"
 #include "storage/service.h"
 #include <functional>
+#include <storage/interfaces/default_global_data_view.h>
 #include <utility>
 
 namespace uh::cluster::deduplicator {

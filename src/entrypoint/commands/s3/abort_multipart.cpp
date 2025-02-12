@@ -6,8 +6,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-abort_multipart::abort_multipart(multipart_state& uploads,
-                                 global_data_view& gdv)
+abort_multipart::abort_multipart(multipart_state& uploads, sn::interface& gdv)
     : m_uploads(uploads),
       m_gdv(gdv) {}
 

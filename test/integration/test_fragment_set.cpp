@@ -11,7 +11,7 @@ namespace uh::cluster {
 
 struct fragment_set_fixture : public global_data_view_fixture {
     context ctx;
-    std::shared_ptr<global_data_view> gdv;
+    std::shared_ptr<sn::interface> gdv;
     std::shared_ptr<dd::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 

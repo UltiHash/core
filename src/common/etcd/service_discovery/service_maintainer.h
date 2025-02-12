@@ -3,6 +3,7 @@
 #include "common/etcd/namespace.h"
 #include "common/etcd/service_discovery/service_monitor.h"
 #include "common/service_interfaces/service_factory.h"
+#include <common/telemetry/log.h>
 
 namespace uh::cluster {
 

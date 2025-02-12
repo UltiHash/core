@@ -6,13 +6,13 @@
 #include <common/db/db.h>
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
-#include <common/global_data/default_global_data_view.h>
 #include <common/license/license_watcher.h>
 #include <deduplicator/service.h>
 #include <entrypoint/directory.h>
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
+#include <storage/interfaces/default_global_data_view.h>
 
 namespace uh::cluster::ep {
 

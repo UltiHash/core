@@ -4,7 +4,7 @@
 
 namespace uh::cluster::dd {
 
-cache::cache(boost::asio::io_context& ioc, global_data_view& gdv,
+cache::cache(boost::asio::io_context& ioc, sn::interface& gdv,
              std::size_t capacity)
     : m_ioc(ioc),
       m_gdv(gdv),

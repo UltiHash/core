@@ -6,7 +6,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-get_ready::get_ready(directory& dir, global_data_view& gdv)
+get_ready::get_ready(directory& dir, sn::interface& gdv)
     : m_dir(dir),
       m_gdv(gdv) {}
 

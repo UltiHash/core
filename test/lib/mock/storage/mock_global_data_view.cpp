@@ -14,12 +14,6 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
 
 coro<std::size_t> mock_global_data_view::read(context& ctx, const address& addr,
                                               std::span<char> buffer) {
-    return read_address(ctx, addr, buffer);
-}
-
-coro<std::size_t> mock_global_data_view::read_address(context& ctx,
-                                                      const address& addr,
-                                                      std::span<char> buffer) {
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);

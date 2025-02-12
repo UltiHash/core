@@ -5,9 +5,9 @@
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
-#include <common/global_data/default_global_data_view.h>
+#include <common/utils/temp_directory.h>
 #include <config/configuration.h>
-#include <lib/util/temp_directory.h>
+#include <storage/interfaces/default_global_data_view.h>
 #include <storage/service.h>
 
 namespace uh::cluster {
@@ -97,7 +97,7 @@ public:
         m_etcd.clear_all();
     }
 
-    std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    std::shared_ptr<sn::interface> get_global_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -119,7 +119,7 @@ private:
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_maintainer<client, client_factory, STORAGE_SERVICE>
         m_storage_services;
-    std::shared_ptr<global_data_view> m_gdv;
+    std::shared_ptr<sn::interface> m_gdv;
 };
 
 } // namespace uh::cluster

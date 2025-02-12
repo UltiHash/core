@@ -10,7 +10,7 @@ size_t largest_common_prefix(const container& a, const container& b) noexcept {
     return std::distance(a.begin(), mismatch.first);
 }
 
-coro<size_t> match_size(context& ctx, global_data_view& storage,
+coro<size_t> match_size(context& ctx, sn::interface& storage,
                         std::string_view data, auto frag) {
     if (!frag) {
         co_return 0ull;
@@ -36,7 +36,7 @@ coro<size_t> match_size(context& ctx, global_data_view& storage,
 
 local_deduplicator::local_deduplicator(boost::asio::io_context& ioc,
                                        deduplicator_config config,
-                                       global_data_view& storage)
+                                       sn::interface& storage)
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
       m_cache(ioc, m_storage, config.global_data_view.read_cache_capacity_l2),

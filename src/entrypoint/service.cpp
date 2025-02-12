@@ -34,7 +34,7 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 }
 
 std::unique_ptr<deduplicator_interface>
-make_deduplicator(const entrypoint_config& config, global_data_view& storage,
+make_deduplicator(const entrypoint_config& config, sn::interface& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
     if (config.m_attached_deduplicator) {

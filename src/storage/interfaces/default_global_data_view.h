@@ -3,10 +3,10 @@
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
-#include "global_data_view.h"
 
 #include <common/etcd/service_discovery/storage_service_get_handler.h>
 #include <common/network/client.h>
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
@@ -22,7 +22,14 @@ private:
     unsigned m_connections;
 };
 
-class default_global_data_view : public global_data_view {
+struct global_data_view_config {
+    std::size_t storage_service_connection_count = 16;
+    std::size_t read_cache_capacity_l2 = 400000ul;
+    std::size_t ec_data_shards = 1;
+    std::size_t ec_parity_shards = 0;
+};
+
+class default_global_data_view : public sn::interface {
 
 public:
     /**

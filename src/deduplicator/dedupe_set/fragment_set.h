@@ -71,7 +71,7 @@ public:
      * address and the prefix and not the full body of a fragment to enable
      * space-efficient prefix-lookup.
      *
-     * @param storage The #global_data_view instance used for looking
+     * @param storage The #sn::interface instance used for looking
      * up full fragment content beyond the prefix.
      */
     fragment_set(size_t capacity, dd::cache& storage);
