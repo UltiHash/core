@@ -42,7 +42,12 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(m_ctx, partial_addr, buffer);
+        auto size =
+            co_await m_storage.read_address(m_ctx, partial_addr, buffer);
+        if (size != buffer_size) {
+            throw std::runtime_error("address data could not be read");
+        }
+
         m_total += buffer_size;
         m_size -= buffer_size;
 

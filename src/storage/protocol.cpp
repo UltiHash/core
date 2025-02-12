@@ -28,7 +28,7 @@ coro<std::size_t> read(client::acquired_messenger& m, context& ctx,
     co_return co_await m->recv_buffers(h);
 }
 
-coro<void> read_address(client::acquired_messenger& m, context& ctx,
+coro<std::size_t> read_address(client::acquired_messenger& m, context& ctx,
                         const address& addr, std::span<char> buffer,
                         const std::vector<size_t>& offsets) {
 
@@ -40,7 +40,7 @@ coro<void> read_address(client::acquired_messenger& m, context& ctx,
         m->register_read_buffer(buffer.data() + offsets.at(i), addr.sizes[i]);
     }
 
-    co_await m->recv_buffers(h);
+    co_return co_await m->recv_buffers(h);
 }
 
 coro<address> link(client::acquired_messenger& m, context& ctx,

@@ -134,8 +134,9 @@ coro<void> handler::handle_read_address(context& ctx, messenger& m,
     const auto addr = co_await m.recv_address(h);
 
     unique_buffer<char> buffer(addr.data_size());
+    auto count = co_await m_storage.read_address(ctx, addr, buffer.span());
+    buffer.resize(count);
 
-    co_await m_storage.read_address(ctx, addr, buffer.span());
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 

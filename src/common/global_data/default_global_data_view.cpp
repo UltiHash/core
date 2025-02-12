@@ -62,14 +62,19 @@ coro<std::size_t> default_global_data_view::read(context& ctx,
 coro<std::size_t>
 default_global_data_view::read_address(context& ctx, const address& addr,
                                        std::span<char> buffer) {
-    co_return co_await perform_for_address(
+
+    std::atomic<std::size_t> read_bytes = 0;
+
+    co_await perform_for_address(
         addr, m_getter, m_io_service,
-        [&ctx, buffer](size_t, std::shared_ptr<client> dn,
+        [&ctx, buffer, &read_bytes](size_t, std::shared_ptr<client> dn,
                        const address_info& info) -> coro<void> {
             auto m = co_await dn->acquire_messenger();
-            co_await sn::read_address(m, ctx, info.addr, buffer,
+            read_bytes += co_await sn::read_address(m, ctx, info.addr, buffer,
                                       info.pointer_offsets);
         });
+
+    co_return read_bytes;
 }
 
 coro<std::size_t> default_global_data_view::get_used_space(context& ctx) {

@@ -60,26 +60,26 @@ struct local_storage : public sn::interface {
         co_return get_data_store(pointer).read(pointer, buffer);
     }
 
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer) {
+    coro<std::size_t> read_address(context& ctx, const address& addr,
+                                   std::span<char> buffer) {
         LOG_DEBUG() << ctx.peer() << ": read addr start";
 
         std::size_t offs = 0ull;
 
         for (size_t i = 0; i < addr.size(); i++) {
             auto frag = addr.get(i);
-            if (get_data_store(frag.pointer)
-                    .read(frag.pointer, buffer.subspan(offs, frag.size)) !=
-                frag.size) {
-                throw std::runtime_error(
-                    "Could not read the data with the given size");
-            }
+            auto& ds = get_data_store(frag.pointer);
 
-            offs += frag.size;
+            auto count = ds.read(frag.pointer, buffer.subspan(offs, frag.size));
+            offs += count;
+
+            if (count != frag.size) {
+                break;
+            }
         }
 
         LOG_DEBUG() << ctx.peer() << ": read addr done";
-        co_return;
+        co_return offs;
     }
 
     coro<address> link(context& ctx, const address& addr) override {
