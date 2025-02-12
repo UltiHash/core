@@ -12,8 +12,7 @@ public:
 
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size) override;
+    coro<std::size_t> read(context& ctx, const uint128_t& pointer, std::span<char>) override;
     coro<std::size_t> read_address(context& ctx, const address& addr,
                                    std::span<char> buffer) override;
     [[nodiscard]] coro<address> link(context& ctx,

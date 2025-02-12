@@ -12,8 +12,8 @@ coro<address> write(client::acquired_messenger& m, context& ctx,
                     std::span<const char> data,
                     const std::vector<std::size_t>& offsets);
 
-coro<shared_buffer<>> read(client::acquired_messenger& m, context& ctx,
-                           const uint128_t& pointer, size_t size);
+coro<std::size_t> read(client::acquired_messenger& m, context& ctx,
+                       const uint128_t& pointer, std::span<char> buffer);
 
 coro<void> read_address(client::acquired_messenger& m, context& ctx,
                         const address& addr, std::span<char> buffer,

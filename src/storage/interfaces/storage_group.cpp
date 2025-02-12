@@ -91,11 +91,11 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     co_return addr;
 }
 
-coro<shared_buffer<>>
-storage_group::read(context& ctx, const uint128_t& pointer, size_t size) {
+coro<std::size_t> storage_group::read(context& ctx, const uint128_t& pointer,
+                                      std::span<char> buffer) {
     auto cl = m_getter.get(pointer);
     auto m = co_await cl->acquire_messenger();
-    co_return co_await sn::read(m, ctx, pointer, size);
+    co_return co_await sn::read(m, ctx, pointer, buffer);
 }
 
 coro<address> storage_group::link(context& ctx, const address& addr) {

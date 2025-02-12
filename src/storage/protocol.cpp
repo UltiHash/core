@@ -18,16 +18,14 @@ coro<address> write(client::acquired_messenger& m, context& ctx,
     co_return co_await m->recv_address(message_header);
 }
 
-coro<shared_buffer<>> read(client::acquired_messenger& m, context& ctx,
-                           const uint128_t& pointer, size_t size) {
+coro<std::size_t> read(client::acquired_messenger& m, context& ctx,
+                       const uint128_t& pointer, std::span<char> buffer) {
 
-    co_await m->send_fragment(ctx, STORAGE_READ_REQ, {pointer, size});
+    co_await m->send_fragment(ctx, STORAGE_READ_REQ, {pointer, buffer.size()});
 
     const auto h = co_await m->recv_header();
-    shared_buffer<> buffer(h.size);
-    m->register_read_buffer(buffer.data(), buffer.size());
-    co_await m->recv_buffers(h);
-    co_return buffer;
+    m->register_read_buffer(buffer);
+    co_return co_await m->recv_buffers(h);
 }
 
 coro<void> read_address(client::acquired_messenger& m, context& ctx,

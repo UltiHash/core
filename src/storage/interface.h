@@ -11,8 +11,8 @@ struct interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
-    virtual coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                                       size_t size) = 0;
+    virtual coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+                                   std::span<char>) = 0;
 
     virtual coro<address> link(context& ctx, const address& addr) = 0;
     virtual coro<std::size_t> unlink(context& ctx, const address& addr) = 0;

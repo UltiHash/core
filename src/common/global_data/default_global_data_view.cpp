@@ -45,18 +45,18 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
     co_return co_await sn::write(m, ctx, data, offsets);
 }
 
-coro<shared_buffer<>> default_global_data_view::read(context& ctx,
-                                                     const uint128_t& pointer,
-                                                     size_t size) {
+coro<std::size_t> default_global_data_view::read(context& ctx,
+                                                 const uint128_t& pointer,
+                                                 std::span<char> buffer) {
 
-    if (size == 0) {
+    if (buffer.size() == 0) {
         throw std::runtime_error("Read size must be larger than zero");
     }
 
     auto client = m_getter.get(pointer);
     auto m = co_await client->acquire_messenger();
 
-    co_return co_await sn::read(m, ctx, pointer, size);
+    co_return co_await sn::read(m, ctx, pointer, buffer);
 }
 
 coro<std::size_t>

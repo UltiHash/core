@@ -23,7 +23,9 @@ coro<size_t> match_size(context& ctx, global_data_view& storage,
         co_return common;
     }
 
-    auto complete = co_await storage.read(ctx, f.pointer, f.size);
+    unique_buffer<char> complete(f.size);
+    auto count = co_await storage.read(ctx, f.pointer, complete.span());
+    complete.resize(count);
 
     co_return common +
         largest_common_prefix(data.substr(common),

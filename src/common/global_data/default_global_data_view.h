@@ -69,8 +69,8 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size);
+    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+                           std::span<char> buffer);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
