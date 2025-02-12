@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <ranges>
+
 namespace uh::cluster {
 
 struct storage_service_get_handler : public service_monitor<storage_interface>,
@@ -21,6 +22,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         m_clients.emplace(id, client);
         m_cv.notify_one();
     }
+
     void
     remove_client(size_t id,
                   const std::shared_ptr<storage_interface>& client) override {
