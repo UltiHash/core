@@ -22,13 +22,6 @@ struct remote_storage : public storage_interface {
         co_return co_await sn::read(m, ctx, pointer, size);
     }
 
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer,
-                            const std::vector<size_t>& offsets) override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        co_await sn::read_address(m, ctx, addr, buffer, offsets);
-    }
-
     coro<address> link(context& ctx, const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_return co_await sn::link(m, ctx, addr);

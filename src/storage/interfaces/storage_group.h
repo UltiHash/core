@@ -31,10 +31,6 @@ struct storage_group : public storage_interface {
     coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
                                size_t size) override;
 
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer,
-                            const std::vector<size_t>& offsets) override;
-
     coro<address> link(context& ctx, const address& addr) override;
 
     coro<std::size_t> unlink(context& ctx, const address& addr) override;
