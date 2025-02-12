@@ -13,7 +13,7 @@ coro<address> write(client::acquired_messenger& m, context& ctx,
                     const std::vector<std::size_t>& offsets);
 
 coro<std::size_t> read(client::acquired_messenger& m, context& ctx,
-                       const uint128_t& pointer, std::span<char> buffer);
+                       const address& addr, std::span<char> buffer);
 
 coro<std::size_t> read_address(client::acquired_messenger& m, context& ctx,
                         const address& addr, std::span<char> buffer,

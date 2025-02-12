@@ -19,9 +19,9 @@ coro<address> write(client::acquired_messenger& m, context& ctx,
 }
 
 coro<std::size_t> read(client::acquired_messenger& m, context& ctx,
-                       const uint128_t& pointer, std::span<char> buffer) {
+                       const address& addr, std::span<char> buffer) {
 
-    co_await m->send_fragment(ctx, STORAGE_READ_REQ, {pointer, buffer.size()});
+    co_await m->send_address(ctx, STORAGE_READ_ADDRESS_REQ, addr);
 
     const auto h = co_await m->recv_header();
     m->register_read_buffer(buffer);

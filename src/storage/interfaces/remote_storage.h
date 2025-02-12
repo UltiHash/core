@@ -16,10 +16,10 @@ struct remote_storage : public sn::interface {
         co_return co_await sn::write(m, ctx, data, offsets);
     }
 
-    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+    coro<std::size_t> read(context& ctx, const address& addr,
                            std::span<char> buffer) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_return co_await sn::read(m, ctx, pointer, buffer);
+        co_return co_await sn::read(m, ctx, addr, buffer);
     }
 
     coro<address> link(context& ctx, const address& addr) override {

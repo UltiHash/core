@@ -69,7 +69,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+    coro<std::size_t> read(context& ctx, const address& addr,
                            std::span<char> buffer);
 
     /**

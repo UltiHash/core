@@ -18,6 +18,8 @@ address::address(std::size_t size)
     : pointers(size * 2),
       sizes(size) {}
 
+address::address(const fragment& f) { push(f); }
+
 address address::shrink() const {
     address rv;
 

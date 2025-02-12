@@ -24,7 +24,7 @@ coro<size_t> match_size(context& ctx, global_data_view& storage,
     }
 
     unique_buffer<char> complete(f.size);
-    auto count = co_await storage.read(ctx, f.pointer, complete.span());
+    auto count = co_await storage.read(ctx, f, complete.span());
     complete.resize(count);
 
     co_return common +
@@ -145,7 +145,8 @@ coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
     std::size_t frag_size = m_dedupe_conf.max_fragment_size;
 
     do {
-        auto stored_data = co_await m_cache.read(ctx, pointer, pursue_size, dd::cache::use_coro{});
+        auto stored_data = co_await m_cache.read(ctx, pointer, pursue_size,
+                                                 dd::cache::use_coro{});
 
         common_size = largest_common_prefix(stored_data.string_view(),
                                             data.substr(frag_size));

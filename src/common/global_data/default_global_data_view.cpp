@@ -46,17 +46,10 @@ default_global_data_view::write(context& ctx, std::span<const char> data,
 }
 
 coro<std::size_t> default_global_data_view::read(context& ctx,
-                                                 const uint128_t& pointer,
+                                                 const address& addr,
                                                  std::span<char> buffer) {
 
-    if (buffer.size() == 0) {
-        throw std::runtime_error("Read size must be larger than zero");
-    }
-
-    auto client = m_getter.get(pointer);
-    auto m = co_await client->acquire_messenger();
-
-    co_return co_await sn::read(m, ctx, pointer, buffer);
+    return read_address(ctx, addr, buffer);
 }
 
 coro<std::size_t>
@@ -68,10 +61,10 @@ default_global_data_view::read_address(context& ctx, const address& addr,
     co_await perform_for_address(
         addr, m_getter, m_io_service,
         [&ctx, buffer, &read_bytes](size_t, std::shared_ptr<client> dn,
-                       const address_info& info) -> coro<void> {
+                                    const address_info& info) -> coro<void> {
             auto m = co_await dn->acquire_messenger();
             read_bytes += co_await sn::read_address(m, ctx, info.addr, buffer,
-                                      info.pointer_offsets);
+                                                    info.pointer_offsets);
         });
 
     co_return read_bytes;

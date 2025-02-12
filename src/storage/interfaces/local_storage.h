@@ -55,9 +55,9 @@ struct local_storage : public sn::interface {
         co_return total_addr;
     }
 
-    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+    coro<std::size_t> read(context& ctx, const address& addr,
                            std::span<char> buffer) override {
-        co_return get_data_store(pointer).read(pointer, buffer);
+        return read_address(ctx, addr, buffer);
     }
 
     coro<std::size_t> read_address(context& ctx, const address& addr,

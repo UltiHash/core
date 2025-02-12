@@ -91,11 +91,20 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     co_return addr;
 }
 
-coro<std::size_t> storage_group::read(context& ctx, const uint128_t& pointer,
+coro<std::size_t> storage_group::read(context& ctx, const address& addr,
                                       std::span<char> buffer) {
-    auto cl = m_getter.get(pointer);
-    auto m = co_await cl->acquire_messenger();
-    co_return co_await sn::read(m, ctx, pointer, buffer);
+    std::atomic<std::size_t> read_bytes = 0;
+
+    co_return co_await perform_for_address(
+        addr, m_getter, m_ioc,
+        [&ctx, buffer, &read_bytes](size_t, auto dn,
+                                    const address_info& info) -> coro<void> {
+            auto m = co_await dn->acquire_messenger();
+            read_bytes += co_await sn::read_address(m, ctx, info.addr, buffer,
+                                                    info.pointer_offsets);
+        });
+
+    co_return read_bytes;
 }
 
 coro<address> storage_group::link(context& ctx, const address& addr) {

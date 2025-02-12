@@ -12,10 +12,9 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
     co_return m_storage.write(data, offsets);
 }
 
-coro<std::size_t> mock_global_data_view::read(context& ctx,
-                                                  const uint128_t& pointer,
-                                                  std::span<char> buffer) {
-    co_return m_storage.read(pointer, buffer);
+coro<std::size_t> mock_global_data_view::read(context& ctx, const address& addr,
+                                              std::span<char> buffer) {
+    return read_address(ctx, addr, buffer);
 }
 
 coro<std::size_t> mock_global_data_view::read_address(context& ctx,

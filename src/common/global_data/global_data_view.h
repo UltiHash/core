@@ -14,7 +14,7 @@ public:
     virtual coro<address> write(context& ctx, std::span<const char> data,
                                 const std::vector<std::size_t>& offsets) = 0;
 
-    virtual coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+    virtual coro<std::size_t> read(context& ctx, const address& addr,
                                    std::span<char> buffer) = 0;
 
     virtual coro<std::size_t> read_address(context& ctx, const address& addr,

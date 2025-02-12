@@ -29,7 +29,7 @@ struct storage_group : public sn::interface {
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
 
-    coro<std::size_t> read(context& ctx, const uint128_t& pointer,
+    coro<std::size_t> read(context& ctx, const address& addr,
                            std::span<char> buffer) override;
 
     coro<address> link(context& ctx, const address& addr) override;

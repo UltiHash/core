@@ -80,7 +80,7 @@ uh::cluster::coro<void> read_addr(uh::cluster::sn::interface& svc,
 
     timer t;
     std::vector<char> data(length);
-    auto count = co_await svc.read(ctx, ptr, data);
+    auto count = co_await svc.read(ctx, fragment{ptr, length}, data);
     data.resize(count);
     auto time = t.passed();
     auto mb = length / MEBI_BYTE;
