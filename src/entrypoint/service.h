@@ -35,7 +35,7 @@ private:
     service_maintainer<client, client_factory, STORAGE_SERVICE>
         m_storage_maintainer;
 
-    default_global_data_view m_data_view;
+    std::unique_ptr<sn::interface> m_storage;
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 
