@@ -1,11 +1,11 @@
 #pragma once
 
-#include <common/service_interfaces/storage_interface.h>
+#include <storage/interface.h>
 #include <storage/protocol.h>
 
 namespace uh::cluster {
 
-struct remote_storage : public storage_interface {
+struct remote_storage : public sn::interface {
 
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}

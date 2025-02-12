@@ -2,9 +2,8 @@
 
 #include "common/ec/ec_scheme.h"
 #include "common/etcd/utils.h"
-#include "common/service_interfaces/storage_interface.h"
-#include "storage/interfaces/storage_group.h"
 #include <common/network/client.h>
+#include <storage/interfaces/storage_group.h>
 
 namespace uh::cluster {
 

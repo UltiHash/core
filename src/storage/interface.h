@@ -1,13 +1,13 @@
 #pragma once
 
-#include "common/telemetry/context.h"
-#include "common/types/common_types.h"
-#include "common/types/scoped_buffer.h"
-#include "common/utils/common.h"
+#include <common/telemetry/context.h>
+#include <common/types/common_types.h>
+#include <common/types/scoped_buffer.h>
+#include <common/utils/common.h>
 
-namespace uh::cluster {
+namespace uh::cluster::sn {
 
-struct storage_interface {
+struct interface {
     virtual coro<address> write(context& ctx, std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
@@ -23,8 +23,8 @@ struct storage_interface {
     virtual coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                                std::size_t size, char* buffer) = 0;
 
-    virtual ~storage_interface() = default;
+    virtual ~interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::sn

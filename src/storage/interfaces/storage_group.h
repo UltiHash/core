@@ -7,10 +7,11 @@
 #include "common/utils/address_utils.h"
 #include "coordinator/recovery_module.h"
 #include <common/network/client.h>
+#include <storage/interface.h>
 
 namespace uh::cluster {
 
-struct storage_group : public storage_interface {
+struct storage_group : public sn::interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                   size_t ec_nodes, size_t group_id, etcd_manager& etcd,

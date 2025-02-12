@@ -1,16 +1,16 @@
 #pragma once
 
 #include "common/etcd/service_discovery/service_monitor.h"
-#include "common/service_interfaces/storage_interface.h"
 #include "common/utils/pointer_traits.h"
 #include "storage_get_handler.h"
 
-#include <iostream>
+#include <storage/interface.h>
+
 #include <ranges>
 
 namespace uh::cluster {
 
-template <typename service = storage_interface,
+template <typename service = sn::interface,
           role service_role = service::service_role>
 struct storage_service_get_handler : public service_monitor<service>,
                                      public storage_get_handler<service> {
