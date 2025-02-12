@@ -22,7 +22,7 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_service_get_handler services{1s};
+    storage_service_get_handler<> services{1s};
     roundrobin_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 

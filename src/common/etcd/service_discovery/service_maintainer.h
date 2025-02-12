@@ -12,19 +12,18 @@ struct service_endpoint {
 };
 
 template <typename service_interface,
-          typename factory = service_factory<service_interface>>
+          typename factory = service_factory<service_interface>,
+          role service_role = service_interface::service_role>
 struct service_maintainer {
 
     service_maintainer(etcd_manager& etcd, factory f)
         : m_factory(std::move(f)),
-          m_watch_guard{
-              etcd.watch(get_service_root_path(service_interface::service_role),
-                         [this](const etcd::Response& response) {
-                             return handle_state_changes(response);
-                         })} {
+          m_watch_guard{etcd.watch(get_service_root_path(service_role),
+                                   [this](const etcd::Response& response) {
+                                       return handle_state_changes(response);
+                                   })} {
 
-        auto key_vals =
-            etcd.ls(get_service_root_path(service_interface::service_role));
+        auto key_vals = etcd.ls(get_service_root_path(service_role));
 
         for (auto& [key, val] : key_vals) {
             add(key, val);
@@ -163,8 +162,8 @@ private:
         } else {
 
             LOG_DEBUG() << "remove callback for service "
-                        << get_service_string(service_interface::service_role)
-                        << ": " << id << " called. ";
+                        << get_service_string(service_role) << ": " << id
+                        << " called. ";
 
             try {
                 for (auto& m : m_monitors) {

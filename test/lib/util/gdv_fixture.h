@@ -18,8 +18,8 @@ public:
           m_service_cfg(make_service_config()),
           m_storage_services(
               m_etcd,
-              service_factory<storage_interface>(
-                  m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
+              client_factory(m_ioc,
+                             m_gdv_config.storage_service_connection_count)) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -50,8 +50,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<default_global_data_view>(
-            m_gdv_config, m_ioc, m_storage_services, m_etcd);
+        m_gdv = std::make_shared<default_global_data_view>(m_ioc,
+                                                           m_storage_services);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -117,7 +117,8 @@ private:
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    service_maintainer<storage_interface> m_storage_services;
+    service_maintainer<client, client_factory, STORAGE_SERVICE>
+        m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;
 };
 

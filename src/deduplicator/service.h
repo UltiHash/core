@@ -28,12 +28,10 @@ public:
           m_attached_storage(sc, config.m_attached_storage),
           m_storage_maintainer(
               m_etcd,
-              service_factory<storage_interface>(
+              client_factory(
                   m_ioc,
-                  config.global_data_view.storage_service_connection_count,
-                  m_attached_storage.get_local_service_interface())),
-          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
-                      m_etcd),
+                  config.global_data_view.storage_service_connection_count)),
+          m_data_view(m_ioc, m_storage_maintainer),
           m_deduplicator(
               std::make_shared<local_deduplicator>(m_ioc, config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
@@ -60,7 +58,8 @@ private:
     service_registry m_service_registry;
 
     attached_service<storage::service> m_attached_storage;
-    service_maintainer<storage_interface> m_storage_maintainer;
+    service_maintainer<client, client_factory, STORAGE_SERVICE>
+        m_storage_maintainer;
 
     default_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;

@@ -65,12 +65,9 @@ service::service(const service_config& sc, entrypoint_config config)
 
       m_attached_storage(sc, m_config.m_attached_storage),
       m_storage_maintainer(
-          m_etcd,
-          service_factory<storage_interface>(
-              m_ioc, m_config.global_data_view.storage_service_connection_count,
-              m_attached_storage.get_local_service_interface())),
-      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
-                  m_etcd),
+          m_etcd, client_factory(m_ioc, m_config.global_data_view
+                                            .storage_service_connection_count)),
+      m_data_view(m_ioc, m_storage_maintainer),
       m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),

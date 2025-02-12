@@ -11,7 +11,7 @@ namespace uh::cluster {
 
 class recovery_module {
 public:
-    recovery_module(storage_service_get_handler& getter,
+    recovery_module(storage_service_get_handler<>& getter,
                     boost::asio::io_context& ioc, ec_interface& ec,
                     ec_group_attributes& attributes)
         : m_getter(getter),
@@ -199,7 +199,7 @@ private:
 
     static constexpr const char* RECOVERY_INITIAL_CONTEXT_NAME = "recovery";
 
-    storage_service_get_handler& m_getter;
+    storage_service_get_handler<>& m_getter;
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
     ec_group_attributes& m_attributes;

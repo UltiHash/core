@@ -52,7 +52,7 @@ struct storage_group : public storage_interface {
 
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    storage_service_get_handler m_getter;
+    storage_service_get_handler<> m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;

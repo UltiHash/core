@@ -1,31 +1,48 @@
 #include "default_global_data_view.h"
 
 #include "common/utils/address_utils.h"
+#include <storage/protocol.h>
 
 namespace uh::cluster {
+
+client_factory::client_factory(boost::asio::io_context& ioc,
+                               unsigned connections)
+    : m_ioc(ioc),
+      m_connections(connections) {}
+
+std::shared_ptr<client>
+client_factory::make_service(const std::string& hostname, uint16_t port, int) {
+    return std::make_shared<client>(m_ioc, hostname, port, m_connections);
+}
+
 default_global_data_view::default_global_data_view(
-    const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<storage_interface>& storage_maintainer,
-    etcd_manager& etcd)
+    boost::asio::io_context& ioc,
+    service_maintainer<client, client_factory, STORAGE_SERVICE>&
+        storage_maintainer)
     : m_io_service(ioc),
-      m_config(config),
-      m_service_maintainer(storage_maintainer),
-      m_ec_maintainer(m_io_service, m_config.ec_data_shards,
-                      m_config.ec_parity_shards, etcd, false),
-      m_basic_getter(m_config.ec_data_shards, m_config.ec_parity_shards) {
+      m_service_maintainer(storage_maintainer) {
+    m_service_maintainer.add_monitor(m_getter);
+}
 
-    m_service_maintainer.add_monitor(m_ec_maintainer);
-    m_ec_maintainer.add_monitor(m_load_balancer);
-    m_ec_maintainer.add_monitor(m_basic_getter);
-
-    m_load_balancer.get();
+default_global_data_view::~default_global_data_view() {
+    m_service_maintainer.remove_monitor(m_getter);
 }
 
 coro<address>
 default_global_data_view::write(context& ctx, std::span<const char> data,
                                 const std::vector<std::size_t>& offsets) {
-    const auto client = m_load_balancer.get();
-    co_return co_await client->write(ctx, data, offsets);
+
+    auto services = m_getter.get_services();
+    if (services.empty()) {
+        throw std::runtime_error("no storage services available");
+    }
+
+    auto client = services.at(m_round_robin % services.size());
+    ++m_round_robin;
+
+    auto m = co_await client->acquire_messenger();
+
+    co_return co_await sn::write(m, ctx, data, offsets);
 }
 
 coro<shared_buffer<>> default_global_data_view::read(context& ctx,
@@ -36,28 +53,32 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
         throw std::runtime_error("Read size must be larger than zero");
     }
 
-    auto storage = m_basic_getter.get(pointer);
-    co_return co_await storage->read(ctx, pointer, size);
+    auto client = m_getter.get(pointer);
+    auto m = co_await client->acquire_messenger();
+
+    co_return co_await sn::read(m, ctx, pointer, size);
 }
 
 coro<std::size_t>
 default_global_data_view::read_address(context& ctx, const address& addr,
                                        std::span<char> buffer) {
     co_return co_await perform_for_address(
-        addr, m_basic_getter, m_io_service,
-        [&ctx, buffer](size_t, std::shared_ptr<storage_interface> dn,
+        addr, m_getter, m_io_service,
+        [&ctx, buffer](size_t, std::shared_ptr<client> dn,
                        const address_info& info) -> coro<void> {
-            co_await dn->read_address(ctx, info.addr, buffer,
+            auto m = co_await dn->acquire_messenger();
+            co_await sn::read_address(m, ctx, info.addr, buffer,
                                       info.pointer_offsets);
         });
 }
 
 coro<std::size_t> default_global_data_view::get_used_space(context& ctx) {
-    auto nodes = m_basic_getter.get_services();
+    auto nodes = m_getter.get_services();
 
     size_t used = 0;
     for (const auto& dn : nodes) {
-        used += co_await dn->get_used_space(ctx);
+        auto m = co_await dn->acquire_messenger();
+        used += co_await sn::get_used_space(m, ctx);
     }
     co_return used;
 }
@@ -66,10 +87,12 @@ coro<std::size_t> default_global_data_view::get_used_space(context& ctx) {
 default_global_data_view::link(context& ctx, const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
-        addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](size_t id, std::shared_ptr<storage_interface> dn,
+        addr, m_getter, m_io_service,
+        [&ctx, &addresses](size_t id, std::shared_ptr<client> dn,
                            const address_info& info) -> coro<void> {
-            addresses.emplace(id, co_await dn->link(ctx, info.addr));
+            auto m = co_await dn->acquire_messenger();
+            auto addr = co_await sn::link(m, ctx, info.addr);
+            addresses.emplace(id, addr);
         });
 
     address rv;
@@ -84,18 +107,13 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
                                                    const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
-        addr, m_basic_getter, m_io_service,
-        [&ctx, &freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+        addr, m_getter, m_io_service,
+        [&ctx, &freed_bytes](size_t, std::shared_ptr<client> dn,
                              const address_info& info) -> coro<void> {
-            freed_bytes += co_await dn->unlink(ctx, info.addr);
+            auto m = co_await dn->acquire_messenger();
+            freed_bytes += co_await sn::unlink(m, ctx, info.addr);
         });
     co_return freed_bytes;
-}
-
-default_global_data_view::~default_global_data_view() noexcept {
-    m_ec_maintainer.remove_monitor(m_load_balancer);
-    m_ec_maintainer.remove_monitor(m_basic_getter);
-    m_service_maintainer.remove_monitor(m_ec_maintainer);
 }
 
 } // namespace uh::cluster

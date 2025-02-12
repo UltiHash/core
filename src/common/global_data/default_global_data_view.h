@@ -7,8 +7,21 @@
 #include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
+#include <common/network/client.h>
 
 namespace uh::cluster {
+
+class client_factory {
+public:
+    client_factory(boost::asio::io_context& ioc, unsigned connections);
+
+    std::shared_ptr<client> make_service(const std::string& hostname,
+                                         uint16_t port, int);
+
+private:
+    boost::asio::io_context& m_ioc;
+    unsigned m_connections;
+};
 
 class default_global_data_view : public global_data_view {
 
@@ -27,10 +40,12 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    explicit default_global_data_view(
-        const global_data_view_config& config, boost::asio::io_context& ioc,
-        service_maintainer<storage_interface>& storage_maintainer,
-        etcd_manager& etcd);
+    default_global_data_view(
+        boost::asio::io_context& ioc,
+        service_maintainer<client, client_factory, STORAGE_SERVICE>&
+            storage_maintainer);
+
+    ~default_global_data_view();
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -111,16 +126,13 @@ public:
      */
     coro<std::size_t> get_used_space(context& ctx);
 
-    ~default_global_data_view() noexcept;
-
 private:
     boost::asio::io_context& m_io_service;
-    global_data_view_config m_config;
 
-    service_maintainer<storage_interface>& m_service_maintainer;
-    ec_group_maintainer m_ec_maintainer;
-    ec_load_balancer m_load_balancer;
-    ec_get_handler m_basic_getter;
+    service_maintainer<client, client_factory, STORAGE_SERVICE>&
+        m_service_maintainer;
+    storage_service_get_handler<client, STORAGE_SERVICE> m_getter;
+    std::atomic<unsigned> m_round_robin = 0u;
 };
 
 } // end namespace uh::cluster
