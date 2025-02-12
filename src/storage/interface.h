@@ -17,11 +17,20 @@ struct interface {
     virtual coro<address> link(context& ctx, const address& addr) = 0;
     virtual coro<std::size_t> unlink(context& ctx, const address& addr) = 0;
     virtual coro<std::size_t> get_used_space(context& ctx) = 0;
-    virtual coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) = 0;
-    virtual coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
-                                std::span<const char>) = 0;
-    virtual coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
-                               std::size_t size, char* buffer) = 0;
+
+    virtual coro<std::map<size_t, size_t>> get_ds_size_map(context&) {
+        throw std::runtime_error("not implemented");
+    }
+
+    virtual coro<void> ds_write(context&, uint32_t, uint64_t,
+                                std::span<const char>) {
+        throw std::runtime_error("not implemented");
+    }
+
+    virtual coro<void> ds_read(context&, uint32_t, uint64_t, std::size_t,
+                               char*) {
+        throw std::runtime_error("not implemented");
+    }
 
     virtual ~interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;
