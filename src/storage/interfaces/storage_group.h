@@ -6,6 +6,7 @@
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/address_utils.h"
 #include "coordinator/recovery_module.h"
+#include <common/network/client.h>
 
 namespace uh::cluster {
 
@@ -16,7 +17,7 @@ struct storage_group : public storage_interface {
                   bool active_recovery);
 
     void insert(size_t id, size_t group_nid,
-                const std::shared_ptr<storage_interface>& node);
+                const std::shared_ptr<client>& node);
 
     void remove(size_t id, size_t group_nid);
 
@@ -51,8 +52,8 @@ struct storage_group : public storage_interface {
                        size_t size, char* buffer) override;
 
 private:
-    std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    storage_service_get_handler<> m_getter;
+    std::vector<std::shared_ptr<client>> m_nodes;
+    storage_service_get_handler<client, STORAGE_SERVICE> m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;

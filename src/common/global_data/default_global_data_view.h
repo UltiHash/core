@@ -1,12 +1,11 @@
 #pragma once
 
-#include "common/etcd/ec_groups/ec_get_handler.h"
-#include "common/etcd/ec_groups/ec_group_maintainer.h"
-#include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
+
+#include <common/etcd/service_discovery/storage_service_get_handler.h>
 #include <common/network/client.h>
 
 namespace uh::cluster {

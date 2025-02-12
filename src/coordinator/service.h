@@ -13,6 +13,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include <common/global_data/default_global_data_view.h>
 #include <common/license/backend_client.h>
 #include <common/license/license_updater.h>
 #include <common/license/usage_updater.h>
@@ -28,9 +29,8 @@ public:
           m_ioc_runner(m_ioc, cc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
-          m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
-          m_usage{m_ioc, cc.database_config} {
+          m_storage_maintainer(m_etcd, client_factory(m_ioc, 1)),
+          m_usage(m_ioc, cc.database_config) {
 
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE";
@@ -87,7 +87,8 @@ private:
     io_context_runner m_ioc_runner;
 
     ec_group_maintainer m_ec_maintainer;
-    service_maintainer<storage_interface> m_storage_maintainer;
+    service_maintainer<client, client_factory, STORAGE_SERVICE>
+        m_storage_maintainer;
 
     usage m_usage;
     std::optional<license_updater> m_license_updater;
