@@ -431,7 +431,7 @@ DECLARE b_id BIGINT;
 BEGIN
     SELECT uh_get_bucket_id(bucket) INTO b_id;
 
-    SELECT o.id INTO o_id FROM objects o WHERE o.bucket_id = b_id AND name = object;
+    SELECT id INTO o_id FROM uh_get_object(bucket, object);
 
     IF o_id IS NOT NULL THEN
        INSERT INTO object_status (object_id, status)
