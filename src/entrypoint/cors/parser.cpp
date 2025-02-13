@@ -52,7 +52,7 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
 
 } // namespace
 
-std::map<std::string, info> parser::parse(std::string code) {
+std::vector<info> parser::parse(std::string code) {
     std::stringstream str(std::move(code));
     boost::property_tree::ptree tree;
     boost::property_tree::read_xml(str, tree);
@@ -62,14 +62,14 @@ std::map<std::string, info> parser::parse(std::string code) {
         return {};
     }
 
-    std::map<std::string, info> rv;
+    std::vector<info> rv;
 
     auto rules = conf->equal_range("CORSRule");
     for (auto it = rules.first; it != rules.second; ++it) {
         auto [origins, info] = parse_corse_info(it->second);
         for (const auto& key : origins) {
             info.origin = key;
-            rv[key] = info;
+            rv.push_back(info);
         }
     }
 
