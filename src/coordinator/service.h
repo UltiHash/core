@@ -15,6 +15,7 @@
 
 #include <common/license/backend_client.h>
 #include <common/license/license_updater.h>
+#include <common/license/usage_updater.h>
 
 namespace uh::cluster::coordinator {
 
@@ -28,24 +29,31 @@ public:
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)) {
+              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
+          m_usage{m_ioc, cc.database_config} {
 
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
                 m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
-            boost::asio::co_spawn( //
-                m_ioc, m_license_updater->update(), boost::asio::detached);
+            boost::asio::co_spawn(m_ioc, m_license_updater->update(),
+                                  boost::asio::detached);
         } else {
-            LOG_INFO() << "Start license_updater";
+            LOG_INFO() << "using license from licensing host "
+                       << cc.backend_config.backend_host;
             const auto& bc = cc.backend_config;
-            m_license_updater.emplace( //
-                m_ioc, m_etcd,
-                default_backend_client(bc.backend_host, bc.customer_id,
-                                       bc.access_token));
+            m_license_updater.emplace(m_ioc, m_etcd,
+                                      default_backend_client(bc.backend_host,
+                                                             bc.customer_id,
+                                                             bc.access_token));
             boost::asio::co_spawn(
                 m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
                 boost::asio::detached);
+
+            m_usage_updater.emplace(m_ioc, m_usage,
+                                    default_backend_client(bc.backend_host,
+                                                           bc.customer_id,
+                                                           bc.access_token));
         }
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
@@ -81,6 +89,8 @@ private:
     ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 
+    usage m_usage;
     std::optional<license_updater> m_license_updater;
+    std::optional<usage_updater> m_usage_updater;
 };
 } // namespace uh::cluster::coordinator

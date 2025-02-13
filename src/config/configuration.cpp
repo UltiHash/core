@@ -237,6 +237,9 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     app.add_option("--access-token", cfg.backend_config.access_token,
                    "access token required to connect to the backend")
         ->envname(ENV_CFG_ACCESS_TOKEN);
+
+    configure(*rv, cfg.database_config);
+
     return rv;
 }
 
