@@ -23,7 +23,7 @@ struct deduplicator_config {
     std::size_t max_fragment_size = DEFAULT_PAGE_SIZE;
     std::size_t worker_thread_count = 16ul;
     std::size_t set_capacity = 1000000;
-    std::optional<storage_config> m_attached_storage;
+    std::optional<storage_config> attached_storage;
 };
 
 } // namespace uh::cluster

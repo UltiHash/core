@@ -31,7 +31,6 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    attached_service<storage::service> m_attached_storage;
     service_maintainer<client, client_factory, STORAGE_SERVICE>
         m_storage_maintainer;
 

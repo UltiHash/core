@@ -25,7 +25,7 @@ public:
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
-          m_attached_storage(sc, config.m_attached_storage),
+          m_attached_storage(sc, config.attached_storage),
           m_storage_maintainer(
               m_etcd,
               client_factory(

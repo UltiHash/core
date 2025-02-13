@@ -37,10 +37,10 @@ std::unique_ptr<deduplicator_interface>
 make_deduplicator(const entrypoint_config& config, sn::interface& storage,
                   boost::asio::io_context& ioc, etcd_manager& etcd) {
 
-    if (config.m_attached_deduplicator) {
+    if (config.attached_deduplicator) {
         LOG_INFO() << "using attached deduplicator";
         return std::make_unique<local_deduplicator>(
-            ioc, *config.m_attached_deduplicator, storage);
+            ioc, *config.attached_deduplicator, storage);
     }
 
     if (config.noop_deduplicator) {
@@ -58,10 +58,10 @@ std::unique_ptr<sn::interface> make_storage(const entrypoint_config& config,
                                             auto& storage_maintainer,
                                             std::size_t service_id) {
 
-    if (config.m_attached_storage) {
+    if (config.attached_storage) {
         return std::make_unique<local_storage>(
-            service_id, config.m_attached_storage->data_store,
-            config.m_attached_storage->m_data_store_roots);
+            service_id, config.attached_storage->data_store,
+            config.attached_storage->data_store_roots);
     }
 
     return std::make_unique<default_global_data_view>(ioc, storage_maintainer);
@@ -77,7 +77,6 @@ service::service(const service_config& sc, entrypoint_config config)
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
       m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd),
 
-      m_attached_storage(sc, m_config.m_attached_storage),
       m_storage_maintainer(
           m_etcd, client_factory(m_ioc, m_config.global_data_view
                                             .storage_service_connection_count)),
