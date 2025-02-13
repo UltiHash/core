@@ -287,7 +287,7 @@ coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
 
     if (error) {
         co_await gdv.unlink(ctx, *obj.addr);
-        throw *error;
+        std::rethrow_exception(*error);
     }
 }
 
