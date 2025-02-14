@@ -34,6 +34,11 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
         }
     }
 
+    auto headers = tree.equal_range("AllowedHeader");
+    for (auto it = headers.first; it != headers.second; ++it) {
+        rv.headers.insert(it->second.get_value<std::string>());
+    }
+
     auto exposed = tree.equal_range("ExposedHeader");
     rv.exposed_headers =
         join(std::ranges::subrange(exposed.first, exposed.second) |
