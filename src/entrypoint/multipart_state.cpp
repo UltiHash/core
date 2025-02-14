@@ -63,7 +63,7 @@ coro<upload_info> multipart_state::instance::details(const std::string& id) {
 
         if (!row) {
             throw command_exception(
-                status::not_found, "NoSuchUpload",
+                status::not_found, "InvalidPart",
                 "The specified multipart upload does not exist. The upload ID "
                 "might not be valid, or the multipart upload might have been "
                 "aborted or completed.");
@@ -113,8 +113,11 @@ multipart_state::instance::part_details(const std::string& upload_id,
             "SELECT size, etag FROM uh_get_upload_part($1, $2)", upload_id,
             part_id);
         if (!row) {
-            throw command_exception(status::not_found, "NoSuchPart",
-                                    "part id not found");
+            throw command_exception(
+                status::not_found, "InvalidPart",
+                "The specified multipart upload does not exist. The upload ID "
+                "might not be valid, or the multipart upload might have been "
+                "aborted or completed.");
         }
         rv.size = *row->number(0);
         rv.etag = *row->string(1);
@@ -124,8 +127,11 @@ multipart_state::instance::part_details(const std::string& upload_id,
             "SELECT address FROM uh_get_upload_part($1, $2)", upload_id,
             part_id);
         if (!row) {
-            throw command_exception(status::not_found, "NoSuchPart",
-                                    "part id not found");
+            throw command_exception(
+                status::not_found, "InvalidPart",
+                "The specified multipart upload does not exist. The upload ID "
+                "might not be valid, or the multipart upload might have been "
+                "aborted or completed.");
         }
         rv.addr = to_address(*row->data(0));
     }

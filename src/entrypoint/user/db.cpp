@@ -30,8 +30,8 @@ coro<user> db::find_by_key(std::string key) {
                                     key);
 
     if (!row) {
-        throw command_exception(status::forbidden, "AccessDenied",
-                                "Access Denied");
+        throw command_exception(status::not_found, "NoSuchAccessGrantError",
+                                "The specified access grant does not exist.");
     }
 
     ep::user::key k{.id = std::move(key),
@@ -170,7 +170,7 @@ coro<std::string> db::add_user(const std::string& name,
         co_return *row->string(0);
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error adding user: " << e.what();
-        throw command_exception(status::conflict, "UserExists",
+        throw command_exception(status::conflict, "UserAlreadyExists",
                                 "User already exists");
     }
 }

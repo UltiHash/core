@@ -31,7 +31,7 @@ coro<response> head_object::handle(request& req) {
         co_return res;
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
+                                "Object not found.");
     }
 }
 

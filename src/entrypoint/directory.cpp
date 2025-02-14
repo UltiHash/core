@@ -21,7 +21,7 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
                                obj.etag, obj.mime);
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
-                                "bucket not found");
+                                "The specified bucket does not exist.");
     }
 }
 
@@ -33,7 +33,7 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
 
     if (!row) {
         throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
+                                "The specified key does not exist.");
     }
 
     auto addr_data = row->data(0);
@@ -85,7 +85,7 @@ coro<object> directory::head_object(const std::string& bucket,
 
     if (!metadata) {
         throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
+                                "The specified key does not exist.");
     }
 
     co_return object{.name = object_id,
@@ -104,8 +104,11 @@ coro<void> directory::put_bucket(const std::string& bucket) {
         auto handle = co_await m_db.get();
         co_await handle->execv("CALL uh_create_bucket($1)", bucket);
     } catch (const std::exception&) {
-        throw command_exception(status::conflict, "BucketAlreadyExists",
-                                "The requested bucket name is not available.");
+        throw command_exception(
+            status::conflict, "BucketAlreadyExists",
+            "The requested bucket name is not available. The bucket namespace "
+            "is shared by all users of the system. Specify a different name "
+            "and try again.");
     }
 }
 
@@ -268,15 +271,17 @@ coro<std::size_t> directory::data_size() {
 
 void directory::validate_bucket_name(const std::string& bucket_name) {
     if (bucket_name.size() < 3 || bucket_name.size() > 63) {
-        throw command_exception(status::bad_request, "InvalidBucketName",
-                                "bucket name has invalid length");
+        throw command_exception(
+            status::bad_request, "InvalidBucketName",
+            "The specified bucket name has invalid length.");
     }
 
     std::regex bucket_pattern(
         R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
     if (!std::regex_match(bucket_name, bucket_pattern)) {
-        throw command_exception(status::bad_request, "InvalidBucketName",
-                                "bucket name has invalid characters");
+        throw command_exception(
+            status::bad_request, "InvalidBucketName",
+            "The specified bucket name has invalid characters.");
     }
 }
 

@@ -46,9 +46,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
             LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-            resp = make_response(command_exception(
-                status::internal_server_error, "InternalServerError",
-                "internal server error"));
+            resp = make_response(
+                command_exception(status::internal_server_error,
+                                  "InternalError", "Internal server error."));
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
 
@@ -88,7 +88,9 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(status::forbidden, "AccessDenied",
-                                "Access Denied");
+                                "You do not have " + cmd->action_id() +
+                                    " permissions to the requested S3 Prefix" +
+                                    req.path() + ".");
     }
 
     co_await cmd->validate(req);

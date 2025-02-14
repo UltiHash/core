@@ -9,7 +9,7 @@ coro<ep::http::response> list_user_policies::handle(ep::http::request& req) {
     auto username = req.query("UserName");
     if (!username) {
         throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "UserName missing");
+                                "UserName missing.");
     }
 
     boost::property_tree::ptree pt_names;

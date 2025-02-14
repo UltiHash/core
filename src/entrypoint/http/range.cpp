@@ -18,12 +18,12 @@ range_spec parse_range_header(std::string_view header, std::size_t max) {
     auto equals = header.find('=');
     if (equals == std::string::npos) {
         throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
+                                "Cannot parse range specifier.");
     }
 
     if (lowercase(std::string(header.substr(0, equals))) != "bytes") {
         throw command_exception(status::bad_request, "BadRequest",
-                                "unsupported range unit");
+                                "Unsupported range unit.");
     }
 
     auto specs = split(header.substr(equals + 1), ',');
@@ -40,7 +40,7 @@ range_spec::range parse_range_spec(std::string_view spec, std::size_t size) {
     auto dash = spec.find('-');
     if (dash == std::string::npos) {
         throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
+                                "Cannot parse range specifier.");
     }
 
     try {
@@ -62,7 +62,7 @@ range_spec::range parse_range_spec(std::string_view spec, std::size_t size) {
     } catch (const std::exception& e) {
         LOG_DEBUG() << "error parsing `" << spec << "`: " << e.what();
         throw command_exception(status::bad_request, "BadRequest",
-                                "cannot parse range specifier");
+                                "Cannot parse range specifier.");
     }
 
     return {};

@@ -10,8 +10,8 @@ create_access_key::create_access_key(user::db& users)
 coro<ep::http::response> create_access_key::handle(ep::http::request& req) {
     auto user = req.query("UserName");
     if (!user) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "UserName missing.");
     }
 
     auto access_key = random_string(20, std::string(CHARS_CAPITALS) +

@@ -20,7 +20,7 @@ void validate_internal(const upload_info& info, std::span<char> body) {
 
     if (!parsed || part_nodes.empty())
         throw command_exception(status::bad_request, "MalformedXML",
-                                "xml is invalid");
+                                "XML is invalid.");
 
     for (uint16_t part_counter = 1; const auto& part : part_nodes) {
         auto part_num = part.get().get_optional<std::size_t>("PartNumber");
@@ -28,29 +28,29 @@ void validate_internal(const upload_info& info, std::span<char> body) {
 
         if (!part_num || !etag || part_counter > MAXIMUM_PART_NUMBER)
             throw command_exception(status::bad_request, "MalformedXML",
-                                    "xml is invalid");
+                                    "XML is invalid.");
 
         auto it = info.parts.find(*part_num);
         if (it == info.parts.end()) {
             throw command_exception(status::bad_request, "InvalidPart",
-                                    "part not found");
+                                    "Part not found.");
         }
 
         const upload_info::part& pt = it->second;
 
         if (pt.size < MAXIMUM_CHUNK_SIZE && *part_num != info.parts.size()) {
             throw command_exception(status::bad_request, "EntityTooSmall",
-                                    "entity is too small");
+                                    "Entity is too small.");
         }
 
         if (pt.etag != etag) {
             throw command_exception(status::bad_request, "InvalidPart",
-                                    "part etag does not match");
+                                    "Part etag does not match.");
         }
 
         if (*part_num != part_counter) {
             throw command_exception(status::bad_request, "InvalidPartOrder",
-                                    "part order is not ascending");
+                                    "Part order is not ascending.");
         }
 
         part_counter++;
