@@ -115,8 +115,8 @@ coro<result> module::flight(const http::request& request) const {
 
     std::map<std::string, std::string> headers;
     headers["Access-Control-Allow-Origin"] = info.origin;
-    if (info.exposed_headers) {
-        headers["Access-Control-Expose-Headers"] = *info.exposed_headers;
+    if (info.expose_headers) {
+        headers["Access-Control-Expose-Headers"] = *info.expose_headers;
     }
 
     co_return result{.headers = std::move(headers)};

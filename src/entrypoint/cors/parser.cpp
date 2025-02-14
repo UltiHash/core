@@ -39,9 +39,9 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
         rv.headers.insert(it->second.get_value<std::string>());
     }
 
-    auto exposed = tree.equal_range("ExposedHeader");
-    rv.exposed_headers =
-        join(std::ranges::subrange(exposed.first, exposed.second) |
+    auto expose = tree.equal_range("ExposeHeader");
+    rv.expose_headers =
+        join(std::ranges::subrange(expose.first, expose.second) |
                  std::views::transform([](auto& it) -> std::string {
                      return it.second.template get_value<std::string>();
                  }),
