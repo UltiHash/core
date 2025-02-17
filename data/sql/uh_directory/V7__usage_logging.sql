@@ -62,6 +62,9 @@ ALTER TABLE __buckets
     ADD COLUMN version uuid DEFAULT gen_random_uuid() NOT NULL,
     DROP COLUMN status;
 
+ALTER TABLE __buckets DROP CONSTRAINT unique_name;
+ALTER TABLE __buckets ADD CONSTRAINT unique_name_version UNIQUE(name, version);
+
 ALTER TABLE __buckets
     RENAME TO buckets;
 
