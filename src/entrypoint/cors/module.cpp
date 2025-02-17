@@ -3,11 +3,24 @@
 #include "parser.h"
 #include <common/utils/strings.h>
 #include <ranges>
-#include <regex>
 
 namespace uh::cluster::ep::cors {
 
 namespace {
+
+bool equals_wildcard(std::string_view pattern, std::string_view str) {
+    auto pos = pattern.find('*');
+
+    if (pos == std::string::npos) {
+        return str == pattern;
+    }
+
+    if (pos > 0 && !str.starts_with(pattern.substr(0, pos - 1))) {
+        return false;
+    }
+
+    return str.ends_with(pattern.substr(pos + 1));
+}
 
 std::optional<std::reference_wrapper<const info>>
 find_info(const std::vector<info>& rules, const std::string& origin,
@@ -79,12 +92,8 @@ coro<result> module::preflight(const http::request& r) const {
         std::set<std::string> intersection;
 
         for (const auto& iheader : info.headers) {
-            std::string pattern = iheader;
-            boost::replace_all(pattern, "*", ".*");
-
-            std::regex re(pattern.c_str());
             for (const auto& rheader : rheaders) {
-                if (std::regex_match(rheader, re)) {
+                if (equals_wildcard(iheader, rheader)) {
                     intersection.insert(intersection.end(), rheader);
                 }
             }
