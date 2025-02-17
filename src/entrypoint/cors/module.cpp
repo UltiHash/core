@@ -3,6 +3,7 @@
 #include "parser.h"
 #include <common/utils/strings.h>
 #include <ranges>
+#include <regex>
 
 namespace uh::cluster::ep::cors {
 
@@ -76,10 +77,18 @@ coro<result> module::preflight(const http::request& r) const {
         auto rheaders = split<std::set<std::string>>(*acrh, ',');
 
         std::set<std::string> intersection;
-        std::set_intersection(
-            rheaders.begin(), rheaders.end(), info.headers.begin(),
-            info.headers.end(),
-            std::inserter(intersection, intersection.begin()));
+
+        for (const auto& iheader : info.headers) {
+            std::string pattern = iheader;
+            boost::replace_all(pattern, "*", ".*");
+
+            std::regex re(pattern.c_str());
+            for (const auto& rheader : rheaders) {
+                if (std::regex_match(rheader, re)) {
+                    intersection.insert(intersection.end(), rheader);
+                }
+            }
+        }
 
         std::string headers = join(intersection, ",");
         if (!headers.empty()) {
