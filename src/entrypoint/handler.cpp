@@ -1,6 +1,7 @@
 #include "handler.h"
 #include "common/utils/random.h"
 #include "http/command_exception.h"
+#include <format>
 
 using namespace uh::cluster::ep::http;
 
@@ -87,10 +88,11 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     if (!req.authenticated_user().super_user &&
         co_await m_policy->check(req, *cmd) == ep::policy::effect::deny) {
         LOG_INFO() << req.peer() << ": command execution denied by policy";
-        throw command_exception(status::forbidden, "AccessDenied",
-                                "You do not have " + cmd->action_id() +
-                                    " permissions to the requested S3 Prefix" +
-                                    req.path() + ".");
+        throw command_exception(
+            status::forbidden, "AccessDenied",
+            std::format(
+                "You do not have {} permissions to the requested S3 Prefix{}.",
+                cmd->action_id(), req.path()));
     }
 
     co_await cmd->validate(req);

@@ -19,8 +19,11 @@ coro<ep::http::response> delete_access_key::handle(ep::http::request& req) {
         if (user.name != *username) {
             // TODO: how?
             throw command_exception(
-                ep::http::status::conflict, "User Name Mismatch",
-                "The provided access key does not belong to the given user.");
+                ep::http::status::conflict, "UserNameMismatch",
+                "AWS IAM implements sophisticated organizations/roles "
+                "management that allows administrator users to delete key of "
+                "other users. We do not implement something like this and "
+                "allow user only to delete their own key.");
         }
     }
 
