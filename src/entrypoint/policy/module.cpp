@@ -55,27 +55,32 @@ coro<effect> module::check(const http::request& request,
         }
     }
 
-    if (auto resource =
-            co_await m_directory.get_bucket_policy(request.bucket());
-        resource) {
-        LOG_DEBUG() << request.peer() << ": bucket policy: " << *resource;
+    try {
+        if (auto resource =
+                co_await m_directory.get_bucket_policy(request.bucket());
+            resource) {
+            LOG_DEBUG() << request.peer() << ": bucket policy: " << *resource;
 
-        // TODO cache bucket policies
-        auto policies = parser::parse(*resource);
-        for (const auto& policy : policies) {
-            auto result = policy.check(vars);
-            if (!result) {
-                continue;
-            }
+            // TODO cache bucket policies
+            auto policies = parser::parse(*resource);
+            for (const auto& policy : policies) {
+                auto result = policy.check(vars);
+                if (!result) {
+                    continue;
+                }
 
-            if (*result == effect::deny) {
-                co_return effect::deny;
-            }
+                if (*result == effect::deny) {
+                    co_return effect::deny;
+                }
 
-            if (*result == effect::allow) {
-                has_allow = true;
+                if (*result == effect::allow) {
+                    has_allow = true;
+                }
             }
         }
+    } catch (const std::exception& e) {
+        LOG_INFO() << request.peer()
+                   << ": error reading bucket policy: " << e.what();
     }
 
     for (const auto& policy : request.authenticated_user().policies) {
