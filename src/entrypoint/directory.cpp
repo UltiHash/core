@@ -162,15 +162,10 @@ coro<std::vector<std::string>> directory::list_buckets() {
 coro<std::optional<std::string>>
 directory::get_bucket_policy(const std::string& bucket) {
 
-    try {
-        auto handle = co_await m_db.get();
-        auto row = co_await handle->execv(
-            "SELECT policy FROM uh_bucket_policy($1)", bucket);
-        co_return row->string(0);
-    } catch (const std::exception& e) {
-    }
-
-    co_return std::nullopt;
+    auto handle = co_await m_db.get();
+    auto row = co_await handle->execv("SELECT policy FROM uh_bucket_policy($1)",
+                                      bucket);
+    co_return row->string(0);
 }
 
 coro<void> directory::set_bucket_policy(const std::string& bucket,
