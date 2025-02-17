@@ -34,9 +34,14 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
         }
     }
 
-    auto exposed = tree.equal_range("ExposedHeader");
-    rv.exposed_headers =
-        join(std::ranges::subrange(exposed.first, exposed.second) |
+    auto headers = tree.equal_range("AllowedHeader");
+    for (auto it = headers.first; it != headers.second; ++it) {
+        rv.headers.insert(it->second.get_value<std::string>());
+    }
+
+    auto expose = tree.equal_range("ExposeHeader");
+    rv.expose_headers =
+        join(std::ranges::subrange(expose.first, expose.second) |
                  std::views::transform([](auto& it) -> std::string {
                      return it.second.template get_value<std::string>();
                  }),
@@ -52,7 +57,7 @@ parse_corse_info(const boost::property_tree::ptree& tree) {
 
 } // namespace
 
-std::map<std::string, info> parser::parse(std::string code) {
+std::vector<info> parser::parse(std::string code) {
     std::stringstream str(std::move(code));
     boost::property_tree::ptree tree;
     boost::property_tree::read_xml(str, tree);
@@ -62,14 +67,14 @@ std::map<std::string, info> parser::parse(std::string code) {
         return {};
     }
 
-    std::map<std::string, info> rv;
+    std::vector<info> rv;
 
     auto rules = conf->equal_range("CORSRule");
     for (auto it = rules.first; it != rules.second; ++it) {
         auto [origins, info] = parse_corse_info(it->second);
         for (const auto& key : origins) {
             info.origin = key;
-            rv[key] = info;
+            rv.push_back(info);
         }
     }
 

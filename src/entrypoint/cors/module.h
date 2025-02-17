@@ -31,12 +31,14 @@ public:
     coro<result> check(const http::request& request) const;
 
 private:
-    coro<std::shared_ptr<std::map<std::string, info>>>
+    coro<result> preflight(const http::request& request) const;
+    coro<result> flight(const http::request& request) const;
+
+    coro<std::shared_ptr<std::vector<info>>>
     get_info(const std::string& bucket) const;
 
     directory& m_directory;
-    mutable timed_cache<std::string,
-                        std::shared_ptr<std::map<std::string, info>>>
+    mutable timed_cache<std::string, std::shared_ptr<std::vector<info>>>
         m_info_cache;
 };
 
