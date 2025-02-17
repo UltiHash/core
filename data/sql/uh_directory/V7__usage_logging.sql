@@ -97,7 +97,7 @@ CREATE OR REPLACE FUNCTION uh_bucket_policy(bucket TEXT)
 DECLARE policy_record JSON;
 BEGIN
     -- Execute the query and save the result to a variable
-    SELECT policy INTO policy_record
+    SELECT buckets.policy INTO policy_record
     FROM buckets
     WHERE name = bucket;
 
