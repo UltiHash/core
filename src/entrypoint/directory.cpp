@@ -162,10 +162,17 @@ coro<std::vector<std::string>> directory::list_buckets() {
 coro<std::optional<std::string>>
 directory::get_bucket_policy(const std::string& bucket) {
 
-    auto handle = co_await m_db.get();
-    auto row = co_await handle->execv("SELECT policy FROM uh_bucket_policy($1)",
-                                      bucket);
-    co_return row->string(0);
+    try {
+        auto handle = co_await m_db.get();
+        auto row = co_await handle->execv(
+            "SELECT policy FROM uh_bucket_policy($1)", bucket);
+        co_return row->string(0);
+    } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
+    }
+
+    co_return std::nullopt;
 }
 
 coro<void> directory::set_bucket_policy(const std::string& bucket,
@@ -193,6 +200,8 @@ directory::get_bucket_cors(const std::string& bucket) {
                                           bucket);
         co_return row->string(0);
     } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 
     co_return std::nullopt;
