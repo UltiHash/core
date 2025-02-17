@@ -62,6 +62,9 @@ ALTER TABLE __buckets
     ADD COLUMN version uuid DEFAULT gen_random_uuid() NOT NULL,
     DROP COLUMN status;
 
+ALTER TABLE __buckets DROP CONSTRAINT unique_name;
+ALTER TABLE __buckets ADD CONSTRAINT unique_name_version UNIQUE(name, version);
+
 ALTER TABLE __buckets
     RENAME TO buckets;
 
@@ -167,6 +170,13 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_create_bucket(bucket TEXT)
     LANGUAGE plpgsql AS $$
 BEGIN
+    PERFORM 1 FROM buckets b LEFT JOIN bucket_status s ON b.id = s.bucket_id
+    WHERE b.name = bucket AND s.bucket_id IS NULL;
+
+    IF FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" already exists', bucket;
+    END IF;
+
     INSERT INTO buckets (name) VALUES (bucket);
 END
 $$;
