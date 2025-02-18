@@ -8,7 +8,7 @@ namespace uh::cluster::ep::cors {
 
 namespace {
 
-bool equals_wildcard(std::string_view pattern, std::string_view str) {
+bool equals_wildcard_single(std::string_view pattern, std::string_view str) {
     auto pos = pattern.find('*');
 
     if (pos == std::string::npos) {
@@ -93,7 +93,7 @@ coro<result> module::preflight(const http::request& r) const {
 
         for (const auto& iheader : info.headers) {
             for (const auto& rheader : rheaders) {
-                if (equals_wildcard(iheader, rheader)) {
+                if (equals_wildcard_single(iheader, rheader)) {
                     intersection.insert(intersection.end(), rheader);
                 }
             }
