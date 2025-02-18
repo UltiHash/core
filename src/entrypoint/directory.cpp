@@ -168,6 +168,8 @@ directory::get_bucket_policy(const std::string& bucket) {
             "SELECT policy FROM uh_bucket_policy($1)", bucket);
         co_return row->string(0);
     } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 
     co_return std::nullopt;
@@ -198,6 +200,8 @@ directory::get_bucket_cors(const std::string& bucket) {
                                           bucket);
         co_return row->string(0);
     } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
     }
 
     co_return std::nullopt;
