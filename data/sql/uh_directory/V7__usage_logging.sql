@@ -425,7 +425,7 @@ BEGIN
 
     UPDATE object_status
     SET status = status_collected()
-    WHERE o.id = target_id;
+    WHERE object_id = target_id;
 
     RETURN QUERY SELECT target_id, target_address;
 END
