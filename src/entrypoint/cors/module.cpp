@@ -8,6 +8,20 @@ namespace uh::cluster::ep::cors {
 
 namespace {
 
+bool equals_wildcard_single(std::string_view pattern, std::string_view str) {
+    auto pos = pattern.find('*');
+
+    if (pos == std::string::npos) {
+        return str == pattern;
+    }
+
+    if (pos > 0 && !str.starts_with(pattern.substr(0, pos - 1))) {
+        return false;
+    }
+
+    return str.ends_with(pattern.substr(pos + 1));
+}
+
 std::optional<std::reference_wrapper<const info>>
 find_info(const std::vector<info>& rules, const std::string& origin,
           http::verb method) {
@@ -76,10 +90,14 @@ coro<result> module::preflight(const http::request& r) const {
         auto rheaders = split<std::set<std::string>>(*acrh, ',');
 
         std::set<std::string> intersection;
-        std::set_intersection(
-            rheaders.begin(), rheaders.end(), info.headers.begin(),
-            info.headers.end(),
-            std::inserter(intersection, intersection.begin()));
+
+        for (const auto& iheader : info.headers) {
+            for (const auto& rheader : rheaders) {
+                if (equals_wildcard_single(iheader, rheader)) {
+                    intersection.insert(intersection.end(), rheader);
+                }
+            }
+        }
 
         std::string headers = join(intersection, ",");
         if (!headers.empty()) {
