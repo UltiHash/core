@@ -115,7 +115,3 @@ BOOST_AUTO_TEST_CASE(prints_out_compact_form_json_string) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
-BOOST_AUTO_TEST_SUITE(a_premium_license)
-
-BOOST_AUTO_TEST_SUITE_END()
