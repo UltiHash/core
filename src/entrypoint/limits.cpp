@@ -17,7 +17,8 @@ void limits::set_storage_size(std::size_t size) {
 
 void limits::check_storage_size(std::size_t increment) {
     auto new_size = m_data_storage_size.load() + increment;
-    auto max_data_size = m_watcher.get_license().storage_cap_gib * GIBI_BYTE;
+    auto lic = m_watcher.get_license();
+    auto max_data_size = lic->storage_cap_gib * GIBI_BYTE;
     if (new_size > max_data_size) {
         throw command_exception(status::insufficient_storage,
                                 "StorageLimitExceeded", "insufficient storage");

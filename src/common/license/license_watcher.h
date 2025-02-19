@@ -30,7 +30,7 @@ public:
                 << "The coordinator has not yet updated the license string";
         }
     }
-    license& get_license() { return *m_license.load(); }
+    std::shared_ptr<license> get_license() { return m_license.load(); }
 
 private:
     void on_watch(const etcd::Response& resp) {
@@ -49,8 +49,10 @@ private:
     void parse_and_save(std::string_view license_str) {
         auto lic = license::create(license_str, license::verify::SKIP_VERIFY);
 
-        LOG_INFO() << "license loaded for " << lic.customer_id
-                   << " -- storage size: " << lic.storage_cap_gib << " bytes";
+        LOG_INFO() << "license loaded for " << lic.customer_id;
+        LOG_INFO() << " -- license type: "
+                   << magic_enum::enum_name(lic.license_type);
+        LOG_INFO() << " -- storage size: " << lic.storage_cap_gib << " GiBs";
 
         m_license.store(std::make_shared<license>(lic));
     }
