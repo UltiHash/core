@@ -66,6 +66,25 @@ BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
         nlohmann::json::parse_error);
 }
 
+BOOST_AUTO_TEST_CASE(handles_missing_storage_cap_gib_for_premium_license_type) {
+    auto license_str =
+        R"({"version":"v1","customer_id":"mem_sb_cm70ihint06d20siof4l25s93","license_type":"premium","signature":"CfNSQJCKE97pfkYUhJ9f7ax1CQDykU2Q708E9PTRSGOv0udfh7mUpNVsV0N2IqMUgexjG0AgQ8mqCnXXWyY8Aw=="})";
+
+    auto sut = license::create(license_str);
+
+    BOOST_CHECK_EQUAL(sut.customer_id, "mem_sb_cm70ihint06d20siof4l25s93");
+    BOOST_CHECK_EQUAL(sut.license_type, license::type::PREMIUM);
+    BOOST_CHECK_EQUAL(sut.storage_cap_gib, 0);
+}
+
+BOOST_AUTO_TEST_CASE(
+    reports_error_when_freemium_license_has_no_storage_cap_gib_field) {
+    auto license_str =
+        R"({"version":"v1","customer_id":"mem_sb_cm70ihint06d20siof4l25s93","license_type":"freemium","signature":"UKIoyfzAMgpMmYoAz6ahgMF/LYOET5t1AYAW+C2FFcKAY5F5alW/mhEN5AY0mQFw3f0bQcPfA3RmF90jlXOlDg=="})";
+
+    BOOST_CHECK_THROW(license::create(license_str), std::runtime_error);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 /*******************************************************************************

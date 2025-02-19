@@ -44,3 +44,5 @@ target_link_libraries(${PROJECT_NAME}-access-client ${PROJECT_NAME}_shared
                       ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME}-access-client
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+add_subdirectory(license-checker)
