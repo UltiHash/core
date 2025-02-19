@@ -50,7 +50,7 @@ private:
         auto lic = license::create(license_str, license::verify::SKIP_VERIFY);
 
         LOG_INFO() << "license loaded for " << lic.customer_id
-                   << " -- storage size: " << lic.storage_cap_gib << " bytes";
+                   << " -- storage size: " << lic.storage_cap_gib << " GiBs";
 
         m_license.store(std::make_shared<license>(lic));
     }
