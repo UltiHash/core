@@ -23,8 +23,6 @@ void limits::check_storage_size(std::size_t increment) {
         return;
     case license::type::NONE:
     case license::type::FREEMIUM:
-        throw command_exception(status::insufficient_storage,
-                                "StorageLimitExceeded", "insufficient storage");
         auto max_data_size = lic->storage_cap_gib * GIBI_BYTE;
         if (new_size > max_data_size) {
             throw command_exception(status::insufficient_storage,
