@@ -159,8 +159,8 @@ CREATE OR REPLACE PROCEDURE uh_clear_deleted_buckets()
 BEGIN
     DELETE FROM buckets b
     USING bucket_status s
-    WHERE b.id = s.bucket_id
-      AND s.status = status_deleted();
+    WHERE b.id = s.bucket_id AND s.status = status_deleted()
+        AND NOT EXISTS (SELECT 1 FROM objects o WHERE o.bucket_id = b.id);
 END
 $$;
 
