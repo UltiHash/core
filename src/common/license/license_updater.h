@@ -32,9 +32,11 @@ public:
 
             auto lic = license::create(str);
 
-            LOG_INFO() << "license loaded for " << lic.customer_id
-                       << " -- storage size: " << lic.storage_cap_gib
-                       << " bytes";
+            LOG_INFO() << "license loaded for " << lic.customer_id;
+            LOG_INFO() << " -- license type: "
+                       << magic_enum::enum_name(lic.license_type);
+            LOG_INFO() << " -- storage size: " << lic.storage_cap_gib
+                       << " GiBs";
 
             m_etcd.put(etcd_license, lic.to_string());
 
