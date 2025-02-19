@@ -18,7 +18,7 @@ CREATE TABLE object_status (
 );
 
 CREATE TABLE bucket_status (
-    bucket_id   BIGINT PRIMARY KEY REFERENCES __buckets ON DELETE RESTRICT,
+    bucket_id   BIGINT PRIMARY KEY REFERENCES __buckets ON DELETE CASCADE,
     status      INTEGER NOT NULL,
     deleted_at  TIMESTAMP DEFAULT now() NOT NULL
 );
