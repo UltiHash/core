@@ -30,7 +30,7 @@ public:
                 << "The coordinator has not yet updated the license string";
         }
     }
-    license& get_license() { return *m_license.load(); }
+    std::shared_ptr<license> get_license() { return m_license.load(); }
 
 private:
     void on_watch(const etcd::Response& resp) {
