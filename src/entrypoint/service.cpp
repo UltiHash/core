@@ -81,7 +81,8 @@ service::service(const service_config& sc, entrypoint_config config)
       m_server(m_config.server,
                std::make_unique<handler>(
                    command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
-                                   m_config, m_data_view, m_limits, m_users),
+                                   m_config, m_data_view, m_limits, m_users,
+                                   m_license_watcher),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory),
                    std::make_unique<cors::module>(cors::config{}, m_directory)),

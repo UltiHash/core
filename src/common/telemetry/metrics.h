@@ -45,6 +45,7 @@ enum metric_type {
     entrypoint_delete_objects_req,
     entrypoint_get_metrics_req,
     entrypoint_get_ready_req,
+    entrypoint_get_license_info_req,
     entrypoint_get_object_req,
     entrypoint_head_object_req,
     entrypoint_init_multipart_req,
