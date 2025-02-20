@@ -44,6 +44,8 @@ public:
 
         } catch (const std::runtime_error& e) {
             LOG_ERROR() << "License check failed: " << e.what();
+            license lic;
+            m_etcd.put(etcd_license, lic.to_string());
         } catch (...) {
         }
         co_return;
