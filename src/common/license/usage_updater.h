@@ -38,6 +38,7 @@ public:
         } catch (const std::runtime_error& e) {
             LOG_ERROR() << "Sending usage data failed: " << e.what();
         } catch (...) {
+            LOG_ERROR() << "Sending usage data failed: unknown error";
         }
         co_return;
     }
