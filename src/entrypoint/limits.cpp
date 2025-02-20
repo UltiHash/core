@@ -17,20 +17,28 @@ void limits::set_storage_size(std::size_t size) {
 
 void limits::check_storage_size(std::size_t increment) {
     auto new_size = m_data_storage_size.load() + increment;
-    auto max_data_size = m_watcher.get_license().storage_cap_gib * GIBI_BYTE;
-    if (new_size > max_data_size) {
-        throw command_exception(status::insufficient_storage,
-                                "StorageLimitExceeded", "insufficient storage");
-    }
-
-    if (new_size * 100 > max_data_size * SIZE_LIMIT_WARNING_PERCENTAGE) {
-        if (m_warn_counter == 0) {
-            LOG_WARN() << "over " << SIZE_LIMIT_WARNING_PERCENTAGE
-                       << "% of storage limit reached";
-            m_warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
+    auto lic = m_watcher.get_license();
+    switch (lic->license_type) {
+    case license::type::PREMIUM:
+        return;
+    case license::type::NONE:
+    case license::type::FREEMIUM:
+        auto max_data_size = lic->storage_cap_gib * GIBI_BYTE;
+        if (new_size > max_data_size) {
+            throw command_exception(status::insufficient_storage,
+                                    "StorageLimitExceeded",
+                                    "insufficient storage");
         }
 
-        --m_warn_counter;
+        if (new_size * 100 > max_data_size * SIZE_LIMIT_WARNING_PERCENTAGE) {
+            if (m_warn_counter == 0) {
+                LOG_WARN() << "over " << SIZE_LIMIT_WARNING_PERCENTAGE
+                           << "% of storage limit reached";
+                m_warn_counter = SIZE_LIMIT_WARNING_INTERVAL;
+            }
+
+            --m_warn_counter;
+        }
     }
 }
 
