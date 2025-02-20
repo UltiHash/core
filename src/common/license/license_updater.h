@@ -30,26 +30,32 @@ public:
                 co_return co_await m_backend_client->get_license();
             });
 
-            auto lic = license::create(str);
+            auto lic = std::make_shared<license>(license::create(str));
 
-            LOG_INFO() << "license loaded for " << lic.customer_id;
+            LOG_INFO() << "license loaded for " << lic->customer_id;
             LOG_INFO() << " -- license type: "
-                       << magic_enum::enum_name(lic.license_type);
-            LOG_INFO() << " -- storage size: " << lic.storage_cap_gib
+                       << magic_enum::enum_name(lic->license_type);
+            LOG_INFO() << " -- storage size: " << lic->storage_cap_gib
                        << " GiBs";
 
-            m_etcd.put(etcd_license, lic.to_string());
+            m_etcd.put(etcd_license, lic->to_string());
+            m_license = std::move(lic);
 
             LOG_DEBUG() << "License updated";
 
         } catch (const std::runtime_error& e) {
             LOG_ERROR() << "License check failed: " << e.what();
-            license lic;
-            m_etcd.put(etcd_license, lic.to_string());
+
+            std::shared_ptr<license> lic = std::make_shared<license>();
+            m_etcd.put(etcd_license, lic->to_string());
+            m_license = std::move(lic);
         } catch (...) {
+            LOG_ERROR() << "License check failed: unknown error";
         }
+
         co_return;
     }
+
     coro<void> periodic_update(std::chrono::seconds interval) {
         while (true) {
             auto start_time = std::chrono::steady_clock::now();
@@ -67,10 +73,13 @@ public:
         }
     }
 
+    std::shared_ptr<license> current() const { return m_license; }
+
 private:
     boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     std::unique_ptr<backend_client> m_backend_client;
+    std::atomic<std::shared_ptr<license>> m_license;
 };
 
 } // namespace uh::cluster
