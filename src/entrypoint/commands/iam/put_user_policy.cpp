@@ -11,20 +11,20 @@ put_user_policy::put_user_policy(user::db& users)
 coro<ep::http::response> put_user_policy::handle(ep::http::request& req) {
     auto user = req.query("UserName");
     if (!user) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "UserName missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "UserName missing.");
     }
 
     auto name = req.query("PolicyName");
     if (!name) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "PolicyName missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "PolicyName missing.");
     }
 
     auto document = req.query("PolicyDocument");
     if (!document) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "PolicyDocument missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "PolicyDocument missing.");
     }
 
     policy::parser::parse(*document);

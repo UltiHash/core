@@ -72,7 +72,7 @@ coro<response> delete_objects::handle(request& req) {
     if (!parsed || object_nodes.empty() ||
         object_nodes.size() > MAXIMUM_DELETE_KEYS)
         throw command_exception(status::bad_request, "MalformedXML",
-                                "xml is invalid");
+                                "XML is invalid.");
 
     auto bucket_id = req.bucket();
     std::vector<std::string> success;
@@ -81,7 +81,7 @@ coro<response> delete_objects::handle(request& req) {
         auto key = obj.get().get_optional<std::string>("Key");
         if (!key) {
             throw command_exception(status::bad_request, "MalformedXML",
-                                    "xml is invalid");
+                                    "XML is invalid.");
         }
 
         try {

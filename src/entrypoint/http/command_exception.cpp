@@ -8,8 +8,8 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 command_exception::command_exception()
-    : command_exception(status::internal_server_error, "InternalServerError",
-                        "internal server error") {}
+    : command_exception(status::internal_server_error, "InternalError",
+                        "Internal server error.") {}
 
 command_exception::command_exception(status status, const std::string& code,
                                      const std::string& reason)
@@ -44,26 +44,28 @@ void throw_from_error(const error& e) {
         return;
     case error::bucket_already_exists:
         throw command_exception(status::conflict, "BucketAlreadyExists",
-                                "bucket already exists");
+                                "The requested bucket name is not available.");
     case error::bucket_not_empty:
-        throw command_exception(status::conflict, "BucketNotEmpty",
-                                "bucket is not empty");
+        throw command_exception(
+            status::conflict, "BucketNotEmpty",
+            "The bucket that you tried to delete is not empty.");
     case error::object_not_found:
         throw command_exception(status::not_found, "NoSuchKey",
-                                "object not found");
+                                "The specified key does not exist.");
     case error::bucket_not_found:
         throw command_exception(status::not_found, "NoSuchBucket",
-                                "bucket not found");
+                                "The specified bucket does not exist.");
     case error::storage_limit_exceeded:
         throw command_exception(status::insufficient_storage,
-                                "StorageLimitExceeded", "insufficient storage");
+                                "InsufficientCapacity",
+                                "Insufficient capacity.");
     case error::invalid_bucket_name:
-        throw command_exception(status::bad_request, "InvalidBucketName",
-                                "bucket name has invalid characters");
+        throw command_exception(
+            status::bad_request, "InvalidBucketName",
+            "The specified bucket name has invalid characters.");
     case error::internal_network_error:
-        throw command_exception(status::internal_server_error,
-                                "InternalServerError",
-                                "downstream connection failed");
+        throw command_exception(status::internal_server_error, "InternalError",
+                                "Downstream connection failed.");
     default:
         throw command_exception();
     }

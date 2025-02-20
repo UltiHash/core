@@ -149,8 +149,8 @@ module::get_info(const std::string& bucket) const {
     auto config = co_await m_directory.get_bucket_cors(bucket);
     if (!config) {
         throw command_exception(
-            http::status::forbidden, "Forbidden",
-            "CORS Response: CORS is not enabled for this bucket");
+            http::status::not_found, "NoSuchCORSConfiguration",
+            "The specified bucket does not have a CORS configuration.");
     }
 
     auto parsed = std::make_shared<std::vector<info>>(parser::parse(*config));

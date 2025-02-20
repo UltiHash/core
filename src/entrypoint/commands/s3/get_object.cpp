@@ -101,8 +101,8 @@ coro<response> get_object::handle(request& req) {
             ep::http::parse_range_header(*range, obj->addr->data_size());
 
         if (spec.ranges.size() != 1) {
-            throw command_exception(status::not_implemented, "MultiRange",
-                                    "no support for multiple ranges");
+            throw command_exception(status::not_implemented, "NotImplemented",
+                                    "No support for multiple ranges.");
         }
 
         obj->addr = apply_range(*obj->addr, spec);

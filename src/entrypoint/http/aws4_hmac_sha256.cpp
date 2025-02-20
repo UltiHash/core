@@ -205,8 +205,8 @@ aws4_hmac_sha256::create(boost::asio::ip::tcp::socket& s, user::db& users,
 
     if (signature != parsed["Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
-        throw command_exception(status::forbidden, "AccessDenied",
-                                "Access Denied");
+        throw command_exception(status::forbidden, "InvalidAccessGrant",
+                                "The specified Access Grant is invalid");
     }
 
     if (!body) {
@@ -239,8 +239,8 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
     auto date = read_iso8601_date_merged(info.amz_date);
     auto expires = std::chrono::seconds(stoul(req.params["X-Amz-Expires"]));
     if (date + expires < utc_time::clock::now()) {
-        throw command_exception(status::forbidden, "AccessDenied",
-                                "Request has expired");
+        throw command_exception(status::bad_request, "ExpiredToken",
+                                "The provided token has expired.");
     }
 
     auto user = co_await users.find_by_key(std::string(split_credentials[0]));
@@ -250,8 +250,12 @@ aws4_hmac_sha256::create_from_url(boost::asio::ip::tcp::socket& s,
 
     if (signature != req.params["X-Amz-Signature"]) {
         LOG_INFO() << req.peer << ": access denied: signature mismatch";
-        throw command_exception(status::forbidden, "AccessDenied",
-                                "Access Denied");
+        throw command_exception(
+            status::forbidden, "SignatureDoesNotMatch",
+            "SignatureDoesNotMatch	The request signature that the server "
+            "calculated does not match the signature that you provided. Check "
+            "your AWS secret access key and signing method. For more "
+            "information, see REST Authentication and SOAP Authentication.");
     }
 
     req.params.erase("X-Amz-Algorithm");

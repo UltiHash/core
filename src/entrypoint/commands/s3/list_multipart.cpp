@@ -53,9 +53,10 @@ coro<response> list_multipart::handle(request& req) {
         ongoing = co_await instance.list_multipart_uploads(bucket_name);
     }
 
+    // Should we throw an exception if there are no multipart uploads?
     if (ongoing.empty()) {
         throw command_exception(status::not_found, "NoMultiPartUploads",
-                                "no multipart uploads");
+                                "No multipart uploads.");
     }
 
     co_return get_response(bucket_name, ongoing);
