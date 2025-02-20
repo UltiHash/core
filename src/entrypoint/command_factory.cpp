@@ -24,6 +24,7 @@
 #include <entrypoint/commands/s3/put_bucket_policy.h>
 #include <entrypoint/commands/s3/put_object.h>
 
+#include <entrypoint/commands/uh/get_license_info.h>
 #include <entrypoint/commands/uh/get_metrics.h>
 #include <entrypoint/commands/uh/get_ready.h>
 
@@ -139,6 +140,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     }
     if (list_multipart::can_handle(req)) {
         co_return std::make_unique<list_multipart>(m_uploads);
+    }
+    if (get_license_info::can_handle(req)) {
+        co_return std::make_unique<get_license_info>(m_license_watcher);
     }
     if (get_metrics::can_handle(req)) {
         co_return std::make_unique<get_metrics>(m_directory, m_gdv);
