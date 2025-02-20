@@ -19,7 +19,7 @@ LABEL org.opencontainers.image.description="UltiHash is an S3-compatible, purpos
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
    && apt-get upgrade --yes \
-   && apt-get install --yes --no-install-recommends libgrpc29t64 libgrpc++1.51t64 libpq5 liblmdb0 adduser \
+   && apt-get install --yes --no-install-recommends libgrpc29t64 libgrpc++1.51t64 libpq5 liblmdb0 adduser ca-certificates \
    && if [ "$DebugTools" = "True" ]; then \
         apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
     fi
