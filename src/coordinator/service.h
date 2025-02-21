@@ -50,7 +50,7 @@ public:
                 m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
                 boost::asio::detached);
 
-            m_usage_updater.emplace(m_ioc, m_usage,
+            m_usage_updater.emplace(m_ioc, m_usage, *m_license_updater,
                                     default_backend_client(bc.backend_host,
                                                            bc.customer_id,
                                                            bc.access_token));
