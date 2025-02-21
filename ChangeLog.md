@@ -1,3 +1,7 @@
+## [1.2.1] 2025-02-21
+
+- Fixed an issue in selecting the correct action when passing a query string.
+
 ## [1.2.0] 2025-01-21
 
 - Consider configured log level in OTEL logging

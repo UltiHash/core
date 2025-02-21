@@ -52,7 +52,7 @@ put_object::put_object(boost::asio::io_context& ioc,
 bool put_object::can_handle(const request& req) {
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && !req.object_key().empty() &&
-           !req.has_query() && !req.header("x-amz-copy-source");
+           !req.query("uploadId") && !req.header("x-amz-copy-source");
 }
 
 coro<void> put_object::validate(const request& req) {

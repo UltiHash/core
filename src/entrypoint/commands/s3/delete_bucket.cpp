@@ -11,7 +11,8 @@ delete_bucket::delete_bucket(directory& dir)
 bool delete_bucket::can_handle(const request& req) {
     return req.method() == verb::delete_ &&
            req.bucket() != RESERVED_BUCKET_NAME && !req.bucket().empty() &&
-           req.object_key().empty() && !req.has_query();
+           req.object_key().empty() && !req.query("policy") &&
+           !req.query("cors");
 }
 
 coro<response> delete_bucket::handle(request& req) {
