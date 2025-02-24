@@ -1,3 +1,14 @@
+## [1.3.0] 2025-02-24
+
+- Implement support for pay-as-you-go licensing
+- Add API call to query configured UH cluster license
+- Add support for AWS signature version 4 pre-signed URL
+- Add support for per-bucket CORS configuration using `s3:PutBucketCors`,
+  `s3:GetBucketCors` and `s3:DeleteBucketCors`
+- Set HTTP status messages to better mimic S3 specification
+- Allow bypassing deduplication step on data upload
+- Introduce coordinator service
+
 ## [1.2.1] 2025-02-21
 
 - Fixed an issue in selecting the correct action when passing a query string.
