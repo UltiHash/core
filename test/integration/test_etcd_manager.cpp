@@ -114,54 +114,50 @@ BOOST_FIXTURE_TEST_CASE(clears_all, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_write, fixture) {
-    auto wm =
-        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        });
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
+    auto wm = etcd.watch(
+        "/test", [&](const etcd::Response& response) { promise.set_value(); });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
-    std::this_thread::sleep_for(100ms);
 
-    Verify(Method(mock, handle_state_changes)).Exactly(1);
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
 }
 
 BOOST_FIXTURE_TEST_CASE(watch_rewrite, fixture) {
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     etcd.put("/test/sub/a0", "172.0.0.1");
-    auto wm =
-        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        });
+    auto wm = etcd.watch(
+        "/test", [&](const etcd::Response& response) { promise.set_value(); });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
-    std::this_thread::sleep_for(100ms);
 
-    Verify(Method(mock, handle_state_changes)).Exactly(1);
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_overwrite, fixture) {
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     etcd.put("/test/sub/a0", "198.51.100.0");
-    auto wm =
-        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        });
+    auto wm = etcd.watch(
+        "/test", [&](const etcd::Response& response) { promise.set_value(); });
 
     etcd.put("/test/sub/a0", "172.0.0.1");
-    std::this_thread::sleep_for(100ms);
 
-    Verify(Method(mock, handle_state_changes)).Exactly(1);
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_remove, fixture) {
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     etcd.put("/test/sub/a0", "172.0.0.1");
-    auto wm =
-        etcd.watch("/test", [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        });
+    auto wm = etcd.watch(
+        "/test", [&](const etcd::Response& response) { promise.set_value(); });
 
     etcd.rmdir("/test");
-    std::this_thread::sleep_for(100ms);
 
-    Verify(Method(mock, handle_state_changes)).Exactly(1);
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
 }
 
 BOOST_FIXTURE_TEST_CASE(

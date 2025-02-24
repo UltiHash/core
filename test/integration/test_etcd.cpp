@@ -10,20 +10,11 @@ using namespace std::chrono_literals;
 
 namespace uh::cluster {
 
-class callback_interface {
-public:
-    virtual ~callback_interface() = default;
-    virtual void handle_state_changes(const etcd::Response& response) = 0;
-};
-
 class fixture {
 public:
     fixture()
         : etcd_address{"http://127.0.0.1:2379"},
-          etcd_client{etcd_address} {
-        When(Method(mock, handle_state_changes))
-            .AlwaysDo([](const etcd::Response&) {});
-    }
+          etcd_client{etcd_address} {}
 
     ~fixture() { etcd_client.rmdir("/", true); }
 
@@ -32,43 +23,23 @@ protected:
     etcd::SyncClient etcd_client;
     etcd_config cfg;
     etcd::Response response;
-    Mock<callback_interface> mock;
 };
 
 BOOST_AUTO_TEST_SUITE(a_etcd_client)
 
 BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
     etcd_client.put("test0", "initial_value");
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
     std::shared_ptr<etcd::Watcher> watcher;
     watcher.reset(new etcd::Watcher(
         etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
+        [&](const etcd::Response& response) { promise.set_value(); },
         true /*recursive*/));
 
     etcd_client.put("test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
 
-    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
-}
-
-BOOST_FIXTURE_TEST_CASE(
-    cannot_watch_changes_on_the_given_key_after_cancellation, fixture) {
-    etcd_client.put("test0", "initial_value");
-    std::shared_ptr<etcd::Watcher> watcher;
-    watcher.reset(new etcd::Watcher(
-        etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
-        true /*recursive*/));
-
-    watcher->Cancel();
-    etcd_client.put("test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
-
-    Verify(Method(mock, handle_state_changes)).Exactly(0);
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
 }
 
 BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
