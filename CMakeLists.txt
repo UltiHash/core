@@ -99,7 +99,9 @@ CPMAddPackage(
     GIT_TAG
     1.9.9
     OPTIONS
-    "BUILD_SHARED_LIBS OFF")
+    "BUILD_SHARED_LIBS OFF"
+    CPM_ARGS
+    "TIMEOUT 300")
 
 if(ENABLE_DEDUPE_LOG)
     message(STATUS "Building log dedupe set")
