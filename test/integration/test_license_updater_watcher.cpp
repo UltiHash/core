@@ -7,7 +7,7 @@
 #include <common/etcd/namespace.h>
 #include <common/license/license_updater.h>
 #include <common/license/license_watcher.h>
-#include <fakeit/fakeit.hpp>
+#include <fakeit.hpp>
 #include <lib/util/coroutine.h>
 
 using namespace fakeit;

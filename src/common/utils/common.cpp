@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <map>
+
 namespace uh::cluster {
 
 static const std::map<uh::cluster::role, std::string> abbreviation_by_role = {

@@ -3,6 +3,18 @@
 #include "config.h"
 #include "log.h"
 
+#include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h>
+
+#include <opentelemetry/trace/propagation/http_trace_context.h>
+#include <opentelemetry/trace/provider.h>
+
+#include <opentelemetry/context/propagation/global_propagator.h>
+
+#include <opentelemetry/sdk/trace/processor.h>
+#include <opentelemetry/sdk/trace/simple_processor_factory.h>
+#include <opentelemetry/sdk/trace/tracer_provider_factory.h>
+
 using namespace opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
 

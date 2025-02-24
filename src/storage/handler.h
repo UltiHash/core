@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/network/messenger.h"
 #include <common/telemetry/context.h>
 #include <common/utils/protocol_handler.h>
 #include <storage/interfaces/local_storage.h>

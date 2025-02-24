@@ -2,7 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <common/utils/random.h>
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 #include <storage/data_file.h>
 
 using namespace uh::cluster;

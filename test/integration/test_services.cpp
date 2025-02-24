@@ -8,10 +8,10 @@
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
 #include "common/utils/common.h"
-#include "common/utils/temp_directory.h"
 #include "lib/util/checks.h"
 #include "lib/util/server.h"
 #include "storage/interfaces/data_store.h"
+#include <lib/util/temp_directory.h>
 
 using namespace boost::asio;
 

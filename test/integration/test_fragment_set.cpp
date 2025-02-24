@@ -1,10 +1,10 @@
 #define BOOST_TEST_MODULE "fragment set tests"
 
-#include "common/utils/temp_directory.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 #include "deduplicator/dedupe_set/fragment_set_log.h"
 #include "lib/util/gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
+#include <lib/util/temp_directory.h>
 
 // ------------- Tests Suites Follow --------------
 

@@ -71,11 +71,10 @@ BOOST_AUTO_TEST_CASE(throws_system_error_for_invalid_path) {
     BOOST_CHECK_THROW(read_text = future.get(), std::system_error);
 }
 
-BOOST_AUTO_TEST_CASE(throws_runtime_error_for_invalid_path) {
+BOOST_AUTO_TEST_CASE(throws_runtime_error_for_invalid_host_name) {
     auto future = boost::asio::co_spawn(
         ioc,
-        sut.co_get("http://-----host:" + std::to_string(server.get_port()) +
-                   "/wrong_path"),
+        sut.co_get("http://-----host:" + std::to_string(server.get_port())),
         boost::asio::use_future);
 
     if (future.wait_for(std::chrono::seconds(2)) ==

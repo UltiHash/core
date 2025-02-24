@@ -2,6 +2,7 @@
 
 #include <common/utils/common.h>
 
+#include <atomic>
 #include <filesystem>
 #include <span>
 

@@ -6,8 +6,8 @@
 
 #include <common/etcd/utils.h>
 #include <common/global_data/default_global_data_view.h>
-#include <common/utils/temp_directory.h>
 #include <config/configuration.h>
+#include <lib/util/temp_directory.h>
 #include <storage/service.h>
 
 namespace uh::cluster {

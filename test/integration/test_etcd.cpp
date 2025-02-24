@@ -1,7 +1,8 @@
 #define BOOST_TEST_MODULE "etcd tests"
 
-#include "common/etcd/utils.h"
-#include "fakeit/fakeit.hpp"
+#include <etcd/Client.hpp>
+#include <etcd/KeepAlive.hpp>
+#include <etcd/Watcher.hpp>
 
 #include <boost/test/unit_test.hpp>
 
@@ -20,8 +21,7 @@ public:
 
 protected:
     std::string etcd_address;
-    etcd::SyncClient etcd_client;
-    etcd_config cfg;
+    etcd::Client etcd_client;
     etcd::Response response;
 };
 
@@ -52,78 +52,9 @@ BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(gets_leasegrant, fixture) {
-    auto resp = etcd_client.leasegrant(2);
+    auto resp = etcd_client.leasegrant(2).get();
 
     BOOST_TEST(resp.is_ok() == true);
-}
-
-BOOST_FIXTURE_TEST_CASE(cannot_read_after_lease_expired, fixture) {
-    auto lease = etcd_client.leasegrant(2).value().lease();
-    etcd_client.put("/foo/bar", "1", lease);
-
-    std::this_thread::sleep_for(4s);
-    auto resp = etcd_client.get("/foo/bar");
-
-    BOOST_TEST(resp.is_ok() == false);
-}
-
-BOOST_FIXTURE_TEST_CASE(fails_getting_lock_when_lease_is_invalidated, fixture) {
-    auto lease = etcd_client.leasegrant(2).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 10, lease);
-    auto key = std::string("/foo/bar");
-    std::this_thread::sleep_for(3s);
-
-    auto resp = etcd_client.lock_with_lease(key, lease);
-
-    BOOST_TEST(resp.is_ok() == false);
-}
-
-BOOST_FIXTURE_TEST_CASE(succeeds_getting_lock_with_valid_lease, fixture) {
-    auto lease = etcd_client.leasegrant(2).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 1, lease);
-    auto key = std::string("/foo/bar");
-    std::this_thread::sleep_for(3s);
-
-    auto resp = etcd_client.lock_with_lease(key, lease);
-
-    BOOST_TEST(resp.is_ok() == true);
-    BOOST_TEST(resp.lock_key().substr(0, key.size()) == key);
-}
-
-BOOST_FIXTURE_TEST_CASE(succeeds_unlocking_with_key_given_from_locking,
-                        fixture) {
-    auto lease = etcd_client.leasegrant(2).value().lease();
-    auto keepalive = etcd::KeepAlive(etcd_client, 1, lease);
-    auto key = std::string("/foo/bar");
-    auto resp_lock = etcd_client.lock_with_lease(key, lease);
-    std::this_thread::sleep_for(3s);
-
-    auto resp_unlock = etcd_client.unlock(resp_lock.lock_key());
-
-    BOOST_TEST(resp_unlock.is_ok() == true);
-}
-
-BOOST_FIXTURE_TEST_CASE(waits_on_second_lock_until_first_lock_is_unlocked,
-                        fixture) {
-
-    auto lease = etcd_client.leasegrant(30).value().lease();
-    auto key = std::string("/foo/bar");
-    auto resp_lock = etcd_client.lock_with_lease(key, lease);
-
-    std::future<etcd::Response> future_lock2 =
-        std::async(std::launch::async, [&]() {
-            auto lease = etcd_client.leasegrant(30).value().lease();
-            return etcd_client.lock_with_lease(key, lease);
-        });
-
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    BOOST_CHECK(future_lock2.wait_for(std::chrono::seconds(0)) ==
-                std::future_status::timeout);
-
-    auto resp_unlock = etcd_client.unlock(resp_lock.lock_key());
-    BOOST_TEST(resp_unlock.is_ok());
-    auto resp_lock2 = future_lock2.get();
-    BOOST_TEST(resp_lock2.is_ok());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

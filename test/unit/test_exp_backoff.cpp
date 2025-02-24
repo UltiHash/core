@@ -11,7 +11,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/test/included/unit_test.hpp>
 #include <chrono>
-#include <fakeit/fakeit.hpp>
+#include <fakeit.hpp>
 #include <lib/util/coroutine.h>
 
 using namespace uh::cluster;
