@@ -34,15 +34,19 @@ public:
 
 private:
     void on_watch(const etcd::Response& resp) {
-        LOG_INFO() << "Watcher has detected a license update";
+        try {
+            LOG_INFO() << "Watcher has detected a license update";
 
-        const auto& license_str = resp.value().as_string();
-        parse_and_save(license_str);
+            const auto& license_str = resp.value().as_string();
+            parse_and_save(license_str);
 
-        LOG_INFO() << "Modified license saved";
+            LOG_INFO() << "Modified license saved";
 
-        if (m_callback) {
-            m_callback(license_str);
+            if (m_callback) {
+                m_callback(license_str);
+            }
+        } catch (const std::exception& e) {
+            LOG_WARN() << "error updating license: " << e.what();
         }
     }
 
