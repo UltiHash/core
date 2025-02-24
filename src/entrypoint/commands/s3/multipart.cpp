@@ -23,8 +23,8 @@ coro<void> multipart::validate(const request& req) {
     std::size_t part_num = *query<std::size_t>(req, "partNumber");
 
     if (part_num < 1 || part_num > 10000) {
-        throw command_exception(status::bad_request, "BadPartNumber",
-                                "part number is invalid");
+        throw command_exception(status::bad_request, "InvalidPart",
+                                "Part number is invalid.");
     }
 
     co_return;

@@ -24,6 +24,7 @@
 #include <entrypoint/commands/s3/put_bucket_policy.h>
 #include <entrypoint/commands/s3/put_object.h>
 
+#include <entrypoint/commands/uh/get_license_info.h>
 #include <entrypoint/commands/uh/get_metrics.h>
 #include <entrypoint/commands/uh/get_ready.h>
 
@@ -42,8 +43,8 @@ coro<std::unique_ptr<command>>
 command_factory::action_command(ep::http::request& req) {
     auto length = std::stoull(req.header("content-length").value_or("0"));
     if (length == 0) {
-        throw command_exception(ep::http::status::bad_request,
-                                "CommandNotFound", "no such command found");
+        throw command_exception(ep::http::status::bad_request, "InvalidURI",
+                                "The specified URI couldn't be parsed.");
     }
 
     if (length > MAX_POST_QUERY_LENGTH) {
@@ -90,8 +91,8 @@ command_factory::action_command(ep::http::request& req) {
         co_return std::make_unique<ep::iam::delete_user_policy>(m_users);
     }
 
-    throw command_exception(ep::http::status::bad_request, "CommandNotFound",
-                            "no such command found");
+    throw command_exception(ep::http::status::bad_request, "InvalidURI",
+                            "The specified URI couldn't be parsed.");
 }
 
 coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
@@ -140,6 +141,9 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     if (list_multipart::can_handle(req)) {
         co_return std::make_unique<list_multipart>(m_uploads);
     }
+    if (get_license_info::can_handle(req)) {
+        co_return std::make_unique<get_license_info>(m_license_watcher);
+    }
     if (get_metrics::can_handle(req)) {
         co_return std::make_unique<get_metrics>(m_directory, m_gdv);
     }
@@ -179,8 +183,8 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
         co_return std::make_unique<put_bucket_cors>(m_directory);
     }
 
-    throw command_exception(ep::http::status::bad_request, "CommandNotFound",
-                            "no such command found");
+    throw command_exception(ep::http::status::bad_request, "InvalidURI",
+                            "The specified URI couldn't be parsed.");
 }
 
 limits& command_factory::get_limits() const { return m_limits; }

@@ -46,10 +46,17 @@ public:
         LOG_DEBUG() << "Fetching license from url: " << url;
         co_return co_await m_http_client.co_get(url);
     }
+
     coro<std::string> post_usage(std::string usage) {
         auto url = std::string(magic_enum::enum_name(m_backend_type)) + "://" +
                    m_backend_host + "/v1/usage";
-        co_return co_await m_http_client.co_post(url, std::move(usage));
+        LOG_DEBUG() << "Posting usage to url: " << url
+                    << "with usage: " << usage;
+
+        cpr::Header hdr;
+        hdr["Content-Type"] = "application/json";
+        co_return co_await m_http_client.co_post(url, std::move(usage),
+                                                 std::move(hdr));
     }
 
 private:

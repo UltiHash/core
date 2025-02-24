@@ -63,6 +63,15 @@ public:
         co_return r.text;
     }
 
+    coro<std::string> co_post(std::string url, cpr::Body body,
+                              cpr::Header headers) {
+        auto r = co_await m_async_client.async_post(
+            std::move(url), std::move(body), std::move(headers),
+            boost::asio::use_awaitable);
+        handle_status_code(r.error, r.status_code);
+        co_return r.text;
+    }
+
 private:
     static void handle_status_code(cpr::Error error, const long status_code) {
 

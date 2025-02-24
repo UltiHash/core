@@ -36,22 +36,7 @@ public:
                 std::make_unique<storage::service>(service_cfg, storage_cfg));
         }
 
-        auto coordinator_cfg = coordinator_config{};
-
-        coordinator_cfg.license = license::create(test_license_string);
-        m_coordinator = std::make_unique<coordinator::service>(service_config{},
-                                                               coordinator_cfg);
         int i = 0;
-
-        boost::asio::post(m_ioc, [this] { m_coordinator->run(); });
-        m_threads.emplace_back([this, i] {
-            try {
-                m_ioc.run();
-            } catch (std::exception& e) {
-                m_excp_ptrs[i] = std::current_exception();
-            }
-        });
-        i++;
 
         for (const auto& node : m_storage_instances) {
             boost::asio::post(m_ioc, [&node] { node->run(); });
@@ -87,11 +72,6 @@ public:
         }
 
         m_storage_instances.clear();
-
-        if (m_coordinator) {
-            m_coordinator->stop();
-            m_coordinator.reset();
-        }
 
         for (auto& thread : m_threads) {
             thread.join();
@@ -136,7 +116,6 @@ private:
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
-    std::unique_ptr<coordinator::service> m_coordinator;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_maintainer<storage_interface> m_storage_services;
     std::shared_ptr<global_data_view> m_gdv;

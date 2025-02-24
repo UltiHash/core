@@ -52,8 +52,7 @@ public:
                 auto callback_ptr =
                     std::make_shared<decltype(callback)>(std::move(callback));
                 cpr::PostCallback(
-                    [callback_ptr] //
-                    (cpr::Response resp) mutable {
+                    [callback_ptr](cpr::Response resp) mutable {
                         (*callback_ptr)(std::move(resp));
                     },
                     cpr::Url{std::forward<std::string>(url)},
@@ -62,6 +61,26 @@ public:
             },
             std::forward<CompletionToken>(token),
             std::forward<std::string>(url), std::move(body));
+    }
+
+    template <typename CompletionToken>
+    auto async_post(auto&& url, cpr::Body body, cpr::Header headers,
+                    CompletionToken&& token) {
+        return async_wrap<cpr::Response>(
+            [this](auto&& url, cpr::Body body, cpr::Header h, auto callback) {
+                auto callback_ptr =
+                    std::make_shared<decltype(callback)>(std::move(callback));
+                cpr::PostCallback(
+                    [callback_ptr](cpr::Response resp) mutable {
+                        (*callback_ptr)(std::move(resp));
+                    },
+                    cpr::Url{std::forward<std::string>(url)},
+                    cpr::Authentication{m_username, m_password, m_auth_type},
+                    std::move(body), std::move(h));
+            },
+            std::forward<CompletionToken>(token),
+            std::forward<std::string>(url), std::move(body),
+            std::move(headers));
     }
 
 private:

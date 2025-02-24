@@ -8,14 +8,14 @@ get_user_policy::get_user_policy(user::db& users)
 coro<ep::http::response> get_user_policy::handle(ep::http::request& req) {
     auto username = req.query("UserName");
     if (!username) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "UserName missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "UserName missing.");
     }
 
     auto policy_name = req.query("PolicyName");
     if (!policy_name) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "PolicyName missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "PolicyName missing.");
     }
 
     auto policy = co_await m_users.policy(*username, *policy_name);

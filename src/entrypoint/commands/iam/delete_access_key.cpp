@@ -9,17 +9,21 @@ coro<ep::http::response> delete_access_key::handle(ep::http::request& req) {
 
     auto access_key = req.query("AccessKeyId");
     if (!access_key) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "Access Key Id missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "Access Key Id missing.");
     }
 
     auto username = req.query("UserName");
     if (username) {
         auto user = co_await m_users.find_by_key(*access_key);
         if (user.name != *username) {
+            // TODO: how?
             throw command_exception(
-                ep::http::status::conflict, "User Name Mismatch",
-                "The provided access key does not belong to the given user.");
+                ep::http::status::conflict, "UserNameMismatch",
+                "AWS IAM implements sophisticated organizations/roles "
+                "management that allows administrator users to delete key of "
+                "other users. We do not implement something like this and "
+                "allow user only to delete their own key.");
         }
     }
 

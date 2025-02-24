@@ -8,8 +8,80 @@ namespace uh::cluster::ep::cors {
 
 namespace {
 
-http::response options_response(const http::request& r, std::string origin,
-                                cors::info info) {
+bool equals_wildcard_single(std::string_view pattern, std::string_view str) {
+    auto pos = pattern.find('*');
+
+    if (pos == std::string::npos) {
+        return str == pattern;
+    }
+
+    if (pos > 0 && !str.starts_with(pattern.substr(0, pos - 1))) {
+        return false;
+    }
+
+    return str.ends_with(pattern.substr(pos + 1));
+}
+
+std::optional<std::reference_wrapper<const info>>
+find_info(const std::vector<info>& rules, const std::string& origin,
+          http::verb method) {
+    for (const auto& info : rules) {
+        if (info.origin != origin && info.origin != "*") {
+            continue;
+        }
+
+        if (!info.methods.contains(method)) {
+            continue;
+        }
+
+        return std::cref(info);
+    }
+
+    return std::nullopt;
+}
+
+} // namespace
+
+module::module(const config& cfg, directory& dir) :m_directory(dir),
+    m_info_cache(cfg.cache_retention) {}
+
+coro<result> module::check(const http::request& request) const {
+    auto origin = request.header("origin");
+    if (!origin) {
+        co_return result{};
+    }
+
+    if (request.method() == http::verb::options) {
+        co_return co_await preflight(request);
+    } else {
+        co_return co_await flight(request);
+    }
+}
+
+coro<result> module::preflight(const http::request& r) const {
+
+    auto rules = co_await get_info(r.bucket());
+
+    auto req_method = r.header("Access-Control-Request-Method");
+    if (!req_method) {
+        co_return result{
+            .response = error_response(
+                http::status::forbidden, "Forbidden",
+                "CORS Response: This CORS request is not allowed")};
+    }
+
+    auto method = boost::beast::http::string_to_verb(*req_method);
+
+    auto origin = *r.header("origin");
+    auto origin_info = find_info(*rules, origin, method);
+    if (!origin_info) {
+        co_return result{
+            .response = error_response(
+                http::status::forbidden, "Forbidden",
+                "CORS Response: This CORS request is not allowed")};
+    }
+
+    const auto& info = origin_info->get();
 
     auto response = http::response(http::status::no_content);
     response.set("Access-Control-Allow-Origin", std::move(origin));
@@ -18,10 +90,14 @@ http::response options_response(const http::request& r, std::string origin,
         auto rheaders = split<std::set<std::string>>(*acrh, ',');
 
         std::set<std::string> intersection;
-        std::set_intersection(
-            rheaders.begin(), rheaders.end(), info.headers.begin(),
-            info.headers.end(),
-            std::inserter(intersection, intersection.begin()));
+
+        for (const auto& iheader : info.headers) {
+            for (const auto& rheader : rheaders) {
+                if (equals_wildcard_single(iheader, rheader)) {
+                    intersection.insert(intersection.end(), rheader);
+                }
+            }
+        }
 
         std::string headers = join(intersection, ",");
         if (!headers.empty()) {
@@ -38,57 +114,33 @@ http::response options_response(const http::request& r, std::string origin,
         response.set("Access-Control-Allow-Methods", std::move(methods));
     }
 
-    return response;
+    co_return result{.response = std::move(response)};
 }
 
-} // namespace
+coro<result> module::flight(const http::request& request) const {
+    auto rules = co_await get_info(request.bucket());
 
-module::module(const config& cfg, directory& dir) :m_directory(dir),
-    m_info_cache(cfg.cache_retention) {}
-
-coro<result> module::check(const http::request& request) const {
-    auto origin = request.header("origin");
-    if (!origin) {
-        co_return result{};
-    }
-
-    auto infos = co_await get_info(request.bucket());
-    auto origin_info = infos->find(*origin);
-    if (origin_info == infos->end()) {
-        origin_info = infos->find("*");
-    }
-
-    if (origin_info == infos->end()) {
+    auto origin = *request.header("origin");
+    auto origin_info = find_info(*rules, origin, request.method());
+    if (!origin_info) {
         co_return result{
             .response = error_response(
                 http::status::forbidden, "Forbidden",
                 "CORS Response: This CORS request is not allowed")};
     }
 
-    const auto& info = origin_info->second;
-
-    if (request.method() == http::verb::options) {
-        co_return result{
-            .response = options_response(request, std::move(*origin), info)};
-    }
-
-    if (!info.methods.contains(request.method())) {
-        co_return result{
-            .response = error_response(
-                http::status::forbidden, "Forbidden",
-                "CORS Response: This CORS request is not allowed")};
-    }
+    const auto& info = origin_info->get();
 
     std::map<std::string, std::string> headers;
     headers["Access-Control-Allow-Origin"] = info.origin;
-    if (info.exposed_headers) {
-        headers["Access-Control-Expose-Headers"] = *info.exposed_headers;
+    if (info.expose_headers) {
+        headers["Access-Control-Expose-Headers"] = *info.expose_headers;
     }
 
     co_return result{.headers = std::move(headers)};
 }
 
-coro<std::shared_ptr<std::map<std::string, info>>>
+coro<std::shared_ptr<std::vector<info>>>
 module::get_info(const std::string& bucket) const {
     if (auto cached = m_info_cache.get(bucket); cached) {
         co_return *cached;
@@ -97,12 +149,11 @@ module::get_info(const std::string& bucket) const {
     auto config = co_await m_directory.get_bucket_cors(bucket);
     if (!config) {
         throw command_exception(
-            http::status::forbidden, "Forbidden",
-            "CORS Response: CORS is not enabled for this bucket");
+            http::status::not_found, "NoSuchCORSConfiguration",
+            "The specified bucket does not have a CORS configuration.");
     }
 
-    auto parsed =
-        std::make_shared<std::map<std::string, info>>(parser::parse(*config));
+    auto parsed = std::make_shared<std::vector<info>>(parser::parse(*config));
     m_info_cache.put(bucket, parsed);
     co_return parsed;
 }

@@ -20,8 +20,8 @@ auto get_encoder(std::optional<std::string> encoding_type) {
     }
 
     if (*encoding_type != "url") {
-        throw command_exception(status::bad_request, "InvalidQueryParameters",
-                                "encountered unexpected query parameter");
+        throw command_exception(status::bad_request, "InvalidArgument",
+                                "Encountered unexpected query parameter.");
     }
 
     return url_encode;

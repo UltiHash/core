@@ -18,7 +18,7 @@ CREATE TABLE object_status (
 );
 
 CREATE TABLE bucket_status (
-    bucket_id   BIGINT PRIMARY KEY REFERENCES __buckets ON DELETE RESTRICT,
+    bucket_id   BIGINT PRIMARY KEY REFERENCES __buckets ON DELETE CASCADE,
     status      INTEGER NOT NULL,
     deleted_at  TIMESTAMP DEFAULT now() NOT NULL
 );
@@ -62,6 +62,9 @@ ALTER TABLE __buckets
     ADD COLUMN version uuid DEFAULT gen_random_uuid() NOT NULL,
     DROP COLUMN status;
 
+ALTER TABLE __buckets DROP CONSTRAINT unique_name;
+ALTER TABLE __buckets ADD CONSTRAINT unique_name_version UNIQUE(name, version);
+
 ALTER TABLE __buckets
     RENAME TO buckets;
 
@@ -97,7 +100,7 @@ CREATE OR REPLACE FUNCTION uh_bucket_policy(bucket TEXT)
 DECLARE policy_record JSON;
 BEGIN
     -- Execute the query and save the result to a variable
-    SELECT policy INTO policy_record
+    SELECT buckets.policy INTO policy_record
     FROM buckets
     WHERE name = bucket;
 
@@ -156,8 +159,8 @@ CREATE OR REPLACE PROCEDURE uh_clear_deleted_buckets()
 BEGIN
     DELETE FROM buckets b
     USING bucket_status s
-    WHERE b.id = s.bucket_id
-      AND s.status = status_deleted();
+    WHERE b.id = s.bucket_id AND s.status = status_deleted()
+        AND NOT EXISTS (SELECT 1 FROM objects o WHERE o.bucket_id = b.id);
 END
 $$;
 
@@ -167,6 +170,13 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_create_bucket(bucket TEXT)
     LANGUAGE plpgsql AS $$
 BEGIN
+    PERFORM 1 FROM buckets b LEFT JOIN bucket_status s ON b.id = s.bucket_id
+    WHERE b.name = bucket AND s.bucket_id IS NULL;
+
+    IF FOUND THEN
+        RAISE EXCEPTION 'Bucket "%s" already exists', bucket;
+    END IF;
+
     INSERT INTO buckets (name) VALUES (bucket);
 END
 $$;
@@ -415,7 +425,7 @@ BEGIN
 
     UPDATE object_status
     SET status = status_collected()
-    WHERE o.id = target_id;
+    WHERE object_id = target_id;
 
     RETURN QUERY SELECT target_id, target_address;
 END
@@ -431,7 +441,7 @@ DECLARE b_id BIGINT;
 BEGIN
     SELECT uh_get_bucket_id(bucket) INTO b_id;
 
-    SELECT o.id INTO o_id FROM objects o WHERE o.bucket_id = b_id AND name = object;
+    SELECT id INTO o_id FROM uh_get_object(bucket, object);
 
     IF o_id IS NOT NULL THEN
        INSERT INTO object_status (object_id, status)

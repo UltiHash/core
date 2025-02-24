@@ -29,7 +29,14 @@ void from_json(const json& j, license& p) {
     j.at("version").get_to(p.version);
     j.at("customer_id").get_to(p.customer_id);
     j.at("license_type").get_to(p.license_type);
-    j.at("storage_cap_gib").get_to(p.storage_cap_gib);
+    if (j.contains("storage_cap_gib")) {
+        j.at("storage_cap_gib").get_to(p.storage_cap_gib);
+    } else {
+        if (p.license_type == license::FREEMIUM)
+            throw std::runtime_error(
+                "Freemium license should have storage_cap_gib field");
+        p.storage_cap_gib = 0;
+    }
 }
 
 license license::create(std::string_view json_str, verify option) {

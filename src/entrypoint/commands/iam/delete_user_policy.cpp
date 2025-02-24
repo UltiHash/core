@@ -8,14 +8,14 @@ delete_user_policy::delete_user_policy(user::db& users)
 coro<ep::http::response> delete_user_policy::handle(ep::http::request& req) {
     auto username = req.query("UserName");
     if (!username) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "UserName missing.");
     }
 
     auto policy_name = req.query("PolicyName");
     if (!policy_name) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "PolicyName missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "PolicyName missing.");
     }
 
     co_await m_users.remove_policy(*username, *policy_name);

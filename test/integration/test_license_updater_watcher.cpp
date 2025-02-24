@@ -57,9 +57,9 @@ BOOST_AUTO_TEST_CASE(returns_updated_license_through_getter) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto received_lic = sut.get_license();
-    BOOST_CHECK_EQUAL(received_lic.customer_id, "big corp xy");
-    BOOST_CHECK_EQUAL(received_lic.license_type, license::type::FREEMIUM);
-    BOOST_CHECK_EQUAL(received_lic.storage_cap_gib, 10240);
+    BOOST_CHECK_EQUAL(received_lic->customer_id, "big corp xy");
+    BOOST_CHECK_EQUAL(received_lic->license_type, license::type::FREEMIUM);
+    BOOST_CHECK_EQUAL(received_lic->storage_cap_gib, 10240);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

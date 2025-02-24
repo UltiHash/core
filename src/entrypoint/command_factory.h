@@ -17,7 +17,7 @@ struct command_factory {
                     deduplicator_interface& dedupe, directory& dir,
                     multipart_state& uploads, entrypoint_config& config,
                     global_data_view& gdv, limits& uhlimits,
-                    ep::user::db& users)
+                    ep::user::db& users, license_watcher& watcher)
         : m_ioc(ioc),
           m_dedupe(dedupe),
           m_directory(dir),
@@ -25,7 +25,8 @@ struct command_factory {
           m_config(config),
           m_gdv(gdv),
           m_limits(uhlimits),
-          m_users(users) {}
+          m_users(users),
+          m_license_watcher(watcher) {}
 
     coro<std::unique_ptr<command>> create(ep::http::request& req);
 
@@ -45,6 +46,7 @@ private:
     global_data_view& m_gdv;
     limits& m_limits;
     ep::user::db& m_users;
+    license_watcher& m_license_watcher;
 };
 
 } // end namespace uh::cluster

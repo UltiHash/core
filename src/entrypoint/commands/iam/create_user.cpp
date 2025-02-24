@@ -11,8 +11,8 @@ create_user::create_user(user::db& users)
 coro<ep::http::response> create_user::handle(ep::http::request& req) {
     auto name = req.query("UserName");
     if (!name) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "ValidationError", "UserName missing.");
     }
 
     auto path = req.query("path").value_or("/");

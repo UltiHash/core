@@ -8,8 +8,8 @@ delete_user::delete_user(user::db& users)
 coro<ep::http::response> delete_user::handle(ep::http::request& req) {
     auto name = req.query("UserName");
     if (!name) {
-        throw command_exception(ep::http::status::bad_request, "Invalid Input",
-                                "username missing");
+        throw command_exception(ep::http::status::bad_request,
+                                "InvalidArgument", "UserName missing.");
     }
 
     co_await m_users.remove_user(*name);

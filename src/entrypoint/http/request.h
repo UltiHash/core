@@ -108,7 +108,7 @@ inline std::optional<std::size_t> query<std::size_t>(const request& req,
         return std::stoul(*value);
     } catch (const std::exception&) {
         throw command_exception(http::status::bad_request, "InvalidArgument",
-                                "invalid " + name);
+                                "Invalid " + name + ".");
     }
 }
 

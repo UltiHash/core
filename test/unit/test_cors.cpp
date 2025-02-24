@@ -26,21 +26,26 @@ const char* SAMPLE_CORS = R"(
  </CORSRule>
 </CORSConfiguration>)";
 
+auto match_name(const std::string& name) {
+    return [name](const info& i) -> bool { return i.origin == name; };
+}
+
 BOOST_AUTO_TEST_CASE(reading_cors_example) {
     auto info = parser::parse(SAMPLE_CORS);
 
-    BOOST_CHECK(info.contains("http://www.example.com"));
+    auto example_com = std::find_if(info.begin(), info.end(),
+                                    match_name("http://www.example.com"));
 
-    auto example_com = info["http://www.example.com"];
-    BOOST_CHECK(example_com.methods.contains(http::verb::delete_));
-    BOOST_CHECK(!example_com.methods.contains(http::verb::get));
-    BOOST_CHECK(!example_com.methods.contains(http::verb::head));
-    BOOST_CHECK(example_com.methods.contains(http::verb::post));
-    BOOST_CHECK(example_com.methods.contains(http::verb::put));
+    BOOST_CHECK(example_com != info.end());
+    BOOST_CHECK(example_com->methods.contains(http::verb::delete_));
+    BOOST_CHECK(!example_com->methods.contains(http::verb::get));
+    BOOST_CHECK(!example_com->methods.contains(http::verb::head));
+    BOOST_CHECK(example_com->methods.contains(http::verb::post));
+    BOOST_CHECK(example_com->methods.contains(http::verb::put));
 
-    BOOST_CHECK(info.contains("*"));
+    auto wildcard = std::find_if(info.begin(), info.end(), match_name("*"));
 
-    auto wildcard = info["*"];
-    BOOST_CHECK(wildcard.methods.contains(http::verb::get));
-    BOOST_CHECK_EQUAL(wildcard.methods.size(), 1ull);
+    BOOST_CHECK(wildcard != info.end());
+    BOOST_CHECK(wildcard->methods.contains(http::verb::get));
+    BOOST_CHECK_EQUAL(wildcard->methods.size(), 1ull);
 }

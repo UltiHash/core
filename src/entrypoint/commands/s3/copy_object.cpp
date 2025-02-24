@@ -49,8 +49,8 @@ coro<response> copy_object::handle(request& req) {
     if (!rejects.empty()) {
         LOG_ERROR() << req.peer()
                     << ": database contains object without references";
-        throw command_exception(status::internal_server_error, "Data Corrupted",
-                                "found corrupted data");
+        throw command_exception(status::internal_server_error, "InternalError",
+                                "Found corrupted data.");
     }
 
     obj->name = req.object_key();
