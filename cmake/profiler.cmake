@@ -8,7 +8,9 @@ CPMAddPackage(
     VERSION
     1.8.5
     OPTIONS
-    "BENCHMARK_ENABLE_TESTING Off")
+    "BENCHMARK_ENABLE_TESTING Off"
+    CPM_ARGS
+    "TIMEOUT 300")
 
 function(uh_add_profiler name)
     # Parse Arguments
