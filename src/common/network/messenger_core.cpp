@@ -61,10 +61,8 @@ coro<messenger_core::header> messenger_core::recv_header() {
 
 coro<std::size_t>
 messenger_core::recv_buffers(const messenger_core::header& h) {
-    if (h.size != m_read_size) {
-        throw std::length_error(
-            "The size of the buffers does not match with the header size: " +
-            std::to_string(h.size) + " != " + std::to_string(m_read_size));
+    if (h.size > m_read_size) {
+        throw std::length_error("unsufficient buffer size to hold response");
     }
 
     try {
