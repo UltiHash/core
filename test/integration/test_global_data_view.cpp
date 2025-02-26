@@ -19,10 +19,10 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_fragment, global_data_view_fixture) {
     context ctx;
 
     std::vector<char> buffer(8 * KIBI_BYTE);
+    address addr(fragment{std::numeric_limits<uint64_t>::max(), 1});
     auto future = boost::asio::co_spawn(
         get_executor(),
-        gdv->read(ctx, fragment{std::numeric_limits<uint64_t>::max(), 1},
-                  buffer),
+        gdv->read(ctx, addr, buffer),
         boost::asio::use_future);
 
     BOOST_CHECK_THROW(future.get(), uh::cluster::error_exception);

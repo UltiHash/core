@@ -24,9 +24,10 @@ shared_buffer<> cache::read(context& ctx, const uint128_t& pointer,
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
     shared_buffer<char> buffer(size);
+    fragment f{pointer, size};
+    address addr(f);
     auto future = boost::asio::co_spawn(
-        m_ioc, m_gdv.read(ctx, fragment{pointer, size}, buffer),
-        boost::asio::use_future);
+        m_ioc, m_gdv.read(ctx, addr, buffer), boost::asio::use_future);
 
     auto count = future.get();
     buffer.resize(count);
