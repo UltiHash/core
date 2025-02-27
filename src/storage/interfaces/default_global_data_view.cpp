@@ -49,13 +49,6 @@ coro<std::size_t> default_global_data_view::read(context& ctx,
                                                  const address& addr,
                                                  std::span<char> buffer) {
 
-    return read_address(ctx, addr, buffer);
-}
-
-coro<std::size_t>
-default_global_data_view::read_address(context& ctx, const address& addr,
-                                       std::span<char> buffer) {
-
     std::atomic<std::size_t> read_bytes = 0;
 
     co_await perform_for_address(

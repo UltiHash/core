@@ -80,21 +80,6 @@ public:
                            std::span<char> buffer);
 
     /**
-     * @brief Retrieves the contents of an entire address from storage services.
-     *
-     * Retrieves content of an entire address by scattering read requests for
-     * each fragment to storage service instances for improved read performance.
-     *
-     * @param ctx open telemetry context
-     * @param[out] buffer A char buffer that the retrieved data is written to.
-     * @param[in] addr An constant reference to the address instance data should
-     * be read from.
-     * @return The number of bytes read.
-     */
-    coro<std::size_t> read_address(context& ctx, const address& addr,
-                                   std::span<char> buffer);
-
-    /**
      * @brief registers a reference to a storage region to claim co-ownership
      * of data.
      *
