@@ -4,10 +4,10 @@
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/utils/address_utils.h"
 #include "coordinator/recovery_module.h"
 #include <common/network/client.h>
 #include <storage/interface.h>
+#include <storage/address_utils.h>
 
 namespace uh::cluster {
 

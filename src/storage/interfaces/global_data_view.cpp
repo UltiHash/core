@@ -1,6 +1,6 @@
 #include "global_data_view.h"
 
-#include "common/utils/address_utils.h"
+#include <storage/address_utils.h>
 #include <storage/protocol.h>
 
 namespace uh::cluster {
