@@ -2,7 +2,7 @@
 
 #include <common/network/server.h>
 #include <storage/config.h>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 
 #include <filesystem>
 

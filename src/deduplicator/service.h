@@ -10,7 +10,7 @@
 #include "handler.h"
 #include "storage/service.h"
 #include <functional>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 #include <utility>
 
 namespace uh::cluster::deduplicator {
@@ -61,7 +61,7 @@ private:
     service_maintainer<client, client_factory, STORAGE_SERVICE>
         m_storage_maintainer;
 
-    default_global_data_view m_data_view;
+    global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
 };

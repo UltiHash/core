@@ -29,13 +29,13 @@ struct global_data_view_config {
     std::size_t ec_parity_shards = 0;
 };
 
-class default_global_data_view : public sn::interface {
+class global_data_view : public sn::interface {
 
 public:
     /**
      * @brief Constructs a global_data view.
      *
-     * The default_global_data_view introduces the abstraction of a flat
+     * The global_data_view introduces the abstraction of a flat
      * address space that fragments can be written to and read from, hiding the
      * interaction with individual storage service instances.
      *
@@ -46,12 +46,12 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    default_global_data_view(
+    global_data_view(
         boost::asio::io_context& ioc,
         service_maintainer<client, client_factory, STORAGE_SERVICE>&
             storage_maintainer);
 
-    ~default_global_data_view();
+    ~global_data_view();
 
     /**
      * @brief Sends write request to a storage service instance, does not

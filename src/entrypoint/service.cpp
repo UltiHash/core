@@ -64,7 +64,7 @@ std::unique_ptr<sn::interface> make_storage(const entrypoint_config& config,
             config.attached_storage->data_store_roots);
     }
 
-    return std::make_unique<default_global_data_view>(ioc, storage_maintainer);
+    return std::make_unique<global_data_view>(ioc, storage_maintainer);
 }
 
 } // namespace

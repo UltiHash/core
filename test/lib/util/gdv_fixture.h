@@ -7,7 +7,7 @@
 
 #include <common/etcd/utils.h>
 #include <config/configuration.h>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 #include <storage/service.h>
 
 namespace uh::cluster {
@@ -50,7 +50,7 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<default_global_data_view>(m_ioc,
+        m_gdv = std::make_shared<global_data_view>(m_ioc,
                                                            m_storage_services);
 
         m_threads.emplace_back([this, i] {

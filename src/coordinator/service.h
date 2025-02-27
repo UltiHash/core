@@ -17,7 +17,7 @@
 #include <common/license/usage_updater.h>
 
 #include <storage/ec_groups/ec_group_maintainer.h>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster::coordinator {
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/service_interfaces/deduplicator_interface.h>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster {
 

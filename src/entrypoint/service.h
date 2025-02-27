@@ -12,7 +12,7 @@
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
-#include <storage/interfaces/default_global_data_view.h>
+#include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster::ep {
 
