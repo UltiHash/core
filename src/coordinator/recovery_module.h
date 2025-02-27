@@ -1,10 +1,11 @@
 #pragma once
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_interface.h"
-#include "common/etcd/ec_groups/ec_group_attributes.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/telemetry/log.h"
+#include <common/etcd/service_discovery/storage_service_get_handler.h>
+#include <common/telemetry/log.h>
 #include <common/network/client.h>
+
+#include <storage/ec_groups/ec_group_attributes.h>
 #include <storage/protocol.h>
 
 #include <boost/asio/co_spawn.hpp>
