@@ -1,11 +1,11 @@
 #pragma once
 
 #include "test_config.h"
-#include "temp_directory.h"
 
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
+#include <common/utils/temp_directory.h>
 #include <config/configuration.h>
 #include <storage/interfaces/global_data_view.h>
 #include <storage/service.h>
