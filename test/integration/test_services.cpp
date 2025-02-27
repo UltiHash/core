@@ -22,18 +22,18 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_service_get_handler services{1s};
-    roundrobin_load_balancer<storage_interface> load_balancer{1s};
-    uh::cluster::service_maintainer<storage_interface> service_maintainer;
+    storage_service_get_handler<> services{1s};
+    roundrobin_load_balancer<sn::interface> load_balancer{1s};
+    uh::cluster::service_maintainer<sn::interface> service_maintainer;
 
-    uh::cluster::service_maintainer<storage_interface> make_services() {
-        return uh::cluster::service_maintainer<storage_interface>(
-            etcd, service_factory<storage_interface>(ioc, 2, nullptr));
+    uh::cluster::service_maintainer<sn::interface> make_services() {
+        return uh::cluster::service_maintainer<sn::interface>(
+            etcd, service_factory<sn::interface>(ioc, 2, nullptr));
     }
 
     fixture()
         : service_id(get_service_id(
-              etcd, get_service_string(storage_interface::service_role),
+              etcd, get_service_string(sn::interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
         service_maintainer.add_monitor(services);

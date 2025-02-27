@@ -93,7 +93,7 @@ public:
 
     coro<header> recv_header();
 
-    coro<void> recv_buffers(const header& h);
+    coro<std::size_t> recv_buffers(const header& h);
 
     void reserve_write_buffers(size_t capacity);
 

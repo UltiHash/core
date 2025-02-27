@@ -59,18 +59,19 @@ coro<messenger_core::header> messenger_core::recv_header() {
     co_return h;
 }
 
-coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
-    if (h.size != m_read_size) {
-        throw std::length_error(
-            "The size of the buffers does not match with the header size: " +
-            std::to_string(h.size) + " != " + std::to_string(m_read_size));
+coro<std::size_t>
+messenger_core::recv_buffers(const messenger_core::header& h) {
+    if (h.size > m_read_size) {
+        throw std::length_error("unsufficient buffer size to hold response");
     }
 
     try {
-        co_await boost::asio::async_read(m_socket, m_read_buffers,
-                                         boost::asio::use_awaitable);
+        auto rv = co_await boost::asio::async_read(
+            m_socket, m_read_buffers, boost::asio::transfer_at_least(h.size));
         m_read_buffers.clear();
         m_read_size = 0;
+
+        co_return rv;
 
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_buffers failed", e);

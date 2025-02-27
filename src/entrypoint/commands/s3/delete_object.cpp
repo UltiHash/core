@@ -5,7 +5,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-delete_object::delete_object(directory& dir, global_data_view& gdv,
+delete_object::delete_object(directory& dir, sn::interface& gdv,
                              limits& uhlimits)
     : m_dir(dir) {}
 

@@ -48,12 +48,6 @@ enum etcd_service_attributes {
     STORAGE_LOAD,
 };
 
-enum etcd_ec_group_attributes {
-    EC_GROUP_SIZE,
-    EC_GROUP_STATUS,
-    EC_GROUP_EC_NODES,
-};
-
 constexpr std::array<
     std::pair<uh::cluster::etcd_service_attributes, const char*>, 5>
     string_by_service_attribute = {{
@@ -63,44 +57,6 @@ constexpr std::array<
         {uh::cluster::STORAGE_FREE_SPACE, "storage_free_space"},
         {uh::cluster::STORAGE_LOAD, "storage_load"},
     }};
-
-constexpr std::array<
-    std::pair<uh::cluster::etcd_ec_group_attributes, const char*>, 3>
-    string_by_ec_group_attribute = {{
-        {uh::cluster::EC_GROUP_SIZE, "group_size"},
-        {uh::cluster::EC_GROUP_STATUS, "group_status"},
-        {uh::cluster::EC_GROUP_EC_NODES, "group_ec_nodes"},
-    }};
-
-constexpr const char* get_etcd_ec_group_attribute_string(
-    const uh::cluster::etcd_ec_group_attributes& param) {
-    for (const auto& entry : string_by_ec_group_attribute) {
-        if (entry.first == param)
-            return entry.second;
-    }
-
-    throw std::invalid_argument("invalid etcd parameter");
-}
-
-constexpr uh::cluster::etcd_ec_group_attributes
-get_etcd_ec_group_attribute_enum(const std::string& param) {
-    for (const auto& entry : string_by_ec_group_attribute) {
-        if (entry.second == param)
-            return entry.first;
-    }
-
-    throw std::invalid_argument("invalid etcd parameter");
-}
-
-inline static std::string get_ec_group_path(int group_id) {
-    return etcd_ec_groups_key_prefix + std::to_string(group_id);
-}
-
-inline static std::string
-get_ec_group_attribute_path(size_t group_id, etcd_ec_group_attributes attr) {
-    return etcd_ec_groups_key_prefix + std::to_string(group_id) + "/" +
-           get_etcd_ec_group_attribute_string(attr);
-}
 
 inline static std::string get_service_root_path(role r) {
     return etcd_services_key_prefix + get_service_string(r);

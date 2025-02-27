@@ -1,9 +1,12 @@
 #pragma once
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_interface.h"
-#include "common/etcd/ec_groups/ec_group_attributes.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/telemetry/log.h"
+#include <common/etcd/service_discovery/storage_service_get_handler.h>
+#include <common/telemetry/log.h>
+#include <common/network/client.h>
+
+#include <storage/ec_groups/ec_group_attributes.h>
+#include <storage/protocol.h>
 
 #include <boost/asio/co_spawn.hpp>
 
@@ -11,9 +14,10 @@ namespace uh::cluster {
 
 class recovery_module {
 public:
-    recovery_module(storage_service_get_handler& getter,
-                    boost::asio::io_context& ioc, ec_interface& ec,
-                    ec_group_attributes& attributes)
+    recovery_module(
+        storage_service_get_handler<client, STORAGE_SERVICE>& getter,
+        boost::asio::io_context& ioc, ec_interface& ec,
+        ec_group_attributes& attributes)
         : m_getter(getter),
           m_ioc(ioc),
           m_ec_calc(ec),
@@ -92,12 +96,12 @@ private:
                 pointer += size;
             }
 
-            co_await run_for_all<int, std::shared_ptr<storage_interface>>(
+            co_await run_for_all<int, std::shared_ptr<client>>(
                 m_ioc,
-                [&](size_t id,
-                    std::shared_ptr<storage_interface> node) -> coro<int> {
-                    co_await node->ds_read(rinfo.ctx, ds_id, ds_recovered_size,
-                                           size, buf.data() + offsets.at(id));
+                [&](size_t id, std::shared_ptr<client> node) -> coro<int> {
+                    auto m = co_await node->acquire_messenger();
+                    co_await sn::ds_read(m, rinfo.ctx, ds_id, ds_recovered_size,
+                                         size, buf.data() + offsets.at(id));
                     co_return 0;
                 },
                 nodes);
@@ -105,8 +109,9 @@ private:
             m_ec_calc.recover(shards, rinfo.stats);
             for (size_t i = 0; i < rinfo.stats.size(); i++) {
                 if (rinfo.stats[i] == lost) {
-                    co_await nodes.at(i)->ds_write(
-                        rinfo.ctx, ds_id, ds_recovered_size, shards.at(i));
+                    auto m = co_await nodes.at(i)->acquire_messenger();
+                    co_await sn::ds_write(m, rinfo.ctx, ds_id,
+                                          ds_recovered_size, shards.at(i));
                 }
             }
             recovered_size += size;
@@ -141,7 +146,8 @@ private:
         size_t i = 0;
 
         for (const auto& dn : m_getter.get_services()) {
-            const auto size = co_await dn->get_used_space(ctx);
+            auto m = co_await dn->acquire_messenger();
+            const auto size = co_await sn::get_used_space(m, ctx);
             sizes[size].emplace_back(i++);
         }
 
@@ -165,15 +171,16 @@ private:
     }
 
     coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {
-        const auto maps = co_await run_for_all<
-            std::map<size_t, size_t>, std::shared_ptr<storage_interface>>(
+        const auto maps = co_await run_for_all<std::map<size_t, size_t>,
+                                               std::shared_ptr<client>>(
             m_ioc,
-            [&ctx = rinfo.ctx](size_t, std::shared_ptr<storage_interface> dn)
+            [&ctx = rinfo.ctx](size_t, std::shared_ptr<client> dn)
                 -> coro<std::map<size_t, size_t>> {
                 if (!dn) {
                     throw std::runtime_error("inaccessible data service");
                 }
-                co_return co_await dn->get_ds_size_map(ctx);
+                auto m = co_await dn->acquire_messenger();
+                co_return co_await sn::get_ds_size_map(m, ctx);
             },
             m_getter.get_services());
 
@@ -199,7 +206,7 @@ private:
 
     static constexpr const char* RECOVERY_INITIAL_CONTEXT_NAME = "recovery";
 
-    storage_service_get_handler& m_getter;
+    storage_service_get_handler<client, STORAGE_SERVICE>& m_getter;
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
     ec_group_attributes& m_attributes;

@@ -4,19 +4,21 @@
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
 #include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/utils/address_utils.h"
 #include "coordinator/recovery_module.h"
+#include <common/network/client.h>
+#include <storage/interface.h>
+#include <storage/address_utils.h>
 
 namespace uh::cluster {
 
-struct storage_group : public storage_interface {
+struct storage_group : public sn::interface {
 
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                   size_t ec_nodes, size_t group_id, etcd_manager& etcd,
                   bool active_recovery);
 
     void insert(size_t id, size_t group_nid,
-                const std::shared_ptr<storage_interface>& node);
+                const std::shared_ptr<client>& node);
 
     void remove(size_t id, size_t group_nid);
 
@@ -27,15 +29,8 @@ struct storage_group : public storage_interface {
     coro<address> write(context& ctx, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
 
-    coro<void> read_fragment(context& ctx, char* buffer,
-                             const fragment& f) override;
-
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size) override;
-
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer,
-                            const std::vector<size_t>& offsets) override;
+    coro<std::size_t> read(context& ctx, const address& addr,
+                           std::span<char> buffer) override;
 
     coro<address> link(context& ctx, const address& addr) override;
 
@@ -54,8 +49,8 @@ struct storage_group : public storage_interface {
                        size_t size, char* buffer) override;
 
 private:
-    std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    storage_service_get_handler m_getter;
+    std::vector<std::shared_ptr<client>> m_nodes;
+    storage_service_get_handler<client, STORAGE_SERVICE> m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;

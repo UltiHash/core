@@ -11,7 +11,7 @@ namespace {
 
 class local_read_handle : public uh::cluster::ep::http::body {
 public:
-    local_read_handle(global_data_view& storage, directory::object_lock&& obj,
+    local_read_handle(sn::interface& storage, directory::object_lock&& obj,
                       context& ctx)
         : m_storage(storage),
           m_obj(std::move(obj)),
@@ -42,7 +42,11 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(m_ctx, partial_addr, buffer);
+        auto size = co_await m_storage.read(m_ctx, partial_addr, buffer);
+        if (size != buffer_size) {
+            throw std::runtime_error("address data could not be read");
+        }
+
         m_total += buffer_size;
         m_size -= buffer_size;
 
@@ -61,7 +65,7 @@ private:
         LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
     }
 
-    global_data_view& m_storage;
+    sn::interface& m_storage;
     directory::object_lock m_obj;
     size_t m_addr_index = 0;
 
@@ -74,7 +78,7 @@ private:
 
 } // namespace
 
-get_object::get_object(directory& dir, global_data_view& storage)
+get_object::get_object(directory& dir, sn::interface& storage)
     : m_dir(dir),
       m_storage(storage) {}
 
