@@ -12,7 +12,8 @@ class request_factory {
 public:
     request_factory(user::db& users);
 
-    coro<std::unique_ptr<request>> create(boost::asio::ip::tcp::socket&);
+    notrace_coro<std::unique_ptr<request>>
+    create(boost::asio::ip::tcp::socket&);
 
 private:
     user::db& m_users;

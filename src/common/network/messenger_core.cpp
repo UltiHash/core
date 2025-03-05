@@ -104,6 +104,7 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
+        auto trace_span = co_await boost::asio::get_trace_span();
         auto ctx_buf = ctx.serialize();
 
         m_write_buffers[0] = {&type, sizeof type};

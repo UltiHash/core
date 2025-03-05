@@ -23,6 +23,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         try {
             auto hdr = co_await m.recv_header();
             ctx = std::move(hdr.ctx);
+            co_await boost::asio::set_trace_parent_span(ctx.get_span());
 
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);

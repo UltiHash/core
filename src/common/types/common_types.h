@@ -3,6 +3,8 @@
 #include "address.h"
 #include "scoped_buffer.h"
 
+#include <common/coroutines/traced_asio.h>
+
 #include <boost/asio/awaitable.hpp>
 #include <chrono>
 
@@ -60,7 +62,8 @@ struct object {
     }
 };
 
-template <typename T> using coro = boost::asio::awaitable<T>;
+template <typename T> using notrace_coro = boost::asio::awaitable<T>;
+template <typename T> using coro = boost::asio::traced_awaitable<T>;
 
 template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 

@@ -133,7 +133,7 @@ private:
         }
     }
 
-    coro<void> do_session(boost::asio::ip::tcp::socket stream) {
+    notrace_coro<void> do_session(boost::asio::ip::tcp::socket stream) {
         LOG_INFO() << "connection from: " << stream.remote_endpoint();
         counter_guard<active_connections> guard;
         co_await m_handler->handle(std::move(stream));

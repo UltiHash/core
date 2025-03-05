@@ -19,6 +19,8 @@ struct remote_storage : public storage_interface {
 
         co_await m->send_write(ctx, req);
         const auto message_header = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(
+            message_header.ctx.get_span());
         co_return co_await m->recv_address(message_header);
     }
 
@@ -27,6 +29,7 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(ctx, STORAGE_READ_FRAGMENT_REQ, frag);
         const auto h = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(h.ctx.get_span());
         if (h.size != frag.size) [[unlikely]] {
             throw std::runtime_error("Incomplete fragment");
         }
@@ -39,6 +42,7 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(ctx, STORAGE_READ_REQ, {pointer, size});
         const auto h = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(h.ctx.get_span());
         shared_buffer<> buffer(h.size);
         m->register_read_buffer(buffer.data(), buffer.size());
         co_await m->recv_buffers(h);
@@ -52,6 +56,7 @@ struct remote_storage : public storage_interface {
 
         co_await m->send_address(ctx, STORAGE_READ_ADDRESS_REQ, addr);
         const auto h = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(h.ctx.get_span());
 
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
@@ -68,6 +73,8 @@ struct remote_storage : public storage_interface {
                     << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_LINK_REQ, addr);
         const auto message_header = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(
+            message_header.ctx.get_span());
         co_return co_await m->recv_address(message_header);
     }
 
@@ -77,6 +84,8 @@ struct remote_storage : public storage_interface {
                     << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_UNLINK_REQ, addr);
         const auto message_header = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(
+            message_header.ctx.get_span());
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
@@ -84,6 +93,8 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(ctx, STORAGE_USED_REQ, {});
         const auto message_header = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(
+            message_header.ctx.get_span());
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
@@ -91,6 +102,8 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(ctx, STORAGE_DS_INFO_REQ, {});
         const auto message_header = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(
+            message_header.ctx.get_span());
         co_return co_await m->recv_map<size_t, size_t>(ctx, message_header);
     }
 
@@ -99,7 +112,8 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         ds_write_request req{.ds_id = ds_id, .pointer = pointer, .data = data};
         co_await m->send_ds_write(ctx, req);
-        co_await m->recv_header();
+        const auto h = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(h.ctx.get_span());
     }
 
     coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
@@ -108,6 +122,7 @@ struct remote_storage : public storage_interface {
         co_await m->send_ds_read(
             ctx, {.ds_id = ds_id, .pointer = pointer, .size = size});
         const auto h = co_await m->recv_header();
+        co_await boost::asio::set_trace_parent_span(h.ctx.get_span());
         if (h.size != size) {
             throw std::runtime_error(
                 "mistmatched read size with requested size in ds_read");

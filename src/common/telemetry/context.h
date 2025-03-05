@@ -40,6 +40,7 @@ public:
         ~span_wrap();
         std::shared_ptr<opentelemetry::trace::Span> span;
     };
+    auto get_span() const { return m_span->span; }
 
 private:
     context(std::shared_ptr<span_wrap> span);

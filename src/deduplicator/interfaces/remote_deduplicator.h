@@ -17,6 +17,8 @@ struct remote_deduplicator : public deduplicator_interface {
         co_await m->send_buffers(ctx, DEDUPLICATOR_REQ);
 
         const auto h_dedupe = co_await m.get().recv_header();
+
+        co_await boost::asio::set_trace_parent_span(h_dedupe.ctx.get_span());
         co_return co_await m->recv_dedupe_response(h_dedupe);
     }
 

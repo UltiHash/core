@@ -31,6 +31,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
                        << *req;
 
+            auto trace_span = co_await boost::asio::manual_start_trace_span();
+
             req->context().set_attribute("request-id", id);
 
             resp = co_await handle_request(s, *req, id);
