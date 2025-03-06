@@ -25,6 +25,7 @@ private:
     http::request_factory m_factory;
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
+    coro<bool> handle_iteration(boost::asio::ip::tcp::socket& s);
 };
 
 } // end namespace uh::cluster::ep

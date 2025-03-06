@@ -19,9 +19,9 @@ public:
 
     template <typename value>
     void set_attribute(const std::string& name, value v) {
-        if (m_span) {
-            m_span->span->SetAttribute(name, std::move(v));
-        }
+        // if (m_span) {
+        //     m_span->span->SetAttribute(name, std::move(v));
+        // }
     }
 
     void set_name(const std::string& name);
@@ -40,7 +40,6 @@ public:
         ~span_wrap();
         std::shared_ptr<opentelemetry::trace::Span> span;
     };
-    auto get_span() const { return m_span->span; }
 
 private:
     context(std::shared_ptr<span_wrap> span);

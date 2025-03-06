@@ -1,6 +1,8 @@
 #pragma once
 
+#include "config.h"
 #include <boost/asio.hpp>
+#include <format>
 #include <iostream>
 #include <opentelemetry/trace/provider.h>
 
@@ -30,15 +32,15 @@ public:
         detail::coroutine_handle<detail::traced_awaitable_frame<U, Executor>>
             h) {
         auto& parent_promise = h.promise();
-        // std::cout << parent_promise.get_coroutine_name() << " suspended\n";
+        // std::cout << parent_promise.get_location_str() << " suspended\n";
         // std::cout << "await_suspend\n";
         if (m_frame) {
             auto parent_span = parent_promise.get_span();
             if (parent_span) {
-                // std::cout << "start span with parent context\n";
+                std::cout << "start span with parent context\n";
                 m_frame->start(parent_span->GetContext());
             } else {
-                // std::cout << "start first span\n";
+                std::cout << "start first span\n";
                 m_frame->start();
             }
         } else {
@@ -66,24 +68,22 @@ public:
     }
 
     void start(const opentelemetry::trace::SpanContext& parent_context) {
-        // std::cout << "start span for " << get_coroutine_name() << std::endl;
         // std::cout << "- using parent context(e.g. parent_span_id: "
         //           << get_trace_id(parent_context) << ")\n";
         auto tracer =
             opentelemetry::trace::Provider::GetTracerProvider()->GetTracer(
-                "my-app-tracer");
+                PROJECT_NAME, PROJECT_VERSION);
         m_span =
-            tracer->StartSpan(get_coroutine_name(), {.parent = parent_context});
+            tracer->StartSpan(get_location_str(), {.parent = parent_context});
 
         decorate_span();
     }
 
     void start() {
-        // std::cout << "start span for " << get_coroutine_name() << std::endl;
         auto tracer =
             opentelemetry::trace::Provider::GetTracerProvider()->GetTracer(
-                "my-app-tracer");
-        m_span = tracer->StartSpan(get_coroutine_name());
+                PROJECT_NAME, PROJECT_VERSION);
+        m_span = tracer->StartSpan(get_location_str());
         decorate_span();
     }
 
@@ -95,14 +95,20 @@ public:
 
     void set_span(
         opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> span) {
+        if (m_span) {
+            m_span->End();
+        }
         m_span = span;
     }
     auto get_span() { return m_span; }
     auto get_source_location() { return m_location; }
     // void print_span_trace_id()
 
-    std::string get_coroutine_name() {
-        return extract_function_name(m_location.function_name());
+    std::string get_location_str() {
+        return std::format("[{}:{}] {}",
+                           remove_project_path(m_location.file_name()),
+                           m_location.line(),
+                           extract_function_name(m_location.function_name()));
     }
 
     static std::string
@@ -117,6 +123,11 @@ private:
     std::source_location m_location;
     opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> m_span;
     void decorate_span() {
+        std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+        std::cout << "start span for " << m_location.function_name()
+                  << std::endl;
+        std::cout << "  on " << m_location.file_name() << std::endl;
+        std::cout << "  line " << m_location.line() << std::endl;
         // std::cout << "trace_id: " << get_trace_id(m_span->GetContext())
         //           << std::endl;
 
@@ -125,25 +136,28 @@ private:
 
         // span->SetStatus(trace::StatusCode::kError, "Exception occurred");
     }
+    static std::string_view remove_project_path(std::string_view path) {
+        auto project_path = std::string_view(PROJECT_SOURCE_DIR);
+        if (path.starts_with(project_path)) {
+            return path.substr(project_path.size());
+        }
+        return path;
+    }
+
     static std::string
     extract_function_name(std::string_view function_signature) {
-        auto last_space =
-            function_signature.rfind(' ', function_signature.find('('));
-        if (last_space == std::string_view::npos) {
-            last_space = 0;
-        } else {
-            last_space++;
+        auto last_open_brace = function_signature.rfind('(');
+        if (last_open_brace == std::string_view::npos) {
+            return std::string(function_signature);
         }
 
-        auto name_start = last_space;
-
-        auto paren = function_signature.find('(', name_start);
+        auto paren = function_signature.rfind(' ', last_open_brace);
         if (paren == std::string_view::npos) {
             return std::string(function_signature);
         }
 
         return std::string(
-            function_signature.substr(name_start, paren - name_start));
+            function_signature.substr(paren, last_open_brace - paren));
     }
 };
 
@@ -181,11 +195,11 @@ struct manual_start_trace_span {
         std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
         if (h.promise().get_span()) {
             std::cerr << "span is already set: you should remove co_await "
-                         "get_trace_span()\n";
+                         "manual_start_trace_span()\n";
             exit(0);
         }
         // std::cout << "start first span for " <<
-        // h.promise().get_coroutine_name()
+        // h.promise().get_location_str()
         //           << "on get_trace_span\n";
         h.promise().start();
         // std::cout << h.promise().get_span() << std::endl;
@@ -216,6 +230,69 @@ struct get_trace_span {
 private:
     detail::otel_span* m_frame;
 };
+
+static constexpr std::size_t SERIALIZED_SIZE =
+    opentelemetry::trace::TraceId::kSize + opentelemetry::trace::SpanId::kSize +
+    2;
+
+inline std::vector<char>
+serialize(opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> span) {
+    std::vector<char> rv(SERIALIZED_SIZE);
+    if (!span) {
+        return rv;
+    }
+
+    auto ctx = span->GetContext();
+    std::size_t pos = 0ull;
+
+    auto trace_id = ctx.trace_id().Id();
+    std::memcpy(&rv[pos], trace_id.data(), trace_id.size());
+    pos += trace_id.size();
+
+    auto span_id = ctx.span_id().Id();
+    std::memcpy(&rv[pos], span_id.data(), span_id.size());
+    pos += span_id.size();
+
+    rv[pos] = ctx.trace_flags().flags();
+    pos += 1;
+
+    rv[pos] = ctx.IsRemote();
+    pos += 1;
+
+    return rv;
+}
+
+inline opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span>
+deserialize(std::span<const char> buffer) {
+    std::span<const uint8_t> uc_buf(
+        reinterpret_cast<const uint8_t*>(&buffer[0]), buffer.size());
+    std::size_t pos = 0ull;
+
+    std::span<const uint8_t, opentelemetry::trace::TraceId::kSize> trace_buf(
+        &uc_buf[pos], opentelemetry::trace::TraceId::kSize);
+    auto trace_id = opentelemetry::trace::TraceId(trace_buf);
+    pos += opentelemetry::trace::TraceId::kSize;
+
+    std::span<const uint8_t, opentelemetry::trace::SpanId::kSize> span_buf(
+        &uc_buf[pos], opentelemetry::trace::SpanId::kSize);
+    auto span_id = opentelemetry::trace::SpanId(span_buf);
+    pos += opentelemetry::trace::SpanId::kSize;
+
+    auto flags = uc_buf[pos];
+    pos += 1;
+
+    auto remote = uc_buf[pos];
+    pos += 1;
+
+    auto ctx = opentelemetry::trace::SpanContext(
+        trace_id, span_id, opentelemetry::trace::TraceFlags(flags), remote);
+
+    return
+
+        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span>(
+            std::make_shared<opentelemetry::trace::DefaultSpan>(
+                std::move(ctx)));
+}
 
 namespace detail {
 // Primary template

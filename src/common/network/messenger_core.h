@@ -24,6 +24,8 @@ public:
         size_type size;
 
         context ctx;
+        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span>
+            remote_span;
     };
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,

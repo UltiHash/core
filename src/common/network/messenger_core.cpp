@@ -47,6 +47,8 @@ coro<messenger_core::header> messenger_core::recv_header() {
     h.ctx = context(ctx_buffer);
     h.ctx.peer() = peer();
 
+    h.remote_span = boost::asio::deserialize(ctx_buffer);
+
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
         throw error_exception(e);
@@ -104,8 +106,8 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto trace_span = co_await boost::asio::get_trace_span();
-        auto ctx_buf = ctx.serialize();
+        auto ctx_buf =
+            boost::asio::serialize(co_await boost::asio::get_trace_span());
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
@@ -145,7 +147,8 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
             metric<success>::increase(1);
         }
 
-        auto ctx_buf = ctx.serialize();
+        auto ctx_buf =
+            boost::asio::serialize(co_await boost::asio::get_trace_span());
         auto size = static_cast<size_type>(data.size());
 
         std::vector<boost::asio::const_buffer> buffers{

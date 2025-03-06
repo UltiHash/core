@@ -17,60 +17,64 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
-
-        /*
-         * Note: lifetime of response must not exceed lifetime of request.
-         */
-        std::unique_ptr<request> req;
-        std::string id = generate_unique_id();
-        response resp;
-        bool keep_alive = false;
-
-        try {
-            req = co_await m_factory.create(s);
-            LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
-                       << *req;
-
-            auto trace_span = co_await boost::asio::manual_start_trace_span();
-
-            req->context().set_attribute("request-id", id);
-
-            resp = co_await handle_request(s, *req, id);
-            metric<success>::increase(1);
-            keep_alive = true;
-        } catch (const command_exception& e) {
-            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(e);
-            keep_alive = true;
-        } catch (const boost::system::system_error& se) {
-            if (se.code() == boost::beast::http::error::end_of_stream) {
-                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
-                break;
-            }
-
-            LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-            resp = make_response(
-                command_exception(status::internal_server_error,
-                                  "InternalError", "Internal server error."));
-        } catch (const std::exception& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-            resp = make_response(command_exception());
-        }
-
-        if (req) {
-            req->context().set_attribute(
-                "response-code", static_cast<unsigned>(resp.base().result()));
-        }
-
-        co_await write(s, std::move(resp), id);
-        if (!keep_alive) {
+        if (!co_await handle_iteration(s)) {
             break;
         }
     }
-
     s.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
     s.close();
+}
+
+coro<bool> handler::handle_iteration(boost::asio::ip::tcp::socket& s) {
+
+    /*
+     * Note: lifetime of response must not exceed lifetime of request.
+     */
+    std::unique_ptr<request> req;
+    std::string id = generate_unique_id();
+    response resp;
+    bool keep_alive = false;
+
+    try {
+        req = co_await m_factory.create(s);
+        LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
+                   << *req;
+
+        req->context().set_attribute("request-id", id);
+
+        resp = co_await handle_request(s, *req, id);
+        metric<success>::increase(1);
+        keep_alive = true;
+    } catch (const command_exception& e) {
+        LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+        resp = make_response(e);
+        keep_alive = true;
+    } catch (const boost::system::system_error& se) {
+        if (se.code() == boost::beast::http::error::end_of_stream) {
+            LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+            co_return false;
+        }
+
+        LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+        resp = make_response(command_exception(status::internal_server_error,
+                                               "InternalError",
+                                               "Internal server error."));
+    } catch (const std::exception& e) {
+        LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+
+        resp = make_response(command_exception());
+    }
+
+    if (req) {
+        req->context().set_attribute(
+            "response-code", static_cast<unsigned>(resp.base().result()));
+    }
+
+    co_await write(s, std::move(resp), id);
+    if (!keep_alive) {
+        co_return false;
+    }
+    co_return true;
 }
 
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,

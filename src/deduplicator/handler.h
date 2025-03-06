@@ -16,6 +16,7 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
+    coro<bool> handle_iteration(std::stringstream& remote, messenger& m);
     coro<void> handle_dedupe(context& ctx, messenger& m,
                              const messenger::header& h);
 
