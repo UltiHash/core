@@ -4,7 +4,7 @@
 #include "common/utils/common.h"
 #include "lib/mock/storage/mock_data_store.h"
 #include "lib/util/random.h"
-#include <common/utils/temp_directory.h>
+#include "lib/util/temp_directory.h"
 #include <boost/test/unit_test.hpp>
 #include <random>
 #include <thread>

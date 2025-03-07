@@ -11,7 +11,7 @@
 #include "lib/util/checks.h"
 #include "lib/util/server.h"
 #include "storage/interfaces/data_store.h"
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 
 using namespace boost::asio;
 

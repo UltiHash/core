@@ -3,7 +3,7 @@
 #include "deduplicator/interfaces/local_deduplicator.h"
 #include "lib/mock/storage/mock_global_data_view.h"
 #include "lib/util/coroutine.h"
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>
