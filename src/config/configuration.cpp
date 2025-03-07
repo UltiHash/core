@@ -257,9 +257,9 @@ std::optional<config> read_config(int argc, char** argv) {
     auto sub_rk = sub_coordinator(app, rv.coordinator);
 
     auto sub_dd_str =
-        sub_storage(*sub_dd, rv.deduplicator.attached_storage.emplace());
+        sub_storage(*sub_dd, rv.deduplicator.m_attached_storage.emplace());
     auto sub_en_dd = sub_deduplicator(
-        *sub_ep, rv.entrypoint.attached_deduplicator.emplace());
+        *sub_ep, rv.entrypoint.m_attached_deduplicator.emplace());
 
     register_service(app, rv.service);
 
@@ -287,12 +287,12 @@ std::optional<config> read_config(int argc, char** argv) {
     if (sub_str->parsed()) {
         rv.role = STORAGE_SERVICE;
 
-        rv.storage.data_store_roots = working_dirs;
-        for (auto& p : rv.storage.data_store_roots) {
+        rv.storage.m_data_store_roots = working_dirs;
+        for (auto& p : rv.storage.m_data_store_roots) {
             p /= "storage";
         }
 
-        rv.service.working_dir = rv.storage.data_store_roots.front();
+        rv.service.working_dir = rv.storage.m_data_store_roots.front();
 
     } else if (sub_ep->parsed()) {
         rv.role = ENTRYPOINT_SERVICE;
@@ -324,10 +324,10 @@ std::optional<config> read_config(int argc, char** argv) {
     rv.log = make_log_config(rv.service, log_level, rv.role);
 
     if (!sub_dd_str->parsed()) {
-        rv.deduplicator.attached_storage.reset();
+        rv.deduplicator.m_attached_storage.reset();
     }
     if (!sub_en_dd->parsed()) {
-        rv.entrypoint.attached_deduplicator.reset();
+        rv.entrypoint.m_attached_deduplicator.reset();
     }
 
     return rv;

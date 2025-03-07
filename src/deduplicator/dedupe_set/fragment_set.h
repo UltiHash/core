@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cache.h"
 #include "common/caches/lfu_cache.h"
+#include "common/global_data/global_data_view.h"
 #include "fragment_set_element.h"
 
 #include <set>
@@ -67,14 +67,17 @@ public:
 
     /**
      * @brief Creates a fragment_set instance
-     * The fragment_set holds fragment_set_elements, which only contain the
-     * address and the prefix and not the full body of a fragment to enable
-     * space-efficient prefix-lookup.
-     *
-     * @param storage The #sn::interface instance used for looking
+     * Upon construction, any existing log in #set_log_path is replayed to
+     * reconstruct the set. If no prior log exists in #set_log_path, a new one
+     * is created. The fragment_set holds fragment_set_elements, which only
+     * contain the address and the prefix and not the full body of a fragment to
+     * enable space-efficient prefix-lookup.
+     * @param set_log_path A path specifying the location of the log file.
+     * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
      */
-    fragment_set(size_t capacity, dd::cache& storage);
+    fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
+                 global_data_view& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
@@ -130,7 +133,7 @@ public:
 private:
     void remove(const std::set<fragment_set_element>::const_iterator& itr);
 
-    dd::cache& m_storage;
+    global_data_view& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
 

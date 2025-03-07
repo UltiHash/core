@@ -1,12 +1,12 @@
 #pragma once
 
 #include "commands/command.h"
+#include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
 #include "directory.h"
 #include "limits.h"
 #include "multipart_state.h"
-#include "storage/interface.h"
 
 #include <entrypoint/user/db.h>
 
@@ -16,7 +16,7 @@ struct command_factory {
     command_factory(boost::asio::io_context& ioc,
                     deduplicator_interface& dedupe, directory& dir,
                     multipart_state& uploads, entrypoint_config& config,
-                    sn::interface& gdv, limits& uhlimits,
+                    global_data_view& gdv, limits& uhlimits,
                     ep::user::db& users, license_watcher& watcher)
         : m_ioc(ioc),
           m_dedupe(dedupe),
@@ -43,7 +43,7 @@ private:
     directory& m_directory;
     multipart_state& m_uploads;
     entrypoint_config& m_config;
-    sn::interface& m_gdv;
+    global_data_view& m_gdv;
     limits& m_limits;
     ep::user::db& m_users;
     license_watcher& m_license_watcher;

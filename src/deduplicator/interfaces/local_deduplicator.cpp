@@ -10,7 +10,7 @@ size_t largest_common_prefix(const container& a, const container& b) noexcept {
     return std::distance(a.begin(), mismatch.first);
 }
 
-coro<size_t> match_size(context& ctx, sn::interface& storage,
+coro<size_t> match_size(context& ctx, global_data_view& storage,
                         std::string_view data, auto frag) {
     if (!frag) {
         co_return 0ull;
@@ -23,9 +23,7 @@ coro<size_t> match_size(context& ctx, sn::interface& storage,
         co_return common;
     }
 
-    unique_buffer<char> complete(f.size);
-    auto count = co_await storage.read(ctx, f, complete.span());
-    complete.resize(count);
+    auto complete = co_await storage.read(ctx, f.pointer, f.size);
 
     co_return common +
         largest_common_prefix(data.substr(common),
@@ -34,13 +32,12 @@ coro<size_t> match_size(context& ctx, sn::interface& storage,
 
 } // namespace
 
-local_deduplicator::local_deduplicator(boost::asio::io_context& ioc,
-                                       deduplicator_config config,
-                                       sn::interface& storage)
+local_deduplicator::local_deduplicator(deduplicator_config config,
+                                       global_data_view& storage)
     : m_dedupe_conf(std::move(config)),
+      m_fragment_set(m_dedupe_conf.working_dir / "log",
+                     m_dedupe_conf.set_capacity, storage),
       m_storage(storage),
-      m_cache(ioc, m_storage, config.global_data_view.read_cache_capacity_l2),
-      m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
       m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
 coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
@@ -145,8 +142,7 @@ coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
     std::size_t frag_size = m_dedupe_conf.max_fragment_size;
 
     do {
-        auto stored_data = co_await m_cache.read(ctx, pointer, pursue_size,
-                                                 dd::cache::use_coro{});
+        auto stored_data = co_await m_storage.read(ctx, pointer, pursue_size);
 
         common_size = largest_common_prefix(stored_data.string_view(),
                                             data.substr(frag_size));

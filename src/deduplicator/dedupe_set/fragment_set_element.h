@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cache.h"
+#include "common/global_data/global_data_view.h"
 
 namespace uh::cluster {
 class fragment_set_element {
@@ -11,32 +11,32 @@ public:
      * @param ptr Content of the pointer member
      * @param size_ Content of the size member
      * @param prefix Content of the prefix member
-     * @param storage  A reference to the cache to be used.
+     * @param storage  A reference to the global_data_view to be used.
      */
     fragment_set_element(const uint128_t& ptr, uint16_t size_,
-                         std::string prefix, dd::cache& storage);
+                         std::string prefix, global_data_view& storage);
 
     /**
      * Creates a fragment_set_element that holds the full fragment data, used
      * for the parameter to the #find method in the fragment_set
      * @param data The full content of the fragment
      * @param prefix the prefix of data to be stored in set
-     * @param storage A reference to the cache to find similar
+     * @param storage A reference to the global_data_view to find similar
      * fragments in.
      */
     fragment_set_element(std::string_view data, std::string prefix,
-                         dd::cache& storage);
+                         global_data_view& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
      * @param data The full content of the fragment, where only the prefix of 16
      * bytes is kept of.
      * @param ptr The pointer to the full fragment.
      * @param prefix the prefix of data to be stored in set
-     * @param storage A reference to the cache the full fragment
+     * @param storage A reference to the global_data_view the full fragment
      * resides in.
      */
     fragment_set_element(std::string_view data, const uint128_t& ptr,
-                         std::string prefix, dd::cache& storage);
+                         std::string prefix, global_data_view& storage);
 
     /**
      * Move-constructs a fragment_set_element
@@ -62,7 +62,7 @@ public:
     mutable std::atomic<int> m_hint_count = 0;
 
 private:
-    dd::cache& m_storage;
+    global_data_view& m_storage;
     uint128_t m_pointer{};
     uint16_t m_size{};
     std::string m_prefix;

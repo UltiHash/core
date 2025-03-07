@@ -1,6 +1,6 @@
 #include "mock_global_data_view.h"
 
-#include <storage/address_utils.h>
+#include "common/utils/address_utils.h"
 
 namespace uh::cluster {
 mock_global_data_view::mock_global_data_view(mock_data_store& storage)
@@ -12,8 +12,28 @@ mock_global_data_view::write(context& ctx, std::span<const char> data,
     co_return m_storage.write(data, offsets);
 }
 
-coro<std::size_t> mock_global_data_view::read(context& ctx, const address& addr,
-                                              std::span<char> buffer) {
+shared_buffer<char>
+mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
+                                     const size_t size) {
+    if (size == 0) {
+        throw std::runtime_error("Read fragment size must be larger than zero");
+    }
+    shared_buffer<char> buffer(size);
+    m_storage.read(pointer, buffer.span());
+    return buffer;
+}
+
+coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
+                                                  const uint128_t& pointer,
+                                                  size_t size) {
+    shared_buffer<char> buffer(size);
+    m_storage.read(pointer, buffer.span());
+    co_return buffer;
+}
+
+coro<std::size_t> mock_global_data_view::read_address(context& ctx,
+                                                      const address& addr,
+                                                      std::span<char> buffer) {
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);

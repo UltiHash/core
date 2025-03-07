@@ -6,7 +6,7 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-get_metrics::get_metrics(directory& dir, sn::interface& gdv)
+get_metrics::get_metrics(directory& dir, global_data_view& gdv)
     : m_dir(dir),
       m_gdv(gdv) {}
 

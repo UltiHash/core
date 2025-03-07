@@ -98,7 +98,7 @@ address fragmentation::get_stored_fragments() const {
     return rv;
 }
 
-coro<void> fragmentation::flush_storage(context& ctx, sn::interface& gdv) {
+coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
     if (m_unstored_size == 0ull) {
         co_return;
     }
