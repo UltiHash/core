@@ -1,9 +1,6 @@
 #pragma once
 
-#include <config/service_config.h>
-
-#include <optional>
-#include <thread>
+#include "config/configuration.h"
 
 namespace uh::cluster {
 

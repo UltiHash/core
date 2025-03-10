@@ -5,9 +5,9 @@
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
-#include <common/utils/temp_directory.h>
+#include <common/global_data/default_global_data_view.h>
 #include <config/configuration.h>
-#include <storage/interfaces/global_data_view.h>
+#include <lib/util/temp_directory.h>
 #include <storage/service.h>
 
 namespace uh::cluster {
@@ -18,8 +18,8 @@ public:
           m_service_cfg(make_service_config()),
           m_storage_services(
               m_etcd,
-              client_factory(m_ioc,
-                             m_gdv_config.storage_service_connection_count)) {}
+              service_factory<storage_interface>(
+                  m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -30,7 +30,7 @@ public:
             service_cfg.working_dir = m_temp_dirs.emplace_back().path();
             storage_config storage_cfg;
             storage_cfg.server.port = 10000 + i;
-            storage_cfg.data_store_roots = {
+            storage_cfg.m_data_store_roots = {
                 std::filesystem::path(service_cfg.working_dir) / "storage"};
             m_storage_instances.emplace_back(
                 std::make_unique<storage::service>(service_cfg, storage_cfg));
@@ -50,8 +50,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<global_data_view>(m_ioc,
-                                                           m_storage_services);
+        m_gdv = std::make_shared<default_global_data_view>(
+            m_gdv_config, m_ioc, m_storage_services, m_etcd);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -97,7 +97,7 @@ public:
         m_etcd.clear_all();
     }
 
-    std::shared_ptr<sn::interface> get_global_data_view() { return m_gdv; }
+    std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -117,9 +117,8 @@ private:
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    service_maintainer<client, client_factory, STORAGE_SERVICE>
-        m_storage_services;
-    std::shared_ptr<sn::interface> m_gdv;
+    service_maintainer<storage_interface> m_storage_services;
+    std::shared_ptr<global_data_view> m_gdv;
 };
 
 } // namespace uh::cluster

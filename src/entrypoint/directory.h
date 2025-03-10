@@ -1,10 +1,10 @@
 #pragma once
 
 #include "common/db/db.h"
+#include "common/global_data/global_data_view.h"
 #include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
 #include "common/utils/scope_guard.h"
-#include "storage/interface.h"
 
 #include <functional>
 
@@ -100,7 +100,7 @@ private:
  *
  * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(context& ctx, directory& dir, sn::interface& gdv,
+coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
                            const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster

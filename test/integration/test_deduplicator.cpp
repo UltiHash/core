@@ -4,7 +4,7 @@
 #include "deduplicator/interfaces/local_deduplicator.h"
 #include "lib/mock/storage/mock_global_data_view.h"
 #include "lib/util/coroutine.h"
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 
 #include <boost/asio.hpp>
 #include <boost/test/unit_test.hpp>
@@ -36,7 +36,7 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
     auto data_store =
         mock_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
     auto data_view = mock_global_data_view(data_store);
-    auto dedup = local_deduplicator(get_io_context(), {}, data_view);
+    auto dedup = local_deduplicator({}, data_view);
 
     context ctx;
     auto data = random_string(66);

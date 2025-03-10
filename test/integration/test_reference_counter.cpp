@@ -2,7 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <common/utils/common.h>
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 #include <storage/reference_counter.h>
 
 // ------------- Tests Suites Follow --------------

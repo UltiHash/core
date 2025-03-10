@@ -12,7 +12,7 @@ struct storage_config {
         .bind_address = "0.0.0.0",
     };
 
-    std::list<std::filesystem::path> data_store_roots;
+    std::list<std::filesystem::path> m_data_store_roots;
     data_store_config data_store = {
         .max_file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,

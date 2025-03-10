@@ -6,7 +6,7 @@
 namespace uh::cluster {
 
 struct ec_get_handler : public service_monitor<storage_group>,
-                        public storage_get_handler<storage_interface> {
+                        public storage_get_handler {
 
     explicit ec_get_handler(
         size_t data_nodes, size_t ec_nodes,
@@ -47,6 +47,6 @@ private:
     }
 
     ec_scheme m_scheme;
-    storage_service_get_handler<> m_getter;
+    storage_service_get_handler m_getter;
 };
 } // namespace uh::cluster

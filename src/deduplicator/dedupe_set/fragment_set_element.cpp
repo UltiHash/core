@@ -3,7 +3,7 @@
 namespace uh::cluster {
 fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
                                            std::string prefix,
-                                           dd::cache& storage)
+                                           global_data_view& storage)
     : m_storage(storage),
       m_pointer(ptr),
       m_size(size),
@@ -12,7 +12,7 @@ fragment_set_element::fragment_set_element(const uint128_t& ptr, uint16_t size,
 
 fragment_set_element::fragment_set_element(std::string_view data,
                                            std::string prefix,
-                                           dd::cache& storage)
+                                           global_data_view& storage)
     : fragment_set_element(data, 0, std::move(prefix), storage) {
     m_data.emplace(data);
 }
@@ -20,7 +20,7 @@ fragment_set_element::fragment_set_element(std::string_view data,
 fragment_set_element::fragment_set_element(std::string_view data,
                                            const uint128_t& ptr,
                                            std::string prefix,
-                                           dd::cache& storage)
+                                           global_data_view& storage)
     : m_storage(storage),
       m_pointer(ptr),
       m_size(std::min(static_cast<size_t>(std::numeric_limits<uint16_t>::max()),
@@ -46,7 +46,7 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
     if (f.m_data.has_value()) {
         str = f.m_data->substr(0, size);
     } else {
-        data = m_storage.read(CURRENT_CONTEXT, f.m_pointer, size);
+        data = m_storage.read_fragment(CURRENT_CONTEXT, f.m_pointer, size);
         str = data.string_view();
     }
 }

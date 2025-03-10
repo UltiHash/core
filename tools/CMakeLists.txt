@@ -45,5 +45,4 @@ target_link_libraries(${PROJECT_NAME}-access-client ${PROJECT_NAME}_shared
 target_include_directories(${PROJECT_NAME}-access-client
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-add_subdirectory(dd-shell)
 add_subdirectory(license-checker)

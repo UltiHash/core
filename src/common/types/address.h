@@ -32,7 +32,6 @@ struct address {
      * Construct address with given number of fragments, all set to zero.
      */
     explicit address(std::size_t size);
-    address(const fragment& f);
 
     auto operator<=>(const address&) const = default;
 

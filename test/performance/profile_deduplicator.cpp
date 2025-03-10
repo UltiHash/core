@@ -3,7 +3,7 @@
 #include "deduplicator/interfaces/local_deduplicator.h"
 #include "lib/mock/storage/mock_global_data_view.h"
 #include "lib/util/coroutine.h"
-#include <common/utils/temp_directory.h>
+#include <lib/util/temp_directory.h>
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>
@@ -32,8 +32,8 @@ public:
             config, dir.path().string(), DATA_STORE_ID, 0);
         data_view = std::make_unique<mock_global_data_view>(*data_store);
 
-        dedup = std::make_unique<local_deduplicator>(
-            get_io_context(), deduplicator_config{}, *data_view);
+        dedup = std::make_unique<local_deduplicator>(deduplicator_config{},
+                                                     *data_view);
     }
 
     void TearDown(const ::benchmark::State& state) override {}

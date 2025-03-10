@@ -1,18 +1,16 @@
 #pragma once
 
+#include "common/service_interfaces/storage_interface.h"
 #include "common/telemetry/log.h"
 #include "common/utils/pointer_traits.h"
 #include "common/utils/time_utils.h"
-
-#include <storage/default_data_store.h>
-#include <storage/interface.h>
-
+#include "storage/default_data_store.h"
 #include <list>
 #include <span>
 
 namespace uh::cluster {
 
-struct local_storage : public sn::interface {
+struct local_storage : public storage_interface {
 
     local_storage(uint32_t index, const data_store_config& config,
                   const std::list<std::filesystem::path>& paths)
@@ -55,31 +53,37 @@ struct local_storage : public sn::interface {
         co_return total_addr;
     }
 
-    coro<std::size_t> read(context& ctx, const address& addr,
-                           std::span<char> buffer) override {
-        return read_address(ctx, addr, buffer);
+    coro<void> read_fragment(context& ctx, char* buffer,
+                             const fragment& f) override {
+        get_data_store(f.pointer).read(f.pointer, {buffer, f.size});
+        co_return;
     }
 
-    coro<std::size_t> read_address(context& ctx, const address& addr,
-                                   std::span<char> buffer) {
+    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
+                               size_t size) override {
+        shared_buffer<> buf(size);
+        auto read_size = get_data_store(pointer).read(pointer, buf.span());
+        buf.resize(read_size);
+        co_return buf;
+    }
+
+    coro<void> read_address(context& ctx, const address& addr,
+                            std::span<char> buffer,
+                            const std::vector<size_t>& offsets) override {
         LOG_DEBUG() << ctx.peer() << ": read addr start";
 
-        std::size_t offs = 0ull;
-
         for (size_t i = 0; i < addr.size(); i++) {
-            auto frag = addr.get(i);
-            auto& ds = get_data_store(frag.pointer);
-
-            auto count = ds.read(frag.pointer, buffer.subspan(offs, frag.size));
-            offs += count;
-
-            if (count != frag.size) {
-                break;
+            const auto frag = addr.get(i);
+            if (get_data_store(frag.pointer)
+                    .read(frag.pointer,
+                          buffer.subspan(offsets[i], frag.size)) != frag.size) {
+                throw std::runtime_error(
+                    "Could not read the data with the given size");
             }
         }
 
         LOG_DEBUG() << ctx.peer() << ": read addr done";
-        co_return offs;
+        co_return;
     }
 
     coro<address> link(context& ctx, const address& addr) override {

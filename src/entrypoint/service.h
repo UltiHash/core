@@ -6,13 +6,13 @@
 #include <common/db/db.h>
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
+#include <common/global_data/default_global_data_view.h>
 #include <common/license/license_watcher.h>
 #include <deduplicator/service.h>
 #include <entrypoint/directory.h>
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
-#include <storage/interfaces/global_data_view.h>
 
 namespace uh::cluster::ep {
 
@@ -31,10 +31,10 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    service_maintainer<client, client_factory, STORAGE_SERVICE>
-        m_storage_maintainer;
+    attached_service<storage::service> m_attached_storage;
+    service_maintainer<storage_interface> m_storage_maintainer;
 
-    std::unique_ptr<sn::interface> m_storage;
+    default_global_data_view m_data_view;
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 

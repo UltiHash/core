@@ -1,4 +1,4 @@
-add_library(uh_test_util SHARED server.cpp random.cpp)
+add_library(uh_test_util SHARED server.cpp random.cpp temp_directory.cpp)
 target_include_directories(
     uh_test_util
     PRIVATE project_includes
