@@ -1,17 +1,16 @@
 #pragma once
 
-#include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
+#include "storage/interface.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
 class complete_multipart : public command {
 public:
-    complete_multipart(directory&, global_data_view&, multipart_state&,
-                       limits&);
+    complete_multipart(directory&, sn::interface&, multipart_state&, limits&);
 
     static bool can_handle(const ep::http::request& req);
 

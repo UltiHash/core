@@ -5,7 +5,7 @@
 namespace uh::cluster::ep {
 
 garbage_collector::garbage_collector(boost::asio::io_context& ctx,
-                                     directory& dir, global_data_view& gdv)
+                                     directory& dir, sn::interface& gdv)
     : m_dir(dir),
       m_gdv(gdv) {
     boost::asio::co_spawn(ctx, collect(), boost::asio::detached);

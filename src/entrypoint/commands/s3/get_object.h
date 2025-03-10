@@ -1,14 +1,14 @@
 #pragma once
 
-#include "common/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
+#include "storage/interface.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
 class get_object : public command {
 public:
-    get_object(directory&, global_data_view&);
+    get_object(directory&, sn::interface&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -18,7 +18,7 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_storage;
+    sn::interface& m_storage;
 };
 
 } // namespace uh::cluster

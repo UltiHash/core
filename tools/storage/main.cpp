@@ -71,7 +71,7 @@ std::optional<::config> read_config(int argc, char** argv) {
     return rv;
 }
 
-uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
+uh::cluster::coro<void> read_addr(uh::cluster::sn::interface& svc,
                                   uh::cluster::uint128_t ptr,
                                   std::size_t length,
                                   std::optional<std::string> outfile,
@@ -79,7 +79,9 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
     uh::cluster::context ctx;
 
     timer t;
-    auto data = co_await svc.read(ctx, ptr, length);
+    std::vector<char> data(length);
+    auto count = co_await svc.read(ctx, fragment{ptr, length}, data);
+    data.resize(count);
     auto time = t.passed();
     auto mb = length / MEBI_BYTE;
 
@@ -118,7 +120,7 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
     }
 }
 
-uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
+uh::cluster::coro<void> write_file(uh::cluster::sn::interface& svc,
                                    const std::string& file) {
     uh::cluster::context ctx;
 

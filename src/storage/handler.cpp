@@ -117,19 +117,16 @@ coro<void> handler::handle_read(context& ctx, messenger& m,
                                 const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
-    auto buffer = co_await m_storage.read(ctx, frag.pointer, frag.size);
+    unique_buffer<char> buffer(frag.size);
+    auto size = co_await m_storage.read(ctx, frag, buffer.span());
+    buffer.resize(size);
 
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 
 coro<void> handler::handle_read_fragment(context& ctx, messenger& m,
                                          const messenger::header& h) {
-    const auto frag = co_await m.recv_fragment(h);
-
-    unique_buffer<char> buffer(frag.size);
-    co_await m_storage.read_fragment(ctx, buffer.data(), frag);
-
-    co_await m.send(ctx, SUCCESS, buffer.span());
+    return handle_read(ctx, m, h);
 }
 
 coro<void> handler::handle_read_address(context& ctx, messenger& m,
@@ -137,16 +134,9 @@ coro<void> handler::handle_read_address(context& ctx, messenger& m,
     const auto addr = co_await m.recv_address(h);
 
     unique_buffer<char> buffer(addr.data_size());
+    auto count = co_await m_storage.read_address(ctx, addr, buffer.span());
+    buffer.resize(count);
 
-    std::vector<size_t> offsets;
-    offsets.reserve(addr.size());
-    size_t offset = 0;
-    for (const auto fsize : addr.sizes) {
-        offsets.emplace_back(offset);
-        offset += fsize;
-    }
-
-    co_await m_storage.read_address(ctx, addr, buffer.span(), offsets);
     co_await m.send(ctx, SUCCESS, buffer.span());
 }
 

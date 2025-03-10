@@ -1,12 +1,13 @@
 #pragma once
+
 #include "common/ec/ec_scheme.h"
 #include "common/etcd/utils.h"
-#include "common/service_interfaces/storage_interface.h"
-#include "storage/interfaces/storage_group.h"
+#include <common/network/client.h>
+#include <storage/interfaces/storage_group.h>
 
 namespace uh::cluster {
 
-struct ec_group_maintainer : public service_monitor<storage_interface> {
+struct ec_group_maintainer : public service_monitor<client> {
 
     ec_group_maintainer(boost::asio::io_context& ioc, size_t data_nodes,
                         size_t ec_nodes, etcd_manager& etcd,
@@ -34,8 +35,7 @@ struct ec_group_maintainer : public service_monitor<storage_interface> {
     }
 
 private:
-    void add_client(size_t id,
-                    const std::shared_ptr<storage_interface>& cl) override {
+    void add_client(size_t id, const std::shared_ptr<client>& cl) override {
 
         const auto gid = m_scheme.calc_group_id(id);
         const auto nid = m_scheme.calc_group_node_id(id);
@@ -57,8 +57,7 @@ private:
         }
     }
 
-    void remove_client(size_t id,
-                       const std::shared_ptr<storage_interface>& cl) override {
+    void remove_client(size_t id, const std::shared_ptr<client>&) override {
 
         const auto gid = m_scheme.calc_group_id(id);
         const auto nid = m_scheme.calc_group_node_id(id);

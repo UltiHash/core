@@ -40,7 +40,7 @@ future<dedupe_response> upload(context& ctx, boost::asio::io_context& ioc,
 
 put_object::put_object(boost::asio::io_context& ioc,
                        const entrypoint_config& conf, limits& uhlimits,
-                       directory& dir, global_data_view& gdv,
+                       directory& dir, sn::interface& gdv,
                        deduplicator_interface& dedup)
     : m_ioc(ioc),
       m_config(conf),

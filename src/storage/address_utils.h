@@ -1,12 +1,24 @@
-#include "address_utils.h"
+#pragma once
 
-#include "common/coroutines/promise.h"
+#include <common/coroutines/promise.h>
+#include <common/etcd/service_discovery/storage_get_handler.h>
 
 namespace uh::cluster {
 
-node_address_info
+struct address_info {
+    address addr;
+    std::vector<size_t> pointer_offsets;
+};
+
+template <typename service> struct node_address_info {
+    std::unordered_map<std::shared_ptr<service>, address_info> node_info_map;
+    size_t data_size;
+};
+
+template <typename service>
+node_address_info<service>
 extract_node_address_map(const address& addr,
-                         storage_get_handler& storage_get_handler,
+                         storage_get_handler<service>& storage_get_handler,
                          const std::vector<size_t>& existing_offsets) {
 
     if (!existing_offsets.empty() and addr.size() != existing_offsets.size()) {
@@ -14,7 +26,7 @@ extract_node_address_map(const address& addr,
             "offset size must be equal to the address size");
     }
 
-    node_address_info info;
+    node_address_info<service> info;
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
@@ -34,13 +46,12 @@ extract_node_address_map(const address& addr,
     return info;
 }
 
-coro<size_t> perform_for_address(
-    const address& addr, storage_get_handler& storage_get_handler,
-    boost::asio::io_context& ioc,
-    std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
-                             const address_info&)>
-        fn,
-    const std::vector<size_t>& existing_offsets) {
+template <typename service, typename func>
+coro<size_t>
+perform_for_address(const address& addr,
+                    storage_get_handler<service>& storage_get_handler,
+                    boost::asio::io_context& ioc, func fn,
+                    const std::vector<size_t>& existing_offsets = {}) {
 
     auto info =
         extract_node_address_map(addr, storage_get_handler, existing_offsets);
@@ -63,4 +74,4 @@ coro<size_t> perform_for_address(
     co_return info.data_size;
 }
 
-} // namespace uh::cluster
+} // end namespace uh::cluster
