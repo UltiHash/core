@@ -76,8 +76,7 @@ public:
      * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
      */
-    fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
-                 dd::cache& storage);
+    fragment_set(size_t capacity, dd::cache& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
