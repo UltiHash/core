@@ -77,7 +77,7 @@ public:
      * up full fragment content beyond the prefix.
      */
     fragment_set(const std::filesystem::path& set_log_path, size_t capacity,
-                 global_data_view& storage);
+                 dd::cache& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
@@ -133,7 +133,7 @@ public:
 private:
     void remove(const std::set<fragment_set_element>::const_iterator& itr);
 
-    global_data_view& m_storage;
+    dd::cache& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
 
