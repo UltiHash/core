@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <iostream>
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
@@ -41,7 +40,6 @@ public:
     }
 
     ~trace_span() {
-        std::cout << "End span for " << coroutine_name() << std::endl;
         if (m_data)
             m_data->End();
     }
@@ -60,8 +58,6 @@ public:
 
     auto context() noexcept {
         if (m_data) {
-            std::cout << "get context for " << coroutine_name() << std::endl;
-            std::cout << "span: " << bool(m_data) << std::endl;
             opentelemetry::context::Context context;
             return opentelemetry::trace::SetSpan(context, m_data);
         } else {
@@ -113,12 +109,8 @@ private:
                 m_parent_context);
 
             if (has_valid_parent) {
-                std::cout << "start sub span for " << coroutine_name()
-                          << std::endl;
                 options.parent = m_parent_context;
             } else {
-                std::cout << "start root span for " << coroutine_name()
-                          << std::endl;
                 opentelemetry::context::Context root;
                 root = root.SetValue(trace_api::kIsRootSpanKey, true);
                 options.parent = std::move(root);

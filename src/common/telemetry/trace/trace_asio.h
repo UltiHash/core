@@ -168,8 +168,6 @@ public:
         m_span.emplace(location);
         if (m_context)
             m_span->set_context(*m_context);
-        std::cout << "initial_suspend on " << m_span->coroutine_name() << ", "
-                  << this << std::endl;
         return awaitable_frame<T, Executor>::initial_suspend();
     }
 
@@ -230,8 +228,6 @@ public:
         m_span.emplace(location);
         if (m_context)
             m_span->set_context(*m_context);
-        std::cout << "initial_suspend on " << m_span->coroutine_name() << ", "
-                  << this << std::endl;
         return awaitable_frame<void, Executor>::initial_suspend();
     }
     auto final_suspend() noexcept {
