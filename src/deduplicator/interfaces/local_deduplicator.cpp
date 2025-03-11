@@ -37,8 +37,7 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
       m_cache(m_storage, m_dedupe_conf.global_data_view.read_cache_capacity_l2),
-      m_fragment_set(m_dedupe_conf.working_dir / "log",
-                     m_dedupe_conf.set_capacity, m_cache),
+      m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
       m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
 coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,

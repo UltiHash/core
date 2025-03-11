@@ -1,7 +1,6 @@
 #define BOOST_TEST_MODULE "fragment set tests"
 
 #include "deduplicator/dedupe_set/fragment_set.h"
-#include "deduplicator/dedupe_set/fragment_set_log.h"
 #include "lib/util/gdv_fixture.h"
 #include <boost/test/unit_test.hpp>
 #include <lib/util/temp_directory.h>
@@ -23,8 +22,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
         global_data_view_fixture::setup();
         gdv = get_global_data_view();
         cache = std::make_shared<dd::cache>(*gdv, 1000);
-        frag_set = std::make_shared<fragment_set>(tmp_dir.path() / "logfile",
-                                                  1000, *cache);
+        frag_set = std::make_shared<fragment_set>(1000, *cache);
     }
 
     std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
@@ -159,10 +157,9 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
     context ctx;
 
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
     auto gdv = get_global_data_view();
     dd::cache cache(*gdv, 1000);
-    fragment_set frag_set(frag_set_log_path, 1000, cache);
+    fragment_set frag_set(1000, cache);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
@@ -218,25 +215,6 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     BOOST_CHECK(frag_element_a < frag_element_b);
     BOOST_CHECK(frag_element_a < frag_element_c);
     BOOST_CHECK(frag_element_b < frag_element_c);
-}
-
-BOOST_FIXTURE_TEST_CASE(insert_performance, global_data_view_fixture) {
-    temp_directory tmp_dir;
-    std::filesystem::path frag_set_log_path = tmp_dir.path() / "logfile";
-    auto log = fragment_set_log(frag_set_log_path);
-
-    fragment_set_log::log_entry entry(INSERT,
-                                      {0x6465647570, 0x6c69636174696f6e}, 13);
-
-    const auto start = std::chrono::steady_clock::now();
-    for (std::size_t i = 0; i < 10000000; i++) {
-        log.append(entry);
-    }
-    log.flush();
-    const auto duration = std::chrono::steady_clock::now() - start;
-    auto millis =
-        std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-    LOG_INFO() << "Inserting 10,000,000 log entries took " << millis << "ms.";
 }
 
 } // namespace uh::cluster
