@@ -7,6 +7,7 @@
 #include "common/types/scoped_buffer.h"
 #include "common/utils/common.h"
 #include "common/utils/error.h"
+#include <common/network/messenger_header.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -19,14 +20,7 @@ using size_type = size_t;
 class messenger_core {
 
 public:
-    struct header {
-        message_type type;
-        size_type size;
-
-        context ctx;
-        opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span>
-            remote_span;
-    };
+    using header = messenger_header;
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
                    const std::uint16_t port);

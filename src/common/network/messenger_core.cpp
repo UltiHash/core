@@ -1,4 +1,5 @@
 #include "messenger_core.h"
+#include <common/telemetry/trace/trace.h>
 
 namespace uh::cluster {
 
@@ -30,7 +31,8 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
 
 coro<messenger_core::header> messenger_core::recv_header() {
     header h;
-    std::vector<char> ctx_buffer(context::SERIALIZED_SIZE);
+    std::string ctx_buffer;
+    ctx_buffer.resize(context::SERIALIZED_SIZE);
 
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
@@ -44,10 +46,10 @@ coro<messenger_core::header> messenger_core::recv_header() {
         throw create_internal_network_error("recv_header failed", e);
     }
 
-    h.ctx = context(ctx_buffer);
     h.ctx.peer() = peer();
+    h.peer = peer();
 
-    h.remote_span = boost::asio::deserialize(ctx_buffer);
+    h.context = decode_context(ctx_buffer);
 
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
@@ -106,8 +108,9 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto ctx_buf =
-            boost::asio::serialize(co_await boost::asio::get_trace_span());
+        auto span = co_await boost::asio::this_coro::span;
+
+        auto ctx_buf = encode_context(span->context());
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
@@ -147,9 +150,10 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
             metric<success>::increase(1);
         }
 
-        auto ctx_buf =
-            boost::asio::serialize(co_await boost::asio::get_trace_span());
         auto size = static_cast<size_type>(data.size());
+
+        auto span = co_await boost::asio::this_coro::span;
+        auto ctx_buf = encode_context(span->context());
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},

@@ -13,12 +13,12 @@ class handler : public protocol_handler {
 public:
     explicit handler(local_deduplicator& local_dedupe);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    notrace_coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    coro<bool> handle_iteration(std::stringstream& remote, messenger& m);
-    coro<void> handle_dedupe(context& ctx, messenger& m,
-                             const messenger::header& h);
+    enum class flow_control : uint8_t { BREAK, CONTINUE };
+    coro<flow_control> handle_dedupe(const messenger::header& hdr,
+                                     messenger& m);
 
     local_deduplicator& m_local_dedupe;
 };

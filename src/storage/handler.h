@@ -11,10 +11,12 @@ class handler : public protocol_handler {
 public:
     explicit handler(local_storage& storage);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    notrace_coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    coro<bool> handle_iteration(std::stringstream& remote, messenger& m);
+    enum class flow_control : uint8_t { BREAK, CONTINUE };
+    coro<handler::flow_control> handle_iteration(const messenger::header& hdr,
+                                                 messenger& m);
     coro<void> handle_write(context& ctx, messenger& m,
                             const messenger::header& h);
 

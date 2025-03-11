@@ -3,7 +3,7 @@
 #include "address.h"
 #include "scoped_buffer.h"
 
-#include <common/coroutines/traced_asio.h>
+#include <common/telemetry/trace/trace_asio.h>
 
 #include <boost/asio/awaitable.hpp>
 #include <chrono>

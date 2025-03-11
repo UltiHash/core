@@ -53,6 +53,7 @@ void initialize_traces_exporter(const std::string& endpoint) {
     auto exporter =
         opentelemetry::exporter::otlp::OtlpGrpcExporterFactory::Create(
             trace_opts);
+    // TODO: Test BatchSpanProcessorFactory
     auto processor =
         trace_sdk::SimpleSpanProcessorFactory::Create(std::move(exporter));
 

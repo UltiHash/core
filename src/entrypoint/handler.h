@@ -14,7 +14,7 @@ public:
                      std::unique_ptr<policy::module> policy,
                      std::unique_ptr<cors::module> cors);
 
-    coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    notrace_coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
     coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
                                         http::request& req,
@@ -25,7 +25,10 @@ private:
     http::request_factory m_factory;
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
-    coro<bool> handle_iteration(boost::asio::ip::tcp::socket& s);
+
+    enum class flow_control : uint8_t { BREAK, CONTINUE };
+    coro<flow_control> handle_iteration(boost::asio::ip::tcp::socket& s,
+                                        std::unique_ptr<http::request> req);
 };
 
 } // end namespace uh::cluster::ep

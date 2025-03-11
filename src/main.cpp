@@ -1,5 +1,6 @@
-#include "common/telemetry/context.h"
+// #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
+#include "common/telemetry/trace/trace.h"
 #include "common/utils/signal_handler.h"
 #include "config/configuration.h"
 #include "coordinator/service.h"
@@ -56,8 +57,10 @@ int main(int argc, char** argv) {
 
         initialize_metrics_exporter(config->service.telemetry_url,
                                     config->service.telemetry_interval);
-        if (config->service.enable_traces) {
-            initialize_traces_exporter(config->service.telemetry_url);
+        if (config->service.enable_traces &&
+            !config->service.telemetry_url.empty()) {
+            LOG_DEBUG() << "trace endpoint: " << config->service.telemetry_url;
+            initialize_trace(config->service.telemetry_url);
         }
 
         execute_role(*config);

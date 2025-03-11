@@ -13,31 +13,58 @@ namespace uh::cluster::storage {
 handler::handler(local_storage& storage)
     : m_storage(storage) {}
 
-coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
     messenger m(std::move(s));
 
-    for (;;) {
-        if (!co_await handle_iteration(remote, m)) {
-            break;
+    bool should_continue = true;
+    do {
+        std::optional<error> err;
+        messenger_header hdr;
+
+        try {
+            hdr = co_await m.recv_header();
+            LOG_DEBUG() << remote.str() << " received "
+                        << magic_enum::enum_name(hdr.type);
+
+        } catch (const boost::system::system_error& e) {
+            LOG_ERROR() << "boost::system::system_error should be converted to "
+                           "error_exception with error::internal_network_error";
+            if (e.code() == boost::asio::error::eof) {
+                should_continue = false;
+                break;
+            }
+            err = error(error::unknown, e.what());
+        } catch (const error_exception& e) {
+            if (*e.error() == error::internal_network_error) {
+                should_continue = false;
+                break;
+            }
+            err = e.error();
+        } catch (const std::exception& e) {
+            err = error(error::unknown, e.what());
         }
-    }
+
+        if (err) {
+            LOG_WARN() << remote.str()
+                       << " error handling request: " << err->message();
+        } else {
+            if (co_await handle_iteration(hdr, m) == flow_control::BREAK) {
+                break;
+            }
+        }
+    } while (should_continue);
 }
 
-coro<bool> handler::handle_iteration(std::stringstream& remote, messenger& m) {
+coro<handler::flow_control>
+handler::handle_iteration(const messenger::header& hdr, messenger& m) {
 
     context ctx;
     std::optional<error> err;
 
     try {
-        auto hdr = co_await m.recv_header();
-        ctx = std::move(hdr.ctx);
-        co_await boost::asio::set_trace_parent_span(hdr.remote_span);
-        LOG_DEBUG() << remote.str() << ": received "
-                    << magic_enum::enum_name(hdr.type);
-
         switch (hdr.type) {
         case STORAGE_WRITE_REQ:
             ctx = ctx.sub_context("storage-write-req");
@@ -90,14 +117,14 @@ coro<bool> handler::handle_iteration(std::stringstream& remote, messenger& m) {
         LOG_ERROR() << "boost::system::system_error should be converted to "
                        "error_exception with error::internal_network_error";
         if (e.code() == boost::asio::error::eof) {
-            LOG_INFO() << remote.str() << " disconnected";
-            co_return false;
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
         }
         err = error(error::unknown, e.what());
     } catch (const error_exception& e) {
         if (*e.error() == error::internal_network_error) {
-            LOG_INFO() << remote.str() << " disconnected";
-            co_return false;
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
         }
         err = e.error();
     } catch (const std::exception& e) {
@@ -105,11 +132,10 @@ coro<bool> handler::handle_iteration(std::stringstream& remote, messenger& m) {
     }
 
     if (err) {
-        LOG_WARN() << remote.str()
-                   << " error handling request: " << err->message();
+        LOG_WARN() << hdr.peer << " error handling request: " << err->message();
         co_await m.send_error(ctx, *err);
     }
-    co_return true;
+    co_return flow_control::CONTINUE;
 }
 
 coro<void> handler::handle_write(context& ctx, messenger& m,

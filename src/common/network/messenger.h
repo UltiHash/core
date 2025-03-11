@@ -23,7 +23,7 @@ public:
     }
 
     template <typename K, typename V>
-    coro<std::map<K, V>> recv_map(context& ctx, const header& message_header) {
+    coro<std::map<K, V>> recv_map(const header& message_header) {
         unique_buffer<> buf(message_header.size);
         register_read_buffer(buf);
         co_await recv_buffers(message_header);
@@ -33,7 +33,9 @@ public:
         co_return res;
     }
 
-    coro<dedupe_response> recv_dedupe_response(const header& message_header);
+    coro<dedupe_response>
+    recv_dedupe_response(const opentelemetry::context::Context& context,
+                         const header& message_header);
 
     coro<void> send_write(context& ctx, const write_request& req);
 
