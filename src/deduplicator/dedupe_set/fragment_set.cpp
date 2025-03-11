@@ -4,7 +4,7 @@
 namespace uh::cluster {
 
 fragment_set::fragment_set(const std::filesystem::path& set_log_path,
-                           size_t capacity, global_data_view& storage)
+                           size_t capacity, dd::cache& storage)
     : m_storage(storage),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
       m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {}
