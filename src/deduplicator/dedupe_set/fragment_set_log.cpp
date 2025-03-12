@@ -21,7 +21,7 @@ void fragment_set_log::append(const log_entry& entry) {
 }
 
 void fragment_set_log::replay(std::set<fragment_set_element>& set,
-                              global_data_view& storage) {
+                              dd::cache& storage) {
     std::lock_guard<std::mutex> guard(m_mutex);
     const auto file_size = std::filesystem::file_size(m_log_path);
     m_log_file.seekg(std::istream::beg);

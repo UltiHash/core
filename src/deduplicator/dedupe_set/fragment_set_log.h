@@ -5,6 +5,8 @@
 #include "deduplicator/config.h"
 #include "fragment_set_element.h"
 
+#include <deduplicator/cache.h>
+
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
@@ -102,7 +104,7 @@ public:
      * restored.
      * @param storage A reference to a global_data_view instance.
      */
-    void replay(std::set<fragment_set_element>& set, global_data_view& storage);
+    void replay(std::set<fragment_set_element>& set, dd::cache& storage);
 
     /**
      * @brief synchronizes the log file with the underlying storage device
