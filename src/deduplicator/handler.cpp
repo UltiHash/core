@@ -19,54 +19,34 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     do {
         std::optional<error> err;
         messenger_header hdr;
+        opentelemetry::context::Context context;
 
         try {
-            hdr = co_await m.recv_header();
+            std::tie(hdr, context) = co_await m.recv_header();
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 
-        } catch (const boost::system::system_error& e) {
-            LOG_ERROR() << "boost::system::system_error should be converted to "
-                           "error_exception with error::internal_network_error";
-            if (e.code() == boost::asio::error::eof) {
-                keep_alive = false;
-            }
-            err = error(error::unknown, e.what());
-        } catch (const error_exception& e) {
-            if (*e.error() == error::internal_network_error) {
-                keep_alive = false;
-            }
-            err = e.error();
         } catch (const std::exception& e) {
-            err = error(error::unknown, e.what());
+            throw;
         }
-
-        if (err) {
-            LOG_WARN() << remote.str()
-                       << " error handling request: " << err->message();
-        } else {
-            if (co_await handle_dedupe(hdr, m) == flow_control::BREAK) {
-                break;
-            }
+        auto control = co_await handle_dedupe(context, hdr, m);
+        if (control == flow_control::BREAK) {
+            break;
         }
     } while (keep_alive);
 }
 
-coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
-                                                   messenger& m) {
-
-    auto ctx = hdr.ctx;
+coro<handler::flow_control>
+handler::handle_dedupe(const opentelemetry::context::Context& context,
+                       const messenger::header& hdr, messenger& m) {
     std::optional<error> err;
-
+    uh::cluster::context ctx{};
     try {
         switch (hdr.type) {
         case DEDUPLICATOR_REQ: {
-            if (hdr.size == 0) [[unlikely]] {
-                throw std::length_error("Empty data sent do the dedupe node");
-            }
-
             unique_buffer<char> data(hdr.size);
             m.register_read_buffer(data);
+            LOG_DEBUG() << "before recv buffers";
             co_await m.recv_buffers(hdr);
 
             LOG_DEBUG() << hdr.peer << ": deduplicate: size=" << data.size();

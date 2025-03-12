@@ -36,7 +36,7 @@ notrace_coro<void> perform_operation(messenger& m, message_type type,
                                      std::span<char> data) {
     context c;
     co_await m.send(c, type, data);
-    const auto h = co_await m.recv_header();
+    const auto [h, _] = co_await m.recv_header();
     unique_buffer<char> buf(h.size);
     m.register_read_buffer(buf);
     co_await m.recv_buffers(h);

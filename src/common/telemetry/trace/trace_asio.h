@@ -4,8 +4,6 @@
 
 #include <common/telemetry/trace/trace_span.h>
 
-#include <common/network/messenger_header.h>
-
 namespace boost {
 namespace asio {
 
@@ -149,20 +147,19 @@ template <typename T, typename Executor>
 class traced_awaitable_frame : public awaitable_frame<T, Executor> {
 public:
     using awaitable_frame<T, Executor>::awaitable_frame;
+
     template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
+
     template <typename... OtherArgs>
     traced_awaitable_frame(const opentelemetry::context::Context& ctx,
                            OtherArgs&&...) noexcept
         : m_context(ctx) {}
-    template <typename... OtherArgs>
-    traced_awaitable_frame(const uh::cluster::messenger_header& header,
-                           OtherArgs&&...) noexcept
-        : m_context(header.context) {}
 
     traced_awaitable<T, Executor> get_return_object() noexcept {
         return traced_awaitable<T, Executor>(
             awaitable_frame<T, Executor>::get_return_object(), this);
     }
+
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
@@ -175,7 +172,9 @@ public:
         m_span.reset();
         return awaitable_frame<T, Executor>::final_suspend();
     }
+
     using awaitable_frame_base<Executor>::await_transform;
+
     template <typename U>
     auto await_transform(traced_awaitable<U, Executor> a) const {
         return traced_awaitable<U, Executor>(
@@ -183,6 +182,7 @@ public:
                 std::move(static_cast<awaitable<U, Executor>&>(a))),
             a.get_coroutine_frame());
     }
+
     template <typename U> auto await_transform(awaitable<U, Executor> a) const {
         return traced_awaitable<U, Executor>(
             awaitable_frame_base<Executor>::await_transform(std::move(a)),
@@ -209,20 +209,19 @@ class traced_awaitable_frame<void, Executor>
     : public awaitable_frame<void, Executor> {
 public:
     using awaitable_frame<void, Executor>::awaitable_frame;
+
     template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
+
     template <typename... OtherArgs>
     traced_awaitable_frame(const opentelemetry::context::Context& ctx,
                            OtherArgs&&...) noexcept
         : m_context(ctx) {}
-    template <typename... OtherArgs>
-    traced_awaitable_frame(const uh::cluster::messenger_header& header,
-                           OtherArgs&&...) noexcept
-        : m_context(header.context) {}
 
     traced_awaitable<void, Executor> get_return_object() noexcept {
         return traced_awaitable<void, Executor>(
             awaitable_frame<void, Executor>::get_return_object(), this);
     }
+
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
@@ -230,11 +229,14 @@ public:
             m_span->set_context(*m_context);
         return awaitable_frame<void, Executor>::initial_suspend();
     }
+
     auto final_suspend() noexcept {
         m_span.reset();
         return awaitable_frame<void, Executor>::final_suspend();
     }
+
     using awaitable_frame_base<Executor>::await_transform;
+
     template <typename U>
     auto await_transform(traced_awaitable<U, Executor> a) const {
         return traced_awaitable<U, Executor>(
@@ -242,6 +244,7 @@ public:
                 std::move(static_cast<awaitable<U, Executor>&>(a))),
             a.get_coroutine_frame());
     }
+
     template <typename U> auto await_transform(awaitable<U, Executor> a) const {
         return traced_awaitable<U, Executor>(
             awaitable_frame_base<Executor>::await_transform(std::move(a)),

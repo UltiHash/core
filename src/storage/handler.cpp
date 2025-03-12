@@ -23,9 +23,10 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     do {
         std::optional<error> err;
         messenger_header hdr;
+        opentelemetry::context::Context context;
 
         try {
-            hdr = co_await m.recv_header();
+            std::tie(hdr, context) = co_await m.recv_header();
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 
@@ -51,7 +52,8 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();
         } else {
-            if (co_await handle_iteration(hdr, m) == flow_control::BREAK) {
+            if (co_await handle_iteration(context, hdr, m) ==
+                flow_control::BREAK) {
                 break;
             }
         }
@@ -59,9 +61,9 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<handler::flow_control>
-handler::handle_iteration(const messenger::header& hdr, messenger& m) {
-
-    context ctx;
+handler::handle_iteration(const opentelemetry::context::Context& context,
+                          const messenger::header& hdr, messenger& m) {
+    uh::cluster::context ctx;
     std::optional<error> err;
 
     try {

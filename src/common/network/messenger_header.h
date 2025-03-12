@@ -14,11 +14,7 @@ struct messenger_header {
     message_type type;
     size_type size;
 
-    // TODO: remove
-    context ctx;
-
     boost::asio::ip::tcp::endpoint peer;
-    opentelemetry::context::Context context;
 };
 
 } // namespace uh::cluster

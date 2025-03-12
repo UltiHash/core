@@ -29,7 +29,8 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_size(m.m_read_size),
       m_write_size(m.m_write_size) {}
 
-coro<messenger_core::header> messenger_core::recv_header() {
+coro<std::tuple<messenger_core::header, opentelemetry::context::Context>>
+messenger_core::recv_header() {
     header h;
     std::string ctx_buffer;
     ctx_buffer.resize(context::SERIALIZED_SIZE);
@@ -45,11 +46,9 @@ coro<messenger_core::header> messenger_core::recv_header() {
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
     }
-
-    h.ctx.peer() = peer();
+    // h.ctx = context();
+    // h.ctx.peer() = peer();
     h.peer = peer();
-
-    h.context = decode_context(ctx_buffer);
 
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
@@ -60,7 +59,7 @@ coro<messenger_core::header> messenger_core::recv_header() {
         measure_message_type(h.type);
     }
 
-    co_return h;
+    co_return std::make_tuple(h, decode_context(ctx_buffer));
 }
 
 coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
@@ -108,9 +107,10 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto span = co_await boost::asio::this_coro::span;
+        // auto context = (co_await boost::asio::this_coro::span)->context();
+        opentelemetry::context::Context context;
 
-        auto ctx_buf = encode_context(span->context());
+        auto ctx_buf = encode_context(context);
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
@@ -152,8 +152,10 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
 
         auto size = static_cast<size_type>(data.size());
 
-        auto span = co_await boost::asio::this_coro::span;
-        auto ctx_buf = encode_context(span->context());
+        // auto context = (co_await boost::asio::this_coro::span)->context();
+        opentelemetry::context::Context context;
+
+        auto ctx_buf = encode_context(context);
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},
