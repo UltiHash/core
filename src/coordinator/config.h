@@ -11,6 +11,8 @@ struct coordinator_config {
     uh::cluster::license license;
     default_backend_client::config backend_config;
     db::config database_config;
+    std::size_t ec_data_shards = 1;
+    std::size_t ec_parity_shards = 0;
 };
 
 } // end namespace uh::cluster

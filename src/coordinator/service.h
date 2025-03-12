@@ -2,13 +2,13 @@
 
 #include "config.h"
 
-#include <common/etcd/ec_groups/ec_group_maintainer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
 #include <config/configuration.h>
+#include <storage/ec_groups/ec_group_controller.h>
 
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -26,7 +26,8 @@ public:
           m_ioc(cc.thread_count),
 
           m_ioc_runner(m_ioc, cc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
+          m_ec_group_controller(m_ioc, cc.ec_data_shards, cc.ec_parity_shards,
+                                m_etcd, true),
 
           m_storage_maintainer(
               m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
@@ -55,7 +56,7 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
-        m_storage_maintainer.add_monitor(m_ec_maintainer);
+        m_storage_maintainer.add_observer(m_ec_group_controller);
     }
 
     void run() {
@@ -74,7 +75,7 @@ public:
             m_stopped = true;
         }
         m_cv.notify_all();
-        m_storage_maintainer.remove_monitor(m_ec_maintainer);
+        m_storage_maintainer.remove_observer(m_ec_group_controller);
     }
 
 private:
@@ -86,7 +87,7 @@ private:
 
     io_context_runner m_ioc_runner;
 
-    ec_group_maintainer m_ec_maintainer;
+    ec_group_controller m_ec_group_controller;
     service_maintainer<storage_interface> m_storage_maintainer;
 
     usage m_usage;

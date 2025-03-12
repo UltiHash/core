@@ -238,6 +238,14 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
                    "access token required to connect to the backend")
         ->envname(ENV_CFG_ACCESS_TOKEN);
 
+    app.add_option("--ec-data-shards", cfg.ec_data_shards,
+                   "number of data shards per storage group")
+        ->envname(ENV_CFG_EC_DATA_SHARDS);
+
+    app.add_option("--ec-parity-shards", cfg.ec_parity_shards,
+                   "number of parity shards per storage group")
+        ->envname(ENV_CFG_EC_PARITY_SHARDS);
+
     configure(*rv, cfg.database_config);
 
     return rv;
