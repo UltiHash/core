@@ -15,7 +15,7 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     messenger m(std::move(s));
 
-    bool should_continue = true;
+    bool keep_alive = true;
     do {
         std::optional<error> err;
         messenger_header hdr;
@@ -29,12 +29,12 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_ERROR() << "boost::system::system_error should be converted to "
                            "error_exception with error::internal_network_error";
             if (e.code() == boost::asio::error::eof) {
-                should_continue = false;
+                keep_alive = false;
             }
             err = error(error::unknown, e.what());
         } catch (const error_exception& e) {
             if (*e.error() == error::internal_network_error) {
-                should_continue = false;
+                keep_alive = false;
             }
             err = e.error();
         } catch (const std::exception& e) {
@@ -49,7 +49,7 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 break;
             }
         }
-    } while (should_continue);
+    } while (keep_alive);
 }
 
 coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
