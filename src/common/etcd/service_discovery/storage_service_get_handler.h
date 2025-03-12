@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/etcd/service_discovery/service_monitor.h"
+#include "common/etcd/service_discovery/service_observer.h"
 #include "common/service_interfaces/storage_interface.h"
 #include "common/utils/pointer_traits.h"
 #include "storage_get_handler.h"
@@ -9,9 +9,10 @@
 #include <ranges>
 namespace uh::cluster {
 
-struct storage_service_get_handler : public service_monitor<storage_interface>,
-                                     public storage_get_handler {
-    storage_service_get_handler(
+class storage_service_get_handler : public service_observer<storage_interface>,
+                                    public storage_get_handler {
+public:
+    explicit storage_service_get_handler(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}
 
@@ -21,6 +22,7 @@ struct storage_service_get_handler : public service_monitor<storage_interface>,
         m_clients.emplace(id, client);
         m_cv.notify_one();
     }
+
     void
     remove_client(size_t id,
                   const std::shared_ptr<storage_interface>& client) override {

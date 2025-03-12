@@ -1,13 +1,13 @@
 #pragma once
 
 #include "common/caches/lru_cache.h"
-#include "common/etcd/ec_groups/ec_get_handler.h"
-#include "common/etcd/ec_groups/ec_group_maintainer.h"
-#include "common/etcd/ec_groups/ec_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
+#include "storage/ec_groups/ec_get_handler.h"
+#include "storage/ec_groups/ec_group_controller.h"
+#include "storage/ec_groups/ec_load_balancer.h"
 
 namespace uh::cluster {
 
@@ -150,7 +150,7 @@ private:
     lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
     service_maintainer<storage_interface>& m_service_maintainer;
-    ec_group_maintainer m_ec_maintainer;
+    ec_group_controller m_ec_group_controller;
     ec_load_balancer m_load_balancer;
     ec_get_handler m_basic_getter;
 };

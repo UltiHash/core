@@ -3,8 +3,9 @@
 
 namespace uh::cluster {
 
-struct storage_get_handler {
+class storage_get_handler {
 
+public:
     virtual std::shared_ptr<storage_interface>
     get(const uint128_t& pointer) = 0;
 

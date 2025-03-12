@@ -5,7 +5,7 @@
 
 namespace uh::cluster {
 
-struct ec_load_balancer : public service_monitor<storage_group> {
+struct ec_load_balancer : public service_observer<storage_group> {
     ec_load_balancer(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}

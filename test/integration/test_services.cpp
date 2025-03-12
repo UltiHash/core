@@ -36,8 +36,8 @@ struct fixture {
               etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
-        service_maintainer.add_monitor(services);
-        service_maintainer.add_monitor(load_balancer);
+        service_maintainer.add_observer(services);
+        service_maintainer.add_observer(load_balancer);
     }
 };
 

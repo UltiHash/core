@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/etcd/namespace.h"
-#include "common/etcd/service_discovery/service_monitor.h"
+#include "common/etcd/service_discovery/service_observer.h"
 #include "common/service_interfaces/service_factory.h"
 
 namespace uh::cluster {
@@ -11,8 +11,9 @@ struct service_endpoint {
     std::map<etcd_service_attributes, std::string> attributes;
 };
 
-template <typename service_interface> struct service_maintainer {
+template <typename service_interface> class service_maintainer {
 
+public:
     service_maintainer(etcd_manager& etcd,
                        service_factory<service_interface> service_factory)
         : m_service_factory(std::move(service_factory)),
@@ -30,25 +31,21 @@ template <typename service_interface> struct service_maintainer {
         }
     }
 
-    void add_monitor(service_monitor<service_interface>& monitor) {
+    void add_observer(service_observer<service_interface>& observer) {
 
         std::lock_guard l(m_mutex);
         for (const auto& [id, cl] : m_clients) {
-            monitor.add_client(id, cl);
-            for (const auto& se = m_detected_service_endpoints.at(id);
-                 const auto& [attr_name, attr_val] : se.attributes) {
-                monitor.add_attribute(cl, attr_name, attr_val);
-            }
+            observer.add_client(id, cl);
         }
 
-        m_monitors.emplace_back(monitor);
+        m_observers.emplace_back(observer);
     }
 
-    void remove_monitor(service_monitor<service_interface>& monitor) {
+    void remove_observer(service_observer<service_interface>& observer) {
         std::lock_guard l(m_mutex);
-        m_monitors.remove_if(
-            [&monitor](const service_monitor<service_interface>& m) {
-                return &monitor == &m;
+        m_observers.remove_if(
+            [&observer](const service_observer<service_interface>& o) {
+                return &observer == &o;
             });
     }
 
@@ -100,14 +97,10 @@ private:
         }
 
         if (auto cl = m_clients.find(id);
-            cl != m_clients.cend() and attribute.has_value()) {
-            for (auto& m : m_monitors) {
-                m.get().add_attribute(cl->second, *attribute, value);
-            }
-        } else if (cl == m_clients.cend() and
-                   itr->second.attributes.contains(ENDPOINT_HOST) and
-                   itr->second.attributes.contains(ENDPOINT_PORT) and
-                   itr->second.attributes.contains(ENDPOINT_PID)) {
+            cl == m_clients.cend() and
+            itr->second.attributes.contains(ENDPOINT_HOST) and
+            itr->second.attributes.contains(ENDPOINT_PORT) and
+            itr->second.attributes.contains(ENDPOINT_PID)) {
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
@@ -119,15 +112,8 @@ private:
                     std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
                     std::stol(itr->second.attributes.at(ENDPOINT_PID))));
 
-            for (auto& m : m_monitors) {
-
+            for (auto& m : m_observers) {
                 m.get().add_client(client_itr->first, client_itr->second);
-
-                for (const auto& [attr_name, attr_val] :
-                     itr->second.attributes) {
-                    m.get().add_attribute(client_itr->second, attr_name,
-                                          attr_val);
-                }
             }
         }
     }
@@ -153,12 +139,6 @@ private:
                 m_detected_service_endpoints.at(id).attributes.erase(attr);
             } catch (...) {
             }
-            try {
-                for (auto& m : m_monitors) {
-                    m.get().remove_attribute(it->second, attr);
-                }
-            } catch (...) {
-            }
         } else {
 
             LOG_DEBUG() << "remove callback for service "
@@ -166,7 +146,7 @@ private:
                         << ": " << id << " called. ";
 
             try {
-                for (auto& m : m_monitors) {
+                for (auto& m : m_observers) {
                     m.get().remove_client(id, it->second);
                 }
             } catch (...) {
@@ -182,8 +162,8 @@ private:
 
     service_factory<service_interface> m_service_factory;
     etcd_manager::watch_guard m_watch_guard;
-    std::list<std::reference_wrapper<service_monitor<service_interface>>>
-        m_monitors;
+    std::list<std::reference_wrapper<service_observer<service_interface>>>
+        m_observers;
 };
 
 } // namespace uh::cluster

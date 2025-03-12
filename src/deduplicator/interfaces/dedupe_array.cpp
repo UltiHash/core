@@ -8,11 +8,11 @@ dedupe_array::dedupe_array(boost::asio::io_context& ioc, etcd_manager& etcd,
       m_etcd(etcd),
       m_dedupe_maintainer(m_etcd, service_factory<deduplicator_interface>(
                                       m_ioc, connections, {})) {
-    m_dedupe_maintainer.add_monitor(m_dedupe_load_balancer);
+    m_dedupe_maintainer.add_observer(m_dedupe_load_balancer);
 }
 
 dedupe_array::~dedupe_array() {
-    m_dedupe_maintainer.remove_monitor(m_dedupe_load_balancer);
+    m_dedupe_maintainer.remove_observer(m_dedupe_load_balancer);
 }
 
 coro<dedupe_response> dedupe_array::deduplicate(context& ctx,

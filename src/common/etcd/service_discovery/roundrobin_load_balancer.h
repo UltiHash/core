@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/etcd/service_discovery/service_monitor.h"
+#include "common/etcd/service_discovery/service_observer.h"
 #include "storage/interfaces/storage_group.h"
 
 #include <set>
@@ -8,9 +8,10 @@
 namespace uh::cluster {
 
 template <typename service_interface>
-struct roundrobin_load_balancer : public service_monitor<service_interface> {
+class roundrobin_load_balancer : public service_observer<service_interface> {
 
-    roundrobin_load_balancer(
+public:
+    explicit roundrobin_load_balancer(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}
 

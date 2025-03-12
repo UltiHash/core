@@ -6,9 +6,10 @@
 
 namespace uh::cluster {
 
-struct ec_group_maintainer : public service_monitor<storage_interface> {
+struct ec_group_controller : public service_observer<storage_interface> {
 
-    ec_group_maintainer(boost::asio::io_context& ioc, size_t data_nodes,
+public:
+    ec_group_controller(boost::asio::io_context& ioc, size_t data_nodes,
                         size_t ec_nodes, etcd_manager& etcd,
                         bool active_recoverable_groups)
         : m_scheme(data_nodes, ec_nodes),
@@ -16,29 +17,28 @@ struct ec_group_maintainer : public service_monitor<storage_interface> {
           m_etcd(etcd),
           m_active_recoverable_groups(active_recoverable_groups) {}
 
-    void add_monitor(service_monitor<storage_group>& monitor) {
+    void add_observer(service_observer<storage_group>& observer) {
 
         std::lock_guard l(m_mutex);
         for (const auto& [id, cl] : m_ec_groups) {
-            monitor.add_client(id, cl);
+            observer.add_client(id, cl);
         }
 
-        m_monitors.emplace_back(monitor);
+        m_observers.emplace_back(observer);
     }
 
-    void remove_monitor(service_monitor<storage_group>& monitor) {
-        m_monitors.remove_if(
-            [&monitor](const service_monitor<storage_group>& m) {
-                return &monitor == &m;
+    void remove_observer(service_observer<storage_group>& observer) {
+        m_observers.remove_if(
+            [&observer](const service_observer<storage_group>& o) {
+                return &observer == &o;
             });
     }
 
-private:
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& cl) override {
 
         const auto gid = m_scheme.calc_group_id(id);
-        const auto nid = m_scheme.calc_group_node_id(id);
+        const auto mid = m_scheme.calc_group_node_id(id);
 
         std::lock_guard l(m_mutex);
 
@@ -50,11 +50,7 @@ private:
                                               m_scheme.ec_nodes(), gid, m_etcd,
                                               m_active_recoverable_groups));
         }
-        it->second->insert(id, nid, cl);
-
-        for (auto& m : m_monitors) {
-            m.get().add_client(gid, it->second);
-        }
+        it->second->insert(id, mid, cl);
     }
 
     void remove_client(size_t id,
@@ -67,19 +63,16 @@ private:
 
         if (const auto it = m_ec_groups.find(gid); it != m_ec_groups.cend()) {
             it->second->remove(id, nid);
-
-            for (auto& m : m_monitors) {
-                m.get().remove_client(gid, it->second);
-            }
         }
     }
 
+private:
     std::mutex m_mutex;
 
     ec_scheme m_scheme;
     std::map<size_t, std::shared_ptr<storage_group>> m_ec_groups;
-    std::list<std::reference_wrapper<service_monitor<storage_group>>>
-        m_monitors;
+    std::list<std::reference_wrapper<service_observer<storage_group>>>
+        m_observers;
     boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     const bool m_active_recoverable_groups;

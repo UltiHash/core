@@ -5,7 +5,7 @@
 
 namespace uh::cluster {
 
-struct ec_get_handler : public service_monitor<storage_group>,
+struct ec_get_handler : public service_observer<storage_group>,
                         public storage_get_handler {
 
     explicit ec_get_handler(

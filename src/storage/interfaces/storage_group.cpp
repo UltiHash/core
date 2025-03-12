@@ -41,18 +41,18 @@ storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
     }
 }
 
-void storage_group::insert(size_t id, size_t group_nid,
+void storage_group::insert(size_t id, size_t group_mid,
                            const std::shared_ptr<storage_interface>& node) {
-    m_nodes.at(group_nid) = node;
+    m_nodes.at(group_mid) = node;
     m_getter.add_client(id, node);
     if (m_rec_mod) {
         m_rec_mod->async_check_recover(m_status, m_nodes.size());
     }
 }
 
-void storage_group::remove(size_t id, size_t group_nid) {
-    m_getter.remove_client(id, m_nodes.at(group_nid));
-    m_nodes.at(group_nid) = nullptr;
+void storage_group::remove(size_t id, size_t group_mid) {
+    m_getter.remove_client(id, m_nodes.at(group_mid));
+    m_nodes.at(group_mid) = nullptr;
     if (m_rec_mod) {
         m_rec_mod->async_check_recover(m_status, m_nodes.size());
     }
