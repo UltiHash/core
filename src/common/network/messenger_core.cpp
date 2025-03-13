@@ -112,10 +112,16 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto context = (co_await boost::asio::this_coro::span)->context();
+        std::optional<opentelemetry::context::Context> context;
+        try {
+            context = co_await boost::asio::this_coro::context;
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "Error in getting context: " << e.what();
+            context = opentelemetry::context::Context{};
+        }
         // opentelemetry::context::Context context;
 
-        auto ctx_buf = encode_context(context);
+        auto ctx_buf = encode_context(*context);
         LOG_DEBUG() << "encoded context size: "
                     << boost::asio::buffer(ctx_buf).size() << "\n";
         m_write_buffers[0] = {&type, sizeof type};
@@ -158,10 +164,15 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
 
         auto size = static_cast<size_type>(data.size());
 
-        auto context = (co_await boost::asio::this_coro::span)->context();
-        // opentelemetry::context::Context context;
+        std::optional<opentelemetry::context::Context> context;
+        try {
+            context = co_await boost::asio::this_coro::context;
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "Error in getting context: " << e.what();
+            context = opentelemetry::context::Context{};
+        }
 
-        auto ctx_buf = encode_context(context);
+        auto ctx_buf = encode_context(*context);
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},

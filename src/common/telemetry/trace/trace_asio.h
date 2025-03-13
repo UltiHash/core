@@ -54,13 +54,6 @@ public:
             if (!is_started()) {
                 m_data->UpdateName(opentelemetry::nostd::string_view(
                     name.begin(), name.size()));
-            } else {
-                std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
-                std::cout << "set_name() called without calling start_span()\n";
-                std::cout << m_location.function_name() << "\n";
-                std::cout << m_location.file_name() << "\n";
-                std::cout << m_location.line() << "\n";
-                // assert(is_started() && "Span is not started");
             }
         }
     }
@@ -70,14 +63,6 @@ public:
         if (enable) {
             if (is_started()) {
                 m_data->SetAttribute(key, value);
-            } else {
-                std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
-                std::cout
-                    << "set_attribute() called without calling start_span()\n";
-                std::cout << m_location.function_name() << "\n";
-                std::cout << m_location.file_name() << "\n";
-                std::cout << m_location.line() << "\n";
-                // assert(is_started() && "Span is not started");
             }
         }
     }
@@ -137,7 +122,6 @@ private:
     void set_parent(trace_span* parent) { m_parent = parent; }
 
     void start_span(opentelemetry::context::Context context) noexcept {
-        std::cout << "start span for " << coroutine_name() << "\n";
         if (enable) {
             auto tracer = trace_api::Provider::GetTracerProvider()->GetTracer(
                 tracer_name, tracer_version);
@@ -316,6 +300,14 @@ public:
         return std::forward<U>(a);
     }
 
+    template <
+        typename U,
+        std::enable_if_t<std::is_same_v<std::decay_t<U>, this_coro::context_t>,
+                         int> = 0>
+    auto await_transform(U&& a) const {
+        return std::forward<U>(a);
+    }
+
     trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
 
 private:
@@ -375,6 +367,14 @@ public:
     template <typename U,
               std::enable_if_t<
                   std::is_same_v<std::decay_t<U>, this_coro::span_t>, int> = 0>
+    auto await_transform(U&& a) const {
+        return std::forward<U>(a);
+    }
+
+    template <
+        typename U,
+        std::enable_if_t<std::is_same_v<std::decay_t<U>, this_coro::context_t>,
+                         int> = 0>
     auto await_transform(U&& a) const {
         return std::forward<U>(a);
     }
