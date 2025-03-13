@@ -4,6 +4,8 @@
 
 #include "impl/carriers.h"
 
+namespace uh::cluster {
+
 void initialize_trace(const std::string& endpoint = "localhost:4317");
 
 template <HttpRequestLike Req>
@@ -50,14 +52,34 @@ opentelemetry::context::Context decode_context(Map& map) {
     return propagator->Extract(carrier, empty_context);
 }
 
+template <std::size_t N>
+constexpr std::size_t constexpr_strlen(const char (&str)[N]) {
+    return N - 1;
+}
+
+constexpr auto get_encoded_context_len() {
+    constexpr auto length = constexpr_strlen(
+        "00-996c6ce7ece3dcf1d2acfb7b89421fd6-28a16557cb531132-01");
+    return length;
+}
+
 inline std::string
 encode_context(const opentelemetry::context::Context& context) {
     std::map<std::string, std::string> map;
     encode_context(map, context);
-    return map["traceparent"];
+    auto traceparent = map["traceparent"];
+    auto desired_length = get_encoded_context_len();
+    if (traceparent.size() != desired_length) {
+        auto ret = std::string{};
+        ret.resize(desired_length);
+        return ret;
+    }
+    return traceparent;
 }
 inline opentelemetry::context::Context decode_context(std::string traceparent) {
     std::map<std::string, std::string> map;
     map["traceparent"] = traceparent;
     return decode_context(map);
 }
+
+} // namespace uh::cluster

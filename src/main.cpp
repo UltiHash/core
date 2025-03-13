@@ -61,6 +61,9 @@ int main(int argc, char** argv) {
             !config->service.telemetry_url.empty()) {
             LOG_DEBUG() << "trace endpoint: " << config->service.telemetry_url;
             initialize_trace(config->service.telemetry_url);
+            boost::asio::trace_span::enable = true;
+            boost::asio::trace_span::tracer_name = PROJECT_NAME;
+            boost::asio::trace_span::tracer_version = PROJECT_VERSION;
         }
 
         execute_role(*config);

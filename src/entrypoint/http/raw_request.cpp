@@ -7,7 +7,7 @@ using namespace boost;
 
 namespace uh::cluster::ep::http {
 
-coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
+notrace_coro<raw_request> raw_request::read(asio::ip::tcp::socket& sock) {
 
     beast::http::request_parser<beast::http::empty_body> parser;
     beast::flat_buffer buffer;

@@ -29,11 +29,13 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_size(m.m_read_size),
       m_write_size(m.m_write_size) {}
 
-coro<std::tuple<messenger_core::header, opentelemetry::context::Context>>
+// TODO: Create recv_header and recv_header_with_context
+notrace_coro<
+    std::tuple<messenger_core::header, opentelemetry::context::Context>>
 messenger_core::recv_header() {
     header h;
     std::string ctx_buffer;
-    ctx_buffer.resize(context::SERIALIZED_SIZE);
+    ctx_buffer.resize(get_encoded_context_len());
 
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
@@ -62,7 +64,8 @@ messenger_core::recv_header() {
     co_return std::make_tuple(h, decode_context(ctx_buffer));
 }
 
-coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
+notrace_coro<void>
+messenger_core::recv_buffers(const messenger_core::header& h) {
     if (h.size != m_read_size) {
         throw std::length_error(
             "The size of the buffers does not match with the header size: " +
@@ -107,8 +110,8 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        // auto context = (co_await boost::asio::this_coro::span)->context();
-        opentelemetry::context::Context context;
+        auto context = (co_await boost::asio::this_coro::span)->context();
+        // opentelemetry::context::Context context;
 
         auto ctx_buf = encode_context(context);
 
@@ -152,8 +155,8 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
 
         auto size = static_cast<size_type>(data.size());
 
-        // auto context = (co_await boost::asio::this_coro::span)->context();
-        opentelemetry::context::Context context;
+        auto context = (co_await boost::asio::this_coro::span)->context();
+        // opentelemetry::context::Context context;
 
         auto ctx_buf = encode_context(context);
 

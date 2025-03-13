@@ -33,9 +33,7 @@ public:
         co_return res;
     }
 
-    coro<dedupe_response>
-    recv_dedupe_response(const opentelemetry::context::Context& context,
-                         const header& message_header);
+    coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
     coro<void> send_write(context& ctx, const write_request& req);
 

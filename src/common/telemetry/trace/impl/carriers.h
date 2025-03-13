@@ -55,6 +55,7 @@ concept MapLike = requires(T message, typename T::key_type key,
     { message.find(key) } -> std::same_as<decltype(message.end())>;
     { message.end() };
 };
+
 template <MapLike Map>
 class HttpTextMapCarrier
     : public opentelemetry::context::propagation::TextMapCarrier {

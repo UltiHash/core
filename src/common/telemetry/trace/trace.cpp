@@ -28,6 +28,8 @@ void init_propagation() {
 }
 } // namespace
 
+namespace uh::cluster {
+
 void initialize_trace(const std::string& endpoint) {
     trace_sdk::BatchSpanProcessorOptions bspOpts{};
     opentelemetry::exporter::otlp::OtlpGrpcExporterOptions opts;
@@ -44,3 +46,5 @@ void initialize_trace(const std::string& endpoint) {
 
     init_propagation();
 }
+
+} // namespace uh::cluster

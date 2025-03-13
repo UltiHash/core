@@ -25,10 +25,6 @@ private:
     http::request_factory m_factory;
     std::unique_ptr<policy::module> m_policy;
     std::unique_ptr<cors::module> m_cors;
-
-    enum class flow_control : uint8_t { BREAK, CONTINUE };
-    coro<flow_control> handle_iteration(boost::asio::ip::tcp::socket& s,
-                                        std::unique_ptr<http::request> req);
 };
 
 } // end namespace uh::cluster::ep

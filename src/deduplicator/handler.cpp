@@ -46,7 +46,6 @@ handler::handle_dedupe(const opentelemetry::context::Context& context,
         case DEDUPLICATOR_REQ: {
             unique_buffer<char> data(hdr.size);
             m.register_read_buffer(data);
-            LOG_DEBUG() << "before recv buffers";
             co_await m.recv_buffers(hdr);
 
             LOG_DEBUG() << hdr.peer << ": deduplicate: size=" << data.size();

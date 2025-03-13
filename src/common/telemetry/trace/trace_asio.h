@@ -1,8 +1,11 @@
 #pragma once
 
 #include <boost/asio.hpp>
-
-#include <common/telemetry/trace/trace_span.h>
+#include <chrono>
+#include <opentelemetry/context/context.h>
+#include <opentelemetry/trace/context.h>
+#include <opentelemetry/trace/provider.h>
+#include <source_location>
 
 namespace boost {
 namespace asio {
@@ -10,34 +13,6 @@ namespace asio {
 namespace detail {
 template <typename, typename> class traced_awaitable_frame;
 }
-
-namespace this_coro {
-struct span_t {
-    constexpr span_t()
-        : m_span{nullptr} {}
-
-    bool await_ready() const noexcept { return false; }
-
-    template <typename U, typename Executor = any_io_executor>
-    void await_suspend(
-        std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
-        m_span = h.promise().span();
-
-        if (!m_span->is_started()) {
-            m_span->start_span();
-        }
-
-        h.resume();
-    }
-
-    auto await_resume() const noexcept { return m_span; }
-
-private:
-    trace_span* m_span;
-};
-
-inline constexpr span_t span;
-} // namespace this_coro
 
 template <typename T, typename Executor = any_io_executor>
 class BOOST_ASIO_NODISCARD traced_awaitable : public awaitable<T, Executor> {
@@ -81,66 +56,186 @@ private:
     detail::traced_awaitable_frame<T, Executor>* m_frame{nullptr};
 };
 
-static constexpr std::size_t SERIALIZED_SIZE =
-    trace_api::TraceId::kSize + trace_api::SpanId::kSize + 2;
+class trace_span {
+public:
+#ifdef TRACE_SPAN_DEFAULT_ENABLE
+    inline static bool enable = true;
+#else
+    inline static bool enable = false;
+#endif
 
-inline std::vector<char>
-serialize(opentelemetry::nostd::shared_ptr<trace_api::Span> span) {
-    std::vector<char> rv(SERIALIZED_SIZE);
-    if (!span) {
-        return rv;
+#ifdef OTEL_SPAN_TRACER_NAME
+    inline static std::string tracer_name = OTEL_SPAN_TRACER_NAME;
+#else
+    inline static std::string tracer_name = "my-app-tracer";
+#endif
+
+#ifdef OTEL_SPAN_TRACER_VERSION
+    inline static std::string tracer_version = OTEL_SPAN_TRACER_VERSION;
+#else
+    inline static std::string tracer_version = "0.1.0";
+#endif
+
+    trace_span(const std::source_location& location) noexcept
+        : m_location{location},
+          m_start_system_clock{std::chrono::system_clock::now()},
+          m_start_steady_clock{std::chrono::steady_clock::now()} {}
+
+    ~trace_span() {
+        if (m_data)
+            m_data->End();
     }
 
-    auto ctx = span->GetContext();
-    std::size_t pos = 0ull;
+    void set_name(std::string_view name) noexcept {
+        if (m_data)
+            m_data->UpdateName(
+                opentelemetry::nostd::string_view(name.begin(), name.size()));
+    }
 
-    auto trace_id = ctx.trace_id().Id();
-    std::memcpy(&rv[pos], trace_id.data(), trace_id.size());
-    pos += trace_id.size();
+    template <typename Value>
+    void set_attribute(std::string_view key, Value value) noexcept {
+        if (m_data)
+            m_data->SetAttribute(key, value);
+    }
 
-    auto span_id = ctx.span_id().Id();
-    std::memcpy(&rv[pos], span_id.data(), span_id.size());
-    pos += span_id.size();
+    auto context() noexcept {
+        if (m_data) {
+            opentelemetry::context::Context context;
+            return opentelemetry::trace::SetSpan(context, m_data);
+        } else {
+            return opentelemetry::context::Context{};
+        }
+    }
 
-    rv[pos] = ctx.trace_flags().flags();
-    pos += 1;
+    static std::string
+    trace_id(const trace_api::SpanContext& context) noexcept {
+        std::array<char, 2 * trace_api::TraceId::kSize> print_buffer{};
+        context.trace_id().ToLowerBase16(print_buffer);
+        return std::string(print_buffer.data(), print_buffer.size());
+    }
 
-    rv[pos] = ctx.IsRemote();
-    pos += 1;
+private:
+    template <typename, typename> friend class boost::asio::traced_awaitable;
+    template <typename, typename>
+    friend class boost::asio::detail::traced_awaitable_frame;
+    friend boost::asio::this_coro::span_t;
 
-    return rv;
-}
+    std::source_location m_location;
+    std::chrono::system_clock::time_point m_start_system_clock;
+    std::chrono::steady_clock::time_point m_start_steady_clock;
 
-inline opentelemetry::nostd::shared_ptr<trace_api::Span>
-deserialize(std::span<const char> buffer) {
-    std::span<const uint8_t> uc_buf(
-        reinterpret_cast<const uint8_t*>(&buffer[0]), buffer.size());
-    std::size_t pos = 0ull;
+    opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
+    opentelemetry::nostd::variant<opentelemetry::trace::SpanContext,
+                                  opentelemetry::context::Context>
+        m_parent_context = opentelemetry::trace::SpanContext::GetInvalid();
 
-    std::span<const uint8_t, trace_api::TraceId::kSize> trace_buf(
-        &uc_buf[pos], trace_api::TraceId::kSize);
-    auto trace_id = trace_api::TraceId(trace_buf);
-    pos += trace_api::TraceId::kSize;
+    void start_span() noexcept {
+        if (enable) {
+            trace_api::StartSpanOptions options{m_start_system_clock,
+                                                m_start_steady_clock};
+            auto has_valid_parent = false;
+            opentelemetry::nostd::visit(
+                [&](const auto& value) {
+                    using T = std::decay_t<decltype(value)>;
 
-    std::span<const uint8_t, trace_api::SpanId::kSize> span_buf(
-        &uc_buf[pos], trace_api::SpanId::kSize);
-    auto span_id = trace_api::SpanId(span_buf);
-    pos += trace_api::SpanId::kSize;
+                    if constexpr (std::is_same_v<
+                                      T, opentelemetry::trace::SpanContext>) {
+                        has_valid_parent = value.IsValid();
+                    } else if constexpr (std::is_same_v<
+                                             T,
+                                             opentelemetry::context::Context>) {
+                        has_valid_parent = true;
+                    }
+                },
+                m_parent_context);
 
-    auto flags = uc_buf[pos];
-    pos += 1;
+            if (has_valid_parent) {
+                options.parent = m_parent_context;
+            } else {
+                opentelemetry::context::Context root;
+                root = root.SetValue(trace_api::kIsRootSpanKey, true);
+                options.parent = std::move(root);
+            }
 
-    auto remote = uc_buf[pos];
-    pos += 1;
+            auto tracer = trace_api::Provider::GetTracerProvider()->GetTracer(
+                tracer_name, tracer_version);
+            std::cout << "function name: " << m_location.function_name()
+                      << std::endl;
+            std::cout << "coroutine name: " << coroutine_name() << std::endl;
+            m_data = tracer->StartSpan(coroutine_name(), options);
+            decorate_span();
+        }
+    }
 
-    auto ctx = trace_api::SpanContext(trace_id, span_id,
-                                      trace_api::TraceFlags(flags), remote);
+    bool is_started() noexcept { return m_data != nullptr; }
 
-    return
+    void set_parent_span(trace_span* parent_span) noexcept {
+        if (m_data) {
+            m_parent_context = parent_span->m_data->GetContext();
+        }
+    }
 
-        opentelemetry::nostd::shared_ptr<trace_api::Span>(
-            std::make_shared<trace_api::DefaultSpan>(std::move(ctx)));
-}
+    void set_context(opentelemetry::context::Context context) noexcept {
+        m_parent_context = context;
+    }
+
+    std::string coroutine_name() noexcept {
+        return extract_function_name(m_location.function_name());
+    }
+
+    void decorate_span() noexcept {
+        m_data->SetAttribute("file", m_location.file_name());
+        m_data->SetAttribute("line", std::to_string(m_location.line()));
+    }
+    static std::string
+    extract_function_name(std::string_view function_signature) noexcept {
+        auto last_space =
+            function_signature.rfind(' ', function_signature.find('('));
+        if (last_space == std::string_view::npos) {
+            last_space = 0;
+        } else {
+            last_space++;
+        }
+
+        auto name_start = last_space;
+
+        auto paren = function_signature.find('(', name_start);
+        if (paren == std::string_view::npos) {
+            return std::string(function_signature);
+        }
+
+        return std::string(
+            function_signature.substr(name_start, paren - name_start));
+    }
+};
+
+namespace this_coro {
+struct span_t {
+    constexpr span_t()
+        : m_span{nullptr} {}
+
+    bool await_ready() const noexcept { return false; }
+
+    template <typename U, typename Executor = any_io_executor>
+    void await_suspend(
+        std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
+        m_span = h.promise().span();
+
+        if (!m_span->is_started()) {
+            m_span->start_span();
+        }
+
+        h.resume();
+    }
+
+    auto await_resume() const noexcept { return m_span; }
+
+private:
+    uh::cluster::trace_span* m_span;
+};
+
+inline constexpr span_t span;
+} // namespace this_coro
 
 namespace detail {
 template <typename T, typename Executor>
@@ -196,10 +291,12 @@ public:
         return std::forward<U>(a);
     }
 
-    trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
+    uh::cluster::trace_span* span() noexcept {
+        return m_span ? &*m_span : nullptr;
+    }
 
 private:
-    std::optional<trace_span> m_span;
+    std::optional<uh::cluster::trace_span> m_span;
     std::optional<opentelemetry::context::Context> m_context;
 };
 
@@ -258,10 +355,12 @@ public:
         return std::forward<U>(a);
     }
 
-    trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
+    uh::cluster::trace_span* span() noexcept {
+        return m_span ? &*m_span : nullptr;
+    }
 
 private:
-    std::optional<trace_span> m_span;
+    std::optional<uh::cluster::trace_span> m_span;
     std::optional<opentelemetry::context::Context> m_context;
 };
 

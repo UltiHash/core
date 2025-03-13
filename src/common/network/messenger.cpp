@@ -19,8 +19,7 @@ coro<fragment> messenger::recv_fragment(const header& message_header) {
 }
 
 coro<dedupe_response>
-messenger::recv_dedupe_response(const opentelemetry::context::Context& context,
-                                const header& message_header) {
+messenger::recv_dedupe_response(const header& message_header) {
     dedupe_response dedupe_resp;
     register_read_buffer(dedupe_resp.effective_size);
     dedupe_resp.addr = address(address::allocated_elements(

@@ -3,8 +3,6 @@
 #include "config.h"
 #include "log.h"
 
-#include <iostream>
-
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h>
 
@@ -26,10 +24,7 @@ context::context(const std::string& name) {}
 
 context::context(const std::vector<char>& buffer) {}
 
-context context::sub_context(const std::string& name) {
-    std::cout << "sub_context: " << name << std::endl;
-    return *this;
-}
+context context::sub_context(const std::string& name) { return *this; }
 
 void context::set_name(const std::string& name) {}
 
