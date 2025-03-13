@@ -67,14 +67,13 @@ public:
         }
     }
 
-    auto context() {
+    auto context() noexcept {
         if (enable) {
             if (is_started()) {
                 opentelemetry::context::Context context;
                 return opentelemetry::trace::SetSpan(context, m_data);
-            } else {
-                throw std::runtime_error("Span is not started");
             }
+            std::cerr << "Span is not started\n";
         }
         return opentelemetry::context::Context();
     }
