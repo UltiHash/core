@@ -10,13 +10,10 @@ default_global_data_view::default_global_data_view(
     : m_io_service(ioc),
       m_config(config),
       m_service_maintainer(storage_maintainer),
-      m_ec_group_controller(m_io_service, m_config.ec_data_shards,
-                            m_config.ec_parity_shards, etcd, false),
-      m_basic_getter(m_config.ec_data_shards, m_config.ec_parity_shards) {
+      m_basic_getter{SERVICE_GET_TIMEOUT} {
 
-    m_service_maintainer.add_observer(m_ec_group_controller);
-    m_ec_group_controller.add_observer(m_load_balancer);
-    m_ec_group_controller.add_observer(m_basic_getter);
+    m_service_maintainer.add_observer(m_basic_getter);
+    m_service_maintainer.add_observer(m_load_balancer);
 
     m_load_balancer.get();
 }
@@ -111,9 +108,8 @@ coro<std::size_t> default_global_data_view::unlink(context& ctx,
 }
 
 default_global_data_view::~default_global_data_view() noexcept {
-    m_ec_group_controller.remove_observer(m_load_balancer);
-    m_ec_group_controller.remove_observer(m_basic_getter);
-    m_service_maintainer.remove_observer(m_ec_group_controller);
+    m_service_maintainer.remove_observer(m_load_balancer);
+    m_service_maintainer.remove_observer(m_basic_getter);
 }
 
 } // namespace uh::cluster
