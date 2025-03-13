@@ -7,7 +7,10 @@
 namespace uh::cluster {
 
 inline constexpr std::string TRACE_STDOUT_ENDPOINT = "stdout";
-void initialize_trace(const std::string& endpoint = "localhost:4317");
+
+void initialize_trace(const std::string& tracer_name,
+                      const std::string& tracer_version,
+                      const std::string& endpoint = "localhost:4317");
 
 template <HttpRequestLike Req>
 void encode_context(Req& req, const opentelemetry::context::Context& context) {
@@ -78,6 +81,9 @@ encode_context(const opentelemetry::context::Context& context) {
     return traceparent;
 }
 inline opentelemetry::context::Context decode_context(std::string traceparent) {
+    if (traceparent.empty()) {
+        return {};
+    }
     std::map<std::string, std::string> map;
     map["traceparent"] = traceparent;
     return decode_context(map);

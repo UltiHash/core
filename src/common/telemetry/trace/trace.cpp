@@ -1,4 +1,5 @@
 #include <common/telemetry/trace/trace.h>
+#include <common/telemetry/trace/trace_asio.h>
 
 #include <opentelemetry/exporters/ostream/span_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
@@ -31,7 +32,14 @@ void init_propagation() {
 
 namespace uh::cluster {
 
-void initialize_trace(const std::string& endpoint) {
+void initialize_trace(const std::string& tracer_name,
+                      const std::string& tracer_version,
+                      const std::string& endpoint) {
+
+    boost::asio::trace_span::enable = true;
+    boost::asio::trace_span::tracer_name = tracer_name;
+    boost::asio::trace_span::tracer_version = tracer_version;
+
     if (endpoint == TRACE_STDOUT_ENDPOINT) {
         auto exporter = opentelemetry::exporter::trace::
             OStreamSpanExporterFactory::Create();

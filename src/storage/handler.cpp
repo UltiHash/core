@@ -61,7 +61,7 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 }
 
 coro<handler::flow_control>
-handler::handle_iteration(const opentelemetry::context::Context& context,
+handler::handle_iteration(opentelemetry::context::Context context,
                           const messenger::header& hdr, messenger& m) {
     uh::cluster::context ctx;
     std::optional<error> err;

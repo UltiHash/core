@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <chrono>
+#include <iostream>
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
@@ -22,53 +22,57 @@ template <typename, typename> class traced_awaitable_frame;
 
 class trace_span {
 public:
-#ifdef TRACE_SPAN_DEFAULT_ENABLE
-    inline static bool enable = true;
-#else
     inline static bool enable = false;
-#endif
-
-#ifdef OTEL_SPAN_TRACER_NAME
-    inline static std::string tracer_name = OTEL_SPAN_TRACER_NAME;
-#else
-    inline static std::string tracer_name = "my-app-tracer";
-#endif
-
-#ifdef OTEL_SPAN_TRACER_VERSION
-    inline static std::string tracer_version = OTEL_SPAN_TRACER_VERSION;
-#else
+    inline static std::string tracer_name = "default-tracer";
     inline static std::string tracer_version = "0.1.0";
-#endif
 
     trace_span(const std::source_location& location) noexcept
-        : m_location{location},
-          m_start_system_clock{std::chrono::system_clock::now()},
-          m_start_steady_clock{std::chrono::steady_clock::now()} {}
+        : m_location{location} {}
 
     ~trace_span() {
-        if (m_data)
+        if (is_started())
             m_data->End();
     }
 
     void set_name(std::string_view name) noexcept {
-        if (m_data)
-            m_data->UpdateName(
-                opentelemetry::nostd::string_view(name.begin(), name.size()));
+        if (enable) {
+            if (!is_started()) {
+                std::cout << "set_name() called without calling start_span()\n";
+                std::cout << m_location.function_name() << "\n";
+                std::cout << m_location.file_name() << "\n";
+                std::cout << m_location.line() << "\n";
+                // assert(is_started() && "Span is not started");
+            }
+        }
+        m_data->UpdateName(
+            opentelemetry::nostd::string_view(name.begin(), name.size()));
     }
 
     template <typename Value>
     void set_attribute(std::string_view key, Value value) noexcept {
-        if (m_data)
-            m_data->SetAttribute(key, value);
+        if (enable) {
+            if (!is_started()) {
+                std::cout << m_location.function_name() << "\n";
+                std::cout << m_location.file_name() << "\n";
+                std::cout << m_location.line() << "\n";
+                // assert(is_started() && "Span is not started");
+            }
+        }
+        m_data->SetAttribute(key, value);
     }
 
     auto context() noexcept {
-        if (m_data) {
-            opentelemetry::context::Context context;
-            return opentelemetry::trace::SetSpan(context, m_data);
-        } else {
-            return opentelemetry::context::Context{};
+        if (enable) {
+            if (!is_started()) {
+                std::cout << "context() called without calling start_span()\n";
+                std::cout << m_location.function_name() << "\n";
+                std::cout << m_location.file_name() << "\n";
+                std::cout << m_location.line() << "\n";
+                // assert(is_started() && "Span is not started");
+            }
         }
+        opentelemetry::context::Context context;
+        return opentelemetry::trace::SetSpan(context, m_data);
     }
 
     static auto root_context() noexcept {
@@ -90,60 +94,20 @@ private:
     friend boost::asio::this_coro::span_t;
 
     std::source_location m_location;
-    std::chrono::system_clock::time_point m_start_system_clock;
-    std::chrono::steady_clock::time_point m_start_steady_clock;
 
     opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
-    opentelemetry::nostd::variant<opentelemetry::trace::SpanContext,
-                                  opentelemetry::context::Context>
-        m_parent_context = opentelemetry::trace::SpanContext::GetInvalid();
 
-    void start_span() noexcept {
+    void start_span(opentelemetry::context::Context context) noexcept {
+        std::cout << "start span for " << coroutine_name() << "\n";
         if (enable) {
-            trace_api::StartSpanOptions options{m_start_system_clock,
-                                                m_start_steady_clock};
-            auto has_valid_parent = false;
-            opentelemetry::nostd::visit(
-                [&](const auto& value) {
-                    using T = std::decay_t<decltype(value)>;
-
-                    if constexpr (std::is_same_v<
-                                      T, opentelemetry::trace::SpanContext>) {
-                        has_valid_parent = value.IsValid();
-                    } else if constexpr (std::is_same_v<
-                                             T,
-                                             opentelemetry::context::Context>) {
-                        has_valid_parent = true;
-                    }
-                },
-                m_parent_context);
-
-            if (has_valid_parent) {
-                options.parent = m_parent_context;
-            } else {
-                opentelemetry::context::Context root;
-                root = root.SetValue(trace_api::kIsRootSpanKey, true);
-                options.parent = std::move(root);
-            }
-
             auto tracer = trace_api::Provider::GetTracerProvider()->GetTracer(
                 tracer_name, tracer_version);
-            m_data = tracer->StartSpan(coroutine_name(), options);
+            m_data = tracer->StartSpan(coroutine_name(), {.parent = context});
             decorate_span();
         }
     }
 
     bool is_started() noexcept { return m_data != nullptr; }
-
-    void set_parent_span(trace_span* parent_span) noexcept {
-        if (m_data) {
-            m_parent_context = parent_span->m_data->GetContext();
-        }
-    }
-
-    void set_context(opentelemetry::context::Context context) noexcept {
-        m_parent_context = context;
-    }
 
     std::string coroutine_name() noexcept {
         return extract_function_name(m_location.function_name());
@@ -194,15 +158,10 @@ public:
 
         auto parent_span = parent_promise.span();
 
-        if (!parent_span->is_started()) {
-            parent_span->start_span();
-        }
-
         if (m_frame != nullptr) {
             auto current_span = m_frame->span();
-            if (!current_span->is_started()) {
-                current_span->set_parent_span(parent_span);
-                current_span->start_span();
+            if (!current_span->is_started() && parent_span->is_started()) {
+                current_span->start_span(parent_span->context());
             }
         }
 
@@ -229,11 +188,6 @@ struct span_t {
     void await_suspend(
         std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
         m_span = h.promise().span();
-
-        if (!m_span->is_started()) {
-            m_span->start_span();
-        }
-
         h.resume();
     }
 
@@ -255,7 +209,7 @@ public:
     template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
 
     template <typename... OtherArgs>
-    traced_awaitable_frame(const opentelemetry::context::Context& ctx,
+    traced_awaitable_frame(opentelemetry::context::Context ctx,
                            OtherArgs&&...) noexcept
         : m_context(ctx) {}
 
@@ -267,8 +221,9 @@ public:
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
-        if (m_context)
-            m_span->set_context(*m_context);
+        if (m_context) {
+            m_span->start_span(*m_context);
+        }
         return awaitable_frame<T, Executor>::initial_suspend();
     }
 
@@ -317,7 +272,7 @@ public:
     template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
 
     template <typename... OtherArgs>
-    traced_awaitable_frame(const opentelemetry::context::Context& ctx,
+    traced_awaitable_frame(opentelemetry::context::Context ctx,
                            OtherArgs&&...) noexcept
         : m_context(ctx) {}
 
@@ -329,8 +284,9 @@ public:
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
-        if (m_context)
-            m_span->set_context(*m_context);
+        if (m_context) {
+            m_span->start_span(*m_context);
+        }
         return awaitable_frame<void, Executor>::initial_suspend();
     }
 
