@@ -83,6 +83,7 @@ coro<response> handler::handle_request(opentelemetry::context::Context context,
     auto cmd = co_await m_command_factory.create(req);
 
     auto span = co_await boost::asio::this_coro::span;
+
     span->set_name(cmd->action_id());
 
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();

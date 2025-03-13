@@ -27,7 +27,7 @@ multipart_state::instance::lock_upload(const std::string& id) {
          id]() mutable -> notrace_coro<void> {
             co_await f.get();
             co_await (*handle)->execv("CALL uh_unlock_upload($1)", id);
-        },
+        }(),
         boost::asio::detached);
 
     co_return release_lock{std::move(p)};

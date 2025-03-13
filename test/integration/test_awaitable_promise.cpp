@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
                 ioc, [p = std::make_shared<uh::cluster::promise<int>>(
                           std::move(p))]() mutable { p->set_value(1); });
             BOOST_TEST((co_await f.get()) == 1);
-        },
+        }(),
         [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
                     }
                 });
             BOOST_CHECK_THROW((co_await f.get()), std::exception);
-        },
+        }(),
         [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
-            },
+            }(),
             [](const std::exception_ptr& e) {
                 if (e) {
                     std::rethrow_exception(e);
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
-            },
+            }(),
             [](const std::exception_ptr& e) {
                 if (e) {
                     std::rethrow_exception(e);

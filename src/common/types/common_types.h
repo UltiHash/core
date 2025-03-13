@@ -62,7 +62,8 @@ struct object {
     }
 };
 
-template <typename T> using notrace_coro = boost::asio::awaitable<T>;
+template <typename T> using lambda_coro = boost::asio::awaitable<T>;
+template <typename T> using notrace_coro = boost::asio::traced_awaitable<T>;
 template <typename T> using coro = boost::asio::traced_awaitable<T>;
 // template <typename T> using coro = boost::asio::awaitable<T>;
 

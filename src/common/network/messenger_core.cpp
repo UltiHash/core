@@ -37,6 +37,8 @@ messenger_core::recv_header() {
     std::string ctx_buffer;
     ctx_buffer.resize(get_encoded_context_len());
 
+    LOG_DEBUG() << "received encoded context size: "
+                << get_encoded_context_len() << "\n";
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type},
@@ -114,7 +116,8 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
         // opentelemetry::context::Context context;
 
         auto ctx_buf = encode_context(context);
-
+        LOG_DEBUG() << "encoded context size: "
+                    << boost::asio::buffer(ctx_buf).size() << "\n";
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
