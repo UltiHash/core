@@ -16,7 +16,8 @@ public:
 
     notrace_coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
-    coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
+    coro<http::response> handle_request(opentelemetry::context::Context context,
+                                        boost::asio::ip::tcp::socket& s,
                                         http::request& req,
                                         const std::string& id);
 

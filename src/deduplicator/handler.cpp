@@ -29,7 +29,7 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         } catch (const std::exception& e) {
             throw;
         }
-        auto control = co_await handle_dedupe(context, hdr, m);
+        auto control = co_await handle_dedupe(std::move(context), hdr, m);
         if (control == flow_control::BREAK) {
             break;
         }

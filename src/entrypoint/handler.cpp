@@ -33,7 +33,8 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
             req->context().set_attribute("request-id", id);
 
-            resp = co_await handle_request(s, *req, id);
+            resp = co_await handle_request(
+                boost::asio::trace_span::root_context(), s, *req, id);
             metric<success>::increase(1);
             keep_alive = true;
         } catch (const command_exception& e) {
@@ -71,15 +72,19 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+coro<response> handler::handle_request(opentelemetry::context::Context context,
+                                       boost::asio::ip::tcp::socket& s,
                                        request& req, const std::string& id) {
-
     auto cors = co_await m_cors->check(req);
     if (cors.response) {
         co_return std::move(*cors.response);
     }
 
     auto cmd = co_await m_command_factory.create(req);
+
+    auto span = co_await boost::asio::this_coro::span;
+    span->set_name(cmd->action_id());
+
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     req.context().set_name(cmd->action_id());

@@ -52,7 +52,7 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();
         } else {
-            if (co_await handle_iteration(context, hdr, m) ==
+            if (co_await handle_iteration(std::move(context), hdr, m) ==
                 flow_control::BREAK) {
                 break;
             }

@@ -6,6 +6,7 @@
 
 namespace uh::cluster {
 
+inline constexpr std::string TRACE_STDOUT_ENDPOINT = "stdout";
 void initialize_trace(const std::string& endpoint = "localhost:4317");
 
 template <HttpRequestLike Req>
