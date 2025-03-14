@@ -2,20 +2,27 @@
 
 namespace uh::cluster {
 
+static ec_status response_to_status(std::string response_value) {
+    const auto stat = magic_enum::enum_cast<ec_status>(response_value);
+    if (!stat)
+        throw std::runtime_error("invalid ec status");
+    return *stat;
+}
+
 storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                              size_t ec_nodes, size_t group_id,
                              etcd_manager& etcd, bool active_recovery)
     : m_nodes(data_nodes + ec_nodes),
       m_ec_calc(ec_factory::create(data_nodes, ec_nodes)),
       m_ioc(ioc),
-      m_attributes(group_id, etcd) {
+      m_group_id(group_id),
+      m_etcd(etcd) {
     if (!active_recovery) {
         if (data_nodes == 1 and ec_nodes == 0) {
             m_status = healthy;
         } else {
             m_watch_guard = etcd.watch(
-                get_ec_group_attribute_path(m_attributes.group_id(),
-                                            EC_GROUP_STATUS),
+                get_ec_group_attribute_path(m_group_id, EC_GROUP_STATUS),
                 [&status = m_status, &m = m_mutex](const etcd::Response& resp) {
                     try {
                         std::lock_guard<std::mutex> lk(m);
@@ -37,25 +44,25 @@ storage_group::storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                 });
         }
     } else {
-        m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
+        // m_rec_mod.emplace(m_getter, m_ioc, *m_ec_calc, m_attributes);
     }
 }
 
 void storage_group::insert(size_t id, size_t group_mid,
                            const std::shared_ptr<storage_interface>& node) {
     m_nodes.at(group_mid) = node;
-    m_getter.add_client(id, node);
-    if (m_rec_mod) {
-        m_rec_mod->async_check_recover(m_status, m_nodes.size());
-    }
+    // m_getter.add_client(id, node);
+    // if (m_rec_mod) {
+    //     m_rec_mod->async_check_recover(m_status, m_nodes.size());
+    // }
 }
 
 void storage_group::remove(size_t id, size_t group_mid) {
-    m_getter.remove_client(id, m_nodes.at(group_mid));
+    // m_getter.remove_client(id, m_nodes.at(group_mid));
     m_nodes.at(group_mid) = nullptr;
-    if (m_rec_mod) {
-        m_rec_mod->async_check_recover(m_status, m_nodes.size());
-    }
+    // if (m_rec_mod) {
+    //     m_rec_mod->async_check_recover(m_status, m_nodes.size());
+    // }
 }
 
 [[nodiscard]] bool storage_group::is_healthy() const noexcept {
@@ -171,7 +178,7 @@ coro<std::map<size_t, size_t>> storage_group::get_ds_size_map(context& ctx) {
 }
 
 [[nodiscard]] size_t storage_group::group_id() const noexcept {
-    return m_attributes.group_id();
+    return m_group_id;
 }
 
 coro<void> storage_group::ds_write(context&, uint32_t, uint64_t,
@@ -182,5 +189,16 @@ coro<void> storage_group::ds_write(context&, uint32_t, uint64_t,
 coro<void> storage_group::ds_read(context&, uint32_t, uint64_t, size_t, char*) {
     throw std::runtime_error("unsupported operation in storage group");
 }
+
+void storage_group::set_status(ec_status status) {
+    set_attribute(EC_GROUP_STATUS, std::string(magic_enum::enum_name(status)));
+}
+
+void storage_group::set_attribute(etcd_ec_group_attributes attr,
+                                  const std::string& value) {
+    m_etcd.put(get_ec_group_attribute_path(m_group_id, attr), value);
+}
+
+storage_group::~storage_group() { m_etcd.rmdir(get_ec_group_path(m_group_id)); }
 
 } // namespace uh::cluster

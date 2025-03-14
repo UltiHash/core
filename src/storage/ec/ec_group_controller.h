@@ -2,7 +2,7 @@
 #include "common/ec/ec_scheme.h"
 #include "common/etcd/utils.h"
 #include "common/service_interfaces/storage_interface.h"
-#include "storage/interfaces/storage_group.h"
+#include "storage_group.h"
 
 namespace uh::cluster {
 
@@ -16,23 +16,6 @@ public:
           m_ioc(ioc),
           m_etcd(etcd),
           m_active_recoverable_groups(active_recoverable_groups) {}
-
-    void add_observer(service_observer<storage_group>& observer) {
-
-        std::lock_guard l(m_mutex);
-        for (const auto& [id, cl] : m_ec_groups) {
-            observer.add_client(id, cl);
-        }
-
-        m_observers.emplace_back(observer);
-    }
-
-    void remove_observer(service_observer<storage_group>& observer) {
-        m_observers.remove_if(
-            [&observer](const service_observer<storage_group>& o) {
-                return &observer == &o;
-            });
-    }
 
     void add_client(size_t id,
                     const std::shared_ptr<storage_interface>& cl) override {

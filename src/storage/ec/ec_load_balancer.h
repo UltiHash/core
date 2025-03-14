@@ -1,16 +1,16 @@
 #pragma once
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
-#include "storage/interfaces/storage_group.h"
+#include "common/etcd/service_discovery/service_load_balancer.h"
+#include "storage_group.h"
 #include <chrono>
 
 namespace uh::cluster {
 
-struct ec_load_balancer : public service_observer<storage_group> {
+struct ec_load_balancer : storage_load_balancer {
     ec_load_balancer(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
-        : m_service_get_timeout{service_get_timeout} {}
+        : storage_load_balancer(service_get_timeout) {}
 
-    void add_client(size_t,
+    void add_client(size_t id,
                     const std::shared_ptr<storage_group>& client) override {
 
         std::lock_guard l(m_mutex);
@@ -27,7 +27,7 @@ struct ec_load_balancer : public service_observer<storage_group> {
         m_cv.notify_one();
     }
 
-    void remove_client(size_t,
+    void remove_client(size_t id,
                        const std::shared_ptr<storage_group>& client) override {
         std::lock_guard l(m_mutex);
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
+#include "common/etcd/service_discovery/service_load_balancer.h"
 #include "common/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"

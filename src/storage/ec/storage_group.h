@@ -1,19 +1,30 @@
 #pragma once
 
+#include "address_utils.h"
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_factory.h"
 #include "common/ec/reedsolomon_c.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/utils/address_utils.h"
-#include "coordinator/recovery_module.h"
+#include "common/etcd/service_discovery/storage_load_balancer.h"
+#include "common/etcd/utils.h"
 
 namespace uh::cluster {
 
-struct storage_group : public storage_interface {
+enum ec_status {
+    empty,
+    degraded,
+    recovering,
+    healthy,
+    failed_recovery,
+};
 
+class storage_group : public storage_interface {
+
+public:
     storage_group(boost::asio::io_context& ioc, size_t data_nodes,
                   size_t ec_nodes, size_t group_id, etcd_manager& etcd,
                   bool active_recovery);
+
+    ~storage_group() override;
 
     void insert(size_t id, size_t group_nid,
                 const std::shared_ptr<storage_interface>& node);
@@ -53,16 +64,21 @@ struct storage_group : public storage_interface {
     coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
                        size_t size, char* buffer) override;
 
+    void set_status(ec_status status);
+
 private:
     std::vector<std::shared_ptr<storage_interface>> m_nodes;
-    storage_service_get_handler m_getter;
+    storage_load_balancer m_getter;
     std::unique_ptr<ec_interface> m_ec_calc;
     boost::asio::io_context& m_ioc;
     std::atomic<ec_status> m_status = empty;
-    ec_group_attributes m_attributes;
     etcd_manager::watch_guard m_watch_guard;
-    std::optional<recovery_module> m_rec_mod;
+    // std::optional<recovery_module> m_rec_mod;
     std::mutex m_mutex;
+    size_t m_group_id;
+    etcd_manager& m_etcd;
+
+    void set_attribute(etcd_ec_group_attributes attr, const std::string& value);
 };
 
 } // namespace uh::cluster

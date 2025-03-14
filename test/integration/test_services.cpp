@@ -4,9 +4,9 @@
 
 #include "common/etcd/registry/service_id.h"
 #include "common/etcd/registry/service_registry.h"
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
+#include "common/etcd/service_discovery/service_load_balancer.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
+#include "common/etcd/service_discovery/storage_load_balancer.h"
 #include "common/utils/common.h"
 #include "lib/util/checks.h"
 #include "lib/util/server.h"
@@ -22,8 +22,8 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_service_get_handler services{1s};
-    roundrobin_load_balancer<storage_interface> load_balancer{1s};
+    storage_load_balancer services{1s};
+    service_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
