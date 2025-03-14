@@ -69,4 +69,6 @@ template <typename T> using coro = boost::asio::traced_awaitable<T>;
 
 template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
 
+inline thread_local opentelemetry::context::Context THREAD_LOCAL_CONTEXT;
+
 } // end namespace uh::cluster

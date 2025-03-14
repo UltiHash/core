@@ -37,12 +37,9 @@ public:
             m_license_updater.emplace(
                 m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
 
-            boost::asio::co_spawn(
-                m_ioc,
-                [&](opentelemetry::context::Context context) -> coro<void> {
-                    co_await m_license_updater->update();
-                }(boost::asio::trace_span::root_context()),
-                boost::asio::detached);
+            boost::asio::co_spawn(m_ioc,
+                                  m_license_updater->update().start_trace(),
+                                  boost::asio::detached);
         } else {
             LOG_INFO() << "using license from licensing host "
                        << cc.backend_config.backend_host;
@@ -53,10 +50,8 @@ public:
                                                              bc.access_token));
             boost::asio::co_spawn(
                 m_ioc,
-                [&](opentelemetry::context::Context context) -> coro<void> {
-                    co_await m_license_updater->periodic_update(
-                        LICENSE_FETCH_PERIOD);
-                }(boost::asio::trace_span::root_context()),
+                m_license_updater->periodic_update(LICENSE_FETCH_PERIOD)
+                    .start_trace(),
                 boost::asio::detached);
 
             m_usage_updater.emplace(m_ioc, m_usage, *m_license_updater,

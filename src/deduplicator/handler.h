@@ -17,8 +17,7 @@ public:
 
 private:
     enum class flow_control : uint8_t { BREAK, CONTINUE };
-    coro<flow_control> handle_dedupe(opentelemetry::context::Context context,
-                                     const messenger::header& hdr,
+    coro<flow_control> handle_dedupe(const messenger::header& hdr,
                                      messenger& m);
 
     local_deduplicator& m_local_dedupe;

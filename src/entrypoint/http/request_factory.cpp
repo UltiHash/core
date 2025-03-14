@@ -13,8 +13,7 @@ request_factory::request_factory(user::db& users)
     : m_users(users) {}
 
 notrace_coro<std::unique_ptr<request>>
-request_factory::create(ip::tcp::socket& sock) {
-    auto req = co_await raw_request::read(sock);
+request_factory::create(ip::tcp::socket& sock, raw_request& req) {
 
     LOG_DEBUG() << "pre-auth request: " << req.headers;
 

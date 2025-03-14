@@ -51,7 +51,7 @@ public:
 
     void set_name(std::string_view name) noexcept {
         if (enable) {
-            if (!is_started()) {
+            if (is_started()) {
                 m_data->UpdateName(opentelemetry::nostd::string_view(
                     name.begin(), name.size()));
             }
@@ -62,7 +62,39 @@ public:
     void set_attribute(std::string_view key, Value value) noexcept {
         if (enable) {
             if (is_started()) {
-                m_data->SetAttribute(key, value);
+                m_data->SetAttribute(
+                    opentelemetry::nostd::string_view(key.begin(), key.size()),
+                    value);
+            }
+        }
+    }
+
+    template <class U,
+              std::enable_if_t<opentelemetry::common::detail::
+                                   is_key_value_iterable<U>::value>* = nullptr>
+    void add_event(std::string_view name, const U& attributes) noexcept {
+        if (enable) {
+            if (is_started()) {
+                m_data->AddEvent(opentelemetry::nostd::string_view(name.begin(),
+                                                                   name.size()),
+                                 attributes);
+            }
+        }
+    }
+
+    void
+    add_event(std::string_view name,
+              const std::initializer_list<std::pair<std::string, std::string>>&
+                  attributes) noexcept {
+        std::vector<std::pair<std::string, std::string>> attrs(attributes);
+        add_event(name, attrs);
+    }
+
+    void add_event(std::string_view name) noexcept {
+        if (enable) {
+            if (is_started()) {
+                m_data->AddEvent(opentelemetry::nostd::string_view(
+                    name.begin(), name.size()));
             }
         }
     }
@@ -88,11 +120,6 @@ public:
     }
     // assert(is_started() && "Span is not started");
 
-    static auto root_context() noexcept {
-        opentelemetry::context::Context context;
-        return context.SetValue(trace_api::kIsRootSpanKey, true);
-    }
-
     static std::string
     trace_id(const trace_api::SpanContext& context) noexcept {
         std::array<char, 2 * trace_api::TraceId::kSize> print_buffer{};
@@ -116,6 +143,11 @@ private:
     std::source_location m_location;
 
     opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
+
+    static auto root_context() noexcept {
+        opentelemetry::context::Context context;
+        return context.SetValue(trace_api::kIsRootSpanKey, true);
+    }
 
     // Debugging facilities
     void set_parent(trace_span* parent) { m_parent = parent; }
@@ -196,6 +228,93 @@ public:
         return m_frame;
     }
 
+    auto& continue_trace(opentelemetry::context::Context parent_context) & {
+        if (m_frame != nullptr) {
+            auto current_span = m_frame->span();
+            if (!current_span->is_started()) {
+                current_span->start_span(parent_context);
+            }
+        }
+        return *this;
+    }
+
+    auto&& continue_trace(opentelemetry::context::Context parent_context) && {
+        return std::move(this->continue_trace(parent_context));
+    }
+
+    auto& start_trace() & { return continue_trace(trace_span::root_context()); }
+
+    auto&& start_trace() && { return std::move(this->start_trace()); }
+
+    auto& set_name(std::string_view name) & noexcept {
+        if (m_frame != nullptr) {
+            m_frame->span()->set_name(name);
+        }
+        return *this;
+    }
+
+    auto&& set_name(std::string_view name) && noexcept {
+        return std::move(this->set_name(name));
+    }
+
+    template <typename Value>
+    auto& set_attribute(std::string_view key, Value value) & noexcept {
+        if (m_frame != nullptr) {
+            m_frame->span()->set_attribute(key, value);
+        }
+        return *this;
+    }
+
+    template <typename Value>
+    auto&& set_attribute(std::string_view key, Value value) && noexcept {
+        return std::move(this->set_attribute(key, value));
+    }
+
+    template <class U,
+              std::enable_if_t<opentelemetry::common::detail::
+                                   is_key_value_iterable<U>::value>* = nullptr>
+    auto& add_event(std::string_view name, const U& attributes) & noexcept {
+        if (m_frame != nullptr) {
+            m_frame->span()->add_event(name, attributes);
+        }
+        return *this;
+    }
+
+    template <class U,
+              std::enable_if_t<opentelemetry::common::detail::
+                                   is_key_value_iterable<U>::value>* = nullptr>
+    auto&& add_event(std::string_view name, const U& attributes) && noexcept {
+        return std::move(this->add_event(name, attributes));
+    }
+
+    auto&
+    add_event(std::string_view name,
+              const std::initializer_list<std::pair<std::string, std::string>>&
+                  attributes) & noexcept {
+        if (m_frame != nullptr) {
+            m_frame->span()->add_event(name, attributes);
+        }
+        return *this;
+    }
+
+    auto&&
+    add_event(std::string_view name,
+              const std::initializer_list<std::pair<std::string, std::string>>&
+                  attributes) && noexcept {
+        return std::move(this->add_event(name, attributes));
+    }
+
+    auto& add_event(std::string_view name) & noexcept {
+        if (m_frame != nullptr) {
+            m_frame->span()->add_event(name);
+        }
+        return *this;
+    }
+
+    auto&& add_event(std::string_view name) && noexcept {
+        return std::move(this->add_event(name));
+    }
+
 private:
     detail::traced_awaitable_frame<T, Executor>* m_frame{nullptr};
 };
@@ -250,13 +369,6 @@ class traced_awaitable_frame : public awaitable_frame<T, Executor> {
 public:
     using awaitable_frame<T, Executor>::awaitable_frame;
 
-    template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
-
-    template <typename... OtherArgs>
-    traced_awaitable_frame(opentelemetry::context::Context ctx,
-                           OtherArgs&&...) noexcept
-        : m_context(ctx) {}
-
     traced_awaitable<T, Executor> get_return_object() noexcept {
         return traced_awaitable<T, Executor>(
             awaitable_frame<T, Executor>::get_return_object(), this);
@@ -265,9 +377,6 @@ public:
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
-        if (m_context) {
-            m_span->start_span(*m_context);
-        }
         return awaitable_frame<T, Executor>::initial_suspend();
     }
 
@@ -311,7 +420,6 @@ public:
 
 private:
     std::optional<trace_span> m_span;
-    std::optional<opentelemetry::context::Context> m_context;
 };
 
 // void specialization
@@ -321,13 +429,6 @@ class traced_awaitable_frame<void, Executor>
 public:
     using awaitable_frame<void, Executor>::awaitable_frame;
 
-    template <typename... Args> traced_awaitable_frame(Args&&...) noexcept {}
-
-    template <typename... OtherArgs>
-    traced_awaitable_frame(opentelemetry::context::Context ctx,
-                           OtherArgs&&...) noexcept
-        : m_context(ctx) {}
-
     traced_awaitable<void, Executor> get_return_object() noexcept {
         return traced_awaitable<void, Executor>(
             awaitable_frame<void, Executor>::get_return_object(), this);
@@ -336,9 +437,6 @@ public:
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.emplace(location);
-        if (m_context) {
-            m_span->start_span(*m_context);
-        }
         return awaitable_frame<void, Executor>::initial_suspend();
     }
 
@@ -382,7 +480,6 @@ public:
 
 private:
     std::optional<trace_span> m_span;
-    std::optional<opentelemetry::context::Context> m_context;
 };
 
 } // namespace detail

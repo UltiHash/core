@@ -50,6 +50,4 @@ private:
 
 void initialize_traces_exporter(const std::string& endpoint);
 
-inline thread_local context CURRENT_CONTEXT;
-
 } // namespace uh::cluster

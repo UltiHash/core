@@ -21,49 +21,17 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         /*
          * Note: lifetime of response must not exceed lifetime of request.
          */
-        std::unique_ptr<request> req;
         std::string id = generate_unique_id();
-        response resp;
-        bool keep_alive = false;
 
+        raw_request rawreq;
         try {
-            req = co_await m_factory.create(s);
-            LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
-                       << *req;
-
-            req->context().set_attribute("request-id", id);
-
-            resp = co_await handle_request(
-                boost::asio::trace_span::root_context(), s, *req, id);
-            metric<success>::increase(1);
-            keep_alive = true;
-        } catch (const command_exception& e) {
-            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(e);
-            keep_alive = true;
-        } catch (const boost::system::system_error& se) {
-            if (se.code() == boost::beast::http::error::end_of_stream) {
-                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
-                break;
-            }
-
-            LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-            resp = make_response(
-                command_exception(status::internal_server_error,
-                                  "InternalError", "Internal server error."));
+            rawreq = co_await raw_request::read(s);
         } catch (const std::exception& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-            resp = make_response(command_exception());
+            LOG_ERROR() << "Error handling request: " << e.what();
         }
 
-        if (req) {
-            req->context().set_attribute(
-                "response-code", static_cast<unsigned>(resp.base().result()));
-        }
-
-        co_await write(s, std::move(resp), id);
-        if (!keep_alive) {
+        auto flow = co_await handle_request(s, rawreq, id);
+        if (flow == flow_control::BREAK) {
             break;
         }
     }
@@ -72,9 +40,52 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<response> handler::handle_request(opentelemetry::context::Context context,
-                                       boost::asio::ip::tcp::socket& s,
-                                       request& req, const std::string& id) {
+coro<handler::flow_control>
+handler::handle_request(boost::asio::ip::tcp::socket& s, raw_request& rawreq,
+                        const std::string& id) {
+
+    flow_control flow = flow_control::BREAK;
+    response resp;
+    try {
+        auto req = co_await m_factory.create(s, rawreq);
+
+        LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
+                   << *req;
+
+        resp = co_await execute_request(s, *req, id).start_trace();
+
+        metric<success>::increase(1);
+
+        flow = flow_control::CONTINUE;
+
+    } catch (const command_exception& e) {
+        LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+        resp = make_response(e);
+        flow = flow_control::CONTINUE;
+
+    } catch (const boost::system::system_error& se) {
+        if (se.code() == boost::beast::http::error::end_of_stream) {
+            LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+        }
+
+        LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+        resp = make_response(command_exception(status::internal_server_error,
+                                               "InternalError",
+                                               "Internal server error."));
+
+    } catch (const std::exception& e) {
+        LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+
+        resp = make_response(command_exception());
+    }
+
+    co_await write(s, std::move(resp), id);
+    co_return flow;
+}
+
+coro<response> handler::execute_request(boost::asio::ip::tcp::socket& s,
+                                        request& req, const std::string& id) {
+
     auto cors = co_await m_cors->check(req);
     if (cors.response) {
         co_return std::move(*cors.response);
@@ -83,12 +94,10 @@ coro<response> handler::handle_request(opentelemetry::context::Context context,
     auto cmd = co_await m_command_factory.create(req);
 
     auto span = co_await boost::asio::this_coro::span;
-
     span->set_name(cmd->action_id());
+    span->set_attribute("request-id", id);
 
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
-
-    req.context().set_name(cmd->action_id());
 
     LOG_DEBUG() << req.peer() << ": checking policies";
     if (!req.authenticated_user().super_user &&
@@ -96,9 +105,9 @@ coro<response> handler::handle_request(opentelemetry::context::Context context,
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(
             status::forbidden, "AccessDenied",
-            std::format(
-                "You do not have {} permissions to the requested S3 Prefix{}.",
-                cmd->action_id(), req.path()));
+            std::format("You do not have {} permissions to the requested "
+                        "S3 Prefix{}.",
+                        cmd->action_id(), req.path()));
     }
 
     co_await cmd->validate(req);
@@ -116,6 +125,9 @@ coro<response> handler::handle_request(opentelemetry::context::Context context,
             response.set(hdr.first, std::move(hdr.second));
         }
     }
+
+    span->set_attribute("response-code",
+                        static_cast<unsigned>(response.base().result()));
 
     co_return response;
 }

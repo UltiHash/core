@@ -9,7 +9,7 @@ namespace uh::cluster::deduplicator {
 handler::handler(local_deduplicator& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
-notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
@@ -29,16 +29,16 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         } catch (const std::exception& e) {
             throw;
         }
-        auto control = co_await handle_dedupe(std::move(context), hdr, m);
+        auto control =
+            co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
         if (control == flow_control::BREAK) {
             break;
         }
     } while (keep_alive);
 }
 
-coro<handler::flow_control>
-handler::handle_dedupe(opentelemetry::context::Context context,
-                       const messenger::header& hdr, messenger& m) {
+coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
+                                                   messenger& m) {
     std::optional<error> err;
     uh::cluster::context ctx{};
     try {

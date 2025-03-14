@@ -15,9 +15,8 @@ public:
 
 private:
     enum class flow_control : uint8_t { BREAK, CONTINUE };
-    coro<handler::flow_control>
-    handle_iteration(opentelemetry::context::Context context,
-                     const messenger::header& hdr, messenger& m);
+    coro<handler::flow_control> handle_iteration(const messenger::header& hdr,
+                                                 messenger& m);
     coro<void> handle_write(context& ctx, messenger& m,
                             const messenger::header& h);
 
