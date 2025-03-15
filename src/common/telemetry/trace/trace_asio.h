@@ -114,7 +114,9 @@ public:
                 opentelemetry::context::Context context;
                 return opentelemetry::trace::SetSpan(context, m_data);
             }
-            std::cerr << "Span is not started\n";
+            std::cerr << "Span is not started: [" << m_location.file_name()
+                      << ":" << m_location.line() << "] " << coroutine_name()
+                      << "\n";
         }
         return opentelemetry::context::Context();
     }
