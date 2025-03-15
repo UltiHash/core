@@ -24,14 +24,53 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         std::string id = generate_unique_id();
 
         raw_request rawreq;
+        std::optional<response> resp;
+        bool keep_alive = false;
+
         try {
             rawreq = co_await raw_request::read(s);
+            auto req = co_await m_factory.create(s, rawreq);
+            LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
+                       << *req;
+            resp = co_await handle_request(s, *req, id).start_trace();
+            metric<success>::increase(1);
+            keep_alive = true;
+
+        } catch (const command_exception& e) {
+            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+            resp = make_response(e);
+            keep_alive = true;
+
+        } catch (const boost::system::system_error& se) {
+            if (se.code() == boost::beast::http::error::end_of_stream) {
+                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+                break;
+            } else {
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+                resp = make_response(command_exception(
+                    status::internal_server_error, "InternalError",
+                    "Internal server error."));
+            }
         } catch (const std::exception& e) {
-            LOG_ERROR() << "Error handling request: " << e.what();
+            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+            resp = make_response(command_exception());
         }
 
-        auto flow = co_await handle_request(s, rawreq, id);
-        if (flow == flow_control::BREAK) {
+        if (resp.has_value()) {
+            try {
+                co_await write(s, std::move(*resp), id);
+            } catch (const boost::system::system_error& se) {
+                if (se.code() == boost::beast::http::error::end_of_stream) {
+                    LOG_INFO()
+                        << s.remote_endpoint() << ": peer closed connection";
+                    break;
+                }
+                throw;
+            }
+            break;
+        }
+
+        if (!keep_alive) {
             break;
         }
     }
@@ -40,51 +79,8 @@ notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     s.close();
 }
 
-coro<handler::flow_control>
-handler::handle_request(boost::asio::ip::tcp::socket& s, raw_request& rawreq,
-                        const std::string& id) {
-
-    flow_control flow = flow_control::BREAK;
-    response resp;
-    try {
-        auto req = co_await m_factory.create(s, rawreq);
-
-        LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
-                   << *req;
-
-        resp = co_await execute_request(s, *req, id).start_trace();
-
-        metric<success>::increase(1);
-
-        flow = flow_control::CONTINUE;
-
-    } catch (const command_exception& e) {
-        LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-        resp = make_response(e);
-        flow = flow_control::CONTINUE;
-
-    } catch (const boost::system::system_error& se) {
-        if (se.code() == boost::beast::http::error::end_of_stream) {
-            LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
-        }
-
-        LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-        resp = make_response(command_exception(status::internal_server_error,
-                                               "InternalError",
-                                               "Internal server error."));
-
-    } catch (const std::exception& e) {
-        LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-        resp = make_response(command_exception());
-    }
-
-    co_await write(s, std::move(resp), id);
-    co_return flow;
-}
-
-coro<response> handler::execute_request(boost::asio::ip::tcp::socket& s,
-                                        request& req, const std::string& id) {
+coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
+                                       request& req, const std::string& id) {
 
     auto cors = co_await m_cors->check(req);
     if (cors.response) {
