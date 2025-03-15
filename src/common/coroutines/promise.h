@@ -80,7 +80,7 @@ private:
             /* Note: shared_ptr is required to move ownership of the shared
              * state to the executor.
              */
-            boost::asio::post(get_associated_executor(m_handler),
+            boost::asio::post(boost::asio::get_associated_executor(m_handler),
                               [s, this]() -> void {
                                   auto exc = s->m_exception.value_or(nullptr);
                                   if (s->m_value) {
@@ -178,7 +178,7 @@ private:
             /* Note: shared_ptr is required to move ownership of the shared
              * state to the executor.
              */
-            boost::asio::post(get_associated_executor(m_handler),
+            boost::asio::post(boost::asio::get_associated_executor(m_handler),
                               [s, this]() -> void {
                                   m_handler(s->m_exception.value_or(nullptr));
                               });
