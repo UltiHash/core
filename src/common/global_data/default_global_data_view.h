@@ -147,7 +147,6 @@ public:
 private:
     boost::asio::io_context& m_io_service;
     global_data_view_config m_config;
-    lru_cache<uint128_t, shared_buffer<char>> m_cache_l2;
 
     service_maintainer<storage_interface>& m_service_maintainer;
     ec_group_maintainer m_ec_maintainer;
