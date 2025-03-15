@@ -14,8 +14,17 @@ namespace asio {
 template <typename, typename> class traced_awaitable;
 
 namespace this_coro {
-struct span_t;
-struct context_t;
+struct span_t {
+    constexpr span_t() {}
+};
+
+inline constexpr span_t span;
+
+struct context_t {
+    constexpr context_t() {}
+};
+
+inline constexpr context_t context;
 } // namespace this_coro
 
 namespace detail {
@@ -214,8 +223,8 @@ public:
 
         if (m_frame != nullptr) {
             auto current_span = m_frame->span();
+            current_span->set_parent(parent_span);
             if (!current_span->is_started() && parent_span->is_started()) {
-                current_span->set_parent(parent_span);
                 current_span->start_span(parent_span->context());
             }
         }
@@ -319,50 +328,6 @@ private:
     detail::traced_awaitable_frame<T, Executor>* m_frame{nullptr};
 };
 
-namespace this_coro {
-struct span_t {
-    constexpr span_t()
-        : m_span{nullptr} {}
-
-    bool await_ready() const noexcept { return false; }
-
-    template <typename U, typename Executor = any_io_executor>
-    void await_suspend(
-        std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
-        m_span = h.promise().span();
-        h.resume();
-    }
-
-    auto await_resume() const noexcept { return m_span; }
-
-private:
-    trace_span* m_span;
-};
-
-inline constexpr span_t span;
-
-struct context_t {
-    constexpr context_t()
-        : m_span{nullptr} {}
-
-    bool await_ready() const noexcept { return false; }
-
-    template <typename U, typename Executor = any_io_executor>
-    void await_suspend(
-        std::coroutine_handle<detail::traced_awaitable_frame<U, Executor>> h) {
-        m_span = h.promise().span();
-        h.resume();
-    }
-
-    auto await_resume() const noexcept { return m_span->context(); }
-
-private:
-    trace_span* m_span;
-};
-
-inline constexpr context_t context;
-} // namespace this_coro
-
 namespace detail {
 template <typename T, typename Executor>
 class traced_awaitable_frame : public awaitable_frame<T, Executor> {
@@ -401,19 +366,34 @@ public:
             nullptr);
     }
 
-    template <typename U,
-              std::enable_if_t<
-                  std::is_same_v<std::decay_t<U>, this_coro::span_t>, int> = 0>
-    auto await_transform(U&& a) const {
-        return std::forward<U>(a);
+    auto await_transform(this_coro::span_t) noexcept {
+        struct result {
+            traced_awaitable_frame* this_;
+
+            bool await_ready() const noexcept { return true; }
+
+            void await_suspend(coroutine_handle<void>) noexcept {}
+
+            auto await_resume() const noexcept { return this_->span(); }
+        };
+
+        return result{this};
     }
 
-    template <
-        typename U,
-        std::enable_if_t<std::is_same_v<std::decay_t<U>, this_coro::context_t>,
-                         int> = 0>
-    auto await_transform(U&& a) const {
-        return std::forward<U>(a);
+    auto await_transform(this_coro::context_t) noexcept {
+        struct result {
+            traced_awaitable_frame* this_;
+
+            bool await_ready() const noexcept { return true; }
+
+            void await_suspend(coroutine_handle<void>) noexcept {}
+
+            auto await_resume() const noexcept {
+                return this_->span()->context();
+            }
+        };
+
+        return result{this};
     }
 
     trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
@@ -461,19 +441,34 @@ public:
             nullptr);
     }
 
-    template <typename U,
-              std::enable_if_t<
-                  std::is_same_v<std::decay_t<U>, this_coro::span_t>, int> = 0>
-    auto await_transform(U&& a) const {
-        return std::forward<U>(a);
+    auto await_transform(this_coro::span_t) noexcept {
+        struct result {
+            traced_awaitable_frame* this_;
+
+            bool await_ready() const noexcept { return true; }
+
+            void await_suspend(coroutine_handle<void>) noexcept {}
+
+            auto await_resume() const noexcept { return this_->span(); }
+        };
+
+        return result{this};
     }
 
-    template <
-        typename U,
-        std::enable_if_t<std::is_same_v<std::decay_t<U>, this_coro::context_t>,
-                         int> = 0>
-    auto await_transform(U&& a) const {
-        return std::forward<U>(a);
+    auto await_transform(this_coro::context_t) noexcept {
+        struct result {
+            traced_awaitable_frame* this_;
+
+            bool await_ready() const noexcept { return true; }
+
+            void await_suspend(coroutine_handle<void>) noexcept {}
+
+            auto await_resume() const noexcept {
+                return this_->span()->context();
+            }
+        };
+
+        return result{this};
     }
 
     trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
