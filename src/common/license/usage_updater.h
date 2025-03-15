@@ -24,7 +24,8 @@ public:
           m_usage{usage},
           m_license(license),
           m_backend_client{std::make_unique<T>(std::forward<T>(client))} {
-        boost::asio::co_spawn(m_ioc, hourly_update(), boost::asio::detached);
+        boost::asio::co_spawn(m_ioc, hourly_update().start_trace(),
+                              boost::asio::detached);
     }
 
     coro<void>

@@ -88,14 +88,15 @@ service::service(const service_config& sc, entrypoint_config config)
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
                m_ioc),
       m_gc(m_ioc, m_directory, m_data_view) {
-    co_spawn(
-        m_ioc, update_limits(m_directory, m_limits), [](std::exception_ptr e) {
-            try {
-                std::rethrow_exception(e);
-            } catch (const std::exception& e) {
-                LOG_ERROR() << "metrics monitor stopped working: " << e.what();
-            }
-        });
+    co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
+             [](std::exception_ptr e) {
+                 try {
+                     std::rethrow_exception(e);
+                 } catch (const std::exception& e) {
+                     LOG_ERROR()
+                         << "metrics monitor stopped working: " << e.what();
+                 }
+             });
 }
 
 void service::run() {

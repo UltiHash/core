@@ -20,7 +20,7 @@ public:
         auto fut = p.get_future();
 
         auto context = co_await boost::asio::this_coro::context;
-        auto f = [&context](auto& f, auto&& promise) mutable {
+        auto f = [context](auto& f, auto&& promise) mutable {
             THREAD_LOCAL_CONTEXT = context;
             try {
                 promise.set_value(f());
@@ -42,7 +42,7 @@ public:
         auto fut = p.get_future();
 
         auto context = co_await boost::asio::this_coro::context;
-        auto f = [&context](auto& f, auto&& promise) mutable {
+        auto f = [context](auto& f, auto&& promise) mutable {
             try {
                 THREAD_LOCAL_CONTEXT = context;
                 f();
