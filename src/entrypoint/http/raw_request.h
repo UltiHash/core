@@ -19,7 +19,7 @@ using verb = beast::http::verb;
 using status = beast::http::status;
 
 struct raw_request {
-    static notrace_coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
+    static coro<raw_request> read(boost::asio::ip::tcp::socket& sock);
     static raw_request
     from_string(beast::http::request<beast::http::empty_body> header,
                 beast::flat_buffer buffer, boost::asio::ip::tcp::endpoint peer);

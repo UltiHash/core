@@ -13,7 +13,7 @@ namespace uh::cluster::storage {
 handler::handler(local_storage& storage)
     : m_storage(storage) {}
 
-notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 

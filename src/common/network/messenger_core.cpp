@@ -29,9 +29,7 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_size(m.m_read_size),
       m_write_size(m.m_write_size) {}
 
-// TODO: Create recv_header and recv_header_with_context
-notrace_coro<
-    std::tuple<messenger_core::header, opentelemetry::context::Context>>
+coro<std::tuple<messenger_core::header, opentelemetry::context::Context>>
 messenger_core::recv_header() {
     header h;
     std::string ctx_buffer;
@@ -64,8 +62,7 @@ messenger_core::recv_header() {
     co_return std::make_tuple(h, decode_context(ctx_buffer));
 }
 
-notrace_coro<void>
-messenger_core::recv_buffers(const messenger_core::header& h) {
+coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     if (h.size != m_read_size) {
         throw std::length_error(
             "The size of the buffers does not match with the header size: " +

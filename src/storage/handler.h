@@ -11,7 +11,7 @@ class handler : public protocol_handler {
 public:
     explicit handler(local_storage& storage);
 
-    notrace_coro<void> handle(boost::asio::ip::tcp::socket s) override;
+    coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
     enum class flow_control : uint8_t { BREAK, CONTINUE };

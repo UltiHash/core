@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(get) {
 
     co_spawn(
         ctx,
-        [&]() -> notrace_coro<void> {
+        [&]() -> coro<void> {
             auto r0 = co_await p.get();
             auto r1 = co_await p.get();
             auto r2 = co_await p.get();
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(block) {
 
     co_spawn(
         ctx,
-        [&]() -> notrace_coro<void> {
+        [&]() -> coro<void> {
             handle = std::make_unique<uh::cluster::pool<int>::handle>(
                 co_await p.get());
         }(),
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(block) {
 
     auto future = co_spawn(
         ctx,
-        [&]() -> notrace_coro<void> {
+        [&]() -> coro<void> {
             ++pos;
             auto r2 = co_await p.get();
             ++pos;

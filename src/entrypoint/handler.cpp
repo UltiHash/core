@@ -15,7 +15,7 @@ handler::handler(command_factory&& comm_factory, request_factory&& factory,
       m_policy(std::move(policy)),
       m_cors(std::move(cors)) {}
 
-notrace_coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
+coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     for (;;) {
 
         /*

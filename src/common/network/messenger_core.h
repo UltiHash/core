@@ -87,10 +87,9 @@ public:
         m_write_size += buf.size();
     }
 
-    notrace_coro<std::tuple<header, opentelemetry::context::Context>>
-    recv_header();
+    coro<std::tuple<header, opentelemetry::context::Context>> recv_header();
 
-    notrace_coro<void> recv_buffers(const header& h);
+    coro<void> recv_buffers(const header& h);
 
     void reserve_write_buffers(size_t capacity);
 
