@@ -153,6 +153,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     opentelemetry_exporter_otlp_grpc
     opentelemetry_exporter_otlp_grpc_metrics
     opentelemetry_exporter_ostream_metrics
+    opentelemetry_exporter_ostream_span
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_LIBRARIES}
     ${LMDB_LIBRARY}

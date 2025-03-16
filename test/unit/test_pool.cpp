@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(get) {
             BOOST_CHECK(*r1 != *r2);
             BOOST_CHECK(*r0 != *r2);
             BOOST_CHECK(*r0 != *r1);
-        },
+        }(),
         use_future)
         .get();
 
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(block) {
         [&]() -> coro<void> {
             handle = std::make_unique<uh::cluster::pool<int>::handle>(
                 co_await p.get());
-        },
+        }(),
         use_future)
         .get();
 
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(block) {
             ++pos;
             auto r2 = co_await p.get();
             ++pos;
-        },
+        }(),
         use_future);
 
     WAIT_UNTIL_CHECK(500, pos == 1);
