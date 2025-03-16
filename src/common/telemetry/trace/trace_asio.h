@@ -47,11 +47,12 @@ public:
     inline static std::string tracer_name = "default-tracer";
     inline static std::string tracer_version = "0.1.0";
 
-    trace_span(const std::source_location& location) noexcept
-        : m_file_name{location.file_name()},
+    trace_span(std::source_location location =
+                   std::source_location::current()) noexcept
+        : m_location{std::move(location)},
+          m_file_name{location.file_name()},
           m_line{location.line()},
-          m_function_name{location.function_name()},
-          m_location{location} {}
+          m_function_name{location.function_name()} {}
 
     ~trace_span() {
         if (is_started())
@@ -147,11 +148,11 @@ private:
 
     // Debugging facilities
     trace_span* m_parent{nullptr};
+
+    std::source_location m_location;
     _string m_file_name;
     uint32_t m_line;
     _string m_function_name;
-
-    std::source_location m_location;
 
     opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
 
@@ -341,17 +342,6 @@ public:
             awaitable_frame<T, Executor>::get_return_object(), this);
     }
 
-    auto initial_suspend(const std::source_location& location =
-                             std::source_location::current()) noexcept {
-        m_span.emplace(location);
-        return awaitable_frame<T, Executor>::initial_suspend();
-    }
-
-    auto final_suspend() noexcept {
-        m_span.reset();
-        return awaitable_frame<T, Executor>::final_suspend();
-    }
-
     using awaitable_frame_base<Executor>::await_transform;
 
     template <typename U>
@@ -398,10 +388,10 @@ public:
         return result{this};
     }
 
-    trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
+    trace_span* span() noexcept { return &m_span; }
 
 private:
-    std::optional<trace_span> m_span;
+    trace_span m_span;
 };
 
 // void specialization
@@ -416,17 +406,6 @@ public:
             awaitable_frame<void, Executor>::get_return_object(), this);
     }
 
-    auto initial_suspend(const std::source_location& location =
-                             std::source_location::current()) noexcept {
-        m_span.emplace(location);
-        return awaitable_frame<void, Executor>::initial_suspend();
-    }
-
-    auto final_suspend() noexcept {
-        m_span.reset();
-        return awaitable_frame<void, Executor>::final_suspend();
-    }
-
     using awaitable_frame_base<Executor>::await_transform;
 
     template <typename U>
@@ -473,10 +452,10 @@ public:
         return result{this};
     }
 
-    trace_span* span() noexcept { return m_span ? &*m_span : nullptr; }
+    trace_span* span() noexcept { return &m_span; }
 
 private:
-    std::optional<trace_span> m_span;
+    trace_span m_span;
 };
 
 } // namespace detail
