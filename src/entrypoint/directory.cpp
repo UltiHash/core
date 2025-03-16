@@ -58,11 +58,11 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id]() mutable -> coro<void> {
+        [f = std::move(f), this, id]() mutable -> lambda_coro<void> {
             co_await f.get();
             auto h = co_await m_db.get();
             co_await h->execv("CALL uh_dec_reference($1)", id);
-        }(),
+        },
         boost::asio::detached);
 
     co_return object_lock(object{.name = object_id,

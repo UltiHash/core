@@ -17,14 +17,14 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
                 ioc, [p = std::make_shared<uh::cluster::promise<int>>(
                           std::move(p))]() mutable { p->set_value(1); });
             BOOST_TEST((co_await f.get()) == 1);
-        }(),
+        },
         [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
                     }
                 });
             BOOST_CHECK_THROW((co_await f.get()), std::exception);
-        }(),
+        },
         [](const std::exception_ptr& e) {
             if (e) {
                 std::rethrow_exception(e);
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [&ioc, i, &failures]() -> coro<void> {
+            [&ioc, i, &failures]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
-            }(),
+            },
             [](const std::exception_ptr& e) {
                 if (e) {
                     std::rethrow_exception(e);
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [i, &failures, &workers]() -> coro<void> {
+            [i, &failures, &workers]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
                 if ((co_await f.get()) != i) {
                     failures++;
                 }
-            }(),
+            },
             [](const std::exception_ptr& e) {
                 if (e) {
                     std::rethrow_exception(e);
