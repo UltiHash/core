@@ -5,6 +5,4 @@
 # 1. Don't forget to run ulimit -c unlimited before running the program.
 # 2. Run gdb <executable> `ls -t /var/lib/apport/coredump/core.* | head -n 1`
 
-set debuginfod enabled on
 set print pretty on
-set pagination off
