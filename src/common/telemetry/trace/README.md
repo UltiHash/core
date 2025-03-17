@@ -1,23 +1,34 @@
-# trace
+# Trace Asio
+
+This extends Boost Asio to support OpenTelemetry trace.
+
+You can start a trace for a coroutine call chain by calling `start_trace()` on the root coroutine's return type, `traced_awaitable`.
+
+```cpp
+resp = co_await handle_request(s, *req, id).start_trace();
+```
+
+To use this method, you need to return `boost::asio::traced_awaitable` instead of `boost::asio_awaitable`.
+All coroutines that return `traced_awaitable` will inherit the context of their parent span in the background and indicate their running time with start/end spans.
+
+To propagate the context, you need to retrieve the current context by awaiting `boost::asio::this_coro::context`.
+
+```cpp
+auto context = co_await boost::asio::this_coro::context;
+```
+
+You can encode the context using the `encode_context` function, send it through a communication channel, and decode it with `decode_context` provided by `trace.h`.
+
+To continue creating a span on a different process, call `continue_trace(context)` on the root coroutine's return type, `traced_awaitable`.
+
+```cpp
+co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
+```
 
 ## TODOs
 
-- [x] Call `start_trace` on root coroutine's awaitable. Remove special constructor for context as a first argument.
-- Broken coroutines chain 
-    - [x] In `catch_frag` function, trasfering context to `read_fragment`(`src/common/global_data/default_global_data_view.cpp|51`) using `CURRENT_CONTEXT`: 
-- [x] Interfaces
-    - [x] A single remote deduplicator is spawned. Why? in `src/entrypoint/commands/s3/put_object.cpp|29` col 15| upload function
-    - [x] `src/common/utils/address_utils.cpp|55` col 22| `perform_for_address`
-    - [x] `run_for_all` uses `co_spawn`.
-
-- [x] Find `set_attribute` and `sub_context`. Change those using `trace_span`.
-- [x] Propagate parent context
-
-- [x] Turn off trace and see how it works
 - [ ] Create `recv_header_with_context`
-- [ ] Remove previous context propagation from the codes
-- [ ] Tweak `co_spawn`
-- [ ] Add logs into spans
-- [ ] Create `m_span` on promise's creation, not on initial suspend.
+- [ ] Remove previous context propagation from the code
 - [ ] Tweak `async_result` macro to start and end spans for async operations
-
+- [ ] Tweak `co_spawn` to spawn coroutines that return `traced_awaitable`
+- [ ] Add logs to spans
