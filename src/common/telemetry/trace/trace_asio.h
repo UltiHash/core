@@ -140,6 +140,21 @@ public:
         context.trace_id().ToLowerBase16(print_buffer);
         return std::string(print_buffer.data(), print_buffer.size());
     }
+    static std::string
+    extract_function_name(std::string_view full_name) noexcept {
+        size_t param_start = full_name.rfind('(');
+        if (param_start == std::string_view::npos)
+            return {};
+
+        size_t name_start = full_name.find(' ');
+        if (name_start == std::string_view::npos)
+            return {};
+
+        name_start += 1;
+
+        return std::string(
+            full_name.substr(name_start, param_start - name_start));
+    }
 
 private:
     template <typename, typename> friend class boost::asio::traced_awaitable;
@@ -185,26 +200,6 @@ private:
         m_data->SetAttribute("function name", m_location.function_name());
         m_data->SetAttribute("file", m_location.file_name());
         m_data->SetAttribute("line", std::to_string(m_location.line()));
-    }
-    static std::string
-    extract_function_name(std::string_view function_signature) noexcept {
-        auto last_space =
-            function_signature.rfind(' ', function_signature.find('('));
-        if (last_space == std::string_view::npos) {
-            last_space = 0;
-        } else {
-            last_space++;
-        }
-
-        auto name_start = last_space;
-
-        auto paren = function_signature.find('(', name_start);
-        if (paren == std::string_view::npos) {
-            return std::string(function_signature);
-        }
-
-        return std::string(
-            function_signature.substr(name_start, paren - name_start));
     }
 };
 
