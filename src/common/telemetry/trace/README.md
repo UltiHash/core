@@ -27,8 +27,9 @@ co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
 
 ## TODOs
 
-- [ ] Create `recv_header_with_context`
+- [ ] Create `recv_header_with_context` and use it to get context from it only
 - [ ] Remove previous context propagation from the code
 - [ ] Tweak `async_result` macro to start and end spans for async operations
 - [ ] Tweak `co_spawn` to spawn coroutines that return `traced_awaitable`
 - [ ] Add logs to spans
+- [ ] Use reference to get context
