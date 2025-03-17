@@ -47,16 +47,18 @@ public:
     inline static std::string tracer_name = "default-tracer";
     inline static std::string tracer_version = "0.1.0";
 
-    trace_span(std::source_location location =
-                   std::source_location::current()) noexcept
-        : m_location{std::move(location)},
-          m_file_name{location.file_name()},
-          m_line{location.line()},
-          m_function_name{location.function_name()} {}
+    trace_span(){};
 
     ~trace_span() {
         if (is_started())
             m_data->End();
+    }
+
+    void set_location(std::source_location location) noexcept {
+        m_location = std::move(location);
+        m_file_name = location.file_name();
+        m_line = location.line();
+        m_function_name = location.function_name();
     }
 
     void set_name(std::string_view name) noexcept {
@@ -150,9 +152,9 @@ private:
     trace_span* m_parent{nullptr};
 
     std::source_location m_location;
-    _string m_file_name;
+    std::string_view m_file_name;
     uint32_t m_line;
-    _string m_function_name;
+    std::string_view m_function_name;
 
     opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
 
@@ -337,6 +339,12 @@ class traced_awaitable_frame : public awaitable_frame<T, Executor> {
 public:
     using awaitable_frame<T, Executor>::awaitable_frame;
 
+    auto initial_suspend(const std::source_location& location =
+                             std::source_location::current()) noexcept {
+        m_span.set_location(location);
+        return awaitable_frame<void, Executor>::initial_suspend();
+    }
+
     traced_awaitable<T, Executor> get_return_object() noexcept {
         return traced_awaitable<T, Executor>(
             awaitable_frame<T, Executor>::get_return_object(), this);
@@ -400,6 +408,12 @@ class traced_awaitable_frame<void, Executor>
     : public awaitable_frame<void, Executor> {
 public:
     using awaitable_frame<void, Executor>::awaitable_frame;
+
+    auto initial_suspend(const std::source_location& location =
+                             std::source_location::current()) noexcept {
+        m_span.set_location(location);
+        return awaitable_frame<void, Executor>::initial_suspend();
+    }
 
     traced_awaitable<void, Executor> get_return_object() noexcept {
         return traced_awaitable<void, Executor>(
