@@ -46,8 +46,7 @@ messenger_core::recv_header() {
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
     }
-    // h.ctx = context();
-    // h.ctx.peer() = peer();
+
     h.peer = peer();
 
     if (h.type == FAILURE) {
