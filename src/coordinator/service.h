@@ -8,7 +8,7 @@
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
 #include <config/configuration.h>
-#include <storage/ec_groups/ec_group_controller.h>
+#include <storage/ec/ec_group_controller.h>
 
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>

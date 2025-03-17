@@ -1,9 +1,9 @@
 #pragma once
 #include "common/coroutines/coro_util.h"
 #include "common/ec/ec_interface.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
+#include "common/etcd/service_discovery/storage_load_balancer.h"
 #include "common/telemetry/log.h"
-#include "storage/ec_groups/ec_group_attributes.h"
+#include "storage/ec/storage_group.h"
 
 #include <boost/asio/co_spawn.hpp>
 
@@ -11,15 +11,14 @@ namespace uh::cluster {
 
 class recovery_module {
 public:
-    recovery_module(storage_service_get_handler& getter,
-                    boost::asio::io_context& ioc, ec_interface& ec,
-                    ec_group_attributes& attributes)
+    recovery_module(storage_load_balancer& getter, boost::asio::io_context& ioc,
+                    ec_interface& ec, storage_group& storage_group)
         : m_getter(getter),
           m_ioc(ioc),
           m_ec_calc(ec),
-          m_attributes(attributes) {}
+          m_storage_group(storage_group) {}
 
-    ~recovery_module() { m_attributes.clear(); }
+    ~recovery_module() { storage_group.clear(); }
 
     void async_check_recover(std::atomic<ec_status>& status,
                              size_t group_size) {
@@ -199,10 +198,10 @@ private:
 
     static constexpr const char* RECOVERY_INITIAL_CONTEXT_NAME = "recovery";
 
-    storage_service_get_handler& m_getter;
+    storage_load_balancer& m_getter;
     boost::asio::io_context& m_ioc;
     ec_interface& m_ec_calc;
-    ec_group_attributes& m_attributes;
+    storage_group& m_attributes;
 };
 
 } // end namespace uh::cluster
