@@ -22,7 +22,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     bool should_continue = true;
     do {
         std::optional<error> err;
-        messenger_header hdr;
+        messenger_core::header hdr;
         opentelemetry::context::Context context;
 
         try {
