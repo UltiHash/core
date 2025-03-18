@@ -337,7 +337,7 @@ public:
     auto initial_suspend(const std::source_location& location =
                              std::source_location::current()) noexcept {
         m_span.set_location(location);
-        return awaitable_frame<void, Executor>::initial_suspend();
+        return awaitable_frame<T, Executor>::initial_suspend();
     }
 
     traced_awaitable<T, Executor> get_return_object() noexcept {
