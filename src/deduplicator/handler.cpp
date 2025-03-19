@@ -15,26 +15,21 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     messenger m(std::move(s));
 
-    bool keep_alive = true;
-    do {
+    for (;;) {
         std::optional<error> err;
         messenger_core::header hdr;
         opentelemetry::context::Context context;
 
-        try {
-            std::tie(hdr, context) = co_await m.recv_header_with_context();
-            LOG_DEBUG() << remote.str() << " received "
-                        << magic_enum::enum_name(hdr.type);
+        std::tie(hdr, context) = co_await m.recv_header_with_context();
+        LOG_DEBUG() << remote.str() << " received "
+                    << magic_enum::enum_name(hdr.type);
 
-        } catch (const std::exception& e) {
-            throw;
-        }
         auto control =
             co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
         if (control == flow_control::BREAK) {
             break;
         }
-    } while (keep_alive);
+    }
 }
 
 coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,

@@ -19,8 +19,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
     messenger m(std::move(s));
 
-    bool should_continue = true;
-    do {
+    for (;;) {
         std::optional<error> err;
         messenger_core::header hdr;
         opentelemetry::context::Context context;
@@ -34,13 +33,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_ERROR() << "boost::system::system_error should be converted to "
                            "error_exception with error::internal_network_error";
             if (e.code() == boost::asio::error::eof) {
-                should_continue = false;
                 break;
             }
             err = error(error::unknown, e.what());
         } catch (const error_exception& e) {
             if (*e.error() == error::internal_network_error) {
-                should_continue = false;
                 break;
             }
             err = e.error();
@@ -57,7 +54,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 break;
             }
         }
-    } while (should_continue);
+    };
 }
 
 coro<handler::flow_control>

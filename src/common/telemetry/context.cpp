@@ -35,32 +35,4 @@ context::span_wrap::~span_wrap() {}
 
 context::context(std::shared_ptr<span_wrap> span) {}
 
-void initialize_traces_exporter(const std::string& endpoint) {
-    if (endpoint.empty()) {
-        return;
-    }
-
-    LOG_DEBUG() << "trace endpoint: " << endpoint;
-
-    opentelemetry::exporter::otlp::OtlpGrpcExporterOptions trace_opts;
-    trace_opts.endpoint = endpoint;
-
-    auto exporter =
-        opentelemetry::exporter::otlp::OtlpGrpcExporterFactory::Create(
-            trace_opts);
-    auto processor =
-        trace_sdk::SimpleSpanProcessorFactory::Create(std::move(exporter));
-
-    std::shared_ptr<opentelemetry::trace::TracerProvider> api_provider =
-        trace_sdk::TracerProviderFactory::Create(std::move(processor));
-
-    opentelemetry::trace::Provider::SetTracerProvider(api_provider);
-
-    opentelemetry::context::propagation::GlobalTextMapPropagator::
-        SetGlobalPropagator(
-            opentelemetry::nostd::shared_ptr<
-                opentelemetry::context::propagation::TextMapPropagator>(
-                new opentelemetry::trace::propagation::HttpTraceContext()));
-}
-
 } // namespace uh::cluster

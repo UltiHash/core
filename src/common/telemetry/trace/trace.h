@@ -67,26 +67,7 @@ constexpr auto get_encoded_context_len() {
     return length;
 }
 
-inline std::string
-encode_context(const opentelemetry::context::Context& context) {
-    std::map<std::string, std::string> map;
-    encode_context(map, context);
-    auto traceparent = map["traceparent"];
-    auto desired_length = get_encoded_context_len();
-    if (traceparent.size() != desired_length) {
-        auto ret = std::string{};
-        ret.resize(desired_length);
-        return ret;
-    }
-    return traceparent;
-}
-inline opentelemetry::context::Context decode_context(std::string traceparent) {
-    if (traceparent.empty()) {
-        return {};
-    }
-    std::map<std::string, std::string> map;
-    map["traceparent"] = traceparent;
-    return decode_context(map);
-}
+std::string encode_context(const opentelemetry::context::Context& context);
+opentelemetry::context::Context decode_context(std::string traceparent);
 
 } // namespace uh::cluster

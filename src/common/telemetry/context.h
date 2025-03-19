@@ -2,7 +2,6 @@
 
 #include <boost/asio.hpp>
 #include <opentelemetry/sdk/metrics/meter_provider_factory.h>
-// #include <opentelemetry/trace/span_context.h>
 
 #include <utility>
 #include <vector>
@@ -18,11 +17,7 @@ public:
     context sub_context(const std::string& name);
 
     template <typename value>
-    void set_attribute(const std::string& name, value v) {
-        // if (m_span) {
-        //     m_span->span->SetAttribute(name, std::move(v));
-        // }
-    }
+    void set_attribute(const std::string& name, value v) {}
 
     void set_name(const std::string& name);
 
@@ -30,10 +25,6 @@ public:
 
     boost::asio::ip::tcp::endpoint& peer() { return m_peer; }
     const boost::asio::ip::tcp::endpoint& peer() const { return m_peer; }
-
-    // static constexpr std::size_t SERIALIZED_SIZE =
-    //     opentelemetry::trace::TraceId::kSize +
-    //     opentelemetry::trace::SpanId::kSize + 2;
 
     struct span_wrap {
         span_wrap(std::shared_ptr<opentelemetry::trace::Span> span);

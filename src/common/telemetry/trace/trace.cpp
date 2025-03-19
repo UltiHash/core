@@ -52,8 +52,6 @@ void initialize_trace(const std::string& tracer_name,
         trace_sdk::BatchSpanProcessorOptions bspOpts{};
         opentelemetry::exporter::otlp::OtlpGrpcExporterOptions opts;
         opts.endpoint = endpoint;
-        // opts.use_ssl_credentials = true;
-        // opts.ssl_credentials_cacert_as_string = "ssl-certificate";
         auto exporter = otlp::OtlpGrpcExporterFactory::Create(opts);
         auto processor = trace_sdk::BatchSpanProcessorFactory::Create(
             std::move(exporter), bspOpts);
@@ -64,6 +62,27 @@ void initialize_trace(const std::string& tracer_name,
     }
 
     init_propagation();
+}
+
+std::string encode_context(const opentelemetry::context::Context& context) {
+    std::map<std::string, std::string> map;
+    encode_context(map, context);
+    auto traceparent = map["traceparent"];
+    auto desired_length = get_encoded_context_len();
+    if (traceparent.size() != desired_length) {
+        auto ret = std::string{};
+        ret.resize(desired_length);
+        return ret;
+    }
+    return traceparent;
+}
+opentelemetry::context::Context decode_context(std::string traceparent) {
+    if (traceparent.empty()) {
+        return {};
+    }
+    std::map<std::string, std::string> map;
+    map["traceparent"] = traceparent;
+    return decode_context(map);
 }
 
 } // namespace uh::cluster

@@ -1,4 +1,3 @@
-// #include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/trace/trace.h"
 #include "common/utils/signal_handler.h"
