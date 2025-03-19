@@ -1,12 +1,13 @@
 #pragma once
 
+#include <common/telemetry/log.h>
+
 #include <boost/asio.hpp>
 #include <functional>
 #include <iostream>
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
-#include <source_location>
 
 namespace boost {
 namespace asio {
@@ -54,11 +55,8 @@ public:
             m_data->End();
     }
 
-    void set_location(std::source_location location) noexcept {
-        m_location = std::move(location);
-        m_file_name = location.file_name();
-        m_line = location.line();
-        m_function_name = location.function_name();
+    void set_location(const source_location& location) noexcept {
+        m_location = location;
     }
 
     void set_name(std::string_view name) noexcept {
@@ -118,8 +116,8 @@ public:
                 return opentelemetry::trace::SetSpan(context, m_data);
             }
             std::cerr << "Span is not started: [" << m_location.file_name()
-                      << ":" << m_location.line() << "] " << coroutine_name()
-                      << "\n";
+                      << ":" << m_location.line() << "] "
+                      << m_location.function_name() << "\n";
         }
         return opentelemetry::context::Context();
     }
@@ -140,20 +138,19 @@ public:
         context.trace_id().ToLowerBase16(print_buffer);
         return std::string(print_buffer.data(), print_buffer.size());
     }
-    static std::string
-    extract_function_name(std::string_view full_name) noexcept {
-        size_t param_start = full_name.rfind('(');
-        if (param_start == std::string_view::npos)
-            return {};
 
-        size_t name_start = full_name.find(' ');
-        if (name_start == std::string_view::npos)
-            return {};
+    static bool check_span(const opentelemetry::context::Context& context) {
+        auto span = opentelemetry::trace::GetSpan(context);
+        auto span_context = span->GetContext();
+        bool is_valid = span_context.IsValid();
 
-        name_start += 1;
+        if (is_valid) {
+            LOG_INFO() << "Valid span in context.";
+        } else {
+            LOG_ERROR() << "No valid span in provided context";
+        }
 
-        return std::string(
-            full_name.substr(name_start, param_start - name_start));
+        return is_valid;
     }
 
 private:
@@ -166,10 +163,7 @@ private:
     // Debugging facilities
     trace_span* m_parent{nullptr};
 
-    std::source_location m_location;
-    std::string_view m_file_name;
-    uint32_t m_line;
-    std::string_view m_function_name;
+    source_location m_location;
 
     opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
 
@@ -185,16 +179,13 @@ private:
         if (enable) {
             auto tracer = trace_api::Provider::GetTracerProvider()->GetTracer(
                 tracer_name, tracer_version);
-            m_data = tracer->StartSpan(coroutine_name(), {.parent = context});
+            m_data = tracer->StartSpan(m_location.function_name(),
+                                       {.parent = context});
             decorate_span();
         }
     }
 
     bool is_started() noexcept { return m_data != nullptr; }
-
-    std::string coroutine_name() noexcept {
-        return extract_function_name(m_location.function_name());
-    }
 
     void decorate_span() noexcept {
         m_data->SetAttribute("function name", m_location.function_name());
@@ -328,14 +319,18 @@ private:
     detail::traced_awaitable_frame<T, Executor>* m_frame{nullptr};
 };
 
+#define CURRENT_LOCATION                                                       \
+    ::boost::source_location(__builtin_FILE(), __builtin_LINE(),               \
+                             __builtin_FUNCTION())
+
 namespace detail {
 template <typename T, typename Executor>
 class traced_awaitable_frame : public awaitable_frame<T, Executor> {
 public:
     using awaitable_frame<T, Executor>::awaitable_frame;
 
-    auto initial_suspend(const std::source_location& location =
-                             std::source_location::current()) noexcept {
+    auto initial_suspend(
+        const source_location& location = CURRENT_LOCATION) noexcept {
         m_span.set_location(location);
         return awaitable_frame<T, Executor>::initial_suspend();
     }
@@ -404,8 +399,8 @@ class traced_awaitable_frame<void, Executor>
 public:
     using awaitable_frame<void, Executor>::awaitable_frame;
 
-    auto initial_suspend(const std::source_location& location =
-                             std::source_location::current()) noexcept {
+    auto initial_suspend(
+        const source_location& location = CURRENT_LOCATION) noexcept {
         m_span.set_location(location);
         return awaitable_frame<void, Executor>::initial_suspend();
     }
