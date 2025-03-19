@@ -26,7 +26,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         opentelemetry::context::Context context;
 
         try {
-            std::tie(hdr, context) = co_await m.recv_header();
+            std::tie(hdr, context) = co_await m.recv_header_with_context();
             LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 

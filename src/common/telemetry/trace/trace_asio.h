@@ -1,10 +1,7 @@
 #pragma once
 
-#include <common/telemetry/log.h>
-
 #include <boost/asio.hpp>
 #include <functional>
-#include <iostream>
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
@@ -31,16 +28,6 @@ inline constexpr context_t context;
 namespace detail {
 template <typename, typename> class traced_awaitable_frame;
 }
-
-class _string {
-    const char* str;
-
-public:
-    explicit _string(const char* s)
-        : str(s) {}
-
-    const char* c_str() const { return str; }
-};
 
 class trace_span {
 public:
@@ -115,23 +102,22 @@ public:
                 opentelemetry::context::Context context;
                 return opentelemetry::trace::SetSpan(context, m_data);
             }
-            std::cerr << "Span is not started: [" << m_location.file_name()
-                      << ":" << m_location.line() << "] "
-                      << m_location.function_name() << "\n";
         }
         return opentelemetry::context::Context();
     }
 
-    void
-    process_execution_sequence(std::function<void(std::string_view)> process) {
+    bool is_started() noexcept { return m_data != nullptr; }
+
+    // For Debugging
+    void iterate_call_stack(std::function<void(source_location)> process) {
         auto parent = m_parent;
         while (parent) {
-            process(parent->m_location.function_name());
+            process(parent->m_location);
             parent = parent->m_parent;
         }
     }
-    // assert(is_started() && "Span is not started");
 
+    // For Debugging
     static std::string
     trace_id(const trace_api::SpanContext& context) noexcept {
         std::array<char, 2 * trace_api::TraceId::kSize> print_buffer{};
@@ -139,16 +125,11 @@ public:
         return std::string(print_buffer.data(), print_buffer.size());
     }
 
-    static bool check_span(const opentelemetry::context::Context& context) {
+    // For Debugging
+    static bool check_context(const opentelemetry::context::Context& context) {
         auto span = opentelemetry::trace::GetSpan(context);
         auto span_context = span->GetContext();
         bool is_valid = span_context.IsValid();
-
-        if (is_valid) {
-            LOG_INFO() << "Valid span in context.";
-        } else {
-            LOG_ERROR() << "No valid span in provided context";
-        }
 
         return is_valid;
     }
@@ -160,7 +141,7 @@ private:
     friend boost::asio::this_coro::span_t;
     friend boost::asio::this_coro::context_t;
 
-    // Debugging facilities
+    // For Debugging
     trace_span* m_parent{nullptr};
 
     source_location m_location;
@@ -172,7 +153,7 @@ private:
         return context.SetValue(trace_api::kIsRootSpanKey, true);
     }
 
-    // Debugging facilities
+    // For Debugging
     void set_parent(trace_span* parent) { m_parent = parent; }
 
     void start_span(opentelemetry::context::Context context) noexcept {
@@ -184,8 +165,6 @@ private:
             decorate_span();
         }
     }
-
-    bool is_started() noexcept { return m_data != nullptr; }
 
     void decorate_span() noexcept {
         m_data->SetAttribute("function name", m_location.function_name());

@@ -91,7 +91,10 @@ public:
         m_write_size += buf.size();
     }
 
-    coro<std::tuple<header, opentelemetry::context::Context>> recv_header();
+    coro<header> recv_header();
+
+    coro<std::tuple<header, opentelemetry::context::Context>>
+    recv_header_with_context();
 
     coro<void> recv_buffers(const header& h);
 

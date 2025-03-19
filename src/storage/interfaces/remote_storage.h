@@ -18,7 +18,7 @@ struct remote_storage : public storage_interface {
         write_request req = {.offsets = offsets, .data = data};
 
         co_await m->send_write(ctx, req);
-        const auto [message_header, _] = co_await m->recv_header();
+        const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_address(message_header);
     }
 
@@ -26,7 +26,7 @@ struct remote_storage : public storage_interface {
                              const fragment& frag) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(ctx, STORAGE_READ_FRAGMENT_REQ, frag);
-        const auto [h, _] = co_await m->recv_header();
+        const auto h = co_await m->recv_header();
         if (h.size != frag.size) [[unlikely]] {
             throw std::runtime_error("Incomplete fragment");
         }
@@ -38,7 +38,7 @@ struct remote_storage : public storage_interface {
                                size_t size) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(ctx, STORAGE_READ_REQ, {pointer, size});
-        const auto [h, _] = co_await m->recv_header();
+        const auto h = co_await m->recv_header();
         shared_buffer<> buffer(h.size);
         m->register_read_buffer(buffer.data(), buffer.size());
         co_await m->recv_buffers(h);
@@ -51,7 +51,7 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
 
         co_await m->send_address(ctx, STORAGE_READ_ADDRESS_REQ, addr);
-        const auto [h, _] = co_await m->recv_header();
+        const auto h = co_await m->recv_header();
 
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
@@ -67,7 +67,7 @@ struct remote_storage : public storage_interface {
         LOG_DEBUG() << ctx.peer() << ": sending STORAGE_LINK_REQ ["
                     << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_LINK_REQ, addr);
-        const auto [message_header, _] = co_await m->recv_header();
+        const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_address(message_header);
     }
 
@@ -76,21 +76,21 @@ struct remote_storage : public storage_interface {
         LOG_DEBUG() << ctx.peer() << ": sending STORAGE_UNLINK_REQ ["
                     << m->local() << " -> " << m->peer() << "]";
         co_await m->send_address(ctx, STORAGE_UNLINK_REQ, addr);
-        const auto [message_header, _] = co_await m->recv_header();
+        const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
     coro<std::size_t> get_used_space(context& ctx) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(ctx, STORAGE_USED_REQ, {});
-        const auto [message_header, _] = co_await m->recv_header();
+        const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
     coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(ctx, STORAGE_DS_INFO_REQ, {});
-        const auto [message_header, _] = co_await m->recv_header();
+        const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_map<size_t, size_t>(message_header);
     }
 
@@ -107,7 +107,7 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_ds_read(
             ctx, {.ds_id = ds_id, .pointer = pointer, .size = size});
-        const auto [header, _] = co_await m->recv_header();
+        const auto header = co_await m->recv_header();
         if (header.size != size) {
             throw std::runtime_error(
                 "mistmatched read size with requested size in ds_read");
