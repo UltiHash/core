@@ -30,8 +30,19 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         try {
             rawreq = co_await raw_request::read(s);
             auto req = co_await m_factory.create(s, rawreq);
-            LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
-                       << *req;
+            LOG_INFO() << ": read request, id=" << id << ": " << *req;
+
+            // TODO: We should update handle_request's span like below.
+            // [!NOTE] handle_request itself sets span name and set some
+            // attributes.
+            //
+            // m_ctx.set_attribute("client-ip", m_peer.address().to_string());
+            // m_ctx.set_attribute("request-target", m_req.target());
+            // m_ctx.set_attribute("request-user-id", m_authenticated_user.id);
+            // m_ctx.set_attribute("request-user-name",
+            // m_authenticated_user.name); m_ctx.set_attribute("request-bucket",
+            // m_bucket_id); m_ctx.set_attribute("request-key", m_object_key);
+            //
             resp = co_await handle_request(s, *req, id).start_trace();
             metric<success>::increase(1);
             keep_alive = true;

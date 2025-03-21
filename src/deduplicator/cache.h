@@ -9,10 +9,9 @@ class cache {
 public:
     cache(global_data_view& gdv, std::size_t capacity);
 
-    shared_buffer<> read_fragment(context& ctx, const uint128_t& pointer, size_t size);
+    shared_buffer<> read_fragment(const uint128_t& pointer, size_t size);
 
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size);
+    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
 
 private:
     global_data_view& m_gdv;

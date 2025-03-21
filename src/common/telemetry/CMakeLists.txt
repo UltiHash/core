@@ -2,7 +2,6 @@ add_library_bundle(
     telemetry
     SOURCES
     trace/trace.cpp
-    context.cpp
     log.cpp
     metrics.cpp
     otel_log_sink.cpp

@@ -10,8 +10,7 @@ size_t largest_common_prefix(const container& a, const container& b) noexcept {
     return std::distance(a.begin(), mismatch.first);
 }
 
-coro<size_t> match_size(context& ctx, dd::cache& storage,
-                        std::string_view data, auto frag) {
+coro<size_t> match_size(dd::cache& storage, std::string_view data, auto frag) {
     if (!frag) {
         co_return 0ull;
     }
@@ -23,7 +22,7 @@ coro<size_t> match_size(context& ctx, dd::cache& storage,
         co_return common;
     }
 
-    auto complete = co_await storage.read(ctx, f.pointer, f.size);
+    auto complete = co_await storage.read(f.pointer, f.size);
 
     co_return common +
         largest_common_prefix(data.substr(common),
@@ -40,9 +39,7 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
       m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
       m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
-coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
-                                                      std::string_view data) {
-    auto& sub_ctx = ctx;
+coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     auto span = co_await boost::asio::this_coro::span;
     span->set_attribute("data-size", data.size());
 
@@ -52,12 +49,10 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
     {
         while (!data.empty()) {
             auto f = co_await m_dedupe_workers.post_in_workers(
-                sub_ctx, [this, &data] { return m_fragment_set.find(data); });
+                [this, &data] { return m_fragment_set.find(data); });
 
-            auto match_low =
-                co_await match_size(sub_ctx, m_cache, data, f.low);
-            auto match_high =
-                co_await match_size(sub_ctx, m_cache, data, f.high);
+            auto match_low = co_await match_size(m_cache, data, f.low);
+            auto match_high = co_await match_size(m_cache, data, f.high);
 
             if (const auto size = std::max(match_low, match_high);
                 size > m_dedupe_conf.min_fragment_size) {
@@ -67,8 +62,7 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
                 // Add `&& size < data.size()`?
                 if (size == m_dedupe_conf.max_fragment_size) {
                     offset += co_await pursue_pointer(
-                        sub_ctx, data,
-                        frag.pointer + m_dedupe_conf.max_fragment_size,
+                        data, frag.pointer + m_dedupe_conf.max_fragment_size,
                         (offset == 0), fragments);
                 } else {
                     fragments.push_stored(frag.pointer, size,
@@ -93,13 +87,13 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
     {
         auto stored_fragments = fragments.get_stored_fragments();
         if (!stored_fragments.empty()) {
-            auto rejected = co_await m_storage.link(sub_ctx, stored_fragments);
+            auto rejected = co_await m_storage.link(stored_fragments);
 
             if (!rejected.empty()) {
                 LOG_DEBUG() << rejected.size() << " fragments rejected, "
                             << rejected.data_size() << " in bytes";
                 co_await m_dedupe_workers.post_in_workers(
-                    sub_ctx, [this, &rejected, &fragments] {
+                    [this, &rejected, &fragments] {
                         fragments.handle_rejected_fragments(rejected,
                                                             m_fragment_set);
                     });
@@ -111,13 +105,13 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
     span->add_event("deduplicator-flush-storage");
     {
         LOG_DEBUG() << "flushing unstored data to storage";
-        co_await fragments.flush_storage(sub_ctx, m_storage);
+        co_await fragments.flush_storage(m_storage);
     }
 
     span->add_event("deduplicator-flush-fragments");
     {
         LOG_DEBUG() << "flushing fragments to fragment set";
-        co_await m_dedupe_workers.post_in_workers(sub_ctx, [this, &fragments] {
+        co_await m_dedupe_workers.post_in_workers([this, &fragments] {
             fragments.flush_fragment_set(m_fragment_set);
         });
     }
@@ -130,8 +124,7 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
     co_return result;
 }
 
-coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
-                                                std::string_view& data,
+coro<size_t> local_deduplicator::pursue_pointer(std::string_view& data,
                                                 uint128_t pointer, bool header,
                                                 fragmentation& fragments) {
     std::size_t common_size;
@@ -140,7 +133,7 @@ coro<size_t> local_deduplicator::pursue_pointer(context& ctx,
     std::size_t frag_size = m_dedupe_conf.max_fragment_size;
 
     do {
-        auto stored_data = co_await m_cache.read(ctx, pointer, pursue_size);
+        auto stored_data = co_await m_cache.read(pointer, pursue_size);
 
         common_size = largest_common_prefix(stored_data.string_view(),
                                             data.substr(frag_size));

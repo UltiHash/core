@@ -11,12 +11,10 @@ namespace {
 
 class local_read_handle : public uh::cluster::ep::http::body {
 public:
-    local_read_handle(global_data_view& storage, directory::object_lock&& obj,
-                      context& ctx)
+    local_read_handle(global_data_view& storage, directory::object_lock&& obj)
         : m_storage(storage),
           m_obj(std::move(obj)),
-          m_size(m_obj->addr->data_size()),
-          m_ctx(ctx) {}
+          m_size(m_obj->addr->data_size()) {}
 
     ~local_read_handle() override {
         try {
@@ -42,7 +40,7 @@ public:
             m_addr_index++;
         }
 
-        co_await m_storage.read_address(m_ctx, partial_addr, buffer);
+        co_await m_storage.read_address(partial_addr, buffer);
         m_total += buffer_size;
         m_size -= buffer_size;
 
@@ -66,7 +64,6 @@ private:
     size_t m_addr_index = 0;
 
     std::size_t m_size;
-    context& m_ctx;
 
     std::size_t m_total = 0;
     timer m_timer;
@@ -115,8 +112,8 @@ coro<response> get_object::handle(request& req) {
                 "bytes " + r.to_string() + "/" + std::to_string(obj->size));
     }
 
-    res.set_body(std::make_unique<local_read_handle>(m_storage, std::move(obj),
-                                                     req.context()));
+    res.set_body(
+        std::make_unique<local_read_handle>(m_storage, std::move(obj)));
 
     co_return res;
 }

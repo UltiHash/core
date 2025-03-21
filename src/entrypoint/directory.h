@@ -100,7 +100,7 @@ private:
  *
  * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
+coro<void> safe_put_object(directory& dir, global_data_view& gdv,
                            const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster
