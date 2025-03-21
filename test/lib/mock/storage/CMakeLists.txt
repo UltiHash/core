@@ -14,6 +14,7 @@ target_link_libraries(
             opentelemetry_exporter_otlp_grpc_log
             opentelemetry_exporter_otlp_grpc
             opentelemetry_exporter_otlp_grpc_metrics
+            opentelemetry_exporter_ostream_span
             opentelemetry_exporter_ostream_metrics)
 
 add_library(uh_mock_global_data SHARED mock_global_data_view.cpp)
@@ -34,5 +35,6 @@ target_link_libraries(
             opentelemetry_exporter_otlp_grpc_log
             opentelemetry_exporter_otlp_grpc
             opentelemetry_exporter_otlp_grpc_metrics
+            opentelemetry_exporter_ostream_span
             opentelemetry_exporter_ostream_metrics
     PUBLIC uh_mock_storage)
