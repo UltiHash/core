@@ -19,8 +19,16 @@ public:
         promise<std::invoke_result_t<Func>> p;
         auto fut = p.get_future();
 
-        auto f = [ctx](auto& f, auto&& promise) mutable {
-            CURRENT_CONTEXT = ctx;
+        auto context = co_await boost::asio::this_coro::context;
+        auto f = [context](auto& f, auto&& promise) mutable {
+            THREAD_LOCAL_CONTEXT = context;
+
+            if (boost::asio::trace_span::enable &&
+                !boost::asio::trace_span::check_context(context)) {
+                LOG_ERROR() << "[post_in_workers] The context to be "
+                               "encoded is invalid";
+            }
+
             try {
                 promise.set_value(f());
             } catch (const std::exception&) {
@@ -40,9 +48,18 @@ public:
         promise<void> p;
         auto fut = p.get_future();
 
-        auto f = [ctx](auto& f, auto&& promise) mutable {
+        auto context = co_await boost::asio::this_coro::context;
+
+        auto f = [context](auto& f, auto&& promise) mutable {
             try {
-                CURRENT_CONTEXT = ctx;
+                THREAD_LOCAL_CONTEXT = context;
+
+                if (boost::asio::trace_span::enable &&
+                    !boost::asio::trace_span::check_context(context)) {
+                    LOG_ERROR() << "[post_in_workers] The context to be "
+                                   "encoded is invalid";
+                }
+
                 f();
                 promise.set_value();
             } catch (const std::exception&) {

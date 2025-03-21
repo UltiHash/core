@@ -23,7 +23,7 @@ public:
         message_type type;
         size_type size;
 
-        context ctx;
+        boost::asio::ip::tcp::endpoint peer;
     };
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
@@ -92,6 +92,9 @@ public:
     }
 
     coro<header> recv_header();
+
+    coro<std::tuple<header, opentelemetry::context::Context>>
+    recv_header_with_context();
 
     coro<void> recv_buffers(const header& h);
 

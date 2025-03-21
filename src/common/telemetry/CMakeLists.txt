@@ -1,6 +1,7 @@
 add_library_bundle(
     telemetry
     SOURCES
+    trace/trace.cpp
     context.cpp
     log.cpp
     metrics.cpp
@@ -12,6 +13,7 @@ add_library_bundle(
     opentelemetry_exporter_otlp_grpc_log
     opentelemetry_exporter_otlp_grpc
     opentelemetry_exporter_otlp_grpc_metrics
+    opentelemetry_exporter_ostream_span
     opentelemetry_exporter_ostream_metrics
     PUBLIC_BUNDLE
     utils)

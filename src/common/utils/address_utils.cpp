@@ -48,12 +48,15 @@ coro<size_t> perform_for_address(
     std::vector<future<void>> futures;
     futures.reserve(info.node_info_map.size());
 
+    auto context = co_await boost::asio::this_coro::context;
     size_t i = 0;
     for (auto& dn : info.node_info_map) {
         promise<void> p;
         futures.emplace_back(p.get_future());
-        boost::asio::co_spawn(ioc, fn(i++, dn.first, dn.second),
-                              use_promise_cospawn(std::move(p)));
+
+        boost::asio::co_spawn(
+            ioc, fn(i++, dn.first, dn.second).continue_trace(context),
+            use_promise_cospawn(std::move(p)));
     }
 
     for (auto& f : futures) {

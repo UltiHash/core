@@ -19,21 +19,23 @@ coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
     co_return read;
 }
 
-future<dedupe_response> upload(context& ctx, boost::asio::io_context& ioc,
-                               deduplicator_interface& dedup,
-                               const std::vector<char>& buffer) {
+coro<future<dedupe_response>> upload(context& ctx, boost::asio::io_context& ioc,
+                                     deduplicator_interface& dedup,
+                                     const std::vector<char>& buffer) {
     promise<dedupe_response> p;
     auto f = p.get_future();
 
+    auto context = co_await boost::asio::this_coro::context;
     if (!buffer.empty()) {
-        asio::co_spawn(ioc,
-                       dedup.deduplicate(ctx, {buffer.data(), buffer.size()}),
+        auto awaitable = dedup.deduplicate(ctx, {buffer.data(), buffer.size()})
+                             .continue_trace(context);
+        asio::co_spawn(ioc, std::move(awaitable),
                        use_promise_cospawn(std::move(p)));
     } else {
         p.set_value(dedupe_response());
     }
 
-    return f;
+    co_return f;
 }
 
 } // namespace
@@ -123,7 +125,8 @@ coro<dedupe_response> put_object::put_large_object(request& req,
     dedupe_response rv;
 
     do {
-        auto future = upload(req.context(), m_ioc, m_dedup, b.current());
+        auto future =
+            co_await upload(req.context(), m_ioc, m_dedup, b.current());
         b.flip();
 
         read = co_await fill(req, b.current());
@@ -133,7 +136,7 @@ coro<dedupe_response> put_object::put_large_object(request& req,
         rv.append(co_await future.get());
     } while (transferred < content_length);
 
-    auto future = upload(req.context(), m_ioc, m_dedup, b.current());
+    auto future = co_await upload(req.context(), m_ioc, m_dedup, b.current());
     rv.append(co_await future.get());
 
     co_return rv;

@@ -74,12 +74,16 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     }
 
     auto encoded = m_ec_calc->encode(data);
+
+    auto context = co_await boost::asio::this_coro::context;
     auto res =
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
-            [&ctx, &encoded, &offsets](size_t i, auto n) -> coro<address> {
+            [&context, &ctx, &encoded, &offsets](size_t i,
+                                                 auto n) -> coro<address> {
                 // TODO offsets need to be computed to match encoded EC data
-                co_return co_await n->write(ctx, encoded.get().at(i), offsets);
+                co_return co_await n->write(ctx, encoded.get().at(i), offsets)
+                    .continue_trace(context);
             },
             m_getter.get_services());
 
