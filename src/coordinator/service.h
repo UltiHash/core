@@ -36,7 +36,9 @@ public:
             LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
                 m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
-            boost::asio::co_spawn(m_ioc, m_license_updater->update(),
+
+            boost::asio::co_spawn(m_ioc,
+                                  m_license_updater->update().start_trace(),
                                   boost::asio::detached);
         } else {
             LOG_INFO() << "using license from licensing host "
@@ -47,7 +49,9 @@ public:
                                                              bc.customer_id,
                                                              bc.access_token));
             boost::asio::co_spawn(
-                m_ioc, m_license_updater->periodic_update(LICENSE_FETCH_PERIOD),
+                m_ioc,
+                m_license_updater->periodic_update(LICENSE_FETCH_PERIOD)
+                    .start_trace(),
                 boost::asio::detached);
 
             m_usage_updater.emplace(m_ioc, m_usage, *m_license_updater,

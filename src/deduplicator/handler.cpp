@@ -16,65 +16,65 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     messenger m(std::move(s));
 
     for (;;) {
-
-        context ctx;
         std::optional<error> err;
+        messenger_core::header hdr;
+        opentelemetry::context::Context context;
 
-        try {
-            auto hdr = co_await m.recv_header();
-            ctx = std::move(hdr.ctx);
+        std::tie(hdr, context) = co_await m.recv_header_with_context();
+        LOG_DEBUG() << remote.str() << " received "
+                    << magic_enum::enum_name(hdr.type);
 
-            LOG_DEBUG() << remote.str() << " received "
-                        << magic_enum::enum_name(hdr.type);
-
-            switch (hdr.type) {
-            case DEDUPLICATOR_REQ:
-                ctx = ctx.sub_context("deduplicator-dedupe");
-                co_await handle_dedupe(ctx, m, hdr);
-                break;
-            default:
-                throw std::invalid_argument("Invalid message type!");
-            }
-        } catch (const boost::system::system_error& e) {
-            LOG_ERROR() << "boost::system::system_error should be converted to "
-                           "error_exception with error::internal_network_error";
-            if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << remote.str() << " disconnected";
-                break;
-            }
-            err = error(error::unknown, e.what());
-        } catch (const error_exception& e) {
-            if (*e.error() == error::internal_network_error) {
-                LOG_INFO() << remote.str() << " disconnected";
-                break;
-            }
-            err = e.error();
-        } catch (const std::exception& e) {
-            err = error(error::unknown, e.what());
-        }
-
-        if (err) {
-            LOG_WARN() << remote.str()
-                       << " error handling request: " << err->message();
-            co_await m.send_error(ctx, *err);
+        auto control =
+            co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
+        if (control == flow_control::BREAK) {
+            break;
         }
     }
 }
 
-coro<void> handler::handle_dedupe(context& ctx, messenger& m,
-                                  const messenger::header& h) {
+coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
+                                                   messenger& m) {
+    std::optional<error> err;
+    uh::cluster::context ctx{};
+    try {
+        switch (hdr.type) {
+        case DEDUPLICATOR_REQ: {
+            unique_buffer<char> data(hdr.size);
+            m.register_read_buffer(data);
+            co_await m.recv_buffers(hdr);
 
-    if (h.size == 0) [[unlikely]] {
-        throw std::length_error("Empty data sent do the dedupe node");
+            LOG_DEBUG() << hdr.peer << ": deduplicate: size=" << data.size();
+            auto dedupe_resp =
+                co_await m_local_dedupe.deduplicate(ctx, data.string_view());
+            co_await m.send_dedupe_response(ctx, dedupe_resp);
+            break;
+        }
+        default:
+            throw std::invalid_argument("Invalid message type!");
+        }
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "boost::system::system_error should be converted to "
+                       "error_exception with error::internal_network_error";
+        if (e.code() == boost::asio::error::eof) {
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
+        }
+        err = error(error::unknown, e.what());
+    } catch (const error_exception& e) {
+        if (*e.error() == error::internal_network_error) {
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
+        }
+        err = e.error();
+    } catch (const std::exception& e) {
+        err = error(error::unknown, e.what());
     }
 
-    unique_buffer<char> data(h.size);
-    m.register_read_buffer(data);
-    co_await m.recv_buffers(h);
-
-    auto dedupe_resp =
-        co_await m_local_dedupe.deduplicate(ctx, data.string_view());
-    co_await m.send_dedupe_response(ctx, dedupe_resp);
+    if (err) {
+        LOG_WARN() << hdr.peer << " error handling request: " << err->message();
+        co_await m.send_error(ctx, *err);
+    }
+    co_return flow_control::CONTINUE;
 }
 
 } // namespace uh::cluster::deduplicator

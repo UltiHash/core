@@ -23,7 +23,7 @@ public:
     }
 
     template <typename K, typename V>
-    coro<std::map<K, V>> recv_map(context& ctx, const header& message_header) {
+    coro<std::map<K, V>> recv_map(const header& message_header) {
         unique_buffer<> buf(message_header.size);
         register_read_buffer(buf);
         co_await recv_buffers(message_header);

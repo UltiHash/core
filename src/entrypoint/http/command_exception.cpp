@@ -23,12 +23,12 @@ const char* command_exception::what() const noexcept {
     return m_reason.c_str();
 }
 
-response make_response(const command_exception& e) {
+response make_response(const command_exception& e) noexcept {
     return error_response(e.m_status, e.m_code, e.m_reason);
 }
 
 ep::http::response error_response(ep::http::status status, std::string code,
-                                  std::string reason) {
+                                  std::string reason) noexcept {
     boost::property_tree::ptree pt;
     pt.put("Error.Code", code);
     pt.put("Error.Message", reason);

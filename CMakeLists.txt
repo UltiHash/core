@@ -152,6 +152,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES
     opentelemetry_exporter_otlp_grpc_log
     opentelemetry_exporter_otlp_grpc
     opentelemetry_exporter_otlp_grpc_metrics
+    opentelemetry_exporter_ostream_span
     opentelemetry_exporter_ostream_metrics
     ${${PROJECT_NAME}_INTERNAL_DEPS}
     ${PostgreSQL_LIBRARIES}
@@ -179,10 +180,10 @@ add_compile_options(-Wno-mismatched-new-delete)
 add_compile_options(-Wno-odr)
 add_link_options(-Wno-odr)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
-else()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in

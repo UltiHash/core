@@ -42,14 +42,14 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
 
 coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
                                                       std::string_view data) {
-    LOG_DEBUG() << ctx.peer() << ": deduplicate: size=" << data.size();
-    ctx.set_attribute("data-size", data.size());
+    auto& sub_ctx = ctx;
+    auto span = co_await boost::asio::this_coro::span;
+    span->set_attribute("data-size", data.size());
 
     fragmentation fragments;
     std::size_t offset = 0;
-
+    span->add_event("deduplicator-fragment-search");
     {
-        auto sub_ctx = ctx.sub_context("deduplicator-fragment-search");
         while (!data.empty()) {
             auto f = co_await m_dedupe_workers.post_in_workers(
                 sub_ctx, [this, &data] { return m_fragment_set.find(data); });
@@ -89,46 +89,44 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
         }
     }
 
+    span->add_event("deduplicator-fragment-link");
     {
-        auto sub_ctx = ctx.sub_context("deduplicator-fragment-link");
         auto stored_fragments = fragments.get_stored_fragments();
         if (!stored_fragments.empty()) {
             auto rejected = co_await m_storage.link(sub_ctx, stored_fragments);
 
             if (!rejected.empty()) {
-                LOG_DEBUG() << sub_ctx.peer() << ": " << rejected.size()
-                            << " fragments rejected, " << rejected.data_size()
-                            << " in bytes";
+                LOG_DEBUG() << rejected.size() << " fragments rejected, "
+                            << rejected.data_size() << " in bytes";
                 co_await m_dedupe_workers.post_in_workers(
                     sub_ctx, [this, &rejected, &fragments] {
                         fragments.handle_rejected_fragments(rejected,
                                                             m_fragment_set);
                     });
-                LOG_DEBUG()
-                    << sub_ctx.peer() << ": handle_rejected_fragments done";
+                LOG_DEBUG() << "handle_rejected_fragments done";
             }
         }
     }
 
+    span->add_event("deduplicator-flush-storage");
     {
-        auto sub_ctx = ctx.sub_context("deduplicator-flush-storage");
-        LOG_DEBUG() << sub_ctx.peer() << ": flushing unstored data to storage";
+        LOG_DEBUG() << "flushing unstored data to storage";
         co_await fragments.flush_storage(sub_ctx, m_storage);
     }
 
+    span->add_event("deduplicator-flush-fragments");
     {
-        auto sub_ctx = ctx.sub_context("deduplicator-flush-fragments");
-        LOG_DEBUG() << sub_ctx.peer() << ": flushing fragments to fragment set";
+        LOG_DEBUG() << "flushing fragments to fragment set";
         co_await m_dedupe_workers.post_in_workers(sub_ctx, [this, &fragments] {
             fragments.flush_fragment_set(m_fragment_set);
         });
     }
 
-    LOG_DEBUG() << ctx.peer() << ": creating deduplication response";
+    LOG_DEBUG() << "creating deduplication response";
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
 
-    LOG_DEBUG() << ctx.peer() << ": deduplicate finished";
+    LOG_DEBUG() << "deduplicate finished";
     co_return result;
 }
 

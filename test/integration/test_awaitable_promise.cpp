@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [&ioc, i, &failures]() -> coro<void> {
+            [&ioc, i, &failures]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [i, &failures, &workers]() -> coro<void> {
+            [i, &failures, &workers]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(
