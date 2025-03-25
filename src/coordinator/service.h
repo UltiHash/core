@@ -29,7 +29,7 @@ public:
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
           m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1, nullptr)),
+              m_etcd, service_factory<storage_interface>(m_ioc, 1)),
           m_usage{m_ioc, cc.database_config} {
 
         if (cc.license) {

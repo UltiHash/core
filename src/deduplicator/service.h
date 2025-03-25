@@ -4,7 +4,6 @@
 #include "common/etcd/registry/service_registry.h"
 #include "common/global_data/default_global_data_view.h"
 #include "common/network/server.h"
-#include "common/service_interfaces/attached_service.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "common/telemetry/log.h"
 #include "config.h"
@@ -25,13 +24,10 @@ public:
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
-          m_attached_storage(sc, config.m_attached_storage),
-          m_storage_maintainer(
-              m_etcd,
+          m_storage_maintainer(m_etcd,
               service_factory<storage_interface>(
                   m_ioc,
-                  config.global_data_view.storage_service_connection_count,
-                  m_attached_storage.get_local_service_interface())),
+                  config.global_data_view.storage_service_connection_count)),
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
                       m_etcd),
           m_deduplicator(
@@ -59,7 +55,6 @@ private:
 
     service_registry m_service_registry;
 
-    attached_service<storage::service> m_attached_storage;
     service_maintainer<storage_interface> m_storage_maintainer;
 
     default_global_data_view m_data_view;
