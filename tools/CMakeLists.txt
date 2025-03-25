@@ -29,7 +29,7 @@ target_include_directories(${PROJECT_NAME}-file-upload
 
 add_executable(${PROJECT_NAME}-uh-dir uh-dir/main.cpp)
 target_link_libraries(${PROJECT_NAME}-uh-dir ${PROJECT_NAME}_shared
-                      ${${PROJECT_NAME}_LINK_LIBRARIES})
+                      ${${PROJECT_NAME}_LINK_LIBRARIES} db)
 target_include_directories(${PROJECT_NAME}-uh-dir
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
@@ -41,7 +41,7 @@ target_include_directories(${PROJECT_NAME}-storage
 
 add_executable(${PROJECT_NAME}-access-client access/main.cpp)
 target_link_libraries(${PROJECT_NAME}-access-client ${PROJECT_NAME}_shared
-                      ${${PROJECT_NAME}_LINK_LIBRARIES})
+                      ${${PROJECT_NAME}_LINK_LIBRARIES} db)
 target_include_directories(${PROJECT_NAME}-access-client
                            PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 

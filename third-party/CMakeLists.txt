@@ -21,8 +21,10 @@ target_include_directories(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magi
 add_library(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits)
 
+find_library(LMDB_LIBRARY NAMES lmdb REQUIRED)
 add_library(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include/lmdbxx/lmdb++.h)
 target_include_directories(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include)
+target_link_libraries(lmdbxx INTERFACE lmdb)
 
 enable_language(C)
 set(ReedSolomonC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/reedsolomon-c)

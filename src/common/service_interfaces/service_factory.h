@@ -6,7 +6,6 @@
 namespace uh::cluster {
 
 template <typename service_interface> struct service_factory {
-
 public:
     service_factory(boost::asio::io_context& ioc, int connections)
         : m_ioc(ioc),

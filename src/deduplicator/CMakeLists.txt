@@ -1,0 +1,12 @@
+add_library(deduplicator
+            handler.cpp
+            cache.cpp
+            fragmentation.cpp
+            dedupe_set/fragment_set_element.cpp
+            dedupe_set/fragment_set.cpp
+            dedupe_set/fragment_set_log.cpp
+            interfaces/local_deduplicator.cpp
+            interfaces/noop_deduplicator.cpp
+            interfaces/dedupe_array.cpp)
+
+target_link_libraries(deduplicator network global_data)
