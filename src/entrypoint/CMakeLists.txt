@@ -65,4 +65,4 @@ add_library(entrypoint
             policy/module.cpp
             policy/variables.cpp)
 
-target_link_libraries(entrypoint db etcd nlohmann_json global_data deduplicator storage crypto utils)
+target_link_libraries(entrypoint db etcd nlohmann_json global_data deduplicator storage crypto utils license)

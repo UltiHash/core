@@ -25,12 +25,9 @@ function(uh_add_profiler name)
 
     target_link_libraries(
         ${target_name}
-        PRIVATE ${PROJECT_NAME}_shared benchmark::benchmark_main ${ARGS_PRIVATE}
+        PRIVATE benchmark::benchmark_main ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
-    target_include_directories(
-        ${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
-                               ${CMAKE_CURRENT_SOURCE_DIR})
     target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
 endfunction()
 

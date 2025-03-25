@@ -1,13 +1,13 @@
-
 #include <boost/throw_exception.hpp>
-#include <stdexcept>
 #define BOOST_TEST_MODULE "formats"
 
-#include "entrypoint/formats.h"
+#include <entrypoint/formats.h>
+
 #include <boost/test/data/monomorphic.hpp> // for data driven tests
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <stdexcept>
 #include <iomanip>
 #include <sstream>
 
