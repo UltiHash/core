@@ -5,7 +5,7 @@
 #include "coordinator/service.h"
 
 #include <common/etcd/utils.h>
-#include <common/global_data/default_global_data_view.h>
+#include <storage/global_data/default_global_data_view.h>
 #include <config/configuration.h>
 #include <lib/util/temp_directory.h>
 #include <storage/service.h>
