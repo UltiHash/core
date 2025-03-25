@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
         if (config->service.enable_traces &&
             !config->service.telemetry_url.empty()) {
             LOG_DEBUG() << "trace endpoint: " << config->service.telemetry_url;
-            initialize_trace(PROJECT_NAME, PROJECT_VERSION,
-                             config->service.telemetry_url);
+            // initialize_trace(PROJECT_NAME, PROJECT_VERSION,
+            //                  config->service.telemetry_url);
         }
 
         execute_role(*config);
