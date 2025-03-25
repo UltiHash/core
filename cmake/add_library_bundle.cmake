@@ -52,9 +52,15 @@ function(add_library_bundle name)
 
     add_library(${name}_shared SHARED $<TARGET_OBJECTS:${name}_object>)
     target_link_libraries(
-        ${name}_shared
-        PRIVATE ${ARGS_PRIVATE} ${ARGS_PRIVATE_BUNDLE}
-        PUBLIC ${ADDITIONAL_INTERFACES} ${ARGS_PUBLIC} ${ARGS_PUBLIC_BUNDLE})
+    ${name}_shared
+    PRIVATE
+        -Wl,--whole-archive ${ARGS_PRIVATE} -Wl,--no-whole-archive
+        -Wl,--whole-archive ${ARGS_PRIVATE_BUNDLE} -Wl,--no-whole-archive
+    PUBLIC
+        ${ADDITIONAL_INTERFACES}
+        -Wl,--whole-archive ${ARGS_PUBLIC} -Wl,--no-whole-archive
+        -Wl,--whole-archive ${ARGS_PUBLIC_BUNDLE} -Wl,--no-whole-archive
+    )
 
     # We don't like to have external shared library as our dependency
     foreach(dep ${PUBLIC})
@@ -73,7 +79,11 @@ function(add_library_bundle name)
     foreach(dep ${private_bundle_shared})
         get_target_property(DEP_LIBS ${dep} INTERFACE_LINK_LIBRARIES)
         foreach(lib ${DEP_LIBS})
-            target_link_libraries(${name}_shared PUBLIC $<IF:$<TARGET_PROPERTY:${lib},TYPE>,SHARED_LIBRARY,${lib},>)
+            target_link_libraries(${name}_shared PUBLIC
+            $<IF:$<TARGET_PROPERTY:${lib},TYPE>,
+                $<LINK_GROUP:--whole-archive,${lib},--no-whole-archive>,
+                ${lib}>
+            )
         endforeach()
     endforeach()
 
