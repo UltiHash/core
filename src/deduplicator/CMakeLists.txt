@@ -4,7 +4,6 @@ add_library(deduplicator
             fragmentation.cpp
             dedupe_set/fragment_set_element.cpp
             dedupe_set/fragment_set.cpp
-            dedupe_set/fragment_set_log.cpp
             interfaces/local_deduplicator.cpp
             interfaces/remote_deduplicator.cpp
             interfaces/noop_deduplicator.cpp

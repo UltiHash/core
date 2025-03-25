@@ -5,7 +5,6 @@ project(uh-cluster VERSION 1.3.0)
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_SHARED_LIBS "Build tools" ON)
-option(ENABLE_DEDUPE_LOG "Build deduplication set log" OFF)
 option(ENABLE_TRACE "Write execution trace to log" OFF)
 option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
 option(ENABLE_CCACHE "Use cache while compiling" ON)
@@ -103,11 +102,6 @@ CPMAddPackage(
     "BUILD_SHARED_LIBS OFF"
     CPM_ARGS
     "TIMEOUT 300")
-
-if(ENABLE_DEDUPE_LOG)
-    message(STATUS "Building log dedupe set")
-    add_definitions(-DLOG_DEDUPE_SET)
-endif()
 
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
