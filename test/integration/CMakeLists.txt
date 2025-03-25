@@ -6,7 +6,7 @@ uh_add_test(test_data_store)
 uh_add_test(test_deduplicator PRIVATE uh_mock_global_data)
 uh_add_test(test_ec)
 
-add_custom_test(test_etcd_sync_client PRIVATE etcd_shared)
+add_custom_test(test_etcd_sync_client PRIVATE etcd)
 
 uh_add_test(test_etcd_manager PRIVATE etcd-cpp-api)
 uh_add_test(test_etcd_manager_on_client_failure PRIVATE etcd-cpp-api)
