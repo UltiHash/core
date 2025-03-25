@@ -29,7 +29,7 @@ struct fixture {
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
         return uh::cluster::service_maintainer<storage_interface>(
-            etcd, service_factory<storage_interface>(ioc, 2, nullptr));
+            etcd, service_factory<storage_interface>(ioc, 2));
     }
 
     fixture()

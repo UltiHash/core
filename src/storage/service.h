@@ -7,7 +7,7 @@
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
 #include <common/network/server.h>
-#include <config.h>
+#include "config.h"
 #include "handler.h"
 
 namespace uh::cluster::storage {

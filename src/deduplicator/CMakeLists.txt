@@ -6,7 +6,8 @@ add_library(deduplicator
             dedupe_set/fragment_set.cpp
             dedupe_set/fragment_set_log.cpp
             interfaces/local_deduplicator.cpp
+            interfaces/remote_deduplicator.cpp
             interfaces/noop_deduplicator.cpp
             interfaces/dedupe_array.cpp)
 
-target_link_libraries(deduplicator network global_data)
+target_link_libraries(deduplicator network storage)

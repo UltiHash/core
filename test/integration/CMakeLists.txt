@@ -1,19 +1,19 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "integration")
 
-uh_add_test(test_gdv_fixture PRIVATE global_data) # It should be tested before using this fixture
+uh_add_test(test_gdv_fixture PRIVATE storage) # It should be tested before using this fixture
 uh_add_test(test_awaitable_promise)
-uh_add_test(test_data_store)
-uh_add_test(test_deduplicator PRIVATE uh_mock_global_data)
-uh_add_test(test_ec)
+uh_add_test(test_data_store PRIVATE storage)
+uh_add_test(test_deduplicator PRIVATE uh_mock_global_data deduplicator)
+uh_add_test(test_ec PRIVATE ec)
 
 add_custom_test(test_etcd_sync_client PRIVATE etcd)
 
 uh_add_test(test_etcd_manager PRIVATE etcd)
 uh_add_test(test_etcd_manager_on_client_failure PRIVATE etcd)
 uh_add_test(test_fragment_set PRIVATE deduplicator)
-uh_add_test(test_global_data_view PRIVATE global_data)
+uh_add_test(test_global_data_view PRIVATE storage)
 uh_add_test(test_license_updater_watcher PRIVATE etcd license)
 uh_add_test(test_lru_cache)
 uh_add_test(test_mock_data_store PRIVATE uh_mock_storage)
-uh_add_test(test_reference_counter)
-uh_add_test(test_services)
+uh_add_test(test_reference_counter PRIVATE storage)
+uh_add_test(test_services PRIVATE etcd storage)

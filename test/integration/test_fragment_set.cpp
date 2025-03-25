@@ -2,6 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <deduplicator/config.h>
 #include <deduplicator/dedupe_set/fragment_set.h>
 
 #include <util/temp_directory.h>

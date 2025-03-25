@@ -2,13 +2,12 @@
 
 #include "test_config.h"
 
-#include "coordinator/service.h"
-
 #include <common/etcd/utils.h>
+#include <common/etcd/service.h>
 #include <storage/global_data/default_global_data_view.h>
-#include <config/configuration.h>
-#include <lib/util/temp_directory.h>
 #include <storage/service.h>
+
+#include <util/temp_directory.h>
 
 namespace uh::cluster {
 class global_data_view_fixture {
@@ -19,7 +18,7 @@ public:
           m_storage_services(
               m_etcd,
               service_factory<storage_interface>(
-                  m_ioc, m_gdv_config.storage_service_connection_count, {})) {}
+                  m_ioc, m_gdv_config.storage_service_connection_count)) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
