@@ -9,6 +9,7 @@ add_library_bundle(
     ec
     service_interfaces
     PUBLIC_BUNDLE
+    network
     telemetry)
 
 

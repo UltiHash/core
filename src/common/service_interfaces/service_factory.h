@@ -1,11 +1,12 @@
 #pragma once
 
-#include "common/utils/host_utils.h"
+#include <boost/asio.hpp>
 #include <memory>
 
 namespace uh::cluster {
 
-template <typename service_interface> struct service_factory {
+template <typename service_interface>
+struct service_factory {
 public:
     service_factory(boost::asio::io_context& ioc, int connections)
         : m_ioc(ioc),

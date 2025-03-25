@@ -1,1 +1,1 @@
-add_library_bundle(service_interfaces SOURCES service_factory.cpp PUBLIC conf)
+add_library(service_interfaces INTERFACE)

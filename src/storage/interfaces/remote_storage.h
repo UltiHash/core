@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/network/client.h"
-#include "common/service_interfaces/storage_interface.h"
+#include <common/network/client.h>
+#include <common/service_interfaces/storage_interface.h>
+#include <common/service_interfaces/service_factory.h>
 
 namespace uh::cluster {
 
@@ -119,5 +120,13 @@ struct remote_storage : public storage_interface {
 private:
     client m_storage_service;
 };
+
+template <>
+std::shared_ptr<storage_interface>
+service_factory<storage_interface>::make_remote_service(
+    const std::string& hostname, uint16_t port) {
+    return std::make_shared<remote_storage>(
+        client(m_ioc, hostname, port, m_connections));
+}
 
 } // namespace uh::cluster

@@ -1,4 +1,5 @@
 #include "dedupe_array.h"
+#include "remote_deduplicator.h"
 
 namespace uh::cluster {
 

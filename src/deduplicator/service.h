@@ -1,14 +1,16 @@
 #pragma once
 
-#include "common/etcd/registry/service_id.h"
-#include "common/etcd/registry/service_registry.h"
-#include "common/network/server.h"
-#include "common/service_interfaces/deduplicator_interface.h"
-#include "common/telemetry/log.h"
-#include "config.h"
+#include <common/etcd/registry/service_id.h>
+#include <common/etcd/registry/service_registry.h>
+#include <common/network/server.h>
+#include <common/telemetry/log.h>
+#include <config.h>
+#include <storage/service.h>
+#include <storage/global_data/default_global_data_view.h>
+#include <storage/interfaces/remote_storage.h>
+
 #include "handler.h"
-#include "storage/global_data/default_global_data_view.h"
-#include "storage/service.h"
+
 #include <functional>
 #include <utility>
 
