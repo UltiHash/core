@@ -106,8 +106,7 @@ private:
             }
         } else if (cl == m_clients.cend() and
                    itr->second.attributes.contains(ENDPOINT_HOST) and
-                   itr->second.attributes.contains(ENDPOINT_PORT) and
-                   itr->second.attributes.contains(ENDPOINT_PID)) {
+                   itr->second.attributes.contains(ENDPOINT_PORT)) {
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
@@ -116,8 +115,7 @@ private:
                 cl, itr->first,
                 m_service_factory.make_service(
                     itr->second.attributes.at(ENDPOINT_HOST),
-                    std::stoul(itr->second.attributes.at(ENDPOINT_PORT)),
-                    std::stol(itr->second.attributes.at(ENDPOINT_PID))));
+                    std::stoul(itr->second.attributes.at(ENDPOINT_PORT)), 0));
 
             for (auto& m : m_monitors) {
 
