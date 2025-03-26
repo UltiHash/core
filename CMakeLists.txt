@@ -127,38 +127,12 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits magic_enum lmdbxx reedsolomon)
-
 add_library(boost_headers INTERFACE)
 target_include_directories(boost_headers INTERFACE ${Boost_INCLUDE_DIRS})
 
 add_library(project_includes INTERFACE)
 target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/src
                                                       ${CMAKE_BINARY_DIR})
-
-set(${PROJECT_NAME}_LINK_LIBRARIES
-    Boost::log
-    Boost::url
-    Boost::filesystem
-    boost_headers
-    etcd-cpp-api
-    CLI11::CLI11
-    opentelemetry_exporter_otlp_grpc_log
-    opentelemetry_exporter_otlp_grpc
-    opentelemetry_exporter_otlp_grpc_metrics
-    opentelemetry_exporter_ostream_span
-    opentelemetry_exporter_ostream_metrics
-    ${${PROJECT_NAME}_INTERNAL_DEPS}
-    ${LMDB_LIBRARY}
-    nlohmann_json
-    cpr::cpr)
-set(${PROJECT_NAME}_INCLUDE_DIRS
-    ${CMAKE_SOURCE_DIR}/third-party
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/include
-    ${${PROJECT_NAME}_INTERNAL_DEPS}
-    ${LMDB_INCLUDE_DIR})
 
 add_compile_options(-Wall -Werror)
 
