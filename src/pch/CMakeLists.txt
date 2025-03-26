@@ -22,18 +22,56 @@ target_link_libraries(uh_precompile_headers
 target_precompile_headers(
     uh_precompile_headers
     PRIVATE
+    <algorithm>
+    <array>
     <atomic>
+    <cctype>
+    <charconv>
     <chrono>
+    <concepts>
+    <condition_variable>
+    <csignal>
+    <cstdint>
+    <cstdlib>
+    <cstring>
+    <ctime>
+    <deque>
+    <exception>
+    <filesystem>
+    <format>
+    <forward_list>
+    <fstream>
     <functional>
     <iomanip>
+    <iosfwd>
+    <list>
     <map>
+    <memory>
+    <mutex>
+    <optional>
     <ostream>
+    <random>
+    <ranges>
+    <set>
+    <shared_mutex>
     <source_location>
+    <span>
     <sstream>
+    <stdexcept>
     <string>
+    <string_view>
     <thread>
+    <tuple>
     <typeinfo>
+    <unordered_map>
+    <unordered_set>
+    <utility>
+    <variant>
     <vector>
+    <cxxabi.h>
+    <endian.h>
+    <fcntl.h>
+    <unistd.h>
     <CLI/CLI.hpp>
     <boost/algorithm/string.hpp>
     <boost/asio.hpp>
