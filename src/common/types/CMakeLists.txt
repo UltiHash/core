@@ -1,3 +1,2 @@
-add_library_bundle(types
-                   SOURCES address.cpp
-                   PUBLIC zpp_bits telemetry)
+add_library(types address.cpp)
+target_link_libraries(types zpp_bits telemetry)

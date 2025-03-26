@@ -148,9 +148,6 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-include(add_library_bundle)
-register_additional_interface(project_includes)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory(src)
 add_subdirectory(scripts)

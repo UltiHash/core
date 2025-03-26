@@ -1,5 +1,9 @@
 find_package(OpenSSL REQUIRED)
 
-add_library_bundle(uhcrypto
-    SOURCES hash.cpp hmac.cpp ossl_base.cpp scrypt.cpp
-    PUBLIC OpenSSL::Crypto)
+add_library(uhcrypto
+            hash.cpp
+            hmac.cpp
+            ossl_base.cpp
+            scrypt.cpp)
+
+target_link_libraries(uhcrypto OpenSSL::Crypto)

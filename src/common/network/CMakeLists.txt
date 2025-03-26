@@ -1,4 +1,2 @@
-add_library_bundle(network
-    SOURCES messenger_core.cpp messenger.cpp tools.cpp
-    PUBLIC zpp_bits telemetry cpr::cpr utils)
-
+add_library(network messenger_core.cpp messenger.cpp tools.cpp)
+target_link_libraries(network zpp_bits telemetry cpr::cpr utils)

@@ -1,4 +1,4 @@
 find_package(PostgreSQL REQUIRED)
 
-add_library_bundle(db SOURCES connection.cpp connstr.cpp row.cpp
-    PUBLIC PostgreSQL::PostgreSQL types)
+add_library(db connection.cpp connstr.cpp row.cpp)
+target_link_libraries(db PostgreSQL::PostgreSQL types)
