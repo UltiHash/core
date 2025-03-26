@@ -5,7 +5,6 @@ target_link_libraries(uh_precompile_headers
                       Boost::log
                       Boost::url
                       Boost::filesystem
-                      boost_headers
                       etcd-cpp-api
                       CLI11::CLI11
                       opentelemetry_exporter_otlp_grpc_log

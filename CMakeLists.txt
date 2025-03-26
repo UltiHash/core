@@ -127,13 +127,6 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-add_library(boost_headers INTERFACE)
-target_include_directories(boost_headers INTERFACE ${Boost_INCLUDE_DIRS})
-
-add_library(project_includes INTERFACE)
-target_include_directories(project_includes INTERFACE ${CMAKE_SOURCE_DIR}/src
-                                                      ${CMAKE_BINARY_DIR})
-
 add_compile_options(-Wall -Werror)
 
 #

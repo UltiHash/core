@@ -7,7 +7,6 @@ add_library_bundle(
     metrics.cpp
     otel_log_sink.cpp
     PUBLIC
-    boost_headers
     magic_enum
     Boost::log
     opentelemetry_exporter_otlp_grpc_log
