@@ -1,3 +1,6 @@
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${UH_BINARY_OUTPUT_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${UH_BINARY_OUTPUT_DIR})
+
 add_subdirectory(pch)
 add_subdirectory(common)
 add_subdirectory(config)
@@ -8,6 +11,4 @@ add_subdirectory(coordinator)
 
 add_executable(uh-cluster main.cpp)
 target_link_libraries(uh-cluster Threads::Threads types telemetry conf entrypoint deduplicator storage coordinator)
-set_target_properties(uh-cluster PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-
 target_precompile_headers(uh-cluster REUSE_FROM uh_precompile_headers)
