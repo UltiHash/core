@@ -2,9 +2,13 @@ cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
 project(uh-cluster VERSION 1.3.0)
 
+#
+# Option handling
+#
+
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
-option(BUILD_SHARED_LIBS "Build tools" OFF)
+option(BUILD_SHARED_LIBS "Build all libraries as shared libraries" OFF)
 option(ENABLE_BUILD_TIME_TRACE "Build time trace, clang only" OFF)
 option(ENABLE_CCACHE "Use cache while compiling" ON)
 option(ENABLE_TSAN "Enable thread-sanitizer" OFF)
@@ -59,33 +63,30 @@ if(ENABLE_TSAN
     add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
 endif()
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG TRUE)
-find_package(Threads REQUIRED)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_custom_target(
     copy-compile-commands ALL
     ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_CURRENT_LIST_DIR})
 
-message(STATUS "Building ${PROJECT_NAME}...")
 
-set(CMAKE_CXX_STANDARD 20)
-add_compile_options(-fPIC)
-set(Boost_USE_STATIC_LIBS ON)
+#
+# External dependencies
+#
 
 add_subdirectory(third-party)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
 
+set(Boost_USE_STATIC_LIBS ON)
 find_package(
     Boost 1.87
     COMPONENTS thread log url unit_test_framework
     REQUIRED)
-find_package(Git REQUIRED)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_PREFIX_PATH})
-set(CMAKE_BUILD_RPATH_USE_ORIGIN On)
 
 include(CPM)
 
@@ -101,6 +102,7 @@ CPMAddPackage(
     CPM_ARGS
     "TIMEOUT 300")
 
+find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
     if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
@@ -122,9 +124,14 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     string(STRIP "${GIT_REPOSITORY}" PROJECT_REPOSITORY)
 
     message(STATUS "Using revision ${PROJECT_REPOSITORY} -- ${PROJECT_VCSID}")
-
 endif()
 
+
+#
+# Compile Options
+#
+set(CMAKE_CXX_STANDARD 20)
+add_compile_options(-fPIC)
 add_compile_options(-Wall -Werror)
 
 #
@@ -143,6 +150,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 else()
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 endif()
+
+set(CMAKE_BUILD_RPATH_USE_ORIGIN On)
+
+
+#
+# Directory stucture
+#
+message(STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}...")
+
+set(UH_BINARY_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
+file(MAKE_DIRECTORY ${UH_BINARY_OUTPUT_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
