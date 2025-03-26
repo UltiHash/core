@@ -6,7 +6,6 @@ add_library(utils
             misc.cpp
             xml_parser.cpp
             random.cpp
-            strings.cpp
-            address_utils.cpp)
+            strings.cpp)
 
 target_link_libraries(utils telemetry types Boost::url)

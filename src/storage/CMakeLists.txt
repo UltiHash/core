@@ -1,4 +1,5 @@
 add_library(storage
+            address_utils.cpp
             handler.cpp
             interfaces/storage_group.cpp
             interfaces/remote_storage.cpp
