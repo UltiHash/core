@@ -5,7 +5,7 @@ add_library_bundle(
     registry/service_id.cpp
     utils.cpp
     PUBLIC
-    etcd-cpp-api
+    etcd-cpp-apiv3
     ec
     service_interfaces
     PUBLIC_BUNDLE

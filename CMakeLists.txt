@@ -77,7 +77,6 @@ add_compile_options(-fPIC)
 set(Boost_USE_STATIC_LIBS ON)
 
 add_subdirectory(third-party)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third-party/etcd-cpp-apiv3)
 
 find_package(
     Boost 1.87
