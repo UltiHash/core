@@ -1,8 +1,11 @@
 #define BOOST_TEST_MODULE "policy"
 
-#include "entrypoint/policy/parser.h"
-#include "lib/mock/entrypoint/entrypoint.h"
+#include <entrypoint/policy/parser.h>
+
+#include <mock/entrypoint/entrypoint.h>
+
 #include <boost/test/unit_test.hpp>
+
 #include <nlohmann/json.hpp>
 
 // ------------- Tests Suites Follow --------------

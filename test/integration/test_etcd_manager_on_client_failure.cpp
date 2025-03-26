@@ -1,8 +1,9 @@
 #define BOOST_TEST_MODULE "etcd manager tests"
 
-#include "common/etcd/utils.h"
+#include <common/etcd/utils.h>
 
 #include <boost/test/unit_test.hpp>
+
 #include <memory>
 
 using namespace std::chrono_literals;

@@ -7,7 +7,7 @@
 #include <common/license/backend_client.h>
 #include <common/types/common_types.h>
 #include <common/utils/strings.h>
-#include <lib/util/coroutine.h>
+#include <util/coroutine.h>
 
 #include <boost/beast.hpp>
 #include <boost/beast/ssl.hpp>

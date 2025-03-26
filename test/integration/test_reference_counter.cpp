@@ -1,9 +1,11 @@
 #define BOOST_TEST_MODULE "reference counter tests"
 
 #include <boost/test/unit_test.hpp>
+
 #include <common/utils/common.h>
-#include <lib/util/temp_directory.h>
 #include <storage/reference_counter.h>
+
+#include <util/temp_directory.h>
 
 // ------------- Tests Suites Follow --------------
 

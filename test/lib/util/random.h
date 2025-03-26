@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/types/scoped_buffer.h"
+#include <common/types/scoped_buffer.h>
 #include <string>
 
 namespace uh::cluster {

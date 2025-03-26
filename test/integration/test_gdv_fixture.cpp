@@ -2,7 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "lib/util/gdv_fixture.h"
+#include <util/gdv_fixture.h>
 
 namespace uh::cluster {
 
