@@ -1,7 +1,9 @@
 #define BOOST_TEST_MODULE "awaitable_promise tests"
 
-#include "common/coroutines/promise.h"
-#include "lib/util/coroutine.h"
+#include <common/coroutines/promise.h>
+
+#include <util/coroutine.h>
+
 #include <boost/test/unit_test.hpp>
 
 using namespace boost::asio;

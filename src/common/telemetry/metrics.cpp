@@ -1,19 +1,19 @@
 #include "metrics.h"
 
-#include "common/utils/common.h"
 #include "log.h"
-#include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
+
+#include <common/utils/common.h>
+#include <config.h>
 
 #include <magic_enum/magic_enum_switch.hpp>
 #include <magic_enum/magic_enum_utility.hpp>
 
+#include <opentelemetry/sdk/metrics/view/view_registry_factory.h>
+#include <opentelemetry/sdk/metrics/meter_context_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
 
 #include <algorithm>
-#include <config.h>
-#include <iostream>
-#include <opentelemetry/sdk/metrics/meter_context_factory.h>
 
 namespace metric_sdk = opentelemetry::sdk::metrics;
 namespace common = opentelemetry::common;

@@ -1,18 +1,20 @@
 #define BOOST_TEST_MODULE "exponential backoff tests"
 
 #include <boost/test/unit_test.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/test/included/unit_test.hpp>
 
 #include "test_config.h"
 
 #include <common/license/backend_client.h>
 #include <common/license/exp_backoff.h>
 
-#include <boost/asio.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/test/included/unit_test.hpp>
-#include <chrono>
+#include <util/coroutine.h>
+
 #include <fakeit.hpp>
-#include <lib/util/coroutine.h>
+
+#include <chrono>
 
 using namespace uh::cluster;
 using namespace fakeit;

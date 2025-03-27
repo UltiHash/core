@@ -1,13 +1,12 @@
 #define BOOST_TEST_MODULE "ec tests"
 
-#include "common/ec/no_ec.h"
-#include "common/telemetry/log.h"
-#include "common/types/common_types.h"
-#include "common/utils/time_utils.h"
+#include <common/ec/no_ec.h>
+#include <common/ec/reedsolomon_c.h>
+#include <common/telemetry/log.h>
+#include <common/types/common_types.h>
+#include <common/utils/time_utils.h>
 
 #include <boost/test/unit_test.hpp>
-
-#include "common/ec/reedsolomon_c.h"
 
 // ------------- Tests Suites Follow --------------
 

@@ -1,9 +1,10 @@
-#include "common/utils/common.h"
-#include "common/utils/random.h"
-#include "deduplicator/interfaces/local_deduplicator.h"
-#include "lib/mock/storage/mock_global_data_view.h"
-#include "lib/util/coroutine.h"
-#include <lib/util/temp_directory.h>
+#include <common/utils/common.h>
+#include <common/utils/random.h>
+#include <deduplicator/interfaces/local_deduplicator.h>
+
+#include <mock/storage/mock_global_data_view.h>
+#include <util/coroutine.h>
+#include <util/temp_directory.h>
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>

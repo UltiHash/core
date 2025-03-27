@@ -3,6 +3,9 @@ set(CMAKE_CXX_STANDARD 20)
 option(BUILD_SHARED_LIBS "Build etcd-cpp-apiv3 shared libraries" OFF)
 option(BUILD_ETCD_CORE_ONLY "Build etcd-cpp-apiv3 core library (the synchronous runtime) only" ON)
 add_subdirectory(etcd-cpp-apiv3)
+add_library(etcd-cpp-apiv3 INTERFACE)
+target_link_libraries(etcd-cpp-apiv3 INTERFACE etcd-cpp-api-core)
+target_include_directories(etcd-cpp-apiv3 INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/etcd-cpp-apiv3)
 
 add_subdirectory(CLI11)
 
@@ -21,8 +24,10 @@ target_include_directories(magic_enum INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/magi
 add_library(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits/zpp_bits.h)
 target_include_directories(zpp_bits INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/zpp_bits)
 
+find_library(LMDB_LIBRARY NAMES lmdb REQUIRED)
 add_library(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include/lmdbxx/lmdb++.h)
 target_include_directories(lmdbxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lmdbxx/include)
+target_link_libraries(lmdbxx INTERFACE lmdb)
 
 enable_language(C)
 set(ReedSolomonC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/reedsolomon-c)

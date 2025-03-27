@@ -1,6 +1,5 @@
 #include "context.h"
 
-#include "config.h"
 #include "log.h"
 
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
