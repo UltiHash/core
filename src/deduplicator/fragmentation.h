@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/global_data/global_data_view.h"
+#include "storage/global_data/global_data_view.h"
 #include "common/types/address.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
 

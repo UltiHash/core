@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/crypto/hash.h"
+#include "hash.h"
 
 namespace uh::cluster {
 

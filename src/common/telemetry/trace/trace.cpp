@@ -1,5 +1,5 @@
-#include <common/telemetry/trace/trace.h>
-#include <common/telemetry/trace/trace_asio.h>
+#include "trace.h"
+#include "trace_asio.h"
 
 #include <opentelemetry/exporters/ostream/span_exporter_factory.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>

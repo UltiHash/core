@@ -1,8 +1,9 @@
 #pragma once
 
-#include "common/network/client.h"
-#include "common/network/messenger_core.h"
-#include "common/service_interfaces/deduplicator_interface.h"
+#include <common/network/client.h>
+#include <common/network/messenger_core.h>
+#include <common/service_interfaces/deduplicator_interface.h>
+#include <common/service_interfaces/service_factory.h>
 
 namespace uh::cluster {
 
@@ -23,4 +24,5 @@ struct remote_deduplicator : public deduplicator_interface {
 private:
     client m_dedupe_service;
 };
+
 } // namespace uh::cluster

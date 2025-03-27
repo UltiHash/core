@@ -1,9 +1,11 @@
 #define BOOST_TEST_MODULE "etcd tests"
 
-#include "common/etcd/utils.h"
+#include <common/etcd/utils.h>
+
 #include "fakeit.hpp"
 
 #include <boost/test/unit_test.hpp>
+
 #include <future>
 
 using namespace fakeit;

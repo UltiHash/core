@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fstream>
+
 namespace uh::cluster {
 
 namespace {

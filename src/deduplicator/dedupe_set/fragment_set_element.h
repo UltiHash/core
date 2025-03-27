@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/global_data/global_data_view.h"
+#include "storage/global_data/global_data_view.h"
 #include <deduplicator/cache.h>
 
 namespace uh::cluster {

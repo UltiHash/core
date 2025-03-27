@@ -1,13 +1,14 @@
 #define BOOST_TEST_MODULE "async_http_client tests"
 
 #include <boost/test/unit_test.hpp>
+#include <boost/beast/http/status.hpp>
 
 #include "test_config.h"
 
 #include <common/network/async_http_client.h>
 
-#include <boost/beast/http/status.hpp>
-#include <lib/util/coroutine.h>
+#include <util/coroutine.h>
+
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;

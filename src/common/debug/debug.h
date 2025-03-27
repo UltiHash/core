@@ -47,11 +47,7 @@ private:
     std::source_location m_loc;
 };
 
-#ifdef ENABLE_TRACE
-#define LOG_CONTEXT() context_logger __ctx
-#else
 #define LOG_CONTEXT()
-#endif
 
 inline std::string dbg_to_string(std::string v) { return v; }
 
