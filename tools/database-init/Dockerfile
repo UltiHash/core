@@ -16,8 +16,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y && \                               
     apt-get install -y openjdk-17-jdk postgresql-client libgrpc-dev libgrpc++-dev liblmdb-dev liblmdb++-dev  
 
-COPY --from=build /core/build/tools/uh-cluster-access-client /usr/local/bin
-COPY --from=build /core/build/libuh-cluster_shared.so /usr/local/bin
+COPY --from=build /core/build/tools/access/uh-access /usr/local/bin/uh-cluster-access-client
+COPY --from=build /core/build/bin/* /usr/local/bin
 
 COPY --from=flyway /flyway /flyway
 
