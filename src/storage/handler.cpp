@@ -49,8 +49,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();
         } else {
-            if (co_await handle_iteration(hdr, m).continue_trace(
-                    std::move(context)) == flow_control::BREAK) {
+            if (co_await handle_iteration(hdr, m) == flow_control::BREAK) {
                 break;
             }
         }

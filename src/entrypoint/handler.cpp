@@ -32,7 +32,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             auto req = co_await m_factory.create(s, rawreq);
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
                        << *req;
-            resp = co_await handle_request(s, *req, id).start_trace();
+            resp = co_await handle_request(s, *req, id);
             metric<success>::increase(1);
             keep_alive = true;
 
@@ -89,9 +89,9 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
 
     auto cmd = co_await m_command_factory.create(req);
 
-    auto span = co_await boost::asio::this_coro::span;
-    span->set_name(cmd->action_id());
-    span->set_attribute("request-id", id);
+    // auto span = co_await boost::asio::this_coro::span;
+    // span->set_name(cmd->action_id());
+    // span->set_attribute("request-id", id);
 
     LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
@@ -122,8 +122,8 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         }
     }
 
-    span->set_attribute("response-code",
-                        static_cast<unsigned>(response.base().result()));
+    // span->set_attribute("response-code",
+    //                     static_cast<unsigned>(response.base().result()));
 
     co_return response;
 }

@@ -24,8 +24,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         LOG_DEBUG() << remote.str() << " received "
                     << magic_enum::enum_name(hdr.type);
 
-        auto control =
-            co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
+        auto control = co_await handle_dedupe(hdr, m);
         if (control == flow_control::BREAK) {
             break;
         }

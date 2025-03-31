@@ -48,8 +48,7 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     }
 
     boost::asio::co_spawn(m_io_service,
-                          storage->read_fragment(ctx, buffer.data(), frag)
-                              .continue_trace(context),
+                          storage->read_fragment(ctx, buffer.data(), frag),
                           boost::asio::use_future)
         .get();
     return buffer;

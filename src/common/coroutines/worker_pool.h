@@ -19,7 +19,8 @@ public:
         promise<std::invoke_result_t<Func>> p;
         auto fut = p.get_future();
 
-        auto context = co_await boost::asio::this_coro::context;
+        // auto context = co_await boost::asio::this_coro::context;
+        auto context = opentelemetry::context::Context();
         auto f = [context](auto& f, auto&& promise) mutable {
             THREAD_LOCAL_CONTEXT = context;
 
@@ -48,7 +49,8 @@ public:
         promise<void> p;
         auto fut = p.get_future();
 
-        auto context = co_await boost::asio::this_coro::context;
+        // auto context = co_await boost::asio::this_coro::context;
+        auto context = opentelemetry::context::Context();
 
         auto f = [context](auto& f, auto&& promise) mutable {
             try {

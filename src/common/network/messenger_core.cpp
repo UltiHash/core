@@ -94,9 +94,9 @@ messenger_core::recv_header_with_context() {
         !boost::asio::trace_span::check_context(context)) {
         LOG_ERROR() << "[messenger_core::send] The decoded context is invalid: "
                        "see following stack trace";
-        auto span = co_await boost::asio::this_coro::span;
-        span->iterate_call_stack(
-            [](boost::source_location loc) { LOG_INFO() << loc; });
+        // auto span = co_await boost::asio::this_coro::span;
+        // span->iterate_call_stack(
+        //     [](boost::source_location loc) { LOG_INFO() << loc; });
         LOG_ERROR() << "End of stack trace";
     }
 
@@ -148,15 +148,16 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto context = co_await boost::asio::this_coro::context;
+        // auto context = co_await boost::asio::this_coro::context;
+        auto context = opentelemetry::context::Context();
 
         if (boost::asio::trace_span::enable &&
             !boost::asio::trace_span::check_context(context)) {
             LOG_ERROR() << "[messenger_core::send_buffers] The context to be "
                            "encoded is invalid: see following stack trace";
-            auto span = co_await boost::asio::this_coro::span;
-            span->iterate_call_stack(
-                [](boost::source_location loc) { LOG_INFO() << loc; });
+            // auto span = co_await boost::asio::this_coro::span;
+            // span->iterate_call_stack(
+            //     [](boost::source_location loc) { LOG_INFO() << loc; });
             LOG_ERROR() << "End of stack trace";
         }
 
@@ -202,15 +203,16 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
 
         auto size = static_cast<size_type>(data.size());
 
-        auto context = co_await boost::asio::this_coro::context;
+        // auto context = co_await boost::asio::this_coro::context;
+        auto context = opentelemetry::context::Context();
 
         if (boost::asio::trace_span::enable &&
             !boost::asio::trace_span::check_context(context)) {
             LOG_ERROR() << "[messenger_core::recv_header] The context to be "
                            "encoded is invalid: see following stack trace";
-            auto span = co_await boost::asio::this_coro::span;
-            span->iterate_call_stack(
-                [](boost::source_location loc) { LOG_INFO() << loc; });
+            // auto span = co_await boost::asio::this_coro::span;
+            // span->iterate_call_stack(
+            //     [](boost::source_location loc) { LOG_INFO() << loc; });
             LOG_ERROR() << "End of stack trace";
         }
 

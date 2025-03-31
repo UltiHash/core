@@ -62,8 +62,9 @@ constexpr std::size_t constexpr_strlen(const char (&str)[N]) {
 }
 
 constexpr auto get_encoded_context_len() {
-    constexpr auto length = constexpr_strlen(
-        "00-996c6ce7ece3dcf1d2acfb7b89421fd6-28a16557cb531132-01");
+    // constexpr auto length = constexpr_strlen(
+    //     "00-996c6ce7ece3dcf1d2acfb7b89421fd6-28a16557cb531132-01");
+    constexpr auto length = constexpr_strlen("00");
     return length;
 }
 

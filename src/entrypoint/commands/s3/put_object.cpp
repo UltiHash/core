@@ -25,10 +25,10 @@ coro<future<dedupe_response>> upload(context& ctx, boost::asio::io_context& ioc,
     promise<dedupe_response> p;
     auto f = p.get_future();
 
-    auto context = co_await boost::asio::this_coro::context;
+    // auto context = co_await boost::asio::this_coro::context;
+    auto context = opentelemetry::context::Context();
     if (!buffer.empty()) {
-        auto awaitable = dedup.deduplicate(ctx, {buffer.data(), buffer.size()})
-                             .continue_trace(context);
+        auto awaitable = dedup.deduplicate(ctx, {buffer.data(), buffer.size()});
         asio::co_spawn(ioc, std::move(awaitable),
                        use_promise_cospawn(std::move(p)));
     } else {

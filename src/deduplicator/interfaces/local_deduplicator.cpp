@@ -10,8 +10,8 @@ size_t largest_common_prefix(const container& a, const container& b) noexcept {
     return std::distance(a.begin(), mismatch.first);
 }
 
-coro<size_t> match_size(context& ctx, dd::cache& storage,
-                        std::string_view data, auto frag) {
+coro<size_t> match_size(context& ctx, dd::cache& storage, std::string_view data,
+                        auto frag) {
     if (!frag) {
         co_return 0ull;
     }
@@ -43,19 +43,18 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
 coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
                                                       std::string_view data) {
     auto& sub_ctx = ctx;
-    auto span = co_await boost::asio::this_coro::span;
-    span->set_attribute("data-size", data.size());
+    // auto span = co_await boost::asio::this_coro::span;
+    // span->set_attribute("data-size", data.size());
 
     fragmentation fragments;
     std::size_t offset = 0;
-    span->add_event("deduplicator-fragment-search");
+    // span->add_event("deduplicator-fragment-search");
     {
         while (!data.empty()) {
             auto f = co_await m_dedupe_workers.post_in_workers(
                 sub_ctx, [this, &data] { return m_fragment_set.find(data); });
 
-            auto match_low =
-                co_await match_size(sub_ctx, m_cache, data, f.low);
+            auto match_low = co_await match_size(sub_ctx, m_cache, data, f.low);
             auto match_high =
                 co_await match_size(sub_ctx, m_cache, data, f.high);
 
@@ -89,7 +88,7 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
         }
     }
 
-    span->add_event("deduplicator-fragment-link");
+    // span->add_event("deduplicator-fragment-link");
     {
         auto stored_fragments = fragments.get_stored_fragments();
         if (!stored_fragments.empty()) {
@@ -108,13 +107,13 @@ coro<dedupe_response> local_deduplicator::deduplicate(context& ctx,
         }
     }
 
-    span->add_event("deduplicator-flush-storage");
+    // span->add_event("deduplicator-flush-storage");
     {
         LOG_DEBUG() << "flushing unstored data to storage";
         co_await fragments.flush_storage(sub_ctx, m_storage);
     }
 
-    span->add_event("deduplicator-flush-fragments");
+    // span->add_event("deduplicator-flush-fragments");
     {
         LOG_DEBUG() << "flushing fragments to fragment set";
         co_await m_dedupe_workers.post_in_workers(sub_ctx, [this, &fragments] {

@@ -13,12 +13,13 @@ coro<std::vector<R>> run_for_all(boost::asio::io_context& ioc,
     futures.reserve(inputs.size());
 
     size_t i = 0;
-    auto context = co_await boost::asio::this_coro::context;
+    // auto context = co_await boost::asio::this_coro::context;
+    auto context = opentelemetry::context::Context();
     for (const auto& in : inputs) {
         promise<R> p;
         futures.emplace_back(p.get_future());
 
-        boost::asio::co_spawn(ioc, func(i++, in).continue_trace(context),
+        boost::asio::co_spawn(ioc, func(i++, in),
                               use_promise_cospawn(std::move(p)));
     }
 

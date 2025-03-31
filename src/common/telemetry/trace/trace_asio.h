@@ -109,7 +109,8 @@ public:
     bool is_started() noexcept { return m_data != nullptr; }
 
     // For Debugging
-    void iterate_call_stack(std::function<void(source_location)> process) {
+    void
+    iterate_call_stack(std::function<void(source_location)> process) const {
         auto parent = m_parent;
         while (parent) {
             process(parent->m_location);
@@ -189,15 +190,15 @@ public:
             h) {
         auto& parent_promise = h.promise();
 
-        auto parent_span = parent_promise.span();
-
-        if (m_frame != nullptr) {
-            auto current_span = m_frame->span();
-            current_span->set_parent(parent_span);
-            if (!current_span->is_started() && parent_span->is_started()) {
-                current_span->start_span(parent_span->context());
-            }
-        }
+        // auto parent_span = parent_promise.span();
+        //
+        // if (m_frame != nullptr) {
+        //     auto current_span = m_frame->span();
+        //     current_span->set_parent(parent_span);
+        //     if (!current_span->is_started() && parent_span->is_started()) {
+        //         current_span->start_span(parent_span->context());
+        //     }
+        // }
 
         awaitable<T, Executor>::await_suspend(
             detail::coroutine_handle<detail::awaitable_frame<U, Executor>>::
@@ -308,9 +309,12 @@ class traced_awaitable_frame : public awaitable_frame<T, Executor> {
 public:
     using awaitable_frame<T, Executor>::awaitable_frame;
 
-    auto initial_suspend(
-        const source_location& location = CURRENT_LOCATION) noexcept {
-        m_span.set_location(location);
+    // auto initial_suspend(
+    //     const source_location& location = CURRENT_LOCATION) noexcept {
+    //     m_span.set_location(location);
+    //     return awaitable_frame<T, Executor>::initial_suspend();
+    // }
+    auto initial_suspend() noexcept {
         return awaitable_frame<T, Executor>::initial_suspend();
     }
 
@@ -323,10 +327,14 @@ public:
 
     template <typename U>
     auto await_transform(traced_awaitable<U, Executor> a) const {
-        return traced_awaitable<U, Executor>(
-            awaitable_frame_base<Executor>::await_transform(
-                std::move(static_cast<awaitable<U, Executor>&>(a))),
-            a.get_coroutine_frame());
+
+        // if (awaitable_frame<U, Executor>::attached_thread_->entry_point()
+        //         ->throw_if_cancelled_)
+        if (!!awaitable_frame<U, Executor>::attached_thread_
+                  ->get_cancellation_state()
+                  .cancelled())
+            throw_error(boost::asio::error::operation_aborted, "co_await");
+        return a;
     }
 
     template <typename U> auto await_transform(awaitable<U, Executor> a) const {
@@ -378,9 +386,12 @@ class traced_awaitable_frame<void, Executor>
 public:
     using awaitable_frame<void, Executor>::awaitable_frame;
 
-    auto initial_suspend(
-        const source_location& location = CURRENT_LOCATION) noexcept {
-        m_span.set_location(location);
+    // auto initial_suspend(
+    //     const source_location& location = CURRENT_LOCATION) noexcept {
+    //     m_span.set_location(location);
+    //     return awaitable_frame<void, Executor>::initial_suspend();
+    // }
+    auto initial_suspend() noexcept {
         return awaitable_frame<void, Executor>::initial_suspend();
     }
 
@@ -393,10 +404,14 @@ public:
 
     template <typename U>
     auto await_transform(traced_awaitable<U, Executor> a) const {
-        return traced_awaitable<U, Executor>(
-            awaitable_frame_base<Executor>::await_transform(
-                std::move(static_cast<awaitable<U, Executor>&>(a))),
-            a.get_coroutine_frame());
+
+        // if (awaitable_frame<U, Executor>::attached_thread_->entry_point()
+        //         ->throw_if_cancelled_)
+        if (!!awaitable_frame<U, Executor>::attached_thread_
+                  ->get_cancellation_state()
+                  .cancelled())
+            throw_error(boost::asio::error::operation_aborted, "co_await");
+        return a;
     }
 
     template <typename U> auto await_transform(awaitable<U, Executor> a) const {
@@ -413,7 +428,8 @@ public:
 
             void await_suspend(coroutine_handle<void>) noexcept {}
 
-            auto await_resume() const noexcept { return this_->span(); }
+            auto await_resume() const noexcept { return &span; }
+            trace_span span;
         };
 
         return result{this};
@@ -428,17 +444,20 @@ public:
             void await_suspend(coroutine_handle<void>) noexcept {}
 
             auto await_resume() const noexcept {
-                return this_->span()->context();
+                return opentelemetry::context::Context();
             }
         };
 
         return result{this};
     }
 
-    trace_span* span() noexcept { return &m_span; }
+    trace_span* span() noexcept {
+        static trace_span span;
+        return &span;
+    }
 
 private:
-    trace_span m_span;
+    // trace_span m_span;
 };
 
 } // namespace detail
