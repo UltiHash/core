@@ -36,9 +36,9 @@ void initialize_trace(const std::string& tracer_name,
                       const std::string& tracer_version,
                       const std::string& endpoint) {
 
-    boost::asio::trace_span::enable = true;
-    boost::asio::trace_span::tracer_name = tracer_name;
-    boost::asio::trace_span::tracer_version = tracer_version;
+    // boost::asio::trace_span::enable = true;
+    // boost::asio::trace_span::tracer_name = tracer_name;
+    // boost::asio::trace_span::tracer_version = tracer_version;
 
     if (endpoint == TRACE_STDOUT_ENDPOINT) {
         auto exporter = opentelemetry::exporter::trace::
@@ -65,24 +65,25 @@ void initialize_trace(const std::string& tracer_name,
 }
 
 std::string encode_context(const opentelemetry::context::Context& context) {
-    std::map<std::string, std::string> map;
-    encode_context(map, context);
-    auto traceparent = map["traceparent"];
-    auto desired_length = get_encoded_context_len();
-    if (traceparent.size() != desired_length) {
-        auto ret = std::string{};
-        ret.resize(desired_length);
-        return ret;
-    }
-    return traceparent;
+    // std::map<std::string, std::string> map;
+    // encode_context(map, context);
+    // auto traceparent = map["traceparent"];
+    // auto desired_length = get_encoded_context_len();
+    // if (traceparent.size() != desired_length) {
+    //     auto ret = std::string{};
+    //     ret.resize(desired_length);
+    //     return ret;
+    // }
+    // return traceparent;
+    return "00";
 }
 opentelemetry::context::Context decode_context(std::string traceparent) {
-    if (traceparent.empty()) {
-        return {};
-    }
-    std::map<std::string, std::string> map;
-    map["traceparent"] = traceparent;
-    return decode_context(map);
+    // if (traceparent.empty()) {
+    return {};
+    // }
+    // std::map<std::string, std::string> map;
+    // map["traceparent"] = traceparent;
+    // return decode_context(map);
 }
 
 } // namespace uh::cluster

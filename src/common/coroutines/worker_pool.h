@@ -24,11 +24,11 @@ public:
         auto f = [context](auto& f, auto&& promise) mutable {
             THREAD_LOCAL_CONTEXT = context;
 
-            if (boost::asio::trace_span::enable &&
-                !boost::asio::trace_span::check_context(context)) {
-                LOG_ERROR() << "[post_in_workers] The context to be "
-                               "encoded is invalid";
-            }
+            // if (boost::asio::trace_span::enable &&
+            //     !boost::asio::trace_span::check_context(context)) {
+            //     LOG_ERROR() << "[post_in_workers] The context to be "
+            //                    "encoded is invalid";
+            // }
 
             try {
                 promise.set_value(f());
@@ -56,11 +56,11 @@ public:
             try {
                 THREAD_LOCAL_CONTEXT = context;
 
-                if (boost::asio::trace_span::enable &&
-                    !boost::asio::trace_span::check_context(context)) {
-                    LOG_ERROR() << "[post_in_workers] The context to be "
-                                   "encoded is invalid";
-                }
+                // if (boost::asio::trace_span::enable &&
+                //     !boost::asio::trace_span::check_context(context)) {
+                //     LOG_ERROR() << "[post_in_workers] The context to be "
+                //                    "encoded is invalid";
+                // }
 
                 f();
                 promise.set_value();

@@ -41,11 +41,11 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     auto storage = m_basic_getter.get(pointer);
     auto context = THREAD_LOCAL_CONTEXT;
 
-    if (boost::asio::trace_span::enable &&
-        !boost::asio::trace_span::check_context(context)) {
-        LOG_ERROR() << "[read_fragment] The context to be "
-                       "encoded is invalid";
-    }
+    // if (boost::asio::trace_span::enable &&
+    //     !boost::asio::trace_span::check_context(context)) {
+    //     LOG_ERROR() << "[read_fragment] The context to be "
+    //                    "encoded is invalid";
+    // }
 
     boost::asio::co_spawn(m_io_service,
                           storage->read_fragment(ctx, buffer.data(), frag),
