@@ -9,7 +9,7 @@ handle in the subsequent sections:
 * Configuration parameters
 * Service state
 
-## Variables
+### Variables
 
 The following variables will be used in this document:
 
@@ -19,25 +19,30 @@ The following variables will be used in this document:
 - `<service_id>` the (numeric) id of a service, currently a serial number
 
 
-# Service announcements
+## Service announcements
 
 Services announcing their availability for other cluster members through etcd
 key prefixes. Announcements are assigned a TTL and are deleted automatically
 when it expires. There is no guarantee that the announced service is actually
 available.
 
-`/<namespace>/services/announced/<service_class>/<service_id>` \
+`/<namespace>/services/attributes/<service_class>/<service_id>` \
   when defined, a service of class `<service_class>` and service id `<service_id>`
   is available
 
-`/<namespace>/services/announced/<service_class>/<service_id>/endpoint_host` \
+`/<namespace>/services/attributes/<service_class>/<service_id>/ENDPOINT_HOST` \
   contains the host the service is running on
 
-`/<namespace>/services/announced/<service_class>/<service_id>/endpoint_port` \
+`/<namespace>/services/attributes/<service_class>/<service_id>/ENDPOINT_PORT` \
   contains the port the service is using for communication
 
-# Service State
+`/<namespace>/services/attributes/<service_class>/<service_id>/ENDPOINT_PID` \
+  contains the port the service is using for communication
 
-Not yet implemented: services may propagate service state under the key
-`/<namespace>/state/class/<service_class>/`
-`/<namespace>/state/instance/<service_class>/<service_id>/`
+## Configuration parameters
+
+TBD
+
+## Service State
+
+TBD
