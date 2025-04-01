@@ -145,10 +145,10 @@ add_compile_options(-Wno-odr)
 add_link_options(-Wno-odr)
 add_compile_options(-pthread)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
-else()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 endif()
 
 set(CMAKE_BUILD_RPATH_USE_ORIGIN On)
