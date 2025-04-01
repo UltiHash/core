@@ -70,6 +70,12 @@ add_custom_target(
     ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_CURRENT_LIST_DIR})
 
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 #
 # External dependencies
 #
@@ -144,12 +150,6 @@ add_compile_options(-Wno-mismatched-new-delete)
 add_compile_options(-Wno-odr)
 add_link_options(-Wno-odr)
 add_compile_options(-pthread)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
-else()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-endif()
 
 set(CMAKE_BUILD_RPATH_USE_ORIGIN On)
 
