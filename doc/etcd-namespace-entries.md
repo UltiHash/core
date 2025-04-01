@@ -7,7 +7,6 @@ There are three major types of resources used by the cluster, which will be
 handle in the subsequent sections:
 * Service announcements
 * Configuration parameters
-* Service state
 
 ### Variables
 
@@ -39,10 +38,17 @@ available.
 `/<namespace>/services/attributes/<service_class>/<service_id>/ENDPOINT_PID` \
   contains the port the service is using for communication
 
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/storages/<storage_service_id>/state` \
+  contains state of storage services
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/throne` \
+  is used for leader election
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
+  contains state of group and storage services state that storage group manager refered
+
 ## Configuration parameters
 
-TBD
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>configuration/`
+  contains configuration of storage groups
 
-## Service State
-
-TBD
