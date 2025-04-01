@@ -89,6 +89,9 @@ template <metric_type type, metric_unit unit = count,
 class metric {
 
     inline static std::function<value_type()> m_gauge_cb;
+    inline static std::function<
+        std::vector<std::pair<std::string, std::string>>()>
+        m_label_cb;
 
     using otel_counter_type = std::conditional_t<
         std::is_signed_v<value_type>,
@@ -148,7 +151,10 @@ class metric {
         auto observer_typed =
             opentelemetry::nostd::get<opentelemetry::nostd::shared_ptr<
                 opentelemetry::metrics::ObserverResultT<value_type>>>(observer);
-        observer_typed->Observe(m_gauge_cb());
+        //
+        //                   attributes) noexcept {
+        //         std::vector<std::pair<std::string, std::string>>
+        observer_typed->Observe(m_gauge_cb(), m_label_cb());
     }
 
 public:
@@ -156,8 +162,12 @@ public:
 
     static void increase(value_type val) { get_counter()->Add(val); }
     static void decrease(value_type val) { get_counter()->Add(-val); }
-    static void register_gauge_callback(std::function<value_type()> fun) {
+    static void register_gauge_callback(
+        std::function<value_type()> fun,
+        std::function<std::vector<std::pair<std::string, std::string>>()>
+            label_fun) {
         m_gauge_cb = fun;
+        m_label_cb = label_fun;
         get_gauge()->AddCallback(gauge_callback_wrapper, nullptr);
     }
 
