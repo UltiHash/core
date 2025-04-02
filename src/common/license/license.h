@@ -3,6 +3,7 @@
 #include <common/etcd/utils.h>
 #include <magic_enum/magic_enum.hpp>
 #include <string_view>
+#include <vector>
 
 namespace uh::cluster {
 
@@ -22,6 +23,9 @@ struct license {
                           verify option = verify::VERIFY);
 
     std::string to_string() const { return m_compact_json; };
+
+    std::vector<std::pair<std::string, std::string>>
+    to_key_value_iterable() const;
 
 private:
     bool is_valid() const { return license_type != type::NONE; }
