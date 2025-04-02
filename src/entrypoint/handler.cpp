@@ -24,7 +24,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         std::string id = generate_unique_id();
 
         raw_request rawreq;
-        std::optional<response> resp;
+        response resp;
         bool keep_alive = false;
 
         try {
@@ -56,18 +56,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             resp = make_response(command_exception());
         }
 
-        if (resp.has_value()) {
-            try {
-                co_await write(s, std::move(*resp), id);
-            } catch (const boost::system::system_error& se) {
-                if (se.code() == boost::beast::http::error::end_of_stream) {
-                    LOG_INFO()
-                        << s.remote_endpoint() << ": peer closed connection";
-                    break;
-                }
-                throw;
+        try {
+            co_await write(s, std::move(resp), id);
+        } catch (const boost::system::system_error& se) {
+            if (se.code() == boost::beast::http::error::end_of_stream) {
+                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+                break;
             }
-            break;
+            throw;
         }
 
         if (!keep_alive) {
