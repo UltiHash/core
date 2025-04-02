@@ -16,8 +16,7 @@ target_link_libraries(uh_precompile_headers
                       magic_enum
                       lmdbxx
                       reedsolomon
-                      nlohmann_json
-                      cpr::cpr)
+                      nlohmann_json)
 
 target_precompile_headers(
     uh_precompile_headers
