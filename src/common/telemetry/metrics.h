@@ -151,9 +151,6 @@ class metric {
         auto observer_typed =
             opentelemetry::nostd::get<opentelemetry::nostd::shared_ptr<
                 opentelemetry::metrics::ObserverResultT<value_type>>>(observer);
-        //
-        //                   attributes) noexcept {
-        //         std::vector<std::pair<std::string, std::string>>
         observer_typed->Observe(m_gauge_cb(), m_label_cb());
     }
 

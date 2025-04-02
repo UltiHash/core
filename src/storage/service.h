@@ -22,7 +22,6 @@ public:
                                       service.working_dir)),
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
                                                     sc.m_data_store_roots)),
-          // TODO: add m_license_watcher(m_etcd)
           m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd),
           m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
 
