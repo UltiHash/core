@@ -145,10 +145,10 @@ add_compile_options(-Wno-odr)
 add_link_options(-Wno-odr)
 add_compile_options(-pthread)
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
-else()
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+else()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
 endif()
 
 set(CMAKE_BUILD_RPATH_USE_ORIGIN On)
@@ -169,7 +169,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 add_subdirectory(src)
-add_subdirectory(scripts)
 
 # Unit tests
 if(BUILD_TESTS)
@@ -181,4 +180,5 @@ endif()
 if(BUILD_TOOLS)
     message(STATUS "Building tools")
     add_subdirectory(tools)
+    add_subdirectory(scripts)
 endif()
