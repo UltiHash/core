@@ -6,7 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-using namespace fakeit;
+// using namespace fakeit;
 using namespace std::chrono_literals;
 
 namespace uh::cluster {
@@ -45,7 +45,7 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
 BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
     etcd_client.put("/foo/bar", "1");
 
-    auto resp = etcd_client.get("/foo/bar");
+    auto resp = etcd_client.get("/foo/bar").get();
 
     BOOST_TEST(resp.is_ok() == true);
     BOOST_TEST(resp.value().as_string() == "1");
