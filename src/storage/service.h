@@ -3,12 +3,12 @@
 #include <functional>
 #include <utility>
 
+#include "config.h"
+#include "handler.h"
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
 #include <common/network/server.h>
-#include "config.h"
-#include "handler.h"
 
 namespace uh::cluster::storage {
 

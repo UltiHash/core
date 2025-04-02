@@ -5,6 +5,8 @@
 #include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
+#include <format>
+#include <magic_enum/magic_enum.hpp>
 
 namespace uh::cluster::ep {
 
@@ -12,13 +14,19 @@ namespace {
 
 static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
 
-coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
+coro<void> update_limits(uh::cluster::directory& directory, limits& l,
+                         license_watcher& lic_watcher) {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
     std::atomic<std::size_t> size = co_await directory.data_size();
     l.set_storage_size(size);
 
     metric<entrypoint_original_data_volume_gauge, byte,
-           int64_t>::register_gauge_callback([&size]() { return size.load(); });
+           int64_t>::register_gauge_callback([&size]() { return size.load(); },
+                                             [&lic_watcher]() {
+                                                 return lic_watcher
+                                                     .get_license()
+                                                     ->to_key_value_iterable();
+                                             });
     auto g = scope_guard([]() {
         metric<entrypoint_original_data_volume_gauge, byte,
                int64_t>::remove_gauge_callback();
@@ -66,7 +74,8 @@ service::service(const service_config& sc, entrypoint_config config)
       m_storage_maintainer(
           m_etcd,
           service_factory<storage_interface>(
-              m_ioc, m_config.global_data_view.storage_service_connection_count)),
+              m_ioc,
+              m_config.global_data_view.storage_service_connection_count)),
       m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer,
                   m_etcd),
       m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
@@ -86,15 +95,16 @@ service::service(const service_config& sc, entrypoint_config config)
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
                m_ioc),
       m_gc(m_ioc, m_directory, m_data_view) {
-    co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
-             [](std::exception_ptr e) {
-                 try {
-                     std::rethrow_exception(e);
-                 } catch (const std::exception& e) {
-                     LOG_ERROR()
-                         << "metrics monitor stopped working: " << e.what();
-                 }
-             });
+    co_spawn(
+        m_ioc,
+        update_limits(m_directory, m_limits, m_license_watcher).start_trace(),
+        [](std::exception_ptr e) {
+            try {
+                std::rethrow_exception(e);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "metrics monitor stopped working: " << e.what();
+            }
+        });
 }
 
 void service::run() {

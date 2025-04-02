@@ -9,6 +9,16 @@ using nlohmann::json;
 
 namespace uh::cluster {
 
+std::vector<std::pair<std::string, std::string>>
+license::to_key_value_iterable() const {
+    return {
+        {"version", version},
+        {"customer_id", customer_id},
+        {"license_type", std::string(magic_enum::enum_name(license_type))},
+        {"storage_cap_gib", std::to_string(storage_cap_gib)},
+    };
+}
+
 NLOHMANN_JSON_SERIALIZE_ENUM(license::type, //
                              {
                                  {license::NONE, ""},
