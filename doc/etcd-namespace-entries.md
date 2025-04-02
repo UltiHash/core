@@ -3,11 +3,6 @@
 This document defines the etcd directory structure implemented by UltiHash
 cluster.
 
-There are three major types of resources used by the cluster, which will be
-handle in the subsequent sections:
-* Service announcements
-* Configuration parameters
-* Service state
 
 ## Variables
 
@@ -18,12 +13,14 @@ The following variables will be used in this document:
   `deduplicator`, `coordinator`, `entrypoint`
 - `<service_id>` the (numeric) id of a service, currently a serial number
 
-# ETCD manager watchdog
+
+## ETCD manager watchdog
 
 `<namespace>/watchdog/` \
     monitored by all services to check for etcd connectivity.
 
-# Service announcements
+
+## Service announcements
 
 Services announcing their availability for other cluster members through etcd
 key prefixes. Announcements are assigned a TTL and are deleted automatically
@@ -41,7 +38,25 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication
 
-# Service ID
+**TBD**: `/<namespace>/services/<service_class>/attributes/<service_id>/state` \
+  contains state of storage services
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/storages/<storage_service_id>/state` \
+  contains next state of storage services
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
+  contains state of group and storage services state that storage group manager refered
+
+**TBD**: `/election/sg<storage_group_id>/` \
+  is used for leader election: this space is handled by leader-election api
+
+## Configuration parameters
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>configuration/`
+  contains configuration of storage groups
+
+
+## Service ID
 
 `/<namespace>/config/class/cluster/lock` \
     used during service ID allocation to synchronize service access to ids
@@ -49,7 +64,8 @@ available.
 `/<namespace>/config/class/cluster/current_id/<service_class>` \
     next ID value for services of type `<service_class>`
 
-# Cluster License
+
+## Cluster License
 
 `/<namespace>/config/license` \
     current cluster license as JSON string. The license has been verified.
