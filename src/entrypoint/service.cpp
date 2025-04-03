@@ -14,23 +14,10 @@ namespace {
 
 static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
 
-coro<void> update_limits(uh::cluster::directory& directory, limits& l,
-                         license_watcher& lic_watcher) {
+coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
     std::atomic<std::size_t> size = co_await directory.data_size();
     l.set_storage_size(size);
-
-    metric<entrypoint_original_data_volume_gauge, byte,
-           int64_t>::register_gauge_callback([&size]() { return size.load(); },
-                                             [&lic_watcher]() {
-                                                 return lic_watcher
-                                                     .get_license()
-                                                     ->to_key_value_iterable();
-                                             });
-    auto g = scope_guard([]() {
-        metric<entrypoint_original_data_volume_gauge, byte,
-               int64_t>::remove_gauge_callback();
-    });
 
     while (true) {
         timer.expires_after(LIMITS_UPDATE_INTERVAL);
@@ -95,19 +82,34 @@ service::service(const service_config& sc, entrypoint_config config)
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
                m_ioc),
       m_gc(m_ioc, m_directory, m_data_view) {
-    co_spawn(
-        m_ioc,
-        update_limits(m_directory, m_limits, m_license_watcher).start_trace(),
-        [](std::exception_ptr e) {
-            try {
-                std::rethrow_exception(e);
-            } catch (const std::exception& e) {
-                LOG_ERROR() << "metrics monitor stopped working: " << e.what();
-            }
-        });
+    co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
+             [](std::exception_ptr e) {
+                 try {
+                     std::rethrow_exception(e);
+                 } catch (const std::exception& e) {
+                     LOG_ERROR()
+                         << "metrics monitor stopped working: " << e.what();
+                 }
+             });
 }
 
 void service::run() {
+
+    metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
+        register_gauge_callback(
+            [this]() { return m_limits.get_storage_size(); },
+            [this]() {
+                auto label =
+                    m_license_watcher.get_license()->to_key_value_iterable();
+                label.push_back({"service_id", std::to_string(m_service_id)});
+                return label;
+            });
+
+    auto g = scope_guard([]() {
+        metric<entrypoint_original_data_volume_gauge, byte,
+               int64_t>::remove_gauge_callback();
+    });
+
     m_service_registry.register_service(m_server.get_server_config());
     m_server.run();
 }
