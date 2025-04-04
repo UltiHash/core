@@ -1,3 +1,7 @@
+## [1.3.1] 2025-04-04
+
+- Add labels to distinguish users on metrics
+
 ## [1.3.0] 2025-02-24
 
 - Implement support for pay-as-you-go licensing
