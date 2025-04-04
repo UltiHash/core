@@ -32,16 +32,13 @@ public:
         metric<storage_available_space_gauge, byte, int64_t>::
             register_gauge_callback(
                 [this]() { return m_storage->get_available_space_func(); },
-                []() -> std::vector<std::pair<std::string, std::string>> {
-                    return {};
+                [this]() {
+                    auto label = m_license_watcher.get_license()
+                                     ->to_key_value_iterable();
+                    label.push_back(
+                        {"service_id", std::to_string(m_service_id)});
+                    return label;
                 });
-        // [this]() {
-        //     auto label = m_license_watcher.get_license()
-        //                      ->to_key_value_iterable();
-        //     label.push_back(
-        //         {"service_id", std::to_string(m_service_id)});
-        //     return label;
-        // });
 
         metric<storage_used_space_gauge, byte, int64_t>::
             register_gauge_callback(
