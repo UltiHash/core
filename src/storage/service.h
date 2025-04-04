@@ -8,7 +8,9 @@
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
+#include <common/license/license_watcher.h>
 #include <common/network/server.h>
+#include <common/utils/scope_guard.h>
 
 namespace uh::cluster::storage {
 
@@ -17,6 +19,7 @@ public:
     service(const service_config& service, const storage_config& sc)
         : m_ioc(sc.server.threads),
           m_etcd{service.etcd_config},
+          m_license_watcher(m_etcd),
           m_service_id(get_service_id(m_etcd,
                                       get_service_string(STORAGE_SERVICE),
                                       service.working_dir)),
@@ -26,6 +29,37 @@ public:
           m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
 
     void run() {
+        metric<storage_available_space_gauge, byte, int64_t>::
+            register_gauge_callback(
+                [this]() { return m_storage->get_available_space_func(); },
+                [this]() {
+                    auto label = m_license_watcher.get_license()
+                                     ->to_key_value_iterable();
+                    label.push_back(
+                        {"service_id", std::to_string(m_service_id)});
+                    return label;
+                });
+
+        metric<storage_used_space_gauge, byte, int64_t>::
+            register_gauge_callback(
+                [this] { return m_storage->get_used_space_func(); },
+                [this]() {
+                    auto label = m_license_watcher.get_license()
+                                     ->to_key_value_iterable();
+                    label.push_back(
+                        {"service_id", std::to_string(m_service_id)});
+                    return label;
+                });
+
+        auto g1 = scope_guard([]() {
+            metric<storage_available_space_gauge, byte,
+                   int64_t>::remove_gauge_callback();
+        });
+        auto g2 = scope_guard([]() {
+            metric<storage_used_space_gauge, byte,
+                   int64_t>::remove_gauge_callback();
+        });
+
         m_service_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
@@ -39,6 +73,7 @@ public:
 private:
     boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
+    license_watcher m_license_watcher;
     std::size_t m_service_id;
     std::shared_ptr<local_storage> m_storage;
     service_registry m_service_registry;
