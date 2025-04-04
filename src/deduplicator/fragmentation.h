@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/global_data/global_data_view.h"
 #include "common/types/address.h"
 #include "deduplicator/dedupe_set/fragment_set.h"
+#include "storage/global_data/global_data_view.h"
 
 #include <list>
 #include <variant>
@@ -39,7 +39,7 @@ public:
     /**
      * Writes all unstored fragments to downstream storage.
      */
-    coro<void> flush_storage(context& ctx, global_data_view& gdv);
+    coro<void> flush_storage(global_data_view& gdv);
 
     std::size_t effective_size() const;
     std::size_t unstored_size() const;

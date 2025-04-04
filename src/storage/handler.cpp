@@ -59,54 +59,42 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
 coro<handler::flow_control>
 handler::handle_iteration(const messenger::header& hdr, messenger& m) {
-    uh::cluster::context ctx;
     std::optional<error> err;
 
     try {
         switch (hdr.type) {
         case STORAGE_WRITE_REQ:
-            ctx = ctx.sub_context("storage-write-req");
-            co_await handle_write(ctx, m, hdr);
+            co_await handle_write(m, hdr);
             break;
         case STORAGE_READ_REQ:
-            ctx = ctx.sub_context("storage-read-req");
-            co_await handle_read(ctx, m, hdr);
+            co_await handle_read(m, hdr);
             break;
         case STORAGE_READ_FRAGMENT_REQ:
-            ctx = ctx.sub_context("storage-read-fragment-req");
-            co_await handle_read_fragment(ctx, m, hdr);
+            co_await handle_read_fragment(m, hdr);
             break;
         case STORAGE_READ_ADDRESS_REQ:
-            ctx = ctx.sub_context("storage-read-address-req");
-            co_await handle_read_address(ctx, m, hdr);
+            co_await handle_read_address(m, hdr);
             break;
         case STORAGE_LINK_REQ:
-            ctx = ctx.sub_context("storage-link-req");
-            co_await handle_link(ctx, m, hdr);
+            co_await handle_link(m, hdr);
             break;
         case STORAGE_UNLINK_REQ:
-            ctx = ctx.sub_context("storage-unlink-req");
-            co_await handle_unlink(ctx, m, hdr);
+            co_await handle_unlink(m, hdr);
             break;
         case STORAGE_USED_REQ:
-            ctx = ctx.sub_context("storage-used-req");
-            co_await handle_get_used(ctx, m, hdr);
+            co_await handle_get_used(m, hdr);
             break;
         case STORAGE_DS_INFO_REQ:
-            ctx = ctx.sub_context("storage-ds-info-req");
-            co_await handle_ds_info(ctx, m, hdr);
+            co_await handle_ds_info(m, hdr);
             break;
         case STORAGE_INIT_DD_REQ:
-            ctx = ctx.sub_context("storage-init-dd-req");
-            co_await handle_init_dd(ctx, m, hdr);
+            co_await handle_init_dd(m, hdr);
             break;
         case STORAGE_DS_WRITE_REQ:
-            ctx = ctx.sub_context("storage-ds-write-req");
-            co_await handle_ds_write(ctx, m, hdr);
+            co_await handle_ds_write(m, hdr);
             break;
         case STORAGE_DS_READ_REQ:
-            ctx = ctx.sub_context("storage-ds-read-req");
-            co_await handle_ds_read(ctx, m, hdr);
+            co_await handle_ds_read(m, hdr);
             break;
         default:
             throw std::invalid_argument("Invalid message type!");
@@ -131,39 +119,37 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
 
     if (err) {
         LOG_WARN() << hdr.peer << " error handling request: " << err->message();
-        co_await m.send_error(ctx, *err);
+        co_await m.send_error(*err);
     }
     co_return flow_control::CONTINUE;
 }
 
-coro<void> handler::handle_write(context& ctx, messenger& m,
-                                 const messenger::header& h) {
+coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
     write_request req = co_await m.recv_write(h);
     auto addr = co_await m_storage.write(
-        ctx, std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
-    co_await m.send_address(ctx, SUCCESS, addr);
+        std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
+    co_await m.send_address(SUCCESS, addr);
 }
 
-coro<void> handler::handle_read(context& ctx, messenger& m,
-                                const messenger::header& h) {
+coro<void> handler::handle_read(messenger& m, const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
-    auto buffer = co_await m_storage.read(ctx, frag.pointer, frag.size);
+    auto buffer = co_await m_storage.read(frag.pointer, frag.size);
 
-    co_await m.send(ctx, SUCCESS, buffer.span());
+    co_await m.send(SUCCESS, buffer.span());
 }
 
-coro<void> handler::handle_read_fragment(context& ctx, messenger& m,
+coro<void> handler::handle_read_fragment(messenger& m,
                                          const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
     unique_buffer<char> buffer(frag.size);
-    co_await m_storage.read_fragment(ctx, buffer.data(), frag);
+    co_await m_storage.read_fragment(buffer.data(), frag);
 
-    co_await m.send(ctx, SUCCESS, buffer.span());
+    co_await m.send(SUCCESS, buffer.span());
 }
 
-coro<void> handler::handle_read_address(context& ctx, messenger& m,
+coro<void> handler::handle_read_address(messenger& m,
                                         const messenger::header& h) {
     const auto addr = co_await m.recv_address(h);
 
@@ -177,61 +163,53 @@ coro<void> handler::handle_read_address(context& ctx, messenger& m,
         offset += fsize;
     }
 
-    co_await m_storage.read_address(ctx, addr, buffer.span(), offsets);
-    co_await m.send(ctx, SUCCESS, buffer.span());
+    co_await m_storage.read_address(addr, buffer.span(), offsets);
+    co_await m.send(SUCCESS, buffer.span());
 }
 
-coro<void> handler::handle_link(context& ctx, messenger& m,
-                                const messenger::header& h) {
+coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
 
     const auto addr = co_await m.recv_address(h);
-    auto rejected_addr = co_await m_storage.link(ctx, addr);
+    auto rejected_addr = co_await m_storage.link(addr);
 
-    co_await m.send_address(ctx, SUCCESS, rejected_addr);
+    co_await m.send_address(SUCCESS, rejected_addr);
 }
 
-coro<void> handler::handle_unlink(context& ctx, messenger& m,
-                                  const messenger::header& h) {
+coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 
     const auto addr = co_await m.recv_address(h);
-    std::size_t freed_bytes = co_await m_storage.unlink(ctx, addr);
+    std::size_t freed_bytes = co_await m_storage.unlink(addr);
 
-    co_await m.send_primitive<size_t>(ctx, SUCCESS, freed_bytes);
+    co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);
 }
 
-coro<void> handler::handle_get_used(context& ctx, messenger& m,
-                                    const messenger::header&) {
-    const auto used = co_await m_storage.get_used_space(ctx);
-    co_await m.send_primitive<size_t>(ctx, SUCCESS, used);
+coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
+    const auto used = co_await m_storage.get_used_space();
+    co_await m.send_primitive<size_t>(SUCCESS, used);
 }
 
-coro<void> handler::handle_ds_info(context& ctx, messenger& m,
-                                   const messenger::header&) {
-    const auto map = co_await m_storage.get_ds_size_map(ctx);
-    co_await m.send_map(ctx, SUCCESS, map);
+coro<void> handler::handle_ds_info(messenger& m, const messenger::header&) {
+    const auto map = co_await m_storage.get_ds_size_map();
+    co_await m.send_map(SUCCESS, map);
 }
 
-coro<void> handler::handle_init_dd(context& ctx, messenger& m,
-                                   const messenger::header&) {
-    co_await m.send(ctx, SUCCESS, {});
+coro<void> handler::handle_init_dd(messenger& m, const messenger::header&) {
+    co_await m.send(SUCCESS, {});
 }
 
-coro<void> handler::handle_ds_write(context& ctx, messenger& m,
-                                    const messenger::header& h) {
+coro<void> handler::handle_ds_write(messenger& m, const messenger::header& h) {
     const auto req = co_await m.recv_ds_write(h);
     co_await m_storage.ds_write(
-        ctx, req.ds_id, req.pointer,
+        req.ds_id, req.pointer,
         std::get<unique_buffer<>>(req.data).string_view());
-    co_await m.send(ctx, SUCCESS, {});
+    co_await m.send(SUCCESS, {});
 }
 
-coro<void> handler::handle_ds_read(context& ctx, messenger& m,
-                                   const messenger::header& h) {
+coro<void> handler::handle_ds_read(messenger& m, const messenger::header& h) {
     const auto req = co_await m.recv_ds_read(h);
     unique_buffer<> buf{req.size};
-    co_await m_storage.ds_read(ctx, req.ds_id, req.pointer, req.size,
-                               buf.data());
-    co_await m.send(ctx, SUCCESS, buf.span());
+    co_await m_storage.ds_read(req.ds_id, req.pointer, req.size, buf.data());
+    co_await m.send(SUCCESS, buf.span());
 }
 
 } // namespace uh::cluster::storage

@@ -12,16 +12,16 @@ using namespace uh::cluster;
 namespace {
 
 BOOST_AUTO_TEST_CASE(get) {
-    io_context ctx;
-    executor_work_guard<decltype(ctx.get_executor())> work{ctx.get_executor()};
-    std::thread thread([&]() { ctx.run(); });
+    io_context ioc;
+    executor_work_guard<decltype(ioc.get_executor())> work{ioc.get_executor()};
+    std::thread thread([&]() { ioc.run(); });
 
     int id = 5;
     uh::cluster::pool<int> p(
-        ctx, [&]() { return std::make_unique<int>(id++); }, 3);
+        ioc, [&]() { return std::make_unique<int>(id++); }, 3);
 
     co_spawn(
-        ctx,
+        ioc,
         [&]() -> lambda_coro<void> {
             auto r0 = co_await p.get();
             auto r1 = co_await p.get();
@@ -43,19 +43,19 @@ BOOST_AUTO_TEST_CASE(get) {
 }
 
 BOOST_AUTO_TEST_CASE(block) {
-    io_context ctx;
-    executor_work_guard<decltype(ctx.get_executor())> work{ctx.get_executor()};
+    io_context ioc;
+    executor_work_guard<decltype(ioc.get_executor())> work{ioc.get_executor()};
 
-    std::thread thread([&]() { ctx.run(); });
+    std::thread thread([&]() { ioc.run(); });
 
     int id = 5;
     uh::cluster::pool<int> p(
-        ctx, [&]() { return std::make_unique<int>(id++); }, 1);
+        ioc, [&]() { return std::make_unique<int>(id++); }, 1);
 
     std::unique_ptr<uh::cluster::pool<int>::handle> handle;
 
     co_spawn(
-        ctx,
+        ioc,
         [&]() -> lambda_coro<void> {
             handle = std::make_unique<uh::cluster::pool<int>::handle>(
                 co_await p.get());
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(block) {
     std::atomic<int> pos = 0;
 
     auto future = co_spawn(
-        ctx,
+        ioc,
         [&]() -> lambda_coro<void> {
             ++pos;
             auto r2 = co_await p.get();

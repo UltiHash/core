@@ -34,8 +34,7 @@ params get_params(int argc, char* args[]) {
 
 coro<void> perform_operation(messenger& m, message_type type,
                              std::span<char> data) {
-    context c;
-    co_await m.send(c, type, data);
+    co_await m.send(type, data);
     const auto h = co_await m.recv_header();
     unique_buffer<char> buf(h.size);
     m.register_read_buffer(buf);

@@ -142,7 +142,7 @@ void messenger_core::reset_read_buffers() {
     m_read_size = 0;
 }
 
-coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
+coro<void> messenger_core::send_buffers(const message_type type) {
     try {
         if (type == SUCCESS) {
             metric<success>::increase(1);
@@ -175,13 +175,13 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
     reset_write_buffers();
 }
 
-coro<void> messenger_core::send_error(context& ctx, const error& e) {
+coro<void> messenger_core::send_error(const error& e) {
     const auto ec = e.code();
     register_write_buffer(ec);
     register_write_buffer(e.message());
     metric<failure>::increase(1);
 
-    co_await send_buffers(ctx, FAILURE);
+    co_await send_buffers(FAILURE);
 }
 
 coro<error> messenger_core::recv_error(const messenger_core::header& h) {
@@ -193,7 +193,7 @@ coro<error> messenger_core::recv_error(const messenger_core::header& h) {
     co_return error(ec, msg);
 }
 
-coro<void> messenger_core::send(context& ctx, const message_type type,
+coro<void> messenger_core::send(const message_type type,
                                 std::span<const char> data) {
     try {
         if (type == SUCCESS) {

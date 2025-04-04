@@ -98,14 +98,14 @@ address fragmentation::get_stored_fragments() const {
     return rv;
 }
 
-coro<void> fragmentation::flush_storage(context& ctx, global_data_view& gdv) {
+coro<void> fragmentation::flush_storage(global_data_view& gdv) {
     if (m_unstored_size == 0ull) {
         co_return;
     }
 
     auto buffer = unstored_to_buffer();
     m_buffer_address =
-        co_await gdv.write(ctx, {&buffer[0], buffer.size()}, m_offsets);
+        co_await gdv.write({&buffer[0], buffer.size()}, m_offsets);
 
     compute_unstored_addresses();
 }

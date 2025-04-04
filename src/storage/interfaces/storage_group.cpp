@@ -66,7 +66,7 @@ void storage_group::remove(size_t id, size_t group_nid) {
     return m_status == empty;
 }
 
-coro<address> storage_group::write(context& ctx, std::span<const char> data,
+coro<address> storage_group::write(std::span<const char> data,
                                    const std::vector<std::size_t>& offsets) {
 
     if (!is_healthy()) {
@@ -79,10 +79,9 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     auto res =
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
-            [&context, &ctx, &encoded, &offsets](size_t i,
-                                                 auto n) -> coro<address> {
+            [&context, &encoded, &offsets](size_t i, auto n) -> coro<address> {
                 // TODO offsets need to be computed to match encoded EC data
-                co_return co_await n->write(ctx, encoded.get().at(i), offsets)
+                co_return co_await n->write(encoded.get().at(i), offsets)
                     .continue_trace(context);
             },
             m_getter.get_services());
@@ -95,31 +94,29 @@ coro<address> storage_group::write(context& ctx, std::span<const char> data,
     co_return addr;
 }
 
-coro<void> storage_group::read_fragment(context& ctx, char* buffer,
-                                        const fragment& f) {
+coro<void> storage_group::read_fragment(char* buffer, const fragment& f) {
     auto cl = m_getter.get(f.pointer);
-    co_await cl->read_fragment(ctx, buffer, f);
+    co_await cl->read_fragment(buffer, f);
 }
 
-coro<shared_buffer<>>
-storage_group::read(context& ctx, const uint128_t& pointer, size_t size) {
-    co_return co_await m_getter.get(pointer)->read(ctx, pointer, size);
+coro<shared_buffer<>> storage_group::read(const uint128_t& pointer,
+                                          size_t size) {
+    co_return co_await m_getter.get(pointer)->read(pointer, size);
 }
 
-coro<void> storage_group::read_address(context& ctx, const address& addr,
+coro<void> storage_group::read_address(const address& addr,
                                        std::span<char> buffer,
                                        const std::vector<size_t>& offsets) {
 
     co_await perform_for_address(
         addr, m_getter, m_ioc,
-        [&ctx, buffer](auto, auto dn, const auto& info) -> coro<void> {
-            co_await dn->read_address(ctx, info.addr, buffer,
-                                      info.pointer_offsets);
+        [buffer](auto, auto dn, const auto& info) -> coro<void> {
+            co_await dn->read_address(info.addr, buffer, info.pointer_offsets);
         },
         offsets);
 }
 
-coro<address> storage_group::link(context& ctx, const address& addr) {
+coro<address> storage_group::link(const address& addr) {
 
     if (!is_healthy()) {
         throw std::runtime_error("unhealthy storage system");
@@ -128,8 +125,8 @@ coro<address> storage_group::link(context& ctx, const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_getter, m_ioc,
-        [&ctx, &addresses](auto id, auto dn, const auto& info) -> coro<void> {
-            addresses.emplace(id, co_await dn->link(ctx, info.addr));
+        [&addresses](auto id, auto dn, const auto& info) -> coro<void> {
+            addresses.emplace(id, co_await dn->link(info.addr));
         });
 
     address rv;
@@ -140,7 +137,7 @@ coro<address> storage_group::link(context& ctx, const address& addr) {
     co_return rv;
 }
 
-coro<std::size_t> storage_group::unlink(context& ctx, const address& addr) {
+coro<std::size_t> storage_group::unlink(const address& addr) {
 
     if (!is_healthy()) {
         throw std::runtime_error("unhealthy storage system");
@@ -149,13 +146,13 @@ coro<std::size_t> storage_group::unlink(context& ctx, const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_getter, m_ioc,
-        [&ctx, &freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
-            freed_bytes += co_await dn->unlink(ctx, info.addr);
+        [&freed_bytes](auto, auto dn, const auto& info) -> coro<void> {
+            freed_bytes += co_await dn->unlink(info.addr);
         });
     co_return freed_bytes;
 }
 
-coro<size_t> storage_group::get_used_space(context& ctx) {
+coro<size_t> storage_group::get_used_space() {
 
     if (!is_healthy()) {
         throw std::runtime_error("unhealthy storage system");
@@ -165,12 +162,12 @@ coro<size_t> storage_group::get_used_space(context& ctx) {
 
     size_t used = 0;
     for (const auto& dn : nodes) {
-        used += co_await dn->get_used_space(ctx);
+        used += co_await dn->get_used_space();
     }
     co_return used;
 }
 
-coro<std::map<size_t, size_t>> storage_group::get_ds_size_map(context& ctx) {
+coro<std::map<size_t, size_t>> storage_group::get_ds_size_map() {
     throw std::runtime_error("This operation is not allowed in storage group");
 }
 
@@ -178,12 +175,11 @@ coro<std::map<size_t, size_t>> storage_group::get_ds_size_map(context& ctx) {
     return m_attributes.group_id();
 }
 
-coro<void> storage_group::ds_write(context&, uint32_t, uint64_t,
-                                   std::span<const char>) {
+coro<void> storage_group::ds_write(uint32_t, uint64_t, std::span<const char>) {
     throw std::runtime_error("unsupported operation in storage group");
 }
 
-coro<void> storage_group::ds_read(context&, uint32_t, uint64_t, size_t, char*) {
+coro<void> storage_group::ds_read(uint32_t, uint64_t, size_t, char*) {
     throw std::runtime_error("unsupported operation in storage group");
 }
 

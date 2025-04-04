@@ -23,7 +23,7 @@ private:
     std::unique_ptr<cors::module> m_cors;
 
     coro<http::response> handle_request(boost::asio::ip::tcp::socket& s,
-                                        http::request& req,
+                                        http::raw_request& rawreq,
                                         const std::string& id);
 };
 
