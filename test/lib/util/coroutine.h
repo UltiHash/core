@@ -31,8 +31,9 @@ public:
         }
     }
 
-private:
     boost::asio::io_context m_ctx;
+
+private:
     boost::asio::executor_work_guard<decltype(m_ctx.get_executor())>
         m_work_guard;
     std::list<std::thread> m_threads;
