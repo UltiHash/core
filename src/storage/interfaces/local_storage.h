@@ -150,13 +150,17 @@ struct local_storage : public storage_interface {
         co_return freed_bytes;
     }
 
-    coro<size_t> get_used_space(context& ctx) override {
+    size_t get_used_space_func() {
 
         size_t used = 0;
         for (const auto& ds : m_data_stores) {
             used += ds->get_used_space();
         }
-        co_return used;
+        return used;
+    }
+
+    coro<size_t> get_used_space(context& ctx) override {
+        co_return get_used_space_func();
     }
 
     coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
@@ -179,7 +183,7 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    size_t get_free_space() {
+    size_t get_available_space_func() {
 
         size_t free = 0;
         for (const auto& ds : m_data_stores) {
