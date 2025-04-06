@@ -6,7 +6,6 @@
 #include "entrypoint/http/body.h"
 #include "entrypoint/user/user.h"
 #include "raw_request.h"
-#include <common/telemetry/context.h>
 
 #include <map>
 #include <span>
@@ -54,9 +53,6 @@ public:
 
     bool keep_alive() const { return m_req.keep_alive(); }
 
-    const uh::cluster::context& context() const;
-    uh::cluster::context& context();
-
     const user::user& authenticated_user() const;
 
 private:
@@ -71,8 +67,6 @@ private:
     std::string m_object_key{};
     std::map<std::string, std::string> m_params;
     std::string m_path;
-
-    uh::cluster::context m_ctx;
 };
 
 std::string get_bucket_id(const std::string& path);

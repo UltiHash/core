@@ -43,8 +43,8 @@ public:
 
     template <typename func>
     requires factory<resource, func>
-    pool(boost::asio::io_context& ctx, func f, unsigned count)
-        : m_ctx(ctx),
+    pool(boost::asio::io_context& ioc, func f, unsigned count)
+        : m_ioc(ioc),
           m_mutex(std::make_unique<std::mutex>()) {
         while (count--) {
             m_resources.emplace_back(f());
@@ -94,7 +94,7 @@ private:
         m_resources.emplace_back(std::move(r));
     }
 
-    boost::asio::io_context& m_ctx;
+    boost::asio::io_context& m_ioc;
     std::unique_ptr<std::mutex> m_mutex;
     std::list<std::unique_ptr<resource>> m_resources;
     std::list<promise<std::unique_ptr<resource>>> m_promises;

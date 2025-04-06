@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/coroutines/promise.h"
-#include "common/telemetry/context.h"
 #include <exception>
 #include <memory>
 
@@ -15,7 +14,7 @@ public:
 
     template <typename Func>
     requires(!std::is_void_v<std::invoke_result_t<Func>>)
-    coro<std::invoke_result_t<Func>> post_in_workers(context& ctx, Func func) {
+    coro<std::invoke_result_t<Func>> post_in_workers(Func func) {
         promise<std::invoke_result_t<Func>> p;
         auto fut = p.get_future();
 
@@ -44,7 +43,7 @@ public:
 
     template <typename Func>
     requires(std::is_void_v<std::invoke_result_t<Func>>)
-    coro<void> post_in_workers(context& ctx, Func func) {
+    coro<void> post_in_workers(Func func) {
         promise<void> p;
         auto fut = p.get_future();
 

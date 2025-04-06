@@ -35,7 +35,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
                                                    messenger& m) {
     std::optional<error> err;
-    uh::cluster::context ctx{};
     try {
         switch (hdr.type) {
         case DEDUPLICATOR_REQ: {
@@ -45,8 +44,8 @@ coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
 
             LOG_DEBUG() << hdr.peer << ": deduplicate: size=" << data.size();
             auto dedupe_resp =
-                co_await m_local_dedupe.deduplicate(ctx, data.string_view());
-            co_await m.send_dedupe_response(ctx, dedupe_resp);
+                co_await m_local_dedupe.deduplicate(data.string_view());
+            co_await m.send_dedupe_response(dedupe_resp);
             break;
         }
         default:
@@ -72,7 +71,7 @@ coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
 
     if (err) {
         LOG_WARN() << hdr.peer << " error handling request: " << err->message();
-        co_await m.send_error(ctx, *err);
+        co_await m.send_error(*err);
     }
     co_return flow_control::CONTINUE;
 }

@@ -47,7 +47,6 @@ private:
         std::vector<data_stat> stats{};
         std::size_t recover_size{};
         bool healthy = false;
-        context ctx;
     };
 
     coro<void> recover(std::atomic<ec_status>& status) {
@@ -98,8 +97,8 @@ private:
                 m_ioc,
                 [&](size_t id,
                     std::shared_ptr<storage_interface> node) -> coro<int> {
-                    co_await node->ds_read(rinfo.ctx, ds_id, ds_recovered_size,
-                                           size, buf.data() + offsets.at(id));
+                    co_await node->ds_read(ds_id, ds_recovered_size, size,
+                                           buf.data() + offsets.at(id));
                     co_return 0;
                 },
                 nodes);
@@ -107,8 +106,8 @@ private:
             m_ec_calc.recover(shards, rinfo.stats);
             for (size_t i = 0; i < rinfo.stats.size(); i++) {
                 if (rinfo.stats[i] == lost) {
-                    co_await nodes.at(i)->ds_write(
-                        rinfo.ctx, ds_id, ds_recovered_size, shards.at(i));
+                    co_await nodes.at(i)->ds_write(ds_id, ds_recovered_size,
+                                                   shards.at(i));
                 }
             }
             recovered_size += size;
@@ -139,11 +138,10 @@ private:
     coro<recovery_info> check_recovery() {
 
         std::map<size_t, std::vector<size_t>> sizes;
-        context ctx(RECOVERY_INITIAL_CONTEXT_NAME);
         size_t i = 0;
 
         for (const auto& dn : m_getter.get_services()) {
-            const auto size = co_await dn->get_used_space(ctx);
+            const auto size = co_await dn->get_used_space();
             sizes[size].emplace_back(i++);
         }
 
@@ -154,8 +152,7 @@ private:
 
         recovery_info rinfo{.stats = {m_getter.size(), valid},
                             .recover_size = sizes.crbegin()->first,
-                            .healthy = true,
-                            .ctx = std::move(ctx)};
+                            .healthy = true};
         if (sizes.size() == 2) {
             for (const auto& fail_index : sizes[0]) {
                 rinfo.stats[fail_index] = lost;
@@ -167,17 +164,18 @@ private:
     }
 
     coro<std::map<size_t, size_t>> get_ds_id_used_map(recovery_info& rinfo) {
-        const auto maps = co_await run_for_all<
-            std::map<size_t, size_t>, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&ctx = rinfo.ctx](size_t, std::shared_ptr<storage_interface> dn)
-                -> coro<std::map<size_t, size_t>> {
-                if (!dn) {
-                    throw std::runtime_error("inaccessible data service");
-                }
-                co_return co_await dn->get_ds_size_map(ctx);
-            },
-            m_getter.get_services());
+        const auto maps =
+            co_await run_for_all<std::map<size_t, size_t>,
+                                 std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [](size_t, std::shared_ptr<storage_interface> dn)
+                    -> coro<std::map<size_t, size_t>> {
+                    if (!dn) {
+                        throw std::runtime_error("inaccessible data service");
+                    }
+                    co_return co_await dn->get_ds_size_map();
+                },
+                m_getter.get_services());
 
         auto f = std::ranges::find(rinfo.stats, valid);
         if (f == rinfo.stats.cend()) {

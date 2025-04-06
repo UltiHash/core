@@ -73,19 +73,6 @@ default_data_store::default_data_store(data_store_config conf,
     }
 
     m_files.reserve(m_conf.max_data_store_size / m_filesize + 1);
-
-    metric<storage_available_space_gauge, byte, int64_t>::
-        register_gauge_callback(
-            [this] { return get_available_space(); },
-            []() -> std::vector<std::pair<std::string, std::string>> {
-                return {};
-            });
-
-    metric<storage_used_space_gauge, byte, int64_t>::register_gauge_callback(
-        [this] { return get_used_space(); },
-        []() -> std::vector<std::pair<std::string, std::string>> {
-            return {};
-        });
 }
 
 std::size_t default_data_store::read(const uint128_t& global_pointer,

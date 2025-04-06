@@ -1,6 +1,5 @@
 add_library(telemetry
             trace/trace.cpp
-            context.cpp
             log.cpp
             metrics.cpp
             otel_log_sink.cpp)

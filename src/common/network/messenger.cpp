@@ -30,13 +30,13 @@ messenger::recv_dedupe_response(const header& message_header) {
     co_return std::move(dedupe_resp);
 }
 
-coro<void> messenger::send_write(context& ctx, const write_request& req) {
+coro<void> messenger::send_write(const write_request& req) {
     auto data = std::get<std::span<const char>>(req.data);
     const size_type data_size = static_cast<size_type>(data.size());
     register_write_buffer(data_size);
     register_write_buffer(data);
     register_write_buffer(req.offsets);
-    co_await send_buffers(ctx, STORAGE_WRITE_REQ);
+    co_await send_buffers(STORAGE_WRITE_REQ);
 }
 
 coro<write_request> messenger::recv_write(const header& message_header) {
@@ -58,11 +58,11 @@ coro<write_request> messenger::recv_write(const header& message_header) {
     co_return req;
 }
 
-coro<void> messenger::send_ds_write(context& ctx, const ds_write_request& req) {
+coro<void> messenger::send_ds_write(const ds_write_request& req) {
     register_write_buffer(req.ds_id);
     register_write_buffer(req.pointer);
     register_write_buffer(std::get<std::span<const char>>(req.data));
-    co_await send_buffers(ctx, STORAGE_DS_WRITE_REQ);
+    co_await send_buffers(STORAGE_DS_WRITE_REQ);
 }
 
 coro<ds_write_request> messenger::recv_ds_write(const header& message_header) {
@@ -78,11 +78,11 @@ coro<ds_write_request> messenger::recv_ds_write(const header& message_header) {
     co_return req;
 }
 
-coro<void> messenger::send_ds_read(context& ctx, const ds_read_request& req) {
+coro<void> messenger::send_ds_read(const ds_read_request& req) {
     register_write_buffer(req.ds_id);
     register_write_buffer(req.pointer);
     register_write_buffer(req.size);
-    co_await send_buffers(ctx, STORAGE_DS_READ_REQ);
+    co_await send_buffers(STORAGE_DS_READ_REQ);
 }
 
 coro<ds_read_request> messenger::recv_ds_read(const header& message_header) {
@@ -94,26 +94,25 @@ coro<ds_read_request> messenger::recv_ds_read(const header& message_header) {
     co_return req;
 }
 
-coro<void> messenger::send_address(context& ctx, const message_type type,
+coro<void> messenger::send_address(const message_type type,
                                    const address& addr) {
     register_write_buffer(addr.pointers);
     register_write_buffer(addr.sizes);
-    co_await send_buffers(ctx, type);
+    co_await send_buffers(type);
 }
 
-coro<void> messenger::send_fragment(context& ctx, const message_type type,
+coro<void> messenger::send_fragment(const message_type type,
                                     const fragment frag) {
     register_write_buffer(frag.pointer.get_data(), 2);
     register_write_buffer(frag.size);
-    co_await send_buffers(ctx, type);
+    co_await send_buffers(type);
 }
 
-coro<void> messenger::send_dedupe_response(context& ctx,
-                                           const dedupe_response& dedupe_resp) {
+coro<void> messenger::send_dedupe_response(const dedupe_response& dedupe_resp) {
     register_write_buffer(dedupe_resp.effective_size);
     register_write_buffer(dedupe_resp.addr.pointers);
     register_write_buffer(dedupe_resp.addr.sizes);
-    co_await send_buffers(ctx, SUCCESS);
+    co_await send_buffers(SUCCESS);
 }
 
 } // namespace uh::cluster

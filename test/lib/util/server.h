@@ -16,7 +16,7 @@ private:
     void accept();
     void run();
 
-    boost::asio::io_context m_ctx;
+    boost::asio::io_context m_ioc;
     boost::asio::ip::tcp::acceptor m_acceptor;
     std::thread m_thread;
 };
