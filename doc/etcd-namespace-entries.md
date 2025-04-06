@@ -30,36 +30,40 @@ available.
 `/<namespace>/services/<service_class>/announced/<service_id>` \
     when defined, a service of class `<service_class>` and service id
     `<service_id>` is available with details being stored under the path
-  `/<namespace>/services/<service_class>/attributes/<service_id>`
+  `/<namespace>/services/<service_class>/attributes/<service_id>`.
 
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_host` \
-    contains the host the service is running on
+    contains the host the service is running on.
 
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
-    contains the port the service is using for communication
+    contains the port the service is using for communication.
 
 **TBD**: `/<namespace>/services/<service_class>/attributes/<service_id>/state` \
-  contains state of storage services
+  contains state of storage services: -(NEW), o(ASSIGNED).
 
 **TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
-  contains state of group and storage services state that storage group manager refered
+  contains state of group and storage services state that storage group manager refered, like \
+  `<group_state>,xx-o-o` (x means there's no storage service)
+
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/initialized` \
+  exists only when the storage group succeeded to assign all storage services: has no ttl.
 
 **TBD**: `/election/sg<storage_group_id>/` \
-  is used for leader election: this space is handled by leader-election api
+  is used for leader election: this space is handled by leader-election api.
 
 ## Configuration parameters
 
 **TBD**: `/<namespace>/storage_groups/<storage_group_id>configuration/`
-  contains configuration of storage groups
+  contains configuration of storage groups.
 
 
 ## Service ID
 
 `/<namespace>/config/class/cluster/lock` \
-    used during service ID allocation to synchronize service access to ids
+    used during service ID allocation to synchronize service access to ids.
 
 `/<namespace>/config/class/cluster/current_id/<service_class>` \
-    next ID value for services of type `<service_class>`
+    next ID value for services of type `<service_class>`.
 
 
 ## Cluster License
