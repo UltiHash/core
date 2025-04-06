@@ -9,6 +9,66 @@
 namespace boost {
 namespace asio {
 
+template <typename Value> class awaitable_future {
+public:
+    bool is_set() const noexcept {
+        return m_state.load(std::memory_order_acquire) == state::set;
+    }
+
+    void set(Value value) {
+        m_value.emplace(std::move(value));
+        const state oldState =
+            m_state.exchange(state::set, std::memory_order_acq_rel);
+        if (oldState == state::not_set_consumer_waiting) {
+            m_awaiter.resume();
+        }
+    }
+
+    void reset() noexcept {
+        m_value.reset();
+        state oldState = state::set;
+        m_state.compare_exchange_strong(oldState, state::not_set,
+                                        std::memory_order_relaxed);
+    }
+
+    auto operator co_await() noexcept {
+        class awaiter {
+        public:
+            awaiter(awaitable_future& event)
+                : m_event(event) {}
+
+            bool await_ready() const noexcept { return m_event.is_set(); }
+
+            bool await_suspend(std::coroutine_handle<> awaiter) {
+                m_event.m_awaiter = awaiter;
+
+                state oldState = state::not_set;
+                return m_event.m_state.compare_exchange_strong(
+                    oldState, state::not_set_consumer_waiting,
+                    std::memory_order_release, std::memory_order_acquire);
+            }
+
+            Value await_resume() noexcept {
+                Value value = std::move(m_event.m_value.value());
+                m_event.m_value.reset();
+                return value;
+            }
+
+        private:
+            awaitable_future& m_event;
+        };
+
+        return awaiter{*this};
+    }
+
+private:
+    enum class state { not_set, not_set_consumer_waiting, set };
+
+    std::atomic<state> m_state{state::not_set};
+    std::coroutine_handle<> m_awaiter;
+    std::optional<Value> m_value;
+};
+
 template <typename, typename> class traced_awaitable;
 
 namespace this_coro {
@@ -365,6 +425,10 @@ public:
         return result{this};
     }
 
+    template <typename U> auto& await_transform(awaitable_future<U>& a) const {
+        return a;
+    }
+
     trace_span* span() noexcept { return &m_span; }
 
 private:
@@ -433,6 +497,10 @@ public:
         };
 
         return result{this};
+    }
+
+    template <typename U> auto& await_transform(awaitable_future<U>& a) const {
+        return a;
     }
 
     trace_span* span() noexcept { return &m_span; }

@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE "awaitable_future tests"
 
-#include <common/coroutines/awaitable_future.h>
+#include <common/telemetry/trace/trace_asio.h>
 
 #include <boost/test/unit_test.hpp>
 #include <util/coroutine.h>
@@ -11,13 +11,13 @@ using namespace boost::asio;
 
 namespace uh::cluster {
 
-traced_awaitable<int> cb(awaitable_future<int>& af) { co_return co_await af; };
-
 BOOST_FIXTURE_TEST_CASE(future_get, coro_fixture) {
     {
         awaitable_future<int> af;
 
-        auto f = co_spawn(m_ctx, cb(af), use_future);
+        auto f = co_spawn(
+            m_ctx, [&]() -> traced_awaitable<int> { co_return co_await af; },
+            use_future);
 
         af.set(4711);
         BOOST_CHECK(f.get() == 4711);
@@ -26,7 +26,9 @@ BOOST_FIXTURE_TEST_CASE(future_get, coro_fixture) {
         awaitable_future<int> af;
 
         af.set(4711);
-        auto f = co_spawn(m_ctx, cb(af), use_future);
+        auto f = co_spawn(
+            m_ctx, [&]() -> traced_awaitable<int> { co_return co_await af; },
+            use_future);
 
         BOOST_CHECK(f.get() == 4711);
     }
