@@ -41,9 +41,6 @@ available.
 **TBD**: `/<namespace>/services/<service_class>/attributes/<service_id>/state` \
   contains state of storage services
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>/storages/<storage_service_id>/state` \
-  contains next state of storage services
-
 **TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
   contains state of group and storage services state that storage group manager refered
 
