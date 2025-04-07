@@ -443,6 +443,53 @@ private:
 
 } // namespace detail
 
+namespace detail {
+
+template <typename T> struct traced_awaitable_signature;
+
+template <typename T, typename Executor>
+struct traced_awaitable_signature<traced_awaitable<T, Executor>> {
+    typedef void type(std::exception_ptr, T);
+};
+
+template <typename Executor>
+struct traced_awaitable_signature<traced_awaitable<void, Executor>> {
+    typedef void type(std::exception_ptr);
+};
+
+} // namespace detail
+
+template <
+    typename Executor, typename F,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(typename detail::traced_awaitable_signature<
+                                    result_of_t<F()>>::type) CompletionToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
+    CompletionToken,
+    typename detail::traced_awaitable_signature<result_of_t<F()>>::type)
+    co_spawn(const Executor& ex, F&& f, CompletionToken&& token,
+             constraint_t<is_executor<Executor>::value ||
+                          execution::is_executor<Executor>::value> = 0) {
+    return async_initiate<
+        CompletionToken,
+        typename detail::traced_awaitable_signature<result_of_t<F()>>::type>(
+        detail::initiate_co_spawn<typename result_of_t<F()>::executor_type>(ex),
+        token, std::forward<F>(f));
+}
+
+template <
+    typename ExecutionContext, typename F,
+    BOOST_ASIO_COMPLETION_TOKEN_FOR(typename detail::traced_awaitable_signature<
+                                    result_of_t<F()>>::type) CompletionToken>
+inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
+    CompletionToken,
+    typename detail::traced_awaitable_signature<result_of_t<F()>>::type)
+    co_spawn(ExecutionContext& ctx, F&& f, CompletionToken&& token,
+             constraint_t<is_convertible<ExecutionContext&,
+                                         execution_context&>::value> = 0) {
+    return (co_spawn)(ctx.get_executor(), std::forward<F>(f),
+                      std::forward<CompletionToken>(token));
+}
+
 } // namespace asio
 } // namespace boost
 

@@ -17,7 +17,7 @@ public:
     }
 
     auto spawn(auto& func) {
-        return co_spawn(m_ioc, func(), boost::asio::use_future);
+        return co_spawn(m_ioc, func, boost::asio::use_future);
     }
 
     auto& get_io_context() { return m_ioc; }
