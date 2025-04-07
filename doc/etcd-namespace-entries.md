@@ -38,7 +38,7 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication.
 
-**TBD**: `/<namespace>/services/<service_class>/attributes/<service_id>/state` \
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/storages/<service_id>` \
   contains state of storage services: -(NEW), o(ASSIGNED).
 
 **TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
@@ -47,9 +47,6 @@ available.
 
 **TBD**: `/<namespace>/storage_groups/<storage_group_id>/initialized` \
   exists only when the storage group succeeded to assign all storage services: has no ttl.
-
-**TBD**: `/election/sg<storage_group_id>/` \
-  is used for leader election: this space is handled by leader-election api.
 
 ## Configuration parameters
 
