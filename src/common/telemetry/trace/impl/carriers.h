@@ -16,7 +16,7 @@ class HttpRequestCarrier
     : public opentelemetry::context::propagation::TextMapCarrier {
 public:
     HttpRequestCarrier(Req& headers)
-        : headers_(headers) {}
+        : m_headers(headers) {}
     HttpRequestCarrier() = default;
 
     virtual opentelemetry::nostd::string_view
@@ -29,16 +29,16 @@ public:
         } else if (key == opentelemetry::trace::propagation::kTraceState) {
             key_to_compare = "tracestate";
         }
-        auto value = headers_[key_to_compare];
+        auto value = m_headers[key_to_compare];
         return opentelemetry::nostd::string_view(value.data(), value.size());
     }
 
     virtual void
     Set(opentelemetry::nostd::string_view key,
         opentelemetry::nostd::string_view value) noexcept override {
-        headers_.set(std::string(key), std::string(value));
+        m_headers.set(std::string(key), std::string(value));
     }
-    Req& headers_;
+    Req& m_headers;
 };
 
 template <typename T>
@@ -61,20 +61,18 @@ class HttpTextMapCarrier
     : public opentelemetry::context::propagation::TextMapCarrier {
 public:
     HttpTextMapCarrier(Map& headers)
-        : headers_(headers) {}
+        : m_headers(headers) {}
     HttpTextMapCarrier() = default;
     virtual opentelemetry::nostd::string_view
     Get(opentelemetry::nostd::string_view key) const noexcept override {
         std::string key_to_compare = key.data();
-        // Header's first letter seems to be  automatically capitaliazed by our
-        // test http-server, so compare accordingly.
         if (key == opentelemetry::trace::propagation::kTraceParent) {
             key_to_compare = "traceparent";
         } else if (key == opentelemetry::trace::propagation::kTraceState) {
             key_to_compare = "tracestate";
         }
-        auto it = headers_.find(key_to_compare);
-        if (it != headers_.end()) {
+        auto it = m_headers.find(key_to_compare);
+        if (it != m_headers.end()) {
             return it->second;
         }
         return "";
@@ -83,9 +81,9 @@ public:
     virtual void
     Set(opentelemetry::nostd::string_view key,
         opentelemetry::nostd::string_view value) noexcept override {
-        headers_.insert(std::pair<std::string, std::string>(
+        m_headers.insert(std::pair<std::string, std::string>(
             std::string(key), std::string(value)));
     }
 
-    Map& headers_;
+    Map& m_headers;
 };

@@ -133,10 +133,8 @@ std::vector<std::vector<std::string>> generate_data(const config& cfg) {
 
 coro<void> do_io(deduplicator_interface& dd,
                  const std::vector<std::string>& data) {
-    context ctx;
-
     for (const auto& data : data) {
-        co_await dd.deduplicate(ctx, data);
+        co_await dd.deduplicate(data);
     }
 }
 

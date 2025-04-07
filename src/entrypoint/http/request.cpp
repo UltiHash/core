@@ -15,17 +15,7 @@ request::request(raw_request req, std::unique_ptr<body> body,
       m_bucket_id(get_bucket_id(req.path)),
       m_object_key(get_object_key(req.path)),
       m_params(std::move(req.params)),
-      m_path(std::move(req.path)),
-      m_ctx("http-request") {
-    m_ctx.peer() = m_peer;
-
-    m_ctx.set_attribute("client-ip", m_peer.address().to_string());
-    m_ctx.set_attribute("request-target", m_req.target());
-    m_ctx.set_attribute("request-user-id", m_authenticated_user.id);
-    m_ctx.set_attribute("request-user-name", m_authenticated_user.name);
-    m_ctx.set_attribute("request-bucket", m_bucket_id);
-    m_ctx.set_attribute("request-key", m_object_key);
-}
+      m_path(std::move(req.path)) {}
 
 http::verb request::method() const { return m_req.method(); }
 
@@ -82,10 +72,6 @@ std::optional<std::string> request::header(const std::string& name) const {
 
     return {};
 }
-
-const uh::cluster::context& request::context() const { return m_ctx; }
-
-uh::cluster::context& request::context() { return m_ctx; }
 
 const user::user& request::authenticated_user() const {
     return m_authenticated_user;

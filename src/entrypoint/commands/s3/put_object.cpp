@@ -19,7 +19,7 @@ coro<std::size_t> fill(request& req, std::vector<char>& buffer) {
     co_return read;
 }
 
-coro<future<dedupe_response>> upload(context& ctx, boost::asio::io_context& ioc,
+coro<future<dedupe_response>> upload(boost::asio::io_context& ioc,
                                      deduplicator_interface& dedup,
                                      const std::vector<char>& buffer) {
     promise<dedupe_response> p;
@@ -27,7 +27,7 @@ coro<future<dedupe_response>> upload(context& ctx, boost::asio::io_context& ioc,
 
     auto context = co_await boost::asio::this_coro::context;
     if (!buffer.empty()) {
-        auto awaitable = dedup.deduplicate(ctx, {buffer.data(), buffer.size()})
+        auto awaitable = dedup.deduplicate({buffer.data(), buffer.size()})
                              .continue_trace(context);
         asio::co_spawn(ioc, std::move(awaitable),
                        use_promise_cospawn(std::move(p)));
@@ -90,10 +90,7 @@ coro<response> put_object::handle(request& req) {
                    .mime = req.header("Content-Type")
                                .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
 
-        {
-            co_await safe_put_object(req.context(), m_dir, m_gdv, req.bucket(),
-                                     obj);
-        }
+        { co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj); }
 
         metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
             static_cast<double>(content_length) / MEBI_BYTE);
@@ -125,8 +122,7 @@ coro<dedupe_response> put_object::put_large_object(request& req,
     dedupe_response rv;
 
     do {
-        auto future =
-            co_await upload(req.context(), m_ioc, m_dedup, b.current());
+        auto future = co_await upload(m_ioc, m_dedup, b.current());
         b.flip();
 
         read = co_await fill(req, b.current());
@@ -136,7 +132,7 @@ coro<dedupe_response> put_object::put_large_object(request& req,
         rv.append(co_await future.get());
     } while (transferred < content_length);
 
-    auto future = co_await upload(req.context(), m_ioc, m_dedup, b.current());
+    auto future = co_await upload(m_ioc, m_dedup, b.current());
     rv.append(co_await future.get());
 
     co_return rv;
@@ -155,8 +151,7 @@ coro<dedupe_response> put_object::put_small_object(request& req,
         co_return dedupe_response();
     }
 
-    co_return co_await m_dedup.deduplicate(req.context(),
-                                           {buffer.data(), buffer.size()});
+    co_return co_await m_dedup.deduplicate({buffer.data(), buffer.size()});
 }
 
 std::string put_object::action_id() const { return "s3:PutObject"; }

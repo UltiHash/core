@@ -37,7 +37,7 @@ You can also verify context with `check_context`.
 ## TODOs
 
 - [x] Create `recv_header_with_context` and use it to retrieve context only
-- [ ] Remove previous context propagation from the code
+- [x] Remove previous context propagation from the code
 - [ ] Instantiate `co_spawn` and `async_result` for `traced_awaitable`
 - [ ] Include logs in spans
 - [ ] Utilize references to retrieve context

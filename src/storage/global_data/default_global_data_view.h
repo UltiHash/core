@@ -47,7 +47,7 @@ public:
      * to be written.
      * @return An #address the data has been written to.
      */
-    coro<address> write(context& ctx, std::span<const char> data,
+    coro<address> write(std::span<const char> data,
                         const std::vector<std::size_t>& offsets);
 
     /**
@@ -61,8 +61,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size);
+    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves fragment from storage services.
@@ -85,8 +84,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return A shared_buffer<char> containing the fragment data.
      */
-    shared_buffer<char> read_fragment(context& ctx, const uint128_t& pointer,
-                                      size_t size);
+    shared_buffer<char> read_fragment(const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -101,8 +99,7 @@ public:
      * be read from.
      * @return The number of bytes read.
      */
-    coro<std::size_t> read_address(context& ctx, const address& addr,
-                                   std::span<char> buffer);
+    coro<std::size_t> read_address(const address& addr, std::span<char> buffer);
 
     /**
      * @brief registers a reference to a storage region to claim co-ownership
@@ -120,7 +117,7 @@ public:
      *
      * already been deleted and therefore can no longer be referenced.
      */
-    [[nodiscard]] coro<address> link(context& ctx, const address& addr);
+    [[nodiscard]] coro<address> link(const address& addr);
 
     /**
      * @brief un-registers a reference to a storage region to release
@@ -132,7 +129,7 @@ public:
      * @return number of bytes freed in response to removing references.
      * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    coro<std::size_t> unlink(context& ctx, const address& addr);
+    coro<std::size_t> unlink(const address& addr);
 
     /**
      * @brief Computes used space across all available storage service
@@ -140,7 +137,7 @@ public:
      * @param ctx open telemetry context
      * @return The used space across all available storage service instances.
      */
-    coro<std::size_t> get_used_space(context& ctx);
+    coro<std::size_t> get_used_space();
 
     ~default_global_data_view() noexcept;
 

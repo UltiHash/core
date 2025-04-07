@@ -18,7 +18,7 @@ bool get_metrics::can_handle(const request& req) {
 coro<response> get_metrics::handle(request& req) {
     metric<entrypoint_get_metrics_req>::increase(1);
     auto raw_data_size = co_await m_dir.data_size();
-    auto effective_data_size = co_await m_gdv.get_used_space(req.context());
+    auto effective_data_size = co_await m_gdv.get_used_space();
 
     response res;
     res.set_body(

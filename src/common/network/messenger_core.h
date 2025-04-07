@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common/telemetry/context.h"
 #include "common/telemetry/log.h"
 #include "common/telemetry/metrics.h"
 #include "common/types/common_types.h"
@@ -106,14 +105,13 @@ public:
 
     void reset_read_buffers();
 
-    coro<void> send_buffers(context& ctx, const message_type type);
+    coro<void> send_buffers(const message_type type);
 
-    coro<void> send_error(context& ctx, const error& e);
+    coro<void> send_error(const error& e);
 
     coro<error> recv_error(const header& h);
 
-    coro<void> send(context& ctx, const message_type type,
-                    std::span<const char> data);
+    coro<void> send(const message_type type, std::span<const char> data);
 
     void clear_buffers();
 

@@ -43,11 +43,10 @@ void fragment_set_element::catch_frag(const fragment_set_element& f,
                                       shared_buffer<char>& data,
                                       std::string_view& str,
                                       size_t size) const {
-    context ctx{};
     if (f.m_data.has_value()) {
         str = f.m_data->substr(0, size);
     } else {
-        data = m_storage.read_fragment(ctx, f.m_pointer, size);
+        data = m_storage.read_fragment(f.m_pointer, size);
         str = data.string_view();
     }
 }

@@ -22,14 +22,14 @@ default_global_data_view::default_global_data_view(
 }
 
 coro<address>
-default_global_data_view::write(context& ctx, std::span<const char> data,
+default_global_data_view::write(std::span<const char> data,
                                 const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
-    co_return co_await client->write(ctx, data, offsets);
+    co_return co_await client->write(data, offsets);
 }
 
 shared_buffer<char>
-default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
+default_global_data_view::read_fragment(const uint128_t& pointer,
                                         const size_t size) {
 
     if (size == 0) {
@@ -47,16 +47,15 @@ default_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
                        "encoded is invalid";
     }
 
-    boost::asio::co_spawn(m_io_service,
-                          storage->read_fragment(ctx, buffer.data(), frag)
-                              .continue_trace(context),
-                          boost::asio::use_future)
+    boost::asio::co_spawn(
+        m_io_service,
+        storage->read_fragment(buffer.data(), frag).continue_trace(context),
+        boost::asio::use_future)
         .get();
     return buffer;
 }
 
-coro<shared_buffer<>> default_global_data_view::read(context& ctx,
-                                                     const uint128_t& pointer,
+coro<shared_buffer<>> default_global_data_view::read(const uint128_t& pointer,
                                                      size_t size) {
 
     if (size == 0) {
@@ -64,39 +63,38 @@ coro<shared_buffer<>> default_global_data_view::read(context& ctx,
     }
 
     auto storage = m_basic_getter.get(pointer);
-    co_return co_await storage->read(ctx, pointer, size);
+    co_return co_await storage->read(pointer, size);
 }
 
 coro<std::size_t>
-default_global_data_view::read_address(context& ctx, const address& addr,
+default_global_data_view::read_address(const address& addr,
                                        std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, buffer](size_t, std::shared_ptr<storage_interface> dn,
-                       const address_info& info) -> coro<void> {
-            co_await dn->read_address(ctx, info.addr, buffer,
-                                      info.pointer_offsets);
+        [buffer](size_t, std::shared_ptr<storage_interface> dn,
+                 const address_info& info) -> coro<void> {
+            co_await dn->read_address(info.addr, buffer, info.pointer_offsets);
         });
 }
 
-coro<std::size_t> default_global_data_view::get_used_space(context& ctx) {
+coro<std::size_t> default_global_data_view::get_used_space() {
     auto nodes = m_basic_getter.get_services();
 
     size_t used = 0;
     for (const auto& dn : nodes) {
-        used += co_await dn->get_used_space(ctx);
+        used += co_await dn->get_used_space();
     }
     co_return used;
 }
 
 [[nodiscard]] coro<address>
-default_global_data_view::link(context& ctx, const address& addr) {
+default_global_data_view::link(const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &addresses](size_t id, std::shared_ptr<storage_interface> dn,
-                           const address_info& info) -> coro<void> {
-            addresses.emplace(id, co_await dn->link(ctx, info.addr));
+        [&addresses](size_t id, std::shared_ptr<storage_interface> dn,
+                     const address_info& info) -> coro<void> {
+            addresses.emplace(id, co_await dn->link(info.addr));
         });
 
     address rv;
@@ -107,14 +105,13 @@ default_global_data_view::link(context& ctx, const address& addr) {
     co_return rv;
 }
 
-coro<std::size_t> default_global_data_view::unlink(context& ctx,
-                                                   const address& addr) {
+coro<std::size_t> default_global_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_basic_getter, m_io_service,
-        [&ctx, &freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
-                             const address_info& info) -> coro<void> {
-            freed_bytes += co_await dn->unlink(ctx, info.addr);
+        [&freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+                       const address_info& info) -> coro<void> {
+            freed_bytes += co_await dn->unlink(info.addr);
         });
     co_return freed_bytes;
 }

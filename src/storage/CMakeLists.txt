@@ -8,4 +8,4 @@ add_library(storage
             default_data_store.cpp
             reference_counter.cpp)
 
-target_link_libraries(storage utils types etcd lmdbxx ec) 
+target_link_libraries(storage utils types etcd lmdbxx ec license) 

@@ -58,7 +58,7 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), this, id]() mutable -> lambda_coro<void> {
+        [f = std::move(f), this, id]() mutable -> coro<void> {
             co_await f.get();
             auto h = co_await m_db.get();
             co_await h->execv("CALL uh_dec_reference($1)", id);
@@ -285,7 +285,7 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
     }
 }
 
-coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
+coro<void> safe_put_object(directory& dir, global_data_view& gdv,
                            const std::string& bucket, const object& obj) {
     std::optional<std::exception_ptr> error;
     try {
@@ -295,7 +295,7 @@ coro<void> safe_put_object(context& ctx, directory& dir, global_data_view& gdv,
     }
 
     if (error) {
-        co_await gdv.unlink(ctx, *obj.addr);
+        co_await gdv.unlink(*obj.addr);
         std::rethrow_exception(*error);
     }
 }
