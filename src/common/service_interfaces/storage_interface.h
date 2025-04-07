@@ -20,11 +20,6 @@ struct storage_interface {
     virtual coro<address> link(const address& addr) = 0;
     virtual coro<std::size_t> unlink(const address& addr) = 0;
     virtual coro<std::size_t> get_used_space() = 0;
-    virtual coro<std::map<size_t, size_t>> get_ds_size_map() = 0;
-    virtual coro<void> ds_write(uint32_t ds_id, uint64_t pointer,
-                                std::span<const char>) = 0;
-    virtual coro<void> ds_read(uint32_t ds_id, uint64_t pointer,
-                               std::size_t size, char* buffer) = 0;
 
     virtual ~storage_interface() = default;
     static constexpr role service_role = STORAGE_SERVICE;

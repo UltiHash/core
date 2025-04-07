@@ -117,4 +117,3 @@ default_global_data_view::~default_global_data_view() noexcept {
 }
 
 } // namespace uh::cluster
-m_basic_getter

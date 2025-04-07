@@ -8,7 +8,7 @@
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
 #include <config/configuration.h>
-#include <storage/ec/ec_group_controller.h>
+#include <storage/interfaces/remote_storage.h>
 
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -24,11 +24,7 @@ public:
     service(const service_config& service, const coordinator_config& cc)
         : m_etcd{service.etcd_config},
           m_ioc(cc.thread_count),
-
           m_ioc_runner(m_ioc, cc.thread_count),
-          m_ec_group_controller(m_ioc, cc.ec_data_shards, cc.ec_parity_shards,
-                                m_etcd, true),
-
           m_storage_maintainer(m_etcd,
                                service_factory<storage_interface>(m_ioc, 1)),
           m_usage{m_ioc, cc.database_config} {
@@ -60,7 +56,6 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
-        m_storage_maintainer.add_observer(m_ec_group_controller);
     }
 
     void run() {
@@ -79,7 +74,6 @@ public:
             m_stopped = true;
         }
         m_cv.notify_all();
-        m_storage_maintainer.remove_observer(m_ec_group_controller);
     }
 
 private:
@@ -91,7 +85,6 @@ private:
 
     io_context_runner m_ioc_runner;
 
-    ec_group_controller m_ec_group_controller;
     service_maintainer<storage_interface> m_storage_maintainer;
 
     usage m_usage;

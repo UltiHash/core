@@ -56,16 +56,6 @@ public:
 
         return clients_list;
     }
-
-    std::vector<std::size_t> get_storage_ids() {
-        std::lock_guard l(m_mutex);
-        std::vector<size_t> ids;
-        ids.reserve(m_services.size());
-
-        std::ranges::copy(m_services | std::views::keys,
-                          std::back_inserter(ids));
-        return ids;
-    }
 };
 
 } // namespace uh::cluster

@@ -6,7 +6,6 @@
 #include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
-#include "storage/ec/ec_group_controller.h"
 
 namespace uh::cluster {
 

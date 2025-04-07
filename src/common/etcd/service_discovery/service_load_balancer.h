@@ -2,6 +2,7 @@
 
 #include "common/etcd/service_discovery/service_observer.h"
 
+#include <condition_variable>
 #include <set>
 
 namespace uh::cluster {
