@@ -58,8 +58,6 @@ constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 constexpr const char* ENV_CFG_ETCD_USERNAME = "UH_ETCD_USERNAME";
 constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 constexpr const char* ENV_CFG_NO_DEDUPE = "UH_NO_DEDUPE";
-constexpr const char* ENV_CFG_EC_DATA_SHARDS = "UH_EC_DATA_SHARDS";
-constexpr const char* ENV_CFG_EC_PARITY_SHARDS = "UH_EC_PARITY_SHARDS";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 

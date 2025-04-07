@@ -2,17 +2,15 @@
 
 #include "common/etcd/namespace.h"
 
-#include <iostream>
-
 namespace uh::cluster {
 
 template <typename service_interface> class service_observer {
 
 public:
     virtual void add_client(size_t,
-                            const std::shared_ptr<service_interface>&) = 0;
+                            const std::shared_ptr<service_interface>) = 0;
     virtual void remove_client(size_t,
-                               const std::shared_ptr<service_interface>&) = 0;
+                               const std::shared_ptr<service_interface>) = 0;
 
     virtual ~service_observer() = default;
 };

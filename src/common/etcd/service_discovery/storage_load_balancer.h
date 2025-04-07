@@ -5,7 +5,6 @@
 #include "common/utils/pointer_traits.h"
 #include "service_load_balancer.h"
 
-#include <iostream>
 #include <ranges>
 namespace uh::cluster {
 
