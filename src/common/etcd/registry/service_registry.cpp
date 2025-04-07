@@ -15,10 +15,8 @@ service_registry::service_registry(uh::cluster::role role, std::size_t index,
       m_etcd(etcd) {}
 
 service_registry::~service_registry() {
-    const std::string announced_key_base =
-        get_announced_path(m_service_role, m_id);
-    const std::string attribute_key_base =
-        get_attributes_path(m_service_role, m_id);
+    std::string announced_key_base = get_announced_path(m_service_role, m_id);
+    std::string attribute_key_base = get_attributes_path(m_service_role, m_id);
 
     m_etcd.rmdir(announced_key_base);
     m_etcd.rmdir(attribute_key_base);
@@ -35,15 +33,10 @@ void service_registry::register_service(const server_config& config) {
         get_attributes_path(m_service_role, m_id);
 
     std::map<std::string, std::string> kv_pairs = {
-        {attribute_key_base +
-             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST),
+        {attribute_key_base + get_etcd_service_attribute_string(ENDPOINT_HOST),
          get_host()},
-        {attribute_key_base +
-             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT),
+        {attribute_key_base + get_etcd_service_attribute_string(ENDPOINT_PORT),
          std::to_string(config.port)},
-        {attribute_key_base +
-             get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PID),
-         std::to_string(getpid())},
         {announced_key_base, {}},
     };
 

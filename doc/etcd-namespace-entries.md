@@ -15,9 +15,13 @@ The following variables will be used in this document:
 
 - `<namespace>` the namespace assigned to the cluster, defaults to `uh`
 - `<service_class>` specifies a type of service, possible values being `storage`,
-  `deduplicator`, `directory`, `entrypoint`
+  `deduplicator`, `coordinator`, `entrypoint`
 - `<service_id>` the (numeric) id of a service, currently a serial number
 
+# ETCD manager watchdog
+
+`<namespace>/watchdog/` \
+    monitored by all services to check for etcd connectivity.
 
 # Service announcements
 
@@ -26,18 +30,26 @@ key prefixes. Announcements are assigned a TTL and are deleted automatically
 when it expires. There is no guarantee that the announced service is actually
 available.
 
-`/<namespace>/services/announced/<service_class>/<service_id>` \
-  when defined, a service of class `<service_class>` and service id `<service_id>`
-  is available
+`/<namespace>/services/<service_class>/announced/<service_id>` \
+    when defined, a service of class `<service_class>` and service id
+    `<service_id>` is available with details being stored under the path
+  `/<namespace>/services/<service_class>/attributes/<service_id>`
 
-`/<namespace>/services/announced/<service_class>/<service_id>/endpoint_host` \
-  contains the host the service is running on
+`/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_host` \
+    contains the host the service is running on
 
-`/<namespace>/services/announced/<service_class>/<service_id>/endpoint_port` \
-  contains the port the service is using for communication
+`/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
+    contains the port the service is using for communication
 
-# Service State
+# Service ID
 
-Not yet implemented: services may propagate service state under the key
-`/<namespace>/state/class/<service_class>/`
-`/<namespace>/state/instance/<service_class>/<service_id>/`
+`/<namespace>/config/class/cluster/lock` \
+    used during service ID allocation to synchronize service access to ids
+
+`/<namespace>/config/class/cluster/current_id/<service_class>` \
+    next ID value for services of type `<service_class>`
+
+# Cluster License
+
+`/<namespace>/config/license` \
+    current cluster license as JSON string. The license has been verified.

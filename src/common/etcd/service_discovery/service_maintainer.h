@@ -106,8 +106,7 @@ private:
             }
         } else if (cl == m_clients.cend() and
                    itr->second.attributes.contains(ENDPOINT_HOST) and
-                   itr->second.attributes.contains(ENDPOINT_PORT) and
-                   itr->second.attributes.contains(ENDPOINT_PID)) {
+                   itr->second.attributes.contains(ENDPOINT_PORT)) {
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
