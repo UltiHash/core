@@ -53,7 +53,7 @@ available.
 
 ## Configuration parameters
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>configuration/`
+**TBD**: `/<namespace>/storage_groups/<storage_group_id>/config/`
   contains configuration of storage groups.
 
 
