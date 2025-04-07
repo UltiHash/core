@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/caches/lfu_cache.h"
-#include "common/global_data/global_data_view.h"
+#include "storage/global_data/global_data_view.h"
 #include "fragment_set_element.h"
 
 #include <set>

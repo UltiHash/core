@@ -1,10 +1,12 @@
 #define BOOST_TEST_MODULE "etcd manager tests"
 
-#include "common/etcd/utils.h"
-#include "common/telemetry/log.h"
+#include <common/etcd/utils.h>
+#include <common/telemetry/log.h>
+
 #include "fakeit.hpp"
 
 #include <boost/test/unit_test.hpp>
+
 #include <future>
 #include <ranges>
 

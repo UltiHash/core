@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <filesystem>
+#include <list>
 #include <mutex>
 
 namespace uh::cluster {

@@ -1,9 +1,11 @@
 #define BOOST_TEST_MODULE "data_file tests"
 
 #include <boost/test/unit_test.hpp>
+
 #include <common/utils/random.h>
-#include <lib/util/temp_directory.h>
 #include <storage/data_file.h>
+
+#include <util/temp_directory.h>
 
 using namespace uh::cluster;
 

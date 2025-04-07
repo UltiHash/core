@@ -1,5 +1,11 @@
+add_subdirectory(crypto)
+add_subdirectory(db)
+add_subdirectory(ec)
+add_subdirectory(etcd)
+add_subdirectory(license)
+add_subdirectory(network)
+add_subdirectory(service_interfaces)
 add_subdirectory(types)
 add_subdirectory(telemetry)
-add_subdirectory(etcd)
 
 add_subdirectory(utils)

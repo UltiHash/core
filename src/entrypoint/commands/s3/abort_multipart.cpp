@@ -33,7 +33,7 @@ coro<response> abort_multipart::handle(request& req) {
 
     for (const auto& part : details.parts) {
         try {
-            co_await m_gdv.unlink(req.context(), part.second.addr);
+            co_await m_gdv.unlink(part.second.addr);
         } catch (const error_exception& e) {
             LOG_WARN() << req.peer() << ": freeing memory for part "
                        << part.first << " failed: " << e.what();

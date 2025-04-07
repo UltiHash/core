@@ -13,7 +13,6 @@ for db in $databases; do
 done
 
 SQL_PATH=@PROJECT_SOURCE_DIR@/data/sql
-BIN_PATH=@PROJECT_BINARY_DIR@
 
 cat $SQL_PATH/provision_databases.sql | psql postgres
 
@@ -24,7 +23,7 @@ for dir in $SQL_PATH/*; do
     fi
 done
 
-access=$BIN_PATH/tools/uh-cluster-access-client
+access=$<TARGET_FILE:uh-access>
 $access user-add --superuser 'root' 'arn:uh:iam::0:users/root'
 $access key-add 'root' 'FANCY-ROOT-KEY' 'SECRET'
 
@@ -40,6 +39,6 @@ $access user-add 'iam' 'arn:uh:iam::0:users/iam'
 $access key-add 'iam' 'ABCDEFGHIJKLMNOPQRST' 'abcdefghijklmnopqrstuvwxyzabcdefghijklmn' 86400
 $access policy-add 'iam' 'allow-all' '{ "Version": "2012-10-17", "Statement": { "Sid":  "AllowAll", "Effect": "Allow", "Action": "*", "Principal": "arn:uh:iam::0:users/*", "Resource": "*" } }'
 
-uh_dir=$BIN_PATH/tools/uh-cluster-uh-dir
+uh_dir=$<TARGET_FILE:uh-dir>
 $uh_dir mkb test-aws-s3a
 $uh_dir mkb datasets

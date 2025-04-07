@@ -6,13 +6,12 @@ namespace uh::cluster::dd {
 
 cache::cache(global_data_view& gdv, std::size_t capacity)
     : m_gdv(gdv),
-      m_lru(capacity) {
-}
+      m_lru(capacity) {}
 
-shared_buffer<> cache::read_fragment(context& ctx, const uint128_t& pointer,
-                            size_t size) {
+shared_buffer<> cache::read_fragment(const uint128_t& pointer, size_t size) {
     if (size == 0) {
-        throw std::runtime_error("read: fragment size must be larger than zero");
+        throw std::runtime_error(
+            "read: fragment size must be larger than zero");
     }
 
     if (auto cp = m_lru.get(pointer); cp && cp->size() >= size) {
@@ -22,13 +21,12 @@ shared_buffer<> cache::read_fragment(context& ctx, const uint128_t& pointer,
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
-    auto buffer = m_gdv.read_fragment(ctx, pointer, size);
+    auto buffer = m_gdv.read_fragment(pointer, size);
     m_lru.put(pointer, buffer);
     return buffer;
 }
 
-coro<shared_buffer<>> cache::read(context& ctx, const uint128_t& pointer,
-                                  size_t size) {
+coro<shared_buffer<>> cache::read(const uint128_t& pointer, size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("read: size must be larger than zero");
@@ -41,7 +39,7 @@ coro<shared_buffer<>> cache::read(context& ctx, const uint128_t& pointer,
 
     metric<metric_type::gdv_l2_cache_miss_counter>::increase(1);
 
-    auto buffer = co_await m_gdv.read(ctx, pointer, size);
+    auto buffer = co_await m_gdv.read(pointer, size);
     m_lru.put(pointer, buffer);
     co_return buffer;
 }

@@ -45,7 +45,7 @@ coro<response> copy_object::handle(request& req) {
 
     m_limits.check_storage_size(obj->size);
 
-    auto rejects = co_await m_gdv.link(req.context(), *obj->addr);
+    auto rejects = co_await m_gdv.link(*obj->addr);
     if (!rejects.empty()) {
         LOG_ERROR() << req.peer()
                     << ": database contains object without references";
@@ -54,7 +54,7 @@ coro<response> copy_object::handle(request& req) {
     }
 
     obj->name = req.object_key();
-    co_await safe_put_object(req.context(), m_dir, m_gdv, req.bucket(), *obj);
+    co_await safe_put_object(m_dir, m_gdv, req.bucket(), *obj);
 
     boost::property_tree::ptree pt;
     put(pt, "CopyObjectResult.LastModified", iso8601_date(obj->last_modified));
