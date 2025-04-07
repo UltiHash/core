@@ -1,23 +1,76 @@
 add_library(uh_precompile_headers STATIC pch.cpp)
-target_include_directories(uh_precompile_headers
-                           PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+
 target_link_libraries(uh_precompile_headers
-                      PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+                      PUBLIC
+                      Boost::log
+                      Boost::url
+                      Boost::filesystem
+                      etcd-cpp-api
+                      CLI11::CLI11
+                      opentelemetry_exporter_otlp_grpc_log
+                      opentelemetry_exporter_otlp_grpc
+                      opentelemetry_exporter_otlp_grpc_metrics
+                      opentelemetry_exporter_ostream_span
+                      opentelemetry_exporter_ostream_metrics
+                      zpp_bits
+                      magic_enum
+                      lmdbxx
+                      reedsolomon
+                      nlohmann_json)
+
 target_precompile_headers(
     uh_precompile_headers
     PRIVATE
+    <algorithm>
+    <array>
     <atomic>
+    <cctype>
+    <charconv>
     <chrono>
+    <concepts>
+    <condition_variable>
+    <csignal>
+    <cstdint>
+    <cstdlib>
+    <cstring>
+    <ctime>
+    <deque>
+    <exception>
+    <filesystem>
+    <format>
+    <forward_list>
+    <fstream>
     <functional>
     <iomanip>
+    <iosfwd>
+    <list>
     <map>
+    <memory>
+    <mutex>
+    <optional>
     <ostream>
+    <random>
+    <ranges>
+    <set>
+    <shared_mutex>
     <source_location>
+    <span>
     <sstream>
+    <stdexcept>
     <string>
+    <string_view>
     <thread>
+    <tuple>
     <typeinfo>
+    <unordered_map>
+    <unordered_set>
+    <utility>
+    <variant>
     <vector>
+    <cxxabi.h>
+    <endian.h>
+    <fcntl.h>
+    <unistd.h>
     <CLI/CLI.hpp>
     <boost/algorithm/string.hpp>
     <boost/asio.hpp>
@@ -33,35 +86,5 @@ target_precompile_headers(
     <openssl/kdf.h>
     <openssl/params.h>
     <openssl/pem.h>
-    <opentelemetry/context/propagation/global_propagator.h>
-    <opentelemetry/context/propagation/text_map_propagator.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_exporter_options.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_factory.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_log_record_exporter_options.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h>
-    <opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h>
-    <opentelemetry/logs/log_record.h>
-    <opentelemetry/logs/provider.h>
-    <opentelemetry/metrics/meter.h>
-    <opentelemetry/metrics/provider.h>
-    <opentelemetry/nostd/shared_ptr.h>
-    <opentelemetry/sdk/logs/logger_provider_factory.h>
-    <opentelemetry/sdk/logs/logger_provider.h>
-    <opentelemetry/sdk/logs/processor.h>
-    <opentelemetry/sdk/logs/simple_log_record_processor_factory.h>
-    <opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader_factory.h>
-    <opentelemetry/sdk/metrics/meter_context_factory.h>
-    <opentelemetry/sdk/metrics/meter_provider_factory.h>
-    <opentelemetry/sdk/metrics/view/view_registry_factory.h>
-    <opentelemetry/sdk/trace/processor.h>
-    <opentelemetry/sdk/trace/simple_processor_factory.h>
-    <opentelemetry/sdk/trace/tracer_provider_factory.h>
-    <opentelemetry/sdk/trace/tracer_provider.h>
-    <opentelemetry/std/shared_ptr.h>
-    <opentelemetry/trace/propagation/http_trace_context.h>
-    <opentelemetry/trace/provider.h>
-    <opentelemetry/trace/scope.h>
-    <opentelemetry/trace/tracer_provider.h>
     <nlohmann/json.hpp>
     <zpp_bits.h>)

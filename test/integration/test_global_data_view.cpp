@@ -1,7 +1,9 @@
 #define BOOST_TEST_MODULE "global data view tests"
 
-#include "common/utils/strings.h"
-#include "lib/util/gdv_fixture.h"
+#include <common/utils/strings.h>
+
+#include <util/gdv_fixture.h>
+
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------

@@ -1,7 +1,9 @@
 #define BOOST_TEST_MODULE "generic pool tests"
 
-#include "common/utils/pool.h"
-#include "lib/util/checks.h"
+#include <common/utils/pool.h>
+
+#include <util/checks.h>
+
 #include <boost/test/unit_test.hpp>
 
 using namespace boost::asio;
@@ -20,7 +22,7 @@ BOOST_AUTO_TEST_CASE(get) {
 
     co_spawn(
         ctx,
-        [&]() -> coro<void> {
+        [&]() -> lambda_coro<void> {
             auto r0 = co_await p.get();
             auto r1 = co_await p.get();
             auto r2 = co_await p.get();
@@ -54,7 +56,7 @@ BOOST_AUTO_TEST_CASE(block) {
 
     co_spawn(
         ctx,
-        [&]() -> coro<void> {
+        [&]() -> lambda_coro<void> {
             handle = std::make_unique<uh::cluster::pool<int>::handle>(
                 co_await p.get());
         },
@@ -65,7 +67,7 @@ BOOST_AUTO_TEST_CASE(block) {
 
     auto future = co_spawn(
         ctx,
-        [&]() -> coro<void> {
+        [&]() -> lambda_coro<void> {
             ++pos;
             auto r2 = co_await p.get();
             ++pos;

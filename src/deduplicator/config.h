@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/global_data/config.h"
-#include "common/network/server.h"
-#include "storage/config.h"
+#include <common/network/server.h>
+#include <storage/config.h>
+#include <storage/global_data/config.h>
 
 #include <filesystem>
 

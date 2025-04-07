@@ -16,15 +16,15 @@ public:
     [[nodiscard]] const char* what() const noexcept override;
 
 private:
-    friend ep::http::response make_response(const command_exception&);
+    friend ep::http::response make_response(const command_exception&) noexcept;
     ep::http::status m_status = ep::http::status::internal_server_error;
     std::string m_code = "UnknownError";
     std::string m_reason = "Internal Server Error";
 };
 
-ep::http::response make_response(const command_exception& e);
+ep::http::response make_response(const command_exception& e) noexcept;
 ep::http::response error_response(ep::http::status status, std::string code,
-                                  std::string reason);
+                                  std::string reason) noexcept;
 
 void throw_from_error(const error& e);
 

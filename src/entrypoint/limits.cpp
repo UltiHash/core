@@ -15,6 +15,10 @@ void limits::set_storage_size(std::size_t size) {
     m_data_storage_size.store(size);
 }
 
+std::size_t limits::get_storage_size() const {
+    return m_data_storage_size.load();
+}
+
 void limits::check_storage_size(std::size_t increment) {
     auto new_size = m_data_storage_size.load() + increment;
     auto lic = m_watcher.get_license();

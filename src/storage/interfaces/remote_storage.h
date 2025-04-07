@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/network/client.h"
-#include "common/service_interfaces/storage_interface.h"
+#include <common/network/client.h>
+#include <common/service_interfaces/storage_interface.h>
+#include <common/service_interfaces/service_factory.h>
 
 namespace uh::cluster {
 
@@ -91,7 +92,7 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(ctx, STORAGE_DS_INFO_REQ, {});
         const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_map<size_t, size_t>(ctx, message_header);
+        co_return co_await m->recv_map<size_t, size_t>(message_header);
     }
 
     coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
@@ -107,13 +108,13 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_ds_read(
             ctx, {.ds_id = ds_id, .pointer = pointer, .size = size});
-        const auto h = co_await m->recv_header();
-        if (h.size != size) {
+        const auto header = co_await m->recv_header();
+        if (header.size != size) {
             throw std::runtime_error(
                 "mistmatched read size with requested size in ds_read");
         }
         m->register_read_buffer(buffer, size);
-        co_await m->recv_buffers(h);
+        co_await m->recv_buffers(header);
     }
 
 private:

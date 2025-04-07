@@ -2,9 +2,10 @@
 
 #define BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS
 
-#include "common/coroutines/promise.h"
-#include "common/network/client.h"
-#include "common/network/server.h"
+#include <common/coroutines/promise.h>
+#include <common/network/client.h>
+#include <common/network/server.h>
+
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------
@@ -17,7 +18,7 @@ BOOST_AUTO_TEST_CASE(basic_promise) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
@@ -40,7 +41,7 @@ BOOST_AUTO_TEST_CASE(promise_exception) {
 
     boost::asio::co_spawn(
         ioc,
-        [&ioc]() -> coro<void> {
+        [&ioc]() -> lambda_coro<void> {
             promise<int> p;
             auto f = p.get_future();
             boost::asio::post(
@@ -78,7 +79,7 @@ BOOST_AUTO_TEST_CASE(stress_test) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [&ioc, i, &failures]() -> coro<void> {
+            [&ioc, i, &failures]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(
@@ -122,7 +123,7 @@ BOOST_AUTO_TEST_CASE(stress_test_asio_thread_pool) {
     for (int i = 0; i < task_count; i++) {
         boost::asio::co_spawn(
             ioc,
-            [i, &failures, &workers]() -> coro<void> {
+            [i, &failures, &workers]() -> lambda_coro<void> {
                 promise<int> p;
                 auto f = p.get_future();
                 boost::asio::post(

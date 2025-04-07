@@ -20,76 +20,24 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     messenger m(std::move(s));
 
     for (;;) {
-
-        context ctx;
         std::optional<error> err;
+        messenger_core::header hdr;
+        opentelemetry::context::Context context;
 
         try {
-            auto hdr = co_await m.recv_header();
-            ctx = std::move(hdr.ctx);
-
-            LOG_DEBUG() << remote.str() << ": received "
+            std::tie(hdr, context) = co_await m.recv_header_with_context();
+            LOG_DEBUG() << remote.str() << " received "
                         << magic_enum::enum_name(hdr.type);
 
-            switch (hdr.type) {
-            case STORAGE_WRITE_REQ:
-                ctx = ctx.sub_context("storage-write-req");
-                co_await handle_write(ctx, m, hdr);
-                break;
-            case STORAGE_READ_REQ:
-                ctx = ctx.sub_context("storage-read-req");
-                co_await handle_read(ctx, m, hdr);
-                break;
-            case STORAGE_READ_FRAGMENT_REQ:
-                ctx = ctx.sub_context("storage-read-fragment-req");
-                co_await handle_read_fragment(ctx, m, hdr);
-                break;
-            case STORAGE_READ_ADDRESS_REQ:
-                ctx = ctx.sub_context("storage-read-address-req");
-                co_await handle_read_address(ctx, m, hdr);
-                break;
-            case STORAGE_LINK_REQ:
-                ctx = ctx.sub_context("storage-link-req");
-                co_await handle_link(ctx, m, hdr);
-                break;
-            case STORAGE_UNLINK_REQ:
-                ctx = ctx.sub_context("storage-unlink-req");
-                co_await handle_unlink(ctx, m, hdr);
-                break;
-            case STORAGE_USED_REQ:
-                ctx = ctx.sub_context("storage-used-req");
-                co_await handle_get_used(ctx, m, hdr);
-                break;
-            case STORAGE_DS_INFO_REQ:
-                ctx = ctx.sub_context("storage-ds-info-req");
-                co_await handle_ds_info(ctx, m, hdr);
-                break;
-            case STORAGE_INIT_DD_REQ:
-                ctx = ctx.sub_context("storage-init-dd-req");
-                co_await handle_init_dd(ctx, m, hdr);
-                break;
-            case STORAGE_DS_WRITE_REQ:
-                ctx = ctx.sub_context("storage-ds-write-req");
-                co_await handle_ds_write(ctx, m, hdr);
-                break;
-            case STORAGE_DS_READ_REQ:
-                ctx = ctx.sub_context("storage-ds-read-req");
-                co_await handle_ds_read(ctx, m, hdr);
-                break;
-            default:
-                throw std::invalid_argument("Invalid message type!");
-            }
         } catch (const boost::system::system_error& e) {
             LOG_ERROR() << "boost::system::system_error should be converted to "
                            "error_exception with error::internal_network_error";
             if (e.code() == boost::asio::error::eof) {
-                LOG_INFO() << remote.str() << " disconnected";
                 break;
             }
             err = error(error::unknown, e.what());
         } catch (const error_exception& e) {
             if (*e.error() == error::internal_network_error) {
-                LOG_INFO() << remote.str() << " disconnected";
                 break;
             }
             err = e.error();
@@ -100,9 +48,92 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         if (err) {
             LOG_WARN() << remote.str()
                        << " error handling request: " << err->message();
-            co_await m.send_error(ctx, *err);
+        } else {
+            if (co_await handle_iteration(hdr, m).continue_trace(
+                    std::move(context)) == flow_control::BREAK) {
+                break;
+            }
         }
+    };
+}
+
+coro<handler::flow_control>
+handler::handle_iteration(const messenger::header& hdr, messenger& m) {
+    uh::cluster::context ctx;
+    std::optional<error> err;
+
+    try {
+        switch (hdr.type) {
+        case STORAGE_WRITE_REQ:
+            ctx = ctx.sub_context("storage-write-req");
+            co_await handle_write(ctx, m, hdr);
+            break;
+        case STORAGE_READ_REQ:
+            ctx = ctx.sub_context("storage-read-req");
+            co_await handle_read(ctx, m, hdr);
+            break;
+        case STORAGE_READ_FRAGMENT_REQ:
+            ctx = ctx.sub_context("storage-read-fragment-req");
+            co_await handle_read_fragment(ctx, m, hdr);
+            break;
+        case STORAGE_READ_ADDRESS_REQ:
+            ctx = ctx.sub_context("storage-read-address-req");
+            co_await handle_read_address(ctx, m, hdr);
+            break;
+        case STORAGE_LINK_REQ:
+            ctx = ctx.sub_context("storage-link-req");
+            co_await handle_link(ctx, m, hdr);
+            break;
+        case STORAGE_UNLINK_REQ:
+            ctx = ctx.sub_context("storage-unlink-req");
+            co_await handle_unlink(ctx, m, hdr);
+            break;
+        case STORAGE_USED_REQ:
+            ctx = ctx.sub_context("storage-used-req");
+            co_await handle_get_used(ctx, m, hdr);
+            break;
+        case STORAGE_DS_INFO_REQ:
+            ctx = ctx.sub_context("storage-ds-info-req");
+            co_await handle_ds_info(ctx, m, hdr);
+            break;
+        case STORAGE_INIT_DD_REQ:
+            ctx = ctx.sub_context("storage-init-dd-req");
+            co_await handle_init_dd(ctx, m, hdr);
+            break;
+        case STORAGE_DS_WRITE_REQ:
+            ctx = ctx.sub_context("storage-ds-write-req");
+            co_await handle_ds_write(ctx, m, hdr);
+            break;
+        case STORAGE_DS_READ_REQ:
+            ctx = ctx.sub_context("storage-ds-read-req");
+            co_await handle_ds_read(ctx, m, hdr);
+            break;
+        default:
+            throw std::invalid_argument("Invalid message type!");
+        }
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "boost::system::system_error should be converted to "
+                       "error_exception with error::internal_network_error";
+        if (e.code() == boost::asio::error::eof) {
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
+        }
+        err = error(error::unknown, e.what());
+    } catch (const error_exception& e) {
+        if (*e.error() == error::internal_network_error) {
+            LOG_INFO() << hdr.peer << " disconnected";
+            co_return flow_control::BREAK;
+        }
+        err = e.error();
+    } catch (const std::exception& e) {
+        err = error(error::unknown, e.what());
     }
+
+    if (err) {
+        LOG_WARN() << hdr.peer << " error handling request: " << err->message();
+        co_await m.send_error(ctx, *err);
+    }
+    co_return flow_control::CONTINUE;
 }
 
 coro<void> handler::handle_write(context& ctx, messenger& m,

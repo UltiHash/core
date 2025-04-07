@@ -24,24 +24,16 @@ function(add_custom_test name)
     cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
                           "${multi_value_args}" ${ARGN})
 
-    set(target_name "${PROJECT_NAME}_${name}")
-
-    add_executable(${target_name} ${name}.cpp)
-    # target_compile_options(${target_name} PRIVATE -fno-inline)
-    # target_compile_definitions( ${target_name} PRIVATE
-    # BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
-
-    target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-    target_link_libraries(
-        ${target_name}
+    add_executable(${name} ${name}.cpp)
+    target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(${name}
         PRIVATE Boost::unit_test_framework uh_test_util
                 uh_test_config ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
-    # target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
-    add_test(NAME ${target_name} COMMAND ${target_name})
+    add_test(NAME ${name} COMMAND ${name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
-    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS})
+    set_tests_properties(${name} PROPERTIES LABELS ${LABELS})
 endfunction()
 
 function(uh_add_test name)
@@ -51,23 +43,16 @@ function(uh_add_test name)
     cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
                           "${multi_value_args}" ${ARGN})
 
-    set(target_name "${PROJECT_NAME}_${name}")
-
-    add_executable(${target_name} ${name}.cpp)
-    # target_compile_options(${target_name} PRIVATE -fno-inline)
-    # target_compile_definitions( ${target_name} PRIVATE
-    # BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
-
-    target_link_libraries(
-        ${target_name}
-        PRIVATE ${PROJECT_NAME}_shared Boost::unit_test_framework uh_test_util
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name}
+        PRIVATE Boost::unit_test_framework uh_test_util
                 uh_test_config ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
-    target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
-    add_test(NAME ${target_name} COMMAND ${target_name})
+    target_precompile_headers(${name} REUSE_FROM uh_precompile_headers)
+    add_test(NAME ${name} COMMAND ${name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
-    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS})
+    set_tests_properties(${name} PROPERTIES LABELS ${LABELS})
 endfunction()
 
 add_subdirectory(unit)

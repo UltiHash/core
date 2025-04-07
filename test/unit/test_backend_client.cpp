@@ -7,11 +7,15 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/use_future.hpp>
 #include <boost/test/unit_test.hpp>
+
 #include <common/license/backend_client.h>
+
+#include <mock/http_server/http_server.h>
+#include <util/coroutine.h>
+
 #include <fakeit.hpp>
+
 #include <future>
-#include <lib/mock/http_server/http_server.h>
-#include <lib/util/coroutine.h>
 #include <string>
 
 using namespace fakeit;

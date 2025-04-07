@@ -15,6 +15,7 @@ public:
      */
     void set_storage_size(std::size_t size);
 
+    std::size_t get_storage_size() const;
     /**
      * Check internal storage size and increment the counter.
      */

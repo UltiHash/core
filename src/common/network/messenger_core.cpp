@@ -1,4 +1,5 @@
 #include "messenger_core.h"
+#include <common/telemetry/trace/trace.h>
 
 namespace uh::cluster {
 
@@ -30,7 +31,8 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
 
 coro<messenger_core::header> messenger_core::recv_header() {
     header h;
-    std::vector<char> ctx_buffer(context::SERIALIZED_SIZE);
+    std::string ctx_buffer;
+    ctx_buffer.resize(get_encoded_context_len());
 
     try {
         std::vector<boost::asio::mutable_buffer> buffers{
@@ -44,8 +46,7 @@ coro<messenger_core::header> messenger_core::recv_header() {
         throw create_internal_network_error("recv_header failed", e);
     }
 
-    h.ctx = context(ctx_buffer);
-    h.ctx.peer() = peer();
+    h.peer = peer();
 
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
@@ -57,6 +58,49 @@ coro<messenger_core::header> messenger_core::recv_header() {
     }
 
     co_return h;
+}
+
+coro<std::tuple<messenger_core::header, opentelemetry::context::Context>>
+messenger_core::recv_header_with_context() {
+    header h;
+    std::string ctx_buffer;
+    ctx_buffer.resize(get_encoded_context_len());
+
+    try {
+        std::vector<boost::asio::mutable_buffer> buffers{
+            {&h.type, sizeof h.type},
+            {&h.size, sizeof h.size},
+            boost::asio::buffer(ctx_buffer)};
+
+        co_await boost::asio::async_read(m_socket, buffers,
+                                         boost::asio::use_awaitable);
+    } catch (const std::exception& e) {
+        throw create_internal_network_error("recv_header failed", e);
+    }
+
+    h.peer = peer();
+
+    if (h.type == FAILURE) {
+        const auto e = co_await recv_error(h);
+        throw error_exception(e);
+    }
+
+    if (h.type != SUCCESS) {
+        measure_message_type(h.type);
+    }
+    auto context = decode_context(ctx_buffer);
+
+    if (boost::asio::trace_span::enable &&
+        !boost::asio::trace_span::check_context(context)) {
+        LOG_ERROR() << "[messenger_core::send] The decoded context is invalid: "
+                       "see following stack trace";
+        auto span = co_await boost::asio::this_coro::span;
+        span->iterate_call_stack(
+            [](boost::source_location loc) { LOG_INFO() << loc; });
+        LOG_ERROR() << "End of stack trace";
+    }
+
+    co_return std::make_tuple(h, context);
 }
 
 coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
@@ -104,7 +148,19 @@ coro<void> messenger_core::send_buffers(context& ctx, const message_type type) {
             metric<success>::increase(1);
         }
 
-        auto ctx_buf = ctx.serialize();
+        auto context = co_await boost::asio::this_coro::context;
+
+        if (boost::asio::trace_span::enable &&
+            !boost::asio::trace_span::check_context(context)) {
+            LOG_ERROR() << "[messenger_core::send_buffers] The context to be "
+                           "encoded is invalid: see following stack trace";
+            auto span = co_await boost::asio::this_coro::span;
+            span->iterate_call_stack(
+                [](boost::source_location loc) { LOG_INFO() << loc; });
+            LOG_ERROR() << "End of stack trace";
+        }
+
+        auto ctx_buf = encode_context(context);
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
@@ -144,8 +200,21 @@ coro<void> messenger_core::send(context& ctx, const message_type type,
             metric<success>::increase(1);
         }
 
-        auto ctx_buf = ctx.serialize();
         auto size = static_cast<size_type>(data.size());
+
+        auto context = co_await boost::asio::this_coro::context;
+
+        if (boost::asio::trace_span::enable &&
+            !boost::asio::trace_span::check_context(context)) {
+            LOG_ERROR() << "[messenger_core::recv_header] The context to be "
+                           "encoded is invalid: see following stack trace";
+            auto span = co_await boost::asio::this_coro::span;
+            span->iterate_call_stack(
+                [](boost::source_location loc) { LOG_INFO() << loc; });
+            LOG_ERROR() << "End of stack trace";
+        }
+
+        auto ctx_buf = encode_context(context);
 
         std::vector<boost::asio::const_buffer> buffers{
             {&type, sizeof(type)},

@@ -27,15 +27,17 @@ public:
         } else if (m_getter.size() < group_size) {
             set_status(status, degraded);
         } else {
-            boost::asio::co_spawn(
-                m_ioc, recover(status), [](const std::exception_ptr& e) {
-                    if (e)
-                        try {
-                            std::rethrow_exception(e);
-                        } catch (const std::exception& ex) {
-                            LOG_ERROR() << "failure in recovery: " << ex.what();
-                        }
-                });
+            boost::asio::co_spawn(m_ioc, recover(status).start_trace(),
+                                  [](const std::exception_ptr& e) {
+                                      if (e)
+                                          try {
+                                              std::rethrow_exception(e);
+                                          } catch (const std::exception& ex) {
+                                              LOG_ERROR()
+                                                  << "failure in recovery: "
+                                                  << ex.what();
+                                          }
+                                  });
         }
     }
 

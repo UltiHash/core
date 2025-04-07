@@ -1,9 +1,10 @@
 #define BOOST_TEST_MODULE "big_int tests"
 
-#include "common/caches/lru_cache.h"
-#include <atomic>
+#include <common/caches/lru_cache.h>
+
 #include <boost/test/unit_test.hpp>
-#include <iostream>
+
+#include <atomic>
 #include <thread>
 
 // ------------- Tests Suites Follow --------------

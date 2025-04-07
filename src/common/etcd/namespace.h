@@ -13,13 +13,13 @@ static constexpr const char* etcd_watchdog = "/" NAMESPACE "/watchdog/";
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
 static constexpr const char* etcd_ec_groups_key_prefix =
-    "/" NAMESPACE "/ec-group/";
+    "/" NAMESPACE "/config/class/cluster/ec_group/";
 
 static constexpr const char* etcd_global_lock_key =
     "/" NAMESPACE "/config/class/cluster/lock";
 static constexpr const char* etcd_current_id_prefix_key =
     "/" NAMESPACE "/config/class/cluster/current_id/";
-static constexpr const char* etcd_license = "/" NAMESPACE "/config/license";
+static constexpr const char* etcd_license_key = "/" NAMESPACE "/config/license";
 
 enum class etcd_action : uint8_t {
     create = 0,
@@ -49,9 +49,9 @@ enum etcd_service_attributes {
 };
 
 enum etcd_ec_group_attributes {
-    EC_GROUP_SIZE,
     EC_GROUP_STATUS,
-    EC_GROUP_EC_NODES,
+    EC_DATA_SHARDS,
+    EC_PARITY_SHARDS,
 };
 
 constexpr std::array<
@@ -67,9 +67,9 @@ constexpr std::array<
 constexpr std::array<
     std::pair<uh::cluster::etcd_ec_group_attributes, const char*>, 3>
     string_by_ec_group_attribute = {{
-        {uh::cluster::EC_GROUP_SIZE, "group_size"},
-        {uh::cluster::EC_GROUP_STATUS, "group_status"},
-        {uh::cluster::EC_GROUP_EC_NODES, "group_ec_nodes"},
+        {uh::cluster::EC_GROUP_STATUS, "status"},
+        {uh::cluster::EC_DATA_SHARDS, "data_shards"},
+        {uh::cluster::EC_PARITY_SHARDS, "parity_shards"},
     }};
 
 constexpr const char* get_etcd_ec_group_attribute_string(
@@ -92,13 +92,13 @@ get_etcd_ec_group_attribute_enum(const std::string& param) {
     throw std::invalid_argument("invalid etcd parameter");
 }
 
-inline static std::string get_ec_group_path(int group_id) {
+inline static std::string get_ec_group_path(size_t group_id) {
     return etcd_ec_groups_key_prefix + std::to_string(group_id);
 }
 
 inline static std::string
 get_ec_group_attribute_path(size_t group_id, etcd_ec_group_attributes attr) {
-    return etcd_ec_groups_key_prefix + std::to_string(group_id) + "/" +
+    return get_ec_group_path(group_id) + "/" +
            get_etcd_ec_group_attribute_string(attr);
 }
 

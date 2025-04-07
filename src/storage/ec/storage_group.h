@@ -1,11 +1,11 @@
 #pragma once
 
-#include "address_utils.h"
-#include "common/coroutines/coro_util.h"
-#include "common/ec/ec_factory.h"
-#include "common/ec/reedsolomon_c.h"
-#include "common/etcd/service_discovery/storage_load_balancer.h"
-#include "common/etcd/utils.h"
+#include <common/coroutines/coro_util.h>
+#include <common/ec/ec_factory.h>
+#include <common/ec/reedsolomon_c.h>
+#include <common/etcd/service_discovery/storage_service_get_handler.h>
+#include <coordinator/recovery_module.h>
+#include <storage/address_utils.h>
 
 namespace uh::cluster {
 

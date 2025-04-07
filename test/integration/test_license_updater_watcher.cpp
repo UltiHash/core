@@ -7,8 +7,10 @@
 #include <common/etcd/namespace.h>
 #include <common/license/license_updater.h>
 #include <common/license/license_watcher.h>
+
+#include <util/coroutine.h>
+
 #include <fakeit.hpp>
-#include <lib/util/coroutine.h>
 
 using namespace fakeit;
 
@@ -35,7 +37,7 @@ BOOST_AUTO_TEST_CASE(updates_license_through_etcd) {
     auto future = co_spawn(ioc, sut.update(), use_future);
     future.get();
 
-    BOOST_TEST(etcd.get(etcd_license) == test_license_string);
+    BOOST_TEST(etcd.get(etcd_license_key) == test_license_string);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

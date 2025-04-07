@@ -3,6 +3,8 @@
 #include "address.h"
 #include "scoped_buffer.h"
 
+#include <common/telemetry/trace/trace_asio.h>
+
 #include <boost/asio/awaitable.hpp>
 #include <chrono>
 
@@ -60,8 +62,11 @@ struct object {
     }
 };
 
-template <typename T> using coro = boost::asio::awaitable<T>;
+template <typename T> using lambda_coro = boost::asio::awaitable<T>;
+template <typename T> using coro = boost::asio::traced_awaitable<T>;
 
 template <typename T> using optref = std::optional<std::reference_wrapper<T>>;
+
+inline thread_local opentelemetry::context::Context THREAD_LOCAL_CONTEXT;
 
 } // end namespace uh::cluster

@@ -21,47 +21,51 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         /*
          * Note: lifetime of response must not exceed lifetime of request.
          */
-        std::unique_ptr<request> req;
         std::string id = generate_unique_id();
+
+        raw_request rawreq;
         response resp;
         bool keep_alive = false;
 
         try {
-            req = co_await m_factory.create(s);
+            rawreq = co_await raw_request::read(s);
+            auto req = co_await m_factory.create(s, rawreq);
             LOG_INFO() << req->peer() << ": read request, id=" << id << ": "
                        << *req;
-
-            req->context().set_attribute("request-id", id);
-
-            resp = co_await handle_request(s, *req, id);
+            resp = co_await handle_request(s, *req, id).start_trace();
             metric<success>::increase(1);
             keep_alive = true;
+
         } catch (const command_exception& e) {
             LOG_INFO() << s.remote_endpoint() << ": " << e.what();
             resp = make_response(e);
             keep_alive = true;
+
+        } catch (const boost::system::system_error& se) {
+            if (se.code() == boost::beast::http::error::end_of_stream) {
+                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+                break;
+            } else {
+                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
+                resp = make_response(command_exception(
+                    status::internal_server_error, "InternalError",
+                    "Internal server error."));
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+            resp = make_response(command_exception());
+        }
+
+        try {
+            co_await write(s, std::move(resp), id);
         } catch (const boost::system::system_error& se) {
             if (se.code() == boost::beast::http::error::end_of_stream) {
                 LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
                 break;
             }
-
-            LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-            resp = make_response(
-                command_exception(status::internal_server_error,
-                                  "InternalError", "Internal server error."));
-        } catch (const std::exception& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-
-            resp = make_response(command_exception());
+            throw;
         }
 
-        if (req) {
-            req->context().set_attribute(
-                "response-code", static_cast<unsigned>(resp.base().result()));
-        }
-
-        co_await write(s, std::move(resp), id);
         if (!keep_alive) {
             break;
         }
@@ -80,9 +84,12 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
     }
 
     auto cmd = co_await m_command_factory.create(req);
-    LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
-    req.context().set_name(cmd->action_id());
+    auto span = co_await boost::asio::this_coro::span;
+    span->set_name(cmd->action_id());
+    span->set_attribute("request-id", id);
+
+    LOG_DEBUG() << req.peer() << ": validating " << cmd->action_id();
 
     LOG_DEBUG() << req.peer() << ": checking policies";
     if (!req.authenticated_user().super_user &&
@@ -90,9 +97,9 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
         LOG_INFO() << req.peer() << ": command execution denied by policy";
         throw command_exception(
             status::forbidden, "AccessDenied",
-            std::format(
-                "You do not have {} permissions to the requested S3 Prefix{}.",
-                cmd->action_id(), req.path()));
+            std::format("You do not have {} permissions to the requested "
+                        "S3 Prefix{}.",
+                        cmd->action_id(), req.path()));
     }
 
     co_await cmd->validate(req);
@@ -110,6 +117,9 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
             response.set(hdr.first, std::move(hdr.second));
         }
     }
+
+    span->set_attribute("response-code",
+                        static_cast<unsigned>(response.base().result()));
 
     co_return response;
 }

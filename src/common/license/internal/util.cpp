@@ -7,6 +7,9 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 
+#include <memory>
+#include <stdexcept>
+
 namespace uh::cluster {
 
 void throw_from_openssl_error(const std::string& prefix) {

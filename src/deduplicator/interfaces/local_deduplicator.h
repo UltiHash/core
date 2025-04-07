@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/coroutines/worker_pool.h"
-#include "common/global_data/global_data_view.h"
+#include "storage/global_data/global_data_view.h"
 #include "common/telemetry/context.h"
 
 #include "common/service_interfaces/deduplicator_interface.h"

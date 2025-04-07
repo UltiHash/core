@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/db/config.h"
-#include "common/global_data/config.h"
+#include "storage/global_data/config.h"
 #include "common/network/server.h"
 #include "deduplicator/config.h"
 
