@@ -7,13 +7,13 @@ mock_global_data_view::mock_global_data_view(mock_data_store& storage)
     : m_storage{storage} {}
 
 coro<address>
-mock_global_data_view::write(context& ctx, std::span<const char> data,
+mock_global_data_view::write(std::span<const char> data,
                              const std::vector<std::size_t>& offsets) {
     co_return m_storage.write(data, offsets);
 }
 
 shared_buffer<char>
-mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
+mock_global_data_view::read_fragment(const uint128_t& pointer,
                                      const size_t size) {
     if (size == 0) {
         throw std::runtime_error("Read fragment size must be larger than zero");
@@ -23,16 +23,14 @@ mock_global_data_view::read_fragment(context& ctx, const uint128_t& pointer,
     return buffer;
 }
 
-coro<shared_buffer<>> mock_global_data_view::read(context& ctx,
-                                                  const uint128_t& pointer,
+coro<shared_buffer<>> mock_global_data_view::read(const uint128_t& pointer,
                                                   size_t size) {
     shared_buffer<char> buffer(size);
     m_storage.read(pointer, buffer.span());
     co_return buffer;
 }
 
-coro<std::size_t> mock_global_data_view::read_address(context& ctx,
-                                                      const address& addr,
+coro<std::size_t> mock_global_data_view::read_address(const address& addr,
                                                       std::span<char> buffer) {
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
@@ -45,17 +43,15 @@ coro<std::size_t> mock_global_data_view::read_address(context& ctx,
     co_return size;
 }
 
-coro<std::size_t> mock_global_data_view::get_used_space(context& ctx) {
+coro<std::size_t> mock_global_data_view::get_used_space() {
     co_return m_storage.get_used_space();
 }
 
-[[nodiscard]] coro<address> mock_global_data_view::link(context& ctx,
-                                                        const address& addr) {
+[[nodiscard]] coro<address> mock_global_data_view::link(const address& addr) {
     co_return m_storage.link(addr);
 }
 
-coro<std::size_t> mock_global_data_view::unlink(context& ctx,
-                                                const address& addr) {
+coro<std::size_t> mock_global_data_view::unlink(const address& addr) {
     co_return m_storage.unlink(addr);
 }
 

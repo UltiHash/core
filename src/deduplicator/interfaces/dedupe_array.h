@@ -13,8 +13,7 @@ public:
                  std::size_t connections);
     ~dedupe_array() override;
 
-    coro<dedupe_response> deduplicate(context& ctx,
-                                      std::string_view data) override;
+    coro<dedupe_response> deduplicate(std::string_view data) override;
 
 private:
     boost::asio::io_context& m_ioc;

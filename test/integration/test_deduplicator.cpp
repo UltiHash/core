@@ -39,11 +39,10 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
     auto data_view = mock_global_data_view(data_store);
     auto dedup = local_deduplicator({}, data_view);
 
-    context ctx;
     auto data = random_string(66);
 
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup.deduplicate(ctx, data);
+        co_return co_await dedup.deduplicate(data);
     };
     {
         std::future<dedupe_response> res = spawn(f);

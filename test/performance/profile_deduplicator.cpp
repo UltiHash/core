@@ -48,7 +48,6 @@ protected:
     std::unique_ptr<mock_data_store> data_store;
     std::unique_ptr<mock_global_data_view> data_view;
     std::unique_ptr<local_deduplicator> dedup;
-    context ctx;
 };
 
 BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
@@ -56,7 +55,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     std::string input_data = random_string(state.range(0));
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup->deduplicate(ctx, input_data);
+        co_return co_await dedup->deduplicate(input_data);
     };
 
     std::future<dedupe_response> res = spawn(f);
@@ -65,7 +64,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     for (auto _ : state) {
         auto f = [&]() -> coro<dedupe_response> {
-            co_return co_await dedup->deduplicate(ctx, input_data);
+            co_return co_await dedup->deduplicate(input_data);
         };
 
         std::future<dedupe_response> res = spawn(f);

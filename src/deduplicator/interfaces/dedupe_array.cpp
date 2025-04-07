@@ -16,9 +16,8 @@ dedupe_array::~dedupe_array() {
     m_dedupe_maintainer.remove_observer(m_dedupe_load_balancer);
 }
 
-coro<dedupe_response> dedupe_array::deduplicate(context& ctx,
-                                                std::string_view data) {
-    return m_dedupe_load_balancer.get()->deduplicate(ctx, data);
+coro<dedupe_response> dedupe_array::deduplicate(std::string_view data) {
+    return m_dedupe_load_balancer.get()->deduplicate(data);
 }
 
 } // namespace uh::cluster

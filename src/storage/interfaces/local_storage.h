@@ -24,7 +24,7 @@ struct local_storage : public storage_interface {
         }
     }
 
-    coro<address> write(context& ctx, std::span<const char> data,
+    coro<address> write(std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
 
         const size_t part_size =
@@ -53,24 +53,21 @@ struct local_storage : public storage_interface {
         co_return total_addr;
     }
 
-    coro<void> read_fragment(context& ctx, char* buffer,
-                             const fragment& f) override {
+    coro<void> read_fragment(char* buffer, const fragment& f) override {
         get_data_store(f.pointer).read(f.pointer, {buffer, f.size});
         co_return;
     }
 
-    coro<shared_buffer<>> read(context& ctx, const uint128_t& pointer,
-                               size_t size) override {
+    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
         shared_buffer<> buf(size);
         auto read_size = get_data_store(pointer).read(pointer, buf.span());
         buf.resize(read_size);
         co_return buf;
     }
 
-    coro<void> read_address(context& ctx, const address& addr,
-                            std::span<char> buffer,
+    coro<void> read_address(const address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
-        LOG_DEBUG() << ctx.peer() << ": read addr start";
+        LOG_DEBUG() << "read addr start";
 
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
@@ -82,11 +79,11 @@ struct local_storage : public storage_interface {
             }
         }
 
-        LOG_DEBUG() << ctx.peer() << ": read addr done";
+        LOG_DEBUG() << "read addr done";
         co_return;
     }
 
-    coro<address> link(context& ctx, const address& addr) override {
+    coro<address> link(const address& addr) override {
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -118,7 +115,7 @@ struct local_storage : public storage_interface {
         co_return rv;
     }
 
-    coro<std::size_t> unlink(context& ctx, const address& addr) override {
+    coro<std::size_t> unlink(const address& addr) override {
 
         std::vector<address> ds_addresses(m_data_stores.size());
         for (size_t i = 0; i < addr.size(); i++) {
@@ -151,7 +148,6 @@ struct local_storage : public storage_interface {
     }
 
     size_t get_used_space_func() {
-
         size_t used = 0;
         for (const auto& ds : m_data_stores) {
             used += ds->get_used_space();
@@ -159,11 +155,9 @@ struct local_storage : public storage_interface {
         return used;
     }
 
-    coro<size_t> get_used_space(context& ctx) override {
-        co_return get_used_space_func();
-    }
+    coro<size_t> get_used_space() override { co_return get_used_space_func(); }
 
-    coro<std::map<size_t, size_t>> get_ds_size_map(context& ctx) override {
+    coro<std::map<size_t, size_t>> get_ds_size_map() override {
         std::map<size_t, size_t> res;
         for (const auto& ds : m_data_stores) {
             res.emplace(ds->id(), ds->get_used_space());
@@ -171,14 +165,14 @@ struct local_storage : public storage_interface {
         co_return res;
     }
 
-    coro<void> ds_write(context& ctx, uint32_t ds_id, uint64_t pointer,
+    coro<void> ds_write(uint32_t ds_id, uint64_t pointer,
                         std::span<const char> data) override {
         m_data_stores.at(ds_id)->manual_write(pointer, data);
         co_return;
     }
 
-    coro<void> ds_read(context& ctx, uint32_t ds_id, uint64_t pointer,
-                       size_t size, char* buffer) override {
+    coro<void> ds_read(uint32_t ds_id, uint64_t pointer, size_t size,
+                       char* buffer) override {
         m_data_stores.at(ds_id)->manual_read(pointer, {buffer, size});
         co_return;
     }

@@ -35,17 +35,15 @@ coro<response> multipart::handle(request& req) {
 
     unique_buffer<char> buffer(req.content_length());
     {
-        auto load_body_ctx = req.context().sub_context("load_body");
         auto size = co_await req.read_body(buffer.span());
         buffer.resize(size);
     }
 
     dedupe_response resp = {};
     {
-        auto dedupe_ctx = req.context().sub_context("call_dedupe");
         if (!buffer.empty()) {
-            resp = co_await m_dedupe.deduplicate(
-                req.context(), {buffer.data(), buffer.size()});
+            resp =
+                co_await m_dedupe.deduplicate({buffer.data(), buffer.size()});
         }
     }
 
@@ -56,8 +54,9 @@ coro<response> multipart::handle(request& req) {
     response res;
     res.set("ETag", md5);
 
-    req.context().set_attribute("multipart-uploadId", id);
-    req.context().set_attribute("multipart-part-number", part_id);
+    auto span = co_await boost::asio::this_coro::span;
+    span->set_attribute("multipart-uploadId", id);
+    span->set_attribute("multipart-part-number", part_id);
 
     std::optional<upload_info::part> existing_part;
 
@@ -75,7 +74,7 @@ coro<response> multipart::handle(request& req) {
     }
 
     if (existing_part) {
-        co_await m_gdv.unlink(req.context(), existing_part->addr);
+        co_await m_gdv.unlink(existing_part->addr);
     }
 
     co_return res;

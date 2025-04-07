@@ -1,4 +1,3 @@
-#include <common/telemetry/context.h>
 #include <common/utils/common.h>
 #include <common/utils/misc.h>
 #include <common/utils/time_utils.h>
@@ -76,10 +75,8 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
                                   std::size_t length,
                                   std::optional<std::string> outfile,
                                   bool no_output) {
-    uh::cluster::context ctx;
-
     timer t;
-    auto data = co_await svc.read(ctx, ptr, length);
+    auto data = co_await svc.read(ptr, length);
     auto time = t.passed();
     auto mb = length / MEBI_BYTE;
 
@@ -120,12 +117,10 @@ uh::cluster::coro<void> read_addr(uh::cluster::storage_interface& svc,
 
 uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
                                    const std::string& file) {
-    uh::cluster::context ctx;
-
     auto buffer = read_file(file);
 
     timer t;
-    auto addr = co_await svc.write(ctx, buffer, {0});
+    auto addr = co_await svc.write(buffer, {0});
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;
