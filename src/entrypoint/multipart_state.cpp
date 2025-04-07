@@ -23,8 +23,7 @@ multipart_state::instance::lock_upload(const std::string& id) {
 
     boost::asio::co_spawn(
         executor,
-        [f = std::move(f), handle = m_handle,
-         id]() mutable -> lambda_coro<void> {
+        [f = std::move(f), handle = m_handle, id]() mutable -> coro<void> {
             co_await f.get();
             co_await (*handle)->execv("CALL uh_unlock_upload($1)", id);
         },
