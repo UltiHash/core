@@ -2,7 +2,9 @@
 
 #define NAMESPACE "uh"
 
-#include "common/utils/common.h"
+#include <common/utils/common.h>
+
+#include <array>
 #include <filesystem>
 #include <map>
 
@@ -43,9 +45,6 @@ inline etcd_action get_etcd_action_enum(const std::string& action_str) {
 enum etcd_service_attributes {
     ENDPOINT_HOST,
     ENDPOINT_PORT,
-    ENDPOINT_PID,
-    STORAGE_FREE_SPACE,
-    STORAGE_LOAD,
 };
 
 enum etcd_ec_group_attributes {
@@ -55,13 +54,10 @@ enum etcd_ec_group_attributes {
 };
 
 constexpr std::array<
-    std::pair<uh::cluster::etcd_service_attributes, const char*>, 5>
+    std::pair<uh::cluster::etcd_service_attributes, const char*>, 2>
     string_by_service_attribute = {{
         {uh::cluster::ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::ENDPOINT_PORT, "endpoint_port"},
-        {uh::cluster::ENDPOINT_PID, "endpoint_pid"},
-        {uh::cluster::STORAGE_FREE_SPACE, "storage_free_space"},
-        {uh::cluster::STORAGE_LOAD, "storage_load"},
     }};
 
 constexpr std::array<
