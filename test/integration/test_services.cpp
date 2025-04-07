@@ -2,16 +2,17 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "common/etcd/registry/service_id.h"
-#include "common/etcd/registry/service_registry.h"
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
-#include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/etcd/service_discovery/storage_service_get_handler.h"
-#include "common/utils/common.h"
-#include "lib/util/checks.h"
-#include "lib/util/server.h"
-#include "storage/interfaces/data_store.h"
-#include <lib/util/temp_directory.h>
+#include <common/etcd/registry/service_id.h>
+#include <common/etcd/registry/service_registry.h>
+#include <common/etcd/service_discovery/roundrobin_load_balancer.h>
+#include <common/etcd/service_discovery/service_maintainer.h>
+#include <common/etcd/service_discovery/storage_service_get_handler.h>
+#include <common/utils/common.h>
+#include <storage/interfaces/data_store.h>
+
+#include <util/checks.h>
+#include <util/server.h>
+#include <util/temp_directory.h>
 
 using namespace boost::asio;
 
@@ -28,7 +29,7 @@ struct fixture {
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
         return uh::cluster::service_maintainer<storage_interface>(
-            etcd, service_factory<storage_interface>(ioc, 2, nullptr));
+            etcd, service_factory<storage_interface>(ioc, 2));
     }
 
     fixture()

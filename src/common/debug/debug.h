@@ -20,39 +20,6 @@ inline ostream& operator<<(ostream& out, const source_location& loc) {
 
 } // namespace std
 
-class context_logger {
-public:
-    context_logger(
-        const std::string& context = "",
-        const std::source_location& loc = std::source_location::current())
-        : m_context(context),
-          m_loc(loc) {
-        LOG_DEBUG() << "ctx enter: " << this->context() << ", loc: " << m_loc;
-    }
-
-    ~context_logger() {
-        LOG_DEBUG() << "ctx leave: " << context() << ", loc: " << m_loc;
-    }
-
-private:
-    std::string context() const {
-        if (!m_context.empty()) {
-            return " " + m_context + ": ";
-        }
-
-        return "";
-    }
-
-    std::string m_context;
-    std::source_location m_loc;
-};
-
-#ifdef ENABLE_TRACE
-#define LOG_CONTEXT() context_logger __ctx
-#else
-#define LOG_CONTEXT()
-#endif
-
 inline std::string dbg_to_string(std::string v) { return v; }
 
 std::string dbg_to_string(auto v);

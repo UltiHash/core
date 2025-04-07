@@ -13,6 +13,10 @@ The following variables will be used in this document:
   `deduplicator`, `coordinator`, `entrypoint`
 - `<service_id>` the (numeric) id of a service, currently a serial number
 
+# ETCD manager watchdog
+
+`<namespace>/watchdog/` \
+    monitored by all services to check for etcd connectivity.
 
 ## ETCD manager watchdog
 

@@ -1,15 +1,17 @@
 #define BOOST_TEST_MODULE "license tests"
 
 #include <boost/test/unit_test.hpp>
+#include <boost/beast/http/status.hpp>
 
 #include "test_config.h"
 
-#include <boost/beast/http/status.hpp>
 #include <cpr/cpr.h>
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <cpr/ssl_options.h>
 #include <httplib.h>
-#include <lib/mock/http_server/http_server.h>
+
+#include <mock/http_server/http_server.h>
+
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;

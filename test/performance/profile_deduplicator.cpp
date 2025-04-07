@@ -1,9 +1,10 @@
-#include "common/utils/common.h"
-#include "common/utils/random.h"
-#include "deduplicator/interfaces/local_deduplicator.h"
-#include "lib/mock/storage/mock_global_data_view.h"
-#include "lib/util/coroutine.h"
-#include <lib/util/temp_directory.h>
+#include <common/utils/common.h>
+#include <common/utils/random.h>
+#include <deduplicator/interfaces/local_deduplicator.h>
+
+#include <mock/storage/mock_global_data_view.h>
+#include <util/coroutine.h>
+#include <util/temp_directory.h>
 
 #include <benchmark/benchmark.h>
 #include <boost/asio.hpp>
@@ -47,7 +48,6 @@ protected:
     std::unique_ptr<mock_data_store> data_store;
     std::unique_ptr<mock_global_data_view> data_view;
     std::unique_ptr<local_deduplicator> dedup;
-    context ctx;
 };
 
 BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
@@ -55,7 +55,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     std::string input_data = random_string(state.range(0));
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup->deduplicate(ctx, input_data);
+        co_return co_await dedup->deduplicate(input_data);
     };
 
     std::future<dedupe_response> res = spawn(f);
@@ -64,7 +64,7 @@ BENCHMARK_DEFINE_F(deduplicator_benchmark, profile_dedup_with_same_data)
 
     for (auto _ : state) {
         auto f = [&]() -> coro<dedupe_response> {
-            co_return co_await dedup->deduplicate(ctx, input_data);
+            co_return co_await dedup->deduplicate(input_data);
         };
 
         std::future<dedupe_response> res = spawn(f);

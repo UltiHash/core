@@ -1,7 +1,7 @@
 #pragma once
 
 #include "commands/command.h"
-#include "common/global_data/global_data_view.h"
+#include "storage/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
 #include "directory.h"

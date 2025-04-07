@@ -1,10 +1,11 @@
 #define BOOST_TEST_MODULE "deduplicator tests"
 
-#include "common/utils/random.h"
-#include "deduplicator/interfaces/local_deduplicator.h"
-#include "lib/mock/storage/mock_global_data_view.h"
-#include "lib/util/coroutine.h"
-#include <lib/util/temp_directory.h>
+#include <common/utils/random.h>
+#include <deduplicator/interfaces/local_deduplicator.h>
+
+#include <mock/storage/mock_global_data_view.h>
+#include <util/coroutine.h>
+#include <util/temp_directory.h>
 
 #include <boost/asio.hpp>
 #include <boost/test/unit_test.hpp>
@@ -38,11 +39,10 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
     auto data_view = mock_global_data_view(data_store);
     auto dedup = local_deduplicator({}, data_view);
 
-    context ctx;
     auto data = random_string(66);
 
     auto f = [&]() -> coro<dedupe_response> {
-        co_return co_await dedup.deduplicate(ctx, data);
+        co_return co_await dedup.deduplicate(data);
     };
     {
         std::future<dedupe_response> res = spawn(f);

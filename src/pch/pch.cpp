@@ -10,7 +10,7 @@
 //   3x: common.h 
 //   ...
 //
-// 95005 ms: /home/sungsik/Projects/core/src/common/global_data/global_data_view.h (included 40 times, avg 2375 ms), included via:
+// 95005 ms: /home/sungsik/Projects/core/src/storage/global_data/global_data_view.h (included 40 times, avg 2375 ms), included via:
 //   3x: directory.h 
 //   3x: utils.h 
 //   2x: fragment_set.h 

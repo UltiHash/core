@@ -115,7 +115,7 @@ private:
                 cl, itr->first,
                 m_service_factory.make_service(
                     itr->second.attributes.at(ENDPOINT_HOST),
-                    std::stoul(itr->second.attributes.at(ENDPOINT_PORT)), 0));
+                    std::stoul(itr->second.attributes.at(ENDPOINT_PORT))));
 
             for (auto& m : m_monitors) {
 

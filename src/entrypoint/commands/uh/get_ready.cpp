@@ -21,7 +21,7 @@ coro<response> get_ready::handle(request& req) {
 
     try {
         co_await m_dir.list_buckets();
-        co_await m_gdv.get_used_space(req.context());
+        co_await m_gdv.get_used_space();
         res.set_body(std::make_unique<string_body>("{\n"
                                                    "  \"ready\": true\n"
                                                    "}"));

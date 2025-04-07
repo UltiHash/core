@@ -1,2 +1,11 @@
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/reset-db.sh.in ${CMAKE_CURRENT_BINARY_DIR}/reset-db.sh)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start.sh.in ${CMAKE_CURRENT_BINARY_DIR}/start.sh)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/reset-db.sh.in ${CMAKE_CURRENT_BINARY_DIR}/reset-db.sh.tmp)
+file(GENERATE
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/reset-db.sh
+    INPUT ${CMAKE_CURRENT_BINARY_DIR}/reset-db.sh.tmp
+    USE_SOURCE_PERMISSIONS)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start.sh.in ${CMAKE_CURRENT_BINARY_DIR}/start.sh.tmp)
+file(GENERATE
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/start.sh
+    INPUT ${CMAKE_CURRENT_BINARY_DIR}/start.sh.tmp
+    USE_SOURCE_PERMISSIONS)

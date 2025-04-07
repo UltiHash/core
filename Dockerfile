@@ -24,8 +24,7 @@ RUN apt-get update \
         apt-get install --yes --no-install-recommends net-tools gdb gdbserver; \
     fi
 
-COPY --from=build /core/build/uh-cluster /usr/local/bin
-COPY --from=build /core/build/libuh-cluster_shared.so /usr/local/bin
+COPY --from=build /core/build/bin/* /usr/local/bin
 
 RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh

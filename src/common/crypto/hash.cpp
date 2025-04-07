@@ -1,6 +1,7 @@
 #include "hash.h"
-#include "common/utils/strings.h"
 #include "ossl_base.h"
+
+#include <common/utils/strings.h>
 
 #include <openssl/err.h>
 #include <stdexcept>

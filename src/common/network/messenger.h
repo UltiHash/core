@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common/telemetry/context.h"
 #include "messenger_core.h"
 
 namespace uh::cluster {
@@ -35,42 +34,37 @@ public:
 
     coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
-    coro<void> send_write(context& ctx, const write_request& req);
+    coro<void> send_write(const write_request& req);
 
     coro<write_request> recv_write(const header& message_header);
 
-    coro<void> send_ds_write(context& ctx, const ds_write_request& req);
+    coro<void> send_ds_write(const ds_write_request& req);
 
     coro<ds_write_request> recv_ds_write(const header& message_header);
 
-    coro<void> send_ds_read(context& ctx, const ds_read_request& req);
+    coro<void> send_ds_read(const ds_read_request& req);
 
     coro<ds_read_request> recv_ds_read(const header& message_header);
 
-    coro<void> send_address(context& ctx, const message_type type,
-                            const address& addr);
+    coro<void> send_address(const message_type type, const address& addr);
 
-    coro<void> send_fragment(context& ctx, const message_type type,
-                             const fragment frag);
+    coro<void> send_fragment(const message_type type, const fragment frag);
 
     template <typename T>
     requires std::is_arithmetic_v<T>
-    coro<void> send_primitive(context& ctx, const message_type type,
-                              const T val) {
+    coro<void> send_primitive(const message_type type, const T val) {
         register_write_buffer(val);
-        co_await send_buffers(ctx, type);
+        co_await send_buffers(type);
     }
 
-    coro<void> send_dedupe_response(context& ctx,
-                                    const dedupe_response& dedupe_resp);
+    coro<void> send_dedupe_response(const dedupe_response& dedupe_resp);
 
     template <typename K, typename V>
     requires(std::is_arithmetic_v<K> and std::is_arithmetic_v<V>)
-    coro<void> send_map(context& ctx, const message_type type,
-                        const std::map<K, V>& map) {
+    coro<void> send_map(const message_type type, const std::map<K, V>& map) {
         std::vector<char> buf;
         zpp::bits::out{buf, zpp::bits::size2b{}}(map).or_throw();
-        co_await send(ctx, type, buf);
+        co_await send(type, buf);
     }
 };
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <common/global_data/global_data_view.h>
+#include <storage/global_data/global_data_view.h>
 #include <common/types/common_types.h>
 #include <entrypoint/directory.h>
 

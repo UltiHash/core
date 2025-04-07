@@ -7,8 +7,8 @@
 #include <common/network/async_http_client.h>
 
 #include <boost/beast/http/status.hpp>
-#include <lib/mock/http_server/http_server.h>
-#include <lib/util/coroutine.h>
+#include <mock/http_server/http_server.h>
+#include <util/coroutine.h>
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;
