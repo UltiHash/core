@@ -1,33 +1,32 @@
 #pragma once
 
-#include "common/etcd/service_discovery/service_monitor.h"
-#include "storage/interfaces/storage_group.h"
+#include "common/etcd/service_discovery/service_observer.h"
 
+#include <condition_variable>
 #include <set>
 
 namespace uh::cluster {
 
 template <typename service_interface>
-struct roundrobin_load_balancer : public service_monitor<service_interface> {
+class service_load_balancer : public service_observer<service_interface> {
 
-    roundrobin_load_balancer(
+public:
+    explicit service_load_balancer(
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}
 
-    void add_client(size_t,
-                    const std::shared_ptr<service_interface>& client) override {
+    void add_client(size_t id,
+                    std::shared_ptr<service_interface> service) override {
         std::lock_guard l(m_mutex);
-
-        m_services.emplace(client);
+        m_services.emplace(id, service);
         m_cv.notify_one();
     }
 
-    void
-    remove_client(size_t,
-                  const std::shared_ptr<service_interface>& client) override {
+    void remove_client(size_t id,
+                       std::shared_ptr<service_interface> service) override {
         std::lock_guard l(m_mutex);
 
-        auto it = m_services.find(client);
+        auto it = m_services.find(id);
         if (it == m_services.end()) {
             return;
         }
@@ -54,7 +53,7 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
             m_robin_index = m_services.cbegin();
         }
 
-        auto rv = *m_robin_index;
+        auto rv = (*m_robin_index).second;
         ++m_robin_index;
 
         return rv;
@@ -64,13 +63,15 @@ struct roundrobin_load_balancer : public service_monitor<service_interface> {
 
     [[nodiscard]] size_t size() const noexcept { return m_services.size(); }
 
-private:
+protected:
     std::chrono::milliseconds m_service_get_timeout;
-    std::mutex m_mutex;
     std::condition_variable m_cv;
+    std::mutex m_mutex;
+    std::map<std::size_t, std::shared_ptr<service_interface>> m_services;
 
-    std::set<std::shared_ptr<service_interface>> m_services;
-    typename std::set<std::shared_ptr<service_interface>>::const_iterator
+private:
+    typename std::map<std::size_t,
+                      std::shared_ptr<service_interface>>::const_iterator
         m_robin_index = m_services.cend();
 };
 

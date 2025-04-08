@@ -84,18 +84,6 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         case STORAGE_USED_REQ:
             co_await handle_get_used(m, hdr);
             break;
-        case STORAGE_DS_INFO_REQ:
-            co_await handle_ds_info(m, hdr);
-            break;
-        case STORAGE_INIT_DD_REQ:
-            co_await handle_init_dd(m, hdr);
-            break;
-        case STORAGE_DS_WRITE_REQ:
-            co_await handle_ds_write(m, hdr);
-            break;
-        case STORAGE_DS_READ_REQ:
-            co_await handle_ds_read(m, hdr);
-            break;
         default:
             throw std::invalid_argument("Invalid message type!");
         }
@@ -186,30 +174,6 @@ coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
     const auto used = co_await m_storage.get_used_space();
     co_await m.send_primitive<size_t>(SUCCESS, used);
-}
-
-coro<void> handler::handle_ds_info(messenger& m, const messenger::header&) {
-    const auto map = co_await m_storage.get_ds_size_map();
-    co_await m.send_map(SUCCESS, map);
-}
-
-coro<void> handler::handle_init_dd(messenger& m, const messenger::header&) {
-    co_await m.send(SUCCESS, {});
-}
-
-coro<void> handler::handle_ds_write(messenger& m, const messenger::header& h) {
-    const auto req = co_await m.recv_ds_write(h);
-    co_await m_storage.ds_write(
-        req.ds_id, req.pointer,
-        std::get<unique_buffer<>>(req.data).string_view());
-    co_await m.send(SUCCESS, {});
-}
-
-coro<void> handler::handle_ds_read(messenger& m, const messenger::header& h) {
-    const auto req = co_await m.recv_ds_read(h);
-    unique_buffer<> buf{req.size};
-    co_await m_storage.ds_read(req.ds_id, req.pointer, req.size, buf.data());
-    co_await m.send(SUCCESS, buf.span());
 }
 
 } // namespace uh::cluster::storage
