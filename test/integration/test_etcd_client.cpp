@@ -28,7 +28,7 @@ public:
             .AlwaysDo([](const etcd::Response&) {});
     }
 
-    ~fixture() { etcd_client.rmdir("/", true); }
+    ~fixture() { etcd_client.rmdir("/", true).get(); }
 
     void print_ls() {
         auto resp = etcd_client.ls("/").get();
@@ -258,6 +258,7 @@ BOOST_FIXTURE_TEST_CASE(concurrent_campaign, fixture) {
     BOOST_TEST(0 == resp2.error_code());
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
     observer_thread.join();
 }
 
