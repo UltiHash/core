@@ -43,6 +43,7 @@ public:
      * Save key value pair
      */
     void put(const std::string& key, const std::string& value);
+    void put_persistant(const std::string& key, const std::string& value);
 
     /*
      * Retrieve methods

@@ -14,8 +14,8 @@ static constexpr const char* etcd_watchdog = "/" NAMESPACE "/watchdog/";
 
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
-static constexpr const char* etcd_ec_groups_key_prefix =
-    "/" NAMESPACE "/ec-group/";
+static constexpr const char* etcd_storage_groups_key_prefix =
+    "/" NAMESPACE "/storage-group/";
 
 static constexpr const char* etcd_global_lock_key =
     "/" NAMESPACE "/config/class/cluster/lock";
@@ -89,14 +89,24 @@ get_etcd_ec_group_attribute_enum(const std::string& param) {
 }
 
 inline static std::string get_ec_group_path(int group_id) {
-    return etcd_ec_groups_key_prefix + std::to_string(group_id);
+    return etcd_storage_groups_key_prefix + std::to_string(group_id);
 }
 
 inline static std::string
 get_ec_group_attribute_path(size_t group_id, etcd_ec_group_attributes attr) {
-    return etcd_ec_groups_key_prefix + std::to_string(group_id) + "/" +
+    return etcd_storage_groups_key_prefix + std::to_string(group_id) + "/" +
            get_etcd_ec_group_attribute_string(attr);
 }
+
+// read(watch) only
+std::string get_storage_groups_assigned_storages_path(size_t group_id);
+// read/write
+std::string get_storage_groups_assigned_storages_path(size_t group_id,
+                                                      size_t storage_id);
+std::string get_storage_group_state_path(size_t group_id);
+std::string get_storage_group_initialized_flag_path(size_t group_id);
+std::string get_storage_group_config_path(size_t group_id);
+std::string get_storage_to_storage_group_map_path(size_t storage_id);
 
 inline static std::string get_service_root_path(role r) {
     return etcd_services_key_prefix + get_service_string(r);

@@ -95,6 +95,17 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
             " failed, details: " + resp.error_message());
 }
 
+void etcd_manager::put_persistant(const std::string& key,
+                                  const std::string& value) {
+    auto client = m_client.load();
+
+    auto resp = client->put(key, value);
+    if (!resp.is_ok())
+        throw std::invalid_argument(
+            "setting configuration parameter " + key +
+            " failed, details: " + resp.error_message());
+}
+
 std::string etcd_manager::get(const std::string& key) const {
     auto client = m_client.load();
     auto resp = client->get(key);
