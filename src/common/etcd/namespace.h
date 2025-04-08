@@ -15,7 +15,7 @@ static constexpr const char* etcd_watchdog = "/" NAMESPACE "/watchdog/";
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
 static constexpr const char* etcd_storage_groups_key_prefix =
-    "/" NAMESPACE "/storage-group/";
+    "/" NAMESPACE "/storage-groups/";
 
 static constexpr const char* etcd_global_lock_key =
     "/" NAMESPACE "/config/class/cluster/lock";
