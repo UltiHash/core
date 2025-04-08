@@ -228,6 +228,20 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
         ->envname(ENV_CFG_LICENSE)
         ->default_val(cfg.license);
 
+    app.add_option(
+           "--storage-groups,-G",
+           [&cfg](CLI::results_t res) {
+               try {
+                   cfg.storage_groups = storage_group_config::create(res[0]);
+               } catch (const std::exception& e) {
+                   return false;
+               }
+               return true;
+           },
+           "UltiHash storage group configuration")
+        ->envname(ENV_CFG_STORAGE_GROUPS)
+        ->default_val(cfg.storage_groups);
+
     app.add_option("--backend-host", cfg.backend_config.backend_host,
                    "backend host")
         ->envname(ENV_CFG_BACKEND_HOST);
