@@ -1,5 +1,5 @@
 #pragma once
-#include "common/etcd/service_discovery/storage_get_handler.h"
+#include "common/etcd/service_discovery/storage_index.h"
 #include "common/service_interfaces/storage_interface.h"
 
 namespace uh::cluster {
@@ -17,11 +17,11 @@ struct node_address_info {
 
 node_address_info
 extract_node_address_map(const address& addr,
-                         storage_get_handler& storage_get_handler,
+                         storage_index& storage_load_balancer,
                          const std::vector<size_t>& existing_offsets = {});
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_get_handler& storage_get_handler,
+    const address& addr, storage_index& storage_load_balancer,
     boost::asio::io_context& ioc,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>

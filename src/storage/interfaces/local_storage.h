@@ -157,26 +157,6 @@ struct local_storage : public storage_interface {
 
     coro<size_t> get_used_space() override { co_return get_used_space_func(); }
 
-    coro<std::map<size_t, size_t>> get_ds_size_map() override {
-        std::map<size_t, size_t> res;
-        for (const auto& ds : m_data_stores) {
-            res.emplace(ds->id(), ds->get_used_space());
-        }
-        co_return res;
-    }
-
-    coro<void> ds_write(uint32_t ds_id, uint64_t pointer,
-                        std::span<const char> data) override {
-        m_data_stores.at(ds_id)->manual_write(pointer, data);
-        co_return;
-    }
-
-    coro<void> ds_read(uint32_t ds_id, uint64_t pointer, size_t size,
-                       char* buffer) override {
-        m_data_stores.at(ds_id)->manual_read(pointer, {buffer, size});
-        co_return;
-    }
-
     size_t get_available_space_func() {
 
         size_t free = 0;
