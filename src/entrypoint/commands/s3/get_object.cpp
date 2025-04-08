@@ -1,6 +1,9 @@
 #include "get_object.h"
-#include "common/utils/time_utils.h"
-#include "entrypoint/http/command_exception.h"
+
+#include <common/utils/time_utils.h>
+
+#include <entrypoint/formats.h>
+#include <entrypoint/http/command_exception.h>
 #include <entrypoint/http/range.h>
 
 using namespace uh::cluster::ep::http;
@@ -90,6 +93,7 @@ coro<response> get_object::handle(request& req) {
 
     res.set("ETag", obj->etag);
     res.set("Content-Type", obj->mime);
+    res.set("Last-Modified", imf_fixdate(obj->last_modified));
 
     if (auto range = req.header("Range"); range) {
         res.base().result(status::partial_content);
