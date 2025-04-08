@@ -1,11 +1,12 @@
 #pragma once
 
-#include "common/coroutines/worker_pool.h"
-#include "common/service_interfaces/deduplicator_interface.h"
-#include "deduplicator/config.h"
-#include "deduplicator/dedupe_set/fragment_set.h"
-#include "deduplicator/fragmentation.h"
-#include "storage/global_data/global_data_view.h"
+#include <common/coroutines/worker_pool.h>
+#include <common/service_interfaces/deduplicator_interface.h>
+#include <common/storage_group/state_watcher.h>
+#include <deduplicator/config.h>
+#include <deduplicator/dedupe_set/fragment_set.h>
+#include <deduplicator/fragmentation.h>
+#include <storage/global_data/global_data_view.h>
 
 #include <deduplicator/cache.h>
 
@@ -13,7 +14,14 @@ namespace uh::cluster {
 
 struct local_deduplicator : public deduplicator_interface {
 
-    local_deduplicator(deduplicator_config config, global_data_view& storage);
+    local_deduplicator(
+        deduplicator_config config, global_data_view& storage,
+        std::function<storage_group::state()> get_storage_group_state = []() {
+            return storage_group::state{
+                .group = storage_group::state::group_state::HEALTHY,
+                .storages = {storage_group::state::storage_state::ASSIGNED},
+            };
+        });
 
     coro<dedupe_response> deduplicate(std::string_view data) override;
 
@@ -26,6 +34,7 @@ private:
     dd::cache m_cache;
     fragment_set m_fragment_set;
     worker_pool m_dedupe_workers;
+    std::function<storage_group::state()> m_get_storage_group_state;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
 };
 } // namespace uh::cluster
