@@ -54,13 +54,22 @@ constexpr std::array<
         {uh::cluster::ENDPOINT_PORT, "endpoint_port"},
     }};
 
-// read(watch) only
+/*
+ * Input of group state manager
+ */
 std::string get_storage_groups_assigned_storages_path(size_t group_id);
-// read/write
 std::string get_storage_groups_assigned_storages_path(size_t group_id,
                                                       size_t storage_id);
-std::string get_storage_group_state_path(size_t group_id);
 std::string get_storage_group_initialized_flag_path(size_t group_id);
+
+/*
+ * Output from group state manager
+ */
+std::string get_storage_group_state_path(size_t group_id);
+
+/*
+ * Group configurations for storage services
+ */
 std::string get_storage_group_config_path(size_t group_id);
 std::string get_storage_to_storage_group_map_path(size_t storage_id);
 
