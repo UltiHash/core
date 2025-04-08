@@ -1,3 +1,7 @@
+## UNRELEASED;
+
+- Add missing Last-Modified header to GetObject
+
 ## [1.3.1] 2025-04-04
 
 - Add labels to distinguish users on metrics

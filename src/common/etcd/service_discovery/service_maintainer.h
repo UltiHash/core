@@ -100,10 +100,13 @@ private:
         }
 
         if (auto cl = m_clients.find(id);
-            cl == m_clients.cend() and
-            itr->second.attributes.contains(ENDPOINT_HOST) and
-            itr->second.attributes.contains(ENDPOINT_PORT) and
-            itr->second.attributes.contains(ENDPOINT_PID)) {
+            cl != m_clients.cend() and attribute.has_value()) {
+            for (auto& m : m_observers) {
+                m.get().add_attribute(cl->second, *attribute, value);
+            }
+        } else if (cl == m_clients.cend() and
+                   itr->second.attributes.contains(ENDPOINT_HOST) and
+                   itr->second.attributes.contains(ENDPOINT_PORT)) {
             LOG_INFO() << "connecting to "
                        << itr->second.attributes.at(ENDPOINT_HOST) << ":"
                        << itr->second.attributes.at(ENDPOINT_PORT);
