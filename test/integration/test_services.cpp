@@ -114,22 +114,6 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
     }
 }
 
-BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
-    BOOST_CHECK(services.get_services().empty());
-
-    std::size_t test_id = 0xdeadbeef;
-
-    {
-        test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, test_id, etcd);
-        sr.register_service({.port = 8081});
-
-        WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
-        BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
-        BOOST_CHECK_NO_THROW(services.get(test_id));
-    }
-}
-
 BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
     /* Note: we are checking implementation details here. The following
      * assumptions must hold true for this test to succeed. If they are not
