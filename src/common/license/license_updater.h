@@ -38,7 +38,7 @@ public:
             LOG_INFO() << " -- storage size: " << lic->storage_cap_gib
                        << " GiBs";
 
-            m_etcd.put(etcd_license, lic->to_string());
+            m_etcd.put(etcd_license_key, lic->to_string());
             m_license = std::move(lic);
 
             LOG_DEBUG() << "License updated";
@@ -47,7 +47,7 @@ public:
             LOG_ERROR() << "License check failed: " << e.what();
 
             std::shared_ptr<license> lic = std::make_shared<license>();
-            m_etcd.put(etcd_license, lic->to_string());
+            m_etcd.put(etcd_license_key, lic->to_string());
             m_license = std::move(lic);
         } catch (...) {
             LOG_ERROR() << "License check failed: unknown error";

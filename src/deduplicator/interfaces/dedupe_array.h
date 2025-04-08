@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/etcd/service_discovery/roundrobin_load_balancer.h>
+#include <common/etcd/service_discovery/service_load_balancer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
 #include <common/service_interfaces/deduplicator_interface.h>
@@ -19,7 +19,7 @@ private:
     boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;
-    roundrobin_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
+    service_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
 };
 
 } // namespace uh::cluster
