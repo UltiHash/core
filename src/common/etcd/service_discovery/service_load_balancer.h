@@ -37,7 +37,7 @@ public:
         }
     }
 
-    virtual std::shared_ptr<service_interface> get() {
+    std::shared_ptr<service_interface> get() {
 
         std::unique_lock lk(m_mutex);
 

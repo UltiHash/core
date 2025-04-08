@@ -6,6 +6,7 @@
 #include "service_load_balancer.h"
 
 #include <ranges>
+
 namespace uh::cluster {
 
 class storage_index : public service_observer<storage_interface> {
