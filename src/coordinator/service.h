@@ -2,13 +2,13 @@
 
 #include "config.h"
 
-#include <common/etcd/ec_groups/ec_group_maintainer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
 #include <config/configuration.h>
+#include <storage/interfaces/remote_storage.h>
 
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -24,10 +24,7 @@ public:
     service(const service_config& service, const coordinator_config& cc)
         : m_etcd{service.etcd_config},
           m_ioc(cc.thread_count),
-
           m_ioc_runner(m_ioc, cc.thread_count),
-          m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
-
           m_storage_maintainer(m_etcd,
                                service_factory<storage_interface>(m_ioc, 1)),
           m_usage{m_ioc, cc.database_config} {
@@ -59,7 +56,6 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
-
         for (size_t i = 0; const auto& cfg : cc.storage_groups) {
             m_etcd.put(get_storage_group_config_path(i), cfg.to_string());
             for (const auto& m : cfg.members) {
@@ -68,8 +64,6 @@ public:
             }
             ++i;
         }
-
-        m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
 
     void run() {
@@ -88,7 +82,6 @@ public:
             m_stopped = true;
         }
         m_cv.notify_all();
-        m_storage_maintainer.remove_monitor(m_ec_maintainer);
     }
 
 private:
@@ -100,7 +93,6 @@ private:
 
     io_context_runner m_ioc_runner;
 
-    ec_group_maintainer m_ec_maintainer;
     service_maintainer<storage_interface> m_storage_maintainer;
 
     usage m_usage;
