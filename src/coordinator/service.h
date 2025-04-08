@@ -28,8 +28,8 @@ public:
           m_ioc_runner(m_ioc, cc.thread_count),
           m_ec_maintainer(m_ioc, 1, 0, m_etcd, true),
 
-          m_storage_maintainer(
-              m_etcd, service_factory<storage_interface>(m_ioc, 1)),
+          m_storage_maintainer(m_etcd,
+                               service_factory<storage_interface>(m_ioc, 1)),
           m_usage{m_ioc, cc.database_config} {
 
         if (cc.license) {
@@ -59,6 +59,16 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
+
+        for (size_t i = 0; const auto& cfg : cc.storage_groups) {
+            m_etcd.put(get_storage_group_config_path(i), cfg.to_string());
+            for (const auto& m : cfg.members) {
+                m_etcd.put(get_storage_to_storage_group_map_path(m),
+                           std::to_string(i));
+            }
+            ++i;
+        }
+
         m_storage_maintainer.add_monitor(m_ec_maintainer);
     }
 

@@ -42,21 +42,24 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication.
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>/storages/<service_id>` \
+**TBD**: `/<namespace>/storage-group/<storage_group_id>/storages/<service_id>` \
   contains state of storage services: -(NEW), o(ASSIGNED).
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>/state` \
-  contains state of group and storage services state that storage group manager refered, like \
-  `<group_state>,xx-o-o` (x means there's no storage service)
+**TBD**: `/<namespace>/storage-group/<storage_group_id>/state` \
+  contains state of group and storage services state that storage group manager
+  refered, like `<group_state>,xx-o-o` (x means there's no storage service)
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>/initialized` \
-  exists only when the storage group succeeded to assign all storage services: has no ttl.
+**TBD**: `/<namespace>/storage-group/<storage_group_id>/initialized` \
+  exists only when the storage group succeeded to assign all storage services: \
+  has no ttl.
 
 ## Configuration parameters
 
-**TBD**: `/<namespace>/storage_groups/<storage_group_id>/config/`
+**TBD**: `/<namespace>/storage-group/config/<storage_group_id>`
   contains configuration of storage groups.
 
+**TBD**: `/<namespace>/storage-group/assignments/<service_id>` \
+  contains the storage group ID to which a storage service belongs.
 
 ## Service ID
 
