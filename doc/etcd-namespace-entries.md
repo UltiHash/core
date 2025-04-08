@@ -43,23 +43,26 @@ available.
     contains the port the service is using for communication.
 
 **TBD**: `/<namespace>/storage-groups/<storage_group_id>/storages/<service_id>` \
-  contains state of storage services: -(NEW), o(ASSIGNED).
-
-**TBD**: `/<namespace>/storage-groups/<storage_group_id>/state` \
-  contains state of group and storage services state that storage group manager
-  refered, like `<group_state>,xx-o-o` (x means there's no storage service)
+  contains state of storage services: -(NEW), o(ASSIGNED). \
+  This key is watched by `coordinator`.
 
 **TBD**: `/<namespace>/storage-groups/<storage_group_id>/initialized` \
-  exists only when the storage group succeeded to assign all storage services: \
-  has no ttl.
+  exists only when the storage group succeeded to assign all storage services. \
+  This key has no ttl. `coordinator` reads this key.
+
+**TBD**: `/<namespace>/storage-groups/state/<storage_group_id>` \
+  contains state of group and storage services state that storage group manager
+  refered, like `<group_state>,xx-o-o` (x means there's no storage service). \
+  This key is watched by `global_data_view`.
 
 ## Configuration parameters
 
 **TBD**: `/<namespace>/storage-groups/config/<storage_group_id>`
-  contains configuration of storage groups.
+  contains configuration of storage groups. `coordinator` reads this key.
 
 **TBD**: `/<namespace>/storage-groups/assignments/<service_id>` \
-  contains the storage group ID to which a storage service belongs.
+  contains the storage group ID to which a storage service belongs. \
+  Each storage services reads this key.
 
 ## Service ID
 
