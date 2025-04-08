@@ -13,6 +13,7 @@ default_global_data_view::default_global_data_view(
       m_load_balancer{SERVICE_GET_TIMEOUT} {
 
     m_service_maintainer.add_observer(m_load_balancer);
+    m_service_maintainer.add_observer(m_storage_index);
 
     m_load_balancer.get();
 }
@@ -34,7 +35,7 @@ default_global_data_view::read_fragment(const uint128_t& pointer,
 
     shared_buffer<char> buffer(size);
     const fragment frag{pointer, size};
-    auto storage = m_load_balancer.get(pointer);
+    auto storage = m_storage_index.get(pointer);
     auto context = THREAD_LOCAL_CONTEXT;
 
     if (boost::asio::trace_span::enable &&
@@ -58,7 +59,7 @@ coro<shared_buffer<>> default_global_data_view::read(const uint128_t& pointer,
         throw std::runtime_error("Read size must be larger than zero");
     }
 
-    auto storage = m_load_balancer.get(pointer);
+    auto storage = m_storage_index.get(pointer);
     co_return co_await storage->read(pointer, size);
 }
 
@@ -66,15 +67,15 @@ coro<std::size_t>
 default_global_data_view::read_address(const address& addr,
                                        std::span<char> buffer) {
     co_return co_await perform_for_address(
-        addr, m_load_balancer, m_io_service,
-        [buffer](size_t, std::shared_ptr<storage_interface> dn,
+        addr, m_storage_index, m_io_service,
+        [buffer](size_t, std::shared_ptr<storage_interface> svc,
                  const address_info& info) -> coro<void> {
-            co_await dn->read_address(info.addr, buffer, info.pointer_offsets);
+            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
         });
 }
 
 coro<std::size_t> default_global_data_view::get_used_space() {
-    auto nodes = m_load_balancer.get_services();
+    auto nodes = m_storage_index.get_services();
 
     size_t used = 0;
     for (const auto& dn : nodes) {
@@ -87,10 +88,10 @@ coro<std::size_t> default_global_data_view::get_used_space() {
 default_global_data_view::link(const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
-        addr, m_load_balancer, m_io_service,
-        [&addresses](size_t id, std::shared_ptr<storage_interface> dn,
+        addr, m_storage_index, m_io_service,
+        [&addresses](size_t id, std::shared_ptr<storage_interface> svc,
                      const address_info& info) -> coro<void> {
-            addresses.emplace(id, co_await dn->link(info.addr));
+            addresses.emplace(id, co_await svc->link(info.addr));
         });
 
     address rv;
@@ -104,16 +105,17 @@ default_global_data_view::link(const address& addr) {
 coro<std::size_t> default_global_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
-        addr, m_load_balancer, m_io_service,
-        [&freed_bytes](size_t, std::shared_ptr<storage_interface> dn,
+        addr, m_storage_index, m_io_service,
+        [&freed_bytes](size_t, std::shared_ptr<storage_interface> svc,
                        const address_info& info) -> coro<void> {
-            freed_bytes += co_await dn->unlink(info.addr);
+            freed_bytes += co_await svc->unlink(info.addr);
         });
     co_return freed_bytes;
 }
 
 default_global_data_view::~default_global_data_view() noexcept {
     m_service_maintainer.remove_observer(m_load_balancer);
+    m_service_maintainer.remove_observer(m_storage_index);
 }
 
 } // namespace uh::cluster

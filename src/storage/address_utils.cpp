@@ -6,7 +6,7 @@ namespace uh::cluster {
 
 node_address_info
 extract_node_address_map(const address& addr,
-                         storage_load_balancer& storage_load_balancer,
+                         storage_index& storage_load_balancer,
                          const std::vector<size_t>& existing_offsets) {
 
     if (!existing_offsets.empty() and addr.size() != existing_offsets.size()) {
@@ -35,7 +35,7 @@ extract_node_address_map(const address& addr,
 }
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_load_balancer& storage_load_balancer,
+    const address& addr, storage_index& storage_load_balancer,
     boost::asio::io_context& ioc,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>

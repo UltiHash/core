@@ -6,7 +6,7 @@
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service_discovery/service_load_balancer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
-#include <common/etcd/service_discovery/storage_load_balancer.h>
+#include <common/etcd/service_discovery/storage_index.h>
 #include <common/utils/common.h>
 #include <storage/interfaces/data_store.h>
 
@@ -23,7 +23,7 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_load_balancer services{1s};
+    storage_index services{1s};
     service_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 

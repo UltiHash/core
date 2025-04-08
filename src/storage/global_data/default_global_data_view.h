@@ -2,7 +2,7 @@
 
 #include "common/caches/lru_cache.h"
 #include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/etcd/service_discovery/storage_load_balancer.h"
+#include "common/etcd/service_discovery/storage_index.h"
 #include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
@@ -144,7 +144,8 @@ private:
     global_data_view_config m_config;
 
     service_maintainer<storage_interface>& m_service_maintainer;
-    storage_load_balancer m_load_balancer;
+    service_load_balancer<storage_interface> m_load_balancer;
+    storage_index m_storage_index;
 };
 
 } // end namespace uh::cluster

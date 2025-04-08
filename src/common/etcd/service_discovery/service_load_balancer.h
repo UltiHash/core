@@ -16,16 +16,14 @@ public:
         : m_service_get_timeout{service_get_timeout} {}
 
     void add_client(size_t id,
-                    const std::shared_ptr<service_interface> client) override {
+                    std::shared_ptr<service_interface> service) override {
         std::lock_guard l(m_mutex);
-
-        m_services.emplace(id, client);
+        m_services.emplace(id, service);
         m_cv.notify_one();
     }
 
-    void
-    remove_client(size_t id,
-                  const std::shared_ptr<service_interface> client) override {
+    void remove_client(size_t id,
+                       std::shared_ptr<service_interface> service) override {
         std::lock_guard l(m_mutex);
 
         auto it = m_services.find(id);
