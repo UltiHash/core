@@ -4,9 +4,9 @@
 
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
-#include <common/etcd/service_discovery/roundrobin_load_balancer.h>
+#include <common/etcd/service_discovery/service_load_balancer.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
-#include <common/etcd/service_discovery/storage_service_get_handler.h>
+#include <common/etcd/service_discovery/storage_index.h>
 #include <common/utils/common.h>
 #include <storage/interfaces/data_store.h>
 
@@ -23,8 +23,8 @@ struct fixture {
     boost::asio::io_context ioc;
     etcd_manager etcd;
     std::size_t service_id;
-    storage_service_get_handler services{1s};
-    roundrobin_load_balancer<storage_interface> load_balancer{1s};
+    storage_index services{1s};
+    service_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
     uh::cluster::service_maintainer<storage_interface> make_services() {
@@ -37,8 +37,8 @@ struct fixture {
               etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
           service_maintainer(make_services()) {
-        service_maintainer.add_monitor(services);
-        service_maintainer.add_monitor(load_balancer);
+        service_maintainer.add_observer(services);
+        service_maintainer.add_observer(load_balancer);
     }
 };
 
@@ -111,22 +111,6 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
 
         fixture f;
         BOOST_CHECK(!f.services.get_services().empty());
-    }
-}
-
-BOOST_FIXTURE_TEST_CASE(GetClientById, fixture) {
-    BOOST_CHECK(services.get_services().empty());
-
-    std::size_t test_id = 0xdeadbeef;
-
-    {
-        test::server srv("0.0.0.0", 8081);
-        service_registry sr(STORAGE_SERVICE, test_id, etcd);
-        sr.register_service({.port = 8081});
-
-        WAIT_UNTIL_CHECK(1000, services.get_services().size() == 1u);
-        BOOST_CHECK_THROW(services.get(std::size_t{}), std::exception);
-        BOOST_CHECK_NO_THROW(services.get(test_id));
     }
 }
 

@@ -15,12 +15,12 @@ public:
     license_watcher(etcd_manager& etcd, callback_t callback = nullptr)
         : m_etcd{etcd},
           m_wg{m_etcd.watch(
-              etcd_license,
+              etcd_license_key,
               [this](const etcd::Response& resp) { on_watch(resp); })},
           m_license{std::make_shared<license>()},
           m_callback{std::move(callback)} {
 
-        auto license_str = m_etcd.get(etcd_license);
+        auto license_str = m_etcd.get(etcd_license_key);
         if (!license_str.empty()) {
             parse_and_save(license_str);
 

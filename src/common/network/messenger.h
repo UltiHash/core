@@ -38,14 +38,6 @@ public:
 
     coro<write_request> recv_write(const header& message_header);
 
-    coro<void> send_ds_write(const ds_write_request& req);
-
-    coro<ds_write_request> recv_ds_write(const header& message_header);
-
-    coro<void> send_ds_read(const ds_read_request& req);
-
-    coro<ds_read_request> recv_ds_read(const header& message_header);
-
     coro<void> send_address(const message_type type, const address& addr);
 
     coro<void> send_fragment(const message_type type, const fragment frag);

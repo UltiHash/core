@@ -1,12 +1,11 @@
 #pragma once
 
-#include "common/etcd/service_discovery/roundrobin_load_balancer.h"
-#include "storage/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
+#include "storage/global_data/global_data_view.h"
 
 #include <boost/asio.hpp>
 #include <boost/url/url.hpp>

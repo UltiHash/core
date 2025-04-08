@@ -79,35 +79,6 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
-    coro<std::map<size_t, size_t>> get_ds_size_map() override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send(STORAGE_DS_INFO_REQ, {});
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_map<size_t, size_t>(message_header);
-    }
-
-    coro<void> ds_write(uint32_t ds_id, uint64_t pointer,
-                        std::span<const char> data) override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        ds_write_request req{.ds_id = ds_id, .pointer = pointer, .data = data};
-        co_await m->send_ds_write(req);
-        co_await m->recv_header();
-    }
-
-    coro<void> ds_read(uint32_t ds_id, uint64_t pointer, size_t size,
-                       char* buffer) override {
-        auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_ds_read(
-            {.ds_id = ds_id, .pointer = pointer, .size = size});
-        const auto header = co_await m->recv_header();
-        if (header.size != size) {
-            throw std::runtime_error(
-                "mistmatched read size with requested size in ds_read");
-        }
-        m->register_read_buffer(buffer, size);
-        co_await m->recv_buffers(header);
-    }
-
 private:
     client m_storage_service;
 };
