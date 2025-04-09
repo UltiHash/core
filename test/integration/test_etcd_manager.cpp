@@ -116,6 +116,17 @@ BOOST_FIXTURE_TEST_CASE(clears_all, fixture) {
     BOOST_TEST(read.size() == 0);
 }
 
+BOOST_FIXTURE_TEST_CASE(detects_initial_value_using_watch, fixture) {
+    std::promise<void> promise;
+    etcd.put("/test/sub/a0", "172.0.0.1");
+
+    std::future<void> future = promise.get_future();
+    auto wm = etcd.watch(
+        "/test", [&](const etcd::Response& response) { promise.set_value(); });
+
+    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
+}
+
 BOOST_FIXTURE_TEST_CASE(watches_write, fixture) {
     std::promise<void> promise;
     std::future<void> future = promise.get_future();
@@ -177,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE(
         { auto lock_guard = etcd.get_lock_guard("/foo/bar"); });
 }
 
-BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
+BOOST_FIXTURE_TEST_CASE(waits_on_second_lock_until_first_lock_is_unlocked,
                         fixture) {
 
     std::optional<std::future<void>> future;
