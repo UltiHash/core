@@ -1,4 +1,4 @@
-#include <common/storage_group/state.h>
+#include <storage/group/state.h>
 
 #include <charconv>
 #include <stdexcept>

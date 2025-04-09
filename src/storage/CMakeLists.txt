@@ -1,3 +1,5 @@
+add_subdirectory(group)
+
 add_library(storage
             address_utils.cpp
             handler.cpp
@@ -7,4 +9,4 @@ add_library(storage
             default_data_store.cpp
             reference_counter.cpp)
 
-target_link_libraries(storage utils types etcd lmdbxx license)
+target_link_libraries(storage storage_group utils types etcd lmdbxx license)
