@@ -6,11 +6,13 @@ namespace uh::cluster {
 default_global_data_view::default_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
     service_maintainer<storage_interface>& storage_maintainer,
-    etcd_manager& etcd)
+    std::function<std::shared_ptr<storage_group::state>()>
+        get_storage_group_state)
     : m_io_service(ioc),
       m_config(config),
       m_service_maintainer(storage_maintainer),
-      m_load_balancer{SERVICE_GET_TIMEOUT} {
+      m_load_balancer{SERVICE_GET_TIMEOUT},
+      m_get_storage_group_state{std::move(get_storage_group_state)} {
 
     m_service_maintainer.add_observer(m_load_balancer);
     m_service_maintainer.add_observer(m_storage_index);

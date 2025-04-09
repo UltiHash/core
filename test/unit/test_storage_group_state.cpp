@@ -4,7 +4,7 @@
 
 #include "test_config.h"
 
-#include <common/storage_group/state.h>
+#include <storage/group/state.h>
 
 using namespace uh::cluster::storage_group;
 

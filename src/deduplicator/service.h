@@ -3,10 +3,10 @@
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/network/server.h>
-#include <common/storage_group/state_watcher.h>
 #include <common/telemetry/log.h>
 #include <config.h>
 #include <storage/global_data/default_global_data_view.h>
+#include <storage/group/state_watcher.h>
 #include <storage/interfaces/remote_storage.h>
 #include <storage/service.h>
 
@@ -34,10 +34,9 @@ public:
                   config.global_data_view.storage_service_connection_count)),
           m_state_watcher(m_etcd),
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
-                      m_etcd),
-          m_deduplicator(std::make_shared<local_deduplicator>(
-              config, m_data_view,
-              [this]() { return m_state_watcher.get_state(); })),
+                      [this]() { return m_state_watcher.get_state(); }),
+          m_deduplicator(
+              std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 

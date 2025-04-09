@@ -31,16 +31,13 @@ coro<size_t> match_size(dd::cache& storage, std::string_view data, auto frag) {
 
 } // namespace
 
-local_deduplicator::local_deduplicator(
-    deduplicator_config config, global_data_view& storage,
-    std::function<std::shared_ptr<storage_group::state>()>
-        get_storage_group_state)
+local_deduplicator::local_deduplicator(deduplicator_config config,
+                                       global_data_view& storage)
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
       m_cache(m_storage, m_dedupe_conf.global_data_view.read_cache_capacity_l2),
       m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
-      m_dedupe_workers(m_dedupe_conf.worker_thread_count),
-      m_get_storage_group_state{std::move(get_storage_group_state)} {}
+      m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
 coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     auto span = co_await boost::asio::this_coro::span;

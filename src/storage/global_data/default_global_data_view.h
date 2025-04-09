@@ -1,11 +1,12 @@
 #pragma once
 
-#include "common/caches/lru_cache.h"
-#include "common/etcd/service_discovery/service_maintainer.h"
-#include "common/etcd/service_discovery/storage_index.h"
-#include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
+
+#include <common/etcd/service_discovery/service_maintainer.h>
+#include <common/etcd/service_discovery/storage_index.h>
+#include <common/types/scoped_buffer.h>
+#include <storage/group/state_watcher.h>
 
 namespace uh::cluster {
 
@@ -29,7 +30,12 @@ public:
     explicit default_global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
         service_maintainer<storage_interface>& storage_maintainer,
-        etcd_manager& etcd);
+        std::function<std::shared_ptr<storage_group::state>()>
+            get_storage_group_state = []() {
+                return std::make_shared<storage_group::state>(
+                    storage_group::state{
+                        .group = storage_group::state::group_state::HEALTHY});
+            });
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -146,6 +152,8 @@ private:
     service_maintainer<storage_interface>& m_service_maintainer;
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
+    std::function<std::shared_ptr<storage_group::state>()>
+        m_get_storage_group_state;
 };
 
 } // end namespace uh::cluster
