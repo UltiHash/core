@@ -56,6 +56,14 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
+        for (size_t i = 0; const auto& cfg : cc.storage_groups) {
+            m_etcd.put(get_storage_group_config_path(i), cfg.to_string());
+            for (const auto& m : cfg.members) {
+                m_etcd.put(get_storage_to_storage_group_map_path(m),
+                           std::to_string(i));
+            }
+            ++i;
+        }
     }
 
     void run() {
