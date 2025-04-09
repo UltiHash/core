@@ -23,18 +23,18 @@ etcd_manager::etcd_manager(const etcd_config& cfg, int lease_timeout)
  * Private utilities
  */
 namespace {
-std::shared_ptr<etcd::Client> create_client(const etcd_config& cfg) {
+std::shared_ptr<etcd::SyncClient> create_client(const etcd_config& cfg) {
     while (true) {
         try {
-            std::shared_ptr<etcd::Client> client;
+            std::shared_ptr<etcd::SyncClient> client;
             if (cfg.username && cfg.password) {
-                client = std::make_unique<etcd::Client>(cfg.url, *cfg.username,
-                                                        *cfg.password);
+                client = std::make_unique<etcd::SyncClient>(
+                    cfg.url, *cfg.username, *cfg.password);
             } else {
-                client = std::make_unique<etcd::Client>(cfg.url);
+                client = std::make_unique<etcd::SyncClient>(cfg.url);
             }
 
-            if (!client->head().get().is_ok()) {
+            if (!client->head().is_ok()) {
                 LOG_DEBUG() << "cannot connect to etcd. trying to reconnect";
                 std::this_thread::sleep_for(1s);
                 continue;
@@ -53,7 +53,7 @@ void etcd_manager::reset() {
     {
         auto client = create_client(m_cfg);
 
-        auto lease_result = client->leasegrant(m_lease_timeout).get();
+        auto lease_result = client->leasegrant(m_lease_timeout);
         if (!lease_result.is_ok()) {
             throw std::runtime_error("Failed to grant lease");
         }
@@ -82,13 +82,13 @@ etcd_manager::~etcd_manager() {
     for (auto& [k, e] : m_watcher_entries) {
         e.watcher->Cancel();
     }
-    client->leaserevoke(m_lease).get();
+    client->leaserevoke(m_lease);
 }
 
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
 
-    auto resp = client->put(key, value, m_lease).get();
+    auto resp = client->put(key, value, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "setting configuration parameter " + key +
@@ -97,7 +97,7 @@ void etcd_manager::put(const std::string& key, const std::string& value) {
 
 std::string etcd_manager::get(const std::string& key) const {
     auto client = m_client.load();
-    auto resp = client->get(key).get();
+    auto resp = client->get(key);
     if (!resp.is_ok())
         return "";
     return resp.value().as_string();
@@ -105,19 +105,19 @@ std::string etcd_manager::get(const std::string& key) const {
 
 bool etcd_manager::has(const std::string& key) const {
     auto client = m_client.load();
-    auto resp = client->get(key).get();
+    auto resp = client->get(key);
     return resp.is_ok();
 }
 
 std::vector<std::string> etcd_manager::keys(const std::string& prefix) const {
     auto client = m_client.load();
-    return client->keys(prefix).get().keys();
+    return client->keys(prefix).keys();
 }
 
 std::map<std::string, std::string>
 etcd_manager::ls(const std::string& prefix) const {
     auto client = m_client.load();
-    auto resp = client->ls(prefix).get();
+    auto resp = client->ls(prefix);
     auto keys = resp.keys();
     std::map<std::string, std::string> ret;
     for (auto i = 0u; i < keys.size(); ++i) {
@@ -128,12 +128,12 @@ etcd_manager::ls(const std::string& prefix) const {
 
 void etcd_manager::rm(const std::string& key) noexcept {
     auto client = m_client.load();
-    client->rm(key).get();
+    client->rm(key);
 }
 
 void etcd_manager::rmdir(const std::string& prefix) noexcept {
     auto client = m_client.load();
-    client->rmdir(prefix, true).get();
+    client->rmdir(prefix, true);
 }
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
@@ -175,7 +175,7 @@ void etcd_manager::remove_watcher(const std::string& prefix) {
 std::string etcd_manager::lock(const std::string& lock_key) {
     auto client = m_client.load();
 
-    auto resp = client->lock_with_lease(lock_key, m_lease).get();
+    auto resp = client->lock_with_lease(lock_key, m_lease);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "getting lock with lock_key " + lock_key +
@@ -185,7 +185,7 @@ std::string etcd_manager::lock(const std::string& lock_key) {
 
 void etcd_manager::unlock(const std::string& unlock_key) {
     auto client = m_client.load();
-    auto resp = client->unlock(unlock_key).get();
+    auto resp = client->unlock(unlock_key);
     if (!resp.is_ok())
         throw std::invalid_argument(
             "releasing lock with unlock_key " + unlock_key +

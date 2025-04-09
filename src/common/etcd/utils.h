@@ -1,7 +1,7 @@
 #pragma once
 
-#include <etcd/Client.hpp>
 #include <etcd/KeepAlive.hpp>
+#include <etcd/SyncClient.hpp>
 #include <etcd/Watcher.hpp>
 #include <memory>
 #include <optional>
@@ -33,7 +33,7 @@ class etcd_manager {
 public:
     using callback_t = std::function<void(const etcd::Response&)>;
     /*
-     * Create etcd::Client, lease, keepalive, and its exception handler to
+     * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
      */
     etcd_manager(const etcd_config& cfg = {}, int lease_timeout = 30);
@@ -125,7 +125,7 @@ public:
 private:
     const etcd_config m_cfg;
     int m_lease_timeout;
-    std::atomic<std::shared_ptr<etcd::Client>> m_client;
+    std::atomic<std::shared_ptr<etcd::SyncClient>> m_client;
     std::unique_ptr<etcd::Watcher> m_watchdog;
 
     int64_t m_lease;
