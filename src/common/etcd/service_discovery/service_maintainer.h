@@ -67,13 +67,13 @@ private:
             std::lock_guard<std::mutex> lk(m_mutex);
 
             switch (get_etcd_action_enum(response.action())) {
-            case etcd_action::create:
+            case etcd_action::CREATE:
                 add(etcd_path, value);
                 break;
-            case etcd_action::set:
+            case etcd_action::SET:
                 set(etcd_path, value);
                 break;
-            case etcd_action::erase:
+            case etcd_action::DELETE:
                 remove(etcd_path, value);
                 break;
             }
