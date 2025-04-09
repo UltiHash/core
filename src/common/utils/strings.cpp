@@ -159,11 +159,19 @@ std::size_t stoul(std::string_view s, std::size_t* pos, int base) {
     std::size_t rv{};
     auto r = std::from_chars(s.begin(), s.end(), rv, base);
 
+    if (r.ec != std::errc()) {
+        throw std::runtime_error("Group state value out of range");
+    }
+
     if (pos) {
         *pos = std::distance(s.begin(), r.ptr);
     }
 
     return rv;
+}
+
+std::size_t ctoul(const char& c, std::size_t* pos, int base) {
+    return stoul(std::string_view(&c, 1), pos, base);
 }
 
 } // namespace uh::cluster

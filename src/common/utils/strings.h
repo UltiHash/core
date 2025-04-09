@@ -182,4 +182,6 @@ std::string unhex(std::string in);
 std::size_t stoul(std::string_view s, std::size_t* pos = nullptr,
                   int base = 10);
 
+std::size_t ctoul(const char& c, std::size_t* pos = nullptr, int base = 10);
+
 } // namespace uh::cluster
