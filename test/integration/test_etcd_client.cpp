@@ -1,6 +1,8 @@
 #define BOOST_TEST_MODULE "etcd tests"
 
-#include <common/etcd/utils.h>
+#include <etcd/Client.hpp>
+#include <etcd/KeepAlive.hpp>
+#include <etcd/Watcher.hpp>
 
 #include "fakeit.hpp"
 
@@ -45,7 +47,6 @@ public:
 protected:
     std::string etcd_address;
     etcd::Client etcd_client;
-    etcd_config cfg;
     etcd::Response response;
     Mock<callback_interface> mock;
 };
