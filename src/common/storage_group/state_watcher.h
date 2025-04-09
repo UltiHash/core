@@ -17,7 +17,7 @@ public:
           m_wg{m_etcd.watch(
               etcd_license_key,
               [this](const etcd::Response& resp) { on_watch(resp); })},
-          m_config{std::make_shared<state>()},
+          m_state{std::make_shared<state>()},
           m_callback{std::move(callback)} {
 
         auto cfg_str = m_etcd.get(etcd_license_key);
@@ -27,10 +27,10 @@ public:
             LOG_INFO() << "storage_group::state saved";
         } else {
             LOG_INFO() << "The coordinator has not yet updated the "
-                          "storage_group_config string";
+                          "storage_group::state string";
         }
     }
-    std::shared_ptr<state> get_config() const { return m_config.load(); }
+    std::shared_ptr<state> get_state() const { return m_state.load(); }
 
 private:
     void on_watch(const etcd::Response& resp) {
@@ -52,12 +52,12 @@ private:
 
     void parse_and_save(std::string_view cfg_str) {
         auto lic = state::create(cfg_str);
-        m_config.store(std::make_shared<state>(lic));
+        m_state.store(std::make_shared<state>(lic));
     }
 
     etcd_manager& m_etcd;
     etcd_manager::watch_guard m_wg;
-    std::atomic<std::shared_ptr<state>> m_config;
+    std::atomic<std::shared_ptr<state>> m_state;
     callback_t m_callback;
 };
 

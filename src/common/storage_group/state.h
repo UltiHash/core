@@ -15,7 +15,7 @@ struct state {
         RECOVERING,
         SIZE
     };
-    enum class storage_state : std::uint8_t { DOWN, NEW, ASSIGNED, SIZE };
+    enum class storage_state : std::uint8_t { NEW, ASSIGNED, DOWN, SIZE };
 
     enum group_state group;
     std::vector<enum storage_state> storages;
