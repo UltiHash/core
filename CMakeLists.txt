@@ -145,14 +145,6 @@ add_compile_options(-Wno-odr)
 add_link_options(-Wno-odr)
 add_compile_options(-pthread)
 
-# Symbols to make compile options same for all targets: 
-# - or you can obmit some libraries from pch build 
-#   if time for building that header is negligible.
-# - You can profile compile-time using `ENABLE_BUILD_TIME_TRACE`.
-add_compile_definitions(-DCPPREST_NO_SSL_LEAK_SUPPRESS)
-add_compile_definitions(-DCPPREST_FORCE_HTTP_LISTENER_ASIO)
-add_compile_definitions(-DCPPREST_FORCE_HTTP_CLIENT_ASIO)
-
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 else()
