@@ -33,7 +33,8 @@ coro<size_t> match_size(dd::cache& storage, std::string_view data, auto frag) {
 
 local_deduplicator::local_deduplicator(
     deduplicator_config config, global_data_view& storage,
-    std::function<storage_group::state()> get_storage_group_state)
+    std::function<std::shared_ptr<storage_group::state>()>
+        get_storage_group_state)
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
       m_cache(m_storage, m_dedupe_conf.global_data_view.read_cache_capacity_l2),

@@ -43,7 +43,7 @@ available.
     contains the port the service is using for communication.
 
 **TBD**: `/<namespace>/storage-groups/<storage_group_id>/storages/<service_id>` \
-  contains state of storage services: -(NEW), o(ASSIGNED). \
+  contains state of storage services: 0(NEW), 1(ASSIGNED). \
   This key is watched by `coordinator`.
 
 **TBD**: `/<namespace>/storage-groups/<storage_group_id>/initialized` \
@@ -52,8 +52,8 @@ available.
 
 **TBD**: `/<namespace>/storage-groups/state/<storage_group_id>` \
   contains state of group and storage services state that storage group manager
-  refered, like `<group_state>,xx-o-o` (x means there's no storage service). \
-  This key is watched by `global_data_view`.
+  refered, like `<group_state>,220101`, 2 means that storage is DOWN, `group_state`
+  will be a single digit number also. This key is watched by `global_data_view`.
 
 ## Configuration parameters
 

@@ -3,11 +3,12 @@
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/network/server.h>
+#include <common/storage_group/state_watcher.h>
 #include <common/telemetry/log.h>
 #include <config.h>
-#include <storage/service.h>
 #include <storage/global_data/default_global_data_view.h>
 #include <storage/interfaces/remote_storage.h>
+#include <storage/service.h>
 
 #include "handler.h"
 
@@ -26,14 +27,17 @@ public:
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       sc.working_dir)),
           m_service_registry(DEDUPLICATOR_SERVICE, m_service_id, m_etcd),
-          m_storage_maintainer(m_etcd,
+          m_storage_maintainer(
+              m_etcd,
               service_factory<storage_interface>(
                   m_ioc,
                   config.global_data_view.storage_service_connection_count)),
+          m_state_watcher(m_etcd),
           m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
                       m_etcd),
-          m_deduplicator(
-              std::make_shared<local_deduplicator>(config, m_data_view)),
+          m_deduplicator(std::make_shared<local_deduplicator>(
+              config, m_data_view,
+              [this]() { return m_state_watcher.get_state(); })),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
@@ -59,6 +63,7 @@ private:
 
     service_maintainer<storage_interface> m_storage_maintainer;
 
+    storage_group::state_watcher m_state_watcher;
     default_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;

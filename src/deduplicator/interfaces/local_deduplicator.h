@@ -16,12 +16,15 @@ struct local_deduplicator : public deduplicator_interface {
 
     local_deduplicator(
         deduplicator_config config, global_data_view& storage,
-        std::function<storage_group::state()> get_storage_group_state = []() {
-            return storage_group::state{
-                .group = storage_group::state::group_state::HEALTHY,
-                .storages = {storage_group::state::storage_state::ASSIGNED},
-            };
-        });
+        std::function<std::shared_ptr<storage_group::state>()>
+            get_storage_group_state = []() {
+                return std::make_shared<storage_group::state>(
+                    storage_group::state{
+                        .group = storage_group::state::group_state::HEALTHY,
+                        .storages =
+                            {storage_group::state::storage_state::ASSIGNED},
+                    });
+            });
 
     coro<dedupe_response> deduplicate(std::string_view data) override;
 
@@ -34,7 +37,8 @@ private:
     dd::cache m_cache;
     fragment_set m_fragment_set;
     worker_pool m_dedupe_workers;
-    std::function<storage_group::state()> m_get_storage_group_state;
+    std::function<std::shared_ptr<storage_group::state>()>
+        m_get_storage_group_state;
     constexpr static std::size_t pursue_size = 64 * KIBI_BYTE;
 };
 } // namespace uh::cluster
