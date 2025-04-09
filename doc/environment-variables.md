@@ -12,8 +12,10 @@ components and describes their purpose.
     be one of the following severity levels: DEBUG, INFO, WARN, ERROR, or FATAL.
 - `UH_LICENSE` - (required) must be filled with a valid json-format UH 
     license (use sample licenses under `ROOT/data/licenses` for testing).
+- `UH_STORAGE_GROUPS` - When set, cluster will be constructed to use storage
+    groups according to the configuration it gave.
 - `UH_OTEL_ENDPOINT` - when set, telemetry data will be pushed to the specified 
-    endpoint using OTLP via gRPC (format: "hostname:port")
+    endpoint using OTLP via gRPC (format: "hostname:port").
 - `UH_WORKING_DIR` - configures the working directory for different services. 
     In specific case of storage service, when multiple working directories are 
     desired, they can be listed and separated by ":".
@@ -27,7 +29,7 @@ components and describes their purpose.
 > **NOTE:** These are ignored when a valid test license is provided through
         `UH_LICENSE`.
 
-- `UH_BACKEND_HOST` - configure host of the backend service. Please fill domain name only like this: 'backend.ultihash.io'
+- `UH_BACKEND_HOST` - configure host of the backend service. Please fill domain name only like this: 'backend.ultihash.io'.
 - `UH_CUSTOMER_ID` - configure customer ID for the backend service.
 - `UH_ACCESS_TOKEN` - configure access token for the backend service.
 
