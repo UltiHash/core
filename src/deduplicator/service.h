@@ -33,8 +33,7 @@ public:
                   m_ioc,
                   config.global_data_view.storage_service_connection_count)),
           m_state_watcher(m_etcd),
-          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer,
-                      [this]() { return m_state_watcher.get_state(); }),
+          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),

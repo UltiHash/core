@@ -87,7 +87,7 @@ public:
     };
 
     /*
-     * Watch given prefix recursively
+     * Watch given prefix "recursively"
      */
     [[nodiscard]] watch_guard watch(const std::string& prefix,
                                     callback_t callback) {

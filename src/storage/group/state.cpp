@@ -1,19 +1,9 @@
 #include <storage/group/state.h>
 
-#include <charconv>
+#include <common/utils/strings.h>
 #include <stdexcept>
 
 namespace uh::cluster::storage_group {
-
-unsigned char_to_int(const char& c) {
-    unsigned ret;
-    auto result = std::from_chars(&c, &c + 1, ret);
-
-    if (result.ec != std::errc()) {
-        throw std::runtime_error("Group state value out of range");
-    }
-    return ret;
-}
 
 state state::create(std::string_view str) {
     static_assert(static_cast<int>(group_state::SIZE) < 10,
@@ -26,7 +16,7 @@ state state::create(std::string_view str) {
 
     state result;
 
-    auto gs = char_to_int(str.front());
+    auto gs = ctoul(str.front());
     if (gs >= static_cast<decltype(gs)>(group_state::SIZE)) {
         throw std::runtime_error("Group state value out of range");
     }
@@ -37,7 +27,7 @@ state state::create(std::string_view str) {
     result.storages.reserve(storage_states_str.size());
 
     for (char c : storage_states_str) {
-        auto ss = char_to_int(c);
+        auto ss = ctoul(c);
         if (ss >= static_cast<int>(storage_state::SIZE)) {
             throw std::runtime_error("Group state value out of range");
         }
