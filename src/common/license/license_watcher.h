@@ -16,36 +16,34 @@ public:
         : m_etcd{etcd},
           m_wg{m_etcd.watch(
               etcd_license_key,
-              [this](const etcd::Response& resp) { on_watch(resp); })},
+              [this](etcd_manager::response resp) { on_watch(resp); })},
           m_license{std::make_shared<license>()},
-          m_callback{std::move(callback)} {
-
-        auto license_str = m_etcd.get(etcd_license_key);
-        if (!license_str.empty()) {
-            parse_and_save(license_str);
-
-            LOG_INFO() << "License saved";
-        } else {
-            LOG_INFO()
-                << "The coordinator has not yet updated the license string";
-        }
-    }
+          m_callback{std::move(callback)} {}
     std::shared_ptr<license> get_license() { return m_license.load(); }
 
 private:
-    void on_watch(const etcd::Response& resp) {
+    void on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << "Watcher has detected a license update";
 
-            const auto& license_str = resp.value().as_string();
-            parse_and_save(license_str);
-
-            LOG_INFO() << "Modified license saved";
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE:
+            case etcd_action::SET: {
+                LOG_INFO() << "Modified license saved";
+                parse_and_save(resp.value);
+                break;
+            }
+            case etcd_action::DELETE:
+            default:
+                throw std::runtime_error("invalid etcd action: " + resp.action);
+            }
 
             if (m_callback) {
-                m_callback(license_str);
+                m_callback(resp.value);
             }
         } catch (const std::exception& e) {
+            m_license.store(std::make_shared<license>());
             LOG_WARN() << "error updating license: " << e.what();
         }
     }

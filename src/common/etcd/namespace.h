@@ -27,6 +27,7 @@ enum class etcd_action : uint8_t {
     CREATE = 0,
     SET,
     DELETE,
+    GET,
 };
 
 inline etcd_action get_etcd_action_enum(const std::string& action_str) {
@@ -34,6 +35,7 @@ inline etcd_action get_etcd_action_enum(const std::string& action_str) {
         {"create", etcd_action::CREATE},
         {"set", etcd_action::SET},
         {"delete", etcd_action::DELETE},
+        {"get", etcd_action::GET},
     };
 
     if (const auto f = etcd_action.find(action_str); f != etcd_action.cend())
