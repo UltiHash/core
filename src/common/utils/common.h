@@ -59,10 +59,9 @@ constexpr const char* ENV_CFG_DB_PASS = "UH_DB_PASS";
 constexpr const char* ENV_CFG_ETCD_USERNAME = "UH_ETCD_USERNAME";
 constexpr const char* ENV_CFG_ETCD_PASSWORD = "UH_ETCD_PASSWORD";
 constexpr const char* ENV_CFG_NO_DEDUPE = "UH_NO_DEDUPE";
+constexpr const char* ENV_CFG_STORAGE_SERVICE_ID = "UH_STORAGE_SERVICE_ID";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
-
-constexpr size_t RECOVERY_CHUNK_SIZE = 16 * MEBI_BYTE;
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
