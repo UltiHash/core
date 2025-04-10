@@ -22,17 +22,9 @@ public:
         : m_service_factory(std::move(service_factory)),
           m_watch_guard{
               etcd.watch(get_service_root_path(service_interface::service_role),
-                         [this](const etcd::Response& response) {
-                             return handle_state_changes(response);
-                         })} {
-
-        auto key_vals =
-            etcd.ls(get_service_root_path(service_interface::service_role));
-
-        for (auto& [key, val] : key_vals) {
-            add(key, val);
-        }
-    }
+                         [this](etcd_manager::response resp) {
+                             return handle_state_changes(resp);
+                         })} {}
 
     void add_observer(service_observer<service_interface>& observer) {
 
@@ -55,27 +47,33 @@ public:
     [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
 
 private:
-    void handle_state_changes(const etcd::Response& response) {
+    void handle_state_changes(etcd_manager::response resp) {
 
         try {
-            const auto& etcd_path = response.value().key();
-            const auto& value = response.value().as_string();
+            const auto& etcd_path = resp.key;
 
-            LOG_DEBUG() << "action: " << response.action()
-                        << ", key: " << etcd_path << ", value: " << value;
+            LOG_DEBUG() << "action: " << resp.action << ", key: " << etcd_path;
 
             std::lock_guard<std::mutex> lk(m_mutex);
 
-            switch (get_etcd_action_enum(response.action())) {
-            case etcd_action::CREATE:
-                add(etcd_path, value);
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE: {
+                LOG_DEBUG() << "value: " << resp.value;
+                add(etcd_path, resp.value);
                 break;
-            case etcd_action::SET:
-                set(etcd_path, value);
+            }
+            case etcd_action::SET: {
+                LOG_DEBUG() << "value: " << resp.value;
+                set(etcd_path, resp.value);
                 break;
-            case etcd_action::DELETE:
-                remove(etcd_path, value);
+            }
+            case etcd_action::DELETE: {
+                remove(etcd_path);
                 break;
+            }
+            default:
+                LOG_WARN() << "invalid etcd action: " << resp.action;
             }
         } catch (const std::exception& e) {
             LOG_WARN() << "error while handling service state change: "
@@ -83,6 +81,8 @@ private:
         }
     }
 
+    // TODO: Check if this function is multi-thread safe, since it is called by
+    // etcd watcher.
     void add(const std::string& path, const std::string& value) {
         const auto id = get_id(path);
 
@@ -120,11 +120,11 @@ private:
     }
 
     void set(const std::string& path, const std::string& value) {
-        remove(path, value);
+        remove(path);
         add(path, value);
     }
 
-    void remove(const std::string& path, const std::string&) {
+    void remove(const std::string& path) {
 
         const auto id = get_id(path);
 
