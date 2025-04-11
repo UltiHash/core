@@ -58,11 +58,11 @@ available.
 ## Configuration parameters
 
 **TBD**: `/<namespace>/storage-groups/config/<storage_group_id>`
-  contains configuration of storage groups. `coordinator` reads this key.
+  contains configuration of storage groups. `coordinator` writes this key.
 
 **TBD**: `/<namespace>/storage-groups/assignments/<service_id>` \
   contains the storage group ID to which a storage service belongs. \
-  Each storage services reads this key.
+  The `coordinator` writes this key, and each storage service reads it.
 
 ## Service ID
 
