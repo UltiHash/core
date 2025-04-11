@@ -24,16 +24,18 @@ static constexpr const char* etcd_current_id_prefix_key =
 static constexpr const char* etcd_license_key = "/" NAMESPACE "/config/license";
 
 enum class etcd_action : uint8_t {
-    create = 0,
-    set,
-    erase,
+    CREATE = 0,
+    SET,
+    DELETE,
+    GET,
 };
 
 inline etcd_action get_etcd_action_enum(const std::string& action_str) {
     static const std::map<std::string, etcd_action> etcd_action = {
-        {"create", etcd_action::create},
-        {"set", etcd_action::set},
-        {"delete", etcd_action::erase},
+        {"create", etcd_action::CREATE},
+        {"set", etcd_action::SET},
+        {"delete", etcd_action::DELETE},
+        {"get", etcd_action::GET},
     };
 
     if (const auto f = etcd_action.find(action_str); f != etcd_action.cend())
