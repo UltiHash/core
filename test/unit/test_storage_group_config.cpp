@@ -4,7 +4,7 @@
 
 #include "test_config.h"
 
-#include <common/storage_group_config/config.h>
+#include <storage/group/config.h>
 
 #include <nlohmann/json.hpp>
 

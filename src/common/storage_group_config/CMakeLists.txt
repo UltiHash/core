@@ -1,2 +1,0 @@
-add_library(storage_group_config config.cpp)
-target_link_libraries(storage_group_config nlohmann_json)

@@ -9,7 +9,6 @@ target_link_libraries(conf
                       network
                       license
                       CLI11::CLI11
-                      storage_group_config
                       coordinator
                       entrypoint
                       deduplicator
