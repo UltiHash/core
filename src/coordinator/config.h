@@ -3,7 +3,7 @@
 #include <common/db/config.h>
 #include <common/license/backend_client.h>
 #include <common/license/license.h>
-#include <common/storage_group_config/config.h>
+#include <storage/group/config.h>
 
 namespace uh::cluster {
 
