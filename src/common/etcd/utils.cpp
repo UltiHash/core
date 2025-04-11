@@ -163,7 +163,7 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
     auto ls_resp = client->ls(prefix);
     if (ls_resp.is_ok()) {
         auto values = ls_resp.values();
-        for (auto i = 0; i < values.size(); ++i) {
+        for (auto i = 0u; i < values.size(); ++i) {
             auto val = values[i];
             if (ls_resp.is_ok()) {
                 callback(
