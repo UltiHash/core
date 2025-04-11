@@ -62,8 +62,10 @@ service::service(const service_config& sc, entrypoint_config config)
           m_etcd,
           service_factory<storage_interface>(
               m_ioc,
-              m_config.global_data_view.storage_service_connection_count)),
-      m_data_view(m_config.global_data_view, m_ioc, m_storage_maintainer),
+              m_config.global_data_view.storage_service_connection_count),
+          m_load_balancer, m_storage_index),
+      m_data_view(m_config.global_data_view, m_ioc, m_load_balancer,
+                  m_storage_index),
       m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),
@@ -93,7 +95,6 @@ service::service(const service_config& sc, entrypoint_config config)
 }
 
 void service::run() {
-
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
         register_gauge_callback(
             [this]() { return m_limits.get_storage_size(); },

@@ -31,9 +31,10 @@ public:
               m_etcd,
               service_factory<storage_interface>(
                   m_ioc,
-                  config.global_data_view.storage_service_connection_count)),
-          m_state_watcher(m_etcd),
-          m_data_view(config.global_data_view, m_ioc, m_storage_maintainer),
+                  config.global_data_view.storage_service_connection_count),
+              m_load_balancer, m_storage_index),
+          m_data_view(config.global_data_view, m_ioc, m_load_balancer,
+                      m_storage_index),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_data_view)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
@@ -59,9 +60,9 @@ private:
 
     service_registry m_service_registry;
 
+    service_load_balancer<storage_interface> m_load_balancer;
+    storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_maintainer;
-
-    storage_group::state_watcher m_state_watcher;
     default_global_data_view m_data_view;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;

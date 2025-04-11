@@ -11,7 +11,6 @@ class dedupe_array : public deduplicator_interface {
 public:
     dedupe_array(boost::asio::io_context& ioc, etcd_manager& etcd,
                  std::size_t connections);
-    ~dedupe_array() override;
 
     coro<dedupe_response> deduplicate(std::string_view data) override;
 

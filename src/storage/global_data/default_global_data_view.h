@@ -29,7 +29,8 @@ public:
      */
     explicit default_global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
-        service_maintainer<storage_interface>& storage_maintainer);
+        service_load_balancer<storage_interface>& load_balancer,
+        storage_index& storage_index);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -137,15 +138,12 @@ public:
      */
     coro<std::size_t> get_used_space();
 
-    ~default_global_data_view() noexcept;
-
 private:
     boost::asio::io_context& m_io_service;
     global_data_view_config m_config;
 
-    service_maintainer<storage_interface>& m_service_maintainer;
-    service_load_balancer<storage_interface> m_load_balancer;
-    storage_index m_storage_index;
+    service_load_balancer<storage_interface>& m_load_balancer;
+    storage_index& m_storage_index;
 };
 
 } // end namespace uh::cluster

@@ -17,7 +17,7 @@ public:
         : m_etcd{etcd},
           m_wg{m_etcd.watch(
               get_storage_group_state_path(),
-              [this](const etcd::Response& resp) { on_watch(resp); })} {
+              [this](etcd_manager::response resp) { on_watch(resp); })} {
         // TODO: m_states.reserve(); according to the number of groups
     }
     std::shared_ptr<state> get_state(int id) const {
@@ -25,12 +25,12 @@ public:
     }
 
 private:
-    void on_watch(const etcd::Response& resp) {
+    void on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << "Watcher has detected a group state update on group "
-                       << resp.value().key();
-            auto group_id = stoul(resp.value().key());
-            parse_and_save(group_id, resp.value().as_string());
+                       << resp.value;
+            auto group_id = stoul(resp.key);
+            parse_and_save(group_id, resp.value);
 
             LOG_INFO() << "Modified storage_group::state for group saved";
 
