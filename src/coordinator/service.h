@@ -61,6 +61,8 @@ public:
             for (const auto& m : cfg.members) {
                 m_etcd.put(get_storage_to_storage_group_map_path(m),
                            std::to_string(i));
+                m_etcd.put(get_storage_to_storage_group_map_path(i),
+                           std::to_string(m));
             }
             ++i;
         }
