@@ -27,19 +27,12 @@ struct fixture {
     service_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
-    uh::cluster::service_maintainer<storage_interface> make_services() {
-        return uh::cluster::service_maintainer<storage_interface>(
-            etcd, service_factory<storage_interface>(ioc, 2));
-    }
-
     fixture()
         : service_id(get_service_id(
               etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
-          service_maintainer(make_services()) {
-        service_maintainer.add_observer(services);
-        service_maintainer.add_observer(load_balancer);
-    }
+          service_maintainer(etcd, service_factory<storage_interface>(ioc, 2),
+                             services, load_balancer) {}
 };
 
 BOOST_FIXTURE_TEST_CASE(Empty, fixture) {
