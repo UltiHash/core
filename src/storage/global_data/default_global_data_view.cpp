@@ -1,20 +1,17 @@
 #include "default_global_data_view.h"
 
+#include <common/telemetry/log.h>
 #include <storage/address_utils.h>
 
 namespace uh::cluster {
 default_global_data_view::default_global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
-    service_maintainer<storage_interface>& storage_maintainer,
-    etcd_manager& etcd)
+    service_load_balancer<storage_interface>& load_balancer,
+    storage_index& storage_index)
     : m_io_service(ioc),
       m_config(config),
-      m_service_maintainer(storage_maintainer),
-      m_load_balancer{SERVICE_GET_TIMEOUT} {
-
-    m_service_maintainer.add_observer(m_load_balancer);
-    m_service_maintainer.add_observer(m_storage_index);
-
+      m_load_balancer{load_balancer},
+      m_storage_index{storage_index} {
     m_load_balancer.get();
 }
 
@@ -111,11 +108,6 @@ coro<std::size_t> default_global_data_view::unlink(const address& addr) {
             freed_bytes += co_await svc->unlink(info.addr);
         });
     co_return freed_bytes;
-}
-
-default_global_data_view::~default_global_data_view() noexcept {
-    m_service_maintainer.remove_observer(m_load_balancer);
-    m_service_maintainer.remove_observer(m_storage_index);
 }
 
 } // namespace uh::cluster
