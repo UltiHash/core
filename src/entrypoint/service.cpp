@@ -64,8 +64,6 @@ service::service(const service_config& sc, entrypoint_config config)
               m_ioc,
               m_config.global_data_view.storage_service_connection_count),
           m_load_balancer, m_storage_index),
-      // TODO: create data_view first, get multiple observers from this and
-      // create storage maintainer using them.
       m_data_view(m_config.global_data_view, m_ioc, m_load_balancer,
                   m_storage_index),
       m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
