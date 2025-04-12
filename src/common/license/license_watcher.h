@@ -14,11 +14,11 @@ public:
     using callback_t = std::function<void(std::string_view)>;
     license_watcher(etcd_manager& etcd, callback_t callback = nullptr)
         : m_etcd{etcd},
+          m_callback{std::move(callback)},
+          m_license{std::make_shared<license>()},
           m_wg{m_etcd.watch(
               etcd_license_key,
-              [this](etcd_manager::response resp) { on_watch(resp); })},
-          m_license{std::make_shared<license>()},
-          m_callback{std::move(callback)} {}
+              [this](etcd_manager::response resp) { on_watch(resp); })} {}
     std::shared_ptr<license> get_license() { return m_license.load(); }
 
 private:
@@ -36,7 +36,9 @@ private:
             }
             case etcd_action::DELETE:
             default:
-                throw std::runtime_error("invalid etcd action: " + resp.action);
+                LOG_INFO() << "License deleted";
+                m_license.store(std::make_shared<license>());
+                break;
             }
 
             if (m_callback) {
@@ -60,9 +62,9 @@ private:
     }
 
     etcd_manager& m_etcd;
-    etcd_manager::watch_guard m_wg;
-    std::atomic<std::shared_ptr<license>> m_license;
     callback_t m_callback;
+    std::atomic<std::shared_ptr<license>> m_license;
+    etcd_manager::watch_guard m_wg;
 };
 
 } // namespace uh::cluster
