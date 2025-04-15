@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <common/etcd/utils.h>
+#include <common/telemetry/log.h>
 #include <functional>
 #include <stop_token>
 #include <thread>
@@ -10,6 +11,12 @@ namespace uh::cluster {
 
 class candidate {
 public:
+    /*
+     * @param etcd: etcd_manager instance to use for campaigning
+     * @param name: name of the election
+     * @param value: value to set if this candidate wins the election
+     * @param callback: function to call when this candidate wins the election
+     */
     candidate(etcd_manager& etcd, const std::string& name, std::string value,
               std::function<void(void)> callback = nullptr)
         : m_etcd{etcd},
@@ -35,7 +42,7 @@ public:
 private:
     void worker(std::stop_token token) {
         while (token.stop_requested() == false) {
-            std::cout << "waiting for election" << std::endl;
+            LOG_DEBUG() << "waiting for election";
             auto resp = m_etcd.campaign(m_name, m_value);
             // NOTE: While conducting a new election (waiting for the function
             // call above), we do not need to be concerned about increasing the
@@ -43,23 +50,23 @@ private:
             // write requests will fail during their allocation call.
 
             if (resp.is_grpc_timeout()) {
-                std::cout << "candidate experienced timeout" << std::endl;
+                LOG_DEBUG() << "candidate experienced timeout";
                 continue;
             }
 
             if (!resp.is_ok()) {
-                std::cout << "candidate failed" << std::endl;
+                LOG_WARN() << "candidate failed";
                 continue;
             }
 
-            std::cout << "candidate won the election" << std::endl;
+            LOG_INFO() << "candidate won the election";
             if (m_callback)
                 std::move(m_callback)();
             std::cout << "key: " << resp.value().key()
                       << " value: " << resp.value().as_string() << std::endl;
             m_campaign_response.store(std::make_shared<etcd::Response>(resp),
                                       std::memory_order_release);
-            break; // no re-election
+            break; // No re-election. Thread will expire.
         }
     }
 
