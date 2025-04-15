@@ -230,6 +230,7 @@ BOOST_FIXTURE_TEST_CASE(concurrent_campaign, fixture) {
     auto lease_id = keepalive->Lease();
 
     auto resp1 = etcd_client.campaign("test", lease_id, "1");
+    BOOST_TEST(1 == resp1.is_ok());
     BOOST_TEST(0 == resp1.error_code());
     std::clog << "key " << resp1.value().key() << " becomes the leader"
               << std::endl;
@@ -238,6 +239,7 @@ BOOST_FIXTURE_TEST_CASE(concurrent_campaign, fixture) {
         auto keepalive = etcd_client.leasekeepalive(60);
         auto lease_id = keepalive->Lease();
         auto resp1 = etcd_client.campaign("test", lease_id, "1");
+        BOOST_TEST(1 == resp1.is_ok());
         BOOST_TEST(0 == resp1.error_code());
         std::clog << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
         std::clog << "Waiting follower becomes the leader" << std::endl;

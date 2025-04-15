@@ -40,6 +40,17 @@ public:
     ~etcd_manager();
 
     /*
+     * Election
+     */
+    etcd::Response campaign(std::string const& name, std::string const& value);
+    void resign(std::string const& name, std::string const& key,
+                int64_t revision);
+    etcd::Response leader(std::string const& name);
+    void proclaim(std::string const& name, std::string const& key,
+                  int64_t revision, std::string const& value);
+    std::unique_ptr<etcd::SyncClient::Observer>
+    observe(std::string const& name);
+    /*
      * Save key value pair
      */
     void put(const std::string& key, const std::string& value);

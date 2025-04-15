@@ -2,12 +2,14 @@
 
 #include "test_config.h"
 
-#include <common/etcd/utils.h>
 #include <common/etcd/service.h>
+#include <common/etcd/utils.h>
 #include <storage/global_data/default_global_data_view.h>
 #include <storage/service.h>
 
 #include <util/temp_directory.h>
+
+using namespace std::chrono_literals;
 
 namespace uh::cluster {
 class global_data_view_fixture {
@@ -60,7 +62,7 @@ public:
             }
         });
 
-        wait_for_true(ETCD_TIMEOUT, std::chrono::seconds(1), [this]() {
+        wait_for_true(300s, 1s, [this]() {
             return m_storage_services.size() == m_storage_instances.size();
         });
     }
