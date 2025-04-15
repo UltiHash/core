@@ -204,9 +204,25 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
                                     " already exists");
     }
 
+    auto ls_resp = client->ls(prefix);
+    if (ls_resp.is_ok()) {
+        auto values = ls_resp.values();
+        for (auto i = 0u; i < values.size(); ++i) {
+            auto val = values[i];
+            callback(response(ls_resp.action(), val.key(), val.as_string()));
+        }
+    }
+
+    auto wrapper = [cb = std::move(callback)](const etcd::Response& resp) {
+        auto val = resp.value();
+        if (resp.is_ok()) {
+            cb(response(resp.action(), val.key(), val.as_string()));
+        }
+    };
     m_watcher_entries[prefix] = watcher_entry(
-        callback, std::make_unique<etcd::Watcher>(*client, prefix,
-                                                  std::move(callback), true));
+        wrapper,
+        std::make_unique<etcd::Watcher>(*client, prefix, ls_resp.index() + 1,
+                                        std::move(wrapper), true));
 }
 
 void etcd_manager::remove_watcher(const std::string& prefix) {

@@ -14,38 +14,38 @@ public:
     using callback_t = std::function<void(std::string_view)>;
     license_watcher(etcd_manager& etcd, callback_t callback = nullptr)
         : m_etcd{etcd},
+          m_callback{std::move(callback)},
+          m_license{std::make_shared<license>()},
           m_wg{m_etcd.watch(
               etcd_license_key,
-              [this](const etcd::Response& resp) { on_watch(resp); })},
-          m_license{std::make_shared<license>()},
-          m_callback{std::move(callback)} {
-
-        auto license_str = m_etcd.get(etcd_license_key);
-        if (!license_str.empty()) {
-            parse_and_save(license_str);
-
-            LOG_INFO() << "License saved";
-        } else {
-            LOG_INFO()
-                << "The coordinator has not yet updated the license string";
-        }
-    }
+              [this](etcd_manager::response resp) { on_watch(resp); })} {}
     std::shared_ptr<license> get_license() { return m_license.load(); }
 
 private:
-    void on_watch(const etcd::Response& resp) {
+    void on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << "Watcher has detected a license update";
 
-            const auto& license_str = resp.value().as_string();
-            parse_and_save(license_str);
-
-            LOG_INFO() << "Modified license saved";
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE:
+            case etcd_action::SET: {
+                LOG_INFO() << "Modified license saved";
+                parse_and_save(resp.value);
+                break;
+            }
+            case etcd_action::DELETE:
+            default:
+                LOG_INFO() << "License deleted";
+                m_license.store(std::make_shared<license>());
+                break;
+            }
 
             if (m_callback) {
-                m_callback(license_str);
+                m_callback(resp.value);
             }
         } catch (const std::exception& e) {
+            m_license.store(std::make_shared<license>());
             LOG_WARN() << "error updating license: " << e.what();
         }
     }
@@ -62,9 +62,9 @@ private:
     }
 
     etcd_manager& m_etcd;
-    etcd_manager::watch_guard m_wg;
-    std::atomic<std::shared_ptr<license>> m_license;
     callback_t m_callback;
+    std::atomic<std::shared_ptr<license>> m_license;
+    etcd_manager::watch_guard m_wg;
 };
 
 } // namespace uh::cluster

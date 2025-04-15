@@ -31,7 +31,12 @@ using namespace std::chrono_literals;
  */
 class etcd_manager {
 public:
-    using callback_t = std::function<void(const etcd::Response&)>;
+    struct response {
+        const std::string& action;
+        const std::string& key;
+        const std::string& value;
+    };
+    using callback_t = std::function<void(response resp)>;
     /*
      * Create etcd::SyncClient, lease, keepalive, and its exception handler to
      * detect connection failure.
