@@ -11,15 +11,14 @@ class dedupe_array : public deduplicator_interface {
 public:
     dedupe_array(boost::asio::io_context& ioc, etcd_manager& etcd,
                  std::size_t connections);
-    ~dedupe_array() override;
 
     coro<dedupe_response> deduplicate(std::string_view data) override;
 
 private:
     boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
-    service_maintainer<deduplicator_interface> m_dedupe_maintainer;
     service_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
+    service_maintainer<deduplicator_interface> m_dedupe_maintainer;
 };
 
 } // namespace uh::cluster

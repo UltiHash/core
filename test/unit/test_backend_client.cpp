@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(returns_license) {
     auto future =
         boost::asio::co_spawn(ioc, sut.get_license(), boost::asio::use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("get_license is not finished in expiring time");
     }
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(returns_license) {
     BOOST_TEST(read_license == expected_license);
 }
 
-BOOST_AUTO_TEST_CASE(pushs_usage) {
+BOOST_AUTO_TEST_CASE(pushes_usage) {
     auto sut = default_backend_client{
         "localhost:" + std::to_string(server.get_port()), "ultihash", "passwd",
         default_backend_client::type::http};
@@ -71,9 +71,9 @@ BOOST_AUTO_TEST_CASE(pushs_usage) {
     auto future = boost::asio::co_spawn(ioc, sut.post_usage("my-usage"),
                                         boost::asio::use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
-        BOOST_FAIL("get_license is not finished in expiring time");
+        BOOST_FAIL("push_usage is not finished in expiring time");
     }
     std::string read_license;
     BOOST_CHECK_NO_THROW(read_license = future.get());

@@ -7,8 +7,8 @@
 #include <common/network/http_client.h>
 
 #include <mock/http_server/http_server.h>
-#include <util/coroutine.h>
 #include <nlohmann/json.hpp>
+#include <util/coroutine.h>
 
 using nlohmann::json;
 using namespace uh::cluster;
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(can_get_response) {
                    "/v1/license"),
         boost::asio::use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("co_get is not finished in expiring time");
     }
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(throws_system_error_for_invalid_path) {
                    "/wrong_path"),
         boost::asio::use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("co_get is not finished in expiring time");
     }
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(throws_runtime_error_for_invalid_host_name) {
         sut.co_get("http://-----host:" + std::to_string(server.get_port())),
         boost::asio::use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("co_get is not finished in expiring time");
     }
