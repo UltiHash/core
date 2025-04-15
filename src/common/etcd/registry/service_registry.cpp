@@ -10,9 +10,9 @@ namespace uh::cluster {
 
 service_registry::service_registry(uh::cluster::role role, std::size_t index,
                                    etcd_manager& etcd)
-    : m_service_role(role),
+    : m_etcd(etcd),
       m_id(index),
-      m_etcd(etcd) {}
+      m_service_role(role) {}
 
 service_registry::~service_registry() {
     std::string announced_key_base = get_announced_path(m_service_role, m_id);

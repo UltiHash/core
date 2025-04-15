@@ -93,16 +93,15 @@ std::size_t register_storage_service_id(etcd_manager& etcd,
 
     const auto lock = etcd.get_lock_guard(etcd_storage_lock_key);
 
-    try {
-        etcd.get(current_id_key);
-    } catch (const std::exception&) {
-        throw std::runtime_error(
-            "another storage service instance with the same id '" +
-            std::to_string(id) +
-            "' has already been registered to the cluster");
+    std::size_t current_id = id;
+    while (etcd.has(current_id_key)) {
+        current_id++;
+        current_id_key =
+            etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
     }
-
-    etcd.put(current_id_key, "registered");
+    current_id_key =
+        etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
+    etcd.put(current_id_key, "1");
     return id;
 }
 

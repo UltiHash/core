@@ -153,7 +153,7 @@ CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
 
     rv->add_option("--storage-service-id", cfg.service_id,
                    "id of the storage service instance")
-        ->required()
+        ->default_val(cfg.service_id)
         ->envname(ENV_CFG_STORAGE_SERVICE_ID);
 
     return rv;

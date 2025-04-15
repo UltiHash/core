@@ -1,6 +1,7 @@
 add_library(etcd
-            registry/service_registry.cpp
             registry/service_id.cpp
+            registry/service_registry.cpp
+            registry/storage_registry.cpp
             namespace.cpp
             utils.cpp)
 
