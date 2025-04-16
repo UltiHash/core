@@ -75,19 +75,7 @@ std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
 }
 
 std::size_t register_storage_service_id(etcd_manager& etcd,
-                                        const std::size_t id,
-                                        const std::filesystem::path& data_dir) {
-    auto id_file =
-        data_dir / get_service_string(STORAGE_SERVICE) / IDENTITY_FILE_NAME;
-
-    auto [success, persisted_id] = read_id_from_disk(id_file);
-    if (success) {
-        throw std::runtime_error("storage services may not be re-started with "
-                                 "a different id (previously id = '" +
-                                 std::to_string(persisted_id) +
-                                 "', now id = '" + std::to_string(id) + "')");
-    }
-
+                                        const std::size_t id) {
     std::string current_id_key =
         etcd_registered_storage_ids_prefix_key + std::to_string(id);
 
@@ -99,10 +87,11 @@ std::size_t register_storage_service_id(etcd_manager& etcd,
         current_id_key =
             etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
     }
+
     current_id_key =
         etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
     etcd.put(current_id_key, "1");
-    return id;
+    return current_id;
 }
 
 } // namespace uh::cluster
