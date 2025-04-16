@@ -27,7 +27,7 @@ public:
 
 private:
     const size_t m_group_id;
-    const std::filesystem::path& m_working_dir;
+    const std::filesystem::path m_working_dir;
     storage_state m_state = storage_state::NEW;
 
     bool read_state_from_disk(const std::filesystem::path& state_file);
