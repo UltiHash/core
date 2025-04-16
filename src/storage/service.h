@@ -6,7 +6,7 @@
 #include "config.h"
 #include "handler.h"
 #include <common/etcd/registry/service_id.h>
-#include <common/etcd/registry/service_registry.h>
+#include <common/etcd/registry/storage_registry.h>
 #include <common/etcd/service.h>
 #include <common/license/license_watcher.h>
 #include <common/network/server.h>
@@ -20,13 +20,13 @@ public:
         : m_ioc(sc.server.threads),
           m_etcd{service.etcd_config},
           m_license_watcher(m_etcd),
-          m_service_id(get_service_id(m_etcd,
-                                      get_service_string(STORAGE_SERVICE),
-                                      service.working_dir)),
+          m_service_id(register_storage_service_id(m_etcd, sc.service_id)),
           m_storage(std::make_shared<local_storage>(m_service_id, sc.data_store,
                                                     sc.m_data_store_roots)),
-          m_service_registry(STORAGE_SERVICE, m_service_id, m_etcd),
-          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
+          m_storage_registry(m_service_id, 0, m_etcd, service.working_dir),
+          m_server(sc.server,
+                   std::make_unique<handler>(*m_storage, m_storage_registry),
+                   m_ioc) {}
 
     void run() {
         metric<storage_available_space_gauge, byte, int64_t>::
@@ -60,7 +60,7 @@ public:
                    int64_t>::remove_gauge_callback();
         });
 
-        m_service_registry.register_service(m_server.get_server_config());
+        m_storage_registry.register_service(m_server.get_server_config());
         m_server.run();
     }
 
@@ -76,7 +76,7 @@ private:
     license_watcher m_license_watcher;
     std::size_t m_service_id;
     std::shared_ptr<local_storage> m_storage;
-    service_registry m_service_registry;
+    storage_registry m_storage_registry;
     server m_server;
 };
 } // namespace uh::cluster::storage

@@ -72,6 +72,11 @@ available.
 `/<namespace>/config/class/cluster/current_id/<service_class>` \
     next ID value for services of type `<service_class>`.
 
+`/<namespace>/config/class/storage/lock` \
+used during storage service ID registration to synchronize access to registered ids.
+
+`/<namespace>/config/class/storage/registered_ids/<service_id>` \
+denotes registered storage `<service_id>`s to ensure that no two service instances are started with the same `<service_id>`.
 
 ## Cluster License
 
