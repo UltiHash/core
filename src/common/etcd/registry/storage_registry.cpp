@@ -24,8 +24,8 @@ storage_registry::~storage_registry() {
         get_storage_to_storage_group_map_path(m_id);
     const std::string storage_state_path =
         get_storage_groups_assigned_storages_path(m_group_id, m_id);
-    m_etcd.rmdir(storage_group_path);
-    m_etcd.rmdir(storage_state_path);
+    m_etcd.rm(storage_group_path);
+    m_etcd.rm(storage_state_path);
 }
 
 void storage_registry::register_service(const server_config& config) {
