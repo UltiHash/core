@@ -5,7 +5,7 @@
 #include <common/service_interfaces/service_factory.h>
 #include <common/telemetry/log.h>
 
-#include <list>
+#include <vector>
 
 namespace uh::cluster {
 
@@ -17,65 +17,51 @@ struct service_endpoint {
 template <typename service_interface> class service_maintainer {
 
 public:
+    template <typename... Observers>
     service_maintainer(etcd_manager& etcd,
-                       service_factory<service_interface> service_factory)
+                       service_factory<service_interface> service_factory,
+                       Observers&... observers)
         : m_service_factory(std::move(service_factory)),
+          m_observers{std::ref(observers)...},
           m_watch_guard{
               etcd.watch(get_service_root_path(service_interface::service_role),
-                         [this](const etcd::Response& response) {
-                             return handle_state_changes(response);
+                         [this](etcd_manager::response resp) {
+                             return handle_state_changes(resp);
                          })} {
-
-        auto key_vals =
-            etcd.ls(get_service_root_path(service_interface::service_role));
-
-        for (auto& [key, val] : key_vals) {
-            add(key, val);
-        }
-    }
-
-    void add_observer(service_observer<service_interface>& observer) {
-
-        std::lock_guard l(m_mutex);
-        for (const auto& [id, cl] : m_clients) {
-            observer.add_client(id, cl);
-        }
-
-        m_observers.emplace_back(observer);
-    }
-
-    void remove_observer(service_observer<service_interface>& observer) {
-        std::lock_guard l(m_mutex);
-        m_observers.remove_if(
-            [&observer](const service_observer<service_interface>& o) {
-                return &observer == &o;
-            });
+        static_assert((std::is_base_of_v<service_observer<service_interface>,
+                                         Observers> &&
+                       ...),
+                      "All observers must be derived from BaseObserver");
     }
 
     [[nodiscard]] size_t size() const noexcept { return m_clients.size(); }
 
 private:
-    void handle_state_changes(const etcd::Response& response) {
+    void handle_state_changes(etcd_manager::response resp) {
 
         try {
-            const auto& etcd_path = response.value().key();
-            const auto& value = response.value().as_string();
+            const auto& etcd_path = resp.key;
 
-            LOG_DEBUG() << "action: " << response.action()
-                        << ", key: " << etcd_path << ", value: " << value;
+            LOG_DEBUG() << "action: " << resp.action << ", key: " << etcd_path;
 
-            std::lock_guard<std::mutex> lk(m_mutex);
-
-            switch (get_etcd_action_enum(response.action())) {
-            case etcd_action::create:
-                add(etcd_path, value);
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE: {
+                LOG_DEBUG() << "value: " << resp.value;
+                add(etcd_path, resp.value);
                 break;
-            case etcd_action::set:
-                set(etcd_path, value);
+            }
+            case etcd_action::SET: {
+                LOG_DEBUG() << "value: " << resp.value;
+                set(etcd_path, resp.value);
                 break;
-            case etcd_action::erase:
-                remove(etcd_path, value);
+            }
+            case etcd_action::DELETE: {
+                remove(etcd_path);
                 break;
+            }
+            default:
+                LOG_WARN() << "invalid etcd action: " << resp.action;
             }
         } catch (const std::exception& e) {
             LOG_WARN() << "error while handling service state change: "
@@ -83,6 +69,8 @@ private:
         }
     }
 
+    // TODO: Check if this function is multi-thread safe, since it is called by
+    // etcd watcher.
     void add(const std::string& path, const std::string& value) {
         const auto id = get_id(path);
 
@@ -120,11 +108,11 @@ private:
     }
 
     void set(const std::string& path, const std::string& value) {
-        remove(path, value);
+        remove(path);
         add(path, value);
     }
 
-    void remove(const std::string& path, const std::string&) {
+    void remove(const std::string& path) {
 
         const auto id = get_id(path);
 
@@ -157,14 +145,13 @@ private:
         }
     }
 
-    std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::map<std::size_t, service_endpoint> m_detected_service_endpoints;
 
     service_factory<service_interface> m_service_factory;
-    etcd_manager::watch_guard m_watch_guard;
-    std::list<std::reference_wrapper<service_observer<service_interface>>>
+    std::vector<std::reference_wrapper<service_observer<service_interface>>>
         m_observers;
+    etcd_manager::watch_guard m_watch_guard;
 };
 
 } // namespace uh::cluster

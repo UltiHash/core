@@ -8,8 +8,8 @@
 
 #include <boost/beast/http/status.hpp>
 #include <mock/http_server/http_server.h>
-#include <util/coroutine.h>
 #include <nlohmann/json.hpp>
+#include <util/coroutine.h>
 
 using nlohmann::json;
 using namespace uh::cluster;
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(can_get_through_http_and_basic_auth_with_using_future) {
         "http://localhost:" + std::to_string(server.get_port()) + "/v1/license",
         use_future);
 
-    if (future.wait_for(std::chrono::seconds(2)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(can_get_through_http_and_basic_auth_with_using_awaitable) {
                       use_awaitable),
         use_future);
 
-    if (future.wait_for(std::chrono::seconds(5)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(can_get_through_http_and_basic_auth_with_using_callback) {
                       "/v1/license",
                   [&](auto resp) { promise.set_value(resp); });
 
-    if (future.wait_for(std::chrono::seconds(5)) ==
+    if (future.wait_for(std::chrono::seconds(4)) ==
         std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
