@@ -18,7 +18,7 @@ namespace uh::cluster {
 class callback_interface {
 public:
     virtual ~callback_interface() = default;
-    virtual void handle_state_changes(const etcd::Response& response) = 0;
+    virtual void handle_state_changes(etcd_manager::response response) = 0;
 };
 
 class fixture {
@@ -34,7 +34,13 @@ public:
     fixture()
         : etcd{} {
         When(Method(mock, handle_state_changes))
-            .AlwaysDo([](const etcd::Response&) {});
+            .AlwaysDo([&](etcd_manager::response resp) {
+                // NOTE: The members should be copied since they are temporary
+                // strings.
+                watch_resp_action = resp.action;
+                watch_resp_key = resp.key;
+                watch_resp_value = resp.value;
+            });
     }
 
     ~fixture() {
@@ -45,7 +51,9 @@ public:
 protected:
     etcd_config cfg;
     etcd_manager etcd;
-    etcd::Response response;
+    std::string watch_resp_action;
+    std::string watch_resp_key;
+    std::string watch_resp_value;
     Mock<callback_interface> mock;
 };
 
@@ -116,53 +124,6 @@ BOOST_FIXTURE_TEST_CASE(clears_all, fixture) {
     BOOST_TEST(read.size() == 0);
 }
 
-BOOST_FIXTURE_TEST_CASE(watches_write, fixture) {
-    std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    auto wm = etcd.watch(
-        "/test", [&](const etcd::Response& response) { promise.set_value(); });
-
-    etcd.put("/test/sub/a0", "172.0.0.1");
-
-    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
-}
-
-BOOST_FIXTURE_TEST_CASE(watch_rewrite, fixture) {
-    std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    etcd.put("/test/sub/a0", "172.0.0.1");
-    auto wm = etcd.watch(
-        "/test", [&](const etcd::Response& response) { promise.set_value(); });
-
-    etcd.put("/test/sub/a0", "172.0.0.1");
-
-    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
-}
-
-BOOST_FIXTURE_TEST_CASE(watches_overwrite, fixture) {
-    std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    etcd.put("/test/sub/a0", "198.51.100.0");
-    auto wm = etcd.watch(
-        "/test", [&](const etcd::Response& response) { promise.set_value(); });
-
-    etcd.put("/test/sub/a0", "172.0.0.1");
-
-    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
-}
-
-BOOST_FIXTURE_TEST_CASE(watches_remove, fixture) {
-    std::promise<void> promise;
-    std::future<void> future = promise.get_future();
-    etcd.put("/test/sub/a0", "172.0.0.1");
-    auto wm = etcd.watch(
-        "/test", [&](const etcd::Response& response) { promise.set_value(); });
-
-    etcd.rmdir("/test");
-
-    BOOST_CHECK(future.wait_for(2s) != std::future_status::timeout);
-}
-
 BOOST_FIXTURE_TEST_CASE(
     returns_lock_guard_and_its_destroyer_doesnt_throw_any_exception, fixture) {
     BOOST_CHECK_NO_THROW(
@@ -177,7 +138,7 @@ BOOST_FIXTURE_TEST_CASE(
         { auto lock_guard = etcd.get_lock_guard("/foo/bar"); });
 }
 
-BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
+BOOST_FIXTURE_TEST_CASE(waits_on_second_lock_until_first_lock_is_unlocked,
                         fixture) {
 
     std::optional<std::future<void>> future;
@@ -194,6 +155,71 @@ BOOST_FIXTURE_TEST_CASE(_waits_on_second_lock_until_first_lock_is_unlocked,
         BOOST_CHECK(future->wait_for(std::chrono::seconds(0)) ==
                     std::future_status::timeout);
     }
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_creation, fixture) {
+    std::promise<void> promise;
+    std::future<void> future = promise.get_future();
+    auto wg = etcd.watch("/test0", [&cb = mock.get(),
+                                    &promise](etcd_manager::response response) {
+        cb.handle_state_changes(response);
+        promise.set_value();
+    });
+
+    etcd.put("/test0", "initial_value");
+    future.wait_for(2s);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp_action == "create");
+    BOOST_TEST(watch_resp_key == "/test0");
+    BOOST_TEST(watch_resp_value == "initial_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_previous_creation, fixture) {
+    etcd.put("/test0", "initial_value");
+    auto wg = etcd.watch("/test0",
+                         [&cb = mock.get()](etcd_manager::response response) {
+                             cb.handle_state_changes(response);
+                         });
+
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp_action == "get");
+    BOOST_TEST(watch_resp_key == "/test0");
+    BOOST_TEST(watch_resp_value == "initial_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
+    etcd.put("/test0", "initial_value");
+    auto wg = etcd.watch("/test0",
+                         [&cb = mock.get()](etcd_manager::response response) {
+                             cb.handle_state_changes(response);
+                         });
+
+    etcd.put("/test0", "updated_value");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(2_Times);
+    BOOST_TEST(watch_resp_action == "set");
+    BOOST_TEST(watch_resp_key == "/test0");
+    BOOST_TEST(watch_resp_value == "updated_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_deletion, fixture) {
+    etcd.put("/test0", "initial_value");
+    auto wg = etcd.watch("/test0",
+                         [&cb = mock.get()](etcd_manager::response response) {
+                             cb.handle_state_changes(response);
+                         });
+
+    etcd.rm("/test0");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(2_Times);
+    BOOST_TEST(watch_resp_action == "delete");
+    BOOST_TEST(watch_resp_key == "/test0");
+    BOOST_TEST(watch_resp_value == "");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

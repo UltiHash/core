@@ -27,7 +27,7 @@ public:
         : etcd_address{"http://127.0.0.1:2379"},
           etcd_client{etcd_address} {
         When(Method(mock, handle_state_changes))
-            .AlwaysDo([](const etcd::Response&) {});
+            .AlwaysDo([&](const etcd::Response& resp) { watch_resp = resp; });
     }
 
     ~fixture() { etcd_client.rmdir("/", true); }
@@ -47,45 +47,11 @@ public:
 protected:
     std::string etcd_address;
     etcd::SyncClient etcd_client;
-    etcd::Response response;
+    etcd::Response watch_resp;
     Mock<callback_interface> mock;
 };
 
 BOOST_AUTO_TEST_SUITE(a_etcd_client)
-
-BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
-    etcd_client.put("test0", "initial_value");
-    std::shared_ptr<etcd::Watcher> watcher;
-    watcher.reset(new etcd::Watcher(
-        etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
-        true /*recursive*/));
-
-    etcd_client.put("test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
-
-    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
-}
-
-BOOST_FIXTURE_TEST_CASE(
-    cannot_watch_changes_on_the_given_key_after_cancellation, fixture) {
-    etcd_client.put("test0", "initial_value");
-    std::shared_ptr<etcd::Watcher> watcher;
-    watcher.reset(new etcd::Watcher(
-        etcd_client, "test0",
-        [&cb = mock.get()](const etcd::Response& response) {
-            cb.handle_state_changes(response);
-        },
-        true /*recursive*/));
-
-    watcher->Cancel();
-    etcd_client.put("test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
-
-    Verify(Method(mock, handle_state_changes)).Exactly(0);
-}
 
 BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
     etcd_client.put("/foo/bar", "1");
@@ -94,6 +60,164 @@ BOOST_FIXTURE_TEST_CASE(reads_written_value, fixture) {
 
     BOOST_TEST(resp.is_ok() == true);
     BOOST_TEST(resp.value().as_string() == "1");
+}
+
+BOOST_FIXTURE_TEST_CASE(returns_correct_action_and_index_for_get, fixture) {
+    etcd_client.put("/foo/bar", "1");
+    auto pref_resp = etcd_client.get("/foo/bar");
+    auto prev_idx = pref_resp.index();
+
+    etcd_client.put("/foo/bar", "1");
+    auto resp = etcd_client.get("/foo/bar");
+
+    BOOST_TEST(resp.action() == "get");
+    BOOST_TEST(resp.is_ok() == true);
+    BOOST_TEST(resp.index() == prev_idx + 1);
+    BOOST_TEST(resp.value().as_string() == "1");
+}
+
+BOOST_FIXTURE_TEST_CASE(returns_correct_action_and_index_for_ls, fixture) {
+    etcd_client.put("/foo/bar", "1");
+    auto pref_resp = etcd_client.ls("/foo");
+    auto prev_idx = pref_resp.index();
+
+    etcd_client.put("/foo/bar2", "2");
+    auto resp = etcd_client.ls("/foo");
+
+    BOOST_TEST(resp.action() == "get");
+    BOOST_TEST(resp.is_ok() == true);
+    BOOST_TEST(resp.index() == prev_idx + 1);
+    BOOST_TEST(resp.values()[0].key() == "/foo/bar");
+    BOOST_TEST(resp.values()[0].as_string() == "1");
+    BOOST_TEST(resp.values()[1].key() == "/foo/bar2");
+    BOOST_TEST(resp.values()[1].as_string() == "2");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_creation, fixture) {
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0",
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    etcd_client.put("/test0", "initial_value");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp.action() == "create");
+    BOOST_TEST(watch_resp.value().key() == "/test0");
+    BOOST_TEST(watch_resp.value().as_string() == "initial_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
+    etcd_client.put("/test0", "initial_value");
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0",
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    etcd_client.put("/test0", "updated_value");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp.action() == "set");
+    BOOST_TEST(watch_resp.value().key() == "/test0");
+    BOOST_TEST(watch_resp.value().as_string() == "updated_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_deletion, fixture) {
+    etcd_client.put("/test0", "initial_value");
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0",
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    etcd_client.rm("/test0");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp.action() == "delete");
+    BOOST_TEST(watch_resp.value().key() == "/test0");
+    BOOST_TEST(watch_resp.value().as_string() == "");
+}
+
+BOOST_FIXTURE_TEST_CASE(
+    cannot_watch_changes_on_the_given_key_after_cancellation, fixture) {
+    etcd_client.put("/test0", "initial_value");
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0",
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    watcher.Cancel();
+    etcd_client.put("/test0", "updated_value");
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(0);
+}
+
+BOOST_FIXTURE_TEST_CASE(cannot_watch_changes_occured_before_creating_watcher,
+                        fixture) {
+    etcd_client.put("/test0", "initial_value");
+
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0",
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(0);
+}
+
+BOOST_FIXTURE_TEST_CASE(watches_changes_previous_watcher_changes_using_index,
+                        fixture) {
+    etcd_client.put("/test0", "initial_value");
+    auto get_resp = etcd_client.get("/test0");
+    etcd_client.put("/test0", "second_value");
+
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0", get_resp.index() + 1,
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp.action() == "set");
+    BOOST_TEST(watch_resp.value().key() == "/test0");
+    BOOST_TEST(watch_resp.value().as_string() == "second_value");
+}
+
+BOOST_FIXTURE_TEST_CASE(
+    watches_changes_recursively_previous_watcher_changes_using_index, fixture) {
+    etcd_client.put("/test0/sub", "initial_value");
+    auto ls_resp = etcd_client.ls("/test0");
+    etcd_client.put("/test0/sub2", "second_value");
+
+    auto watcher = etcd::Watcher(
+        etcd_client, "/test0", ls_resp.index() + 1,
+        [&cb = mock.get()](const etcd::Response& response) {
+            cb.handle_state_changes(response);
+        },
+        true /*recursive*/);
+
+    std::this_thread::sleep_for(100ms);
+
+    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
+    BOOST_TEST(watch_resp.action() == "create");
+    BOOST_TEST(watch_resp.value().key() == "/test0/sub2");
+    BOOST_TEST(watch_resp.value().as_string() == "second_value");
 }
 
 BOOST_FIXTURE_TEST_CASE(gets_leasegrant, fixture) {
