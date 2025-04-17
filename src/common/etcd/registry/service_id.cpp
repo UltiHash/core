@@ -74,4 +74,24 @@ std::size_t get_service_id(etcd_manager& etcd, const std::string& service,
     return current_id;
 }
 
+std::size_t register_storage_service_id(etcd_manager& etcd,
+                                        const std::size_t id) {
+    std::string current_id_key =
+        etcd_registered_storage_ids_prefix_key + std::to_string(id);
+
+    const auto lock = etcd.get_lock_guard(etcd_storage_lock_key);
+
+    std::size_t current_id = id;
+    while (etcd.has(current_id_key)) {
+        current_id++;
+        current_id_key =
+            etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
+    }
+
+    current_id_key =
+        etcd_registered_storage_ids_prefix_key + std::to_string(current_id);
+    etcd.put(current_id_key, "1");
+    return current_id;
+}
+
 } // namespace uh::cluster

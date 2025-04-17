@@ -6,10 +6,6 @@
 namespace uh::cluster::storage_group {
 
 state state::create(std::string_view str) {
-    static_assert(static_cast<int>(group_state::SIZE) < 10,
-                  "group_state has too many values");
-    static_assert(static_cast<int>(storage_state::SIZE) < 10,
-                  "group_state has too many values");
     if (str.size() < 3 || str[1] != ',') {
         throw std::runtime_error("Invalid state string format");
     }
@@ -47,5 +43,10 @@ std::string state::to_string() const {
 
     return result;
 }
+
+static_assert(static_cast<int>(state::group_state::SIZE) < 10,
+              "group_state has too many values");
+static_assert(static_cast<int>(state::storage_state::SIZE) < 10,
+              "group_state has too many values");
 
 } // namespace uh::cluster::storage_group

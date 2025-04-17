@@ -10,8 +10,9 @@
 
 namespace uh::cluster::storage {
 
-handler::handler(local_storage& storage)
-    : m_storage(storage) {}
+handler::handler(local_storage& storage, storage_registry& registry)
+    : m_storage(storage),
+      m_registry(registry) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
@@ -83,6 +84,9 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
             break;
         case STORAGE_USED_REQ:
             co_await handle_get_used(m, hdr);
+            break;
+        case STORAGE_UPDATE_STATE:
+            co_await handle_update_state(m, hdr);
             break;
         default:
             throw std::invalid_argument("Invalid message type!");
@@ -174,6 +178,17 @@ coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
     const auto used = co_await m_storage.get_used_space();
     co_await m.send_primitive<size_t>(SUCCESS, used);
+}
+
+coro<void> handler::handle_update_state(messenger& m,
+                                        const messenger::header& h) {
+    const auto state = co_await m.recv_primitive<uint8_t>(h);
+    const auto state_enum =
+        magic_enum::enum_cast<storage_registry::storage_state>(state);
+    if (state_enum.has_value()) {
+        m_registry.update_service_state(state_enum.value());
+    }
+    co_await m.send(SUCCESS, {});
 }
 
 } // namespace uh::cluster::storage

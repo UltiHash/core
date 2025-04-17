@@ -4,8 +4,6 @@
 
 using nlohmann::json;
 
-#include <iostream>
-
 namespace uh::cluster::storage_group {
 
 void from_json(const json& j, config& config) {

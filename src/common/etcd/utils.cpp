@@ -165,10 +165,7 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
         auto values = ls_resp.values();
         for (auto i = 0u; i < values.size(); ++i) {
             auto val = values[i];
-            if (ls_resp.is_ok()) {
-                callback(
-                    response(ls_resp.action(), val.key(), val.as_string()));
-            }
+            callback(response(ls_resp.action(), val.key(), val.as_string()));
         }
     }
 
