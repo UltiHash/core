@@ -6,6 +6,7 @@
 #include <common/telemetry/log.h>
 #include <config.h>
 #include <storage/global_data/default_global_data_view.h>
+#include <storage/group/state_watcher.h>
 #include <storage/interfaces/remote_storage.h>
 #include <storage/service.h>
 

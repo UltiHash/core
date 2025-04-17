@@ -73,6 +73,7 @@ std::string get_storage_group_initialized_flag_path(size_t group_id);
 /*
  * Output from group state manager
  */
+std::string get_storage_group_state_path();
 std::string get_storage_group_state_path(size_t group_id);
 
 /*

@@ -19,6 +19,10 @@ std::string get_storage_group_initialized_flag_path(size_t group_id) {
                        group_id);
 }
 
+std::string get_storage_group_state_path() {
+    return std::format("{}state", etcd_storage_groups_key_prefix);
+}
+
 std::string get_storage_group_state_path(size_t group_id) {
     return std::format("{}state/{}", etcd_storage_groups_key_prefix, group_id);
 }

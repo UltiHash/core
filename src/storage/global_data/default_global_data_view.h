@@ -1,9 +1,12 @@
 #pragma once
 
-#include "common/etcd/service_discovery/storage_index.h"
-#include "common/types/scoped_buffer.h"
 #include "config.h"
 #include "global_data_view.h"
+
+#include <common/etcd/service_discovery/service_maintainer.h>
+#include <common/etcd/service_discovery/storage_index.h>
+#include <common/types/scoped_buffer.h>
+#include <storage/group/state_watcher.h>
 
 namespace uh::cluster {
 

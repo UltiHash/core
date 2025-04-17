@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_CASE(throws_for_invalid_json_string) {
     static constexpr const char* json_literal =
         R"([{"data_shards:3,"parity_shards":1,"members":[0,1,2,3]},{"data_shards":2,"parity_shards":0,"members":[4,5]}])";
 
-    BOOST_CHECK_THROW(storage_group_config::create_multiple(json_literal),
+    BOOST_CHECK_THROW(storage_group::config::create_multiple(json_literal),
                       nlohmann::json::parse_error);
 }
 
@@ -24,24 +24,24 @@ BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
     static constexpr const char* json_literal =
         R"([{"data_shards":3,"parity_shards":1},{"data_shards":2,"parity_shards":0}])";
 
-    BOOST_CHECK_THROW(storage_group_config::create_multiple(json_literal),
+    BOOST_CHECK_THROW(storage_group::config::create_multiple(json_literal),
                       nlohmann::json::out_of_range);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
 /*******************************************************************************
- * Below, we are testing the storage_group_config class with the correct JSON
+ * Below, we are testing the storage_group::config class with the correct JSON
  * string.
  */
 class fixture {
 
 public:
     fixture()
-        : sut{storage_group_config::create_multiple(
+        : sut{storage_group::config::create_multiple(
               test_storage_group_config_string)} {}
 
-    std::vector<storage_group_config> sut;
+    std::vector<storage_group::config> sut;
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_initialized_license, fixture)

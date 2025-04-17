@@ -238,7 +238,7 @@ CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
            [&cfg](CLI::results_t res) {
                try {
                    cfg.storage_groups =
-                       storage_group_config::create_multiple(res[0]);
+                       storage_group::config::create_multiple(res[0]);
                } catch (const std::exception& e) {
                    return false;
                }
