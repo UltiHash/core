@@ -52,7 +52,6 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
         BOOST_TEST(get_announced_id(announced_etcd_path) == index);
         BOOST_TEST(etcd.has(announced_etcd_path));
     }
-    return;
 
     {
         // check for de-registry
