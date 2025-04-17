@@ -54,9 +54,6 @@ void etcd_manager::reset() {
     {
         auto client = create_client(m_cfg);
 
-        // to break blocking campaign call.
-        client->set_grpc_timeout(ETCD_GRPC_TIMEOUT);
-
         auto lease_result = client->leasegrant(m_lease_timeout);
         if (!lease_result.is_ok()) {
             throw std::runtime_error("Failed to grant lease");
@@ -150,6 +147,14 @@ void etcd_manager::put_persistant(const std::string& key,
             " failed, details: " + resp.error_message());
 }
 
+etcd::Response etcd_manager::create_if_empty(std::string const& key,
+                                             std::string const& value) {
+
+    auto client = m_client.load();
+    auto resp = client->modify_if(key, value, 0, m_lease);
+    return resp;
+}
+
 std::string etcd_manager::get(const std::string& key) const {
     auto client = m_client.load();
     auto resp = client->get(key);
@@ -193,7 +198,8 @@ void etcd_manager::rmdir(const std::string& prefix) noexcept {
 
 void etcd_manager::clear_all() noexcept { rmdir("/"); }
 
-void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
+void etcd_manager::add_watcher(const std::string& prefix, callback_t callback,
+                               int64_t watch_index) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     auto client = m_client.load();
@@ -204,13 +210,17 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
                                     " already exists");
     }
 
-    auto ls_resp = client->ls(prefix);
-    if (ls_resp.is_ok()) {
-        auto values = ls_resp.values();
-        for (auto i = 0u; i < values.size(); ++i) {
-            auto val = values[i];
-            callback(response(ls_resp.action(), val.key(), val.as_string()));
+    if (watch_index == 0) {
+        auto ls_resp = client->ls(prefix);
+        if (ls_resp.is_ok()) {
+            auto values = ls_resp.values();
+            for (auto i = 0u; i < values.size(); ++i) {
+                auto val = values[i];
+                callback(
+                    response(ls_resp.action(), val.key(), val.as_string()));
+            }
         }
+        watch_index = ls_resp.index() + 1;
     }
 
     auto wrapper = [cb = std::move(callback)](const etcd::Response& resp) {
@@ -220,9 +230,8 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback) {
         }
     };
     m_watcher_entries[prefix] = watcher_entry(
-        wrapper,
-        std::make_unique<etcd::Watcher>(*client, prefix, ls_resp.index() + 1,
-                                        std::move(wrapper), true));
+        wrapper, std::make_unique<etcd::Watcher>(*client, prefix, watch_index,
+                                                 std::move(wrapper), true));
 }
 
 void etcd_manager::remove_watcher(const std::string& prefix) {

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
 #include <functional>
-#include <stop_token>
-#include <thread>
+#include <stdexcept>
 
 namespace uh::cluster {
 
@@ -13,69 +13,80 @@ class candidate {
 public:
     /*
      * @param etcd: etcd_manager instance to use for campaigning
-     * @param name: name of the election
-     * @param value: value to set if this candidate wins the election
+     * @param election_name: name of the election
+     * @param candidate_name: value to set if this candidate wins the election
      * @param callback: function to call when this candidate wins the election
      */
-    candidate(etcd_manager& etcd, const std::string& name, std::string value,
+    candidate(etcd_manager& etcd, const std::string& election_name,
+              std::string candidate_name,
               std::function<void(void)> callback = nullptr)
         : m_etcd{etcd},
-          m_name{name},
-          m_value{value},
+          m_election_name{election_name},
+          m_candidate_name{candidate_name},
           m_callback{std::move(callback)},
-          worker_thread{&candidate::worker, this} {}
+          m_is_leader{false} {
 
-    ~candidate() {
-        auto resp = m_campaign_response.load(std::memory_order_acquire);
-        if (resp != nullptr) {
-            auto val = resp->value();
-            m_etcd.resign(m_name, val.key(), val.created_index());
+        // Create key with empty value first,
+        auto resp = m_etcd.create_if_empty(m_election_name, "");
+        if (resp.is_ok()) {
+            m_is_leader.store(true, std::memory_order_release);
+            if (m_callback)
+                std::move(m_callback)();
+            // Set the candidate name
+            m_etcd.put(m_election_name, m_candidate_name);
+            return;
         }
-        // NOTE: Destructor can consume ETCD_GRPC_TIMEOUT because campaign is a
-        // blocking operation.
+        if (resp.error_code() != etcdv3::ERROR_COMPARE_FAILED) {
+            throw std::runtime_error("modify_if returns error code: " +
+                                     std::to_string(resp.error_code()));
+        }
+
+        m_watch_guard = m_etcd.watch(
+            m_election_name,
+            [this](etcd_manager::response resp) {
+                try {
+                    switch (get_etcd_action_enum(resp.action)) {
+                    case etcd_action::DELETE: {
+                        auto resp = m_etcd.create_if_empty(m_election_name, "");
+                        if (resp.is_ok()) {
+                            m_is_leader.store(true, std::memory_order_release);
+                            if (m_callback)
+                                std::move(m_callback)();
+                            m_etcd.put(m_election_name, m_candidate_name);
+                            // TODO: let's remove this watcher here for
+                            // efficiency
+                        } else if (resp.error_code() !=
+                                   etcdv3::ERROR_COMPARE_FAILED) {
+                            throw std::runtime_error(
+                                "modify_if returns error code: " +
+                                std::to_string(resp.error_code()));
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                } catch (const std::exception& e) {
+                    LOG_WARN() << "error trying create_if_any on candidate "
+                               << m_candidate_name << ": " << e.what();
+                }
+            },
+            resp.index() + 1);
     }
 
+    ~candidate() { m_etcd.rm(m_election_name); }
+
     auto is_leader() const {
-        return m_campaign_response.load(std::memory_order_acquire) != nullptr;
+        return m_is_leader.load(std::memory_order_acquire);
     }
 
 private:
-    void worker(std::stop_token token) {
-        while (token.stop_requested() == false) {
-            LOG_DEBUG() << "waiting for election";
-            auto resp = m_etcd.campaign(m_name, m_value);
-            // NOTE: While conducting a new election (waiting for the function
-            // call above), we do not need to be concerned about increasing the
-            // offset on write requests to other services, as any additional
-            // write requests will fail during their allocation call.
-
-            if (resp.is_grpc_timeout()) {
-                LOG_DEBUG() << "candidate experienced timeout";
-                continue;
-            }
-
-            if (!resp.is_ok()) {
-                LOG_WARN() << "candidate failed";
-                continue;
-            }
-
-            LOG_INFO() << "candidate won the election";
-            if (m_callback)
-                std::move(m_callback)();
-            std::cout << "key: " << resp.value().key()
-                      << " value: " << resp.value().as_string() << std::endl;
-            m_campaign_response.store(std::make_shared<etcd::Response>(resp),
-                                      std::memory_order_release);
-            break; // No re-election. Thread will expire.
-        }
-    }
-
     etcd_manager& m_etcd;
-    std::string m_name;
-    std::string m_value;
+    std::string m_election_name;
+    std::string m_candidate_name;
     std::function<void(void)> m_callback;
-    std::jthread worker_thread;
-    std::atomic<std::shared_ptr<etcd::Response>> m_campaign_response{nullptr};
+    std::atomic<bool> m_is_leader;
+    etcd_manager::watch_guard m_watch_guard;
 };
 
 } // namespace uh::cluster
