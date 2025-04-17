@@ -12,16 +12,17 @@ namespace uh::cluster::storage_group {
 
 class state_watcher {
 public:
-    using callback_t = std::function<void(std::string_view)>;
-    state_watcher(etcd_manager& etcd, callback_t callback = nullptr)
+    using callback_t = std::function<void(state*)>;
+    state_watcher(etcd_manager& etcd, size_t group_id,
+                  callback_t callback = nullptr)
         : m_etcd{etcd},
+          m_callback{std::move(callback)},
           m_wg{m_etcd.watch(
-              get_storage_group_state_path(),
-              [this](etcd_manager::response resp) { on_watch(resp); })} {
-        // TODO: m_states.reserve(); according to the number of groups
-    }
-    std::shared_ptr<state> get_state(int id) const {
-        return m_states.at(id).load();
+              get_storage_group_state_path(group_id),
+              [this](etcd_manager::response resp) { on_watch(resp); })} {}
+
+    std::shared_ptr<state> get_state() const {
+        return m_states.load(std::memory_order_acquire);
     }
 
 private:
@@ -29,24 +30,36 @@ private:
         try {
             LOG_INFO() << "Watcher has detected a group state update on group "
                        << resp.value;
-            auto group_id = stoul(resp.key);
-            parse_and_save(group_id, resp.value);
 
-            LOG_INFO() << "Modified storage_group::state for group saved";
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE:
+            case etcd_action::SET: {
+                auto s = state::create(resp.value);
+                m_states.store(std::make_shared<state>(s));
+
+                LOG_INFO() << "Modified storage_group::state for group saved";
+                break;
+            }
+            case etcd_action::DELETE:
+            default:
+                LOG_INFO() << "License deleted";
+                m_states.store(std::make_shared<state>());
+                break;
+            }
+
+            if (m_callback)
+                m_callback(get_state().get());
 
         } catch (const std::exception& e) {
             LOG_WARN() << "error updating storage_group::state: " << e.what();
         }
     }
 
-    void parse_and_save(int group_id, std::string_view str) {
-        auto s = state::create(str);
-        m_states.at(group_id).store(std::make_shared<state>(s));
-    }
-
     etcd_manager& m_etcd;
+    callback_t m_callback;
+    std::atomic<std::shared_ptr<state>> m_states;
     etcd_manager::watch_guard m_wg;
-    std::vector<std::atomic<std::shared_ptr<state>>> m_states;
 };
 
 } // namespace uh::cluster::storage_group
