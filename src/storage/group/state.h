@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 
-namespace uh::cluster::storage_group {
+namespace uh::cluster::storage::group {
 
 struct state {
     enum class group_state : std::uint8_t {
@@ -25,4 +25,4 @@ struct state {
     std::string to_string() const;
 };
 
-} // namespace uh::cluster::storage_group
+} // namespace uh::cluster::storage::group

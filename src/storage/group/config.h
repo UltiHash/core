@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-namespace uh::cluster::storage_group {
+namespace uh::cluster::storage::group {
 
 struct config {
     int data_shards{0};
@@ -16,4 +16,4 @@ struct config {
     std::string to_string() const;
 };
 
-} // namespace uh::cluster::storage_group
+} // namespace uh::cluster::storage::group

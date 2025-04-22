@@ -5,7 +5,7 @@
 #include "service_registry.h"
 #include <string>
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
 class storage_registry : public service_registry {
 
@@ -35,4 +35,4 @@ private:
                              storage_registry::storage_state state);
 };
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage

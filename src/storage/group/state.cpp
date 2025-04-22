@@ -3,7 +3,7 @@
 #include <common/utils/strings.h>
 #include <stdexcept>
 
-namespace uh::cluster::storage_group {
+namespace uh::cluster::storage::group {
 
 state state::create(std::string_view str) {
     if (str.size() < 3 || str[1] != ',') {
@@ -49,4 +49,4 @@ static_assert(static_cast<int>(state::group_state::SIZE) < 10,
 static_assert(static_cast<int>(state::storage_state::SIZE) < 10,
               "group_state has too many values");
 
-} // namespace uh::cluster::storage_group
+} // namespace uh::cluster::storage::group
