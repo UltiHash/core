@@ -16,6 +16,7 @@ struct state {
         RECOVERING,
         SIZE
     };
+    // TODO: remove this and use same one on the service_registry.h
     enum class storage_state : std::uint8_t { NEW, ASSIGNED, DOWN, SIZE };
 
     enum group_state group { group_state::UNDETERMINED };

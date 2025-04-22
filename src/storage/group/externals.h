@@ -12,25 +12,29 @@
 
 namespace uh::cluster::storage::group::externals {
 
+using prefix_t = ns::externals_t::next_t;
+
+inline prefix_t get_prefix(size_t group_id) {
+    return ns::root.storage_group.externals[group_id];
+}
+
 class publisher {
 public:
     publisher(etcd_manager& etcd, size_t group_id)
         : m_etcd{etcd},
-          m_group_id{group_id} {}
+          m_prefix{get_prefix(group_id)} {}
     void put_group_state(state group_state) {
-        m_etcd.put(ns::root.storage_group.externals[m_group_id].group_state,
-                   group_state.to_string());
+        m_etcd.put(m_prefix.group_state, group_state.to_string());
     }
 
     void put_storage_hostport(size_t storage_id, hostport storage_hostport) {
-        m_etcd.put(
-            ns::root.storage_group.externals[m_group_id].hostports[storage_id],
-            storage_hostport.to_string());
+        m_etcd.put(m_prefix.storage_hostports[storage_id],
+                   storage_hostport.to_string());
     }
 
 private:
     etcd_manager& m_etcd;
-    size_t m_group_id;
+    prefix_t m_prefix;
 };
 
 class subscriber {
@@ -43,16 +47,16 @@ public:
         : m_etcd{etcd},
           m_group_state_callback{std::move(group_state_callback)},
           m_storage_hostport_callback{std::move(storage_hostport_callback)},
-          m_key{ns::root.storage_group.externals[group_id]},
-          m_hostports(num_storages) {
+          m_prefix{get_prefix(group_id)},
+          m_storage_hostports(num_storages) {
 
         m_group_state.store(std::make_shared<state>(),
                             std::memory_order_release);
-        for (auto& atom : m_hostports) {
+        for (auto& atom : m_storage_hostports) {
             atom.store(std::make_shared<hostport>(), std::memory_order_release);
         }
         m_wg = m_etcd.watch(
-            m_key, [this](etcd_manager::response resp) { on_watch(resp); });
+            m_prefix, [this](etcd_manager::response resp) { on_watch(resp); });
     }
 
     std::shared_ptr<state> get_group_state() const {
@@ -60,13 +64,13 @@ public:
     }
 
     auto get_hostport(size_t storage_id) const {
-        return m_hostports[storage_id].load(std::memory_order_acquire);
+        return m_storage_hostports[storage_id].load(std::memory_order_acquire);
     }
 
     std::vector<std::shared_ptr<hostport>> get_hostports() const {
         std::vector<std::shared_ptr<hostport>> result;
-        result.reserve(m_hostports.size());
-        for (const auto& atom : m_hostports) {
+        result.reserve(m_storage_hostports.size());
+        for (const auto& atom : m_storage_hostports) {
             result.push_back(atom.load(std::memory_order_acquire));
         }
         return result;
@@ -78,7 +82,7 @@ private:
             LOG_INFO() << "externals_watcher has detected a change on "
                        << resp.key;
 
-            if (resp.key == std::string(m_key.group_state)) {
+            if (resp.key == std::string(m_prefix.group_state)) {
                 switch (get_etcd_action_enum(resp.action)) {
                 case etcd_action::GET:
                 case etcd_action::CREATE:
@@ -86,8 +90,7 @@ private:
                     auto s = state::create(resp.value);
                     m_group_state.store(std::make_shared<state>(s));
 
-                    LOG_INFO()
-                        << "Modified storage::group::state for group saved";
+                    LOG_INFO() << "Modified group_state saved";
 
                     if (m_group_state_callback)
                         m_group_state_callback(get_group_state().get());
@@ -98,7 +101,7 @@ private:
                 default:
                     m_group_state.store(std::make_shared<state>());
 
-                    LOG_INFO() << "License deleted";
+                    LOG_INFO() << "group_state deleted";
 
                     if (m_group_state_callback)
                         m_group_state_callback(get_group_state().get());
@@ -106,14 +109,15 @@ private:
                 }
 
             } else if (auto key = std::filesystem::path(resp.key);
-                       key.parent_path() == std::string(m_key.hostports)) {
+                       key.parent_path() ==
+                       std::string(m_prefix.storage_hostports)) {
                 auto storage_id = stoul(key.filename().string());
                 switch (get_etcd_action_enum(resp.action)) {
                 case etcd_action::GET:
                 case etcd_action::CREATE:
                 case etcd_action::SET: {
                     auto t = hostport::create(resp.value);
-                    m_hostports[storage_id].store(
+                    m_storage_hostports[storage_id].store(
                         std::make_shared<hostport>(t));
 
                     LOG_INFO() << "Modified hostport for storage " << resp.value
@@ -126,10 +130,10 @@ private:
                 }
                 case etcd_action::DELETE:
                 default:
-                    m_group_state.store(std::make_shared<state>());
+                    m_storage_hostports[storage_id].store(
+                        std::make_shared<hostport>());
 
-                    LOG_INFO()
-                        << "Hostport for storage " << resp.value << " deleted";
+                    LOG_INFO() << "Hostport for storage deleted";
 
                     if (m_storage_hostport_callback)
                         m_storage_hostport_callback(
@@ -139,16 +143,16 @@ private:
             }
 
         } catch (const std::exception& e) {
-            LOG_WARN() << "error updating storage::group::state: " << e.what();
+            LOG_WARN() << "error updating externals: " << e.what();
         }
     }
 
     etcd_manager& m_etcd;
     group_state_callback_t m_group_state_callback;
     storage_hostport_callback_t m_storage_hostport_callback;
-    ns::externals_t::next_t m_key;
+    prefix_t m_prefix;
     std::atomic<std::shared_ptr<state>> m_group_state;
-    std::vector<std::atomic<std::shared_ptr<hostport>>> m_hostports;
+    std::vector<std::atomic<std::shared_ptr<hostport>>> m_storage_hostports;
     etcd_manager::watch_guard m_wg;
 };
 

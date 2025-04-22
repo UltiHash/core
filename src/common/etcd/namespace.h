@@ -136,13 +136,15 @@ get_etcd_service_attribute_enum(const std::string& param) {
 namespace ns {
 
 struct key_t {
-    std::string m_prefix;
     virtual const char* basename() const = 0;
 
     key_t(std::string&& prefix)
         : m_prefix{std::move(prefix)} {}
 
     operator std::string() const { return m_prefix + "/" + basename(); }
+
+private:
+    std::string m_prefix;
 };
 
 struct storage_states_t : public key_t {
@@ -160,6 +162,8 @@ struct storage_states_t : public key_t {
     storage_states_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "storage_states";
 };
 
@@ -167,6 +171,8 @@ struct group_initialized_t : public key_t {
     group_initialized_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "group_initialized";
 };
 
@@ -189,6 +195,8 @@ struct internals_t : public key_t {
     internals_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "internals";
 };
 
@@ -196,10 +204,12 @@ struct group_state_t : public key_t {
     group_state_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "group_state";
 };
 
-struct hostports_t : public key_t {
+struct storage_hostports_t : public key_t {
     struct next_t : public key_t {
         std::string m_basename;
         template <std::integral T>
@@ -211,23 +221,25 @@ struct hostports_t : public key_t {
     template <std::integral T> auto operator[](T index) {
         return next_t{*this, index};
     }
-    hostports_t(std::string&& prefix)
+    storage_hostports_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
-    inline static constexpr const char* m_basename = "hostports";
+
+private:
+    inline static constexpr const char* m_basename = "storage_hostports";
 };
 
 struct externals_t : public key_t {
     struct next_t : public key_t {
         std::string m_basename;
         group_state_t group_state;
-        hostports_t hostports;
+        storage_hostports_t storage_hostports;
         template <std::integral T>
         next_t(std::string&& prefix, T index)
             : key_t{std::move(prefix)},
               m_basename{std::to_string(index)},
               group_state{*this},
-              hostports{*this} {}
+              storage_hostports{*this} {}
         const char* basename() const { return m_basename.c_str(); }
     };
     template <std::integral T> auto operator[](T index) {
@@ -236,6 +248,8 @@ struct externals_t : public key_t {
     externals_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "externals";
 };
 
@@ -254,6 +268,8 @@ struct group_configs_t : public key_t {
     group_configs_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "group_configs";
 };
 
@@ -272,6 +288,8 @@ struct storage_assignments_t : public key_t {
     storage_assignments_t(std::string&& prefix)
         : key_t{std::move(prefix)} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "storage_assignments";
 };
 
@@ -288,6 +306,8 @@ struct storage_group_t : public key_t {
           group_configs{*this},
           storage_assignments{*this} {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "storage_group";
 };
 
@@ -298,6 +318,8 @@ struct uh_t : public key_t {
         : key_t{std::move(prefix)},
           storage_group(*this) {}
     const char* basename() const override { return m_basename; }
+
+private:
     inline static constexpr const char* m_basename = "uh";
 };
 
