@@ -107,7 +107,7 @@ public:
     };
 
     /*
-     * Watch given prefix recursively
+     * Watch given prefix "recursively"
      * @callback: callback should handle GET(if watch_index != 0), CREATE, SET,
      *            DELETE actions
      * @watch_index: index to start watching from, 0 means "from the creation"

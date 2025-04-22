@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/network/messenger.h"
+#include <common/etcd/registry/storage_registry.h>
 #include <common/utils/protocol_handler.h>
 #include <storage/interfaces/local_storage.h>
 
@@ -8,7 +9,7 @@ namespace uh::cluster::storage {
 
 class handler : public protocol_handler {
 public:
-    explicit handler(local_storage& storage);
+    explicit handler(local_storage& storage, storage_registry& registry);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
@@ -30,15 +31,10 @@ private:
 
     coro<void> handle_get_used(messenger& m, const messenger::header&);
 
-    coro<void> handle_ds_info(messenger& m, const messenger::header&);
-
-    coro<void> handle_init_dd(messenger& m, const messenger::header&);
-
-    coro<void> handle_ds_write(messenger& m, const messenger::header& h);
-
-    coro<void> handle_ds_read(messenger& m, const messenger::header& h);
+    coro<void> handle_update_state(messenger& m, const messenger::header&);
 
     local_storage& m_storage;
+    storage_registry& m_registry;
 };
 
 } // namespace uh::cluster::storage

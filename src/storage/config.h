@@ -18,6 +18,7 @@ struct storage_config {
         .max_data_store_size = 1ul * PEBI_BYTE,
         .page_size = DEFAULT_PAGE_SIZE,
     };
+    std::size_t service_id = 0;
 };
 
 } // namespace uh::cluster
