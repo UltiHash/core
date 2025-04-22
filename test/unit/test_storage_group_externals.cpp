@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_hostport) {
     for (auto& p : promises) {
         futures.push_back(p.get_future());
     }
-    int callback_count = 0;
+    auto callback_count = 0ul;
     auto publisher = std::make_optional<group::externals::publisher>(
         etcd, group_id, storage_id);
     auto subscriber = storage::group::externals::subscriber(

@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(
     for (auto& p : promises) {
         futures.push_back(p.get_future());
     }
-    int callback_count = 0;
+    auto callback_count = 0ul;
     std::optional<storage::group::internals::publisher> publisher =
         storage::group::internals::publisher(etcd, 11, 7);
     auto subscriber =
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_state) {
     for (auto& p : promises) {
         futures.push_back(p.get_future());
     }
-    int callback_count = 0;
+    auto callback_count = 0ul;
     auto publisher = std::make_optional<group::internals::publisher>(
         etcd, group_id, storage_id);
     auto subscriber = storage::group::internals::subscriber(
