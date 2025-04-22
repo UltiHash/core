@@ -1,6 +1,6 @@
 #pragma once
 
-#include <storage/group/state.h>
+#include <storage/group/state_context.h>
 
 #include <common/telemetry/log.h>
 
@@ -18,28 +18,40 @@ inline prefix_t get_prefix(size_t group_id) {
     return ns::root.storage_group.externals[group_id];
 }
 
+/*
+ * Storage-wise publisher
+ */
 class publisher {
 public:
-    publisher(etcd_manager& etcd, size_t group_id)
+    publisher(etcd_manager& etcd, size_t group_id, size_t storage_id)
         : m_etcd{etcd},
-          m_prefix{get_prefix(group_id)} {}
-    void put_group_state(state group_state) {
-        m_etcd.put(m_prefix.group_state, group_state.to_string());
+          m_prefix{get_prefix(group_id)},
+          m_storage_id{storage_id} {}
+    ~publisher() {
+        m_etcd.rm(m_prefix.group_state);
+        m_etcd.rm(m_prefix.storage_hostports[m_storage_id]);
+    }
+    void put_group_state(state_context group_state) {
+        m_etcd.put(m_prefix.group_state, serialize(group_state));
     }
 
-    void put_storage_hostport(size_t storage_id, hostport storage_hostport) {
-        m_etcd.put(m_prefix.storage_hostports[storage_id],
-                   storage_hostport.to_string());
+    void put_storage_hostport(hostport storage_hostport) {
+        m_etcd.put(m_prefix.storage_hostports[m_storage_id],
+                   serialize(storage_hostport));
     }
 
 private:
     etcd_manager& m_etcd;
     prefix_t m_prefix;
+    size_t m_storage_id;
 };
 
+/*
+ * Group-wise subscriber
+ */
 class subscriber {
 public:
-    using group_state_callback_t = std::function<void(state*)>;
+    using group_state_callback_t = std::function<void(state_context*)>;
     using storage_hostport_callback_t = std::function<void(hostport*)>;
     subscriber(etcd_manager& etcd, size_t group_id, size_t num_storages,
                group_state_callback_t group_state_callback = nullptr,
@@ -50,7 +62,7 @@ public:
           m_prefix{get_prefix(group_id)},
           m_storage_hostports(num_storages) {
 
-        m_group_state.store(std::make_shared<state>(),
+        m_group_state.store(std::make_shared<state_context>(),
                             std::memory_order_release);
         for (auto& atom : m_storage_hostports) {
             atom.store(std::make_shared<hostport>(), std::memory_order_release);
@@ -59,7 +71,7 @@ public:
             m_prefix, [this](etcd_manager::response resp) { on_watch(resp); });
     }
 
-    std::shared_ptr<state> get_group_state() const {
+    std::shared_ptr<state_context> get_group_state() const {
         return m_group_state.load(std::memory_order_acquire);
     }
 
@@ -87,10 +99,11 @@ private:
                 case etcd_action::GET:
                 case etcd_action::CREATE:
                 case etcd_action::SET: {
-                    auto s = state::create(resp.value);
-                    m_group_state.store(std::make_shared<state>(s));
+                    auto s = deserialize<state_context>(resp.value);
+                    m_group_state.store(std::make_shared<state_context>(s));
 
-                    LOG_INFO() << "Modified group_state saved";
+                    LOG_INFO()
+                        << "Modified group_state " << resp.value << " saved";
 
                     if (m_group_state_callback)
                         m_group_state_callback(get_group_state().get());
@@ -99,7 +112,7 @@ private:
                 }
                 case etcd_action::DELETE:
                 default:
-                    m_group_state.store(std::make_shared<state>());
+                    m_group_state.store(std::make_shared<state_context>());
 
                     LOG_INFO() << "group_state deleted";
 
@@ -111,12 +124,13 @@ private:
             } else if (auto key = std::filesystem::path(resp.key);
                        key.parent_path() ==
                        std::string(m_prefix.storage_hostports)) {
+                LOG_DEBUG() << "Storage index " << key.filename().string();
                 auto storage_id = stoul(key.filename().string());
                 switch (get_etcd_action_enum(resp.action)) {
                 case etcd_action::GET:
                 case etcd_action::CREATE:
                 case etcd_action::SET: {
-                    auto t = hostport::create(resp.value);
+                    auto t = deserialize<hostport>(resp.value);
                     m_storage_hostports[storage_id].store(
                         std::make_shared<hostport>(t));
 
@@ -151,7 +165,7 @@ private:
     group_state_callback_t m_group_state_callback;
     storage_hostport_callback_t m_storage_hostport_callback;
     prefix_t m_prefix;
-    std::atomic<std::shared_ptr<state>> m_group_state;
+    std::atomic<std::shared_ptr<state_context>> m_group_state;
     std::vector<std::atomic<std::shared_ptr<hostport>>> m_storage_hostports;
     etcd_manager::watch_guard m_wg;
 };

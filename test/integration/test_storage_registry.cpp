@@ -67,25 +67,20 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_update_retrieve_deregister) {
         {
             const auto storage_state_number =
                 std::stoul(etcd.get(storage_state_path));
-            const auto storage_state =
-                magic_enum::enum_cast<storage_registry::storage_state>(
-                    storage_state_number);
-            BOOST_TEST(storage_state.has_value());
-            BOOST_TEST((storage_state.value() ==
-                        storage_registry::storage_state::NEW));
+            const auto state =
+                magic_enum::enum_cast<storage_state>(storage_state_number);
+            BOOST_TEST(state.has_value());
+            BOOST_TEST((state.value() == storage_state::NEW));
         }
         {
-            registering_registry.update_service_state(
-                storage_registry::storage_state::ASSIGNED);
+            registering_registry.update_service_state(storage_state::ASSIGNED);
             sleep(1);
             const auto storage_state_number =
                 std::stoul(etcd.get(storage_state_path));
-            const auto storage_state =
-                magic_enum::enum_cast<storage_registry::storage_state>(
-                    storage_state_number);
-            BOOST_TEST(storage_state.has_value());
-            BOOST_TEST((storage_state.value() ==
-                        storage_registry::storage_state::ASSIGNED));
+            const auto state =
+                magic_enum::enum_cast<storage_state>(storage_state_number);
+            BOOST_TEST(state.has_value());
+            BOOST_TEST((state.value() == storage_state::ASSIGNED));
         }
     }
 

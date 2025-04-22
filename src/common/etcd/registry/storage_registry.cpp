@@ -71,7 +71,7 @@ bool storage_registry::read_state_from_disk(
     in.read(reinterpret_cast<char*>(&persisted_state), sizeof(uint8_t));
 
     const auto state_enum =
-        magic_enum::enum_cast<storage_registry::storage_state>(persisted_state);
+        magic_enum::enum_cast<storage_state>(persisted_state);
     if (state_enum.has_value()) {
         m_state = state_enum.value();
         return true;
@@ -80,8 +80,7 @@ bool storage_registry::read_state_from_disk(
 }
 
 void storage_registry::write_state_to_disk(
-    const std::filesystem::path& state_file,
-    storage_registry::storage_state state) {
+    const std::filesystem::path& state_file, storage_state state) {
 
     std::filesystem::create_directories(state_file.parent_path());
 

@@ -3,16 +3,10 @@
 #include "common/etcd/utils.h"
 #include "common/network/server.h"
 #include "service_registry.h"
-#include <string>
 
 namespace uh::cluster::storage {
 
-enum class storage_state : std::uint8_t {
-    NEW = 0,
-    ASSIGNED = 1,
-    DOWN = 2,
-    SIZE
-};
+enum class storage_state : std::uint8_t { DOWN, NEW, ASSIGNED };
 
 class storage_registry : public service_registry {
 
@@ -34,7 +28,7 @@ private:
 
     bool read_state_from_disk(const std::filesystem::path& state_file);
     void write_state_to_disk(const std::filesystem::path& state_file,
-                             storage_registry::storage_state state);
+                             storage_state state);
 };
 
 } // namespace uh::cluster::storage

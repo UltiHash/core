@@ -1,19 +1,19 @@
-#include <storage/group/state.h>
+#include <storage/group/state_context.h>
 
 #include <common/utils/strings.h>
 #include <stdexcept>
 
 namespace uh::cluster::storage::group {
 
-state state::create(std::string_view str) {
+state_context state_context::create(std::string_view str) {
     if (str.size() < 3 || str[1] != ',') {
-        throw std::runtime_error("Invalid state string format");
+        throw std::runtime_error("Invalid state_context string format");
     }
 
-    state result;
+    state_context result;
 
     auto gs = ctoul(str.front());
-    if (gs >= static_cast<decltype(gs)>(group_state::SIZE)) {
+    if (gs >= magic_enum::enum_count<group_state>()) {
         throw std::runtime_error("Group state value out of range");
     }
 
@@ -24,7 +24,7 @@ state state::create(std::string_view str) {
 
     for (char c : storage_states_str) {
         auto ss = ctoul(c);
-        if (ss >= static_cast<int>(storage_state::SIZE)) {
+        if (ss >= magic_enum::enum_count<storage_state>()) {
             throw std::runtime_error("Group state value out of range");
         }
         result.storages.push_back(static_cast<storage_state>(ss));
@@ -33,7 +33,7 @@ state state::create(std::string_view str) {
     return result;
 }
 
-std::string state::to_string() const {
+std::string state_context::to_string() const {
     std::string result = std::to_string(static_cast<int>(group));
     result += ',';
 
@@ -44,9 +44,9 @@ std::string state::to_string() const {
     return result;
 }
 
-static_assert(static_cast<int>(state::group_state::SIZE) < 10,
+static_assert(magic_enum::enum_count<group_state>() < 10,
               "group_state has too many values");
-static_assert(static_cast<int>(state::storage_state::SIZE) < 10,
-              "group_state has too many values");
+static_assert(magic_enum::enum_count<storage_state>() < 10,
+              "storage_state has too many values");
 
 } // namespace uh::cluster::storage::group
