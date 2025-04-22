@@ -6,6 +6,7 @@
 
 #include <array>
 #include <filesystem>
+#include <iostream> // TODO: remove
 #include <map>
 #include <string>
 
@@ -136,194 +137,76 @@ get_etcd_service_attribute_enum(const std::string& param) {
 namespace ns {
 
 struct key_t {
-    virtual const char* basename() const = 0;
-
-    key_t(std::string&& prefix)
-        : m_prefix{std::move(prefix)} {}
-
-    operator std::string() const { return m_prefix + "/" + basename(); }
+    key_t() = default;
+    key_t(std::string&& basename, key_t* parent = nullptr) {
+        std::cout << "basename: " << basename << std::endl;
+        m_basename = std::move(basename);
+        if (parent) {
+            std::cout << "parent key: " << parent->m_key << std::endl;
+            m_key = parent->m_key + "/" + m_basename;
+        } else {
+            std::cout << "parent is nullptr" << std::endl;
+            m_key = "/" + m_basename;
+        }
+    }
+    key_t(key_t&&) = default;
+    key_t& operator=(key_t&&) = default;
+    operator std::string() const { return m_key; }
+    const std::string_view basename() const { return m_basename; }
 
 private:
-    std::string m_prefix;
+    std::string m_basename;
+    std::string m_key;
 };
 
-struct storage_states_t : public key_t {
+struct subscriptable_key_t : public key_t {
     struct next_t : public key_t {
-        std::string m_basename;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)} {}
-        const char* basename() const { return m_basename.c_str(); }
+        using key_t::key_t;
     };
     template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
+        return next_t{std::to_string(index), this};
     }
-    storage_states_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "storage_states";
-};
-
-struct group_initialized_t : public key_t {
-    group_initialized_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "group_initialized";
+    using key_t::key_t;
 };
 
 struct internals_t : public key_t {
     struct next_t : public key_t {
-        std::string m_basename;
-        storage_states_t storage_states;
-        group_initialized_t group_initialized;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)},
-              storage_states{*this},
-              group_initialized{*this} {}
-        const char* basename() const { return m_basename.c_str(); }
+        subscriptable_key_t storage_states{"storage_states", this};
+        key_t group_initialized{"group_initialized", this};
+        using key_t::key_t;
     };
     template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
+        return next_t{std::to_string(index), this};
     }
-    internals_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "internals";
-};
-
-struct group_state_t : public key_t {
-    group_state_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "group_state";
-};
-
-struct storage_hostports_t : public key_t {
-    struct next_t : public key_t {
-        std::string m_basename;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)} {}
-        const char* basename() const { return m_basename.c_str(); }
-    };
-    template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
-    }
-    storage_hostports_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "storage_hostports";
+    using key_t::key_t;
 };
 
 struct externals_t : public key_t {
     struct next_t : public key_t {
-        std::string m_basename;
-        group_state_t group_state;
-        storage_hostports_t storage_hostports;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)},
-              group_state{*this},
-              storage_hostports{*this} {}
-        const char* basename() const { return m_basename.c_str(); }
+        key_t group_state{"group_state", this};
+        subscriptable_key_t storage_hostports{"storage_hostports", this};
+        using key_t::key_t;
     };
     template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
+        return next_t{std::to_string(index), this};
     }
-    externals_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "externals";
-};
-
-struct group_configs_t : public key_t {
-    struct next_t : public key_t {
-        std::string m_basename;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)} {}
-        const char* basename() const { return m_basename.c_str(); }
-    };
-    template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
-    }
-    group_configs_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "group_configs";
-};
-
-struct storage_assignments_t : public key_t {
-    struct next_t : public key_t {
-        std::string m_basename;
-        template <std::integral T>
-        next_t(std::string&& prefix, T index)
-            : key_t{std::move(prefix)},
-              m_basename{std::to_string(index)} {}
-        const char* basename() const { return m_basename.c_str(); }
-    };
-    template <std::integral T> auto operator[](T index) {
-        return next_t{*this, index};
-    }
-    storage_assignments_t(std::string&& prefix)
-        : key_t{std::move(prefix)} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "storage_assignments";
+    using key_t::key_t;
 };
 
 struct storage_group_t : public key_t {
-    internals_t internals;
-    externals_t externals;
-    group_configs_t group_configs;
-    storage_assignments_t storage_assignments;
-
-    storage_group_t(std::string&& prefix)
-        : key_t{std::move(prefix)},
-          internals{*this},
-          externals{*this},
-          group_configs{*this},
-          storage_assignments{*this} {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "storage_group";
+    internals_t internals{"internals", this};
+    externals_t externals{"externals", this};
+    subscriptable_key_t group_configs{"group_configs", this};
+    subscriptable_key_t storage_assignments{"storage_assignments", this};
+    using key_t::key_t;
 };
 
 struct uh_t : public key_t {
-    storage_group_t storage_group;
-
-    uh_t(std::string&& prefix = {})
-        : key_t{std::move(prefix)},
-          storage_group(*this) {}
-    const char* basename() const override { return m_basename; }
-
-private:
-    inline static constexpr const char* m_basename = "uh";
+    storage_group_t storage_group{"storage_group", this};
+    using key_t::key_t;
 };
 
-inline uh_t root{};
+inline uh_t root{"uh"};
 
 } // namespace ns
 
