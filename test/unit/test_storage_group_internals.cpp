@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE(
         futures.push_back(p.get_future());
     }
     auto callback_count = 0ul;
-    std::optional<storage::group::internals::publisher> publisher =
-        storage::group::internals::publisher(etcd, 11, 7);
+    auto publisher =
+        std::make_optional<storage::group::internals::publisher>(etcd, 11, 7);
     auto subscriber =
         storage::group::internals::subscriber(etcd, 11, 7, [&](bool*) {
             if (callback_count < promises.size()) {
