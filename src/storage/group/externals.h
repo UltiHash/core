@@ -18,13 +18,13 @@ public:
         : m_etcd{etcd},
           m_group_id{group_id} {}
     void put_group_state(state group_state) {
-        m_etcd.put(ns::root.storage_groups.externals[m_group_id].group_state,
+        m_etcd.put(ns::root.storage_group.externals[m_group_id].group_state,
                    group_state.to_string());
     }
 
     void put_storage_hostport(size_t storage_id, hostport storage_hostport) {
         m_etcd.put(
-            ns::root.storage_groups.externals[m_group_id].hostports[storage_id],
+            ns::root.storage_group.externals[m_group_id].hostports[storage_id],
             storage_hostport.to_string());
     }
 
@@ -43,7 +43,7 @@ public:
         : m_etcd{etcd},
           m_group_state_callback{std::move(group_state_callback)},
           m_storage_hostport_callback{std::move(storage_hostport_callback)},
-          m_key{ns::root.storage_groups.externals[group_id]},
+          m_key{ns::root.storage_group.externals[group_id]},
           m_hostports(num_storages) {
 
         m_group_state.store(std::make_shared<state>(),

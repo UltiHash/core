@@ -6,7 +6,6 @@
 
 #include <array>
 #include <filesystem>
-#include <format>
 #include <map>
 #include <string>
 
@@ -16,7 +15,6 @@ static constexpr const char* etcd_watchdog = "/" NAMESPACE "/watchdog/";
 
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
-#define ETCD_STORAGE_GROUPS_KEY_PREFIX "/" NAMESPACE "/storage-groups"
 
 static constexpr const char* etcd_global_lock_key =
     "/" NAMESPACE "/config/class/cluster/lock";
@@ -277,28 +275,28 @@ struct storage_assignments_t : public key_t {
     inline static constexpr const char* m_basename = "storage_assignments";
 };
 
-struct storage_groups_t : public key_t {
+struct storage_group_t : public key_t {
     internals_t internals;
     externals_t externals;
     group_configs_t group_configs;
     storage_assignments_t storage_assignments;
 
-    storage_groups_t(std::string&& prefix)
+    storage_group_t(std::string&& prefix)
         : key_t{std::move(prefix)},
           internals{*this},
           externals{*this},
           group_configs{*this},
           storage_assignments{*this} {}
     const char* basename() const override { return m_basename; }
-    inline static constexpr const char* m_basename = "storage_groups";
+    inline static constexpr const char* m_basename = "storage_group";
 };
 
 struct uh_t : public key_t {
-    storage_groups_t storage_groups;
+    storage_group_t storage_group;
 
     uh_t(std::string&& prefix = {})
         : key_t{std::move(prefix)},
-          storage_groups(*this) {}
+          storage_group(*this) {}
     const char* basename() const override { return m_basename; }
     inline static constexpr const char* m_basename = "uh";
 };
