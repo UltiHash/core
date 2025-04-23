@@ -86,46 +86,6 @@ etcd_manager::~etcd_manager() {
     client->leaserevoke(m_lease);
 }
 
-etcd::Response etcd_manager::campaign(std::string const& name,
-                                      std::string const& value) {
-    auto client = m_client.load();
-    auto resp = client->campaign(name, m_lease, value);
-    return resp;
-}
-
-etcd::Response etcd_manager::leader(std::string const& name) {
-    auto client = m_client.load();
-    auto resp = client->leader(name);
-    return resp;
-}
-
-std::unique_ptr<etcd::SyncClient::Observer>
-etcd_manager::observe(const std::string& name) {
-    auto client = m_client.load();
-    return client->observe(name);
-}
-
-void etcd_manager::proclaim(std::string const& name, std::string const& key,
-                            int64_t revision, std::string const& value) {
-    auto client = m_client.load();
-    auto resp = client->campaign(name, m_lease, value);
-    if (!resp.is_ok())
-        throw std::invalid_argument(
-            std::format("proclaim with name: {}, key: {}, revision: {}, value: "
-                        "{} failed, details: {}",
-                        name, key, revision, value, resp.error_message()));
-}
-
-void etcd_manager::resign(std::string const& name, std::string const& key,
-                          int64_t revision) {
-    auto client = m_client.load();
-    auto resp = client->resign(name, m_lease, key, revision);
-    if (!resp.is_ok())
-        throw std::invalid_argument(std::format(
-            "proclaim with name: {}, key: {}, revision: {} failed, details: {}",
-            name, key, revision, resp.error_message()));
-}
-
 void etcd_manager::put(const std::string& key, const std::string& value) {
     auto client = m_client.load();
 
