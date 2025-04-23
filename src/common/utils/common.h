@@ -68,9 +68,6 @@ constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
 
 constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
 
-constexpr auto ETCD_TIMEOUT = std::chrono::seconds(300);
-constexpr auto ETCD_RETRY_INTERVAL = std::chrono::seconds(1);
-
 constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
 
 constexpr size_t SET_LOG_CACHE_SIZE = 10000;

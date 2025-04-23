@@ -49,6 +49,8 @@ public:
      */
     void put(const std::string& key, const std::string& value);
     void put_persistant(const std::string& key, const std::string& value);
+    etcd::Response create_if_empty(std::string const& key,
+                                   std::string const& value);
 
     /*
      * Retrieve methods
@@ -79,10 +81,10 @@ public:
 
     private:
         watch_guard(etcd_manager* etcd, const std::string& prefix,
-                    callback_t callback)
+                    callback_t callback, int64_t watch_index)
             : m_etcd{etcd},
               m_prefix{prefix} {
-            m_etcd->add_watcher(prefix, std::move(callback));
+            m_etcd->add_watcher(prefix, std::move(callback), watch_index);
         }
 
         etcd_manager* m_etcd{nullptr};
@@ -93,10 +95,14 @@ public:
 
     /*
      * Watch given prefix "recursively"
+     * @callback: callback should handle GET(if watch_index != 0), CREATE, SET,
+     *            DELETE actions
+     * @watch_index: index to start watching from, 0 means "from the creation"
      */
     [[nodiscard]] watch_guard watch(const std::string& prefix,
-                                    callback_t callback) {
-        return watch_guard(this, prefix, std::move(callback));
+                                    callback_t callback,
+                                    int64_t watch_index = 0) {
+        return watch_guard(this, prefix, std::move(callback), watch_index);
     }
 
     /*
@@ -155,7 +161,8 @@ private:
 
     void reset();
 
-    void add_watcher(const std::string& prefix, callback_t callback);
+    void add_watcher(const std::string& prefix, callback_t callback,
+                     int64_t watch_index);
     void remove_watcher(const std::string& prefix);
     void restore_watchers(void);
 
