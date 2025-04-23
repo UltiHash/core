@@ -59,5 +59,5 @@ private:
 
 } // namespace uh::cluster
 
-#include <common/etcd/endpoints/impl/value.h>
-#include <common/etcd/endpoints/impl/vector.h>
+#include <common/etcd/endpoints/impl/value_observer.h>
+#include <common/etcd/endpoints/impl/vector_observer.h>
