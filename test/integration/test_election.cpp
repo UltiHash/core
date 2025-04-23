@@ -13,7 +13,7 @@ namespace uh::cluster {
 
 BOOST_AUTO_TEST_SUITE(a_observer)
 
-BOOST_AUTO_TEST_CASE(creates_and_destroys_observer) {
+BOOST_AUTO_TEST_CASE(is_created_and_destroyed_well) {
     auto etcd_observer = etcd_manager();
     auto o = observer(etcd_observer, "group_a");
     BOOST_TEST(o.get() == "");
