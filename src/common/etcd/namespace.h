@@ -6,7 +6,6 @@
 
 #include <array>
 #include <filesystem>
-#include <iostream> // TODO: remove
 #include <map>
 #include <string>
 
@@ -139,13 +138,10 @@ namespace ns {
 struct key_t {
     key_t() = default;
     key_t(std::string&& basename, key_t* parent = nullptr) {
-        std::cout << "basename: " << basename << std::endl;
         m_basename = std::move(basename);
         if (parent) {
-            std::cout << "parent key: " << parent->m_key << std::endl;
             m_key = parent->m_key + "/" + m_basename;
         } else {
-            std::cout << "parent is nullptr" << std::endl;
             m_key = "/" + m_basename;
         }
     }
