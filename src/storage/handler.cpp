@@ -183,8 +183,7 @@ coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
 coro<void> handler::handle_update_state(messenger& m,
                                         const messenger::header& h) {
     const auto state = co_await m.recv_primitive<uint8_t>(h);
-    const auto state_enum =
-        magic_enum::enum_cast<storage_registry::storage_state>(state);
+    const auto state_enum = magic_enum::enum_cast<storage_state>(state);
     if (state_enum.has_value()) {
         m_registry.update_service_state(state_enum.value());
     }

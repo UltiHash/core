@@ -2,6 +2,7 @@
 
 #include <entrypoint/http/request.h>
 #include <entrypoint/user/db.h>
+#include <set>
 
 namespace uh::cluster::ep::http {
 

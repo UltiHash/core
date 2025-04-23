@@ -2,7 +2,7 @@
 
 #include <cstring>
 #include <ranges>
-#include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -183,5 +183,78 @@ std::size_t stoul(std::string_view s, std::size_t* pos = nullptr,
                   int base = 10);
 
 std::size_t ctoul(const char& c, std::size_t* pos = nullptr, int base = 10);
+
+template <typename T>
+concept HasToString = requires(const T& obj) {
+    { obj.to_string() } -> std::convertible_to<std::string>;
+};
+
+template <typename T>
+concept HasCreate = requires(const std::string& str) {
+    { T::create(str) } -> std::same_as<T>;
+};
+
+template <typename T>
+concept Serializable = HasToString<T> && HasCreate<T>;
+
+template <typename T>
+requires Serializable<T>
+std::ostream& operator<<(std::ostream& os, const T& value) {
+    os << value.to_string();
+    return os;
+}
+
+template <typename T>
+requires Serializable<T>
+std::istream& operator>>(std::istream& is, T& value) {
+    std::string input;
+    is >> input;
+
+    try {
+        value = T::create(input);
+    } catch (const std::exception& e) {
+        is.setstate(std::ios::failbit);
+    }
+    return is;
+}
+
+template <typename T>
+std::string serialize(const T& value)
+requires requires(std::ostream& os, const T& v) {
+    { os << v } -> std::same_as<std::ostream&>;
+}
+{
+    std::ostringstream oss;
+    oss << value;
+    return oss.str();
+}
+
+template <typename T>
+T deserialize(const std::string& str)
+requires requires(std::istream& is, T& v) {
+    { is >> v } -> std::same_as<std::istream&>;
+}
+{
+    std::istringstream iss(str);
+    T value;
+    iss >> value;
+    return value;
+}
+
+template <typename Enum>
+std::string serialize(Enum value)
+requires std::is_enum_v<Enum>
+{
+    return std::to_string(static_cast<size_t>(value));
+}
+
+template <typename Enum>
+Enum deserialize(const std::string& str)
+requires std::is_enum_v<Enum>
+{
+    size_t value = 0;
+    value = stoul(str);
+    return static_cast<Enum>(value);
+}
 
 } // namespace uh::cluster

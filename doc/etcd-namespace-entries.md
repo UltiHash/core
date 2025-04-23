@@ -42,25 +42,28 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication.
 
-**TBD**: `/<namespace>/storage-groups/<storage_group_id>/storages/<service_id>` \
-  contains state of storage services: 0(NEW), 1(ASSIGNED). \
+`/<namespace>/storage_group/internals/<storage_group_id>/storage_states/<storage_id>` \
+  contains state of storage services: NEW, ASSIGNED, and DOWN as numbers. \
   This key is watched by `coordinator`.
 
-**TBD**: `/<namespace>/storage-groups/<storage_group_id>/initialized` \
+`/<namespace>/storage_group/internals/<storage_group_id>/group_initialized` \
   exists only when the storage group succeeded to assign all storage services. \
   This key has no ttl. `coordinator` reads this key.
 
-**TBD**: `/<namespace>/storage-groups/state/<storage_group_id>` \
+`/<namespace>/storage_group/externals/<storage_group_id>/group_state` \
   contains state of group and storage services state that storage group manager
   refered, like `<group_state>,220101`, 2 means that storage is DOWN, `group_state`
-  will be a single digit number also. This key is watched by `global_data_view`.
+  will be a single digit number also. This key is watched by group data view.
+
+`/<namespace>/storage_group/externals/<storage_group_id>/storage_hostports/<storage_id>` \
+  contains hostport of storages that group data view refers, like `hostname:8080`.
 
 ## Configuration parameters
 
-**TBD**: `/<namespace>/storage-groups/config/<storage_group_id>`
+`/<namespace>/storage_group/group_configs/<storage_group_id>`
   contains configuration of storage groups. `coordinator` writes this key.
 
-**TBD**: `/<namespace>/storage-groups/assignments/<service_id>` \
+`/<namespace>/storage_group/storage_assignments/<storage_id>` \
   contains the storage group ID to which a storage service belongs. \
   The `coordinator` writes this key, and each storage service reads it.
 

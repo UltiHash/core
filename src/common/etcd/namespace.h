@@ -6,7 +6,9 @@
 
 #include <array>
 #include <filesystem>
+#include <iostream> // TODO: remove
 #include <map>
+#include <string>
 
 namespace uh::cluster {
 
@@ -14,8 +16,6 @@ static constexpr const char* etcd_watchdog = "/" NAMESPACE "/watchdog/";
 
 static constexpr const char* etcd_services_key_prefix =
     "/" NAMESPACE "/services/";
-static constexpr const char* etcd_storage_groups_key_prefix =
-    "/" NAMESPACE "/storage-groups/";
 
 static constexpr const char* etcd_global_lock_key =
     "/" NAMESPACE "/config/class/cluster/lock";
@@ -61,26 +61,6 @@ constexpr std::array<
         {uh::cluster::ENDPOINT_HOST, "endpoint_host"},
         {uh::cluster::ENDPOINT_PORT, "endpoint_port"},
     }};
-
-/*
- * Input of group state manager
- */
-std::string get_storage_groups_assigned_storages_path(size_t group_id);
-std::string get_storage_groups_assigned_storages_path(size_t group_id,
-                                                      size_t storage_id);
-std::string get_storage_group_initialized_flag_path(size_t group_id);
-
-/*
- * Output from group state manager
- */
-std::string get_storage_group_state_path();
-std::string get_storage_group_state_path(size_t group_id);
-
-/*
- * Group configurations for storage services
- */
-std::string get_storage_group_config_path(size_t group_id);
-std::string get_storage_to_storage_group_map_path(size_t storage_id);
 
 inline static std::string get_service_root_path(role r) {
     return etcd_services_key_prefix + get_service_string(r);
@@ -153,5 +133,81 @@ get_etcd_service_attribute_enum(const std::string& param) {
 
     throw std::invalid_argument("invalid etcd parameter");
 }
+
+namespace ns {
+
+struct key_t {
+    key_t() = default;
+    key_t(std::string&& basename, key_t* parent = nullptr) {
+        std::cout << "basename: " << basename << std::endl;
+        m_basename = std::move(basename);
+        if (parent) {
+            std::cout << "parent key: " << parent->m_key << std::endl;
+            m_key = parent->m_key + "/" + m_basename;
+        } else {
+            std::cout << "parent is nullptr" << std::endl;
+            m_key = "/" + m_basename;
+        }
+    }
+    key_t(key_t&&) = default;
+    key_t& operator=(key_t&&) = default;
+    operator std::string() const { return m_key; }
+    const std::string_view basename() const { return m_basename; }
+
+private:
+    std::string m_basename;
+    std::string m_key;
+};
+
+struct subscriptable_key_t : public key_t {
+    struct next_t : public key_t {
+        using key_t::key_t;
+    };
+    template <std::integral T> auto operator[](T index) {
+        return next_t{std::to_string(index), this};
+    }
+    using key_t::key_t;
+};
+
+struct internals_t : public key_t {
+    struct next_t : public key_t {
+        subscriptable_key_t storage_states{"storage_states", this};
+        key_t group_initialized{"group_initialized", this};
+        using key_t::key_t;
+    };
+    template <std::integral T> auto operator[](T index) {
+        return next_t{std::to_string(index), this};
+    }
+    using key_t::key_t;
+};
+
+struct externals_t : public key_t {
+    struct next_t : public key_t {
+        key_t group_state{"group_state", this};
+        subscriptable_key_t storage_hostports{"storage_hostports", this};
+        using key_t::key_t;
+    };
+    template <std::integral T> auto operator[](T index) {
+        return next_t{std::to_string(index), this};
+    }
+    using key_t::key_t;
+};
+
+struct storage_group_t : public key_t {
+    internals_t internals{"internals", this};
+    externals_t externals{"externals", this};
+    subscriptable_key_t group_configs{"group_configs", this};
+    subscriptable_key_t storage_assignments{"storage_assignments", this};
+    using key_t::key_t;
+};
+
+struct uh_t : public key_t {
+    storage_group_t storage_group{"storage_group", this};
+    using key_t::key_t;
+};
+
+inline uh_t root{"uh"};
+
+} // namespace ns
 
 } // namespace uh::cluster
