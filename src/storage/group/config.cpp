@@ -4,7 +4,7 @@
 
 using nlohmann::json;
 
-namespace uh::cluster::storage_group {
+namespace uh::cluster::storage::group {
 
 void from_json(const json& j, config& config) {
     j.at("data_shards").get_to(config.data_shards);
@@ -34,4 +34,4 @@ std::string config::to_string() const {
     return j.dump();
 }
 
-} // namespace uh::cluster::storage_group
+} // namespace uh::cluster::storage::group

@@ -11,7 +11,7 @@
 
 // ------------- Tests Suites Follow --------------
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
 BOOST_AUTO_TEST_CASE(basic_register_retrieve_update_retrieve_deregister) {
 
@@ -58,33 +58,29 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_update_retrieve_deregister) {
         BOOST_TEST(etcd.has(announced_etcd_path));
 
         const auto storage_group_map =
-            etcd.get(get_storage_to_storage_group_map_path(service_id));
+            etcd.get(ns::root.storage_group.storage_assignments[service_id]);
         BOOST_TEST(std::stoul(storage_group_map) == group_id);
 
         const std::string storage_state_path =
-            get_storage_groups_assigned_storages_path(group_id, service_id);
+            ns::root.storage_group.internals[group_id]
+                .storage_states[service_id];
         {
             const auto storage_state_number =
                 std::stoul(etcd.get(storage_state_path));
-            const auto storage_state =
-                magic_enum::enum_cast<storage_registry::storage_state>(
-                    storage_state_number);
-            BOOST_TEST(storage_state.has_value());
-            BOOST_TEST((storage_state.value() ==
-                        storage_registry::storage_state::NEW));
+            const auto state =
+                magic_enum::enum_cast<storage_state>(storage_state_number);
+            BOOST_TEST(state.has_value());
+            BOOST_TEST((state.value() == storage_state::NEW));
         }
         {
-            registering_registry.update_service_state(
-                storage_registry::storage_state::ASSIGNED);
+            registering_registry.update_service_state(storage_state::ASSIGNED);
             sleep(1);
             const auto storage_state_number =
                 std::stoul(etcd.get(storage_state_path));
-            const auto storage_state =
-                magic_enum::enum_cast<storage_registry::storage_state>(
-                    storage_state_number);
-            BOOST_TEST(storage_state.has_value());
-            BOOST_TEST((storage_state.value() ==
-                        storage_registry::storage_state::ASSIGNED));
+            const auto state =
+                magic_enum::enum_cast<storage_state>(storage_state_number);
+            BOOST_TEST(state.has_value());
+            BOOST_TEST((state.value() == storage_state::ASSIGNED));
         }
     }
 
@@ -104,4 +100,4 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_update_retrieve_deregister) {
     }
 }
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::storage

@@ -1,13 +1,13 @@
 #include "storage_registry.h"
 
-#include "common/etcd/namespace.h"
-#include "common/utils/common.h"
+#include <common/etcd/namespace.h>
+#include <common/utils/common.h>
 
 #include <fstream>
 
 using namespace boost::asio;
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
 constexpr const char* STATE_FILE_NAME = "state";
 
@@ -21,9 +21,9 @@ storage_registry::storage_registry(std::size_t service_index,
 storage_registry::~storage_registry() {
     service_registry::~service_registry();
     const std::string storage_group_path =
-        get_storage_to_storage_group_map_path(m_id);
+        ns::root.storage_group.storage_assignments[m_id];
     const std::string storage_state_path =
-        get_storage_groups_assigned_storages_path(m_group_id, m_id);
+        ns::root.storage_group.internals[m_group_id].storage_states[m_id];
     m_etcd.rm(storage_group_path);
     m_etcd.rm(storage_state_path);
 }
@@ -39,7 +39,7 @@ void storage_registry::register_service(const server_config& config) {
     }
 
     const std::string storage_group_path =
-        get_storage_to_storage_group_map_path(m_id);
+        ns::root.storage_group.storage_assignments[m_id];
     m_etcd.put(storage_group_path, std::to_string(m_group_id));
 }
 
@@ -50,7 +50,7 @@ void storage_registry::update_service_state(const storage_state state) {
     write_state_to_disk(state_file, state);
 
     const std::string storage_state_path =
-        get_storage_groups_assigned_storages_path(m_group_id, m_id);
+        ns::root.storage_group.internals[m_group_id].storage_states[m_id];
     const std::string value(std::to_string(magic_enum::enum_integer(state)));
     m_etcd.put(storage_state_path, value);
 }
@@ -71,7 +71,7 @@ bool storage_registry::read_state_from_disk(
     in.read(reinterpret_cast<char*>(&persisted_state), sizeof(uint8_t));
 
     const auto state_enum =
-        magic_enum::enum_cast<storage_registry::storage_state>(persisted_state);
+        magic_enum::enum_cast<storage_state>(persisted_state);
     if (state_enum.has_value()) {
         m_state = state_enum.value();
         return true;
@@ -80,8 +80,7 @@ bool storage_registry::read_state_from_disk(
 }
 
 void storage_registry::write_state_to_disk(
-    const std::filesystem::path& state_file,
-    storage_registry::storage_state state) {
+    const std::filesystem::path& state_file, storage_state state) {
 
     std::filesystem::create_directories(state_file.parent_path());
 
@@ -93,4 +92,4 @@ void storage_registry::write_state_to_disk(
     out.write(reinterpret_cast<const char*>(&state), sizeof(uint8_t));
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage
