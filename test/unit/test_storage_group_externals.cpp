@@ -46,9 +46,10 @@ BOOST_AUTO_TEST_CASE(is_watched_well) {
     auto state = deserialize<group_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals::publisher(etcd, group_id, storage_id);
-    auto subscriber = externals::subscriber(
-        etcd, group_id, num_storages, [&](group_state*) { p.set_value(); });
+    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto subscriber =
+        externals_subscriber(etcd, group_id, num_storages,
+                             [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_group_state(state);
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
@@ -68,17 +69,18 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_hostport) {
     auto hp = deserialize<hostport>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals::publisher(etcd, group_id, storage_id);
-    auto subscriber = externals::subscriber(
-        etcd, group_id, num_storages, nullptr,
-        [&](hostport*) { p.set_value(); }, nullptr);
+    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto subscriber =
+        externals_subscriber(etcd, group_id, num_storages,
+                             [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_hostport(hp);
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    BOOST_TEST(serialize(*subscriber.get_hostport(storage_id)) == literal);
+    BOOST_TEST(serialize(*subscriber.get_storage_hostports()[storage_id]) ==
+               literal);
 }
 
 BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_hostport) {
@@ -92,16 +94,14 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_hostport) {
     }
     auto callback_count = 0ul;
     auto publisher =
-        std::make_optional<externals::publisher>(etcd, group_id, storage_id);
-    auto subscriber = externals::subscriber(
-        etcd, group_id, num_storages, nullptr,
-        [&](hostport*) {
+        std::make_optional<externals_publisher>(etcd, group_id, storage_id);
+    auto subscriber = externals_subscriber(
+        etcd, group_id, num_storages, [&](etcd_manager::response) {
             if (callback_count < promises.size()) {
                 promises[callback_count].set_value();
             }
             ++callback_count;
-        },
-        nullptr);
+        });
     publisher->put_storage_hostport(hp);
     if (futures[0].wait_for(std::chrono::seconds(5)) ==
         std::future_status::timeout) {
@@ -114,7 +114,8 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_hostport) {
         BOOST_FAIL("First callback was not called within the timeout period");
     }
 
-    BOOST_TEST(serialize(*subscriber.get_hostport(storage_id)) == ":0");
+    BOOST_TEST(serialize(*subscriber.get_storage_hostports()[storage_id]) ==
+               ":0");
 }
 
 BOOST_AUTO_TEST_CASE(gets_storage_hostports) {
@@ -123,16 +124,16 @@ BOOST_AUTO_TEST_CASE(gets_storage_hostports) {
     auto hp = deserialize<hostport>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals::publisher(etcd, group_id, storage_id);
-    auto subscriber = externals::subscriber(
-        etcd, group_id, num_storages, nullptr,
-        [&](hostport*) { p.set_value(); }, nullptr);
+    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto subscriber =
+        externals_subscriber(etcd, group_id, num_storages,
+                             [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_hostport(hp);
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto hostports = subscriber.get_hostports();
+    auto hostports = subscriber.get_storage_hostports();
     BOOST_TEST(serialize(*hostports[storage_id]) == literal);
     BOOST_TEST(serialize(*hostports[0]) == ":0");
 }
@@ -143,17 +144,18 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     auto hp = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals::publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(etcd, group_id, storage_id);
     auto subscriber =
-        externals::subscriber(etcd, group_id, num_storages, nullptr, nullptr,
-                              [&](storage_state*) { p.set_value(); });
+        externals_subscriber(etcd, group_id, num_storages,
+                             [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_state(hp);
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    BOOST_TEST(serialize(*subscriber.get_storage_state(storage_id)) == literal);
+    BOOST_TEST(serialize(*subscriber.get_storage_states()[storage_id]) ==
+               literal);
 }
 
 BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_state) {
@@ -167,9 +169,9 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_state) {
     }
     auto callback_count = 0ul;
     auto publisher =
-        std::make_optional<externals::publisher>(etcd, group_id, storage_id);
-    auto subscriber = externals::subscriber(
-        etcd, group_id, num_storages, nullptr, nullptr, [&](storage_state*) {
+        std::make_optional<externals_publisher>(etcd, group_id, storage_id);
+    auto subscriber = externals_subscriber(
+        etcd, group_id, num_storages, [&](etcd_manager::response) {
             if (callback_count < promises.size()) {
                 promises[callback_count].set_value();
             }
@@ -187,7 +189,7 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_state) {
         BOOST_FAIL("First callback was not called within the timeout period");
     }
 
-    BOOST_TEST(serialize(*subscriber.get_storage_state(storage_id)) == "0");
+    BOOST_TEST(serialize(*subscriber.get_storage_states()[storage_id]) == "0");
 }
 
 BOOST_AUTO_TEST_CASE(gets_storage_states) {
@@ -196,10 +198,10 @@ BOOST_AUTO_TEST_CASE(gets_storage_states) {
     auto hp = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals::publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(etcd, group_id, storage_id);
     auto subscriber =
-        externals::subscriber(etcd, group_id, num_storages, nullptr, nullptr,
-                              [&](storage_state*) { p.set_value(); });
+        externals_subscriber(etcd, group_id, num_storages,
+                             [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_state(hp);
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
