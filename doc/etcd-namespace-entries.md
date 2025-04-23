@@ -42,28 +42,26 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication.
 
-`/<namespace>/storage_group/internals/<storage_group_id>/storage_states/<storage_id>` \
-  contains state of storage services: NEW, ASSIGNED, and DOWN as numbers. \
+`/<namespace>/storage_groups/<storage_group_id>/storage_states/<storage_id>` \
+  contains state of storage services: DOWN, NEW, and ASSIGNED as a number. \
   This key is watched by `coordinator`.
 
-`/<namespace>/storage_group/internals/<storage_group_id>/group_initialized` \
+`/<namespace>/storage_groups/<storage_group_id>/group_initialized` \
   exists only when the storage group succeeded to assign all storage services. \
   This key has no ttl. `coordinator` reads this key.
 
-`/<namespace>/storage_group/externals/<storage_group_id>/group_state` \
-  contains state of group and storage services state that storage group manager
-  refered, like `<group_state>,220101`, 2 means that storage is DOWN, `group_state`
-  will be a single digit number also. This key is watched by group data view.
+`/<namespace>/storage_groups/<storage_group_id>/group_state` \
+  contains state of group. This key is watched by group data view.
 
-`/<namespace>/storage_group/externals/<storage_group_id>/storage_hostports/<storage_id>` \
+`/<namespace>/storage_groups/<storage_group_id>/storage_hostports/<storage_id>` \
   contains hostport of storages that group data view refers, like `hostname:8080`.
 
 ## Configuration parameters
 
-`/<namespace>/storage_group/group_configs/<storage_group_id>`
+`/<namespace>/storage_groups/group_configs/<storage_group_id>`
   contains configuration of storage groups. `coordinator` writes this key.
 
-`/<namespace>/storage_group/storage_assignments/<storage_id>` \
+`/<namespace>/storage_groups/storage_assignments/<storage_id>` \
   contains the storage group ID to which a storage service belongs. \
   The `coordinator` writes this key, and each storage service reads it.
 

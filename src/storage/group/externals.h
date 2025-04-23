@@ -1,6 +1,6 @@
 #pragma once
 
-#include <storage/group/state_context.h>
+#include <storage/group/state.h>
 
 #include <common/telemetry/log.h>
 
@@ -10,12 +10,12 @@
 #include <common/utils/strings.h>
 #include <filesystem>
 
-namespace uh::cluster::storage::group::externals {
+namespace uh::cluster::storage::externals {
 
-using prefix_t = ns::externals_t::next_t;
+using prefix_t = ns::storage_groups_t::impl_t;
 
 inline prefix_t get_prefix(size_t group_id) {
-    return ns::root.storage_group.externals[group_id];
+    return ns::root.storage_groups[group_id];
 }
 
 /*
@@ -31,7 +31,7 @@ public:
         m_etcd.rm(m_prefix.group_state);
         m_etcd.rm(m_prefix.storage_hostports[m_storage_id]);
     }
-    void put_group_state(state_context group_state) {
+    void put_group_state(group_state group_state) {
         m_etcd.put(m_prefix.group_state, serialize(group_state));
     }
 
@@ -51,7 +51,7 @@ private:
  */
 class subscriber {
 public:
-    using group_state_callback_t = std::function<void(state_context*)>;
+    using group_state_callback_t = std::function<void(group_state*)>;
     using storage_hostport_callback_t = std::function<void(hostport*)>;
     subscriber(etcd_manager& etcd, size_t group_id, size_t num_storages,
                group_state_callback_t group_state_callback = nullptr,
@@ -62,7 +62,7 @@ public:
           m_prefix{get_prefix(group_id)},
           m_storage_hostports(num_storages) {
 
-        m_group_state.store(std::make_shared<state_context>(),
+        m_group_state.store(std::make_shared<group_state>(),
                             std::memory_order_release);
         for (auto& atom : m_storage_hostports) {
             atom.store(std::make_shared<hostport>(), std::memory_order_release);
@@ -71,7 +71,7 @@ public:
             m_prefix, [this](etcd_manager::response resp) { on_watch(resp); });
     }
 
-    std::shared_ptr<state_context> get_group_state() const {
+    std::shared_ptr<group_state> get_group_state() const {
         return m_group_state.load(std::memory_order_acquire);
     }
 
@@ -99,8 +99,8 @@ private:
                 case etcd_action::GET:
                 case etcd_action::CREATE:
                 case etcd_action::SET: {
-                    auto s = deserialize<state_context>(resp.value);
-                    m_group_state.store(std::make_shared<state_context>(s));
+                    auto s = deserialize<group_state>(resp.value);
+                    m_group_state.store(std::make_shared<group_state>(s));
 
                     LOG_INFO()
                         << "Modified group_state " << resp.value << " saved";
@@ -112,7 +112,7 @@ private:
                 }
                 case etcd_action::DELETE:
                 default:
-                    m_group_state.store(std::make_shared<state_context>());
+                    m_group_state.store(std::make_shared<group_state>());
 
                     LOG_INFO() << "group_state deleted";
 
@@ -165,9 +165,9 @@ private:
     group_state_callback_t m_group_state_callback;
     storage_hostport_callback_t m_storage_hostport_callback;
     prefix_t m_prefix;
-    std::atomic<std::shared_ptr<state_context>> m_group_state;
+    std::atomic<std::shared_ptr<group_state>> m_group_state;
     std::vector<std::atomic<std::shared_ptr<hostport>>> m_storage_hostports;
     etcd_manager::watch_guard m_wg;
 };
 
-} // namespace uh::cluster::storage::group::externals
+} // namespace uh::cluster::storage::externals

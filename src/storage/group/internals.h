@@ -8,12 +8,12 @@
 #include <common/utils/strings.h>
 #include <filesystem>
 
-namespace uh::cluster::storage::group::internals {
+namespace uh::cluster::storage::internals {
 
-using prefix_t = ns::internals_t::next_t;
+using prefix_t = ns::storage_groups_t::impl_t;
 
 inline prefix_t get_prefix(size_t group_id) {
-    return ns::root.storage_group.internals[group_id];
+    return ns::root.storage_groups[group_id];
 }
 
 /*
@@ -176,4 +176,4 @@ private:
     etcd_manager::watch_guard m_wg;
 };
 
-} // namespace uh::cluster::storage::group::internals
+} // namespace uh::cluster::storage::internals

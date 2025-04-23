@@ -57,10 +57,10 @@ public:
                                                            bc.access_token));
         }
         for (size_t i = 0; const auto& cfg : cc.storage_groups) {
-            m_etcd.put(ns::root.storage_group.group_configs[i],
+            m_etcd.put(ns::root.storage_groups.group_configs[i],
                        cfg.to_string());
             for (const auto& m : cfg.members) {
-                m_etcd.put(ns::root.storage_group.storage_assignments[m],
+                m_etcd.put(ns::root.storage_groups.storage_assignments[m],
                            std::to_string(i));
             }
             ++i;
