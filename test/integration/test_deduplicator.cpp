@@ -3,7 +3,7 @@
 #include <common/utils/random.h>
 #include <deduplicator/interfaces/local_deduplicator.h>
 
-#include <mock/storage/mock_global_data_view.h>
+#include <mock/storage/mock_data_view.h>
 #include <util/coroutine.h>
 #include <util/temp_directory.h>
 
@@ -36,8 +36,9 @@ BOOST_FIXTURE_TEST_CASE(deduplicate, dedup_coro_fixture) {
                           .page_size = DEFAULT_PAGE_SIZE};
     auto data_store =
         mock_data_store(config, dir.path().string(), DATA_STORE_ID, 0);
-    auto data_view = mock_global_data_view(data_store);
-    auto dedup = local_deduplicator({}, data_view);
+    auto data_view = mock_data_view(data_store);
+    auto cache = storage::global::cache(get_io_context(), data_view, 4000ul);
+    auto dedup = local_deduplicator({}, data_view, cache);
 
     auto data = random_string(66);
 

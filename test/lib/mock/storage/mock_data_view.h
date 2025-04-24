@@ -6,9 +6,9 @@
 
 namespace uh::cluster {
 
-class mock_global_data_view : public global_data_view {
+class mock_data_view : public storage::data_view {
 public:
-    mock_global_data_view(mock_data_store& storage);
+    explicit mock_data_view(mock_data_store& storage);
 
     coro<address> write(std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
@@ -19,7 +19,7 @@ public:
     coro<std::size_t> unlink(const address& addr) override;
     coro<std::size_t> get_used_space() override;
 
-    ~mock_global_data_view() noexcept = default;
+    ~mock_data_view() noexcept = default;
 
 private:
     mock_data_store& m_storage;

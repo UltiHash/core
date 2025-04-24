@@ -82,7 +82,7 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         case STORAGE_USED_REQ:
             co_await handle_get_used(m, hdr);
             break;
-        case STORAGE_UPDATE_STATE:
+        case STORAGE_UPDATE_STATE_REQ:
             co_await handle_update_state(m, hdr);
             break;
         default:

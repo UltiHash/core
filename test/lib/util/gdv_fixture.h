@@ -53,7 +53,7 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<default_global_data_view>(
+        m_gdv = std::make_shared<storage::global::global_data_view>(
             m_gdv_config, m_ioc, m_load_balancer, m_storage_index);
 
         m_threads.emplace_back([this, i] {
@@ -100,7 +100,7 @@ public:
         m_etcd.clear_all();
     }
 
-    std::shared_ptr<global_data_view> get_global_data_view() { return m_gdv; }
+    std::shared_ptr<storage::data_view> get_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -123,7 +123,7 @@ private:
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_services;
-    std::shared_ptr<global_data_view> m_gdv;
+    std::shared_ptr<storage::data_view> m_gdv;
 };
 
 } // namespace uh::cluster

@@ -36,6 +36,7 @@ private:
     storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_maintainer;
     storage::global::global_data_view m_data_view;
+    storage::global::cache m_cache;
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 

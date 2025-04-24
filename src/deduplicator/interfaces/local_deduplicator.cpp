@@ -32,11 +32,12 @@ coro<size_t> match_size(storage::global::cache& storage, std::string_view data,
 
 } // namespace
 
-local_deduplicator::local_deduplicator(
-    deduplicator_config config, storage::global::global_data_view& storage)
+local_deduplicator::local_deduplicator(deduplicator_config config,
+                                       storage::data_view& storage,
+                                       storage::global::cache& cache)
     : m_dedupe_conf(std::move(config)),
       m_storage(storage),
-      m_cache(m_storage, m_dedupe_conf.global_data_view.read_cache_capacity_l2),
+      m_cache(cache),
       m_fragment_set(m_dedupe_conf.set_capacity, m_cache),
       m_dedupe_workers(m_dedupe_conf.worker_thread_count) {}
 
