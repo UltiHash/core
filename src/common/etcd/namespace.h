@@ -6,7 +6,6 @@
 
 #include <array>
 #include <filesystem>
-#include <iostream> // TODO: remove
 #include <map>
 #include <string>
 
@@ -139,13 +138,10 @@ namespace ns {
 struct key_t {
     key_t() = default;
     key_t(std::string&& basename, key_t* parent = nullptr) {
-        std::cout << "basename: " << basename << std::endl;
         m_basename = std::move(basename);
         if (parent) {
-            std::cout << "parent key: " << parent->m_key << std::endl;
             m_key = parent->m_key + "/" + m_basename;
         } else {
-            std::cout << "parent is nullptr" << std::endl;
             m_key = "/" + m_basename;
         }
     }
@@ -160,49 +156,34 @@ private:
 };
 
 struct subscriptable_key_t : public key_t {
-    struct next_t : public key_t {
+    struct impl_t : public key_t {
         using key_t::key_t;
     };
     template <std::integral T> auto operator[](T index) {
-        return next_t{std::to_string(index), this};
+        return impl_t{std::to_string(index), this};
     }
     using key_t::key_t;
 };
 
-struct internals_t : public key_t {
-    struct next_t : public key_t {
-        subscriptable_key_t storage_states{"storage_states", this};
-        key_t group_initialized{"group_initialized", this};
-        using key_t::key_t;
-    };
-    template <std::integral T> auto operator[](T index) {
-        return next_t{std::to_string(index), this};
-    }
-    using key_t::key_t;
-};
-
-struct externals_t : public key_t {
-    struct next_t : public key_t {
-        key_t group_state{"group_state", this};
-        subscriptable_key_t storage_hostports{"storage_hostports", this};
-        using key_t::key_t;
-    };
-    template <std::integral T> auto operator[](T index) {
-        return next_t{std::to_string(index), this};
-    }
-    using key_t::key_t;
-};
-
-struct storage_group_t : public key_t {
-    internals_t internals{"internals", this};
-    externals_t externals{"externals", this};
+struct storage_groups_t : public key_t {
     subscriptable_key_t group_configs{"group_configs", this};
     subscriptable_key_t storage_assignments{"storage_assignments", this};
+
+    struct impl_t : public key_t {
+        subscriptable_key_t storage_hostports{"storage_hostports", this};
+        subscriptable_key_t storage_states{"storage_states", this};
+        key_t group_initialized{"group_initialized", this};
+        key_t group_state{"group_state", this};
+        using key_t::key_t;
+    };
+    template <std::integral T> auto operator[](T index) {
+        return impl_t{std::to_string(index), this};
+    }
     using key_t::key_t;
 };
 
 struct uh_t : public key_t {
-    storage_group_t storage_group{"storage_group", this};
+    storage_groups_t storage_groups{"storage_groups", this};
     using key_t::key_t;
 };
 

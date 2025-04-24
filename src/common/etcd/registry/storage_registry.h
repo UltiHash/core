@@ -1,12 +1,12 @@
 #pragma once
 
-#include "common/etcd/utils.h"
-#include "common/network/server.h"
 #include "service_registry.h"
 
-namespace uh::cluster::storage {
+#include <common/etcd/utils.h>
+#include <common/network/server.h>
+#include <storage/group/state.h>
 
-enum class storage_state : std::uint8_t { DOWN, NEW, ASSIGNED };
+namespace uh::cluster::storage {
 
 class storage_registry : public service_registry {
 

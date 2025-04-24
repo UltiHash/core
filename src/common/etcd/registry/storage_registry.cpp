@@ -21,9 +21,9 @@ storage_registry::storage_registry(std::size_t service_index,
 storage_registry::~storage_registry() {
     service_registry::~service_registry();
     const std::string storage_group_path =
-        ns::root.storage_group.storage_assignments[m_id];
+        ns::root.storage_groups.storage_assignments[m_id];
     const std::string storage_state_path =
-        ns::root.storage_group.internals[m_group_id].storage_states[m_id];
+        ns::root.storage_groups[m_group_id].storage_states[m_id];
     m_etcd.rm(storage_group_path);
     m_etcd.rm(storage_state_path);
 }
@@ -39,7 +39,7 @@ void storage_registry::register_service(const server_config& config) {
     }
 
     const std::string storage_group_path =
-        ns::root.storage_group.storage_assignments[m_id];
+        ns::root.storage_groups.storage_assignments[m_id];
     m_etcd.put(storage_group_path, std::to_string(m_group_id));
 }
 
@@ -50,7 +50,7 @@ void storage_registry::update_service_state(const storage_state state) {
     write_state_to_disk(state_file, state);
 
     const std::string storage_state_path =
-        ns::root.storage_group.internals[m_group_id].storage_states[m_id];
+        ns::root.storage_groups[m_group_id].storage_states[m_id];
     const std::string value(std::to_string(magic_enum::enum_integer(state)));
     m_etcd.put(storage_state_path, value);
 }
