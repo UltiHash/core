@@ -5,7 +5,7 @@
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
-#include <storage/global_data/default_global_data_view.h>
+#include <storage/global/data_view.h>
 #include <storage/service.h>
 
 #include <util/temp_directory.h>

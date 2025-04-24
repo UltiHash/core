@@ -1,9 +1,9 @@
 #pragma once
 
 #include <common/caches/lru_cache.h>
-#include <storage/global_data/global_data_view.h>
+#include <storage/global/data_view.h>
 
-namespace uh::cluster::dd {
+namespace uh::cluster::storage::global {
 
 class cache {
 public:
@@ -18,4 +18,4 @@ private:
     lru_cache<uint128_t, shared_buffer<char>> m_lru;
 };
 
-} // namespace uh::cluster::dd
+} // namespace uh::cluster::storage::global

@@ -7,7 +7,8 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-multipart::multipart(deduplicator_interface& dedupe, global_data_view& gdv,
+multipart::multipart(deduplicator_interface& dedupe,
+                     storage::global::global_data_view& gdv,
                      multipart_state& uploads)
     : m_dedupe(dedupe),
       m_gdv(gdv),

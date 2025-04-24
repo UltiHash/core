@@ -1,6 +1,6 @@
 #pragma once
 
-#include <storage/global_data/global_data_view.h>
+#include <storage/global/data_view.h>
 
 #include "mock_data_store.h"
 
@@ -13,8 +13,6 @@ public:
     coro<address> write(std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override;
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override;
-    shared_buffer<char> read_fragment(const uint128_t& pointer,
-                                      size_t size) override;
     coro<std::size_t> read_address(const address& addr,
                                    std::span<char> buffer) override;
     [[nodiscard]] coro<address> link(const address& addr) override;

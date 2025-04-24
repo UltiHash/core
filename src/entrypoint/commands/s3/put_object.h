@@ -1,11 +1,11 @@
 #pragma once
 
 #include "common/crypto/hash.h"
-#include "storage/global_data/global_data_view.h"
 #include "common/service_interfaces/deduplicator_interface.h"
 #include "entrypoint/config.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
+#include "storage/global/data_view.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
@@ -13,7 +13,8 @@ namespace uh::cluster {
 class put_object : public command {
 public:
     put_object(boost::asio::io_context&, const entrypoint_config&, limits&,
-               directory&, global_data_view&, deduplicator_interface&);
+               directory&, storage::global::global_data_view&,
+               deduplicator_interface&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -32,7 +33,7 @@ private:
     boost::asio::io_context& m_ioc;
     const entrypoint_config& m_config;
     directory& m_dir;
-    global_data_view& m_gdv;
+    storage::global::global_data_view& m_gdv;
     limits& m_limits;
     deduplicator_interface& m_dedup;
 };
