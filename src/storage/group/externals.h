@@ -71,7 +71,7 @@ public:
 
 private:
     prefix_t m_prefix;
-    value_observer<int> m_leader;
+    value_observer<int> m_leader; // use int to represent the empty state (-1)
     value_observer<group_state> m_group_state;
     vector_observer<hostport> m_storage_hostports;
     vector_observer<storage_state> m_storage_states;

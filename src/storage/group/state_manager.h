@@ -19,10 +19,10 @@ struct storage_campaign_strategy : public campaign_strategy {
     storage_campaign_strategy(etcd_manager& etcd, size_t group_id,
                               size_t num_storages, size_t storage_id,
                               std::function<void()> manage_state)
-        : m_etcd(etcd),
-          m_group_id(group_id),
-          m_num_storages(num_storages),
-          m_storage_id(storage_id),
+        : m_etcd{etcd},
+          m_group_id{group_id},
+          m_num_storages{num_storages},
+          m_storage_id{storage_id},
           m_manage_state{std::move(manage_state)} {}
 
     void pre_campaign() override {
@@ -65,10 +65,10 @@ class state_manager {
 public:
     state_manager(etcd_manager& etcd, size_t group_id, size_t num_storages,
                   size_t storage_id)
-        : m_etcd(etcd),
-          m_group_id(group_id),
-          m_num_storages(num_storages),
-          m_storage_id(storage_id),
+        : m_etcd{etcd},
+          m_group_id{group_id},
+          m_num_storages{num_storages},
+          m_storage_id{storage_id},
           m_externals_publisher(etcd, group_id, storage_id),
           m_candidate(m_etcd, get_prefix(m_group_id).leader,
                       serialize(m_storage_id),
@@ -76,17 +76,23 @@ public:
                           etcd, group_id, num_storages, storage_id,
                           // State management function
                           [this]() {
+                              m_group_state.emplace(group_state::INITIALIZING);
                               internals_subscriber.emplace(
                                   m_etcd, m_group_id, m_num_storages,
                                   [this](etcd_manager::response) { manage(); });
                           })) {}
 
 private:
+    /*
+     * Called only on a leader
+     */
     void manage() {
         auto group_initialized = internals_subscriber->get_group_initialized();
         auto storage_states = internals_subscriber->get_storage_states();
 
         // TODO: manage state here
+        // m_group_state = group_state::INITIALIZING;
+        // m_externals_publisher.put_group_state(*m_group_state);
     }
 
     etcd_manager& m_etcd;
@@ -94,7 +100,13 @@ private:
     size_t m_num_storages;
     size_t m_storage_id;
     externals_publisher m_externals_publisher;
+
+    /*
+     * Used only on a leader
+     */
+    std::optional<group_state> m_group_state;
     std::optional<internals_subscriber> internals_subscriber;
+
     candidate m_candidate;
 };
 
