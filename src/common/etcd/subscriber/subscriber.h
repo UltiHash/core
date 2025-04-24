@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/etcd/endpoints/impl/subscriber_observer.h>
+#include <common/etcd/subscriber/impl/subscriber_observer.h>
 
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
@@ -10,6 +10,7 @@ namespace uh::cluster {
 /*
  * Group-wise subscriber
  */
+// TODO: use const key_t& instead of using T
 template <typename T> class subscriber {
 public:
     using callback_t = std::function<void(etcd_manager::response resp)>;
@@ -34,11 +35,11 @@ private:
                 "externals_watcher has detected {} action on {} with value {}",
                 resp.action, resp.key, resp.value);
 
-            for (auto& o : m_observers) {
-                o.get().on_watch(resp);
-            }
+            bool change_detected =
+                std::any_of(m_observers.begin(), m_observers.end(),
+                            [&](auto& o) { return o.get().on_watch(resp); });
 
-            if (m_callback)
+            if (change_detected and m_callback)
                 m_callback(resp);
 
         } catch (const std::runtime_error& e) {
@@ -59,5 +60,5 @@ private:
 
 } // namespace uh::cluster
 
-#include <common/etcd/endpoints/impl/value_observer.h>
-#include <common/etcd/endpoints/impl/vector_observer.h>
+#include <common/etcd/subscriber/impl/value_observer.h>
+#include <common/etcd/subscriber/impl/vector_observer.h>

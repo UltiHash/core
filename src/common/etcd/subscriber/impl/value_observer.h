@@ -9,8 +9,8 @@ namespace uh::cluster {
 template <typename T> class value_observer : public subscriber_observer {
 public:
     using callback_t = std::function<void(T&)>;
-    value_observer(std::string expected_key, callback_t callback = nullptr,
-                   T default_value = {})
+    value_observer(std::string expected_key, T default_value = {},
+                   callback_t callback = nullptr)
         : m_expected_key{std::move(expected_key)},
           m_default_value{std::move(default_value)},
           m_callback{std::move(callback)} {
@@ -29,10 +29,10 @@ public:
     /*
      * listener
      */
-    void on_watch(etcd_manager::response resp) {
+    bool on_watch(etcd_manager::response resp) {
 
         if (resp.key != m_expected_key)
-            return;
+            return false;
 
         switch (get_etcd_action_enum(resp.action)) {
         case etcd_action::GET:
@@ -44,11 +44,13 @@ public:
             m_value.store(std::make_shared<T>(m_default_value));
             break;
         default:
-            break;
+            return false;
         }
 
         if (m_callback)
             m_callback(*get().get());
+
+        return true;
     }
 
 private:

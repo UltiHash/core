@@ -10,7 +10,7 @@ template <typename T> class vector_observer : public subscriber_observer {
 public:
     using callback_t = std::function<void(T&)>;
     vector_observer(std::string expected_parent_key, size_t num_storages,
-                    callback_t callback = nullptr, T default_value = {})
+                    T default_value = {}, callback_t callback = nullptr)
         : m_expected_parent_key{std::move(expected_parent_key)},
           m_default_value{std::move(default_value)},
           m_callback{std::move(callback)},
@@ -37,12 +37,12 @@ public:
     /*
      * listener
      */
-    void on_watch(etcd_manager::response resp) {
+    bool on_watch(etcd_manager::response resp) {
 
         auto key = std::filesystem::path(resp.key);
 
         if (key.parent_path() != m_expected_parent_key)
-            return;
+            return false;
 
         auto id = stoul(key.filename().string());
 
@@ -56,11 +56,13 @@ public:
             m_values[id].store(std::make_shared<T>(m_default_value));
             break;
         default:
-            break;
+            return false;
         }
 
         if (m_callback)
             m_callback(*get(id).get());
+
+        return true;
     }
 
 private:
