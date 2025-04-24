@@ -12,24 +12,18 @@
 
 namespace uh::cluster::storage {
 
-class callback_interface {
-public:
-    virtual ~callback_interface() = default;
-    virtual void handle_state_changes(etcd_manager::response response) = 0;
-};
-
 class fixture {
 public:
     fixture()
-        : etcd{} {}
+        : m_etcd{} {}
 
     ~fixture() {
-        etcd.clear_all();
+        m_etcd.clear_all();
         std::this_thread::sleep_for(100ms);
     }
 
 protected:
-    etcd_manager etcd;
+    etcd_manager m_etcd;
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_storage_group_state, fixture)
@@ -46,9 +40,9 @@ BOOST_AUTO_TEST_CASE(is_watched_well) {
     auto state = deserialize<group_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(m_etcd, group_id, storage_id);
     auto subscriber =
-        externals_subscriber(etcd, group_id, num_storages,
+        externals_subscriber(m_etcd, group_id, num_storages,
                              [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_group_state(state);
@@ -69,9 +63,9 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_hostport) {
     auto hp = deserialize<hostport>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(m_etcd, group_id, storage_id);
     auto subscriber =
-        externals_subscriber(etcd, group_id, num_storages,
+        externals_subscriber(m_etcd, group_id, num_storages,
                              [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_hostport(hp);
@@ -94,9 +88,9 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_hostport) {
     }
     auto callback_count = 0ul;
     auto publisher =
-        std::make_optional<externals_publisher>(etcd, group_id, storage_id);
+        std::make_optional<externals_publisher>(m_etcd, group_id, storage_id);
     auto subscriber = externals_subscriber(
-        etcd, group_id, num_storages, [&](etcd_manager::response) {
+        m_etcd, group_id, num_storages, [&](etcd_manager::response) {
             if (callback_count < promises.size()) {
                 promises[callback_count].set_value();
             }
@@ -124,9 +118,9 @@ BOOST_AUTO_TEST_CASE(gets_storage_hostports) {
     auto hp = deserialize<hostport>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(m_etcd, group_id, storage_id);
     auto subscriber =
-        externals_subscriber(etcd, group_id, num_storages,
+        externals_subscriber(m_etcd, group_id, num_storages,
                              [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_hostport(hp);
@@ -144,9 +138,9 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     auto hp = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(m_etcd, group_id, storage_id);
     auto subscriber =
-        externals_subscriber(etcd, group_id, num_storages,
+        externals_subscriber(m_etcd, group_id, num_storages,
                              [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_state(hp);
@@ -169,9 +163,9 @@ BOOST_AUTO_TEST_CASE(publisher_destroyes_storage_state) {
     }
     auto callback_count = 0ul;
     auto publisher =
-        std::make_optional<externals_publisher>(etcd, group_id, storage_id);
+        std::make_optional<externals_publisher>(m_etcd, group_id, storage_id);
     auto subscriber = externals_subscriber(
-        etcd, group_id, num_storages, [&](etcd_manager::response) {
+        m_etcd, group_id, num_storages, [&](etcd_manager::response) {
             if (callback_count < promises.size()) {
                 promises[callback_count].set_value();
             }
@@ -198,9 +192,9 @@ BOOST_AUTO_TEST_CASE(gets_storage_states) {
     auto hp = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto publisher = externals_publisher(etcd, group_id, storage_id);
+    auto publisher = externals_publisher(m_etcd, group_id, storage_id);
     auto subscriber =
-        externals_subscriber(etcd, group_id, num_storages,
+        externals_subscriber(m_etcd, group_id, num_storages,
                              [&](etcd_manager::response) { p.set_value(); });
 
     publisher.put_storage_state(hp);

@@ -6,7 +6,7 @@
 namespace uh::cluster {
 
 struct subscriber_observer {
-    virtual void on_watch(etcd_manager::response resp) = 0;
+    virtual bool on_watch(etcd_manager::response resp) = 0;
     virtual ~subscriber_observer() = default;
 };
 
