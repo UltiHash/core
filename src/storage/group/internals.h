@@ -26,11 +26,11 @@ public:
         m_etcd.rm(m_prefix.storage_states[m_storage_id]);
     }
 
-    void put_group_initialized(bool s) {
-        m_etcd.put_persistant(m_prefix.group_initialized, serialize(s));
+    void put_group_initialized(bool value) {
+        m_etcd.put_persistant(m_prefix.group_initialized, serialize(value));
     }
-    void put_storage_state(storage_state s) {
-        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(s));
+    void put_storage_state(storage_state value) {
+        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(value));
     }
 
 private:
