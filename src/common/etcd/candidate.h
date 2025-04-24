@@ -36,7 +36,6 @@ public:
           m_strategy{std::move(strategy)},
           m_is_leader{false} {
 
-        // Create key with empty value first,
         auto resp = campaign();
         if (resp.is_ok())
             return;
@@ -57,6 +56,7 @@ private:
         if (m_strategy)
             m_strategy->pre_campaign();
 
+        // Create key with empty value first,
         auto resp = m_etcd.create_if_empty(m_key, "");
         if (resp.is_ok()) {
             m_is_leader.store(true, std::memory_order_release);
