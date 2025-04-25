@@ -42,7 +42,7 @@ coro<future<dedupe_response>> upload(boost::asio::io_context& ioc,
 
 put_object::put_object(boost::asio::io_context& ioc,
                        const entrypoint_config& conf, limits& uhlimits,
-                       directory& dir, global_data_view& gdv,
+                       directory& dir, storage::global::global_data_view& gdv,
                        deduplicator_interface& dedup)
     : m_ioc(ioc),
       m_config(conf),

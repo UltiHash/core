@@ -14,16 +14,17 @@ namespace uh::cluster {
 
 struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
-    std::shared_ptr<global_data_view> gdv;
-    std::shared_ptr<dd::cache> cache;
+    std::shared_ptr<storage::data_view> gdv;
+    std::shared_ptr<storage::global::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
     fragment_set_fixture() {}
 
     void setup() {
         global_data_view_fixture::setup();
-        gdv = get_global_data_view();
-        cache = std::make_shared<dd::cache>(*gdv, 1000);
+        gdv = get_data_view();
+        cache = std::make_shared<storage::global::cache>(get_executor(), *gdv,
+                                                         1000);
         frag_set = std::make_shared<fragment_set>(1000, *cache);
     }
 
@@ -157,8 +158,8 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
 
-    auto gdv = get_global_data_view();
-    dd::cache cache(*gdv, 1000);
+    auto gdv = get_data_view();
+    storage::global::cache cache(get_executor(), *gdv, 1000);
     fragment_set frag_set(1000, cache);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);

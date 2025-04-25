@@ -9,8 +9,6 @@ struct storage_interface {
     virtual coro<address> write(std::span<const char>,
                                 const std::vector<std::size_t>&) = 0;
 
-    virtual coro<void> read_fragment(char* buffer, const fragment& f) = 0;
-
     virtual coro<shared_buffer<>> read(const uint128_t& pointer,
                                        size_t size) = 0;
 
@@ -21,7 +19,7 @@ struct storage_interface {
     virtual coro<std::size_t> unlink(const address& addr) = 0;
     virtual coro<std::size_t> get_used_space() = 0;
 
-    virtual ~storage_interface() = default;
+    virtual ~storage_interface() noexcept = default;
     static constexpr role service_role = STORAGE_SERVICE;
 };
 

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "storage/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
+#include "storage/global/data_view.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
 class copy_object : public command {
 public:
-    copy_object(directory&, global_data_view&, limits& limits);
+    copy_object(directory&, storage::global::global_data_view&, limits& limits);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -19,7 +19,7 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_gdv;
+    storage::global::global_data_view& m_gdv;
     limits& m_limits;
 };
 

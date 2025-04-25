@@ -3,7 +3,7 @@
 
 namespace uh::cluster {
 
-fragment_set::fragment_set(size_t capacity, dd::cache& storage)
+fragment_set::fragment_set(size_t capacity, storage::global::cache& storage)
     : m_storage(storage),
       m_lfu(capacity, std::bind_front(&fragment_set::remove, this)),
       m_lfu_headers(capacity, std::bind_front(&fragment_set::remove, this)) {}

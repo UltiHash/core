@@ -1,14 +1,14 @@
 #pragma once
 
-#include <storage/global_data/global_data_view.h>
 #include <entrypoint/commands/command.h>
 #include <entrypoint/directory.h>
+#include <storage/global/data_view.h>
 
 namespace uh::cluster {
 
 class get_metrics : public command {
 public:
-    get_metrics(directory&, global_data_view&);
+    get_metrics(directory&, storage::global::global_data_view&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -18,7 +18,7 @@ public:
 
 private:
     directory& m_dir;
-    global_data_view& m_gdv;
+    storage::global::global_data_view& m_gdv;
 };
 
 } // namespace uh::cluster

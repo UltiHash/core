@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/caches/lfu_cache.h"
-#include "storage/global_data/global_data_view.h"
 #include "fragment_set_element.h"
+#include <common/caches/lfu_cache.h>
+#include <storage/global/data_view.h>
 
 #include <set>
 #include <shared_mutex>
@@ -76,7 +76,7 @@ public:
      * @param storage The #global_data_view instance used for looking
      * up full fragment content beyond the prefix.
      */
-    fragment_set(size_t capacity, dd::cache& storage);
+    fragment_set(size_t capacity, storage::global::cache& storage);
 
     /**
      * @brief Searches the system for lexicographic neighbours of #data
@@ -132,7 +132,7 @@ public:
 private:
     void remove(const std::set<fragment_set_element>::const_iterator& itr);
 
-    dd::cache& m_storage;
+    storage::global::cache& m_storage;
     std::set<fragment_set_element> m_set;
     std::shared_mutex m_mutex;
 

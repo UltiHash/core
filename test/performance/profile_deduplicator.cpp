@@ -2,7 +2,7 @@
 #include <common/utils/random.h>
 #include <deduplicator/interfaces/local_deduplicator.h>
 
-#include <mock/storage/mock_global_data_view.h>
+#include <mock/storage/mock_data_view.h>
 #include <util/coroutine.h>
 #include <util/temp_directory.h>
 
@@ -31,10 +31,12 @@ public:
                                         .page_size = DEFAULT_PAGE_SIZE};
         data_store = std::make_unique<mock_data_store>(
             config, dir.path().string(), DATA_STORE_ID, 0);
-        data_view = std::make_unique<mock_global_data_view>(*data_store);
-
+        data_view = std::make_unique<mock_data_view>(*data_store);
+        ioc = std::make_unique<boost::asio::io_context>(4);
+        cache =
+            std::make_unique<storage::global::cache>(*ioc, *data_view, 4000ul);
         dedup = std::make_unique<local_deduplicator>(deduplicator_config{},
-                                                     *data_view);
+                                                     *data_view, *cache);
     }
 
     void TearDown(const ::benchmark::State& state) override {}
@@ -46,7 +48,10 @@ public:
 protected:
     temp_directory dir;
     std::unique_ptr<mock_data_store> data_store;
-    std::unique_ptr<mock_global_data_view> data_view;
+
+    std::unique_ptr<mock_data_view> data_view;
+    std::unique_ptr<boost::asio::io_context> ioc;
+    std::unique_ptr<storage::global::cache> cache;
     std::unique_ptr<local_deduplicator> dedup;
 };
 

@@ -21,8 +21,6 @@ private:
 
     coro<void> handle_read(messenger& m, const messenger::header& h);
 
-    coro<void> handle_read_fragment(messenger& m, const messenger::header& h);
-
     coro<void> handle_read_address(messenger& m, const messenger::header& h);
 
     coro<void> handle_link(messenger& m, const messenger::header& h);

@@ -1,10 +1,10 @@
-#include "default_global_data_view.h"
+#include "data_view.h"
+#include "address_utils.h"
 
 #include <common/telemetry/log.h>
-#include <storage/address_utils.h>
 
-namespace uh::cluster {
-default_global_data_view::default_global_data_view(
+namespace uh::cluster::storage::global {
+global_data_view::global_data_view(
     const global_data_view_config& config, boost::asio::io_context& ioc,
     service_load_balancer<storage_interface>& load_balancer,
     storage_index& storage_index)
@@ -15,42 +15,14 @@ default_global_data_view::default_global_data_view(
     m_load_balancer.get();
 }
 
-coro<address>
-default_global_data_view::write(std::span<const char> data,
-                                const std::vector<std::size_t>& offsets) {
+coro<address> global_data_view::write(std::span<const char> data,
+                                      const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
     co_return co_await client->write(data, offsets);
 }
 
-shared_buffer<char>
-default_global_data_view::read_fragment(const uint128_t& pointer,
-                                        const size_t size) {
-
-    if (size == 0) {
-        throw std::runtime_error("Read fragment size must be larger than zero");
-    }
-
-    shared_buffer<char> buffer(size);
-    const fragment frag{pointer, size};
-    auto storage = m_storage_index.get(pointer);
-    auto context = THREAD_LOCAL_CONTEXT;
-
-    if (boost::asio::trace_span::enable &&
-        !boost::asio::trace_span::check_context(context)) {
-        LOG_ERROR() << "[read_fragment] The context to be "
-                       "encoded is invalid";
-    }
-
-    boost::asio::co_spawn(
-        m_io_service,
-        storage->read_fragment(buffer.data(), frag).continue_trace(context),
-        boost::asio::use_future)
-        .get();
-    return buffer;
-}
-
-coro<shared_buffer<>> default_global_data_view::read(const uint128_t& pointer,
-                                                     size_t size) {
+coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
+                                             size_t size) {
 
     if (size == 0) {
         throw std::runtime_error("Read size must be larger than zero");
@@ -60,9 +32,8 @@ coro<shared_buffer<>> default_global_data_view::read(const uint128_t& pointer,
     co_return co_await storage->read(pointer, size);
 }
 
-coro<std::size_t>
-default_global_data_view::read_address(const address& addr,
-                                       std::span<char> buffer) {
+coro<std::size_t> global_data_view::read_address(const address& addr,
+                                                 std::span<char> buffer) {
     co_return co_await perform_for_address(
         addr, m_storage_index, m_io_service,
         [buffer](size_t, std::shared_ptr<storage_interface> svc,
@@ -71,7 +42,7 @@ default_global_data_view::read_address(const address& addr,
         });
 }
 
-coro<std::size_t> default_global_data_view::get_used_space() {
+coro<std::size_t> global_data_view::get_used_space() {
     auto nodes = m_storage_index.get_services();
 
     size_t used = 0;
@@ -81,8 +52,7 @@ coro<std::size_t> default_global_data_view::get_used_space() {
     co_return used;
 }
 
-[[nodiscard]] coro<address>
-default_global_data_view::link(const address& addr) {
+[[nodiscard]] coro<address> global_data_view::link(const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
         addr, m_storage_index, m_io_service,
@@ -99,7 +69,7 @@ default_global_data_view::link(const address& addr) {
     co_return rv;
 }
 
-coro<std::size_t> default_global_data_view::unlink(const address& addr) {
+coro<std::size_t> global_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_storage_index, m_io_service,
@@ -110,4 +80,4 @@ coro<std::size_t> default_global_data_view::unlink(const address& addr) {
     co_return freed_bytes;
 }
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage::global

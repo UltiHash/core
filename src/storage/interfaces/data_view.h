@@ -5,9 +5,9 @@
 #include "common/types/common_types.h"
 #include "common/types/scoped_buffer.h"
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
-class global_data_view {
+class data_view {
 
 public:
     virtual coro<address> write(std::span<const char> data,
@@ -15,8 +15,6 @@ public:
 
     virtual coro<shared_buffer<>> read(const uint128_t& pointer,
                                        size_t size) = 0;
-    virtual shared_buffer<char> read_fragment(const uint128_t& pointer,
-                                              size_t size) = 0;
 
     virtual coro<std::size_t> read_address(const address& addr,
                                            std::span<char> buffer) = 0;
@@ -27,7 +25,7 @@ public:
 
     virtual coro<std::size_t> get_used_space() = 0;
 
-    virtual ~global_data_view() noexcept = default;
+    virtual ~data_view() noexcept = default;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::storage

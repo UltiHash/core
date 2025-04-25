@@ -9,7 +9,8 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
-copy_object::copy_object(directory& dir, global_data_view& gdv, limits& limits)
+copy_object::copy_object(directory& dir, storage::global::global_data_view& gdv,
+                         limits& limits)
     : m_dir(dir),
       m_gdv(gdv),
       m_limits(limits) {}
