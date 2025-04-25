@@ -42,13 +42,21 @@ available.
 `/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
     contains the port the service is using for communication.
 
+`/<namespace>/storage_groups/temporaries/<storage_group_id>/storage_offsets/<storage_id>` \
+  contains storage offset of all storage services. This key is watched by  a 
+  leader.
+
+`/<namespace>/storage_groups/<storage_group_id>/leader` \
+  contains leader's storage id. It can contain empty value during election as a 
+  temporary value.
+
 `/<namespace>/storage_groups/<storage_group_id>/storage_states/<storage_id>` \
   contains state of storage services: DOWN, NEW, and ASSIGNED as a number. \
-  This key is watched by `coordinator`.
+  This key is watched by a leader.
 
 `/<namespace>/storage_groups/<storage_group_id>/group_initialized` \
   exists only when the storage group succeeded to assign all storage services. \
-  This key has no ttl. `coordinator` reads this key.
+  This key has no ttl. A leader reads this key.
 
 `/<namespace>/storage_groups/<storage_group_id>/group_state` \
   contains state of group. This key is watched by group data view.

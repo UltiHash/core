@@ -1,6 +1,8 @@
 #pragma once
 
-#include <common/etcd/endpoints/endpoints.h>
+#include "impl/prefix.h"
+
+#include <common/etcd/subscriber/subscriber.h>
 
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
@@ -10,21 +12,12 @@
 
 namespace uh::cluster::storage {
 
-using prefix_t = ns::storage_groups_t::impl_t;
-
-inline prefix_t get_prefix(size_t group_id) {
-    return ns::root.storage_groups[group_id];
-}
-
 /*
- * Storage-wise publisher
+ * Storage-wise publisher.
+ *
+ * Leader interface is ommited, because we have `candidate` class for that.
  */
 class externals_publisher {
-private:
-    etcd_manager& m_etcd;
-    prefix_t m_prefix;
-    size_t m_storage_id;
-
 public:
     externals_publisher(etcd_manager& etcd, size_t group_id, size_t storage_id)
         : m_etcd{etcd},
@@ -36,15 +29,20 @@ public:
         m_etcd.rm(m_prefix.storage_states[m_storage_id]);
     }
 
-    void put_group_state(group_state s) {
-        m_etcd.put(m_prefix.group_state, serialize(s));
+    void put_group_state(group_state value) {
+        m_etcd.put(m_prefix.group_state, serialize(value));
     }
-    void put_storage_hostport(hostport s) {
-        m_etcd.put(m_prefix.storage_hostports[m_storage_id], serialize(s));
+    void put_storage_hostport(hostport value) {
+        m_etcd.put(m_prefix.storage_hostports[m_storage_id], serialize(value));
     }
-    void put_storage_state(storage_state s) {
-        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(s));
+    void put_storage_state(storage_state value) {
+        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(value));
     }
+
+private:
+    etcd_manager& m_etcd;
+    prefix_t m_prefix;
+    size_t m_storage_id;
 };
 
 /*
@@ -52,23 +50,28 @@ public:
  */
 class externals_subscriber {
 public:
+    using callback_t = subscriber<prefix_t>::callback_t;
     externals_subscriber(etcd_manager& etcd, size_t group_id,
-                         size_t num_storages,
-                         subscriber<prefix_t>::callback_t callback)
+                         size_t num_storages, callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
+          m_leader{m_prefix.leader, -1},
           m_group_state{m_prefix.group_state},
           m_storage_hostports{m_prefix.storage_hostports, num_storages},
           m_storage_states{m_prefix.storage_states, num_storages},
-          m_subscriber{etcd,
-                       m_prefix,
-                       {m_group_state, m_storage_hostports, m_storage_states},
-                       std::move(callback)} {}
+          m_subscriber{
+              etcd,
+              m_prefix,
+              {m_leader, m_group_state, m_storage_hostports, m_storage_states},
+              std::move(callback)} {}
+
+    auto get_leader() { return m_leader.get(); };
     auto get_group_state() { return m_group_state.get(); };
     auto get_storage_hostports() { return m_storage_hostports.get(); };
     auto get_storage_states() { return m_storage_states.get(); };
 
 private:
     prefix_t m_prefix;
+    value_observer<int> m_leader; // use int to represent the empty state (-1)
     value_observer<group_state> m_group_state;
     vector_observer<hostport> m_storage_hostports;
     vector_observer<storage_state> m_storage_states;

@@ -1,7 +1,8 @@
 #define BOOST_TEST_MODULE "election tests"
 
-#include <common/election/candidate.h>
-#include <common/election/observer.h>
+#include <common/etcd/candidate.h>
+#include <common/etcd/utils.h>
+#include <storage/group/externals.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -9,66 +10,105 @@
 
 using namespace std::chrono_literals;
 
-namespace uh::cluster {
+namespace uh::cluster::storage {
 
-BOOST_AUTO_TEST_SUITE(a_observer)
+class fixture {
+public:
+    fixture()
+        : m_etcd{} {}
 
-BOOST_AUTO_TEST_CASE(is_created_and_destroyed_well) {
-    auto etcd_observer = etcd_manager();
-    auto o = observer(etcd_observer, "group_a");
-    BOOST_TEST(o.get() == "");
-}
+    ~fixture() {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+    }
 
-BOOST_AUTO_TEST_SUITE_END()
+protected:
+    void setup_promises_and_subscriber(size_t expected_callbacks,
+                                       size_t group_id, size_t num_storages) {
+        promises.resize(expected_callbacks);
+        futures.clear();
+        for (auto& p : promises) {
+            futures.push_back(p.get_future());
+        }
+        callback_count = 0;
+        subscriber.emplace(m_etcd, group_id, num_storages,
+                           [&](etcd_manager::response) {
+                               if (callback_count < promises.size()) {
+                                   promises[callback_count].set_value();
+                               }
+                               ++callback_count;
+                           });
+    }
 
-BOOST_AUTO_TEST_SUITE(a_candidate)
+    void wait_for_callbacks() {
+        for (size_t i = 0; i < promises.size(); ++i) {
+            if (futures[i].wait_for(std::chrono::seconds(5)) ==
+                std::future_status::timeout) {
+                BOOST_FAIL("Callback was not called within the timeout period");
+            }
+        }
+    }
+
+    etcd_manager m_etcd;
+    std::vector<std::promise<void>> promises;
+    std::vector<std::future<void>> futures;
+    size_t callback_count = 0;
+    std::optional<externals_subscriber> subscriber;
+};
+
+BOOST_FIXTURE_TEST_SUITE(a_candidate, fixture)
 
 BOOST_AUTO_TEST_CASE(gets_leadership_when_no_other_candidates) {
-    auto etcd_observer = etcd_manager();
-    std::promise<void> p;
-    std::future<void> f = p.get_future();
-    auto o = observer(etcd_observer, "group_a", [&]() { p.set_value(); });
+    const auto group_id = 11ul, num_storages = 7ul, storage_id = 3ul;
 
-    auto etcd_candidate_1 = etcd_manager();
-    auto c_1 = std::make_optional<candidate>(etcd_candidate_1, "group_a", "1");
-    if (f.wait_for(5s) == std::future_status::timeout) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(o.get() == "1");
-    c_1.reset(); // candidate resigns
+    // 2 promises, for preemption and proclamation
+    setup_promises_and_subscriber(2, group_id, num_storages);
+
+    auto c1 = candidate(m_etcd, ns::root.storage_groups[group_id].leader,
+                        serialize(storage_id));
+
+    wait_for_callbacks();
+
+    BOOST_TEST(*subscriber->get_leader() == storage_id);
 }
 
-BOOST_AUTO_TEST_CASE(gets_leadership_when_it_is_created_first) {
-    auto etcd_observer = etcd_manager();
-    std::promise<void> p;
-    std::future<void> f = p.get_future();
-    auto o = observer(etcd_observer, "group_a", [&]() { p.set_value(); });
+BOOST_AUTO_TEST_CASE(loose_leadership_when_it_goes_down) {
+    const auto group_id = 11ul, num_storages = 7ul, storage_id = 2ul;
 
-    auto etcd_candidate_1 = etcd_manager();
-    auto c_1 = std::make_optional<candidate>(etcd_candidate_1, "group_a", "1");
-    // etcd_manager etcd_candidate_2;
-    // auto c_2 = candidate(etcd_candidate_2, "group_a", "2");
-    if (f.wait_for(5s) == std::future_status::timeout) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(o.get() == "1");
-    c_1.reset(); // candidate resigns
+    // For preemption, proclamation and resignation
+    setup_promises_and_subscriber(3, group_id, num_storages);
+
+    auto c1 = std::make_optional<candidate>(
+        m_etcd, ns::root.storage_groups[group_id].leader,
+        serialize(storage_id));
+
+    c1.reset();
+
+    wait_for_callbacks();
+
+    BOOST_TEST(*subscriber->get_leader() == -1);
 }
 
 BOOST_AUTO_TEST_CASE(gets_leadership_when_previous_leader_goes_down) {
-    etcd_manager etcd_observer;
-    auto o = observer(etcd_observer, "group_a");
-    etcd_manager etcd_candidate_1;
-    auto c_1 = std::make_optional<candidate>(etcd_candidate_1, "group_a", "1");
+    const auto group_id = 11ul, num_storages = 7ul, storage_id = 2ul;
 
-    etcd_manager etcd_candidate_2;
-    auto c_2 = candidate(etcd_candidate_2, "group_a", "2");
-    c_1.reset();
+    // For preemption, proclamation, resignation for the first candidate,
+    // and another preemption-proclamation for the second candidate
+    setup_promises_and_subscriber(5, group_id, num_storages);
 
-    std::this_thread::sleep_for(2s);
-    BOOST_TEST(o.get() == "2");
+    auto c1 = std::make_optional<candidate>(
+        m_etcd, ns::root.storage_groups[group_id].leader, serialize(1));
+
+    auto c2 = candidate(m_etcd, ns::root.storage_groups[group_id].leader,
+                        serialize(storage_id));
+
+    c1.reset();
+
+    wait_for_callbacks();
+
+    BOOST_TEST(*subscriber->get_leader() == storage_id);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-} // namespace uh::cluster
+} // namespace uh::cluster::storage

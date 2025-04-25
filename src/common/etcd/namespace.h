@@ -145,6 +145,8 @@ struct key_t {
             m_key = "/" + m_basename;
         }
     }
+    key_t(const key_t&) = default;
+    key_t& operator=(const key_t&) = default;
     key_t(key_t&&) = default;
     key_t& operator=(key_t&&) = default;
     operator std::string() const { return m_key; }
@@ -165,15 +167,28 @@ struct subscriptable_key_t : public key_t {
     using key_t::key_t;
 };
 
+struct temporaries_t : public key_t {
+    struct impl_t : public key_t {
+        subscriptable_key_t storage_offsets{"storage_offsets", this};
+        using key_t::key_t;
+    };
+    template <std::integral T> auto operator[](T index) {
+        return impl_t{std::to_string(index), this};
+    }
+    using key_t::key_t;
+};
+
 struct storage_groups_t : public key_t {
     subscriptable_key_t group_configs{"group_configs", this};
     subscriptable_key_t storage_assignments{"storage_assignments", this};
+    temporaries_t temporaries{"temporaries", this};
 
     struct impl_t : public key_t {
         subscriptable_key_t storage_hostports{"storage_hostports", this};
         subscriptable_key_t storage_states{"storage_states", this};
         key_t group_initialized{"group_initialized", this};
         key_t group_state{"group_state", this};
+        key_t leader{"leader", this};
         using key_t::key_t;
     };
     template <std::integral T> auto operator[](T index) {
