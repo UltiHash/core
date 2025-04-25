@@ -4,7 +4,7 @@
 #include "common/network/messenger_core.h"
 #include "common/types/common_types.h"
 #include "common/utils/scope_guard.h"
-#include "storage/global_data/global_data_view.h"
+#include "storage/global/data_view.h"
 
 #include <functional>
 
@@ -100,7 +100,8 @@ private:
  *
  * @return number of bytes reclaimed
  */
-coro<void> safe_put_object(directory& dir, global_data_view& gdv,
+coro<void> safe_put_object(directory& dir,
+                           storage::global::global_data_view& gdv,
                            const std::string& bucket, const object& obj);
 
 } // namespace uh::cluster

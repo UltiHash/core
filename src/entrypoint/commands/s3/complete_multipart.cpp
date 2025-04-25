@@ -70,7 +70,8 @@ std::string multipart_etag(const upload_info& info) {
 
 } // namespace
 
-complete_multipart::complete_multipart(directory& dir, global_data_view& gdv,
+complete_multipart::complete_multipart(directory& dir,
+                                       storage::global::global_data_view& gdv,
                                        multipart_state& uploads,
                                        limits& uhlimits)
     : m_dir(dir),

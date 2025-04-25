@@ -1,16 +1,17 @@
 #pragma once
 
 #include "config.h"
-#include "global_data_view.h"
 
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/service_discovery/storage_index.h>
 #include <common/types/scoped_buffer.h>
 #include <storage/group/externals.h>
+#include <storage/interfaces/data_view.h>
 
-namespace uh::cluster {
+namespace uh::cluster::storage::global {
 
-class default_global_data_view : public global_data_view {
+class global_data_view : public uh::cluster::storage::data_view {
+    friend class cache;
 
 public:
     /**
@@ -27,7 +28,7 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    explicit default_global_data_view(
+    explicit global_data_view(
         const global_data_view_config& config, boost::asio::io_context& ioc,
         service_load_balancer<storage_interface>& load_balancer,
         storage_index& storage_index);
@@ -61,29 +62,6 @@ public:
      * @return
      */
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
-
-    /**
-     * @brief Retrieves fragment from storage services.
-     *
-     * The L2 read cache is consulted to see if it contains the requested
-     * fragment. Otherwise, a read request is issued to the storage service
-     * instance serving the address range the provided #pointer is in.
-     * - If the requested fragment can be served by a storage service, the
-     * fragment and its address are (re)-inserted into the L2
-     * read cache.
-     * - If no storage service can serve the fragment, a std::runtime_error
-     * exception is thrown
-     *
-     * The L2 read cache contains the
-     * entire content of a fragment at the price of a smaller cache capacity.
-     *
-     * @param ctx traces context
-     * @param pointer A constant reference to a uint128_t, specifying the
-     * location of the fragment.
-     * @param size A size_t specifying the size of the fragment.
-     * @return A shared_buffer<char> containing the fragment data.
-     */
-    shared_buffer<char> read_fragment(const uint128_t& pointer, size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -146,4 +124,4 @@ private:
     storage_index& m_storage_index;
 };
 
-} // end namespace uh::cluster
+} // namespace uh::cluster::storage::global

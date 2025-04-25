@@ -70,9 +70,6 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         case STORAGE_READ_REQ:
             co_await handle_read(m, hdr);
             break;
-        case STORAGE_READ_FRAGMENT_REQ:
-            co_await handle_read_fragment(m, hdr);
-            break;
         case STORAGE_READ_ADDRESS_REQ:
             co_await handle_read_address(m, hdr);
             break;
@@ -85,7 +82,7 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         case STORAGE_USED_REQ:
             co_await handle_get_used(m, hdr);
             break;
-        case STORAGE_UPDATE_STATE:
+        case STORAGE_UPDATE_STATE_REQ:
             co_await handle_update_state(m, hdr);
             break;
         default:
@@ -127,16 +124,6 @@ coro<void> handler::handle_read(messenger& m, const messenger::header& h) {
     const auto frag = co_await m.recv_fragment(h);
 
     auto buffer = co_await m_storage.read(frag.pointer, frag.size);
-
-    co_await m.send(SUCCESS, buffer.span());
-}
-
-coro<void> handler::handle_read_fragment(messenger& m,
-                                         const messenger::header& h) {
-    const auto frag = co_await m.recv_fragment(h);
-
-    unique_buffer<char> buffer(frag.size);
-    co_await m_storage.read_fragment(buffer.data(), frag);
 
     co_await m.send(SUCCESS, buffer.span());
 }

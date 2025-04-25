@@ -5,7 +5,7 @@
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
 #include "entrypoint/multipart_state.h"
-#include "storage/global_data/global_data_view.h"
+#include "storage/global/data_view.h"
 
 #include <boost/asio.hpp>
 #include <boost/url/url.hpp>

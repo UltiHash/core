@@ -1,15 +1,15 @@
 #pragma once
 
-#include "storage/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/multipart_state.h"
+#include "storage/global/data_view.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
 class abort_multipart : public command {
 public:
-    abort_multipart(multipart_state&, global_data_view&);
+    abort_multipart(multipart_state&, storage::global::global_data_view&);
 
     static bool can_handle(const ep::http::request& req);
 
@@ -19,7 +19,7 @@ public:
 
 private:
     multipart_state& m_uploads;
-    global_data_view& m_gdv;
+    storage::global::global_data_view& m_gdv;
 };
 
 } // namespace uh::cluster

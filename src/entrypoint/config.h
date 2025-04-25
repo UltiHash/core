@@ -1,9 +1,9 @@
 #pragma once
 
 #include "common/db/config.h"
-#include "storage/global_data/config.h"
 #include "common/network/server.h"
 #include "deduplicator/config.h"
+#include "storage/global/config.h"
 
 namespace uh::cluster {
 

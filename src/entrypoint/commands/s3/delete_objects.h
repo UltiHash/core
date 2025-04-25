@@ -1,15 +1,15 @@
 #pragma once
 
-#include "storage/global_data/global_data_view.h"
 #include "entrypoint/directory.h"
 #include "entrypoint/limits.h"
+#include "storage/global/data_view.h"
 #include <entrypoint/commands/command.h>
 
 namespace uh::cluster {
 
 class delete_objects : public command {
 public:
-    delete_objects(directory&, global_data_view&, limits&);
+    delete_objects(directory&, storage::global::global_data_view&, limits&);
 
     static bool can_handle(const ep::http::request& req);
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/global_data/global_data_view.h"
-#include <deduplicator/cache.h>
+#include <storage/global/cache.h>
+#include <storage/global/data_view.h>
 
 namespace uh::cluster {
 class fragment_set_element {
@@ -15,7 +15,7 @@ public:
      * @param storage  A reference to the global_data_view to be used.
      */
     fragment_set_element(const uint128_t& ptr, uint16_t size_,
-                         std::string prefix, dd::cache& storage);
+                         std::string prefix, storage::global::cache& storage);
 
     /**
      * Creates a fragment_set_element that holds the full fragment data, used
@@ -26,7 +26,7 @@ public:
      * fragments in.
      */
     fragment_set_element(std::string_view data, std::string prefix,
-                         dd::cache& storage);
+                         storage::global::cache& storage);
     /**
      * Creates a fragment_set_element that holds only the prefix and the pointer
      * @param data The full content of the fragment, where only the prefix of 16
@@ -37,7 +37,7 @@ public:
      * resides in.
      */
     fragment_set_element(std::string_view data, const uint128_t& ptr,
-                         std::string prefix, dd::cache& storage);
+                         std::string prefix, storage::global::cache& storage);
 
     /**
      * Move-constructs a fragment_set_element
@@ -63,7 +63,7 @@ public:
     mutable std::atomic<int> m_hint_count = 0;
 
 private:
-    dd::cache& m_storage;
+    storage::global::cache& m_storage;
     uint128_t m_pointer{};
     uint16_t m_size{};
     std::string m_prefix;

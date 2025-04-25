@@ -29,13 +29,15 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
 }
 
 std::unique_ptr<deduplicator_interface>
-make_deduplicator(const entrypoint_config& config, global_data_view& storage,
-                  boost::asio::io_context& ioc, etcd_manager& etcd) {
+make_deduplicator(const entrypoint_config& config,
+                  storage::global::global_data_view& storage,
+                  storage::global::cache& cache, boost::asio::io_context& ioc,
+                  etcd_manager& etcd) {
 
     if (config.m_attached_deduplicator) {
         LOG_INFO() << "using attached deduplicator";
         return std::make_unique<local_deduplicator>(
-            *config.m_attached_deduplicator, storage);
+            *config.m_attached_deduplicator, storage, cache);
     }
 
     if (config.noop_deduplicator) {
@@ -66,7 +68,10 @@ service::service(const service_config& sc, entrypoint_config config)
           m_load_balancer, m_storage_index),
       m_data_view(m_config.global_data_view, m_ioc, m_load_balancer,
                   m_storage_index),
-      m_dedupe(make_deduplicator(m_config, m_data_view, m_ioc, m_etcd)),
+      m_cache(m_ioc, m_data_view,
+              config.global_data_view.read_cache_capacity_l2),
+      m_dedupe(
+          make_deduplicator(m_config, m_data_view, m_cache, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),

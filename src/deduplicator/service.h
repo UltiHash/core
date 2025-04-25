@@ -5,7 +5,7 @@
 #include <common/network/server.h>
 #include <common/telemetry/log.h>
 #include <config.h>
-#include <storage/global_data/default_global_data_view.h>
+#include <storage/global/data_view.h>
 #include <storage/group/externals.h>
 #include <storage/interfaces/remote_storage.h>
 #include <storage/service.h>
@@ -35,8 +35,10 @@ public:
               m_load_balancer, m_storage_index),
           m_data_view(config.global_data_view, m_ioc, m_load_balancer,
                       m_storage_index),
-          m_deduplicator(
-              std::make_shared<local_deduplicator>(config, m_data_view)),
+          m_cache(m_ioc, m_data_view,
+                  config.global_data_view.read_cache_capacity_l2),
+          m_deduplicator(std::make_shared<local_deduplicator>(
+              config, m_data_view, m_cache)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
@@ -63,7 +65,8 @@ private:
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_maintainer;
-    default_global_data_view m_data_view;
+    storage::global::global_data_view m_data_view;
+    storage::global::cache m_cache;
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
 };

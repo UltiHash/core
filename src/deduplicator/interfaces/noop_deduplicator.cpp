@@ -2,7 +2,7 @@
 
 namespace uh::cluster {
 
-noop_deduplicator::noop_deduplicator(global_data_view& storage)
+noop_deduplicator::noop_deduplicator(storage::global::global_data_view& storage)
     : m_storage(storage) {}
 
 coro<dedupe_response> noop_deduplicator::deduplicate(std::string_view data) {

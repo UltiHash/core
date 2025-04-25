@@ -13,7 +13,7 @@
 #include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
-#include <storage/global_data/default_global_data_view.h>
+#include <storage/global/data_view.h>
 
 namespace uh::cluster::ep {
 
@@ -35,7 +35,8 @@ private:
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_maintainer;
-    default_global_data_view m_data_view;
+    storage::global::global_data_view m_data_view;
+    storage::global::cache m_cache;
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 

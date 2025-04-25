@@ -12,12 +12,13 @@ and can only be modified explicitly based on deltas that are added/subtracted
 Each service measures the number of requests it receives and handles using monotonic counters. These are as follows:
 
 ### Storage service requests (internal, custom protocol):
-- `storage_read_fragment_req`: number of requests received for reading a fragment
+- `storage_read_req`: number of requests received for reading data
 - `storage_read_address_req`: number of requests received for reading an address
 - `storage_write_req`: number of requests received for writing data
-- `storage_sync_req`: number of requests received to sync data to persistent storage
-- `storage_remove_fragment_req`: number of requests received to remove a fragment from storage
+- `storage_link_req`: number of requests received for linking a fragment
+- `storage_unlink_req`: number of requests received for unlinking a fragment
 - `storage_used_req`: number of requests received to get the used space
+- `storage_update_state_req`: number of requests received for updating the state of the storage service
 
 ### Deduplicator service requests (internal, custom protocol):
 

@@ -7,7 +7,7 @@ using namespace uh::cluster::ep::http;
 namespace uh::cluster {
 
 abort_multipart::abort_multipart(multipart_state& uploads,
-                                 global_data_view& gdv)
+                                 storage::global::global_data_view& gdv)
     : m_uploads(uploads),
       m_gdv(gdv) {}
 
