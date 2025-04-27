@@ -122,6 +122,11 @@ public:
                 break;
             }
         });
+        if (future.wait_for(timeout) == std::future_status::timeout) {
+            throw std::runtime_error(
+                format("Timeout waiting for key: {}", prefix));
+        }
+
         return future.get();
     }
 
