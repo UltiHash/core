@@ -1,8 +1,6 @@
 #!/bin/bash
 
 UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
-export UH_LICENSE
-UH_STORAGE_GROUPS='[{"data_shards":3,"parity_shards":1,"members":[0,1,2,3]},{"data_shards":2,"parity_shards":0,"members":[4,5]}]'
 export UH_STORAGE_GROUPS
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=/var/lib/uh
@@ -13,6 +11,34 @@ instances=1
 if [ -n "$1" ];then
     instances="$1"
 fi
+
+data_shards=$instances
+parity_shards=$((instances - 1))
+
+members=""
+for ((i=0; i<data_shards+parity_shards; i++)); do
+  if [ -z "$members" ]; then
+    members="$i"
+  else
+    members="$members,$i"
+  fi
+done
+
+members_json="[$members]"
+
+uh_storage_groups=$(cat <<EOF
+[{
+  "data_shards": $data_shards,
+  "parity_shards": $parity_shards,
+  "members": $members_json
+}]
+EOF
+)
+
+export UH_STORAGE_GROUPS="$uh_storage_groups"
+
+echo "UH_STORAGE_GROUPS has been set to:"
+echo "$UH_STORAGE_GROUPS"
 
 set -e
 

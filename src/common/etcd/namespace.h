@@ -197,8 +197,17 @@ struct storage_groups_t : public key_t {
     using key_t::key_t;
 };
 
+struct service_t : public key_t {
+    subscriptable_key_t hostports{"hostports", this};
+    using key_t::key_t;
+};
+
 struct uh_t : public key_t {
     storage_groups_t storage_groups{"storage_groups", this};
+    service_t deduplicator{"deduplicator", this};
+    service_t entrypoint{"entrypoint", this};
+    service_t coordinator{"coordinator", this};
+
     using key_t::key_t;
 };
 

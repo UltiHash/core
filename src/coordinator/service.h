@@ -2,12 +2,12 @@
 
 #include "config.h"
 
+#include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
-#include <config/configuration.h>
 #include <storage/interfaces/remote_storage.h>
 
 #include <boost/asio/spawn.hpp>

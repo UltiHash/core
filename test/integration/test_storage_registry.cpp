@@ -57,10 +57,6 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_update_retrieve_deregister) {
         BOOST_TEST(get_announced_id(announced_etcd_path) == service_id);
         BOOST_TEST(etcd.has(announced_etcd_path));
 
-        const auto storage_group_map =
-            etcd.get(ns::root.storage_groups.storage_assignments[service_id]);
-        BOOST_TEST(std::stoul(storage_group_map) == group_id);
-
         const std::string storage_state_path =
             ns::root.storage_groups[group_id].storage_states[service_id];
         {

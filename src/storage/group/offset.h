@@ -13,19 +13,22 @@ namespace uh::cluster::storage {
  */
 class offset_publisher {
 public:
-    offset_publisher(etcd_manager& etcd, size_t group_id, size_t storage_id)
+    offset_publisher(etcd_manager& etcd, std::size_t group_id,
+                     std::size_t storage_id)
         : m_etcd{etcd},
           m_prefix{get_storage_offset_prefix(group_id)},
           m_storage_id{storage_id} {}
 
     ~offset_publisher() { m_etcd.rm(m_prefix); }
 
-    void put(size_t val) { m_etcd.put(m_prefix[m_storage_id], serialize(val)); }
+    void put(std::size_t val) {
+        m_etcd.put(m_prefix[m_storage_id], serialize(val));
+    }
 
 private:
     etcd_manager& m_etcd;
     offset_prefix_t m_prefix;
-    size_t m_storage_id;
+    std::size_t m_storage_id;
 };
 
 /*
@@ -34,8 +37,8 @@ private:
 class offset_subscriber {
 public:
     using callback_t = subscriber<prefix_t>::callback_t;
-    offset_subscriber(etcd_manager& etcd, size_t group_id, size_t num_storages,
-                      callback_t callback = nullptr)
+    offset_subscriber(etcd_manager& etcd, std::size_t group_id,
+                      std::size_t num_storages, callback_t callback = nullptr)
         : m_prefix{get_storage_offset_prefix(group_id)},
           m_offsets{m_prefix.storage_hostports, num_storages},
           m_subscriber{etcd, m_prefix, {m_offsets}, std::move(callback)} {}
@@ -43,7 +46,7 @@ public:
 
 private:
     prefix_t m_prefix;
-    vector_observer<size_t> m_offsets;
+    vector_observer<std::size_t> m_offsets;
     subscriber<prefix_t> m_subscriber;
 };
 

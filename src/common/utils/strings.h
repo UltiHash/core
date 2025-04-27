@@ -230,12 +230,12 @@ requires requires(std::ostream& os, const T& v) {
 }
 
 template <typename T>
-T deserialize(const std::string& str)
+T deserialize(auto&& str)
 requires requires(std::istream& is, T& v) {
     { is >> v } -> std::same_as<std::istream&>;
 }
 {
-    std::istringstream iss(str);
+    std::istringstream iss(std::forward<decltype(str)>(str));
     T value;
     iss >> value;
     return value;
@@ -249,11 +249,11 @@ requires std::is_enum_v<Enum>
 }
 
 template <typename Enum>
-Enum deserialize(const std::string& str)
+Enum deserialize(auto&& str)
 requires std::is_enum_v<Enum>
 {
     size_t value = 0;
-    value = stoul(str);
+    value = stoul(std::forward<decltype(str)>(str));
     return static_cast<Enum>(value);
 }
 
