@@ -13,11 +13,11 @@ namespace uh::cluster::storage {
 struct storage_campaign_strategy : public campaign_strategy {
     storage_campaign_strategy(etcd_manager& etcd, std::size_t group_id,
                               std::size_t storage_id,
-                              std::function<void()> manage_state)
+                              std::function<void()> callback)
         : m_etcd{etcd},
           m_group_id{group_id},
           m_storage_id{storage_id},
-          m_manage_state{std::move(manage_state)},
+          m_callback{std::move(callback)},
           m_offset_publisher{m_etcd, m_group_id, m_storage_id} {}
 
     void pre_campaign() override {
@@ -26,7 +26,7 @@ struct storage_campaign_strategy : public campaign_strategy {
         m_offset_publisher.put(current_offset);
     }
 
-    void on_elected() override { m_manage_state(); }
+    void on_elected() override { m_callback(); }
 
     void post_campaign() override {}
 
@@ -34,7 +34,7 @@ private:
     etcd_manager& m_etcd;
     std::size_t m_group_id;
     std::size_t m_storage_id;
-    std::function<void()> m_manage_state;
+    std::function<void()> m_callback;
     offset_publisher m_offset_publisher;
 };
 
