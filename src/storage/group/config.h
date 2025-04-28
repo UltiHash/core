@@ -6,9 +6,10 @@
 namespace uh::cluster::storage {
 
 struct group_config {
-    std::size_t data_shards{0};
+    // TODO: Initialize them using {}.
+    std::size_t data_shards{2};
     std::size_t parity_shards{0};
-    std::vector<std::size_t> members{};
+    std::vector<std::size_t> members{0, 1};
 
     static group_config create(std::string_view json_str);
     static std::vector<group_config> create_multiple(std::string_view json_str);
