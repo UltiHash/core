@@ -9,9 +9,9 @@
 
 namespace uh::cluster::storage {
 
-class restorer {
+class repairer {
 public:
-    restorer(std::vector<std::shared_ptr<storage_state>> states,
+    repairer(std::vector<std::shared_ptr<storage_state>> states,
              std::vector<std::shared_ptr<hostport>> hostports)
         : m_to_be_recovered{get_new_storage_indices(states)} {
         (void)hostports;

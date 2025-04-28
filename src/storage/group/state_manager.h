@@ -4,7 +4,7 @@
 #include "externals.h"
 #include "internals.h"
 #include "offset.h"
-#include "restorer.h"
+#include "repairer.h"
 
 #include <algorithm>
 #include <common/etcd/candidate.h>
@@ -114,22 +114,22 @@ private:
             m_externals_publisher.put_group_state(m_group_state);
         }
 
-        if (m_group_state != group_state::RECOVERING and //
+        if (m_group_state != group_state::REPAIRING and //
             !has_down and assigned_count >= m_config.data_shards and
             assigned_count < m_num_storages) {
-            m_group_state = group_state::RECOVERING;
+            m_group_state = group_state::REPAIRING;
             m_externals_publisher.put_group_state(m_group_state);
 
             auto reader =
                 externals_subscriber(m_etcd, m_group_id, m_num_storages);
-            m_restorer.emplace(storage_states, reader.get_storage_hostports());
-        } else if (m_group_state == group_state::RECOVERING and
+            m_repairer.emplace(storage_states, reader.get_storage_hostports());
+        } else if (m_group_state == group_state::REPAIRING and
                    assigned_count == m_num_storages) {
-            if (m_restorer->is_changed(storage_states)) {
-                m_restorer.reset();
+            if (m_repairer->is_changed(storage_states)) {
+                m_repairer.reset();
                 auto reader =
                     externals_subscriber(m_etcd, m_group_id, m_num_storages);
-                m_restorer.emplace(storage_states,
+                m_repairer.emplace(storage_states,
                                    reader.get_storage_hostports());
             }
         }
@@ -144,7 +144,7 @@ private:
     externals_publisher m_externals_publisher;
     group_state m_group_state;
     internals_subscriber m_internals_subscriber;
-    std::optional<restorer> m_restorer;
+    std::optional<repairer> m_repairer;
 };
 
 } // namespace uh::cluster::storage
