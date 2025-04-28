@@ -33,14 +33,13 @@ protected:
 BOOST_FIXTURE_TEST_SUITE(a_storage_group_state, fixture)
 
 BOOST_AUTO_TEST_CASE(is_created_and_well_detected) {
-    auto initialized = true;
     std::promise<void> p;
     std::future<void> f = p.get_future();
     auto publisher = internals_publisher(etcd, 11, 7);
     auto subscriber = internals_subscriber(
         etcd, 11, 7, [&](etcd_manager::response) { p.set_value(); });
 
-    publisher.put_group_initialized(initialized);
+    internals_publisher::set_group_initialized(etcd, 11);
 
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -50,7 +49,6 @@ BOOST_AUTO_TEST_CASE(is_created_and_well_detected) {
 
 BOOST_AUTO_TEST_CASE(
     doesnt_delete_group_initialized_on_publishers_destruction) {
-    auto initialized = true;
     std::vector<std::promise<void>> promises(2);
     std::vector<std::future<void>> futures;
     for (auto& p : promises) {
@@ -65,7 +63,7 @@ BOOST_AUTO_TEST_CASE(
             }
             ++callback_count;
         });
-    publisher->put_group_initialized(initialized);
+    internals_publisher::set_group_initialized(etcd, 11);
     if (futures[0].wait_for(std::chrono::seconds(5)) ==
         std::future_status::timeout) {
         BOOST_FAIL("First callback was not called within the timeout period");
