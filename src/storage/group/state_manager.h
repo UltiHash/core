@@ -52,11 +52,12 @@ private:
      * Called only on a leader
      */
     void manage() {
-        auto group_initialized = m_internals_subscriber.get_group_initialized();
-        auto storage_states = m_internals_subscriber.get_storage_states();
+        // auto group_initialized =
+        // m_internals_subscriber.get_group_initialized(); auto storage_states =
+        // m_internals_subscriber.get_storage_states();
 
         // TODO: manage state here
-        // m_group_state = group_state::INITIALIZING;
+        m_group_state = group_state::INITIALIZING;
         // m_externals_publisher.put_group_state(*m_group_state);
     }
 
