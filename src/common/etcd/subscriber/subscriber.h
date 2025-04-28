@@ -32,7 +32,7 @@ private:
     void on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << std::format(
-                "externals_watcher has detected {} action on {} with value {}",
+                "subscriber has detected {} action on {} with value {}",
                 resp.action, resp.key, resp.value);
 
             bool change_detected =
