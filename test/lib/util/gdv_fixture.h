@@ -31,7 +31,8 @@ public:
         {
             service_config service_cfg;
             service_cfg.working_dir = m_temp_dirs.emplace_back().path();
-            coordinator_config coordinator_cfg;
+            coordinator_config coordinator_cfg{
+                .license = license::create(test_license_string)};
             storage::group_config config;
             config.data_shards = NUM_STORAGE_INSTANCES;
             config.parity_shards = 0;

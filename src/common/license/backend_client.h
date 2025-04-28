@@ -19,9 +19,9 @@ class default_backend_client : public backend_client {
 public:
     enum class type : uint8_t { http, https };
     struct config {
-        std::string backend_host;
-        std::string customer_id;
-        std::string access_token;
+        std::string backend_host{};
+        std::string customer_id{};
+        std::string access_token{};
         operator bool() const { return is_valid(); }
 
     private:
