@@ -40,7 +40,8 @@ public:
                       LOG_INFO() << std::format("Storage service {} is elected "
                                                 "as a leader of group {}",
                                                 m_storage_id, m_group_id);
-                      m_state_manager.emplace(m_etcd, m_group_id, m_storage_id);
+                      // m_state_manager.emplace(m_etcd, m_group_id,
+                      // m_storage_id);
                   })),
 
           m_server(sc.server,

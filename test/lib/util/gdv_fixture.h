@@ -29,18 +29,16 @@ public:
 
     void setup() {
         {
-            service_config service_cfg;
-            service_cfg.working_dir = m_temp_dirs.emplace_back().path();
-            coordinator_config coordinator_cfg{
-                .license = license::create(test_license_string)};
+            coordinator_config coordinator_cfg;
             storage::group_config config;
             config.data_shards = NUM_STORAGE_INSTANCES;
             config.parity_shards = 0;
             config.members.resize(config.data_shards);
             std::iota(config.members.begin(), config.members.end(), 0);
             coordinator_cfg.storage_groups.push_back(config);
-            m_coordinator_instances = std::make_unique<coordinator::service>(
-                service_cfg, coordinator_cfg);
+
+            coordinator::service::publish_configs(
+                m_etcd, coordinator_cfg.storage_groups);
         }
 
         for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
@@ -85,8 +83,6 @@ public:
     }
 
     void teardown() {
-        m_coordinator_instances.reset();
-
         for (const auto& node : m_storage_instances) {
             node->stop();
         }
@@ -136,7 +132,6 @@ private:
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
-    std::unique_ptr<coordinator::service> m_coordinator_instances;
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
