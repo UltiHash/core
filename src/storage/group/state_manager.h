@@ -38,9 +38,11 @@ public:
     }
 
 private:
-    static std::size_t summarize_offsets(etcd_manager& etcd, size_t group_id,
-                                         size_t num_storages) {
-        auto offsets = offset_subscriber(etcd, group_id, num_storages).get();
+    static std::size_t summarize_offsets(etcd_manager& etcd,
+                                         std::size_t group_id,
+                                         std::size_t num_storages) {
+        auto os = offset_subscriber(etcd, group_id, num_storages);
+        auto offsets = os.get();
 
         auto max_offset = std::ranges::max_element(
             offsets,
@@ -52,13 +54,14 @@ private:
      * Called only on a leader
      */
     void manage() {
-        // auto group_initialized =
-        // m_internals_subscriber.get_group_initialized(); auto storage_states =
-        // m_internals_subscriber.get_storage_states();
+        auto group_initialized = m_internals_subscriber.get_group_initialized();
+        auto storage_states = m_internals_subscriber.get_storage_states();
 
         // TODO: manage state here
-        m_group_state = group_state::INITIALIZING;
-        // m_externals_publisher.put_group_state(*m_group_state);
+        if (m_group_state == group_state::INITIALIZING) {
+            m_externals_publisher.put_group_state(m_group_state);
+            return;
+        }
     }
 
     etcd_manager& m_etcd;
