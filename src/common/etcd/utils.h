@@ -1,8 +1,11 @@
 #pragma once
 
+#include "namespace.h"
+
 #include <etcd/KeepAlive.hpp>
 #include <etcd/SyncClient.hpp>
 #include <etcd/Watcher.hpp>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
@@ -103,6 +106,28 @@ public:
                                     callback_t callback,
                                     int64_t watch_index = 0) {
         return watch_guard(this, prefix, std::move(callback), watch_index);
+    }
+
+    std::string wait(const std::string& prefix,
+                     std::chrono::seconds timeout = 5s) {
+        std::promise<std::string> promise;
+        auto future = promise.get_future();
+        auto wg = watch(prefix, [&](response resp) {
+            switch (get_etcd_action_enum(resp.action)) {
+            case etcd_action::GET:
+            case etcd_action::CREATE:
+                promise.set_value(resp.value);
+                break;
+            default:
+                break;
+            }
+        });
+        if (future.wait_for(timeout) == std::future_status::timeout) {
+            throw std::runtime_error(
+                format("Timeout waiting for key: {}", prefix));
+        }
+
+        return future.get();
     }
 
     /*

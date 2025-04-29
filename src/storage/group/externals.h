@@ -19,7 +19,8 @@ namespace uh::cluster::storage {
  */
 class externals_publisher {
 public:
-    externals_publisher(etcd_manager& etcd, size_t group_id, size_t storage_id)
+    externals_publisher(etcd_manager& etcd, std::size_t group_id,
+                        std::size_t storage_id)
         : m_etcd{etcd},
           m_prefix{get_prefix(group_id)},
           m_storage_id{storage_id} {}
@@ -42,7 +43,7 @@ public:
 private:
     etcd_manager& m_etcd;
     prefix_t m_prefix;
-    size_t m_storage_id;
+    std::size_t m_storage_id;
 };
 
 /*
@@ -51,8 +52,9 @@ private:
 class externals_subscriber {
 public:
     using callback_t = subscriber<prefix_t>::callback_t;
-    externals_subscriber(etcd_manager& etcd, size_t group_id,
-                         size_t num_storages, callback_t callback = nullptr)
+    externals_subscriber(etcd_manager& etcd, std::size_t group_id,
+                         std::size_t num_storages,
+                         callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
           m_leader{m_prefix.leader, -1},
           m_group_state{m_prefix.group_state},

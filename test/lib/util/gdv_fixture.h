@@ -5,6 +5,7 @@
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
+#include <coordinator/service.h>
 #include <storage/global/data_view.h>
 #include <storage/service.h>
 
@@ -27,6 +28,18 @@ public:
     virtual ~global_data_view_fixture() { teardown(); }
 
     void setup() {
+        {
+            coordinator_config coordinator_cfg;
+            storage::group_config config;
+            config.data_shards = NUM_STORAGE_INSTANCES;
+            config.parity_shards = 0;
+            config.members.resize(config.data_shards);
+            std::iota(config.members.begin(), config.members.end(), 0);
+            coordinator_cfg.storage_groups.push_back(config);
+
+            coordinator::service::publish_configs(
+                m_etcd, coordinator_cfg.storage_groups);
+        }
 
         for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
             service_config service_cfg;

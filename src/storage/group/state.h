@@ -12,7 +12,7 @@ enum class group_state : std::uint8_t {
     HEALTHY,
     DEGRADED,
     FAILED,
-    RECOVERING
+    REPAIRING
 };
 
 } // namespace uh::cluster::storage

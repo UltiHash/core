@@ -2,12 +2,12 @@
 
 #include "config.h"
 
+#include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 #include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
-#include <config/configuration.h>
 #include <storage/interfaces/remote_storage.h>
 
 #include <boost/asio/spawn.hpp>
@@ -56,15 +56,7 @@ public:
                                                            bc.customer_id,
                                                            bc.access_token));
         }
-        for (size_t i = 0; const auto& cfg : cc.storage_groups) {
-            m_etcd.put(ns::root.storage_groups.group_configs[i],
-                       cfg.to_string());
-            for (const auto& m : cfg.members) {
-                m_etcd.put(ns::root.storage_groups.storage_assignments[m],
-                           std::to_string(i));
-            }
-            ++i;
-        }
+        publish_configs(m_etcd, cc.storage_groups);
     }
 
     void run() {
@@ -83,6 +75,19 @@ public:
             m_stopped = true;
         }
         m_cv.notify_all();
+    }
+
+    static void
+    publish_configs(etcd_manager& etcd,
+                    const std::vector<storage::group_config>& group_configs) {
+        for (size_t i = 0; const auto& cfg : group_configs) {
+            etcd.put(ns::root.storage_groups.group_configs[i], cfg.to_string());
+            for (const auto& m : cfg.members) {
+                etcd.put(ns::root.storage_groups.storage_assignments[m],
+                         std::to_string(i));
+            }
+            ++i;
+        }
     }
 
 private:

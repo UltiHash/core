@@ -17,7 +17,8 @@ namespace uh::cluster::storage {
  */
 class internals_publisher {
 public:
-    internals_publisher(etcd_manager& etcd, size_t group_id, size_t storage_id)
+    internals_publisher(etcd_manager& etcd, std::size_t group_id,
+                        std::size_t storage_id)
         : m_etcd{etcd},
           m_prefix{get_prefix(group_id)},
           m_storage_id{storage_id} {}
@@ -26,17 +27,20 @@ public:
         m_etcd.rm(m_prefix.storage_states[m_storage_id]);
     }
 
-    void put_group_initialized(bool value) {
-        m_etcd.put_persistant(m_prefix.group_initialized, serialize(value));
-    }
     void put_storage_state(storage_state value) {
         m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(value));
+    }
+
+    static void set_group_initialized(etcd_manager& etcd,
+                                      std::size_t group_id) {
+        etcd.put_persistant(get_prefix(group_id).group_initialized,
+                            serialize(true));
     }
 
 private:
     etcd_manager& m_etcd;
     prefix_t m_prefix;
-    size_t m_storage_id;
+    std::size_t m_storage_id;
 };
 
 /*
@@ -45,8 +49,9 @@ private:
 class internals_subscriber {
 public:
     using callback_t = subscriber<prefix_t>::callback_t;
-    internals_subscriber(etcd_manager& etcd, size_t group_id,
-                         size_t num_storages, callback_t callback = nullptr)
+    internals_subscriber(etcd_manager& etcd, std::size_t group_id,
+                         std::size_t num_storages,
+                         callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
           m_group_initialized{m_prefix.group_initialized},
           m_storage_states{m_prefix.storage_states, num_storages},

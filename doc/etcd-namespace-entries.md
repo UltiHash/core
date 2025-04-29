@@ -31,16 +31,9 @@ key prefixes. Announcements are assigned a TTL and are deleted automatically
 when it expires. There is no guarantee that the announced service is actually
 available.
 
-`/<namespace>/services/<service_class>/announced/<service_id>` \
-    when defined, a service of class `<service_class>` and service id
-    `<service_id>` is available with details being stored under the path
-  `/<namespace>/services/<service_class>/attributes/<service_id>`.
-
-`/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_host` \
-    contains the host the service is running on.
-
-`/<namespace>/services/<service_class>/attributes/<service_id>/endpoint_port` \
-    contains the port the service is using for communication.
+TBD: `/<namespace>/<service_class>/hostports/<service_id>` \
+  contains the host/port of the service is running on. coordinator, deduplicator,
+  entrypoint services support this key.
 
 `/<namespace>/storage_groups/temporaries/<storage_group_id>/storage_offsets/<storage_id>` \
   contains storage offset of all storage services. This key is watched by  a 

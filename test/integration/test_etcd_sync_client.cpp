@@ -122,15 +122,21 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(a_watcher)
 
 BOOST_FIXTURE_TEST_CASE(watches_creation, fixture) {
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
     auto watcher = etcd::Watcher(
         etcd_client, "/test0",
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
     etcd_client.put("/test0", "initial_value");
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "create");
@@ -139,15 +145,21 @@ BOOST_FIXTURE_TEST_CASE(watches_creation, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_creation_with_0_index, fixture) {
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", 0,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
     etcd_client.put("/test0", "initial_value");
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "create");
@@ -156,16 +168,22 @@ BOOST_FIXTURE_TEST_CASE(watches_creation_with_0_index, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
     etcd_client.put("/test0", "initial_value");
     auto watcher = etcd::Watcher(
         etcd_client, "/test0",
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
     etcd_client.put("/test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "set");
@@ -174,16 +192,22 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_on_the_given_key, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_deletion, fixture) {
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
     etcd_client.put("/test0", "initial_value");
     auto watcher = etcd::Watcher(
         etcd_client, "/test0",
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
     etcd_client.rm("/test0");
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "delete");
@@ -192,16 +216,22 @@ BOOST_FIXTURE_TEST_CASE(watches_deletion, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_deletion_with_index_0, fixture) {
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
     etcd_client.put("/test0", "initial_value");
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", 0,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
     etcd_client.rm("/test0");
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "delete");
@@ -210,19 +240,24 @@ BOOST_FIXTURE_TEST_CASE(watches_deletion_with_index_0, fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(watches_deletion_with_previndex_plus_1, fixture) {
-
     auto lease_id = etcd_client.leasegrant(1).value().lease();
     auto resp = etcd_client.put("/test0", "initial_value", lease_id);
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
 
     // etcd::SyncClient etcd_client_for_watcher;
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", resp.index() + 1,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
-    std::this_thread::sleep_for(4s);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     auto get_resp = etcd_client.get("/test0");
     BOOST_TEST(get_resp.is_ok() == false);
@@ -245,7 +280,7 @@ BOOST_FIXTURE_TEST_CASE(
 
     watcher.Cancel();
     etcd_client.put("/test0", "updated_value");
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(200ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(0);
 }
@@ -260,7 +295,7 @@ BOOST_FIXTURE_TEST_CASE(cannot_watch_changes_occured_before_creating_watcher,
             cb.handle_state_changes(response);
         },
         true /*recursive*/);
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(200ms);
 
     Verify(Method(mock, handle_state_changes)).Exactly(0);
 }
@@ -270,15 +305,21 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_previous_watcher_changes_using_index,
     etcd_client.put("/test0", "initial_value");
     auto get_resp = etcd_client.get("/test0");
     etcd_client.put("/test0", "second_value");
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
 
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", get_resp.index() + 1,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "set");
@@ -291,15 +332,21 @@ BOOST_FIXTURE_TEST_CASE(
     etcd_client.put("/test0/sub", "initial_value");
     auto ls_resp = etcd_client.ls("/test0");
     etcd_client.put("/test0/sub2", "second_value");
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
 
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", ls_resp.index() + 1,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
-    std::this_thread::sleep_for(100ms);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
     BOOST_TEST(watch_resp.action() == "create");
@@ -342,16 +389,22 @@ BOOST_FIXTURE_TEST_CASE(with_watcher_with_previndex_plus_1_watches_key_deletion,
 
     auto lease_id = etcd_client.leasegrant(1).value().lease();
     auto resp = etcd_client.modify_if("/test0", "initial_value", 0, lease_id);
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
 
     // etcd::SyncClient etcd_client_for_watcher;
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", resp.index() + 1,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
-    std::this_thread::sleep_for(4s);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     auto get_resp = etcd_client.get("/test0");
     BOOST_TEST(get_resp.is_ok() == false);
@@ -398,16 +451,22 @@ BOOST_FIXTURE_TEST_CASE(with_watcher_with_previndex_plus_1_watches_key_deletion,
 
     auto lease_id = etcd_client.leasegrant(1).value().lease();
     auto resp = etcd_client.add("/test0", "initial_value", lease_id);
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
 
     // etcd::SyncClient etcd_client_for_watcher;
     auto watcher = etcd::Watcher(
         etcd_client, "/test0", resp.index() + 1,
-        [&cb = mock.get()](const etcd::Response& response) {
+        [&cb = mock.get(), &promise](const etcd::Response& response) {
             cb.handle_state_changes(response);
+            promise.set_value();
         },
         true /*recursive*/);
 
-    std::this_thread::sleep_for(4s);
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     auto get_resp = etcd_client.get("/test0");
     BOOST_TEST(get_resp.is_ok() == false);

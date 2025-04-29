@@ -45,7 +45,10 @@ public:
             resp.index() + 1);
     }
 
-    ~candidate() { m_etcd.rm(m_key); }
+    ~candidate() {
+        m_watch_guard.reset();
+        m_etcd.rm(m_key);
+    }
 
     auto is_leader() const {
         return m_is_leader.load(std::memory_order_acquire);
@@ -74,10 +77,13 @@ private:
         try {
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::DELETE: {
-                auto resp = campaign();
-                if (resp.is_ok()) {
-                    // TODO: let's cancel this watcher here for
-                    // efficiency
+                if (!is_leader()) {
+                    auto resp = campaign();
+                    if (resp.is_ok()) {
+                        // TODO: let's cancel this watcher here for
+                        // efficiency
+                        // m_watch_guard.reset();
+                    }
                 }
             } break;
             default:
@@ -95,7 +101,7 @@ private:
     std::unique_ptr<campaign_strategy> m_strategy;
     std::function<void(void)> m_on_elected;
     std::atomic<bool> m_is_leader;
-    etcd_manager::watch_guard m_watch_guard;
+    std::optional<etcd_manager::watch_guard> m_watch_guard;
 };
 
 } // namespace uh::cluster

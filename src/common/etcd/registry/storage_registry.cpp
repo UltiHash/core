@@ -20,11 +20,8 @@ storage_registry::storage_registry(std::size_t service_index,
 
 storage_registry::~storage_registry() {
     service_registry::~service_registry();
-    const std::string storage_group_path =
-        ns::root.storage_groups.storage_assignments[m_id];
     const std::string storage_state_path =
         ns::root.storage_groups[m_group_id].storage_states[m_id];
-    m_etcd.rm(storage_group_path);
     m_etcd.rm(storage_state_path);
 }
 
@@ -37,10 +34,6 @@ void storage_registry::register_service(const server_config& config) {
     if (!read_state_from_disk(state_file)) {
         update_service_state(storage_state::NEW);
     }
-
-    const std::string storage_group_path =
-        ns::root.storage_groups.storage_assignments[m_id];
-    m_etcd.put(storage_group_path, std::to_string(m_group_id));
 }
 
 void storage_registry::update_service_state(const storage_state state) {
