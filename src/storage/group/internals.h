@@ -6,7 +6,6 @@
 
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
-#include <common/service_interfaces/service_factory.h>
 #include <common/utils/strings.h>
 #include <storage/group/state.h>
 
@@ -48,7 +47,7 @@ private:
  */
 class internals_subscriber {
 public:
-    using callback_t = subscriber<prefix_t>::callback_t;
+    using callback_t = subscriber::callback_t;
     internals_subscriber(etcd_manager& etcd, std::size_t group_id,
                          std::size_t num_storages,
                          callback_t callback = nullptr)
@@ -66,7 +65,7 @@ private:
     prefix_t m_prefix;
     value_observer<bool> m_group_initialized;
     vector_observer<storage_state> m_storage_states;
-    subscriber<prefix_t> m_subscriber;
+    subscriber m_subscriber;
 };
 
 } // namespace uh::cluster::storage

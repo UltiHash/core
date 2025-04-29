@@ -11,19 +11,16 @@ namespace uh::cluster::storage {
 
 constexpr const char* STATE_FILE_NAME = "state";
 
-storage_registry::storage_registry(std::size_t service_index,
-                                   std::size_t group_index, etcd_manager& etcd,
+storage_registry::storage_registry(etcd_manager& etcd, std::size_t group_id,
+                                   std::size_t service_id,
                                    const std::filesystem::path& working_dir)
-    : service_registry(STORAGE_SERVICE, service_index, etcd),
-      m_group_id(group_index),
+    : service_registry(
+          etcd,
+          ns::root.storage_groups[group_id].storage_hostports[service_id]),
+      m_state_key{ns::root.storage_groups[group_id].storage_states[service_id]},
       m_working_dir(working_dir) {}
 
-storage_registry::~storage_registry() {
-    service_registry::~service_registry();
-    const std::string storage_state_path =
-        ns::root.storage_groups[m_group_id].storage_states[m_id];
-    m_etcd.rm(storage_state_path);
-}
+storage_registry::~storage_registry() { m_etcd.rm(m_state_key); }
 
 void storage_registry::register_service(const server_config& config) {
     service_registry::register_service(config);
@@ -42,10 +39,8 @@ void storage_registry::update_service_state(const storage_state state) {
         m_working_dir / get_service_string(STORAGE_SERVICE) / STATE_FILE_NAME;
     write_state_to_disk(state_file, state);
 
-    const std::string storage_state_path =
-        ns::root.storage_groups[m_group_id].storage_states[m_id];
     const std::string value(std::to_string(magic_enum::enum_integer(state)));
-    m_etcd.put(storage_state_path, value);
+    m_etcd.put(m_state_key, value);
 }
 
 bool storage_registry::read_state_from_disk(

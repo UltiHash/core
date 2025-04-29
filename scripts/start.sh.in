@@ -13,7 +13,7 @@ if [ -n "$1" ];then
 fi
 
 data_shards=$instances
-parity_shards=$((instances - 1))
+parity_shards=0
 
 members=""
 for ((i=0; i<data_shards+parity_shards; i++)); do

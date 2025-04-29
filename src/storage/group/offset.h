@@ -36,7 +36,7 @@ private:
  */
 class offset_subscriber {
 public:
-    using callback_t = subscriber<prefix_t>::callback_t;
+    using callback_t = subscriber::callback_t;
     offset_subscriber(etcd_manager& etcd, std::size_t group_id,
                       std::size_t num_storages, callback_t callback = nullptr)
         : m_prefix{get_storage_offset_prefix(group_id)},
@@ -47,7 +47,7 @@ public:
 private:
     prefix_t m_prefix;
     vector_observer<std::size_t> m_offsets;
-    subscriber<prefix_t> m_subscriber;
+    subscriber m_subscriber;
 };
 
 } // namespace uh::cluster::storage

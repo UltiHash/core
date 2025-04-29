@@ -19,37 +19,42 @@ public:
     global_data_view_fixture()
         : m_etcd(),
           m_service_cfg(make_service_config()),
-          m_storage_services(
-              m_etcd,
+          m_storage_maintainer(
+              m_etcd, ns::root.storage_groups[0].storage_hostports,
               service_factory<storage_interface>(
                   m_ioc, m_gdv_config.storage_service_connection_count),
-              m_load_balancer, m_storage_index) {}
+              {m_load_balancer, m_storage_index}) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
     void setup() {
         {
-            coordinator_config coordinator_cfg;
+            std::vector<storage::group_config> group_configs;
             storage::group_config config;
             config.data_shards = NUM_STORAGE_INSTANCES;
             config.parity_shards = 0;
             config.members.resize(config.data_shards);
             std::iota(config.members.begin(), config.members.end(), 0);
-            coordinator_cfg.storage_groups.push_back(config);
+            group_configs.push_back(config);
 
-            coordinator::service::publish_configs(
-                m_etcd, coordinator_cfg.storage_groups);
+            coordinator::service::publish_configs(m_etcd, group_configs);
         }
 
-        for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
-            service_config service_cfg;
-            service_cfg.working_dir = m_temp_dirs.emplace_back().path();
-            storage_config storage_cfg;
-            storage_cfg.server.port = 10000 + i;
-            storage_cfg.m_data_store_roots = {
-                std::filesystem::path(service_cfg.working_dir) / "storage"};
-            m_storage_instances.emplace_back(
-                std::make_unique<storage::service>(service_cfg, storage_cfg));
+        try {
+            for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
+                service_config service_cfg;
+                service_cfg.working_dir = m_temp_dirs.emplace_back().path();
+                storage_config storage_cfg;
+                storage_cfg.server.port = 10000 + i;
+                storage_cfg.m_data_store_roots = {
+                    std::filesystem::path(service_cfg.working_dir) / "storage"};
+                m_storage_instances.emplace_back(
+                    std::make_unique<storage::service>(service_cfg,
+                                                       storage_cfg));
+            }
+        } catch (...) {
+            LOG_ERROR() << "Failed to create storage instances";
+            throw;
         }
 
         int i = 0;
@@ -78,7 +83,10 @@ public:
         });
 
         wait_for_true(300s, 1s, [this]() {
-            return m_storage_services.size() == m_storage_instances.size();
+            std::cout << std::format(
+                "maintainer.size(): {}, instances.size(): {}",
+                m_storage_maintainer.size(), m_storage_instances.size());
+            return m_storage_maintainer.size() == m_storage_instances.size();
         });
     }
 
@@ -108,8 +116,6 @@ public:
 
         m_threads.clear();
         m_temp_dirs.clear();
-        std::string current_id_key =
-            etcd_current_id_prefix_key + get_service_string(STORAGE_SERVICE);
         m_etcd.clear_all();
     }
 
@@ -135,7 +141,7 @@ private:
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
-    service_maintainer<storage_interface> m_storage_services;
+    service_maintainer<storage_interface> m_storage_maintainer;
     std::shared_ptr<storage::data_view> m_gdv;
 };
 

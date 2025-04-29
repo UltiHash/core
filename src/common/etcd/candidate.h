@@ -77,13 +77,11 @@ private:
         try {
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::DELETE: {
-                if (!is_leader()) {
-                    auto resp = campaign();
-                    if (resp.is_ok()) {
-                        // TODO: let's cancel this watcher here for
-                        // efficiency
-                        // m_watch_guard.reset();
-                    }
+                auto resp = campaign();
+                if (resp.is_ok()) {
+                    // TODO: let's cancel this watcher here for
+                    // efficiency
+                    // m_watch_guard.reset();
                 }
             } break;
             default:
