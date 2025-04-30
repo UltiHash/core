@@ -6,6 +6,8 @@
 #include "common/etcd/utils.h"
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/test/unit_test.hpp>
+#include <common/service_interfaces/hostport.h>
+#include <common/utils/strings.h>
 
 // ------------- Tests Suites Follow --------------
 
@@ -17,55 +19,31 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
     const auto port_address = 9200;
 
     auto etcd = etcd_manager();
+    auto key = ns::root.deduplicator.hostports[index];
 
     {
         // check if the keys already exist or not
-        const auto host = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST));
-        const auto port = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT));
+        auto hp = deserialize<hostport>(etcd.get(key));
 
-        BOOST_TEST(host.empty());
-        BOOST_TEST(port.empty());
-
-        BOOST_TEST(!etcd.has(get_announced_path(STORAGE_SERVICE, index)));
+        BOOST_TEST(hp.hostname.empty());
+        BOOST_TEST(hp.port == 0);
     }
 
     {
-        service_registry registering_registry(STORAGE_SERVICE, index, etcd);
+        service_registry registering_registry(etcd, key);
         registering_registry.register_service({.port = port_address});
 
-        const auto host = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST));
-        BOOST_TEST(host == boost::asio::ip::host_name());
-
-        const auto port = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT));
-        BOOST_TEST(std::stoul(port) == port_address);
-
-        const auto announced_etcd_path =
-            get_announced_path(STORAGE_SERVICE, index);
-        BOOST_TEST(get_announced_id(announced_etcd_path) == index);
-        BOOST_TEST(etcd.has(announced_etcd_path));
+        auto hp = deserialize<hostport>(etcd.get(key));
+        BOOST_TEST(hp.hostname == boost::asio::ip::host_name());
+        BOOST_TEST(hp.port == port_address);
     }
 
     {
         // check for de-registry
-        const auto host = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_HOST));
-        const auto port = etcd.get(
-            get_attributes_path(STORAGE_SERVICE, index) +
-            get_etcd_service_attribute_string(uh::cluster::ENDPOINT_PORT));
+        auto hp = deserialize<hostport>(etcd.get(key));
 
-        BOOST_TEST(host.empty());
-        BOOST_TEST(port.empty());
-
-        BOOST_TEST(!etcd.has(get_announced_path(STORAGE_SERVICE, index)));
+        BOOST_TEST(hp.hostname.empty());
+        BOOST_TEST(hp.port == 0);
     }
 }
 

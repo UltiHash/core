@@ -2,7 +2,7 @@
 
 #include "state.h"
 
-#include <common/service_interfaces/service_factory.h>
+#include <common/service_interfaces/hostport.h>
 
 #include <memory>
 #include <vector>

@@ -58,14 +58,15 @@ service::service(const service_config& sc, entrypoint_config config)
       m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
-      m_service_registry(ENTRYPOINT_SERVICE, m_service_id, m_etcd),
-
+      m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id]),
+      // TODO: do not maintain storage services here. We can do this on the
+      // group_manager.h using externals_subscriber instance.
       m_storage_maintainer(
-          m_etcd,
+          m_etcd, ns::root.storage_groups[0].storage_hostports,
           service_factory<storage_interface>(
               m_ioc,
               m_config.global_data_view.storage_service_connection_count),
-          m_load_balancer, m_storage_index),
+          {m_load_balancer, m_storage_index}),
       m_data_view(m_config.global_data_view, m_ioc, m_load_balancer,
                   m_storage_index),
       m_cache(m_ioc, m_data_view,
@@ -120,7 +121,7 @@ void service::run() {
 }
 
 void service::stop() {
-    LOG_INFO() << "stopping " << m_service_registry.get_service_name();
+    LOG_INFO() << "stopping entrypoint " << m_service_id;
 
     m_server.stop();
 }

@@ -22,8 +22,7 @@ public:
         m_cv.notify_one();
     }
 
-    void remove_client(size_t id,
-                       std::shared_ptr<service_interface> service) override {
+    void remove_client(size_t id) override {
         std::lock_guard l(m_mutex);
 
         auto it = m_services.find(id);
