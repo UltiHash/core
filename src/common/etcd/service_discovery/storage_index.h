@@ -21,8 +21,7 @@ public:
         m_services.emplace(id, service);
         m_cv.notify_one();
     }
-    void remove_client(size_t id,
-                       std::shared_ptr<storage_interface> service) override {
+    void remove_client(size_t id) override {
         std::lock_guard l(m_mutex);
         m_services.erase(id);
     }

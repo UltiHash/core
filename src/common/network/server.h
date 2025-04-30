@@ -33,12 +33,16 @@ public:
           m_handler(std::move(handler)) {
         m_is_running = true;
 
+        LOG_INFO() << "server config: " << m_config.bind_address << ":"
+                   << m_config.port;
+
         auto acceptor = do_listen(boost::asio::ip::tcp::endpoint{
             boost::asio::ip::make_address(m_config.bind_address),
             m_config.port});
         boost::asio::co_spawn(
             m_ioc, do_accept(std::move(acceptor)),
             [](const std::exception_ptr& e) {
+                LOG_ERROR() << "acceptor error";
                 if (e)
                     try {
                         std::rethrow_exception(e);

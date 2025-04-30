@@ -25,8 +25,6 @@ public:
         : m_etcd{service.etcd_config},
           m_ioc(cc.thread_count),
           m_ioc_runner(m_ioc, cc.thread_count),
-          m_storage_maintainer(m_etcd,
-                               service_factory<storage_interface>(m_ioc, 1)),
           m_usage{m_ioc, cc.database_config} {
 
         if (cc.license) {
@@ -98,8 +96,6 @@ private:
     bool m_stopped = false;
 
     io_context_runner m_ioc_runner;
-
-    service_maintainer<storage_interface> m_storage_maintainer;
 
     usage m_usage;
     std::optional<license_updater> m_license_updater;

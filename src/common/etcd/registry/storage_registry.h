@@ -11,8 +11,8 @@ namespace uh::cluster::storage {
 class storage_registry : public service_registry {
 
 public:
-    storage_registry(std::size_t service_index, std::size_t group_index,
-                     etcd_manager& etcd,
+    storage_registry(etcd_manager& etcd, std::size_t group_index,
+                     std::size_t service_id,
                      const std::filesystem::path& working_dir);
 
     ~storage_registry() override;
@@ -22,7 +22,7 @@ public:
     void update_service_state(const storage_state state);
 
 private:
-    const size_t m_group_id;
+    std::string m_state_key;
     const std::filesystem::path m_working_dir;
     storage_state m_state = storage_state::NEW;
 

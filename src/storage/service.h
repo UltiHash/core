@@ -30,7 +30,7 @@ public:
               SERVICE_GET_TIMEOUT))},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
                                                     sc.m_data_store_roots)),
-          m_storage_registry(m_storage_id, m_group_id, m_etcd,
+          m_storage_registry(m_etcd, m_group_id, m_storage_id,
                              service.working_dir),
           m_candidate(
               m_etcd, get_prefix(m_group_id).leader, serialize(m_storage_id),
@@ -42,7 +42,6 @@ public:
                                                 m_storage_id, m_group_id);
                       m_state_manager.emplace(m_etcd, m_group_id, m_storage_id);
                   })),
-
           m_server(sc.server,
                    std::make_unique<handler>(*m_storage, m_storage_registry),
                    m_ioc) {}

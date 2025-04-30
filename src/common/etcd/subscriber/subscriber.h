@@ -8,15 +8,14 @@
 namespace uh::cluster {
 
 /*
- * Group-wise subscriber
+ * Subscriber manages multiple keys by using recursive watch.
  */
-// TODO: use const key_t& instead of using T
-template <typename T> class subscriber {
+class subscriber {
 public:
     using callback_t = std::function<void(etcd_manager::response resp)>;
 
     subscriber(
-        etcd_manager& etcd, const T& key,
+        etcd_manager& etcd, const std::string& key,
         std::initializer_list<std::reference_wrapper<subscriber_observer>>
             observers,
         callback_t callback = nullptr)
@@ -60,5 +59,6 @@ private:
 
 } // namespace uh::cluster
 
+#include <common/etcd/subscriber/impl/hostports_observer.h>
 #include <common/etcd/subscriber/impl/value_observer.h>
 #include <common/etcd/subscriber/impl/vector_observer.h>
