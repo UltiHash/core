@@ -8,60 +8,74 @@
 
 #include <nlohmann/json.hpp>
 
-using namespace uh::cluster;
+namespace uh::cluster::storage {
 
 BOOST_AUTO_TEST_SUITE(a_storage_group_config)
 
 BOOST_AUTO_TEST_CASE(throws_for_invalid_json_string) {
     static constexpr const char* json_literal =
-        R"([{"data_shards:3,"parity_shards":1,"members":[0,1,2,3]},{"data_shards":2,"parity_shards":0,"members":[4,5]}])";
+        R"([{id:0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1},{"id":1,"type":"ROUND_ROBIN","storages":2}])";
 
-    BOOST_CHECK_THROW(storage::group_config::create_multiple(json_literal),
+    BOOST_CHECK_THROW(group_configs::create(json_literal),
                       nlohmann::json::parse_error);
 }
 
-BOOST_AUTO_TEST_CASE(throws_for_missing_field) {
+BOOST_AUTO_TEST_CASE(throws_for_missing_parity_shards_for_ec_group) {
     static constexpr const char* json_literal =
-        R"([{"data_shards":3,"parity_shards":1},{"data_shards":2,"parity_shards":0}])";
+        R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2}])";
 
-    BOOST_CHECK_THROW(storage::group_config::create_multiple(json_literal),
+    BOOST_CHECK_THROW(group_configs::create(json_literal),
                       nlohmann::json::out_of_range);
+}
+
+BOOST_AUTO_TEST_CASE(throws_for_missing_storages_for_rr_group) {
+    static constexpr const char* json_literal =
+        R"([{"id":0,"type":"ROUND_ROBIN"}])";
+
+    BOOST_CHECK_THROW(group_configs::create(json_literal),
+                      nlohmann::json::out_of_range);
+}
+
+BOOST_AUTO_TEST_CASE(deserializes_rr_group) {
+    static constexpr const char* json_literal =
+        R"([{"id":0,"type":"ROUND_ROBIN","storages":2}])";
+
+    BOOST_TEST(group_configs::create(json_literal).to_string() == json_literal);
+}
+
+BOOST_AUTO_TEST_CASE(deserializes_ec_group) {
+    static constexpr const char* json_literal =
+        R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1}])";
+
+    BOOST_TEST(group_configs::create(json_literal).to_string() == json_literal);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
 /*******************************************************************************
- * Below, we are testing the storage::group_config class with the correct JSON
+ * Below, we are testing the group_config class with the correct JSON
  * string.
  */
 class fixture {
 
 public:
     fixture()
-        : sut{storage::group_config::create_multiple(
-              test_storage_group_config_string)} {}
+        : sut{group_configs::create(test_storage_group_config_string)} {}
 
-    std::vector<storage::group_config> sut;
+    group_configs sut;
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_initialized_license, fixture)
 
 BOOST_AUTO_TEST_CASE(parses_json_string_to_license) {
-    BOOST_CHECK_EQUAL(sut[0].data_shards, 3);
-    BOOST_CHECK_EQUAL(sut[0].parity_shards, 1);
-    BOOST_CHECK_EQUAL(sut[0].members.size(), 4);
-    BOOST_CHECK_EQUAL(sut[0].members[0], 0);
-    BOOST_CHECK_EQUAL(sut[0].members[1], 1);
-    BOOST_CHECK_EQUAL(sut[0].members[2], 2);
-    BOOST_CHECK_EQUAL(sut[0].members[3], 3);
-    BOOST_CHECK_EQUAL(sut[1].data_shards, 2);
-    BOOST_CHECK_EQUAL(sut[1].parity_shards, 0);
-    BOOST_CHECK_EQUAL(sut[1].members.size(), 2);
-    BOOST_CHECK_EQUAL(sut[1].members[0], 4);
-    BOOST_CHECK_EQUAL(sut[1].members[1], 5);
-    // BOOST_CHECK_EQUAL(sut[0].members, {0, 1, 2, 3});
-    // BOOST_CHECK_EQUAL(sut.license_type, license::type::FREEMIUM);
-    // BOOST_CHECK_EQUAL(sut.storage_cap_gib, 10240);
+    BOOST_TEST(sut.configs[0].type == group_config::type_t::ERASURE_CODING);
+    BOOST_TEST(sut.configs[0].storages == 3);
+    BOOST_TEST(sut.configs[0].data_shards == 2);
+    BOOST_TEST(sut.configs[0].parity_shards == 1);
+    BOOST_TEST(sut.configs[1].type == group_config::type_t::ROUND_ROBIN);
+    BOOST_TEST(sut.configs[1].storages == 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace uh::cluster::storage

@@ -20,19 +20,17 @@ namespace uh::cluster::storage {
  */
 class state_manager {
 public:
-    state_manager(etcd_manager& etcd, std::size_t group_id,
+    state_manager(etcd_manager& etcd, const group_config& config,
                   std::size_t storage_id)
         : m_etcd{etcd},
-          m_group_id{group_id},
-          m_config{group_config::create(
-              m_etcd.get(ns::root.storage_groups.group_configs[group_id]))},
+          m_config{config},
           m_num_storages{m_config.data_shards + m_config.parity_shards},
           m_storage_id{storage_id},
-          m_offset{
-              state_manager::summarize_offsets(etcd, group_id, m_storage_id)},
-          m_externals_publisher(etcd, group_id, storage_id),
+          m_offset{state_manager::summarize_offsets(etcd, m_config.id,
+                                                    m_storage_id)},
+          m_externals_publisher(etcd, m_config.id, storage_id),
           m_group_state{group_state::INITIALIZING},
-          m_internals_subscriber{m_etcd, m_group_id, m_num_storages,
+          m_internals_subscriber{m_etcd, m_config.id, m_num_storages,
                                  [this](etcd_manager::response) { manage(); }} {
         // TODO: set real offset using m_offset
         m_externals_publisher.put_group_state(m_group_state);
@@ -86,7 +84,7 @@ private:
                         // and have their remote interfaces temporarily.
                     }
                     internals_publisher::set_group_initialized(m_etcd,
-                                                               m_group_id);
+                                                               m_config.id);
                     m_group_state = group_state::HEALTHY;
                     m_externals_publisher.put_group_state(m_group_state);
                 }
@@ -121,14 +119,14 @@ private:
             m_externals_publisher.put_group_state(m_group_state);
 
             auto reader =
-                externals_subscriber(m_etcd, m_group_id, m_num_storages);
+                externals_subscriber(m_etcd, m_config.id, m_num_storages);
             m_repairer.emplace(storage_states, reader.get_storage_hostports());
         } else if (m_group_state == group_state::REPAIRING and
                    assigned_count == m_num_storages) {
             if (m_repairer->is_changed(storage_states)) {
                 m_repairer.reset();
                 auto reader =
-                    externals_subscriber(m_etcd, m_group_id, m_num_storages);
+                    externals_subscriber(m_etcd, m_config.id, m_num_storages);
                 m_repairer.emplace(storage_states,
                                    reader.get_storage_hostports());
             }
@@ -136,7 +134,6 @@ private:
     }
 
     etcd_manager& m_etcd;
-    std::size_t m_group_id;
     group_config m_config;
     std::size_t m_num_storages;
     std::size_t m_storage_id;

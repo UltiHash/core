@@ -4,4 +4,4 @@ static constexpr const char* test_license_string =
     R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";
 
 static constexpr const char* test_storage_group_config_string =
-    R"([{"data_shards":3,"parity_shards":1,"members":[0,1,2,3]},{"data_shards":2,"parity_shards":0,"members":[4,5]}])";
+    R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1},{"id":1,"type":"ROUND_ROBIN","storages":2}])";
