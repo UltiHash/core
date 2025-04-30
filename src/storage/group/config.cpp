@@ -17,6 +17,7 @@ void from_json(const ordered_json& j, group_config& config) {
     if (type_enum == group_config::type_t::ERASURE_CODING) {
         j.at("data_shards").get_to(config.data_shards);
         j.at("parity_shards").get_to(config.parity_shards);
+        j.at("chunk_size_kib").get_to(config.chunk_size_kib);
     }
 }
 
@@ -28,6 +29,7 @@ void to_json(ordered_json& j, const group_config& config) {
     if (config.type == group_config::type_t::ERASURE_CODING) {
         j["data_shards"] = config.data_shards;
         j["parity_shards"] = config.parity_shards;
+        j["chunk_size_kib"] = config.chunk_size_kib;
     }
 }
 
