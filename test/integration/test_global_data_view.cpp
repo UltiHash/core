@@ -21,7 +21,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
     BOOST_CHECK_THROW(
         boost::asio::co_spawn(
             get_executor(),
-            gdv->read(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
+            gdv.read(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
             boost::asio::use_future)
             .get(),
         uh::cluster::error_exception);
@@ -32,7 +32,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     auto input_buffer = unique_buffer<char>(8 * KIBI_BYTE);
     fill_random(input_buffer.data(), input_buffer.size());
     auto addr = boost::asio::co_spawn(
-                    get_executor(), gdv->write(input_buffer.string_view(), {0}),
+                    get_executor(), gdv.write(input_buffer.string_view(), {0}),
                     boost::asio::use_future)
                     .get();
     BOOST_CHECK(input_buffer.size() == addr.data_size());
@@ -41,7 +41,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
 
     unique_buffer<char> result_buffer(addr.data_size());
     boost::asio::co_spawn(get_executor(),
-                          gdv->read_address(addr, result_buffer.span()),
+                          gdv.read_address(addr, result_buffer.span()),
                           boost::asio::use_future)
         .get();
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());
@@ -56,7 +56,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
 
     BOOST_CHECK_THROW(
         boost::asio::co_spawn(get_executor(),
-                              gdv->read_address(addr, result_buffer.span()),
+                              gdv.read_address(addr, result_buffer.span()),
                               boost::asio::use_future)
             .get(),
         uh::cluster::error_exception);
@@ -71,58 +71,58 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
     address addr;
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             0 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            0 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             8 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            8 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             16 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            16 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             24 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            24 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             32 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            32 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             40 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            40 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             48 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            48 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
     addr.append(
         boost::asio::co_spawn(get_executor(),
-                              gdv->write(input_buffer.string_view().substr(
-                                             56 * KIBI_BYTE, 8 * KIBI_BYTE),
-                                         {0}),
+                              gdv.write(input_buffer.string_view().substr(
+                                            56 * KIBI_BYTE, 8 * KIBI_BYTE),
+                                        {0}),
                               boost::asio::use_future)
             .get());
 
@@ -130,7 +130,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 
     auto result_buffer = unique_buffer<char>(addr.data_size());
     boost::asio::co_spawn(get_executor(),
-                          gdv->read_address(addr, result_buffer.span()),
+                          gdv.read_address(addr, result_buffer.span()),
                           boost::asio::use_future)
         .get();
     BOOST_CHECK(input_buffer.string_view() == result_buffer.string_view());

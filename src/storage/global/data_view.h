@@ -21,15 +21,13 @@ public:
      * address space that fragments can be written to and read from, hiding the
      * interaction with individual storage service instances.
      *
-     * @param config A constant reference to an instance of
-     * global_data_view_config, providing all tunable configuration parameters.
      * @param ioc A reference to an instance of boost::asio::io_context used for
      * spawning co-routines.
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
     explicit global_data_view(
-        const global_data_view_config& config, boost::asio::io_context& ioc,
+        boost::asio::io_context& ioc,
         service_load_balancer<storage_interface>& load_balancer,
         storage_index& storage_index);
 
@@ -118,7 +116,6 @@ public:
 
 private:
     boost::asio::io_context& m_io_service;
-    global_data_view_config m_config;
 
     service_load_balancer<storage_interface>& m_load_balancer;
     storage_index& m_storage_index;

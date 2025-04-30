@@ -5,11 +5,10 @@
 
 namespace uh::cluster::storage::global {
 global_data_view::global_data_view(
-    const global_data_view_config& config, boost::asio::io_context& ioc,
+    boost::asio::io_context& ioc,
     service_load_balancer<storage_interface>& load_balancer,
     storage_index& storage_index)
     : m_io_service(ioc),
-      m_config(config),
       m_load_balancer{load_balancer},
       m_storage_index{storage_index} {
     m_load_balancer.get();
@@ -47,7 +46,9 @@ coro<std::size_t> global_data_view::get_used_space() {
 
     size_t used = 0;
     for (const auto& dn : nodes) {
-        used += co_await dn->get_used_space();
+        if (dn != nullptr) {
+            used += co_await dn->get_used_space();
+        }
     }
     co_return used;
 }

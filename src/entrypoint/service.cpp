@@ -59,20 +59,14 @@ service::service(const service_config& sc, entrypoint_config config)
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id]),
-      // TODO: do not maintain storage services here. We can do this on the
-      // group_manager.h using externals_subscriber instance.
-      m_storage_maintainer(
-          m_etcd, ns::root.storage_groups[0].storage_hostports,
-          service_factory<storage_interface>(
-              m_ioc,
-              m_config.global_data_view.storage_service_connection_count),
-          {m_load_balancer, m_storage_index}),
-      m_data_view(m_config.global_data_view, m_ioc, m_load_balancer,
-                  m_storage_index),
-      m_cache(m_ioc, m_data_view,
+
+      m_group_manager(m_ioc, m_etcd, /*m_group_id*/ 0,
+                      config.global_data_view.storage_service_connection_count),
+
+      m_cache(m_ioc, m_group_manager.get_data_view(),
               config.global_data_view.read_cache_capacity_l2),
-      m_dedupe(
-          make_deduplicator(m_config, m_data_view, m_cache, m_ioc, m_etcd)),
+      m_dedupe(make_deduplicator(m_config, m_group_manager.get_data_view(),
+                                 m_cache, m_ioc, m_etcd)),
 
       m_directory(m_ioc, m_config.database),
       m_uploads(m_ioc, m_config.database),
@@ -82,13 +76,13 @@ service::service(const service_config& sc, entrypoint_config config)
       m_server(m_config.server,
                std::make_unique<handler>(
                    command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
-                                   m_config, m_data_view, m_limits, m_users,
-                                   m_license_watcher),
+                                   m_config, m_group_manager.get_data_view(),
+                                   m_limits, m_users, m_license_watcher),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory),
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
                m_ioc),
-      m_gc(m_ioc, m_directory, m_data_view) {
+      m_gc(m_ioc, m_directory, m_group_manager.get_data_view()) {
     co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
              [](std::exception_ptr e) {
                  try {
