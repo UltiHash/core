@@ -49,7 +49,6 @@ public:
     }
 
 private:
-    std::chrono::milliseconds m_service_get_timeout;
     std::mutex m_mutex;
     std::condition_variable m_cv;
     std::vector<std::atomic<std::shared_ptr<storage_interface>>> m_services;
