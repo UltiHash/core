@@ -1,3 +1,4 @@
+#include <functional>
 #define BOOST_TEST_MODULE "fragment set tests"
 
 #include <boost/test/unit_test.hpp>

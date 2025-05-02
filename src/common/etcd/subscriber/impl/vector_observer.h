@@ -9,12 +9,12 @@ namespace uh::cluster {
 template <typename T> class vector_observer : public subscriber_observer {
 public:
     using callback_t = std::function<void(T&)>;
-    vector_observer(std::string expected_parent_key, size_t num_storages,
+    vector_observer(std::string expected_parent_key, size_t num_members,
                     T default_value = {}, callback_t callback = nullptr)
         : m_expected_parent_key{std::move(expected_parent_key)},
           m_default_value{std::move(default_value)},
           m_callback{std::move(callback)},
-          m_values(num_storages) {
+          m_values(num_members) {
 
         for (auto& atom : m_values) {
             atom.store(std::make_shared<T>(m_default_value),
@@ -50,10 +50,12 @@ public:
         case etcd_action::GET:
         case etcd_action::CREATE:
         case etcd_action::SET:
-            m_values[id].store(std::make_shared<T>(deserialize<T>(resp.value)));
+            m_values[id].store(std::make_shared<T>(deserialize<T>(resp.value)),
+                               std::memory_order_release);
             break;
         case etcd_action::DELETE:
-            m_values[id].store(std::make_shared<T>(m_default_value));
+            m_values[id].store(std::make_shared<T>(m_default_value),
+                               std::memory_order_release);
             break;
         default:
             return false;

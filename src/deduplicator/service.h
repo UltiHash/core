@@ -28,20 +28,11 @@ public:
                                       sc.working_dir)),
           m_service_registry(m_etcd,
                              ns::root.deduplicator.hostports[m_service_id]),
-          // TODO: do not maintain storage services here. We can do this on the
-          // group_manager.h using externals_subscriber instance.
-          m_storage_maintainer(
-              m_etcd, ns::root.storage_groups[0].storage_hostports,
-              service_factory<storage_interface>(
-                  m_ioc,
-                  config.global_data_view.storage_service_connection_count),
-              {m_load_balancer, m_storage_index}),
-          m_data_view(config.global_data_view, m_ioc, m_load_balancer,
-                      m_storage_index),
-          m_cache(m_ioc, m_data_view,
-                  config.global_data_view.read_cache_capacity_l2),
-          m_deduplicator(std::make_shared<local_deduplicator>(
-              config, m_data_view, m_cache)),
+
+          m_gdv{m_ioc, m_etcd, config.global_data_view},
+          m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
+          m_deduplicator(
+              std::make_shared<local_deduplicator>(config, m_gdv, m_cache)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
@@ -65,11 +56,9 @@ private:
 
     service_registry m_service_registry;
 
-    service_load_balancer<storage_interface> m_load_balancer;
-    storage_index m_storage_index;
-    service_maintainer<storage_interface> m_storage_maintainer;
-    storage::global::global_data_view m_data_view;
+    storage::global::global_data_view m_gdv;
     storage::global::cache m_cache;
+
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
 };

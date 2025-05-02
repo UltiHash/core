@@ -18,12 +18,7 @@ class global_data_view_fixture {
 public:
     global_data_view_fixture()
         : m_etcd(),
-          m_service_cfg(make_service_config()),
-          m_storage_maintainer(
-              m_etcd, ns::root.storage_groups[0].storage_hostports,
-              service_factory<storage_interface>(
-                  m_ioc, m_gdv_config.storage_service_connection_count),
-              {m_load_balancer, m_storage_index}) {}
+          m_service_cfg(make_service_config()) {}
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -40,7 +35,6 @@ public:
 
             coordinator::service::publish_configs(m_etcd, configs);
         }
-
         try {
             for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
                 service_config service_cfg;
@@ -72,8 +66,8 @@ public:
             i++;
         }
 
-        m_gdv = std::make_shared<storage::global::global_data_view>(
-            m_gdv_config, m_ioc, m_load_balancer, m_storage_index);
+        m_gdv = std::make_unique<storage::global::global_data_view>(
+            m_ioc, m_etcd, m_gdv_config);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -82,16 +76,11 @@ public:
                 m_excp_ptrs[i] = std::current_exception();
             }
         });
-
-        wait_for_true(300s, 1s, [this]() {
-            std::cout << std::format(
-                "maintainer.size(): {}, instances.size(): {}",
-                m_storage_maintainer.size(), m_storage_instances.size());
-            return m_storage_maintainer.size() == m_storage_instances.size();
-        });
     }
 
     void teardown() {
+        m_gdv.reset();
+
         for (const auto& node : m_storage_instances) {
             node->stop();
         }
@@ -120,7 +109,7 @@ public:
         m_etcd.clear_all();
     }
 
-    std::shared_ptr<storage::data_view> get_data_view() { return m_gdv; }
+    auto get_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -139,11 +128,10 @@ private:
     service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
+
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    service_load_balancer<storage_interface> m_load_balancer;
-    storage_index m_storage_index;
-    service_maintainer<storage_interface> m_storage_maintainer;
-    std::shared_ptr<storage::data_view> m_gdv;
+
+    std::shared_ptr<storage::global::global_data_view> m_gdv;
 };
 
 } // namespace uh::cluster

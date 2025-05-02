@@ -32,11 +32,9 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    service_load_balancer<storage_interface> m_load_balancer;
-    storage_index m_storage_index;
-    service_maintainer<storage_interface> m_storage_maintainer;
-    storage::global::global_data_view m_data_view;
+    storage::global::global_data_view m_gdv;
     storage::global::cache m_cache;
+
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 
