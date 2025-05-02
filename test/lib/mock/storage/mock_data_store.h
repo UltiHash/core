@@ -39,8 +39,6 @@ public:
 
     address write(std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
-    void manual_write(uint64_t internal_pointer, std::span<const char> data);
-    void manual_read(uint64_t pointer, std::span<char> buffer);
     std::size_t read(const uint128_t& pointer, std::span<char> buffer);
     address link(const address& addr);
     size_t unlink(const address& addr);

@@ -132,19 +132,6 @@ address default_data_store::write(std::span<const char> data,
     return rv;
 }
 
-void default_data_store::manual_write(uint64_t pointer,
-                                      std::span<const char> data) {
-
-    auto loc = file_location(pointer);
-    loc.file.write(loc.offset, data);
-}
-
-void default_data_store::manual_read(uint64_t pointer, std::span<char> buffer) {
-
-    auto loc = file_location(pointer);
-    loc.file.read(loc.offset, buffer);
-}
-
 address default_data_store::link(const address& addr) {
     std::unique_lock lock(m_mutex);
     return m_refcounter.increment(addr);

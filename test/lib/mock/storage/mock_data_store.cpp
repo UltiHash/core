@@ -76,41 +76,6 @@ address mock_data_store::write(std::span<const char> data,
     return data_address;
 }
 
-void mock_data_store::manual_write(uint64_t internal_pointer,
-                                   std::span<const char> data) {
-    if (internal_pointer + data.size() > m_conf.max_data_store_size) {
-        throw std::out_of_range("internal_pointer is out of range");
-    }
-    address data_address;
-    data_address.push({.pointer = pointer_traits::get_global_pointer(
-                           internal_pointer, m_storage_id, m_data_store_id),
-                       .size = data.size()});
-    link(data_address);
-
-    std::copy(data.begin(), data.end(), m_data.begin() + internal_pointer);
-}
-
-void mock_data_store::manual_read(uint64_t pointer, std::span<char> buffer) {
-    std::memcpy(buffer.data(), m_data.data() + pointer, buffer.size());
-}
-
-std::size_t mock_data_store::read(const uint128_t& global_pointer,
-                                  std::span<char> buffer) {
-    const auto pointer = pointer_traits::get_pointer(global_pointer);
-    const auto current_offset = m_current_offset.load();
-
-    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
-        pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
-        pointer + buffer.size() > current_offset) {
-        LOG_WARN() << "attempted to read data from the out-of-bounds offset="
-                   << pointer << ", with current_offset=" << current_offset;
-        throw std::out_of_range("pointer is out of range");
-    }
-
-    std::memcpy(buffer.data(), m_data.data() + pointer, buffer.size());
-    return buffer.size();
-}
-
 address mock_data_store::link(const address& addr) {
     address new_fragments;
     for (size_t i = 0; i < addr.size(); ++i) {

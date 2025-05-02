@@ -33,21 +33,6 @@ public:
                   const std::vector<std::size_t>& offsets);
 
     /**
-     * Manually write the data directly to a specific internal pointer
-     * @param internal_pointer
-     * @param data
-     */
-    void manual_write(uint64_t internal_pointer, std::span<const char> data);
-
-    /**
-     * Reading direcly from a data store
-     * @param pointer
-     * @param size
-     * @param buffer
-     */
-    void manual_read(uint64_t pointer, std::span<char> buffer);
-
-    /**
      * @brief Read bytes of data starting from the pointer until the size and
      * store it in the buffer given.
      * @param buffer: buffer where the read data is to be written
