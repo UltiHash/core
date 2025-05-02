@@ -7,33 +7,44 @@ UH_DATA=/var/lib/uh
 export UH_LOG_LEVEL=DEBUG
 UH_CLUSTER=$<TARGET_FILE:uh-cluster>
 
+storage_type="ROUND_ROBIN"
 instances=1
-if [ -n "$1" ];then
-    instances="$1"
+
+if [ -n "$1" ]; then
+    storage_type="$1"
 fi
 
-data_shards=$instances
-parity_shards=0
+if [ -n "$2" ]; then
+    instances="$2"
+fi
 
-members=""
-for ((i=0; i<data_shards+parity_shards; i++)); do
-  if [ -z "$members" ]; then
-    members="$i"
-  else
-    members="$members,$i"
-  fi
-done
-
-members_json="[$members]"
-
-uh_storage_groups=$(cat <<EOF
+if [ "$storage_type" == "ROUND_ROBIN" ]; then
+    uh_storage_groups=$(cat <<EOF
 [{
-  "data_shards": $data_shards,
-  "parity_shards": $parity_shards,
-  "members": $members_json
+  "id": 0,
+  "type": "ROUND_ROBIN",
+  "storages": $instances
 }]
 EOF
-)
+    )
+elif [ "$storage_type" == "ERASURE_CODING" ]; then
+    data_shards=$instances
+    parity_shards=0
+
+    uh_storage_groups=$(cat <<EOF
+[{
+  "id": 0,
+  "type": "ERASURE_CODING",
+  "storages": $instances,
+  "data_shards": $data_shards,
+  "parity_shards": $parity_shards
+}]
+EOF
+    )
+else
+    echo "Error: Unsupported storage type '$storage_type'."
+    exit 1
+fi
 
 export UH_STORAGE_GROUPS="$uh_storage_groups"
 

@@ -29,15 +29,16 @@ public:
 
     void setup() {
         {
-            std::vector<storage::group_config> group_configs;
+            storage::group_configs configs;
             storage::group_config config;
-            config.data_shards = NUM_STORAGE_INSTANCES;
+            config.type = storage::group_config::type_t::ROUND_ROBIN;
+            config.storages = NUM_STORAGE_INSTANCES;
+            config.data_shards = 0;
             config.parity_shards = 0;
-            config.members.resize(config.data_shards);
-            std::iota(config.members.begin(), config.members.end(), 0);
-            group_configs.push_back(config);
+            configs.configs.clear();
+            configs.configs.push_back(config);
 
-            coordinator::service::publish_configs(m_etcd, group_configs);
+            coordinator::service::publish_configs(m_etcd, configs);
         }
 
         try {

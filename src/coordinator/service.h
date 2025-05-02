@@ -16,6 +16,7 @@
 #include <common/license/backend_client.h>
 #include <common/license/license_updater.h>
 #include <common/license/usage_updater.h>
+#include <ranges>
 
 namespace uh::cluster::coordinator {
 
@@ -75,16 +76,16 @@ public:
         m_cv.notify_all();
     }
 
-    static void
-    publish_configs(etcd_manager& etcd,
-                    const std::vector<storage::group_config>& group_configs) {
-        for (size_t i = 0; const auto& cfg : group_configs) {
-            etcd.put(ns::root.storage_groups.group_configs[i], cfg.to_string());
-            for (const auto& m : cfg.members) {
-                etcd.put(ns::root.storage_groups.storage_assignments[m],
-                         std::to_string(i));
+    static void publish_configs(etcd_manager& etcd,
+                                const storage::group_configs& group_configs) {
+        for (size_t g = 0; const auto& cfg : group_configs.configs) {
+            etcd.put(ns::root.storage_groups.group_configs[g], cfg.to_string());
+
+            for (auto s = 0ul; s < cfg.storages; ++s) {
+                etcd.put(ns::root.storage_groups.storage_assignments[s],
+                         std::to_string(g));
             }
-            ++i;
+            ++g;
         }
     }
 

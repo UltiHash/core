@@ -28,23 +28,30 @@ public:
           m_group_id{deserialize<size_t>(m_etcd.wait(
               ns::root.storage_groups.storage_assignments[m_storage_id],
               SERVICE_GET_TIMEOUT))},
+          m_group_config{group_config::create(
+              m_etcd.get(ns::root.storage_groups.group_configs[m_group_id]))},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
                                                     sc.m_data_store_roots)),
           m_storage_registry(m_etcd, m_group_id, m_storage_id,
                              service.working_dir),
-          m_candidate(
-              m_etcd, get_prefix(m_group_id).leader, serialize(m_storage_id),
-              std::make_unique<storage_campaign_strategy>(
-                  m_etcd, m_group_id, m_storage_id,
-                  [this]() {
-                      LOG_INFO() << std::format("Storage service {} is elected "
-                                                "as a leader of group {}",
-                                                m_storage_id, m_group_id);
-                      m_state_manager.emplace(m_etcd, m_group_id, m_storage_id);
-                  })),
           m_server(sc.server,
                    std::make_unique<handler>(*m_storage, m_storage_registry),
-                   m_ioc) {}
+                   m_ioc) {
+
+        if (m_group_config.type == group_config::type_t::ERASURE_CODING) {
+            m_candidate.emplace(
+                m_etcd, get_prefix(m_group_id).leader, serialize(m_storage_id),
+                std::make_unique<storage_campaign_strategy>(
+                    m_etcd, m_group_id, m_storage_id, [this]() {
+                        LOG_INFO()
+                            << std::format("Storage service {} is elected "
+                                           "as a leader of group {}",
+                                           m_storage_id, m_group_id);
+                        m_state_manager.emplace(m_etcd, m_group_config,
+                                                m_storage_id);
+                    }));
+        }
+    }
 
     void run() {
         metric<storage_available_space_gauge, byte, int64_t>::
@@ -94,10 +101,11 @@ private:
     license_watcher m_license_watcher;
     std::size_t m_storage_id;
     std::size_t m_group_id;
+    group_config m_group_config;
     std::shared_ptr<local_storage> m_storage;
     storage_registry m_storage_registry;
     std::optional<state_manager> m_state_manager;
-    candidate m_candidate;
+    std::optional<candidate> m_candidate;
     server m_server;
 };
 } // namespace uh::cluster::storage
