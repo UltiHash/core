@@ -1,3 +1,4 @@
+#include <functional>
 #define BOOST_TEST_MODULE "fragment set tests"
 
 #include <boost/test/unit_test.hpp>
@@ -14,7 +15,7 @@ namespace uh::cluster {
 
 struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
-    std::optional<storage::global::global_data_view> gdv;
+    std::optional<std::reference_wrapper<storage::data_view>> gdv;
     std::shared_ptr<storage::global::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
@@ -32,10 +33,11 @@ struct fragment_set_fixture : public global_data_view_fixture {
                                                             std::size_t size) {
         shared_buffer<char> fragment(size);
         memset(fragment.data(), fill_char, size);
-        auto addr = boost::asio::co_spawn(
-                        get_executor(), gdv->write(fragment.string_view(), {0}),
-                        boost::asio::use_future)
-                        .get();
+        auto addr =
+            boost::asio::co_spawn(get_executor(),
+                                  gdv->get().write(fragment.string_view(), {0}),
+                                  boost::asio::use_future)
+                .get();
         return {std::move(fragment), addr};
     }
     shared_buffer<char> read_prefix(const std::string& source,
@@ -158,7 +160,7 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
 
-    auto gdv = get_data_view();
+    auto& gdv = get_data_view();
     storage::global::cache cache(get_executor(), gdv, 1000);
     fragment_set frag_set(1000, cache);
 

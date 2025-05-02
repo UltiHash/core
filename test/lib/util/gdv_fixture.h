@@ -7,7 +7,6 @@
 #include <common/etcd/utils.h>
 #include <coordinator/service.h>
 #include <storage/global/data_view.h>
-#include <storage/group/group_manager.h>
 #include <storage/service.h>
 
 #include <util/temp_directory.h>
@@ -67,8 +66,7 @@ public:
             i++;
         }
 
-        m_group_manager.emplace(m_ioc, m_etcd, /*m_group_id*/ 0,
-                                m_gdv_config.storage_service_connection_count);
+        m_gdv.emplace(m_ioc, m_etcd, m_gdv_config);
 
         m_threads.emplace_back([this, i] {
             try {
@@ -80,6 +78,8 @@ public:
     }
 
     void teardown() {
+        m_gdv.reset();
+
         for (const auto& node : m_storage_instances) {
             node->stop();
         }
@@ -108,7 +108,7 @@ public:
         m_etcd.clear_all();
     }
 
-    auto get_data_view() { return m_group_manager->get_data_view(); }
+    auto& get_data_view() { return *m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
@@ -130,9 +130,7 @@ private:
 
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
 
-    std::shared_ptr<storage::data_view> m_gdv;
-
-    std::optional<storage::group_manager> m_group_manager;
+    std::optional<storage::global::global_data_view> m_gdv;
 };
 
 } // namespace uh::cluster

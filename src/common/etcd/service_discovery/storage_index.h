@@ -15,8 +15,7 @@ public:
     explicit storage_index(
         std::size_t num_storages,
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
-        : m_service_get_timeout{service_get_timeout},
-          m_services(num_storages) {}
+        : m_services(num_storages) {}
 
     void add_client(size_t id,
                     std::shared_ptr<storage_interface> service) override {
@@ -49,8 +48,6 @@ public:
     }
 
 private:
-    std::mutex m_mutex;
-    std::condition_variable m_cv;
     std::vector<std::atomic<std::shared_ptr<storage_interface>>> m_services;
 };
 

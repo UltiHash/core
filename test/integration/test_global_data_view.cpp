@@ -17,7 +17,7 @@ static void fill_random(char* buf, size_t size) {
 }
 
 BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
-    auto gdv = get_data_view();
+    auto& gdv = get_data_view();
     BOOST_CHECK_THROW(
         boost::asio::co_spawn(
             get_executor(),
@@ -28,7 +28,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
-    auto gdv = get_data_view();
+    auto& gdv = get_data_view();
     auto input_buffer = unique_buffer<char>(8 * KIBI_BYTE);
     fill_random(input_buffer.data(), input_buffer.size());
     auto addr = boost::asio::co_spawn(
@@ -49,7 +49,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
 
-    auto gdv = get_data_view();
+    auto& gdv = get_data_view();
     address addr;
     addr.push({23, 42});
     auto result_buffer = unique_buffer<char>(addr.data_size());
@@ -64,7 +64,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 
-    auto gdv = get_data_view();
+    auto& gdv = get_data_view();
     auto input_buffer = unique_buffer<char>(64 * KIBI_BYTE);
     fill_random(input_buffer.data(), input_buffer.size());
 
