@@ -35,37 +35,36 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
     auto group_config = deserialize<storage::group_config>(etcd.wait(
         ns::root.storage_groups.group_configs[group_id], SERVICE_GET_TIMEOUT));
 
-    m_group_views.push_back(
-        group_factory(m_ioc, etcd, group_id, group_config,
-                      config.storage_service_connection_count));
+    m_group_view = group_factory(m_ioc, etcd, group_id, group_config,
+                                 config.storage_service_connection_count);
 }
 
 coro<address> global_data_view::write(std::span<const char> data,
                                       const std::vector<std::size_t>& offsets) {
-    co_return co_await m_group_views[0]->write(data, offsets);
+    co_return co_await m_group_view->write(data, offsets);
 }
 
 coro<shared_buffer<>> global_data_view::read(const uint128_t& pointer,
                                              size_t size) {
 
-    co_return co_await m_group_views[0]->read(pointer, size);
+    co_return co_await m_group_view->read(pointer, size);
 }
 
 coro<std::size_t> global_data_view::read_address(const address& addr,
                                                  std::span<char> buffer) {
-    co_return co_await m_group_views[0]->read_address(addr, buffer);
+    co_return co_await m_group_view->read_address(addr, buffer);
 }
 
 coro<std::size_t> global_data_view::get_used_space() {
-    co_return co_await m_group_views[0]->get_used_space();
+    co_return co_await m_group_view->get_used_space();
 }
 
 [[nodiscard]] coro<address> global_data_view::link(const address& addr) {
-    co_return co_await m_group_views[0]->link(addr);
+    co_return co_await m_group_view->link(addr);
 }
 
 coro<std::size_t> global_data_view::unlink(const address& addr) {
-    co_return co_await m_group_views[0]->unlink(addr);
+    co_return co_await m_group_view->unlink(addr);
 }
 
 } // namespace uh::cluster::storage::global

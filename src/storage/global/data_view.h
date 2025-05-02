@@ -115,7 +115,7 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
-    std::vector<std::unique_ptr<storage::data_view>> m_group_views;
+    std::unique_ptr<storage::data_view> m_group_view;
 };
 
 } // namespace uh::cluster::storage::global
