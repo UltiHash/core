@@ -33,7 +33,7 @@ public:
         return rv;
     }
 
-    auto get_services() {
+    auto get() {
         std::vector<std::shared_ptr<storage_interface>> rv;
         rv.reserve(m_services.size());
         for (const auto& atom : m_services) {
