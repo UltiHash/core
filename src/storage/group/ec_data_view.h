@@ -117,6 +117,7 @@ private:
     boost::asio::io_context& m_ioc;
 
     storage_index m_storage_index;
+    // TODO: Use external_subscriber instead of using service maintainer here.
     service_maintainer<storage_interface> m_storage_maintainer;
 };
 

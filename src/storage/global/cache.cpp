@@ -5,8 +5,8 @@
 
 namespace uh::cluster::storage::global {
 
-cache::cache(boost::asio::io_context& ioc,
-             uh::cluster::storage::data_view& storage, std::size_t capacity)
+cache::cache(boost::asio::io_context& ioc, data_view& storage,
+             std::size_t capacity)
     : m_ioc(ioc),
       m_storage(storage),
       m_lru(capacity) {}

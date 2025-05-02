@@ -24,7 +24,7 @@ struct fixture {
     etcd_manager etcd;
     std::size_t service_id;
     std::size_t num_storages = 5;
-    storage_index services{num_storages, 1s};
+    storage_index services{num_storages};
     service_load_balancer<storage_interface> load_balancer{1s};
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 

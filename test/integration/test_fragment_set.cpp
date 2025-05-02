@@ -15,7 +15,7 @@ namespace uh::cluster {
 
 struct fragment_set_fixture : public global_data_view_fixture {
     temp_directory tmp_dir;
-    std::optional<std::reference_wrapper<storage::data_view>> gdv;
+    std::shared_ptr<storage::data_view> gdv;
     std::shared_ptr<storage::global::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
@@ -23,7 +23,7 @@ struct fragment_set_fixture : public global_data_view_fixture {
 
     void setup() {
         global_data_view_fixture::setup();
-        gdv.emplace(get_data_view());
+        gdv = get_data_view();
         cache = std::make_shared<storage::global::cache>(get_executor(), *gdv,
                                                          1000);
         frag_set = std::make_shared<fragment_set>(1000, *cache);
@@ -33,11 +33,10 @@ struct fragment_set_fixture : public global_data_view_fixture {
                                                             std::size_t size) {
         shared_buffer<char> fragment(size);
         memset(fragment.data(), fill_char, size);
-        auto addr =
-            boost::asio::co_spawn(get_executor(),
-                                  gdv->get().write(fragment.string_view(), {0}),
-                                  boost::asio::use_future)
-                .get();
+        auto addr = boost::asio::co_spawn(
+                        get_executor(), gdv->write(fragment.string_view(), {0}),
+                        boost::asio::use_future)
+                        .get();
         return {std::move(fragment), addr};
     }
     shared_buffer<char> read_prefix(const std::string& source,
@@ -160,14 +159,14 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     temp_directory tmp_dir;
 
-    auto& gdv = get_data_view();
-    storage::global::cache cache(get_executor(), gdv, 1000);
+    auto gdv = get_data_view();
+    storage::global::cache cache(get_executor(), *gdv, 1000);
     fragment_set frag_set(1000, cache);
 
     shared_buffer<char> fragment_a(8 * KIBI_BYTE);
     memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
     auto addr_a = boost::asio::co_spawn(
-                      get_executor(), gdv.write(fragment_a.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_a.string_view(), {0}),
                       boost::asio::use_future)
                       .get();
 
@@ -178,7 +177,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
 
     auto addr_b = boost::asio::co_spawn(
-                      get_executor(), gdv.write(fragment_b.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_b.string_view(), {0}),
                       boost::asio::use_future)
                       .get();
 
@@ -188,7 +187,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
     auto addr_c = boost::asio::co_spawn(
-                      get_executor(), gdv.write(fragment_c.string_view(), {0}),
+                      get_executor(), gdv->write(fragment_c.string_view(), {0}),
                       boost::asio::use_future)
                       .get();
 

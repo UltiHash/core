@@ -7,7 +7,7 @@ namespace uh::cluster::storage::global {
 
 class cache {
 public:
-    cache(boost::asio::io_context& ioc, storage::data_view& storage,
+    cache(boost::asio::io_context& ioc, data_view& storage,
           std::size_t capacity);
 
     shared_buffer<> read_fragment(const uint128_t& pointer, size_t size);

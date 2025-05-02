@@ -21,7 +21,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                                          size_t size) {
-    co_return shared_buffer{};
+    co_return shared_buffer<>{};
 }
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,

@@ -12,9 +12,7 @@ namespace uh::cluster {
 
 class storage_index : public service_observer<storage_interface> {
 public:
-    explicit storage_index(
-        std::size_t num_storages,
-        std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
+    explicit storage_index(std::size_t num_storages)
         : m_services(num_storages) {}
 
     void add_client(size_t id,
@@ -30,10 +28,7 @@ public:
         auto rv = m_services.at(id).load(std::memory_order_acquire);
 
         if (rv == nullptr) {
-            throw std::runtime_error(
-                "timeout waiting for " +
-                get_service_string(storage_interface::service_role) +
-                " client: " + std::to_string(id));
+            throw std::runtime_error("access wrong index storage");
         }
         return rv;
     }
