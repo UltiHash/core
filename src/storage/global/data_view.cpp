@@ -30,7 +30,9 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
                                    const global_data_view_config& config)
     : m_ioc(ioc) {
 
-    // TODO: watch group configs and create group using factory function
+    // TODO: watch group configs and create group using factory function.
+    // We should save groups using map, or using two vectors like group_indices,
+    // group_views.
     auto group_id = 0ul;
     auto group_config = deserialize<storage::group_config>(etcd.wait(
         ns::root.storage_groups.group_configs[group_id], SERVICE_GET_TIMEOUT));
