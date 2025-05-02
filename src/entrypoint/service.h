@@ -32,9 +32,9 @@ private:
     std::size_t m_service_id;
     service_registry m_service_registry;
 
-    storage::group_manager m_group_manager;
-
+    storage::global::global_data_view m_gdv;
     storage::global::cache m_cache;
+
     std::unique_ptr<deduplicator_interface> m_dedupe;
     directory m_directory;
 
