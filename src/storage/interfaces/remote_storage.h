@@ -3,6 +3,8 @@
 #include <common/network/client.h>
 #include <common/service_interfaces/service_factory.h>
 #include <common/service_interfaces/storage_interface.h>
+#include <common/utils/strings.h>
+#include <storage/group/state.h>
 
 namespace uh::cluster {
 

@@ -12,18 +12,11 @@ namespace uh::cluster::storage {
 constexpr const char* STATE_FILE_NAME = "state";
 
 storage_registry::storage_registry(etcd_manager& etcd, std::size_t group_id,
-                                   std::size_t service_id,
+                                   std::size_t storage_id,
                                    const std::filesystem::path& working_dir)
-    : service_registry(
-          etcd,
-          ns::root.storage_groups[group_id].storage_hostports[service_id]),
-      m_state_key{ns::root.storage_groups[group_id].storage_states[service_id]},
-      m_working_dir(working_dir) {}
-
-storage_registry::~storage_registry() { m_etcd.rm(m_state_key); }
-
-void storage_registry::register_service(const server_config& config) {
-    service_registry::register_service(config);
+    : m_etcd{etcd},
+      m_state_key{ns::root.storage_groups[group_id].storage_states[storage_id]},
+      m_working_dir(working_dir) {
 
     auto state_file =
         m_working_dir / get_service_string(STORAGE_SERVICE) / STATE_FILE_NAME;
@@ -32,6 +25,8 @@ void storage_registry::register_service(const server_config& config) {
         update_service_state(storage_state::NEW);
     }
 }
+
+storage_registry::~storage_registry() { m_etcd.rm(m_state_key); }
 
 void storage_registry::update_service_state(const storage_state state) {
     m_state = state;

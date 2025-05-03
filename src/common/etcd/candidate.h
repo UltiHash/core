@@ -9,31 +9,20 @@
 
 namespace uh::cluster {
 
-class campaign_strategy {
-public:
-    virtual void pre_campaign() {}
-    virtual void on_elected() {}
-    virtual void post_campaign() {}
-    virtual ~campaign_strategy() = default;
-};
-
 class candidate {
 public:
+    using callback_t = std::function<void(bool leader)>;
+
     /*
-     * @param etcd: etcd_manager instance to use for campaigning
-     * @param key: key for election
-     * @param candidate_name: value to set if this candidate wins election
-     * @param pre_campaign: function to be called before starting campaign
-     * @param on_elected: function to be called when this candidate wins
-     * election
+     * NOTE: On a leader, the callback is called before announcing itself as a
+     * leader.
      */
     candidate(etcd_manager& etcd, const std::string& key,
-              std::string candidate_name,
-              std::unique_ptr<campaign_strategy> strategy = nullptr)
+              std::string candidate_name, callback_t callback = nullptr)
         : m_etcd{etcd},
           m_key{key},
           m_candidate_name{candidate_name},
-          m_strategy{std::move(strategy)},
+          m_callback{std::move(callback)},
           m_is_leader{false} {
 
         auto resp = campaign();
@@ -56,20 +45,17 @@ public:
 
 private:
     auto campaign() -> etcd::Response {
-        if (m_strategy)
-            m_strategy->pre_campaign();
-
         // Create key with empty value first,
         auto resp = m_etcd.create_if_empty(m_key, "");
+
+        if (m_callback)
+            m_callback(resp.is_ok());
+
         if (resp.is_ok()) {
             m_is_leader.store(true, std::memory_order_release);
-            if (m_strategy)
-                m_strategy->on_elected();
             m_etcd.put(m_key, m_candidate_name);
         }
 
-        if (m_strategy)
-            m_strategy->post_campaign();
         return resp;
     }
 
@@ -79,9 +65,7 @@ private:
             case etcd_action::DELETE: {
                 auto resp = campaign();
                 if (resp.is_ok()) {
-                    // TODO: let's cancel this watcher here for
-                    // efficiency
-                    // m_watch_guard.reset();
+                    // TODO: let's cancel this watcher here for efficiency
                 }
             } break;
             default:
@@ -96,8 +80,7 @@ private:
     etcd_manager& m_etcd;
     std::string m_key;
     std::string m_candidate_name;
-    std::unique_ptr<campaign_strategy> m_strategy;
-    std::function<void(void)> m_on_elected;
+    callback_t m_callback;
     std::atomic<bool> m_is_leader;
     std::optional<etcd_manager::watch_guard> m_watch_guard;
 };
