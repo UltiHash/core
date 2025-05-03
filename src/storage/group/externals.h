@@ -27,12 +27,12 @@ public:
           m_prefix{get_prefix(group_id)},
           m_storage_id{storage_id} {}
     ~externals_publisher() {
-        m_etcd.rm(m_prefix.group_state);
         m_etcd.rm(m_prefix.storage_hostports[m_storage_id]);
         m_etcd.rm(m_prefix.storage_states[m_storage_id]);
     }
 
     void put_group_state(group_state value) {
+        m_etcd.rm(m_prefix.group_state);
         m_etcd.put(m_prefix.group_state, serialize(value));
     }
     void put_storage_hostport(hostport value) {
