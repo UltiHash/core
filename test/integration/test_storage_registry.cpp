@@ -96,39 +96,33 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
     BOOST_CHECK(*states[2] == storage_state::DOWN);
 }
 
-// BOOST_AUTO_TEST_CASE(restores_previous_state) {
-//     const auto num_storages = 7;
-//     const auto service_id = 3;
-//     const auto group_id = 4;
-//     auto etcd = etcd_manager();
-//     temp_directory tmp_dir;
-//     auto promise = std::promise<void>();
-//     auto future = promise.get_future();
-//     auto sut = std::make_optional<storage_registry>(etcd, group_id,
-//     service_id,
-//                                                     tmp_dir.path());
-//     sut.reset();
-//     storage_state_subscriber subscriber(
-//         etcd, group_id, num_storages,
-//         [&](std::size_t id, storage_state state) { promise.set_value(); });
-//
-//     auto sut_2 = storage_registry(etcd, group_id, service_id,
-//     tmp_dir.path());
-//
-//     // BOOST_CHECK(deserialize<storage_state>(etcd.get(
-//     //                 ns::root.storage_groups[group_id].storage_states[3]))
-//     ==
-//     //             storage_state::ASSIGNED);
-//
-//     // BOOST_CHECK(*states[3] == storage_state::ASSIGNED);
-//     if (future.wait_for(std::chrono::seconds(5)) ==
-//         std::future_status::timeout) {
-//         BOOST_FAIL("Callback was not called within the timeout period");
-//     }
-//     auto states = subscriber.get();
-//     BOOST_CHECK(*states[3] == storage_state::ASSIGNED);
-//     BOOST_CHECK(*states[2] == storage_state::DOWN);
-// }
+BOOST_AUTO_TEST_CASE(restores_previous_state) {
+    const auto num_storages = 7;
+    const auto service_id = 3;
+    const auto group_id = 4;
+    auto etcd = etcd_manager();
+    temp_directory tmp_dir;
+    auto promise = std::promise<void>();
+    auto future = promise.get_future();
+    auto sut = std::make_optional<storage_registry>(etcd, group_id, service_id,
+                                                    tmp_dir.path());
+    sut->update_service_state(storage_state::ASSIGNED);
+    sut.reset();
+
+    storage_state_subscriber subscriber(
+        etcd, group_id, num_storages,
+        [&](std::size_t id, storage_state state) { promise.set_value(); });
+
+    auto sut_2 = storage_registry(etcd, group_id, service_id, tmp_dir.path());
+
+    if (future.wait_for(std::chrono::seconds(5)) ==
+        std::future_status::timeout) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
+    auto states = subscriber.get();
+    BOOST_CHECK(*states[3] == storage_state::ASSIGNED);
+    BOOST_CHECK(*states[2] == storage_state::DOWN);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 
