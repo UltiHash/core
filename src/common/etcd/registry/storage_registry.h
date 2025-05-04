@@ -22,12 +22,10 @@ private:
     etcd_manager& m_etcd;
 
     std::string m_state_key;
-    const std::filesystem::path m_working_dir;
-    storage_state m_state = storage_state::NEW;
+    const std::filesystem::path m_file;
 
-    bool read_state_from_disk(const std::filesystem::path& state_file);
-    void write_state_to_disk(const std::filesystem::path& state_file,
-                             storage_state state);
+    storage_state load();
+    void store(storage_state state);
 };
 
 } // namespace uh::cluster::storage
