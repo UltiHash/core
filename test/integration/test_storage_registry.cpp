@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
         });
     auto sut = storage_registry(etcd, group_id, service_id, tmp_dir.path());
 
-    sut.update_service_state(storage_state::ASSIGNED);
+    sut.set(storage_state::ASSIGNED);
 
     if (future.wait_for(std::chrono::seconds(5)) ==
         std::future_status::timeout) {
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
     auto future = promise.get_future();
     auto sut = std::make_optional<storage_registry>(etcd, group_id, service_id,
                                                     tmp_dir.path());
-    sut->update_service_state(storage_state::ASSIGNED);
+    sut->set(storage_state::ASSIGNED);
     storage_state_subscriber subscriber(
         etcd, group_id, num_storages, [&](std::size_t id, storage_state state) {
             if (state == storage_state::DOWN)
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(restores_previous_state) {
     auto future = promise.get_future();
     auto sut = std::make_optional<storage_registry>(etcd, group_id, service_id,
                                                     tmp_dir.path());
-    sut->update_service_state(storage_state::ASSIGNED);
+    sut->set(storage_state::ASSIGNED);
     sut.reset();
 
     storage_state_subscriber subscriber(

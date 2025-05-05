@@ -24,38 +24,6 @@ struct group_initialized {
 };
 
 /*
- * Storage-wise publisher
- */
-class storage_state_publisher {
-public:
-    storage_state_publisher(etcd_manager& etcd, std::size_t group_id,
-                            std::size_t storage_id)
-        : m_etcd{etcd},
-          m_prefix{get_prefix(group_id)},
-          m_storage_id{storage_id} {}
-    ~storage_state_publisher() {
-        // NOTE: Do not remove group_initialized, to make it persistant
-        m_etcd.rm(m_prefix.storage_states[m_storage_id]);
-    }
-
-    void put(storage_state value) {
-        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(value));
-    }
-
-    void put_others_persistant(std::size_t id, storage_state value) {
-        if (m_storage_id == id) {
-            throw std::runtime_error("Cannot put storage state to itself");
-        }
-        m_etcd.put_persistant(m_prefix.storage_states[id], serialize(value));
-    }
-
-private:
-    etcd_manager& m_etcd;
-    prefix_t m_prefix;
-    std::size_t m_storage_id;
-};
-
-/*
  * Group-wise subscriber
  */
 class storage_state_subscriber {

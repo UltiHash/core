@@ -16,7 +16,8 @@ storage_registry::storage_registry(etcd_manager& etcd, std::size_t group_id,
                                    std::size_t storage_id,
                                    const std::filesystem::path& working_dir)
     : m_etcd{etcd},
-      m_state_key{ns::root.storage_groups[group_id].storage_states[storage_id]},
+      m_prefix{ns::root.storage_groups[group_id].storage_states},
+      m_storage_id{storage_id},
       m_file(working_dir / get_service_string(STORAGE_SERVICE) /
              STATE_FILE_NAME) {
 
@@ -25,18 +26,25 @@ storage_registry::storage_registry(etcd_manager& etcd, std::size_t group_id,
         state = storage_state::NEW;
     }
 
-    update_service_state(state);
+    set(state);
 }
 
-storage_registry::~storage_registry() { m_etcd.rm(m_state_key); }
+storage_registry::~storage_registry() { m_etcd.rm(m_prefix[m_storage_id]); }
 
-void storage_registry::update_service_state(const storage_state state) {
+void storage_registry::set(const storage_state state) {
     LOG_DEBUG() << std::format("Set storage state to {}",
                                magic_enum::enum_name(state));
     store(state);
 
-    const std::string value(std::to_string(magic_enum::enum_integer(state)));
-    m_etcd.put(m_state_key, value);
+    m_etcd.put(m_prefix[m_storage_id], serialize(state));
+}
+
+void storage_registry::set_others_persistant(std::size_t id,
+                                             storage_state value) {
+    if (m_storage_id == id) {
+        throw std::runtime_error("Cannot put storage state to itself");
+    }
+    m_etcd.put_persistant(m_prefix[id], serialize(value));
 }
 
 storage_state storage_registry::load() {

@@ -15,40 +15,6 @@
 namespace uh::cluster::storage {
 
 /*
- * Storage-wise publisher.
- *
- * Leader interface is ommited, because we have `candidate` class for that.
- */
-class externals_publisher {
-public:
-    externals_publisher(etcd_manager& etcd, std::size_t group_id,
-                        std::size_t storage_id)
-        : m_etcd{etcd},
-          m_prefix{get_prefix(group_id)},
-          m_storage_id{storage_id} {}
-    ~externals_publisher() {
-        m_etcd.rm(m_prefix.storage_hostports[m_storage_id]);
-        m_etcd.rm(m_prefix.storage_states[m_storage_id]);
-    }
-
-    void put_group_state(group_state value) {
-        m_etcd.rm(m_prefix.group_state);
-        m_etcd.put(m_prefix.group_state, serialize(value));
-    }
-    void put_storage_hostport(hostport value) {
-        m_etcd.put(m_prefix.storage_hostports[m_storage_id], serialize(value));
-    }
-    void put_storage_state(storage_state value) {
-        m_etcd.put(m_prefix.storage_states[m_storage_id], serialize(value));
-    }
-
-private:
-    etcd_manager& m_etcd;
-    prefix_t m_prefix;
-    std::size_t m_storage_id;
-};
-
-/*
  * Group-wise subscriber
  */
 class externals_subscriber {
