@@ -32,6 +32,7 @@ protected:
         }
         callback_count = 0;
         subscriber.emplace(m_etcd, group_id, num_storages,
+                           service_factory<storage_interface>(m_ioc, 2),
                            [&](etcd_manager::response) {
                                if (callback_count < promises.size()) {
                                    promises[callback_count].set_value();
@@ -49,6 +50,7 @@ protected:
         }
     }
 
+    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
     std::vector<std::promise<void>> promises;
     std::vector<std::future<void>> futures;

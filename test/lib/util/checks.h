@@ -12,7 +12,7 @@
  * CONDITION    condition to evaluate
  */
 #define WAIT_UNTIL_CHECK(TIMEOUT_MS, CONDITION)                                \
-    {                                                                          \
+    do {                                                                       \
         auto start = std::chrono::steady_clock::now();                         \
         do {                                                                   \
             if ((CONDITION)) {                                                 \
@@ -21,8 +21,7 @@
         } while ((std::chrono::steady_clock::now() - start) <                  \
                  std::chrono::milliseconds(TIMEOUT_MS));                       \
         BOOST_CHECK(CONDITION);                                                \
-    }                                                                          \
-    while (false)
+    } while (false)
 
 /**
  * Repeatedly execute a statement until it does not throw an
@@ -34,7 +33,7 @@
  * STATEMENT    statement to execute
  */
 #define WAIT_UNTIL_NO_THROW(TIMEOUT_MS, STATEMENT)                             \
-    {                                                                          \
+    do {                                                                       \
         auto start = std::chrono::steady_clock::now();                         \
         bool success = false;                                                  \
         do {                                                                   \
@@ -47,8 +46,7 @@
         } while ((std::chrono::steady_clock::now() - start) <                  \
                  std::chrono::milliseconds(TIMEOUT_MS));                       \
         BOOST_CHECK(success);                                                  \
-    }                                                                          \
-    while (false)
+    } while (false)
 
 /**
  * Repeatedly check a condition until a timeout is hit. `BOOST_CHECK`

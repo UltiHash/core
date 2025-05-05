@@ -13,6 +13,7 @@
 #include <common/network/server.h>
 #include <common/utils/scope_guard.h>
 #include <common/utils/strings.h>
+#include <storage/global/config.h>
 #include <storage/group/campaign_strategy.h>
 #include <storage/group/state_manager.h>
 
@@ -42,13 +43,14 @@ public:
             m_candidate.emplace(
                 m_etcd, get_prefix(m_group_id).leader, serialize(m_storage_id),
                 std::make_unique<storage_campaign_strategy>(
-                    m_etcd, m_group_id, m_storage_id, [this]() {
+                    m_etcd, m_group_id, m_storage_id, [this, &sc]() {
                         LOG_INFO()
                             << std::format("Storage service {} is elected "
                                            "as a leader of group {}",
                                            m_storage_id, m_group_id);
-                        m_state_manager.emplace(m_etcd, m_group_config,
-                                                m_storage_id);
+                        m_state_manager.emplace(m_ioc, m_etcd, m_group_config,
+                                                m_storage_id,
+                                                sc.global_data_view);
                     }));
         }
     }

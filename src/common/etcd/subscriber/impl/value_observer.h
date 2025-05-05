@@ -38,10 +38,12 @@ public:
         case etcd_action::GET:
         case etcd_action::CREATE:
         case etcd_action::SET:
-            m_value.store(std::make_shared<T>(deserialize<T>(resp.value)));
+            m_value.store(std::make_shared<T>(deserialize<T>(resp.value)),
+                          std::memory_order_release);
             break;
         case etcd_action::DELETE:
-            m_value.store(std::make_shared<T>(m_default_value));
+            m_value.store(std::make_shared<T>(m_default_value),
+                          std::memory_order_release);
             break;
         default:
             return false;

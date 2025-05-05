@@ -7,8 +7,8 @@ namespace uh::cluster::storage::global {
 
 class cache {
 public:
-    cache(boost::asio::io_context& ioc,
-          uh::cluster::storage::data_view& storage, std::size_t capacity);
+    cache(boost::asio::io_context& ioc, data_view& storage,
+          std::size_t capacity);
 
     shared_buffer<> read_fragment(const uint128_t& pointer, size_t size);
 
@@ -16,7 +16,7 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
-    uh::cluster::storage::data_view& m_storage;
+    storage::data_view& m_storage;
     lru_cache<uint128_t, shared_buffer<char>> m_lru;
 };
 

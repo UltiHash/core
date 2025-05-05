@@ -104,24 +104,13 @@ void register_global_data_view(CLI::App& app, global_data_view_config& cfg) {
         ->add_option("--l2-capacity", cfg.read_cache_capacity_l2,
                      "number of L2 cache entries")
         ->default_val(cfg.read_cache_capacity_l2);
-
-    group
-        ->add_option(
-            "--ec-data-shards", cfg.ec_data_shards,
-            "number of data shards (K) in an erasure-coded storage group")
-        ->default_val(cfg.ec_data_shards);
-
-    group
-        ->add_option(
-            "--ec-parity-shards", cfg.ec_parity_shards,
-            "number of parity shards (M) in an erasure-coded storage group")
-        ->default_val(cfg.ec_parity_shards);
 }
 
 CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
     auto* rv = app.add_subcommand("storage", "Run as storage service");
 
     register_server(*rv, cfg.server);
+    register_global_data_view(*rv, cfg.global_data_view);
 
     rv->add_option("--file-size", cfg.data_store.max_file_size,
                    "minimum file size in data store")

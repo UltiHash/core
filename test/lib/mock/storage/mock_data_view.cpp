@@ -1,6 +1,6 @@
 #include "mock_data_view.h"
 
-#include <storage/global/address_utils.h>
+#include <storage/group/impl/address_utils.h>
 
 namespace uh::cluster {
 mock_data_view::mock_data_view(mock_data_store& storage)

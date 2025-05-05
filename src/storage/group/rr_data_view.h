@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cache.h"
 #include "config.h"
 
 #include <common/etcd/service_discovery/service_maintainer.h>
@@ -9,9 +8,9 @@
 #include <storage/group/externals.h>
 #include <storage/interfaces/data_view.h>
 
-namespace uh::cluster::storage::global {
+namespace uh::cluster::storage {
 
-class global_data_view : public data_view {
+class rr_data_view : public data_view {
     friend class cache;
 
 public:
@@ -27,8 +26,9 @@ public:
      * @param storage_maintainer A reference to an instance of
      * service maintainer used for service discovery.
      */
-    global_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
-                     const global_data_view_config& config);
+    explicit rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
+                          std::size_t group_id, group_config group_config,
+                          std::size_t service_connections);
 
     /**
      * @brief Sends write request to a storage service instance, does not
@@ -115,7 +115,10 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
-    std::unique_ptr<storage::data_view> m_group_view;
+
+    service_load_balancer<storage_interface> m_load_balancer;
+    storage_index m_storage_index;
+    service_maintainer<storage_interface> m_storage_maintainer;
 };
 
-} // namespace uh::cluster::storage::global
+} // namespace uh::cluster::storage

@@ -36,7 +36,6 @@ public:
             return false;
 
         auto id = deserialize<std::size_t>(key.filename().string());
-        (void)id;
 
         switch (get_etcd_action_enum(resp.action)) {
         case etcd_action::GET:
@@ -109,6 +108,7 @@ private:
     service_factory<service_interface> m_service_factory;
     std::vector<std::reference_wrapper<service_observer<service_interface>>>
         m_observers;
+    // TODO: Modify this to vector and get num_storages on the constructor
     std::map<std::size_t, std::shared_ptr<service_interface>> m_clients;
     std::atomic<std::size_t> m_client_count{0};
 };

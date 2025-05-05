@@ -15,7 +15,6 @@ public:
     coro<dedupe_response> deduplicate(std::string_view data) override;
 
 private:
-    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     service_load_balancer<deduplicator_interface> m_dedupe_load_balancer;
     service_maintainer<deduplicator_interface> m_dedupe_maintainer;

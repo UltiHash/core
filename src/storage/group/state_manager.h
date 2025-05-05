@@ -12,6 +12,7 @@
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
 #include <common/utils/strings.h>
+#include <storage/global/config.h>
 
 namespace uh::cluster::storage {
 
@@ -20,12 +21,15 @@ namespace uh::cluster::storage {
  */
 class state_manager {
 public:
-    state_manager(etcd_manager& etcd, const group_config& config,
-                  std::size_t storage_id)
-        : m_etcd{etcd},
+    state_manager(boost::asio::io_context& ioc, etcd_manager& etcd,
+                  const group_config& config, std::size_t storage_id,
+                  const global_data_view_config& global_config)
+        : m_ioc{ioc},
+          m_etcd{etcd},
           m_config{config},
           m_num_storages{m_config.data_shards + m_config.parity_shards},
           m_storage_id{storage_id},
+          m_global_config{global_config},
           m_offset{state_manager::summarize_offsets(etcd, m_config.id,
                                                     m_storage_id)},
           m_externals_publisher(etcd, m_config.id, storage_id),
@@ -118,25 +122,19 @@ private:
             m_group_state = group_state::REPAIRING;
             m_externals_publisher.put_group_state(m_group_state);
 
-            auto reader =
-                externals_subscriber(m_etcd, m_config.id, m_num_storages);
-            m_repairer.emplace(storage_states, reader.get_storage_hostports());
-        } else if (m_group_state == group_state::REPAIRING and
-                   assigned_count == m_num_storages) {
-            if (m_repairer->is_changed(storage_states)) {
-                m_repairer.reset();
-                auto reader =
-                    externals_subscriber(m_etcd, m_config.id, m_num_storages);
-                m_repairer.emplace(storage_states,
-                                   reader.get_storage_hostports());
-            }
+            auto reader = externals_subscriber(
+                m_etcd, m_config.id, m_num_storages,
+                service_factory<storage_interface>(
+                    m_ioc, m_global_config.storage_service_connection_count));
+            m_repairer.emplace(storage_states, reader.get_storage_services());
         }
     }
-
+    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     group_config m_config;
     std::size_t m_num_storages;
     std::size_t m_storage_id;
+    global_data_view_config m_global_config;
     std::size_t m_offset;
     externals_publisher m_externals_publisher;
     group_state m_group_state;
