@@ -145,6 +145,7 @@ struct key_t {
             m_key = "/" + m_basename;
         }
     }
+    ~key_t() = default;
     key_t(const key_t&) = default;
     key_t& operator=(const key_t&) = default;
     key_t(key_t&&) = default;

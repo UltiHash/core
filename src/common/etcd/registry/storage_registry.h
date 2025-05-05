@@ -8,27 +8,28 @@
 
 namespace uh::cluster::storage {
 
-class storage_registry : public service_registry {
+class storage_registry {
 
 public:
     storage_registry(etcd_manager& etcd, std::size_t group_index,
                      std::size_t service_id,
                      const std::filesystem::path& working_dir);
+    ~storage_registry();
 
-    ~storage_registry() override;
-
-    void register_service(const server_config& config) override;
-
-    void update_service_state(const storage_state state);
+    void set(const storage_state state);
+    void publish();
+    void set_others_persistant(std::size_t id, storage_state value);
 
 private:
-    std::string m_state_key;
-    const std::filesystem::path m_working_dir;
-    storage_state m_state = storage_state::NEW;
+    etcd_manager& m_etcd;
 
-    bool read_state_from_disk(const std::filesystem::path& state_file);
-    void write_state_to_disk(const std::filesystem::path& state_file,
-                             storage_state state);
+    ns::subscriptable_key_t m_prefix;
+    std::size_t m_storage_id;
+    const std::filesystem::path m_file;
+    storage_state m_state;
+
+    storage_state load();
+    void store(storage_state state);
 };
 
 } // namespace uh::cluster::storage
