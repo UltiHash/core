@@ -4,11 +4,11 @@
 
 #include <common/telemetry/log.h>
 #include <common/types/common_types.h>
-#include <storage/default_data_store.h>
 #include <common/utils/random.h>
+#include <storage/default_data_store.h>
 
-#include <util/temp_directory.h>
 #include <util/random.h>
+#include <util/temp_directory.h>
 
 #include <random>
 #include <thread>
@@ -17,7 +17,6 @@
 
 #define MAX_DATA_STORE_SIZE_BYTES (4 * MEBI_BYTE)
 #define MAX_FILE_SIZE_BYTES (128 * KIBI_BYTE)
-#define DATA_STORE_ID 1
 
 namespace uh::cluster {
 
@@ -53,8 +52,8 @@ struct data_store_fixture {
     }
 
     [[nodiscard]] auto make_data_store() const {
-        return std::make_unique<default_data_store>(
-            make_data_store_config(), m_dir.path().string(), DATA_STORE_ID, 0);
+        return std::make_unique<default_data_store>(make_data_store_config(),
+                                                    m_dir.path().string(), 0);
     }
 
     void setup() {
@@ -123,12 +122,10 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 BOOST_AUTO_TEST_CASE(test_read) {
     char buf[MAX_FILE_SIZE_BYTES];
 
-    BOOST_CHECK_THROW(
-        ds->read((DATA_STORE_ID + 1) * MAX_DATA_STORE_SIZE_BYTES, {buf, 1}),
-        std::out_of_range);
-    BOOST_CHECK_THROW(
-        ds->read(DATA_STORE_ID * MAX_DATA_STORE_SIZE_BYTES - 1, {buf, 1}),
-        std::out_of_range);
+    BOOST_CHECK_THROW(ds->read(2 * MAX_DATA_STORE_SIZE_BYTES, {buf, 1}),
+                      std::out_of_range);
+    BOOST_CHECK_THROW(ds->read(MAX_DATA_STORE_SIZE_BYTES - 1, {buf, 1}),
+                      std::out_of_range);
 
     long failures = 0;
     for (auto& data : test_data) {

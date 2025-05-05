@@ -53,11 +53,9 @@ std::vector<data_file> load_files(const std::filesystem::path& root,
 
 default_data_store::default_data_store(data_store_config conf,
                                        const std::filesystem::path& working_dir,
-                                       uint32_t service_id,
-                                       uint32_t data_store_id)
+                                       uint32_t service_id)
     : m_storage_id(service_id),
-      m_data_store_id(data_store_id),
-      m_root(working_dir / std::to_string(data_store_id)),
+      m_root(working_dir),
       m_conf(conf),
       m_filesize(m_conf.max_file_size),
       m_files(load_files(m_root, m_filesize)),
@@ -123,7 +121,7 @@ address default_data_store::write(std::span<const char> data,
 
         data_offs += count;
         auto frag = fragment{.pointer = pointer_traits::get_global_pointer(
-                                 alloc.local, m_storage_id, m_data_store_id),
+                                 alloc.local, m_storage_id, 0),
                              .size = alloc.size};
         rv.push(frag);
     }
@@ -141,8 +139,6 @@ size_t default_data_store::unlink(const address& addr) {
     std::unique_lock lock(m_mutex);
     return m_refcounter.decrement(addr);
 }
-
-size_t default_data_store::id() const noexcept { return m_data_store_id; }
 
 default_data_store::~default_data_store() {
     for (auto& file : m_files) {

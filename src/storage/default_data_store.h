@@ -17,7 +17,7 @@ class default_data_store : public data_store {
 public:
     default_data_store(data_store_config conf,
                        const std::filesystem::path& working_dir,
-                       uint32_t service_id, uint32_t data_store_id);
+                       uint32_t service_id);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -77,8 +77,6 @@ public:
      */
     size_t get_available_space() const noexcept;
 
-    size_t id() const noexcept;
-
     ~default_data_store();
 
 private:
@@ -108,7 +106,6 @@ private:
     size_t internal_delete(std::size_t offset, std::size_t size);
 
     const uint32_t m_storage_id;
-    const uint32_t m_data_store_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
     std::size_t m_filesize;

@@ -58,6 +58,7 @@ service::service(const service_config& sc, entrypoint_config config)
       m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
+      // TODO: add support for non-persistent service_id
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id]),
       // TODO: do not maintain storage services here. We can do this on the
       // group_manager.h using externals_subscriber instance.
