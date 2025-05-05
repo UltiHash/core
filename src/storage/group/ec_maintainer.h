@@ -18,8 +18,6 @@ public:
            const global_data_view_config& gdv_config,
            storage_registry& storage_registry) {
 
-        wait_until_no_down_storage(etcd, group_config, storage_id, 500ms);
-
         if (group_initialized::get(etcd, group_config.id) == false) {
 
             auto storage_states =
@@ -40,6 +38,9 @@ public:
             }
 
             group_initialized::put(etcd, group_config.id, true);
+
+        } else {
+            wait_until_no_down_storage(etcd, group_config, storage_id, 500ms);
         }
 
         m_offset = leader::summarize_offsets(etcd, group_config.id, storage_id);
