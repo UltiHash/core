@@ -32,7 +32,7 @@ public:
           m_global_config{global_config},
           m_group_state_key{
               ns::root.storage_groups[m_group_config.id].group_state},
-          m_group_state{group_state::INITIALIZING},
+          m_group_state{group_state::UNDETERMINED},
           m_storage_state_subscriber{
               m_etcd, m_group_config.id, m_num_storages,
               [this](std::size_t id, storage_state state) { manage(); }} {
