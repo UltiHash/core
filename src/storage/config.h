@@ -1,7 +1,9 @@
 #pragma once
 
-#include "common/network/server.h"
 #include "interfaces/data_store.h"
+
+#include <common/network/server.h>
+#include <storage/global/config.h>
 
 namespace uh::cluster {
 
@@ -11,6 +13,8 @@ struct storage_config {
         .port = 9200,
         .bind_address = "0.0.0.0",
     };
+
+    global_data_view_config global_data_view;
 
     std::list<std::filesystem::path> m_data_store_roots;
     data_store_config data_store = {

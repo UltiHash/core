@@ -38,11 +38,11 @@ struct fixture {
               {services, load_balancer}) {}
 
     auto count_valid_services() {
-        return std::ranges::count_if(services.get_services(),
+        return std::ranges::count_if(services.get(),
                                      [](auto& s) { return s != nullptr; });
     }
     bool all_null_services() {
-        return std::ranges::all_of(services.get_services(),
+        return std::ranges::all_of(services.get(),
                                    [](auto& s) { return s == nullptr; });
     }
 };

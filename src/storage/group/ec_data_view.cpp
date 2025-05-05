@@ -1,5 +1,4 @@
 #include "ec_data_view.h"
-#include "impl/address_utils.h"
 
 #include <common/telemetry/log.h>
 
@@ -8,14 +7,34 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t group_id, group_config group_config,
                            std::size_t service_connections)
     : m_ioc(ioc),
-      m_storage_index{group_config.storages},
-      m_storage_maintainer(
-          etcd, ns::root.storage_groups[group_id].storage_hostports,
-          service_factory<storage_interface>(ioc, service_connections),
-          {m_storage_index}) {}
+      m_externals(
+          etcd, group_id, group_config.storages,
+          service_factory<storage_interface>(ioc, service_connections)) {}
 
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
+    // TODO: Implement this using
+    // - m_externals.get_storage_services();
+    // - m_externals.get_storage_states()
+    // - m_externals.get_group_state()
+    // - m_externals.get_leader()
+
+    // e.g.
+    // auto storages = m_externals.get_storage_services();
+    // auto offset = storages.at(m_externals.get_leader()).alloc(size);
+    //
+    // switch (*m_externals.get_group_state()) {
+    // case group_state::HEALTHY:
+    //     for (int i = 0; i < group_config.data_shards; i++) {
+    //         auto addr = address{offset, i};
+    //         storages.at(i).write(addr, data);
+    //     }
+    //     break;
+    // default:
+    //     // do not permit
+    //     break;
+    // }
+
     co_return address{};
 }
 

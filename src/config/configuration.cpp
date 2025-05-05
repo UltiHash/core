@@ -130,6 +130,7 @@ CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
     auto* rv = app.add_subcommand("storage", "Run as storage service");
 
     register_server(*rv, cfg.server);
+    register_global_data_view(*rv, cfg.global_data_view);
 
     rv->add_option("--file-size", cfg.data_store.max_file_size,
                    "minimum file size in data store")

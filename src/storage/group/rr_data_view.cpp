@@ -45,7 +45,7 @@ coro<std::size_t> rr_data_view::read_address(const address& addr,
 }
 
 coro<std::size_t> rr_data_view::get_used_space() {
-    auto nodes = m_storage_index.get_services();
+    auto nodes = m_storage_index.get();
 
     size_t used = 0;
     for (const auto& dn : nodes) {
