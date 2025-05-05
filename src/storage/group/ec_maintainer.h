@@ -18,12 +18,15 @@ public:
            const global_data_view_config& gdv_config,
            storage_registry& storage_registry) {
 
+        wait_until_no_down_storage(etcd, group_config, storage_id, 500ms);
+
         if (group_initialized::get(etcd, group_config.id) == false) {
+
             auto storage_states =
                 wait_until_no_down_storage(etcd, group_config, storage_id);
 
             for (auto i = 0ul; i < storage_states.size(); ++i) {
-                if (storage_states[i] == storage_state::NEW) {
+                if (*storage_states[i] == storage_state::NEW) {
                     if (i == storage_id) {
                         storage_registry.update_service_state(
                             storage_state::ASSIGNED);
@@ -37,10 +40,6 @@ public:
             }
 
             group_initialized::put(etcd, group_config.id, true);
-
-        } else {
-            // To wait for the offset values from other storage services.
-            std::this_thread::sleep_for(std::chrono::milliseconds(700));
         }
 
         m_offset = leader::summarize_offsets(etcd, group_config.id, storage_id);
@@ -63,10 +62,11 @@ private:
         return max_offset != offsets.end() ? **max_offset : 0;
     }
 
-    static std::vector<storage_state>
-    wait_until_no_down_storage(etcd_manager& etcd,
-                               const group_config& group_config,
-                               std::size_t storage_id) {
+    static std::vector<std::shared_ptr<storage_state>>
+    wait_until_no_down_storage(
+        etcd_manager& etcd, const group_config& group_config,
+        std::size_t storage_id,
+        std::optional<std::chrono::milliseconds> timeout = std::nullopt) {
         auto promise = std::promise<void>();
         auto future = promise.get_future();
         storage_state_subscriber subscriber{
@@ -80,14 +80,13 @@ private:
                 if (no_down_storage)
                     promise.set_value();
             }};
-        future.wait(); // NOTE: there's no timeout for now.
 
-        auto storage_states = subscriber.get();
-        std::vector<storage_state> rv;
-        rv.reserve(storage_states.size());
-        std::ranges::transform(storage_states, std::back_inserter(rv),
-                               [](const auto& state) { return *state; });
-        return rv;
+        if (timeout == std::nullopt)
+            future.wait();
+        else
+            future.wait_for(*timeout);
+
+        return subscriber.get();
     }
 
     std::size_t m_offset;
@@ -98,16 +97,22 @@ class follower : public participant {
 public:
     follower(etcd_manager& etcd, const group_config& group_config,
              std::size_t storage_id, storage_registry& storage_registry)
-        : m_subscriber{etcd, group_config.id, group_config.storages,
-                       [&](std::size_t id, storage_state state) {
-                           if (id == storage_id) {
-                               storage_registry.update_service_state(state);
-                           }
-                       }} {}
+        : m_key{ns::root.storage_groups[group_config.id]
+                    .storage_states[storage_id]},
+          m_storage_state{m_key,
+                          {},
+                          [&](storage_state state) {
+                              storage_registry.update_service_state(state);
+                          }},
+          m_subscriber{etcd, m_key, {m_storage_state}} {}
 
 private:
-    storage_state_subscriber m_subscriber;
+    std::string m_key;
+    value_observer<storage_state> m_storage_state;
+    subscriber m_subscriber;
 };
+
+// TODO: write a test for ec_maintainer
 
 class ec_maintainer {
 public:
