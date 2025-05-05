@@ -63,7 +63,6 @@ BOOST_AUTO_TEST_CASE(returns_default_value_when_the_key_has_empty_value) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    // deserialize<T>(resp.value)
 
     BOOST_TEST(*m_leader_observer.get() == candidate::staging_id);
 }
