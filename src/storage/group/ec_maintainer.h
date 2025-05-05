@@ -26,12 +26,9 @@ public:
             for (auto i = 0ul; i < storage_states.size(); ++i) {
                 if (*storage_states[i] == storage_state::NEW) {
                     if (i == storage_id) {
-                        storage_registry.update_service_state(
-                            storage_state::ASSIGNED);
+                        storage_registry.set(storage_state::ASSIGNED);
                     } else {
-                        auto publisher = storage_state_publisher(
-                            etcd, group_config.id, storage_id);
-                        publisher.put_others_persistant(
+                        storage_registry.set_others_persistant(
                             i, storage_state::ASSIGNED);
                     }
                 }
@@ -100,11 +97,10 @@ public:
              std::size_t storage_id, storage_registry& storage_registry)
         : m_key{ns::root.storage_groups[group_config.id]
                     .storage_states[storage_id]},
-          m_storage_state{m_key,
-                          {},
-                          [&](storage_state state) {
-                              storage_registry.update_service_state(state);
-                          }},
+          m_storage_state{
+              m_key,
+              {},
+              [&](storage_state state) { storage_registry.set(state); }},
           m_subscriber{etcd, m_key, {m_storage_state}} {}
 
 private:

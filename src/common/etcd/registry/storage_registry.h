@@ -16,12 +16,14 @@ public:
                      const std::filesystem::path& working_dir);
     ~storage_registry();
 
-    void update_service_state(const storage_state state);
+    void set(const storage_state state);
+    void set_others_persistant(std::size_t id, storage_state value);
 
 private:
     etcd_manager& m_etcd;
 
-    std::string m_state_key;
+    ns::subscriptable_key_t m_prefix;
+    std::size_t m_storage_id;
     const std::filesystem::path m_file;
 
     storage_state load();
