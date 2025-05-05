@@ -35,7 +35,7 @@ public:
           m_group_state{group_state::UNDETERMINED},
           m_storage_state_subscriber{
               m_etcd, m_group_config.id, m_num_storages,
-              [this](std::size_t id, storage_state state) { manage(); }} {
+              [this](std::size_t id, storage_state& state) { manage(); }} {
 
         publish(m_group_state);
     }

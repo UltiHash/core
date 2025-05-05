@@ -50,7 +50,8 @@ BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
     auto promise = std::promise<void>();
     auto future = promise.get_future();
     storage_state_subscriber subscriber(
-        etcd, group_id, num_storages, [&](std::size_t id, storage_state state) {
+        etcd, group_id, num_storages,
+        [&](std::size_t id, storage_state& state) {
             if (id == 3 && state == storage_state::ASSIGNED) {
                 promise.set_value();
             }
@@ -82,7 +83,8 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
     sut->set(storage_state::ASSIGNED);
     sut->publish();
     storage_state_subscriber subscriber(
-        etcd, group_id, num_storages, [&](std::size_t id, storage_state state) {
+        etcd, group_id, num_storages,
+        [&](std::size_t id, storage_state& state) {
             if (state == storage_state::DOWN)
                 promise.set_value();
         });
@@ -114,7 +116,7 @@ BOOST_AUTO_TEST_CASE(restores_previous_state) {
 
     storage_state_subscriber subscriber(
         etcd, group_id, num_storages,
-        [&](std::size_t id, storage_state state) { promise.set_value(); });
+        [&](std::size_t id, storage_state& state) { promise.set_value(); });
 
     auto sut_2 = storage_registry(etcd, group_id, service_id, tmp_dir.path());
 

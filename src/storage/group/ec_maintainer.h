@@ -100,7 +100,7 @@ public:
                     .storage_states[storage_id]},
           m_storage_state{m_key,
                           {},
-                          [&](storage_state state) {
+                          [&](storage_state& state) {
                               if (state == storage_state::ASSIGNED)
                                   storage_registry.set(state);
                           }},
