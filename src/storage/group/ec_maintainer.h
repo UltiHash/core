@@ -8,43 +8,44 @@
 namespace uh::cluster::storage {
 
 struct participant {
-    ~participant() = default;
+    virtual ~participant() = default;
 };
 
 class leader : public participant {
 public:
     leader(boost::asio::io_context& ioc, etcd_manager& etcd,
            const group_config& group_config, std::size_t storage_id,
-           const global_data_view_config& gdv_config,
-           storage_registry& storage_registry) {
+           const global_data_view_config& gdv_cfg,
+           storage_registry& storage_registry)
+        : m_offset{[&]() {
+              if (group_initialized::get(etcd, group_config.id) == false) {
 
-        if (group_initialized::get(etcd, group_config.id) == false) {
+                  auto storage_states = wait_until_no_down_storage(
+                      etcd, group_config, storage_id, 1s);
 
-            auto storage_states =
-                wait_until_no_down_storage(etcd, group_config, storage_id);
+                  for (auto i = 0ul; i < storage_states.size(); ++i) {
+                      if (*storage_states[i] == storage_state::NEW) {
+                          if (i == storage_id) {
+                              storage_registry.set(storage_state::ASSIGNED);
+                              storage_registry.publish();
+                          } else {
+                              storage_registry.set_others_persistant(
+                                  i, storage_state::ASSIGNED);
+                          }
+                      }
+                  }
 
-            for (auto i = 0ul; i < storage_states.size(); ++i) {
-                if (*storage_states[i] == storage_state::NEW) {
-                    if (i == storage_id) {
-                        storage_registry.set(storage_state::ASSIGNED);
-                    } else {
-                        storage_registry.set_others_persistant(
-                            i, storage_state::ASSIGNED);
-                    }
-                }
-            }
+                  group_initialized::put(etcd, group_config.id, true);
 
-            group_initialized::put(etcd, group_config.id, true);
+              } else {
+                  wait_until_no_down_storage(etcd, group_config, storage_id,
+                                             500ms);
+              }
 
-        } else {
-            wait_until_no_down_storage(etcd, group_config, storage_id, 500ms);
-        }
-
-        m_offset = leader::summarize_offsets(etcd, group_config.id, storage_id);
-
-        m_state_manager.emplace(ioc, etcd, group_config, storage_id,
-                                gdv_config);
-    }
+              return leader::summarize_offsets(etcd, group_config.id,
+                                               storage_id);
+          }()},
+          m_state_manager(ioc, etcd, group_config, storage_id, gdv_cfg) {}
 
 private:
     static std::size_t summarize_offsets(etcd_manager& etcd,
@@ -69,7 +70,7 @@ private:
         auto future = promise.get_future();
         storage_state_subscriber subscriber{
             etcd, group_config.id, group_config.storages,
-            [&subscriber, &promise](std::size_t id, storage_state state) {
+            [&subscriber, &promise](std::size_t id, storage_state& state) {
                 auto storage_states = subscriber.get();
                 auto no_down_storage =
                     std::ranges::all_of(storage_states, [](const auto& state) {
@@ -88,7 +89,7 @@ private:
     }
 
     std::size_t m_offset;
-    std::optional<state_manager> m_state_manager;
+    state_manager m_state_manager;
 };
 
 class follower : public participant {
@@ -97,10 +98,12 @@ public:
              std::size_t storage_id, storage_registry& storage_registry)
         : m_key{ns::root.storage_groups[group_config.id]
                     .storage_states[storage_id]},
-          m_storage_state{
-              m_key,
-              {},
-              [&](storage_state state) { storage_registry.set(state); }},
+          m_storage_state{m_key,
+                          {},
+                          [&](storage_state state) {
+                              if (state == storage_state::ASSIGNED)
+                                  storage_registry.set(state);
+                          }},
           m_subscriber{etcd, m_key, {m_storage_state}} {}
 
 private:
@@ -114,15 +117,16 @@ private:
 class ec_maintainer {
 public:
     ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
-                  const group_config& group_config, std::size_t storage_id,
+                  const group_config& group_cfg, std::size_t storage_id,
                   const service_config& service_config,
-                  const global_data_view_config& gdv_config)
-        : m_offset_publisher{etcd, group_config.id, storage_id},
-          m_storage_registry{etcd, group_config.id, storage_id,
+                  const global_data_view_config& gdv_cfg)
+        : m_offset_publisher{etcd, group_cfg.id, storage_id},
+          m_storage_registry{etcd, group_cfg.id, storage_id,
                              service_config.working_dir},
           m_candidate(
-              etcd, get_prefix(group_config.id).leader, serialize(storage_id),
-              [&](bool is_leader) {
+              etcd, get_prefix(group_cfg.id).leader, storage_id,
+              [this, &ioc, &etcd, &group_cfg, storage_id,
+               &gdv_cfg](bool is_leader) {
                   // TODO: Get offset from local storage
                   std::size_t current_offset = 0;
                   m_offset_publisher.put(current_offset);
@@ -130,17 +134,17 @@ public:
                   if (is_leader) {
                       LOG_INFO() << std::format("Storage service {} is elected "
                                                 "as a leader of group {}",
-                                                storage_id, group_config.id);
+                                                storage_id, group_cfg.id);
                       m_participant = std::make_unique<leader>(
-                          ioc, etcd, group_config, storage_id, gdv_config,
+                          ioc, etcd, group_cfg, storage_id, gdv_cfg,
                           m_storage_registry);
                   } else /*follower */ {
                       LOG_INFO() << std::format("Storage service {} is a "
                                                 "follower of group {}",
-                                                storage_id, group_config.id);
+                                                storage_id, group_cfg.id);
 
-                      m_participant = std::make_unique<follower>(
-                          etcd, group_config, storage_id, m_storage_registry);
+                      // m_participant = std::make_unique<follower>(
+                      //     etcd, group_cfg, storage_id, m_storage_registry);
                   }
               }) {}
 

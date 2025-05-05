@@ -17,6 +17,7 @@ public:
     ~storage_registry();
 
     void set(const storage_state state);
+    void publish();
     void set_others_persistant(std::size_t id, storage_state value);
 
 private:
@@ -25,6 +26,7 @@ private:
     ns::subscriptable_key_t m_prefix;
     std::size_t m_storage_id;
     const std::filesystem::path m_file;
+    storage_state m_state;
 
     storage_state load();
     void store(storage_state state);

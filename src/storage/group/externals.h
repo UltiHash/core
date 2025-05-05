@@ -4,6 +4,7 @@
 
 #include <common/etcd/subscriber/subscriber.h>
 
+#include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/service_interfaces/hostport.h>
@@ -25,7 +26,7 @@ public:
                          service_factory<storage_interface> service_factory,
                          callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
-          m_leader{m_prefix.leader, -1},
+          m_leader{m_prefix.leader, candidate::staging_id},
           m_group_state{m_prefix.group_state},
           m_storage_states{m_prefix.storage_states, num_storages},
           m_storage_index{num_storages},
@@ -45,7 +46,7 @@ public:
 
 private:
     prefix_t m_prefix;
-    value_observer<int> m_leader; // use int to represent the empty state (-1)
+    value_observer<candidate::id_t> m_leader;
     value_observer<group_state> m_group_state;
     vector_observer<storage_state> m_storage_states;
 

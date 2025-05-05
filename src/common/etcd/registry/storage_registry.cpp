@@ -21,12 +21,13 @@ storage_registry::storage_registry(etcd_manager& etcd, std::size_t group_id,
       m_file(working_dir / get_service_string(STORAGE_SERVICE) /
              STATE_FILE_NAME) {
 
-    auto state = load();
-    if (state == storage_state::DOWN) {
-        state = storage_state::NEW;
+    m_state = load();
+    if (m_state == storage_state::DOWN) {
+        m_state = storage_state::NEW;
+        store(m_state);
     }
 
-    set(state);
+    publish();
 }
 
 storage_registry::~storage_registry() { m_etcd.rm(m_prefix[m_storage_id]); }
@@ -34,9 +35,12 @@ storage_registry::~storage_registry() { m_etcd.rm(m_prefix[m_storage_id]); }
 void storage_registry::set(const storage_state state) {
     LOG_DEBUG() << std::format("Set storage state to {}",
                                magic_enum::enum_name(state));
-    store(state);
+    m_state = state;
+    store(m_state);
+}
 
-    m_etcd.put(m_prefix[m_storage_id], serialize(state));
+void storage_registry::publish() {
+    m_etcd.put(m_prefix[m_storage_id], serialize(m_state));
 }
 
 void storage_registry::set_others_persistant(std::size_t id,

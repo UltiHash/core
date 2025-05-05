@@ -4,24 +4,26 @@
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
+#include <common/utils/strings.h>
 #include <functional>
-#include <stdexcept>
 
 namespace uh::cluster {
 
 class candidate {
 public:
     using callback_t = std::function<void(bool leader)>;
+    using id_t = int; // to represent -1 as empty
+    constexpr static id_t staging_id = -1;
 
     /*
      * NOTE: On a leader, the callback is called before announcing itself as a
      * leader.
      */
-    candidate(etcd_manager& etcd, const std::string& key,
-              std::string candidate_name, callback_t callback = nullptr)
+    candidate(etcd_manager& etcd, const std::string& key, id_t id,
+              callback_t callback = nullptr)
         : m_etcd{etcd},
           m_key{key},
-          m_candidate_name{candidate_name},
+          m_id{id},
           m_callback{std::move(callback)},
           m_is_leader{false} {
 
@@ -45,15 +47,15 @@ public:
 
 private:
     auto campaign() -> etcd::Response {
-        // Create key with empty value first,
-        auto resp = m_etcd.create_if_empty(m_key, "");
+        // Create key with -1 first,
+        auto resp = m_etcd.create_if_empty(m_key, serialize<int>(staging_id));
 
         if (m_callback)
             m_callback(resp.is_ok());
 
         if (resp.is_ok()) {
             m_is_leader.store(true, std::memory_order_release);
-            m_etcd.put(m_key, m_candidate_name);
+            m_etcd.put(m_key, serialize<int>(m_id));
         }
 
         return resp;
@@ -73,13 +75,13 @@ private:
             }
         } catch (const std::exception& e) {
             LOG_WARN() << "error trying create_if_any on candidate "
-                       << m_candidate_name << ": " << e.what();
+                       << std::to_string(m_id) << ": " << e.what();
         }
     }
 
     etcd_manager& m_etcd;
     std::string m_key;
-    std::string m_candidate_name;
+    id_t m_id;
     callback_t m_callback;
     std::atomic<bool> m_is_leader;
     std::optional<etcd_manager::watch_guard> m_watch_guard;

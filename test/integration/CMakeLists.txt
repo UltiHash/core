@@ -1,6 +1,6 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "integration")
 
-uh_add_test(test_gdv_fixture PRIVATE storage coordinator) # It should be tested before using this fixture
+uh_add_test(test_gdv_fixture PRIVATE storage coordinator)
 uh_add_test(test_awaitable_promise PRIVATE network)
 uh_add_test(test_data_store PRIVATE storage)
 uh_add_test(test_deduplicator PRIVATE uh_mock_global_data deduplicator)
@@ -17,3 +17,5 @@ uh_add_test(test_mock_data_store PRIVATE uh_mock_storage)
 uh_add_test(test_reference_counter PRIVATE storage)
 uh_add_test(test_services PRIVATE etcd storage)
 uh_add_test(test_storage_registry PRIVATE etcd storage)
+uh_add_test(test_ec_maintainer PRIVATE storage)
+uh_add_test(test_subscriber PRIVATE etcd)
