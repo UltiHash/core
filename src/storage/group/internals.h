@@ -28,18 +28,23 @@ struct group_initialized {
  */
 class storage_state_subscriber {
 public:
-    using callback_t = vector_observer<storage_state>::callback_t;
+    // TODO: Use callback of subscriber, rather than using vector_observer's.
+    using callback_t = subscriber::callback_t;
     storage_state_subscriber(etcd_manager& etcd, std::size_t group_id,
                              std::size_t num_storages,
                              callback_t callback = nullptr)
-        : m_prefix{get_prefix(group_id)},
-          m_storage_states{m_prefix.storage_states, num_storages, {}, callback},
-          m_subscriber{etcd, m_prefix, {m_storage_states}} {}
+        : m_prefix{get_prefix(group_id).storage_states},
+          m_storage_states{m_prefix, num_storages, {}},
+          m_subscriber{"storage_state_subscriber",
+                       etcd,
+                       m_prefix,
+                       {m_storage_states},
+                       std::move(callback)} {}
 
     auto get() { return m_storage_states.get(); };
 
 private:
-    prefix_t m_prefix;
+    std::string m_prefix;
     vector_observer<storage_state> m_storage_states;
     subscriber m_subscriber;
 };

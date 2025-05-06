@@ -27,6 +27,10 @@ protected:
 
 BOOST_FIXTURE_TEST_SUITE(a_storage_group_state, fixture)
 
+BOOST_AUTO_TEST_CASE(reads_false_by_default) {
+    BOOST_TEST(group_initialized::get(etcd, 11) == false);
+}
+
 BOOST_AUTO_TEST_CASE(is_created_and_well_detected) {
     group_initialized::put(etcd, 11, true);
 
@@ -44,9 +48,8 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     std::promise<void> p;
     std::future<void> f = p.get_future();
     temp_directory tmp_dir;
-    auto subscriber = storage_state_subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t, storage_state) { p.set_value(); });
+    auto subscriber = storage_state_subscriber(etcd, group_id, num_storages,
+                                               [&]() { p.set_value(); });
 
     etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
              serialize(state));
@@ -63,9 +66,8 @@ BOOST_AUTO_TEST_CASE(gets_storage_states) {
     auto state = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto subscriber = storage_state_subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t, storage_state) { p.set_value(); });
+    auto subscriber = storage_state_subscriber(etcd, group_id, num_storages,
+                                               [&]() { p.set_value(); });
 
     etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
              serialize(state));

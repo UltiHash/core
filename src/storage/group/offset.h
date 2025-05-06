@@ -41,7 +41,11 @@ public:
                       std::size_t num_storages, callback_t callback = nullptr)
         : m_prefix{get_storage_offset_prefix(group_id)},
           m_offsets{m_prefix.storage_hostports, num_storages},
-          m_subscriber{etcd, m_prefix, {m_offsets}, std::move(callback)} {}
+          m_subscriber{"offset_subscriber",
+                       etcd,
+                       m_prefix,
+                       {m_offsets},
+                       std::move(callback)} {}
     auto get() { return m_offsets.get(); };
 
 private:

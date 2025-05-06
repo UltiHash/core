@@ -32,8 +32,7 @@ protected:
         }
         callback_count = 0;
         subscriber.emplace(m_etcd, group_id, num_storages,
-                           service_factory<storage_interface>(m_ioc, 2),
-                           [&](etcd_manager::response) {
+                           service_factory<storage_interface>(m_ioc, 2), [&]() {
                                if (callback_count < promises.size()) {
                                    promises[callback_count].set_value();
                                }
