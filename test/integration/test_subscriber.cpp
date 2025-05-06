@@ -6,7 +6,7 @@
 
 #include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
-#include <common/etcd/subscriber/subscriber.h>
+#include <common/etcd/subscriber.h>
 
 namespace uh::cluster::storage {
 

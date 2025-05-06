@@ -1,62 +1,59 @@
 #pragma once
 
-#include <common/etcd/subscriber/impl/subscriber_observer.h>
+#include <common/etcd/impl/subscriber_observer.h>
 
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
 
 namespace uh::cluster {
 
+class subscriber;
+
 /*
- * Subscriber manages multiple keys by using recursive watch.
+ * reader manages multiple keys by using recursive watch.
  */
-class subscriber {
+class reader {
 public:
     using callback_t = std::function<void()>;
 
-    subscriber(
-        std::string name, etcd_manager& etcd, const std::string& key,
-        std::initializer_list<std::reference_wrapper<subscriber_observer>>
-            observers,
-        callback_t callback = nullptr)
+    reader(std::string name, etcd_manager& etcd, const std::string& key,
+           std::initializer_list<std::reference_wrapper<subscriber_observer>>
+               observers,
+           callback_t callback = nullptr)
         : m_name{std::move(name)},
           m_etcd{etcd},
           m_observers{observers},
           m_callback{std::move(callback)} {
 
         auto change_detected = false;
-        auto index = m_etcd.ls(
+        m_index = m_etcd.ls(
             key, [this, &change_detected](etcd_manager::response resp) {
                 try {
                     change_detected = on_watch(resp);
                 } catch (const std::exception& e) {
-                    LOG_WARN() << "Exception on subscriber: " << e.what();
+                    LOG_WARN() << "Exception on reader: " << e.what();
                 }
             });
 
-        if (change_detected and m_callback)
-            m_callback();
-
-        m_wg = m_etcd.watch(
-            key,
-            [this](etcd_manager::response resp) {
-                try {
-                    auto change_detected = on_watch(resp);
-                    if (change_detected and m_callback)
-                        m_callback();
-                } catch (const std::exception& e) {
-                    LOG_WARN() << "Exception on subscriber: " << e.what();
-                }
-            },
-            index + 1);
+        if (change_detected)
+            run_callback();
     }
 
+    auto get_index() { return m_index; }
+
 private:
+    friend subscriber;
+
+    void run_callback() {
+        if (m_callback)
+            m_callback();
+    }
+
     bool on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << std::format(
-                "subscriber {} has detected {} action on {} with value {}",
-                m_name, resp.action, resp.key, resp.value);
+                "reader {} has detected {} action on {} with value {}", m_name,
+                resp.action, resp.key, resp.value);
 
             bool change_detected =
                 std::any_of(m_observers.begin(), m_observers.end(),
@@ -81,11 +78,11 @@ private:
     etcd_manager& m_etcd;
     std::vector<std::reference_wrapper<subscriber_observer>> m_observers;
     callback_t m_callback;
-    etcd_manager::watch_guard m_wg;
+    int64_t m_index;
 };
 
 } // namespace uh::cluster
 
-#include <common/etcd/subscriber/impl/hostports_observer.h>
-#include <common/etcd/subscriber/impl/value_observer.h>
-#include <common/etcd/subscriber/impl/vector_observer.h>
+#include <common/etcd/impl/hostports_observer.h>
+#include <common/etcd/impl/value_observer.h>
+#include <common/etcd/impl/vector_observer.h>

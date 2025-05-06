@@ -2,7 +2,7 @@
 
 #include "impl/prefix.h"
 
-#include <common/etcd/subscriber/subscriber.h>
+#include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/utils/strings.h>
 
@@ -34,24 +34,24 @@ private:
 /*
  * Group-wise subscriber
  */
-class offset_subscriber {
+class offset_reader {
 public:
     using callback_t = subscriber::callback_t;
-    offset_subscriber(etcd_manager& etcd, std::size_t group_id,
-                      std::size_t num_storages, callback_t callback = nullptr)
+    offset_reader(etcd_manager& etcd, std::size_t group_id,
+                  std::size_t num_storages, callback_t callback = nullptr)
         : m_prefix{get_storage_offset_prefix(group_id)},
           m_offsets{m_prefix.storage_hostports, num_storages},
-          m_subscriber{"offset_subscriber",
-                       etcd,
-                       m_prefix,
-                       {m_offsets},
-                       std::move(callback)} {}
+          m_reader{"offset_reader",
+                   etcd,
+                   m_prefix,
+                   {m_offsets},
+                   std::move(callback)} {}
     auto get() { return m_offsets.get(); };
 
 private:
     prefix_t m_prefix;
     vector_observer<std::size_t> m_offsets;
-    subscriber m_subscriber;
+    reader m_reader;
 };
 
 } // namespace uh::cluster::storage

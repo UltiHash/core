@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/etcd/service_discovery/service_observer.h>
-#include <common/etcd/subscriber/subscriber.h>
+#include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/service_interfaces/service_factory.h>
 #include <common/telemetry/log.h>
