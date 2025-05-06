@@ -2,7 +2,7 @@
 
 #include "impl/prefix.h"
 
-#include <common/etcd/subscriber/subscriber.h>
+#include <common/etcd/subscriber.h>
 
 #include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>

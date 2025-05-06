@@ -26,18 +26,30 @@ public:
           m_id{id},
           m_callback{std::move(callback)},
           m_is_leader{false} {
+        LOG_DEBUG() << std::format(
+            "Group 0's candidate (storage {}) construction is started", m_id);
 
         auto resp = campaign();
-        if (resp.is_ok())
+        if (resp.is_ok()) {
+            LOG_DEBUG() << std::format(
+                "Group 0's candidate (storage {}) construction is done", m_id);
             return;
+        }
 
         m_watch_guard = m_etcd.watch(
             m_key, [this](etcd_manager::response resp) { on_watch(resp); },
             resp.index() + 1);
+
+        LOG_DEBUG() << std::format(
+            "Group 0's candidate (storage {}) construction is done", m_id);
     }
 
     ~candidate() {
+        LOG_DEBUG() << std::format(
+            "Group 0's candidate (storage {}) destruction is started", m_id);
         m_watch_guard.reset();
+        LOG_DEBUG() << std::format(
+            "Group 0's candidate (storage {}) - watch_guard destroyed", m_id);
         if (is_leader()) {
             m_etcd.rm(m_key);
         }
@@ -49,11 +61,17 @@ public:
 
 private:
     auto campaign() -> etcd::Response {
+
+        LOG_DEBUG() << std::format(
+            "Group 0's candidate (storage {}) participated the election", m_id);
         // Create key with -1 first,
         auto resp = m_etcd.create_if_empty(m_key, serialize<int>(staging_id));
 
-        if (m_callback)
+        if (m_callback) {
+            LOG_DEBUG() << std::format(
+                "Group 0's candidate (storage {}) won the election", m_id);
             m_callback(resp.is_ok());
+        }
 
         if (resp.is_ok()) {
             m_is_leader.store(true, std::memory_order_release);
