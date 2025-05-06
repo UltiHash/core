@@ -44,7 +44,8 @@ protected:
             cv.notify_one(); // Notify the waiting thread
             std::cerr << "Leader updated: " << new_leader << std::endl;
         }};
-    subscriber m_subscriber{m_etcd,
+    subscriber m_subscriber{"fixture",
+                            m_etcd,
                             ns::root.storage_groups[m_group_id].leader,
                             {m_leader_observer}};
 };

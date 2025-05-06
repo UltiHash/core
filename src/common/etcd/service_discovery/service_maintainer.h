@@ -18,7 +18,8 @@ public:
             std::reference_wrapper<service_observer<service_interface>>>
             observers)
         : m_hostports_observer{prefix, std::move(service_factory), observers},
-          m_subscriber{etcd, prefix, {m_hostports_observer}} {}
+          m_subscriber{
+              "service_maintainer", etcd, prefix, {m_hostports_observer}} {}
 
     [[nodiscard]] std::size_t size() const noexcept {
         return m_hostports_observer.size();

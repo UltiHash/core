@@ -16,24 +16,63 @@
 
 namespace uh::cluster::storage {
 
-BOOST_AUTO_TEST_SUITE(a_storage_registry)
+class basic_fixture {
+public:
+    basic_fixture()
+        : m_etcd{} {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+    }
+
+    virtual ~basic_fixture() {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+    }
+
+protected:
+    const std::size_t m_num_storages = 7;
+    const std::size_t m_service_id = 3;
+    const std::size_t m_group_id = 4;
+    etcd_manager m_etcd;
+    temp_directory m_tmp_dir;
+};
+
+class fixture_with_subscriber : public basic_fixture {
+public:
+    fixture_with_subscriber()
+        : basic_fixture{} {}
+    ~fixture_with_subscriber() {}
+
+    bool wait_for_storage_states_key() {
+        std::unique_lock<std::mutex> lock(cv_mutex);
+        if (!cv.wait_for(lock, std::chrono::seconds(2),
+                         [&] { return storage_states_updated; })) {
+            return false;
+        }
+        storage_states_updated = false;
+        return true;
+    }
+
+protected:
+    std::condition_variable cv;
+    std::mutex cv_mutex;
+    bool storage_states_updated = false;
+    storage_state_subscriber subscriber{
+        m_etcd, m_group_id, m_num_storages, [&]() {
+            std::lock_guard<std::mutex> lock(cv_mutex);
+            storage_states_updated = true;
+            cv.notify_one(); // Notify the waiting thread
+            std::cerr << "Storage states updated" << std::endl;
+        }};
+};
+
+BOOST_FIXTURE_TEST_SUITE(a_storage_registry, fixture_with_subscriber)
 
 BOOST_AUTO_TEST_CASE(registers_current_storage_state_as_new) {
-    const auto num_storages = 7;
-    const auto service_id = 3;
-    const auto group_id = 4;
-    auto etcd = etcd_manager();
-    temp_directory tmp_dir;
-    auto promise = std::promise<void>();
-    auto future = promise.get_future();
-    storage_state_subscriber subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t, storage_state) { promise.set_value(); });
+    auto sut =
+        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
 
-    auto sut = storage_registry(etcd, group_id, service_id, tmp_dir.path());
-
-    if (future.wait_for(std::chrono::seconds(5)) ==
-        std::future_status::timeout) {
+    if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto states = subscriber.get();
@@ -42,27 +81,16 @@ BOOST_AUTO_TEST_CASE(registers_current_storage_state_as_new) {
 }
 
 BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
-    const auto num_storages = 7;
-    const auto service_id = 3;
-    const auto group_id = 4;
-    auto etcd = etcd_manager();
-    temp_directory tmp_dir;
-    auto promise = std::promise<void>();
-    auto future = promise.get_future();
-    storage_state_subscriber subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t id, storage_state& state) {
-            if (id == 3 && state == storage_state::ASSIGNED) {
-                promise.set_value();
-            }
-        });
-    auto sut = storage_registry(etcd, group_id, service_id, tmp_dir.path());
+    auto sut =
+        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     sut.set(storage_state::ASSIGNED);
     sut.publish();
 
-    if (future.wait_for(std::chrono::seconds(5)) ==
-        std::future_status::timeout) {
+    if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto states = subscriber.get();
@@ -71,28 +99,20 @@ BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
 }
 
 BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
-    const auto num_storages = 7;
-    const auto service_id = 3;
-    const auto group_id = 4;
-    auto etcd = etcd_manager();
-    temp_directory tmp_dir;
-    auto promise = std::promise<void>();
-    auto future = promise.get_future();
-    auto sut = std::make_optional<storage_registry>(etcd, group_id, service_id,
-                                                    tmp_dir.path());
+    auto sut = std::make_optional<storage_registry>(
+        m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
     sut->set(storage_state::ASSIGNED);
     sut->publish();
-    storage_state_subscriber subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t id, storage_state& state) {
-            if (state == storage_state::DOWN)
-                promise.set_value();
-        });
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
     sut.reset();
 
-    if (future.wait_for(std::chrono::seconds(5)) ==
-        std::future_status::timeout) {
+    if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto states = subscriber.get();
@@ -101,27 +121,25 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
 }
 
 BOOST_AUTO_TEST_CASE(restores_previous_state) {
-    const auto num_storages = 7;
-    const auto service_id = 3;
-    const auto group_id = 4;
-    auto etcd = etcd_manager();
-    temp_directory tmp_dir;
-    auto promise = std::promise<void>();
-    auto future = promise.get_future();
-    auto sut = std::make_optional<storage_registry>(etcd, group_id, service_id,
-                                                    tmp_dir.path());
+    auto sut = std::make_optional<storage_registry>(
+        m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
     sut->set(storage_state::ASSIGNED);
     sut->publish();
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
     sut.reset();
+    if (!wait_for_storage_states_key()) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
 
-    storage_state_subscriber subscriber(
-        etcd, group_id, num_storages,
-        [&](std::size_t id, storage_state& state) { promise.set_value(); });
+    auto sut_2 =
+        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
 
-    auto sut_2 = storage_registry(etcd, group_id, service_id, tmp_dir.path());
-
-    if (future.wait_for(std::chrono::seconds(5)) ==
-        std::future_status::timeout) {
+    if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto states = subscriber.get();

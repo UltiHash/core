@@ -1,8 +1,8 @@
-file(DOWNLOAD 
+file(DOWNLOAD
     https://raw.githubusercontent.com/yhirose/cpp-httplib/v0.18.5/httplib.h
     ${CMAKE_CURRENT_BINARY_DIR}/httplib.h
 )
-file(DOWNLOAD 
+file(DOWNLOAD
     https://github.com/eranpeer/FakeIt/raw/refs/tags/2.4.1/single_header/standalone/fakeit.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/fakeit.hpp
 )
@@ -31,6 +31,13 @@ function(uh_add_test name)
         PUBLIC ${ARGS_PUBLIC})
 
     target_precompile_headers(${name} REUSE_FROM uh_precompile_headers)
+
+    # execute_process(
+    #     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} --list_content
+    #     ERROR_VARIABLE TEST_LIST
+    #     OUTPUT_STRIP_TRAILING_WHITESPACE
+    # )
+
     add_test(NAME ${name} COMMAND ${name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
     set_tests_properties(${name} PROPERTIES LABELS ${LABELS})

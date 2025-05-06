@@ -38,10 +38,12 @@ public:
 
     ~candidate() {
         m_watch_guard.reset();
-        m_etcd.rm(m_key);
+        if (is_leader()) {
+            m_etcd.rm(m_key);
+        }
     }
 
-    auto is_leader() const {
+    auto is_leader() -> bool const {
         return m_is_leader.load(std::memory_order_acquire);
     }
 
