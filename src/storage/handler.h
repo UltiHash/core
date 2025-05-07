@@ -29,7 +29,7 @@ private:
 
     coro<void> handle_get_used(messenger& m, const messenger::header&);
 
-    coro<void> handle_update_state(messenger& m, const messenger::header&);
+    coro<void> handle_allocate(messenger& m, const messenger::header&);
 
     local_storage& m_storage;
     storage_registry& m_registry;

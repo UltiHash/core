@@ -42,6 +42,9 @@ public:
 
     coro<void> send_fragment(const message_type type, const fragment frag);
 
+    coro<void> send_allocation(const message_type type,
+                               const allocation_t& allocation);
+
     template <typename T>
     requires std::is_arithmetic_v<T>
     coro<void> send_primitive(const message_type type, const T val) {

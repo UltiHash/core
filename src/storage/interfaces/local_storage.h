@@ -18,7 +18,7 @@ struct local_storage : public storage_interface {
           m_data_store(
               std::make_unique<default_data_store>(config, path, index)) {}
 
-    coro<address> write(std::span<const char> data,
+    coro<address> write(allocation_t allocation, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
         co_return m_data_store->write(data, offsets);
     }
@@ -89,6 +89,8 @@ struct local_storage : public storage_interface {
     std::size_t get_available_space_func() {
         return m_data_store->get_available_space();
     }
+
+    virtual coro<allocation_t> allocate(std::size_t size) override {}
 
 private:
     boost::asio::thread_pool m_threads;

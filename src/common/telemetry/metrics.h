@@ -34,7 +34,7 @@ enum metric_type {
     storage_link_req,
     storage_unlink_req,
     storage_used_req,
-    storage_update_state_req,
+    storage_allocate_req,
     deduplicator_req,
     entrypoint_abort_multipart_req,
     entrypoint_complete_multipart_req,

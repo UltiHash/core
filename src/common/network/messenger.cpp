@@ -33,15 +33,23 @@ messenger::recv_dedupe_response(const header& message_header) {
 coro<void> messenger::send_write(const write_request& req) {
     auto data = std::get<std::span<const char>>(req.data);
     const size_type data_size = static_cast<size_type>(data.size());
+    register_write_buffer(req.allocation.offset.get_data(), 2);
+    register_write_buffer(req.allocation.size);
     register_write_buffer(data_size);
     register_write_buffer(data);
     register_write_buffer(req.offsets);
+
     co_await send_buffers(STORAGE_WRITE_REQ);
 }
 
 coro<write_request> messenger::recv_write(const header& message_header) {
     size_type data_size;
-    unique_buffer<char> recv_buffer(message_header.size - sizeof(size_type));
+    uint128_t alloc_offset;
+    std::size_t alloc_size;
+    unique_buffer<char> recv_buffer(message_header.size - sizeof(size_type) -
+                                    sizeof(uint128_t) - sizeof(std::size_t));
+    register_read_buffer(alloc_offset.ref_data());
+    register_read_buffer(alloc_size);
     register_read_buffer(data_size);
     register_read_buffer(recv_buffer);
     co_await recv_buffers(message_header);
@@ -49,8 +57,10 @@ coro<write_request> messenger::recv_write(const header& message_header) {
     std::size_t offsets_size = recv_buffer.size() - data_size;
 
     write_request req = {
-        .offsets = std::vector<std::size_t>(offsets_size / sizeof(std::size_t)),
-        .data = unique_buffer<char>(data_size)};
+        .allocation = {.offset = alloc_offset, .size = alloc_size},
+        .data = unique_buffer<char>(data_size),
+        .offsets =
+            std::vector<std::size_t>(offsets_size / sizeof(std::size_t))};
     std::memcpy(std::get<unique_buffer<char>>(req.data).data(),
                 recv_buffer.data(), data_size);
     std::memcpy(req.offsets.data(), recv_buffer.data() + data_size,
@@ -69,6 +79,13 @@ coro<void> messenger::send_fragment(const message_type type,
                                     const fragment frag) {
     register_write_buffer(frag.pointer.get_data(), 2);
     register_write_buffer(frag.size);
+    co_await send_buffers(type);
+}
+
+coro<void> messenger::send_allocation(const message_type type,
+                                      const allocation_t& allocation) {
+    register_write_buffer(allocation.offset.get_data(), 2);
+    register_write_buffer(allocation.size);
     co_await send_buffers(type);
 }
 
