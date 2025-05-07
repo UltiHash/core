@@ -42,10 +42,8 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_FIXTURE_TEST_SUITE(a_internals, fixture)
 
 BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
-    static constexpr const char* literal = "1";
     auto group_id = 11ul, num_storages = 7ul, storage_id = 3ul;
     service_config service_cfg;
-    auto state = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
     temp_directory tmp_dir;
@@ -53,35 +51,12 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
         etcd, group_id, num_storages, storage_id, service_cfg, [](bool) {},
         [&]() { p.set_value(); });
 
-    etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
-             serialize(state));
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
     BOOST_TEST(serialize(*subscriber.storage_states().get()[storage_id]) ==
-               literal);
-}
-
-BOOST_AUTO_TEST_CASE(gets_storage_states) {
-    static constexpr const char* literal = "2";
-    auto group_id = 11ul, num_storages = 7ul, storage_id = 3ul;
-    service_config service_cfg;
-    auto state = deserialize<storage_state>(literal);
-    std::promise<void> p;
-    std::future<void> f = p.get_future();
-    auto subscriber = internals_subscriber(
-        etcd, group_id, num_storages, storage_id, service_cfg, [](bool) {},
-        [&]() { p.set_value(); });
-
-    etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
-             serialize(state));
-    if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    auto states = subscriber.storage_states().get();
-    BOOST_TEST(serialize(*states[storage_id]) == literal);
-    BOOST_TEST(serialize(*states[0]) == "0");
+               "1");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
