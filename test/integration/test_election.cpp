@@ -81,14 +81,16 @@ BOOST_AUTO_TEST_CASE(gets_leadership_when_previous_leader_goes_down) {
     auto c1 = std::make_optional<candidate>(
         m_etcd, ns::root.storage_groups[group_id].leader, 1);
 
+    wait_for_callback(); // proclamation
+
     etcd_manager etcd2;
     auto c2 =
         candidate(etcd2, ns::root.storage_groups[group_id].leader, storage_id);
 
     c1.reset();
 
-    wait_for_callback(); // proclamation
     wait_for_callback(); // resignation
+    wait_for_callback(); // preclamation
     wait_for_callback(); // proclamation
 
     BOOST_TEST(*subscriber->get_leader() == storage_id);

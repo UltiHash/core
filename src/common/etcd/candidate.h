@@ -32,7 +32,8 @@ private:
         if (m_callback) {
             m_callback(is_leader);
         }
-        m_candidate.proclaim();
+        if (is_leader)
+            m_candidate.proclaim();
     }
 
     callback_t m_callback;
