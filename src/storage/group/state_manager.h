@@ -22,6 +22,7 @@ namespace uh::cluster::storage {
  */
 class group_state_manager {
 public:
+    enum class role_t { UNDEFINED, LEADER, FOLLOWER };
     group_state_manager(boost::asio::io_context& ioc, etcd_manager& etcd,
                         const group_config& config, std::size_t storage_id,
                         const global_data_view_config& global_config,
@@ -33,46 +34,28 @@ public:
           m_global_config{global_config},
           m_storage_registry{storage_registry},
 
-          m_group_initialized{
-              group_initialized::get(m_etcd, m_group_config.id)},
           m_group_state{group_state::UNDETERMINED},
 
           m_group_state_key{
-              ns::root.storage_groups[m_group_config.id].group_state},
-          m_storage_state_subscriber{m_etcd, m_group_config.id,
-                                     m_group_config.storages,
-                                     [this]() { manage(); }} {
+              ns::root.storage_groups[m_group_config.id].group_state} {
         // TODO: After timeout, trigger manage function with setting
         // group_initialized.
-        LOG_DEBUG() << std::format(
-            "Group {}'s state manager (storage {}) is constructed",
-            m_group_config.id, m_storage_id);
     }
 
-    ~group_state_manager() {
-        LOG_DEBUG() << std::format(
-            "Group {}'s state manager (storage {}) is destructed",
-            m_group_config.id, m_storage_id);
-        m_etcd.rm(m_group_state_key);
-    }
-
-private:
-    struct statistics {
-        bool has_down = false;
-        std::size_t assigned_count = 0ul;
-    };
+    ~group_state_manager() { m_etcd.rm(m_group_state_key); }
 
     /*
      * Called only on a leader
      */
-    void manage() {
-        auto storage_states = m_storage_state_subscriber.get();
+    void
+    manage_state(bool group_initialized,
+                 std::vector<std::shared_ptr<storage_state>> storage_states) {
         auto stats = get_statistics(storage_states);
         LOG_DEBUG() << std::format("Group {}: assigned_count {}, has_down {}",
                                    m_group_config.id, stats.assigned_count,
                                    stats.has_down);
 
-        if (not m_group_initialized) {
+        if (not group_initialized) {
             LOG_INFO() << "Group isn't initialized";
 
             if (stats.has_down)
@@ -84,17 +67,16 @@ private:
                         m_storage_registry.set(storage_state::ASSIGNED);
                         m_storage_registry.publish();
                     } else {
-                        m_storage_registry.set_others_persistant(
-                            i, storage_state::ASSIGNED);
+                        m_storage_registry.set_others(i,
+                                                      storage_state::ASSIGNED);
                     }
                 }
             }
             if (stats.assigned_count != m_group_config.storages)
                 return;
 
-            m_group_initialized = true;
-            group_initialized::put(m_etcd, m_group_config.id,
-                                   m_group_initialized);
+            LOG_INFO() << "Group is now initialized";
+            group_initialized::put(m_etcd, m_group_config.id, true);
         }
 
         if (m_group_state != group_state::HEALTHY and
@@ -127,6 +109,12 @@ private:
                                m_global_config);
         }
     }
+
+private:
+    struct statistics {
+        bool has_down = false;
+        std::size_t assigned_count = 0ul;
+    };
 
     statistics get_statistics(
         std::vector<std::shared_ptr<storage_state>>& storage_states) {
@@ -162,11 +150,9 @@ private:
     global_data_view_config m_global_config;
     storage_registry& m_storage_registry;
 
-    bool m_group_initialized;
     group_state m_group_state;
 
     std::string m_group_state_key;
-    storage_state_subscriber m_storage_state_subscriber;
     std::optional<repairer> m_repairer;
 };
 

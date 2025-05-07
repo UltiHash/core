@@ -28,10 +28,14 @@ public:
 
         publish();
     }
-    ~storage_registry() { m_etcd.rm(m_prefix[m_storage_id]); }
+    ~storage_registry() {
+        LOG_DEBUG() << std::format("Destroy storage registry for {}",
+                                   m_storage_id);
+        m_etcd.rm(m_prefix[m_storage_id]);
+    }
 
     void set(const storage_state state) {
-        if (m_state != state) {
+        if (m_state != state) { // NOTE: now we need to skip repeated set call
             LOG_DEBUG() << std::format("Set storage {} state to {}",
                                        m_storage_id,
                                        magic_enum::enum_name(state));
@@ -42,11 +46,11 @@ public:
 
     void publish() { m_etcd.put(m_prefix[m_storage_id], serialize(m_state)); }
 
-    void set_others_persistant(std::size_t id, storage_state value) {
+    void set_others(std::size_t id, storage_state value) {
         if (m_storage_id == id) {
             throw std::runtime_error("Cannot put storage state to itself");
         }
-        m_etcd.put_persistant(m_prefix[id], serialize(value));
+        m_etcd.put(m_prefix[id], serialize(value));
     }
 
 private:

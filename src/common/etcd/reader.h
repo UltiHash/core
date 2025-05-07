@@ -52,7 +52,7 @@ private:
     bool on_watch(etcd_manager::response resp) {
         try {
             LOG_INFO() << std::format(
-                "reader {} has detected {} action on {} with value {}", m_name,
+                "{} has detected {} action on {} with value {}", m_name,
                 resp.action, resp.key, resp.value);
 
             bool change_detected =
