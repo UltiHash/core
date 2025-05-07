@@ -23,9 +23,6 @@ public:
 
     ~candidate_observer() {
         if (is_leader()) {
-            LOG_DEBUG() << std::format(
-                "Candidate {} is destroyed, removing key {}", m_id,
-                m_expected_key);
             m_etcd.rm(m_expected_key);
         }
     }

@@ -31,12 +31,6 @@ public:
                        [this](bool is_leader) { election_callback(is_leader); },
                        [this]() { handler(); }} {}
 
-    ~ec_maintainer() {
-        LOG_DEBUG() << std::format(
-            "Group {}'s maintainer (storage {}) destruction started",
-            m_group_config.id, m_storage_id);
-    }
-
     void election_callback(bool is_leader) {
         // TODO: Get offset from local storage
         std::size_t current_offset = 0;
@@ -48,10 +42,6 @@ public:
             m_offset = summarize_offsets();
 
             m_subscriber.candidate().proclaim();
-
-        } else {
-            LOG_DEBUG() << std::format("[group {}, storage {}] loose election",
-                                       m_group_config.id, m_storage_id);
         }
     }
 
@@ -60,11 +50,6 @@ public:
         auto storage_states = m_subscriber.storage_states().get();
 
         auto stats = get_statistics(storage_states);
-
-        LOG_DEBUG() << std::format(
-            "[group {}, storage {}] assigned_count {}, has_down {}",
-            m_group_config.id, m_storage_id, stats.assigned_count,
-            stats.has_down);
 
         if (not(*group_initialized)) {
             LOG_DEBUG() << std::format(
@@ -77,18 +62,9 @@ public:
             for (auto i = 0ul; i < storage_states.size(); ++i) {
                 if (*storage_states[i] == storage_state::NEW) {
                     if (i == m_storage_id) {
-                        LOG_DEBUG()
-                            << std::format("[group {}, storage {}] Leader set "
-                                           "it's state as ASSIGNED",
-                                           m_group_config.id, m_storage_id);
-
                         m_subscriber.storage_state_manager().set(
                             storage_state::ASSIGNED);
                     } else {
-                        LOG_DEBUG()
-                            << std::format("[group {}, storage {}] Trigger "
-                                           "storage {} to be assigned",
-                                           m_group_config.id, m_storage_id, i);
                         etcd_storage_assignment_triggers::put(
                             m_etcd, m_group_config.id, i, true);
                         m_subscriber.storage_assignment_triggers().set(i, true);
@@ -108,30 +84,47 @@ public:
             m_subscriber.group_initialized().set(true);
         }
 
-        auto group_state = m_group_state_manager.get();
-        if (group_state != group_state::HEALTHY and
+        // TODO: clear storage_assignment_triggers for DOWN storages
+
+        auto state = m_group_state_manager.get();
+        auto new_state = state;
+
+        if (state != group_state::HEALTHY and
             stats.assigned_count == m_group_config.storages) {
-            m_group_state_manager.set(group_state::HEALTHY);
+            new_state = group_state::HEALTHY;
         }
 
-        if (group_state != group_state::DEGRADED and //
+        if (state != group_state::DEGRADED and //
             stats.has_down and
             stats.assigned_count >= m_group_config.data_shards) {
-            m_group_state_manager.set(group_state::DEGRADED);
+            new_state = group_state::DEGRADED;
         }
 
-        if (group_state != group_state::FAILED and //
+        if (state != group_state::FAILED and //
             stats.assigned_count < m_group_config.data_shards) {
-            m_group_state_manager.set(group_state::FAILED);
+            new_state = group_state::FAILED;
         }
 
-        if (group_state != group_state::REPAIRING and //
+        if (state != group_state::REPAIRING and //
             !stats.has_down and
             stats.assigned_count >= m_group_config.data_shards and
             stats.assigned_count < m_group_config.storages) {
-            m_group_state_manager.set(group_state::REPAIRING);
+            new_state = group_state::REPAIRING;
 
             // TODO: Spawn repairer here
+        }
+
+        if (new_state != state) {
+            m_group_state_manager.set(new_state);
+
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] assigned_count {}, has_down {}",
+                m_group_config.id, m_storage_id, stats.assigned_count,
+                stats.has_down);
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] change group state to {}",
+                m_group_config.id, m_storage_id,
+                magic_enum::enum_name(new_state));
         }
     }
 
@@ -145,11 +138,7 @@ private:
         std::vector<std::shared_ptr<storage_state>>& storage_states) {
 
         statistics rv;
-        for (auto cnt = 0ul; const auto& val : storage_states) {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] storage {} state: {}",
-                m_group_config.id, m_storage_id, cnt++,
-                magic_enum::enum_name(*val));
+        for (const auto& val : storage_states) {
             switch (*val) {
             case storage_state::DOWN:
                 rv.has_down = true;
@@ -168,26 +157,14 @@ private:
         auto is_leader = m_subscriber.candidate().is_leader();
 
         if (is_leader) {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] @@@@@@@@@@@@@@@@@@@@@@ I'm a leader",
-                m_group_config.id, m_storage_id);
             manage_state();
 
         } else { // follower
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] @@@@@@@@@@@@@@@@@@@@@@ I'm a follower",
-                m_group_config.id, m_storage_id);
-
             auto trigger =
                 m_subscriber.storage_assignment_triggers().get(m_storage_id);
             if (*trigger) {
-                LOG_DEBUG() << std::format(
-                    "[group {}, storage {}] Got assignment trigger",
-                    m_group_config.id, m_storage_id);
                 m_subscriber.storage_state_manager().set(
                     storage_state::ASSIGNED);
-                // m_subscriber.storage_states().set(m_storage_id,
-                //                                   storage_state::ASSIGNED);
                 etcd_storage_assignment_triggers::put(m_etcd, m_group_config.id,
                                                       m_storage_id, false);
                 m_subscriber.storage_assignment_triggers().set(m_storage_id,

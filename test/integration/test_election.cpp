@@ -15,96 +15,81 @@ namespace uh::cluster::storage {
 class fixture {
 public:
     fixture()
-        : m_etcd{} {}
+        : m_etcd{} {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+        subscriber.emplace(m_etcd, group_id, num_storages,
+                           service_factory<storage_interface>(m_ioc, 2), [&]() {
+                               std::lock_guard<std::mutex> lock(cv_mutex);
+                               callback_called = true;
+                               cv.notify_one();
+                           });
+    }
 
     ~fixture() {
+        subscriber.reset();
         m_etcd.clear_all();
         std::this_thread::sleep_for(100ms);
     }
 
 protected:
-    void setup_promises_and_subscriber(size_t expected_callbacks,
-                                       size_t group_id, size_t num_storages) {
-        promises.resize(expected_callbacks);
-        futures.clear();
-        for (auto& p : promises) {
-            futures.push_back(p.get_future());
+    void wait_for_callback() {
+        std::unique_lock<std::mutex> lock(cv_mutex);
+        if (!cv.wait_for(lock, std::chrono::seconds(5),
+                         [&] { return callback_called; })) {
+            BOOST_FAIL("Callback was not called within the timeout period");
         }
-        callback_count = 0;
-        subscriber.emplace(m_etcd, group_id, num_storages,
-                           service_factory<storage_interface>(m_ioc, 2), [&]() {
-                               if (callback_count < promises.size()) {
-                                   promises[callback_count].set_value();
-                               }
-                               ++callback_count;
-                           });
+        callback_called = false;
     }
 
-    void wait_for_callbacks() {
-        for (size_t i = 0; i < promises.size(); ++i) {
-            if (futures[i].wait_for(std::chrono::seconds(5)) ==
-                std::future_status::timeout) {
-                BOOST_FAIL("Callback was not called within the timeout period");
-            }
-        }
-    }
+    const std::size_t group_id = 11ul, num_storages = 7ul, storage_id = 2ul;
+
+    std::condition_variable cv;
+    std::mutex cv_mutex;
+    bool callback_called = false;
 
     boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
-    std::vector<std::promise<void>> promises;
-    std::vector<std::future<void>> futures;
-    size_t callback_count = 0;
     std::optional<externals_subscriber> subscriber;
 };
 
 BOOST_FIXTURE_TEST_SUITE(a_candidate, fixture)
 
 BOOST_AUTO_TEST_CASE(gets_leadership_when_no_other_candidates) {
-    const auto group_id = 11ul, num_storages = 7ul, storage_id = 3ul;
-
-    // 2 promises, for preemption and proclamation
-    setup_promises_and_subscriber(2, group_id, num_storages);
-
     auto c1 =
         candidate(m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
 
-    wait_for_callbacks();
-
+    wait_for_callback();
     BOOST_TEST(*subscriber->get_leader() == storage_id);
 }
 
 BOOST_AUTO_TEST_CASE(loose_leadership_when_it_goes_down) {
-    const auto group_id = 11ul, num_storages = 7ul, storage_id = 2ul;
-
-    // For preemption, proclamation and resignation
-    setup_promises_and_subscriber(3, group_id, num_storages);
-
     auto c1 = std::make_optional<candidate>(
         m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
 
+    wait_for_callback(); // proclamation
+
     c1.reset();
 
-    wait_for_callbacks();
+    wait_for_callback(); // resignation
 
     BOOST_TEST(*subscriber->get_leader() == -1);
 }
 
 BOOST_AUTO_TEST_CASE(gets_leadership_when_previous_leader_goes_down) {
-    const auto group_id = 11ul, num_storages = 7ul, storage_id = 2ul;
-
-    // For preemption, proclamation, resignation for the first candidate,
-    // and another preemption-proclamation for the second candidate
-    setup_promises_and_subscriber(5, group_id, num_storages);
 
     auto c1 = std::make_optional<candidate>(
         m_etcd, ns::root.storage_groups[group_id].leader, 1);
 
+    etcd_manager etcd2;
     auto c2 =
-        candidate(m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
+        candidate(etcd2, ns::root.storage_groups[group_id].leader, storage_id);
 
     c1.reset();
 
-    wait_for_callbacks();
+    wait_for_callback(); // proclamation
+    wait_for_callback(); // resignation
+    wait_for_callback(); // proclamation
 
     BOOST_TEST(*subscriber->get_leader() == storage_id);
 }

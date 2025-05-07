@@ -59,13 +59,7 @@ public:
           m_candidate{etcd, m_prefix.leader,
                       (candidate_observer::id_t)storage_id,
                       std::move(election_callback)},
-          m_storage_states{
-              m_prefix.storage_states, num_storages,
-              [=](std::size_t id, storage_state& state) {
-                  LOG_DEBUG() << std::format(
-                      "[group {}, storage {}] Storage {} state changed to {}",
-                      group_id, storage_id, id, magic_enum::enum_name(state));
-              }},
+          m_storage_states{m_prefix.storage_states, num_storages},
           m_storage_registry{etcd, group_id, storage_id,
                              service_cfg.working_dir},
 

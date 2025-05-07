@@ -16,6 +16,7 @@ add_subdirectory(performance)
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h @ONLY)
 add_library(uh_test_config INTERFACE)
 target_include_directories(uh_test_config INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(uh_test_config INTERFACE magic_enum)
 
 function(uh_add_test name)
     # Parse Arguments
@@ -37,6 +38,8 @@ function(uh_add_test name)
     #     ERROR_VARIABLE TEST_LIST
     #     OUTPUT_STRIP_TRAILING_WHITESPACE
     # )
+
+    # boost test exec option: --log_level=all --run_test=multiple*/determine*
 
     add_test(NAME ${name} COMMAND ${name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)

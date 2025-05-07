@@ -72,9 +72,6 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
         maintainer.reset();
-        LOG_DEBUG() << std::format(
-            "Group 0's maintainer (storage {}) destruction is done",
-            storage_id);
     }
 };
 
@@ -94,8 +91,6 @@ public:
         for (auto& [key, thread] : threads) {
             if (!thread.get_stop_token().stop_requested()) {
                 thread.request_stop();
-                // std::cout << "Stop requested for thread " << &thread
-                //           << std::endl;
             }
         }
     }
@@ -141,8 +136,7 @@ protected:
         candidate_observer::staging_id, [&](int leader_id) {
             std::lock_guard<std::mutex> lock(cv_mutex);
             leader_updated = true;
-            cv.notify_one(); // Notify the waiting thread
-            // std::cerr << "Leader updated: " << leader_id << std::endl;
+            cv.notify_one();
         }};
     value_observer<group_state> m_group_state_observer{
         ns::root.storage_groups[m_group_cfg.id].group_state,
@@ -151,8 +145,6 @@ protected:
             std::lock_guard<std::mutex> lock(cv_mutex);
             group_state_updated = true;
             cv.notify_one();
-            std::cerr << "Group state updated: " << magic_enum::enum_name(state)
-                      << std::endl;
         }};
     vector_observer<storage_state> m_storage_states_observer{
         ns::root.storage_groups[m_group_cfg.id].storage_states,
@@ -161,11 +153,7 @@ protected:
         [&](std::size_t id, storage_state& state) {
             std::lock_guard<std::mutex> lock(cv_mutex);
             storage_states_updated = true;
-            cv.notify_one(); // Notify the waiting thread
-            // std::cerr << std::format(
-            //                  "Storage states for storage {} updated: {}", id,
-            //                  magic_enum::enum_name(state))
-            //           << std::endl;
+            cv.notify_one();
         }};
     subscriber m_subscriber{
         "fixture",
@@ -182,14 +170,12 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    // std::cout << "Leader: " << leader_id << std::endl;
     BOOST_TEST(leader_id == candidate_observer::staging_id);
 
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     leader_id = *m_leader_observer.get();
-    // std::cout << "Leader: " << leader_id << std::endl;
     BOOST_TEST(leader_id != candidate_observer::staging_id);
     BOOST_TEST(leader_id < m_num_instances);
 }
@@ -199,8 +185,7 @@ BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::HEALTHY);
+    BOOST_TEST(state == group_state::HEALTHY);
 }
 
 BOOST_AUTO_TEST_CASE(assign_storages) {
@@ -210,7 +195,7 @@ BOOST_AUTO_TEST_CASE(assign_storages) {
 
     auto states = m_storage_states_observer.get();
     for (auto state : states) {
-        BOOST_CHECK(*state == storage_state::ASSIGNED);
+        BOOST_TEST(*state == storage_state::ASSIGNED);
     }
 }
 
@@ -222,17 +207,15 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    // std::cout << "Initial leader: " << leader_id << std::endl;
 
-    // Interrupt the leader's thread
     std::cout << "Kill the leader" << std::endl;
     threads[leader_id].request_stop();
 
-    if (wait_for_leader_key() == false) { // wait for deletion
+    if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) { // wait for pre-occupying
+    if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
@@ -240,7 +223,6 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto new_leader_id = *m_leader_observer.get();
-    // std::cout << "New leader: " << new_leader_id << std::endl;
     BOOST_TEST(new_leader_id != candidate_observer::staging_id);
     BOOST_TEST(new_leader_id < m_num_instances);
     BOOST_TEST(new_leader_id != leader_id);
@@ -251,11 +233,10 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    std::cout << "Initial leader: " << leader_id << std::endl;
 
     auto cnt = 0ul;
     for (auto& [key, thread] : threads) {
-        if (key == leader_id) {
+        if ((candidate_observer::id_t)key == leader_id) {
             continue;
         }
         std::cout << std::format("Kill service {}", key) << std::endl;
@@ -268,8 +249,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::DEGRADED);
+    BOOST_TEST(state == group_state::DEGRADED);
 }
 
 BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
@@ -277,7 +257,6 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    // std::cout << "Initial leader: " << leader_id << std::endl;
 
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     threads[leader_id].request_stop();
@@ -287,9 +266,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
             BOOST_FAIL("Callback was not called within the timeout period");
         }
         auto state = *m_group_state_observer.get();
-        std::cout << "Group state: " << magic_enum::enum_name(state)
-                  << std::endl;
-        BOOST_CHECK(state == group_state::UNDETERMINED);
+        BOOST_TEST(state == group_state::UNDETERMINED);
     }
 
     {
@@ -297,9 +274,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
             BOOST_FAIL("Callback was not called within the timeout period");
         }
         auto state = *m_group_state_observer.get();
-        std::cout << "Group state: " << magic_enum::enum_name(state)
-                  << std::endl;
-        BOOST_CHECK(state == group_state::DEGRADED);
+        BOOST_TEST(state == group_state::DEGRADED);
     }
 }
 
@@ -308,11 +283,10 @@ BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    std::cout << "Initial leader: " << leader_id << std::endl;
 
     auto cnt = 0ul;
     for (auto& [key, thread] : threads) {
-        if (key == leader_id) {
+        if ((candidate_observer::id_t)key == leader_id) {
             continue;
         }
         std::cout << std::format("Kill service {}", key) << std::endl;
@@ -325,23 +299,20 @@ BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::DEGRADED);
+    BOOST_TEST(state == group_state::DEGRADED);
 
     threads[leader_id].request_stop();
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::UNDETERMINED);
+    BOOST_TEST(state == group_state::UNDETERMINED);
 
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::FAILED);
+    BOOST_TEST(state == group_state::FAILED);
 }
 
 BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
@@ -349,7 +320,6 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    std::cout << "Initial leader: " << leader_id << std::endl;
 
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     threads[leader_id].request_stop();
@@ -359,15 +329,13 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::UNDETERMINED);
+    BOOST_TEST(state == group_state::UNDETERMINED);
 
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::DEGRADED);
+    BOOST_TEST(state == group_state::DEGRADED);
 
     std::cout << std::format("Thread for storage {} created", leader_id)
               << std::endl;
@@ -380,8 +348,7 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::REPAIRING);
+    BOOST_TEST(state == group_state::REPAIRING);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
