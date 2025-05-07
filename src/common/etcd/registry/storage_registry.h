@@ -28,7 +28,10 @@ public:
 
         publish();
     }
-    ~storage_registry() {
+
+    ~storage_registry() { deregister(); }
+
+    void deregister() {
         LOG_DEBUG() << std::format("Destroy storage registry for {}",
                                    m_storage_id);
         m_etcd.rm(m_prefix[m_storage_id]);

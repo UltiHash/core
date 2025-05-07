@@ -28,6 +28,13 @@ public:
                        [this](bool is_leader) { election_callback(is_leader); },
                        [this]() { handler(); }} {}
 
+    ~ec_maintainer() {
+        LOG_DEBUG() << std::format(
+            "Group {}'s maintainer (storage {}) destruction started",
+            m_group_config.id, m_storage_id);
+        m_storage_registry.deregister();
+    }
+
     void election_callback(bool is_leader) {
         // TODO: Get offset from local storage
         std::size_t current_offset = 0;
@@ -81,7 +88,9 @@ private:
 
     std::atomic<std::size_t> m_offset;
     offset_publisher m_offset_publisher;
+
     storage_registry m_storage_registry;
+
     group_state_manager m_group_state_manager;
     internals_subscriber m_subscriber;
 };
