@@ -18,8 +18,7 @@ public:
           m_id{id},
           m_callback{std::move(callback)} {
 
-        if (campaign())
-            m_is_leader.store(true, std::memory_order_release);
+        m_is_leader.store(campaign(), std::memory_order_release);
     }
 
     ~candidate_observer() {
@@ -47,8 +46,7 @@ public:
 
         switch (get_etcd_action_enum(resp.action)) {
         case etcd_action::DELETE:
-            if (campaign())
-                m_is_leader.store(true, std::memory_order_release);
+            m_is_leader.store(campaign(), std::memory_order_release);
             break;
         default:
             return false;
