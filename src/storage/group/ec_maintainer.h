@@ -1,6 +1,5 @@
 #pragma once
 
-#include <common/etcd/registry/storage_registry.h>
 #include <common/etcd/service.h>
 #include <memory>
 #include <storage/global/config.h>
@@ -21,8 +20,6 @@ public:
           m_group_config{group_cfg},
           m_storage_id{storage_id},
           m_offset_publisher{etcd, group_cfg.id, storage_id},
-          m_storage_registry{etcd, group_cfg.id, storage_id,
-                             service_cfg.working_dir},
 
           m_group_state_manager{etcd, group_cfg.id},
 
@@ -30,6 +27,7 @@ public:
                        m_group_config.id,
                        m_group_config.storages,
                        storage_id,
+                       service_cfg,
                        [this](bool is_leader) { election_callback(is_leader); },
                        [this]() { handler(); }} {}
 
@@ -84,7 +82,8 @@ public:
                                            "it's state as ASSIGNED",
                                            m_group_config.id, m_storage_id);
 
-                        m_storage_registry.set(storage_state::ASSIGNED);
+                        m_subscriber.storage_state_manager().set(
+                            storage_state::ASSIGNED);
                     } else {
                         LOG_DEBUG()
                             << std::format("[group {}, storage {}] Trigger "
@@ -185,7 +184,8 @@ private:
                 LOG_DEBUG() << std::format(
                     "[group {}, storage {}] Got assignment trigger",
                     m_group_config.id, m_storage_id);
-                m_storage_registry.set(storage_state::ASSIGNED);
+                m_subscriber.storage_state_manager().set(
+                    storage_state::ASSIGNED);
                 // m_subscriber.storage_states().set(m_storage_id,
                 //                                   storage_state::ASSIGNED);
                 etcd_storage_assignment_triggers::put(m_etcd, m_group_config.id,
@@ -216,8 +216,6 @@ private:
 
     std::atomic<std::size_t> m_offset;
     offset_publisher m_offset_publisher;
-
-    storage_registry m_storage_registry;
 
     group_state_manager m_group_state_manager;
 
