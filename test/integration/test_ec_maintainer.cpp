@@ -282,12 +282,25 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     threads[leader_id].request_stop();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
+    {
+        if (wait_for_group_state_key() == false) {
+            BOOST_FAIL("Callback was not called within the timeout period");
+        }
+        auto state = *m_group_state_observer.get();
+        std::cout << "Group state: " << magic_enum::enum_name(state)
+                  << std::endl;
+        BOOST_CHECK(state == group_state::UNDETERMINED);
     }
-    auto state = *m_group_state_observer.get();
-    std::cout << "Group state: " << magic_enum::enum_name(state) << std::endl;
-    BOOST_CHECK(state == group_state::DEGRADED);
+
+    {
+        if (wait_for_group_state_key() == false) {
+            BOOST_FAIL("Callback was not called within the timeout period");
+        }
+        auto state = *m_group_state_observer.get();
+        std::cout << "Group state: " << magic_enum::enum_name(state)
+                  << std::endl;
+        BOOST_CHECK(state == group_state::DEGRADED);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(determine_failed_group_state) {

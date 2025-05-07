@@ -51,10 +51,6 @@ private:
 
     bool on_watch(etcd_manager::response resp) {
         try {
-            LOG_INFO() << std::format(
-                "{} has detected {} action on {} with value {}", m_name,
-                resp.action, resp.key, resp.value);
-
             bool change_detected =
                 std::any_of(m_observers.begin(), m_observers.end(),
                             [&](auto& o) { return o.get().on_watch(resp); });
