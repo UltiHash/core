@@ -1,110 +1,33 @@
 #pragma once
 
-#include <atomic>
 #include <common/etcd/namespace.h>
+#include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/telemetry/log.h>
 #include <common/utils/strings.h>
-#include <functional>
 
 namespace uh::cluster {
 
 class candidate {
 public:
-    using callback_t = std::function<void(bool leader)>;
-    using id_t = int; // to represent -1 as empty
-    constexpr static id_t staging_id = -1;
-
-    /*
-     * NOTE: On a leader, the callback is called before announcing itself as a
-     * leader.
-     */
+    // TODO: Use callback of subscriber, rather than using vector_observer's.
+    using callback_t = candidate_observer::callback_t;
+    using id_t = candidate_observer::id_t;
     candidate(etcd_manager& etcd, const std::string& key, id_t id,
               callback_t callback = nullptr)
-        : m_etcd{etcd},
-          m_key{key},
-          m_id{id},
-          m_callback{std::move(callback)},
-          m_is_leader{false} {
-        LOG_DEBUG() << std::format(
-            "Group 0's candidate (storage {}) construction is started", m_id);
+        : m_candidate{etcd, key, id, std::move(callback)},
+          m_subscriber{"candidate",
+                       etcd,
+                       key,
+                       {
+                           m_candidate,
+                       }} {}
 
-        auto resp = campaign();
-        if (resp.is_ok()) {
-            LOG_DEBUG() << std::format(
-                "Group 0's candidate (storage {}) construction is done", m_id);
-            return;
-        }
-
-        m_watch_guard = m_etcd.watch(
-            m_key, [this](etcd_manager::response resp) { on_watch(resp); },
-            resp.index() + 1);
-
-        LOG_DEBUG() << std::format(
-            "Group 0's candidate (storage {}) construction is done", m_id);
-    }
-
-    ~candidate() {
-        LOG_DEBUG() << std::format(
-            "Group 0's candidate (storage {}) destruction is started", m_id);
-        m_watch_guard.reset();
-        LOG_DEBUG() << std::format(
-            "Group 0's candidate (storage {}) - watch_guard destroyed", m_id);
-        if (is_leader()) {
-            m_etcd.rm(m_key);
-        }
-    }
-
-    auto is_leader() -> bool const {
-        return m_is_leader.load(std::memory_order_acquire);
-    }
+    auto is_leader() -> bool const { return m_candidate.is_leader(); }
 
 private:
-    auto campaign() -> etcd::Response {
-
-        LOG_DEBUG() << std::format(
-            "Group 0's candidate (storage {}) participated the election", m_id);
-        // Create key with -1 first,
-        auto resp = m_etcd.create_if_empty(m_key, serialize<int>(staging_id));
-
-        if (m_callback) {
-            LOG_DEBUG() << std::format(
-                "Group 0's candidate (storage {}) won the election", m_id);
-            m_callback(resp.is_ok());
-        }
-
-        if (resp.is_ok()) {
-            m_is_leader.store(true, std::memory_order_release);
-            m_etcd.put(m_key, serialize<int>(m_id));
-        }
-
-        return resp;
-    }
-
-    void on_watch(etcd_manager::response resp) {
-        try {
-            switch (get_etcd_action_enum(resp.action)) {
-            case etcd_action::DELETE: {
-                auto resp = campaign();
-                if (resp.is_ok()) {
-                    // TODO: let's cancel this watcher here for efficiency
-                }
-            } break;
-            default:
-                break;
-            }
-        } catch (const std::exception& e) {
-            LOG_WARN() << "error trying create_if_any on candidate "
-                       << std::to_string(m_id) << ": " << e.what();
-        }
-    }
-
-    etcd_manager& m_etcd;
-    std::string m_key;
-    id_t m_id;
-    callback_t m_callback;
-    std::atomic<bool> m_is_leader;
-    std::optional<etcd_manager::watch_guard> m_watch_guard;
+    candidate_observer m_candidate;
+    subscriber m_subscriber;
 };
 
 } // namespace uh::cluster

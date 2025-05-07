@@ -43,6 +43,7 @@ private:
 
 } // namespace uh::cluster
 
+#include <common/etcd/impl/candidate_observer.h>
 #include <common/etcd/impl/hostports_observer.h>
 #include <common/etcd/impl/value_observer.h>
 #include <common/etcd/impl/vector_observer.h>

@@ -26,26 +26,35 @@ struct group_initialized {
 /*
  * Group-wise subscriber
  */
-class storage_state_subscriber {
+class internals_subscriber {
 public:
     // TODO: Use callback of subscriber, rather than using vector_observer's.
+    using election_callback_t = candidate_observer::callback_t;
     using callback_t = subscriber::callback_t;
-    storage_state_subscriber(etcd_manager& etcd, std::size_t group_id,
-                             std::size_t num_storages,
-                             callback_t callback = nullptr)
-        : m_prefix{get_prefix(group_id).storage_states},
-          m_storage_states{m_prefix, num_storages, {}},
-          m_subscriber{"storage_state_subscriber",
+    internals_subscriber(etcd_manager& etcd, std::size_t group_id,
+                         std::size_t num_storages, std::size_t storage_id,
+                         election_callback_t election_callback = nullptr,
+                         callback_t callback = nullptr)
+        : m_prefix{get_prefix(group_id)},
+          m_storage_states{m_prefix.storage_states, num_storages, {}},
+          m_candidate{etcd, m_prefix.leader,
+                      (candidate_observer::id_t)storage_id,
+                      std::move(election_callback)},
+          m_subscriber{"internals_subscriber",
                        etcd,
                        m_prefix,
-                       {m_storage_states},
+                       {m_storage_states, m_candidate},
                        std::move(callback)} {}
 
-    auto get() { return m_storage_states.get(); };
+    const candidate_observer& candidate() const { return m_candidate; }
+    const vector_observer<storage_state>& storage_states() const {
+        return m_storage_states;
+    }
 
 private:
-    std::string m_prefix;
+    prefix_t m_prefix;
     vector_observer<storage_state> m_storage_states;
+    candidate_observer m_candidate;
     subscriber m_subscriber;
 };
 
