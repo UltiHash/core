@@ -25,38 +25,30 @@ public:
             m_state = storage_state::NEW;
             store(m_state);
         }
-
         publish();
     }
 
-    ~storage_registry() { deregister(); }
-
-    void deregister() {
+    ~storage_registry() {
         LOG_DEBUG() << std::format("Destroy storage registry for {}",
                                    m_storage_id);
         m_etcd.rm(m_prefix[m_storage_id]);
     }
 
-    void set(const storage_state state) {
-        if (m_state != state) { // NOTE: now we need to skip repeated set call
+    void set(storage_state state) {
+        // NOTE: now we need to skip repeated set call
+        if (m_state != state) {
             LOG_DEBUG() << std::format("Set storage {} state to {}",
                                        m_storage_id,
                                        magic_enum::enum_name(state));
             m_state = state;
             store(m_state);
         }
-    }
-
-    void publish() { m_etcd.put(m_prefix[m_storage_id], serialize(m_state)); }
-
-    void set_others(std::size_t id, storage_state value) {
-        if (m_storage_id == id) {
-            throw std::runtime_error("Cannot put storage state to itself");
-        }
-        m_etcd.put(m_prefix[id], serialize(value));
+        publish();
     }
 
 private:
+    void publish() { m_etcd.put(m_prefix[m_storage_id], serialize(m_state)); }
+
     etcd_manager& m_etcd;
 
     ns::subscriptable_key_t m_prefix;

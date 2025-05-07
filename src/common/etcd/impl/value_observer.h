@@ -19,8 +19,18 @@ public:
                       std::memory_order_release);
     }
 
+    value_observer(std::string expected_key, callback_t callback)
+        : value_observer(expected_key, {}, std::move(callback)) {}
+
     /*
-     * getters
+     * Setter
+     */
+    void set(const T& val) {
+        m_value.store(std::make_shared<T>(val), std::memory_order_release);
+    }
+
+    /*
+     * getter
      */
     std::shared_ptr<T> get() const {
         return m_value.load(std::memory_order_acquire);

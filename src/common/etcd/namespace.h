@@ -187,6 +187,8 @@ struct storage_groups_t : public key_t {
     struct impl_t : public key_t {
         subscriptable_key_t storage_hostports{"storage_hostports", this};
         subscriptable_key_t storage_states{"storage_states", this};
+        subscriptable_key_t storage_assignment_triggers{
+            "storage_assignment_triggers", this};
         key_t group_initialized{"group_initialized", this};
         key_t group_state{"group_state", this};
         key_t leader{"leader", this};

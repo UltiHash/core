@@ -41,22 +41,6 @@ protected:
     etcd_manager m_etcd;
 };
 
-BOOST_FIXTURE_TEST_SUITE(a_group_state_manager, basic_fixture)
-
-BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
-    const auto storage_id = 0ul;
-    etcd_manager local_etcd;
-    temp_directory dir;
-    service_config service_cfg{.working_dir = dir.path()};
-    auto reg = storage_registry(local_etcd, m_group_cfg.id, storage_id,
-                                service_cfg.working_dir);
-
-    group_state_manager sm(m_ioc, local_etcd, m_group_cfg, storage_id,
-                           m_gdv_cfg, reg);
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
 BOOST_FIXTURE_TEST_SUITE(a_maintainer, basic_fixture)
 
 BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
@@ -167,9 +151,8 @@ protected:
             std::lock_guard<std::mutex> lock(cv_mutex);
             group_state_updated = true;
             cv.notify_one();
-            // std::cerr << "Group state updated: " <<
-            // magic_enum::enum_name(state)
-            //           << std::endl;
+            std::cerr << "Group state updated: " << magic_enum::enum_name(state)
+                      << std::endl;
         }};
     vector_observer<storage_state> m_storage_states_observer{
         ns::root.storage_groups[m_group_cfg.id].storage_states,

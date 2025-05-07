@@ -15,6 +15,25 @@
 
 namespace uh::cluster::storage {
 
+class group_state_manager {
+public:
+    group_state_manager(etcd_manager& etcd, std::size_t group_id)
+        : m_etcd{etcd},
+          m_key{get_prefix(group_id).group_state},
+          m_group_state{group_state::UNDETERMINED} {}
+
+    void set(group_state state) {
+        m_group_state = state;
+        m_etcd.put(m_key, serialize(state));
+    }
+    group_state get() { return m_group_state; }
+
+private:
+    etcd_manager& m_etcd;
+    std::string m_key;
+    group_state m_group_state;
+};
+
 /*
  * Group-wise subscriber
  */

@@ -22,11 +22,23 @@ public:
         }
     }
 
+    vector_observer(std::string expected_parent_key, std::size_t num_members,
+                    callback_t callback)
+        : vector_observer(expected_parent_key, num_members, {},
+                          std::move(callback)) {}
+
+    /*
+     * Setter
+     */
+    void set(std::size_t id, const T& val) {
+        m_values[id].store(std::make_shared<T>(val), std::memory_order_release);
+    }
+
     /*
      * getters
      */
-    auto get(std::size_t storage_id) const {
-        return m_values[storage_id].load(std::memory_order_acquire);
+    auto get(std::size_t id) const {
+        return m_values[id].load(std::memory_order_acquire);
     }
 
     std::vector<std::shared_ptr<T>> get() const {
