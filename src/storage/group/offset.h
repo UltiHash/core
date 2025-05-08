@@ -8,54 +8,45 @@
 
 namespace uh::cluster::storage {
 
-/*
- * Storage-wise publisher
- */
-class offset_publisher {
+class offset_manager {
 public:
-    offset_publisher(etcd_manager& etcd, std::size_t group_id,
-                     std::size_t storage_id)
+    using type_t = long;
+
+    using callback_t = subscriber::callback_t;
+    offset_manager(etcd_manager& etcd, std::size_t group_id,
+                   std::size_t num_storages, std::size_t storage_id)
         : m_etcd{etcd},
           m_prefix{get_storage_offset_prefix(group_id)},
-          m_storage_id{storage_id} {}
+          m_storage_id{storage_id},
+          future{promise.get_future()},
+          m_offset_candidates{m_prefix, num_storages, -1},
+          m_subscriber{"offset_manager",
+                       etcd,
+                       m_prefix,
+                       {m_offset_candidates},
+                       [this]() { this->callback(); }} {}
 
-    ~offset_publisher() { m_etcd.rm(m_prefix); }
+    ~offset_manager() { m_etcd.rm(m_prefix); }
 
-    void put(std::size_t val) {
-        m_etcd.put(m_prefix[m_storage_id], serialize(val));
+    static void put(etcd_manager& etcd, std::size_t group_id,
+                    std::size_t storage_id, type_t val) {
+        etcd.put(get_storage_offset_prefix(group_id)[storage_id],
+                 serialize(val));
     }
 
-private:
-    etcd_manager& m_etcd;
-    offset_prefix_t m_prefix;
-    std::size_t m_storage_id;
-};
-
-/*
- * Group-wise subscriber
- */
-class offset_subscriber {
-public:
-    using callback_t = subscriber::callback_t;
-    offset_subscriber(etcd_manager& etcd, std::size_t group_id,
-                      std::size_t num_storages)
-        : m_prefix{get_storage_offset_prefix(group_id)},
-          future{promise.get_future()},
-          m_offsets{m_prefix.storage_hostports, num_storages, -1},
-          m_subscriber{
-              "offset_subscriber", etcd, m_prefix, {m_offsets}, [this]() {
-                  this->callback();
-              }} {}
-    auto get() { return m_offsets.get(); };
-
-    auto wait_and_get(std::chrono::seconds timeout = 5s) {
+    auto summarize_offsets(std::chrono::seconds timeout = 5s) {
         future.wait_for(timeout);
-        return get();
+        auto candidates = m_offset_candidates.get();
+        auto max_offset = std::ranges::max_element(
+            candidates,
+            []<typename T>(const T& a, const T& b) { return *a < *b; });
+
+        return (max_offset != candidates.end() ? **max_offset : 0);
     }
 
 private:
     void callback() {
-        auto offsets = m_offsets.get();
+        auto offsets = m_offset_candidates.get();
         auto all_set = std::ranges::all_of(
             offsets, [](const auto& offset) { return *offset != -1; });
         if (all_set) {
@@ -63,10 +54,12 @@ private:
         }
     }
 
-    prefix_t m_prefix;
+    etcd_manager& m_etcd;
+    offset_prefix_t m_prefix;
+    std::size_t m_storage_id;
     std::promise<void> promise;
     std::future<void> future;
-    vector_observer<int> m_offsets;
+    vector_observer<type_t> m_offset_candidates;
     subscriber m_subscriber;
 };
 
