@@ -42,8 +42,8 @@ public:
                                        magic_enum::enum_name(state));
             m_state = state;
             store(m_state);
+            publish();
         }
-        publish();
     }
 
 private:
