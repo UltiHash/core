@@ -1,15 +1,15 @@
 #include "storage/group/internals.h"
 #include <boost/test/tools/old/interface.hpp>
 #include <thread>
-#define BOOST_TEST_MODULE "storage_registry tests"
+#define BOOST_TEST_MODULE "storage_state_manager tests"
 
 #include "common/etcd/namespace.h"
 #include "common/etcd/utils.h"
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/test/unit_test.hpp>
-#include <common/etcd/registry/storage_registry.h>
 #include <common/service_interfaces/hostport.h>
 #include <common/utils/strings.h>
+#include <storage/group/storage_state_manager.h>
 #include <util/temp_directory.h>
 
 // ------------- Tests Suites Follow --------------
@@ -72,11 +72,11 @@ protected:
                             {m_storage_states_observer}};
 };
 
-BOOST_FIXTURE_TEST_SUITE(a_storage_registry, fixture_with_subscriber)
+BOOST_FIXTURE_TEST_SUITE(a_storage_state_manager, fixture_with_subscriber)
 
 BOOST_AUTO_TEST_CASE(registers_current_storage_state_as_new) {
-    auto sut =
-        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    auto sut = storage_state_manager(m_etcd, m_group_id, m_service_id,
+                                     m_tmp_dir.path());
 
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -87,8 +87,8 @@ BOOST_AUTO_TEST_CASE(registers_current_storage_state_as_new) {
 }
 
 BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
-    auto sut =
-        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    auto sut = storage_state_manager(m_etcd, m_group_id, m_service_id,
+                                     m_tmp_dir.path());
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
 }
 
 BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
-    auto sut = std::make_optional<storage_registry>(
+    auto sut = std::make_optional<storage_state_manager>(
         m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
 }
 
 BOOST_AUTO_TEST_CASE(restores_previous_state) {
-    auto sut = std::make_optional<storage_registry>(
+    auto sut = std::make_optional<storage_state_manager>(
         m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -139,8 +139,8 @@ BOOST_AUTO_TEST_CASE(restores_previous_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    auto sut_2 =
-        storage_registry(m_etcd, m_group_id, m_service_id, m_tmp_dir.path());
+    auto sut_2 = storage_state_manager(m_etcd, m_group_id, m_service_id,
+                                       m_tmp_dir.path());
 
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");

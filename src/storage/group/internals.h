@@ -3,12 +3,12 @@
 #include "impl/prefix.h"
 
 #include <common/etcd/namespace.h>
-#include <common/etcd/registry/storage_registry.h>
 #include <common/etcd/service.h>
 #include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/utils/strings.h>
 #include <storage/group/state.h>
+#include <storage/group/storage_state_manager.h>
 
 namespace uh::cluster::storage {
 
@@ -63,8 +63,8 @@ public:
                       (candidate_observer::id_t)storage_id,
                       std::move(election_callback)},
           m_storage_states{m_prefix.storage_states, num_storages},
-          m_storage_registry{etcd, group_id, storage_id,
-                             service_cfg.working_dir},
+          m_storage_state_manager{etcd, group_id, storage_id,
+                                  service_cfg.working_dir},
 
           m_subscriber{"internals_subscriber",
                        etcd,
@@ -81,7 +81,9 @@ public:
     vector_observer<storage_state>& storage_states() {
         return m_storage_states;
     }
-    storage_registry& storage_state_manager() { return m_storage_registry; }
+    storage_state_manager& storage_state_interface() {
+        return m_storage_state_manager;
+    }
 
 private:
     prefix_t m_prefix;
@@ -91,8 +93,8 @@ private:
     vector_observer<storage_state> m_storage_states;
     // NOTE: Order is important! The storage state should be destroyed before
     // the leader key, which is handled by the candidate_observer.
-    storage_registry m_storage_registry; // It removes storage state on it's
-                                         // destructor
+    storage_state_manager m_storage_state_manager; // It removes storage state
+                                                   // on it's destructor
     subscriber m_subscriber;
 };
 
