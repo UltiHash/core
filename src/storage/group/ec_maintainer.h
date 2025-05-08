@@ -83,8 +83,6 @@ public:
                                                    true);
         }
 
-        // TODO: clear storage_assignment_triggers for DOWN storages
-
         auto state = m_group_state_manager.get();
         auto new_state = state;
 
@@ -170,7 +168,6 @@ private:
 
     std::size_t summarize_offsets() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        // TODO: use reader instead of subscriber
         auto reader =
             offset_reader(m_etcd, m_group_config.id, m_group_config.storages);
         auto offsets = reader.get();
