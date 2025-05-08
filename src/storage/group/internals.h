@@ -84,11 +84,12 @@ private:
     prefix_t m_prefix;
     value_observer<bool> m_group_initialized;
     vector_observer<bool> m_storage_assignment_triggers;
-    candidate_observer m_candidate;
+    candidate_observer m_candidate; // It removes leader key on it's destructor
     vector_observer<storage_state> m_storage_states;
     // NOTE: Order is important! The storage state should be destroyed before
     // the leader key, which is handled by the candidate_observer.
-    storage_registry m_storage_registry;
+    storage_registry m_storage_registry; // It removes storage state on it's
+                                         // destructor
     subscriber m_subscriber;
 };
 
