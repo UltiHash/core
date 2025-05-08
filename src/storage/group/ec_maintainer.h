@@ -167,10 +167,9 @@ private:
     }
 
     std::size_t summarize_offsets() {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        auto reader =
-            offset_reader(m_etcd, m_group_config.id, m_group_config.storages);
-        auto offsets = reader.get();
+        auto subscriber = offset_subscriber(m_etcd, m_group_config.id,
+                                            m_group_config.storages);
+        auto offsets = subscriber.wait_and_get(OFFSET_GATHERING_TIMEOUT);
 
         auto max_offset = std::ranges::max_element(
             offsets,

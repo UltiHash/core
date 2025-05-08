@@ -34,24 +34,40 @@ private:
 /*
  * Group-wise subscriber
  */
-class offset_reader {
+class offset_subscriber {
 public:
     using callback_t = subscriber::callback_t;
-    offset_reader(etcd_manager& etcd, std::size_t group_id,
-                  std::size_t num_storages, callback_t callback = nullptr)
+    offset_subscriber(etcd_manager& etcd, std::size_t group_id,
+                      std::size_t num_storages)
         : m_prefix{get_storage_offset_prefix(group_id)},
-          m_offsets{m_prefix.storage_hostports, num_storages},
-          m_reader{"offset_reader",
-                   etcd,
-                   m_prefix,
-                   {m_offsets},
-                   std::move(callback)} {}
+          future{promise.get_future()},
+          m_offsets{m_prefix.storage_hostports, num_storages, -1},
+          m_subscriber{
+              "offset_subscriber", etcd, m_prefix, {m_offsets}, [this]() {
+                  this->callback();
+              }} {}
     auto get() { return m_offsets.get(); };
 
+    auto wait_and_get(std::chrono::seconds timeout = 5s) {
+        future.wait_for(timeout);
+        return get();
+    }
+
 private:
+    void callback() {
+        auto offsets = m_offsets.get();
+        auto all_set = std::ranges::all_of(
+            offsets, [](const auto& offset) { return *offset != -1; });
+        if (all_set) {
+            promise.set_value();
+        }
+    }
+
     prefix_t m_prefix;
-    vector_observer<std::size_t> m_offsets;
-    reader m_reader;
+    std::promise<void> promise;
+    std::future<void> future;
+    vector_observer<int> m_offsets;
+    subscriber m_subscriber;
 };
 
 } // namespace uh::cluster::storage
