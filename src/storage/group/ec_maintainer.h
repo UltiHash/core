@@ -15,10 +15,12 @@ public:
     ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
                   const group_config& group_cfg, std::size_t storage_id,
                   const service_config& service_cfg,
-                  const global_data_view_config& gdv_cfg)
+                  const global_data_view_config& gdv_cfg, offset_t offset)
         : m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
+
+          m_offset{offset},
 
           m_group_state_manager{etcd, group_cfg.id},
 
@@ -31,12 +33,9 @@ public:
                        [this]() { handler(); }} {}
 
     void election_callback(bool is_leader) {
-        // TODO: Get offset from local storage, like below:
-        // offset_manager::type_t current_offset = local_storage.get_offset();
-        offset_manager::type_t current_offset = 0;
 
         offset_manager::put(m_etcd, m_group_config.id, m_storage_id,
-                            current_offset);
+                            get_offset());
 
         if (is_leader) {
             LOG_DEBUG() << std::format("[group {}, storage {}] won election",
@@ -46,22 +45,17 @@ public:
                 offset_manager(m_etcd, m_group_config.id,
                                m_group_config.storages, m_storage_id);
             auto offset = manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
-            m_offset.store(offset, std::memory_order_release);
+            set_offset(offset);
 
             m_subscriber.candidate().proclaim();
         }
     }
 
-    /*
-     * It needs to be called on allocation call
-     */
-    void put_offset(std::size_t offset) {
+    void set_offset(std::size_t offset) {
         m_offset.store(offset, std::memory_order_release);
     }
 
-    void get_offset(std::size_t offset) {
-        m_offset.laod(offset, std::memory_order_acquire);
-    }
+    offset_t get_offset() { return m_offset.load(std::memory_order_acquire); }
 
     void manage_state() {
         auto group_initialized = m_subscriber.group_initialized().get();
@@ -188,7 +182,7 @@ private:
     const group_config& m_group_config;
     std::size_t m_storage_id;
 
-    std::atomic<offset_manager::type_t> m_offset;
+    std::atomic<offset_t> m_offset;
 
     group_state_manager m_group_state_manager;
 

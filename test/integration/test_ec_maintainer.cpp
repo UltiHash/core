@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     service_config service_cfg{.working_dir = dir.path()};
 
     ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg);
+                             service_cfg, m_gdv_cfg, 0 /*offset*/);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -66,7 +66,7 @@ public:
 
         auto maintainer = std::make_optional<ec_maintainer>(
             m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
-            m_gdv_cfg);
+            m_gdv_cfg, 0 /*offset*/);
 
         while (!stoken.stop_requested()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));

@@ -8,6 +8,8 @@
 
 namespace uh::cluster::storage {
 
+using offset_t = long;
+
 class offset_manager {
 public:
     using type_t = long;
@@ -29,7 +31,7 @@ public:
     ~offset_manager() { m_etcd.rm(m_prefix); }
 
     static void put(etcd_manager& etcd, std::size_t group_id,
-                    std::size_t storage_id, type_t val) {
+                    std::size_t storage_id, offset_t val) {
         etcd.put(get_storage_offset_prefix(group_id)[storage_id],
                  serialize(val));
     }
@@ -59,7 +61,7 @@ private:
     std::size_t m_storage_id;
     std::promise<void> promise;
     std::future<void> future;
-    vector_observer<type_t> m_offset_candidates;
+    vector_observer<offset_t> m_offset_candidates;
     subscriber m_subscriber;
 };
 
