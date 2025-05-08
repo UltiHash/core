@@ -12,7 +12,10 @@
 
 namespace uh::cluster::storage {
 
-struct etcd_group_initialized {
+/*
+ * etcd key interfaces, which doesn't need to remove key on destruction
+ */
+struct group_initialized_manager {
     static void put_persistant(etcd_manager& etcd, std::size_t group_id,
                                bool value) {
         etcd.put_persistant(get_prefix(group_id).group_initialized,
@@ -25,7 +28,7 @@ struct etcd_group_initialized {
     };
 };
 
-struct etcd_storage_assignment_triggers {
+struct storage_assignment_triggers_manager {
     static void put(etcd_manager& etcd, std::size_t group_id,
                     std::size_t storage_id, bool value) {
         etcd.put(get_prefix(group_id).storage_assignment_triggers[storage_id],

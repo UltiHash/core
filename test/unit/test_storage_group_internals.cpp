@@ -28,13 +28,13 @@ protected:
 BOOST_FIXTURE_TEST_SUITE(a_storage_group_state, fixture)
 
 BOOST_AUTO_TEST_CASE(reads_false_by_default) {
-    BOOST_TEST(etcd_group_initialized::get(etcd, 11) == false);
+    BOOST_TEST(group_initialized_manager::get(etcd, 11) == false);
 }
 
 BOOST_AUTO_TEST_CASE(is_created_and_well_detected) {
-    etcd_group_initialized::put_persistant(etcd, 11, true);
+    group_initialized_manager::put_persistant(etcd, 11, true);
 
-    BOOST_TEST(etcd_group_initialized::get(etcd, 11) == true);
+    BOOST_TEST(group_initialized_manager::get(etcd, 11) == true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

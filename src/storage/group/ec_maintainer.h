@@ -65,11 +65,11 @@ public:
                         m_subscriber.storage_state_manager().put(
                             storage_state::ASSIGNED);
                     } else {
-                        etcd_storage_assignment_triggers::put(
+                        storage_assignment_triggers_manager::put(
                             m_etcd, m_group_config.id, i, true);
                     }
                 } else {
-                    etcd_storage_assignment_triggers::put(
+                    storage_assignment_triggers_manager::put(
                         m_etcd, m_group_config.id, m_storage_id, false);
                 }
             }
@@ -79,8 +79,8 @@ public:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] Group is now initialized",
                 m_group_config.id, m_storage_id);
-            etcd_group_initialized::put_persistant(m_etcd, m_group_config.id,
-                                                   true);
+            group_initialized_manager::put_persistant(m_etcd, m_group_config.id,
+                                                      true);
         }
 
         auto state = m_group_state_manager.get();
