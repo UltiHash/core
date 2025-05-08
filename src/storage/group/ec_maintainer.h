@@ -71,6 +71,8 @@ public:
                     }
                     m_subscriber.storage_states().set(i,
                                                       storage_state::ASSIGNED);
+                } else if (*storage_states[i] == storage_state::ASSIGNED) {
+                    m_subscriber.storage_assignment_triggers().set(i, false);
                 }
             }
             if (stats.assigned_count != m_group_config.storages)
@@ -167,8 +169,6 @@ private:
                     storage_state::ASSIGNED);
                 etcd_storage_assignment_triggers::put(m_etcd, m_group_config.id,
                                                       m_storage_id, false);
-                m_subscriber.storage_assignment_triggers().set(m_storage_id,
-                                                               false);
             }
         }
     }
