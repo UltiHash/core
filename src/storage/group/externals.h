@@ -22,7 +22,7 @@ public:
           m_key{get_prefix(group_id).group_state},
           m_group_state{group_state::UNDETERMINED} {}
 
-    void set(group_state state) {
+    void put(group_state state) {
         m_group_state = state;
         m_etcd.put(m_key, serialize(state));
     }

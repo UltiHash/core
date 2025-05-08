@@ -34,7 +34,7 @@ public:
         m_etcd.rm(m_prefix[m_storage_id]);
     }
 
-    void set(storage_state state) {
+    void put(storage_state state) {
         // NOTE: now we need to skip repeated set call
         if (m_state != state) {
             LOG_DEBUG() << std::format("Set storage {} state to {}",

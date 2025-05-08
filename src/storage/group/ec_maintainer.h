@@ -62,7 +62,7 @@ public:
             for (auto i = 0ul; i < storage_states.size(); ++i) {
                 if (*storage_states[i] == storage_state::NEW) {
                     if (i == m_storage_id) {
-                        m_subscriber.storage_state_manager().set(
+                        m_subscriber.storage_state_manager().put(
                             storage_state::ASSIGNED);
                     } else {
                         etcd_storage_assignment_triggers::put(
@@ -114,7 +114,7 @@ public:
         }
 
         if (new_state != state) {
-            m_group_state_manager.set(new_state);
+            m_group_state_manager.put(new_state);
 
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] assigned_count {}, has_down {}",
@@ -162,7 +162,7 @@ private:
             auto trigger =
                 m_subscriber.storage_assignment_triggers().get(m_storage_id);
             if (*trigger) {
-                m_subscriber.storage_state_manager().set(
+                m_subscriber.storage_state_manager().put(
                     storage_state::ASSIGNED);
             }
         }
