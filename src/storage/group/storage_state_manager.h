@@ -9,12 +9,12 @@
 
 namespace uh::cluster::storage {
 
-class storage_registry {
+class storage_state_manager {
 
 public:
-    storage_registry(etcd_manager& etcd, std::size_t group_id,
-                     std::size_t storage_id,
-                     const std::filesystem::path& working_dir)
+    storage_state_manager(etcd_manager& etcd, std::size_t group_id,
+                          std::size_t storage_id,
+                          const std::filesystem::path& working_dir)
         : m_etcd{etcd},
           m_prefix{ns::root.storage_groups[group_id].storage_states},
           m_storage_id{storage_id},
@@ -28,8 +28,8 @@ public:
         publish();
     }
 
-    ~storage_registry() {
-        LOG_DEBUG() << std::format("Destroy storage registry for {}",
+    ~storage_state_manager() {
+        LOG_DEBUG() << std::format("Remove storage state on storage {}",
                                    m_storage_id);
         m_etcd.rm(m_prefix[m_storage_id]);
     }
@@ -37,7 +37,7 @@ public:
     void put(storage_state state) {
         // NOTE: now we need to skip repeated set call
         if (m_state != state) {
-            LOG_DEBUG() << std::format("Set storage {} state to {}",
+            LOG_DEBUG() << std::format("Set storage state of storage {} to {}",
                                        m_storage_id,
                                        magic_enum::enum_name(state));
             m_state = state;
