@@ -68,7 +68,7 @@ public:
                         etcd_storage_assignment_triggers::put(
                             m_etcd, m_group_config.id, i, true);
                     }
-                } else if (*storage_states[i] == storage_state::ASSIGNED) {
+                } else {
                     etcd_storage_assignment_triggers::put(
                         m_etcd, m_group_config.id, m_storage_id, false);
                 }
