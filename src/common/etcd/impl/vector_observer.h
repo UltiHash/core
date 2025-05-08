@@ -28,13 +28,6 @@ public:
                           std::move(callback)) {}
 
     /*
-     * Setter
-     */
-    void set(std::size_t id, const T& val) {
-        m_values[id].store(std::make_shared<T>(val), std::memory_order_release);
-    }
-
-    /*
      * getters
      */
     auto get(std::size_t id) const {

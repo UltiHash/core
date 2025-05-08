@@ -23,13 +23,6 @@ public:
         : value_observer(expected_key, {}, std::move(callback)) {}
 
     /*
-     * Setter
-     */
-    void set(const T& val) {
-        m_value.store(std::make_shared<T>(val), std::memory_order_release);
-    }
-
-    /*
      * getter
      */
     std::shared_ptr<T> get() const {

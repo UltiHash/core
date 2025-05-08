@@ -67,12 +67,10 @@ public:
                     } else {
                         etcd_storage_assignment_triggers::put(
                             m_etcd, m_group_config.id, i, true);
-                        m_subscriber.storage_assignment_triggers().set(i, true);
                     }
-                    m_subscriber.storage_states().set(i,
-                                                      storage_state::ASSIGNED);
                 } else if (*storage_states[i] == storage_state::ASSIGNED) {
-                    m_subscriber.storage_assignment_triggers().set(i, false);
+                    etcd_storage_assignment_triggers::put(
+                        m_etcd, m_group_config.id, m_storage_id, false);
                 }
             }
             if (stats.assigned_count != m_group_config.storages)
@@ -83,7 +81,6 @@ public:
                 m_group_config.id, m_storage_id);
             etcd_group_initialized::put_persistant(m_etcd, m_group_config.id,
                                                    true);
-            m_subscriber.group_initialized().set(true);
         }
 
         // TODO: clear storage_assignment_triggers for DOWN storages
@@ -167,8 +164,6 @@ private:
             if (*trigger) {
                 m_subscriber.storage_state_manager().set(
                     storage_state::ASSIGNED);
-                etcd_storage_assignment_triggers::put(m_etcd, m_group_config.id,
-                                                      m_storage_id, false);
             }
         }
     }
