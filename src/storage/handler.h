@@ -9,7 +9,7 @@ namespace uh::cluster::storage {
 
 class handler : public protocol_handler {
 public:
-    explicit handler(local_storage& storage, storage_registry& registry);
+    explicit handler(local_storage& storage);
 
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
@@ -32,7 +32,6 @@ private:
     coro<void> handle_allocate(messenger& m, const messenger::header&);
 
     local_storage& m_storage;
-    storage_registry& m_registry;
 };
 
 } // namespace uh::cluster::storage

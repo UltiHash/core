@@ -66,8 +66,8 @@ BOOST_AUTO_TEST_CASE(gets_leadership_when_no_other_candidates) {
     // 2 promises, for preemption and proclamation
     setup_promises_and_subscriber(2, group_id, num_storages);
 
-    auto c1 = candidate(m_etcd, ns::root.storage_groups[group_id].leader,
-                        serialize(storage_id));
+    auto c1 =
+        candidate(m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
 
     wait_for_callbacks();
 
@@ -81,8 +81,7 @@ BOOST_AUTO_TEST_CASE(loose_leadership_when_it_goes_down) {
     setup_promises_and_subscriber(3, group_id, num_storages);
 
     auto c1 = std::make_optional<candidate>(
-        m_etcd, ns::root.storage_groups[group_id].leader,
-        serialize(storage_id));
+        m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
 
     c1.reset();
 
@@ -99,10 +98,10 @@ BOOST_AUTO_TEST_CASE(gets_leadership_when_previous_leader_goes_down) {
     setup_promises_and_subscriber(5, group_id, num_storages);
 
     auto c1 = std::make_optional<candidate>(
-        m_etcd, ns::root.storage_groups[group_id].leader, serialize(1));
+        m_etcd, ns::root.storage_groups[group_id].leader, 1);
 
-    auto c2 = candidate(m_etcd, ns::root.storage_groups[group_id].leader,
-                        serialize(storage_id));
+    auto c2 =
+        candidate(m_etcd, ns::root.storage_groups[group_id].leader, storage_id);
 
     c1.reset();
 

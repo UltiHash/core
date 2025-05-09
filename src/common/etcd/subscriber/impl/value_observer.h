@@ -8,7 +8,7 @@ namespace uh::cluster {
 
 template <typename T> class value_observer : public subscriber_observer {
 public:
-    using callback_t = std::function<void(T&)>;
+    using callback_t = std::function<void(T& value)>;
     value_observer(std::string expected_key, T default_value = {},
                    callback_t callback = nullptr)
         : m_expected_key{std::move(expected_key)},

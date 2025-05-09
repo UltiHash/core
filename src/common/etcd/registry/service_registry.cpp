@@ -17,6 +17,7 @@ service_registry::service_registry(etcd_manager& etcd, const std::string& key)
 service_registry::~service_registry() { m_etcd.rm(m_key); }
 
 void service_registry::register_service(const server_config& config) {
+    // TODO: move it into the constructor
     m_etcd.put(m_key, serialize(hostport(get_host(), config.port)));
 }
 

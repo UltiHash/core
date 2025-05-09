@@ -10,9 +10,8 @@
 
 namespace uh::cluster::storage {
 
-handler::handler(local_storage& storage, storage_registry& registry)
-    : m_storage(storage),
-      m_registry(registry) {}
+handler::handler(local_storage& storage)
+    : m_storage(storage) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
