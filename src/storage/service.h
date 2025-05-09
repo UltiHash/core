@@ -31,7 +31,7 @@ public:
           m_group_config{group_config::create(
               m_etcd.get(ns::root.storage_groups.group_configs[m_group_id]))},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
-                                                    sc.m_data_store_roots)),
+                                                    sc.working_directory)),
 
           m_service_registry(m_etcd, ns::root.storage_groups[m_group_id]
                                          .storage_hostports[m_storage_id]),
