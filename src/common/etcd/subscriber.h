@@ -24,15 +24,7 @@ public:
 
         m_wg = etcd.watch(
             key,
-            [this](etcd_manager::response resp) {
-                try {
-                    auto change_detected = m_reader.on_watch(resp);
-                    if (change_detected)
-                        m_reader.run_callback();
-                } catch (const std::exception& e) {
-                    LOG_WARN() << "Exception on subscriber: " << e.what();
-                }
-            },
+            [this](etcd_manager::response resp) { m_reader.on_watch(resp); },
             m_reader.get_index() + 1);
     }
 

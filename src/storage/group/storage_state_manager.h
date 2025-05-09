@@ -34,16 +34,15 @@ public:
         m_etcd.rm(m_prefix[m_storage_id]);
     }
 
+    storage_state get() const { return m_state; }
+
     void put(storage_state state) {
         // NOTE: now we need to skip repeated set call
-        if (m_state != state) {
-            LOG_DEBUG() << std::format("Set storage state of storage {} to {}",
-                                       m_storage_id,
-                                       magic_enum::enum_name(state));
-            m_state = state;
-            store(m_state);
-            publish();
-        }
+        LOG_DEBUG() << std::format("Set storage state of storage {} to {}",
+                                   m_storage_id, magic_enum::enum_name(state));
+        m_state = state;
+        store(m_state);
+        publish();
     }
 
 private:

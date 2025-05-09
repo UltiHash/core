@@ -47,9 +47,10 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     std::promise<void> p;
     std::future<void> f = p.get_future();
     temp_directory tmp_dir;
-    auto subscriber = internals_subscriber(
-        etcd, group_id, num_storages, storage_id, service_cfg, [](bool) {},
-        [&]() { p.set_value(); });
+    auto prefix = ns::root.storage_groups[group_id].storage_states[storage_id];
+    auto storage_states = vector_observer<storage_state>(prefix, num_storages);
+    auto sub = subscriber("test subscriber", etcd, prefix, {storage_states},
+                          [&]() { p.set_value(); });
 
     if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");

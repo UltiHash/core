@@ -16,10 +16,9 @@ public:
 
     using callback_t = subscriber::callback_t;
     offset_manager(etcd_manager& etcd, std::size_t group_id,
-                   std::size_t num_storages, std::size_t storage_id)
+                   std::size_t num_storages)
         : m_etcd{etcd},
           m_prefix{get_storage_offset_prefix(group_id)},
-          m_storage_id{storage_id},
           future{promise.get_future()},
           m_offset_candidates{m_prefix, num_storages, -1},
           m_subscriber{"offset_manager",
@@ -58,7 +57,6 @@ private:
 
     etcd_manager& m_etcd;
     offset_prefix_t m_prefix;
-    std::size_t m_storage_id;
     std::promise<void> promise;
     std::future<void> future;
     vector_observer<offset_t> m_offset_candidates;

@@ -23,21 +23,9 @@ public:
         : m_name{std::move(name)},
           m_etcd{etcd},
           m_observers{observers},
-          m_callback{std::move(callback)} {
-
-        auto change_detected = false;
-        m_index = m_etcd.ls(
-            key, [this, &change_detected](etcd_manager::response resp) {
-                try {
-                    change_detected = on_watch(resp);
-                } catch (const std::exception& e) {
-                    LOG_WARN() << "Exception on reader: " << e.what();
-                }
-            });
-
-        if (change_detected)
-            run_callback();
-    }
+          m_callback{std::move(callback)},
+          m_index{m_etcd.ls(
+              key, [this](etcd_manager::response resp) { on_watch(resp); })} {}
 
     auto get_index() { return m_index; }
 
@@ -49,25 +37,25 @@ private:
             m_callback();
     }
 
-    bool on_watch(etcd_manager::response resp) {
+    void on_watch(etcd_manager::response resp) {
         try {
-            bool change_detected =
-                std::any_of(m_observers.begin(), m_observers.end(),
-                            [&](auto& o) { return o.get().on_watch(resp); });
+            LOG_INFO() << std::format(
+                "{} has detected {} action on {} with value {}", m_name,
+                resp.action, resp.key, resp.value);
 
-            return change_detected;
+            for (auto& o : m_observers) {
+                o.get().on_watch(resp);
+            }
+            run_callback();
 
         } catch (const std::runtime_error& e) {
             LOG_WARN() << "if you see stoul exception, it might be the case "
                           "deserialize function get's wrong value: "
                        << e.what();
-            return false;
 
         } catch (const std::exception& e) {
             LOG_WARN() << "error updating externals: " << e.what();
-            return false;
         }
-        return false;
     }
 
     std::string m_name;

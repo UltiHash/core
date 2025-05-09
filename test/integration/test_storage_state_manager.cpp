@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(supports_updating_state_to_assigned) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    sut.set(storage_state::ASSIGNED);
+    sut.put(storage_state::ASSIGNED);
 
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(clears_etcd_key_when_destroyed) {
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    sut->set(storage_state::ASSIGNED);
+    sut->put(storage_state::ASSIGNED);
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(restores_previous_state) {
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    sut->set(storage_state::ASSIGNED);
+    sut->put(storage_state::ASSIGNED);
     if (!wait_for_storage_states_key()) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
