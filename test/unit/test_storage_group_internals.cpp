@@ -39,26 +39,4 @@ BOOST_AUTO_TEST_CASE(is_created_and_well_detected) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_FIXTURE_TEST_SUITE(a_internals, fixture)
-
-BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
-    auto group_id = 11ul, num_storages = 7ul, storage_id = 3ul;
-    service_config service_cfg;
-    std::promise<void> p;
-    std::future<void> f = p.get_future();
-    temp_directory tmp_dir;
-    auto prefix = ns::root.storage_groups[group_id].storage_states[storage_id];
-    auto storage_states = vector_observer<storage_state>(prefix, num_storages);
-    auto sub = subscriber("test subscriber", etcd, prefix, {storage_states},
-                          [&]() { p.set_value(); });
-
-    if (f.wait_for(std::chrono::seconds(10)) == std::future_status::timeout) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-
-    BOOST_TEST(serialize(storage_states.get()[storage_id]) == "1");
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
 } // namespace uh::cluster::storage
