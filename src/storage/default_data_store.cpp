@@ -2,6 +2,8 @@
 
 #include <common/telemetry/log.h>
 #include <common/telemetry/metrics.h>
+#include <common/utils/error.h>
+#include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
 #include <set>
@@ -9,6 +11,11 @@
 namespace uh::cluster {
 
 namespace {
+
+struct metadata {
+    std::size_t write_offset = 0ull;
+    std::size_t used_space = 0ull;
+};
 
 std::string base_name(std::size_t number) {
     std::stringstream s;
@@ -60,6 +67,7 @@ default_data_store::default_data_store(data_store_config conf,
       m_filesize(m_conf.max_file_size),
       m_files(load_files(m_root, m_filesize)),
       m_file_count(m_files.size()),
+      m_meta_fd(open_file(working_dir + ".ds_store")),
       m_used_space(fetch_used_space()),
       m_refcounter(
           m_root, m_conf.page_size,
@@ -71,21 +79,21 @@ default_data_store::default_data_store(data_store_config conf,
     }
 
     m_files.reserve(m_conf.max_data_store_size / m_filesize + 1);
+    read_metadata();
 }
 
-std::size_t default_data_store::read(const uint128_t& global_pointer,
+std::size_t default_data_store::read(std::size_t local_pointer,
                                      std::span<char> buffer) {
     std::size_t rv = 0ull;
-    auto pointer = global_pointer;
 
     while (rv < buffer.size()) {
-        auto loc = file_location(pointer_traits::get_pointer(pointer));
+        auto loc = file_location(local_pointer);
         auto count = loc.file.read(loc.offset, buffer.subspan(rv));
         if (count == 0) {
             break;
         }
 
-        pointer += count;
+        local_pointer += count;
         rv += count;
     }
 
@@ -95,6 +103,13 @@ std::size_t default_data_store::read(const uint128_t& global_pointer,
 void default_data_store::sync() {
     std::unique_lock lock(m_mutex);
     m_files.back().sync();
+
+    write_metadata();
+    int md_rv = fsync(m_meta_fd);
+    if (md_rv == -1) {
+        throw_from_errno("metadata file sync failed for " +
+                         (m_root + ".ds_store").string());
+    }
 }
 
 std::size_t default_data_store::fetch_used_space() const {
@@ -104,27 +119,37 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address default_data_store::write(std::span<const char> data,
+address default_data_store::write(const allocation_t allocation,
+                                  std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
-    auto allocation = allocate(data.size(), offsets);
-
+    std::size_t local_pointer = allocation.offset;
+    allocate_files(local_pointer, allocation.size);
+    maintain_refcount(local_pointer, allocation.size, offsets);
     address rv;
 
-    std::size_t data_offs = 0ull;
-    for (const auto& alloc : allocation) {
-        auto count = alloc.l.file.write(alloc.l.offset,
-                                        data.subspan(data_offs, alloc.size));
-
-        if (count != alloc.size) {
-            throw std::runtime_error("could not complete buffer write");
+    std::size_t written = 0ull;
+    while (written < data.size()) {
+        auto loc = file_location(local_pointer);
+        std::size_t file_offset = local_pointer % m_filesize;
+        auto count = loc.file.write(file_offset, data.subspan(written));
+        if (count == 0) {
+            break;
         }
 
-        data_offs += count;
         auto frag = fragment{.pointer = pointer_traits::get_global_pointer(
-                                 alloc.local, m_storage_id, 0),
-                             .size = alloc.size};
+                                 local_pointer, m_storage_id, 0),
+                             .size = count};
+
+        local_pointer += count;
+        written += count;
+
         rv.push(frag);
     }
+    if (written != allocation.size) {
+        throw std::runtime_error("could not complete buffer write");
+    }
+
+    m_used_space += allocation.size;
 
     sync();
     return rv;
@@ -147,6 +172,28 @@ default_data_store::~default_data_store() {
         } catch (const std::exception& e) {
             LOG_WARN() << "error syncing file: " << e.what();
         }
+    }
+
+    if (m_meta_fd != -1) {
+        if (close(m_meta_fd) == -1) {
+            LOG_WARN() << "error closing file descriptor: " << errno_message();
+        }
+    }
+}
+
+void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
+    std::unique_lock lock(m_mutex);
+
+    auto required_file_count = (offset + size) / m_filesize;
+
+    if (required_file_count <= m_file_count) {
+        return;
+    }
+
+    while (m_file_count < required_file_count) {
+        m_files.emplace_back(
+            data_file::create(m_root / base_name(m_files.size()), m_filesize));
+        m_file_count = m_files.size();
     }
 }
 
@@ -178,51 +225,24 @@ size_t default_data_store::get_available_space() const noexcept {
     return capacity;
 }
 
-std::list<default_data_store::alloc_t>
-default_data_store::allocate(size_t size,
-                             const std::vector<std::size_t>& offsets) {
+allocation_t default_data_store::allocate(size_t size) {
 
     std::unique_lock lock(m_mutex);
 
-    if (m_conf.max_data_store_size - m_files.size() * m_filesize +
-            m_files.back().free() <
-        size) {
+    if (m_conf.max_data_store_size - m_write_offset.load() < size) {
         throw std::runtime_error("datastore cannot store additional " +
                                  std::to_string(size) + " bytes");
     }
 
-    std::list<alloc_t> rv;
-    std::size_t allocated = 0ull;
+    std::size_t allocation_offset = m_write_offset.load();
+    m_write_offset += size;
 
-    while (size > allocated) {
-        auto& file = m_files.back();
+    return {.offset = allocation_offset, .size = size};
+}
 
-        std::size_t bytes = std::min(file.free(), size - allocated);
-        std::size_t offset = file.alloc(bytes);
-
-        rv.push_back(
-            alloc_t{.l = {.file = file, .offset = offset},
-                    .size = bytes,
-                    .local = (m_files.size() - 1) * m_filesize + offset});
-
-        allocated += bytes;
-
-        if (file.free() == 0ull) {
-            m_files.back().sync();
-            m_files.emplace_back(data_file::create(
-                m_root / base_name(m_files.size()), m_filesize));
-            m_file_count = m_files.size();
-        }
-    }
-
-    m_used_space += allocated;
-
-    if (rv.empty()) {
-        return rv;
-    }
-
-    std::size_t local_pointer = rv.front().local;
-
+void default_data_store::maintain_refcount(
+    const std::size_t local_pointer, const std::size_t size,
+    const std::vector<std::size_t>& offsets) {
     std::deque<reference_counter::refcount_cmd> refcount_commands;
 
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
@@ -234,8 +254,6 @@ default_data_store::allocate(size_t size,
 
     update_last_page_ref(refcount_commands);
     m_refcounter.execute(refcount_commands);
-
-    return rv;
 }
 
 void default_data_store::update_last_page_ref(
@@ -265,13 +283,8 @@ void default_data_store::update_last_page_ref(
 
 std::size_t default_data_store::internal_delete(std::size_t offset,
                                                 std::size_t size) {
-
-    std::size_t file_count = m_file_count;
-    std::size_t curr_offs =
-        file_count * m_filesize - m_files[file_count - 1].free();
-
     std::size_t last_page_offset =
-        (curr_offs / m_conf.page_size) * m_conf.page_size;
+        (m_used_space / m_conf.page_size) * m_conf.page_size;
 
     if (offset >= last_page_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
@@ -295,6 +308,26 @@ std::size_t default_data_store::internal_delete(std::size_t offset,
 
     m_used_space -= rv;
     return rv;
+}
+
+void default_data_store::read_metadata() {
+    metadata md;
+
+    safe_pread(m_meta_fd,
+               std::span<char>(reinterpret_cast<char*>(&md), sizeof(metadata)),
+               0);
+
+    m_write_offset = md.write_offset;
+    m_used_space = md.used_space;
+}
+
+void default_data_store::write_metadata() {
+    metadata md{.write_offset = m_write_offset, .used_space = m_used_space};
+
+    safe_pwrite(m_meta_fd,
+                std::span<const char>(reinterpret_cast<const char*>(&md),
+                                      sizeof(metadata)),
+                0);
 }
 
 } // end namespace uh::cluster

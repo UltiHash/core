@@ -21,7 +21,7 @@ struct dedupe_response {
 };
 
 struct allocation_t {
-    uint128_t offset;
+    std::size_t offset;
     std::size_t size;
 };
 

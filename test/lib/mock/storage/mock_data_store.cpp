@@ -57,7 +57,8 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(std::span<const char> data,
+address mock_data_store::write(const allocation_t allocation,
+                               std::span<const char> data,
                                const std::vector<std::size_t>& offsets) {
 
     if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
@@ -65,25 +66,22 @@ address mock_data_store::write(std::span<const char> data,
         throw std::bad_alloc();
     }
 
-    auto current_offset = m_current_offset.fetch_add(data.size());
-    std::copy(data.begin(), data.end(), m_data.begin() + current_offset);
+    std::copy(data.begin(), data.end(), m_data.begin() + allocation.offset);
+    m_current_offset.fetch_add(data.size());
 
     address data_address;
     data_address.push({.pointer = pointer_traits::get_global_pointer(
-                           current_offset, m_storage_id, m_data_store_id),
+                           allocation.offset, m_storage_id, m_data_store_id),
                        .size = data.size()});
     link(data_address);
     return data_address;
 }
 
-std::size_t mock_data_store::read(const uint128_t& global_pointer,
+std::size_t mock_data_store::read(const std::size_t pointer,
                                   std::span<char> buffer) {
-    const auto pointer = pointer_traits::get_pointer(global_pointer);
     const auto current_offset = m_current_offset.load();
 
-    if (pointer_traits::get_service_id(global_pointer) != m_storage_id or
-        pointer_traits::get_data_store_id(global_pointer) != m_data_store_id or
-        pointer + buffer.size() > current_offset) {
+    if (pointer + buffer.size() > current_offset) {
         LOG_WARN() << "attempted to read data from the out-of-bounds offset="
                    << pointer << ", with current_offset=" << current_offset;
         throw std::out_of_range("pointer is out of range");
@@ -146,6 +144,21 @@ void mock_data_store::clear() {
 }
 
 size_t mock_data_store::id() const noexcept { return m_data_store_id; }
+
+allocation_t mock_data_store::allocate(size_t size) {
+
+    std::unique_lock lock(m_mutex);
+
+    if (m_conf.max_data_store_size - m_current_offset.load() < size) {
+        throw std::runtime_error("datastore cannot store additional " +
+                                 std::to_string(size) + " bytes");
+    }
+
+    std::size_t allocation_offset = m_current_offset.load();
+    m_current_offset += size;
+
+    return {.offset = allocation_offset, .size = size};
+}
 
 mock_data_store::~mock_data_store() {
     {

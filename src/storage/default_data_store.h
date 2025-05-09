@@ -20,16 +20,26 @@ public:
                        uint32_t service_id);
 
     /**
+     * @brief Allocates the specified size of storage space in the data store.
+     * @param size
+     * @return local pointer to the allocated storage space and size of
+     * allocation
+     */
+    allocation_t allocate(size_t size);
+
+    /**
      * Writes data to persistent storage. On completion, the provided data
      * is guaranteed to be written to persistent storage.
      *
      * @affects get_used_space()
      * @affects get_available_space()
      *
-     * @param data
+     * @param allocation: allocation to which data is written
+     * @param data: buffer to be written
+     * @param offsets: offsets of fragments in the buffer
      * @return allocated address
      */
-    address write(std::span<const char> data,
+    address write(const allocation_t allocation, std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
 
     /**
@@ -43,7 +53,7 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(const uint128_t& pointer, std::span<char> buffer);
+    std::size_t read(std::size_t local_pointer, std::span<char> buffer);
 
     /**
      * @brief Creates a reference to one or multiple storage locations.
@@ -93,8 +103,11 @@ private:
 
     void sync();
 
-    std::list<alloc_t> allocate(size_t size,
-                                const std::vector<std::size_t>& offsets);
+    void maintain_refcount(const std::size_t local_pointer,
+                           const std::size_t size,
+                           const std::vector<std::size_t>& offsets);
+
+    void allocate_files(std::size_t offset, std::size_t size);
 
     location file_location(size_t pointer);
 
@@ -105,6 +118,9 @@ private:
 
     size_t internal_delete(std::size_t offset, std::size_t size);
 
+    void read_metadata();
+    void write_metadata();
+
     const uint32_t m_storage_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
@@ -114,7 +130,9 @@ private:
     std::vector<data_file> m_files;
     std::atomic<std::size_t> m_file_count;
 
-    std::atomic<size_t> m_used_space{};
+    int m_meta_fd;
+    std::atomic<std::size_t> m_used_space{};
+    std::atomic<std::size_t> m_write_offset{};
 
     std::optional<std::size_t> m_locked_page = std::nullopt;
     reference_counter m_refcounter;

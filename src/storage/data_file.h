@@ -38,15 +38,6 @@ public:
     std::size_t read(std::size_t offset, std::span<char> buffer);
 
     /**
-     * Reserve `size` bytes of space, returning offset to write to.
-     * If `size > free()` this function will not return an error, however calls
-     * to `write(offset, ...)` may write less bytes than allocated.
-     *
-     * @note this function must not be used from concurrent threads
-     */
-    std::size_t alloc(std::size_t size);
-
-    /**
      * Free `size` bytes of used space at the given `offset`.
      */
     std::size_t release(std::size_t offset, std::size_t size);

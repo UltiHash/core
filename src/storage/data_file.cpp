@@ -19,21 +19,6 @@ struct metadata {
     std::size_t filesize = 0ull;
 };
 
-int open_file(const std::filesystem::path& path) {
-    int fd = ::open(path.c_str(), O_RDWR);
-    if (fd == -1) {
-        throw_from_errno("could not open file " + path.string());
-    }
-
-    return fd;
-}
-
-std::filesystem::path operator+(const std::filesystem::path& p, std::string s) {
-    auto rv = p;
-    rv += s;
-    return rv;
-}
-
 } // namespace
 
 data_file::data_file(const std::filesystem::path& root)
@@ -46,7 +31,6 @@ data_file::data_file(const std::filesystem::path& root)
 data_file::data_file(data_file&& other)
     : m_fd(std::move(other.m_fd)),
       m_meta_fd(std::move(other.m_meta_fd)),
-      m_pointer(other.m_pointer.load()),
       m_used(other.m_used.load()),
       m_filesize(std::move(other.m_filesize)),
       m_path(std::move(other.m_path)) {
@@ -54,7 +38,6 @@ data_file::data_file(data_file&& other)
     other.m_fd = -1;
     other.m_meta_fd = -1;
     other.m_used = 0ull;
-    other.m_pointer = 0ull;
 }
 
 data_file::~data_file() {
@@ -79,10 +62,14 @@ data_file::~data_file() {
 }
 
 std::size_t data_file::write(std::size_t offset, std::span<const char> buffer) {
-
-    return safe_pwrite(
-        m_fd, buffer.subspan(0, std::min(filesize() - offset, buffer.size())),
-        offset);
+    std::size_t size = std::min(m_filesize - offset, buffer.size());
+    m_used += size;
+    std::size_t pointer = m_pointer.load();
+    while (!m_pointer.compare_exchange_strong(
+        pointer, std::max(pointer, offset + size))) {
+        pointer = m_pointer.load();
+    }
+    return safe_pwrite(m_fd, buffer.subspan(0, size), offset);
 }
 
 std::size_t data_file::read(std::size_t offset, std::span<char> buffer) {
@@ -96,17 +83,6 @@ std::size_t data_file::read(std::size_t offset, std::span<char> buffer) {
         offset);
 }
 
-std::size_t data_file::alloc(std::size_t size) {
-
-    std::size_t rv = m_pointer;
-    std::size_t real_size = std::min(size, m_filesize - rv);
-
-    m_pointer += real_size;
-    m_used += real_size;
-
-    return rv;
-}
-
 std::size_t data_file::release(std::size_t offset, std::size_t size) {
 
     std::size_t count = std::min(m_filesize - offset, size);
@@ -115,7 +91,7 @@ std::size_t data_file::release(std::size_t offset, std::size_t size) {
         throw_from_errno("could not free space for " + m_path.string());
     }
 
-    m_used -= count;
+    m_used.fetch_sub(count);
     return count;
 }
 

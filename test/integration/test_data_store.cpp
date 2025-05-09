@@ -90,7 +90,9 @@ BOOST_AUTO_TEST_CASE(write_updates_space) {
     BOOST_CHECK_EQUAL(ds->get_used_space(), 0ull);
     BOOST_CHECK_EQUAL(ds->get_available_space(), MAX_DATA_STORE_SIZE_BYTES);
 
-    ds->write(random_string(1 * MEBI_BYTE), {0});
+    auto data = random_buffer(1 * MEBI_BYTE);
+    auto alloc = ds->allocate(data.size());
+    ds->write(alloc, data.string_view(), {0});
 
     BOOST_CHECK_EQUAL(ds->get_used_space(), 1 * MEBI_BYTE);
     BOOST_CHECK_EQUAL(ds->get_available_space(),
@@ -102,7 +104,8 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
     long failures = 0;
 
     for (auto& data : test_data) {
-        ds->write(data.string_view(), {0});
+        auto alloc = ds->allocate(data.size());
+        ds->write(alloc, data.string_view(), {0});
 
         auto used_size = get_expected_used(data.size());
         BOOST_TEST(ds->get_used_space() == used_size);
@@ -129,11 +132,13 @@ BOOST_AUTO_TEST_CASE(test_read) {
 
     long failures = 0;
     for (auto& data : test_data) {
-        auto address = ds->write(data.string_view(), {0});
+        auto alloc = ds->allocate(data.size());
+        auto address = ds->write(alloc, data.string_view(), {0});
         size_t t_read = 0;
         for (size_t i = 0; i < address.size(); i++) {
             const auto p = address.get(i);
-            auto read_size = ds->read(p.pointer, {buf + t_read, p.size});
+            auto read_size =
+                ds->read(p.pointer.get_low(), {buf + t_read, p.size});
             t_read += read_size;
         }
 
@@ -152,14 +157,16 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     std::vector<address> addresses;
     for (auto& data : test_data) {
-        addresses.emplace_back(ds->write(data.string_view(), {0}));
+        auto alloc = ds->allocate(data.size());
+        addresses.emplace_back(ds->write(alloc, data.string_view(), {0}));
     }
     auto address = addresses[RND_ELEM];
     ds.reset();
 
     ds = make_data_store();
 
-    BOOST_CHECK_THROW(ds->write(throwing_data.string_view(), {0}),
+    auto alloc = ds->allocate(throwing_data.size());
+    BOOST_CHECK_THROW(ds->write(alloc, throwing_data.string_view(), {0}),
                       std::exception);
 
     char buf[MAX_FILE_SIZE_BYTES];
@@ -167,7 +174,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     for (size_t i = 0; i < address.size(); ++i) {
         const auto p = address.get(i);
-        auto read_size = ds->read(p.pointer, {buf + t_read, p.size});
+        auto read_size = ds->read(p.pointer.get_low(), {buf + t_read, p.size});
         t_read += read_size;
     }
 
@@ -190,16 +197,17 @@ BOOST_AUTO_TEST_CASE(stress_test) {
                 auto limit = std::min((thread_id + 1) * thread_io_count,
                                       test_data.size());
                 for (size_t k = thread_id * thread_io_count; k < limit; ++k) {
+                    auto alloc = ds->allocate(test_data[k].size());
                     addresses.emplace_back(
-                        ds->write(test_data[k].string_view(), {0}));
+                        ds->write(alloc, test_data[k].string_view(), {0}));
                 }
                 char buf[MAX_FILE_SIZE_BYTES];
                 for (size_t j = 0; j < addresses.size(); ++j) {
                     size_t read_size = 0ull;
                     for (unsigned id = 0; id < addresses[j].size(); ++id) {
                         auto f = addresses[j].get(id);
-                        read_size +=
-                            ds->read(f.pointer, {buf + read_size, f.size});
+                        read_size += ds->read(f.pointer.get_low(),
+                                              {buf + read_size, f.size});
                     }
 
                     if ((read_size !=
@@ -239,7 +247,8 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
         int failures = 0;
         for (size_t i = 0; i < addr.size(); i++) {
             const auto p = addr.get(i);
-            auto read_size = ds->read(p.pointer, {buf + t_read, p.size});
+            auto read_size =
+                ds->read(p.pointer.get_low(), {buf + t_read, p.size});
             t_read += read_size;
         }
 
@@ -256,7 +265,8 @@ BOOST_AUTO_TEST_CASE(test_async_write) {
 
     std::vector<address> addresses;
     for (auto& data : test_data) {
-        addresses.emplace_back(ds->write(data.string_view(), {0}));
+        auto alloc = ds->allocate(data.size());
+        addresses.emplace_back(ds->write(alloc, data.string_view(), {0}));
         failures += read_address_compare(addresses.back(), data);
     }
 
@@ -275,10 +285,12 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
 
     auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
 
-    auto addr = ds->write(buffer.string_view(), {0});
+    auto alloc = ds->allocate(buffer.size());
+    auto addr = ds->write(alloc, buffer.string_view(), {0});
     BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
 
-    addr = ds->write(buffer.string_view(), {0});
+    auto alloc2 = ds->allocate(buffer.size());
+    addr = ds->write(alloc2, buffer.string_view(), {0});
 
     address illegal_addr;
     illegal_addr.push({0, addr.data_size() / 2});
@@ -296,9 +308,12 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
     auto buffer3 = random_buffer(2 * DEFAULT_PAGE_SIZE);
 
     address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view(), {0});
-    auto buffer2_address = ds->write(buffer2.string_view(), {0});
-    auto buffer3_address = ds->write(buffer3.string_view(), {0});
+    auto alloc1 = ds->allocate(buffer1.size());
+    auto alloc2 = ds->allocate(buffer2.size());
+    auto alloc3 = ds->allocate(buffer3.size());
+    auto buffer1_address = ds->write(alloc1, buffer1.string_view(), {0});
+    auto buffer2_address = ds->write(alloc2, buffer2.string_view(), {0});
+    auto buffer3_address = ds->write(alloc3, buffer3.string_view(), {0});
     full_address.append(buffer1_address);
     full_address.append(buffer2_address);
     full_address.append(buffer3_address);
@@ -311,8 +326,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -333,8 +348,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -358,9 +373,12 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
     auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET);
 
     address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view(), {0});
-    auto buffer2_address = ds->write(buffer2.string_view(), {0});
-    auto buffer3_address = ds->write(buffer3.string_view(), {0});
+    auto alloc1 = ds->allocate(buffer1.size());
+    auto alloc2 = ds->allocate(buffer2.size());
+    auto alloc3 = ds->allocate(buffer3.size());
+    auto buffer1_address = ds->write(alloc1, buffer1.string_view(), {0});
+    auto buffer2_address = ds->write(alloc2, buffer2.string_view(), {0});
+    auto buffer3_address = ds->write(alloc3, buffer3.string_view(), {0});
     full_address.append(buffer1_address);
     full_address.append(buffer2_address);
     full_address.append(buffer3_address);
@@ -373,8 +391,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -395,8 +413,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -427,15 +445,16 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
     auto buffer2 = random_buffer(DEFAULT_PAGE_SIZE / 2);
     auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE);
 
-    auto buffer1_address = ds->write(buffer1.string_view(), {0});
+    auto alloc1 = ds->allocate(buffer1.size());
+    auto buffer1_address = ds->write(alloc1, buffer1.string_view(), {0});
 
     {
         shared_buffer<char> read_buffer(buffer1_address.data_size());
         size_t t_read = 0;
         for (size_t i = 0; i < buffer1_address.size(); ++i) {
             const auto p = buffer1_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -451,8 +470,8 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
         size_t t_read = 0;
         for (size_t i = 0; i < buffer1_address.size(); ++i) {
             const auto p = buffer1_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -461,7 +480,8 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
                                 buffer1.size()) == 0);
     }
 
-    auto buffer2_address = ds->write(buffer2.string_view(), {0});
+    auto alloc2 = ds->allocate(buffer2.size());
+    auto buffer2_address = ds->write(alloc2, buffer2.string_view(), {0});
     address combined_buffer_address;
     combined_buffer_address.append(buffer1_address);
     combined_buffer_address.append(buffer2_address);
@@ -471,8 +491,8 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
         size_t t_read = 0;
         for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
             const auto p = combined_buffer_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -491,8 +511,8 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
         size_t t_read = 0;
         for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
             const auto p = combined_buffer_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -512,8 +532,8 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
         size_t t_read = 0;
         for (size_t i = 0; i < combined_buffer_address.size(); ++i) {
             const auto p = combined_buffer_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -528,8 +548,10 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
     auto buffer2 = random_buffer(2 * DEFAULT_PAGE_SIZE);
 
     address full_address;
-    auto buffer1_address = ds->write(buffer1.string_view(), {0});
-    auto buffer2_address = ds->write(buffer2.string_view(), {0});
+    auto alloc1 = ds->allocate(buffer1.size());
+    auto alloc2 = ds->allocate(buffer2.size());
+    auto buffer1_address = ds->write(alloc1, buffer1.string_view(), {0});
+    auto buffer2_address = ds->write(alloc2, buffer2.string_view(), {0});
     full_address.append(buffer1_address);
     full_address.append(buffer2_address);
     ds.reset();
@@ -541,8 +563,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -562,8 +584,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_multi_file) {
         size_t t_read = 0;
         for (size_t i = 0; i < full_address.size(); ++i) {
             const auto p = full_address.get(i);
-            auto read_size =
-                ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+            auto read_size = ds->read(p.pointer.get_low(),
+                                      {read_buffer.data() + t_read, p.size});
             t_read += read_size;
         }
 
@@ -588,18 +610,20 @@ BOOST_AUTO_TEST_CASE(repeated_write_delete) {
 
     address buffer_address;
     for (std::size_t i = 0; i < 100; i++) {
-        buffer_address = ds->write(buffer.string_view(), {0});
+        auto alloc = ds->allocate(buffer.size());
+        buffer_address = ds->write(alloc, buffer.string_view(), {0});
         ds->unlink(buffer_address);
     }
 
-    buffer_address = ds->write(buffer.string_view(), {0});
+    auto alloc = ds->allocate(buffer.size());
+    buffer_address = ds->write(alloc, buffer.string_view(), {0});
 
     shared_buffer<char> read_buffer(buffer_address.data_size());
     size_t t_read = 0;
     for (size_t i = 0; i < buffer_address.size(); ++i) {
         const auto p = buffer_address.get(i);
-        auto read_size =
-            ds->read(p.pointer, {read_buffer.data() + t_read, p.size});
+        auto read_size = ds->read(p.pointer.get_low(),
+                                  {read_buffer.data() + t_read, p.size});
         t_read += read_size;
     }
 
@@ -613,7 +637,9 @@ BOOST_AUTO_TEST_CASE(deletion_space_reclaim) {
     BOOST_CHECK_EQUAL(ds->get_used_space(), 0ull);
     BOOST_CHECK_EQUAL(ds->get_available_space(), MAX_DATA_STORE_SIZE_BYTES);
 
-    ds->write(random_string(MAX_DATA_STORE_SIZE_BYTES / 4), {0});
+    auto data = random_buffer(MAX_DATA_STORE_SIZE_BYTES / 4);
+    auto alloc = ds->allocate(data.size());
+    ds->write(alloc, data.string_view(), {0});
     BOOST_CHECK_EQUAL(ds->get_used_space(), MAX_DATA_STORE_SIZE_BYTES / 4);
     BOOST_CHECK_EQUAL(ds->get_available_space(),
                       3 * (MAX_DATA_STORE_SIZE_BYTES / 4));

@@ -74,7 +74,7 @@ struct remote_storage : public storage_interface {
         co_await m->send_primitive<size_t>(STORAGE_ALLOCATE_REQ, size);
         const auto message_header = co_await m->recv_header();
         allocation_t allocation;
-        m->register_read_buffer(allocation.offset.ref_data());
+        m->register_read_buffer(allocation.offset);
         m->register_read_buffer(allocation.size);
         co_await m->recv_buffers(message_header);
         co_return allocation;

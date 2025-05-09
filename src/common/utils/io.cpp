@@ -1,5 +1,6 @@
 #include "io.h"
 #include "error.h"
+#include <fcntl.h>
 #include <unistd.h>
 
 namespace uh::cluster {
@@ -30,13 +31,28 @@ std::size_t safe_pwrite(int fd, std::span<const char> buffer,
         auto rc = ::pwrite(fd, buffer.data() + written, buffer.size() - written,
                            offset + written);
         if (rc == -1) {
-            throw_from_errno("pread failed");
+            throw_from_errno("pwrite failed");
         }
 
         written += rc;
     }
 
     return written;
+}
+
+std::filesystem::path operator+(const std::filesystem::path& p, std::string s) {
+    auto rv = p;
+    rv += s;
+    return rv;
+}
+
+int open_file(const std::filesystem::path& path) {
+    int fd = ::open(path.c_str(), O_RDWR);
+    if (fd == -1) {
+        throw_from_errno("could not open file " + path.string());
+    }
+
+    return fd;
 }
 
 } // namespace uh::cluster

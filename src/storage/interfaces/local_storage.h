@@ -20,14 +20,15 @@ struct local_storage : public storage_interface {
 
     coro<address> write(allocation_t allocation, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
-        co_return m_data_store->write(data, offsets);
+        co_return m_data_store->write(allocation, data, offsets);
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
         // TODO: check if service ids in pointer is the same as this service id
         // TODO: add test case that checks for the above mentioned behaviour
         shared_buffer<> buf(size);
-        auto read_size = m_data_store->read(pointer, buf.span());
+        auto read_size = m_data_store->read(
+            pointer_traits::get_pointer(pointer), buf.span());
         buf.resize(read_size);
         co_return buf;
     }
@@ -40,7 +41,7 @@ struct local_storage : public storage_interface {
 
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
-            if (m_data_store->read(frag.pointer,
+            if (m_data_store->read(pointer_traits::get_pointer(frag.pointer),
                                    buffer.subspan(offsets[i], frag.size)) !=
                 frag.size) {
                 throw std::runtime_error(
@@ -90,7 +91,9 @@ struct local_storage : public storage_interface {
         return m_data_store->get_available_space();
     }
 
-    virtual coro<allocation_t> allocate(std::size_t size) override {}
+    coro<allocation_t> allocate(std::size_t size) override {
+        co_return m_data_store->allocate(size);
+    }
 
 private:
     boost::asio::thread_pool m_threads;
