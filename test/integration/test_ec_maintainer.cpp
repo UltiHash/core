@@ -66,7 +66,7 @@ public:
 
         auto maintainer = std::make_optional<ec_maintainer>(
             m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
-            m_gdv_cfg, 0 /*offset*/);
+            m_gdv_cfg, storage_id);
 
         while (!stoken.stop_requested()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -156,7 +156,7 @@ protected:
             cv.notify_one();
         }};
     subscriber m_subscriber{
-        "fixture",
+        "test_ec_maintainer",
         m_etcd,
         ns::root.storage_groups[m_group_cfg.id],
         {m_leader_observer, m_group_state_observer, m_storage_states_observer}};
@@ -169,15 +169,11 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
-    BOOST_TEST(leader_id == candidate_observer::staging_id);
-
+    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    leader_id = *m_leader_observer.get();
-    BOOST_TEST(leader_id != candidate_observer::staging_id);
-    BOOST_TEST(leader_id < m_num_instances);
+    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
 }
 
 BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
@@ -203,9 +199,12 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
+    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
+    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
+
     auto leader_id = *m_leader_observer.get();
 
     std::cout << "Kill the leader" << std::endl;

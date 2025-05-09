@@ -56,8 +56,7 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    BOOST_TEST(serialize(*subscriber.storage_states().get()[storage_id]) ==
-               "1");
+    BOOST_TEST(serialize(storage_states.get()[storage_id]) == "1");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

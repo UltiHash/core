@@ -22,10 +22,10 @@ struct group_initialized_manager {
                             serialize(value));
     }
 
-    // static auto get(etcd_manager& etcd, std::size_t group_id) {
-    //     return deserialize<bool>(
-    //         etcd.get(get_prefix(group_id).group_initialized));
-    // };
+    static auto get(etcd_manager& etcd, std::size_t group_id) {
+        return deserialize<bool>(
+            etcd.get(get_prefix(group_id).group_initialized));
+    };
 };
 
 struct storage_assignment_triggers_manager {
@@ -34,10 +34,10 @@ struct storage_assignment_triggers_manager {
                  serialize(value));
     }
 
-    // static auto get(etcd_manager& etcd, std::size_t group_id, ) {
-    //     return deserialize<bool>(
-    //         etcd.get(get_prefix(group_id).storage_assignment_trigger));
-    // };
+    static auto get(etcd_manager& etcd, std::size_t group_id) {
+        return deserialize<bool>(
+            etcd.get(get_prefix(group_id).storage_assignment_trigger));
+    };
 };
 
 } // namespace uh::cluster::storage

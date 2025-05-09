@@ -39,9 +39,11 @@ private:
 
     void on_watch(etcd_manager::response resp) {
         try {
-            LOG_INFO() << std::format(
-                "{} has detected {} action on {} with value {}", m_name,
-                resp.action, resp.key, resp.value);
+            if (!m_name.empty()) {
+                LOG_INFO() << std::format(
+                    "{} has detected {} action on {} with value {}", m_name,
+                    resp.action, resp.key, resp.value);
+            }
 
             for (auto& o : m_observers) {
                 o.get().on_watch(resp);
