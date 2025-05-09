@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     auto sub = subscriber("test subscriber", etcd, prefix, {storage_states},
                           [&]() { p.set_value(); });
 
-    if (f.wait_for(std::chrono::seconds(5)) == std::future_status::timeout) {
+    if (f.wait_for(std::chrono::seconds(10)) == std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 

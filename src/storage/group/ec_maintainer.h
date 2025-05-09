@@ -60,6 +60,37 @@ public:
                                    m_group_config.id, m_storage_id);
     }
 
+    void set_offset(std::size_t offset) {
+        m_offset.store(offset, std::memory_order_release);
+    }
+
+    offset_t get_offset() { return m_offset.load(std::memory_order_acquire); }
+
+private:
+    struct statistics {
+        bool has_down = false;
+        std::size_t assigned_count = 0ul;
+    };
+
+    statistics get_statistics(
+        std::vector<std::shared_ptr<storage_state>>& storage_states) {
+
+        statistics rv;
+        for (const auto& val : storage_states) {
+            switch (*val) {
+            case storage_state::DOWN:
+                rv.has_down = true;
+                break;
+            case storage_state::ASSIGNED:
+                rv.assigned_count++;
+                break;
+            default:
+                break;
+            }
+        }
+        return rv;
+    }
+
     void election_handler(bool is_leader) {
 
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset",
@@ -83,12 +114,6 @@ public:
             m_candidate.proclaim();
         }
     }
-
-    void set_offset(std::size_t offset) {
-        m_offset.store(offset, std::memory_order_release);
-    }
-
-    offset_t get_offset() { return m_offset.load(std::memory_order_acquire); }
 
     void storage_states_handler() {
         auto group_initialized = m_group_initialized.get();
@@ -176,31 +201,6 @@ public:
                 m_group_config.id, m_storage_id,
                 magic_enum::enum_name(new_state));
         }
-    }
-
-private:
-    struct statistics {
-        bool has_down = false;
-        std::size_t assigned_count = 0ul;
-    };
-
-    statistics get_statistics(
-        std::vector<std::shared_ptr<storage_state>>& storage_states) {
-
-        statistics rv;
-        for (const auto& val : storage_states) {
-            switch (*val) {
-            case storage_state::DOWN:
-                rv.has_down = true;
-                break;
-            case storage_state::ASSIGNED:
-                rv.assigned_count++;
-                break;
-            default:
-                break;
-            }
-        }
-        return rv;
     }
 
     void assignment_trigger_handler(bool& val) {
