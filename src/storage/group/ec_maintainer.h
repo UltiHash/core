@@ -27,30 +27,38 @@ public:
           m_group_state_manager{etcd, group_cfg.id},
 
           m_prefix{get_prefix(m_group_config.id)},
-          m_group_initialized{m_prefix.group_initialized,
-                              [this](bool& val) { storage_states_handler(); }},
+          m_group_initialized{m_prefix.group_initialized},
           m_storage_assignment_trigger{
               m_prefix.storage_assignment_trigger,
-              [this](bool& val) { assignment_trigger_handler(); }},
+              [this](bool& val) { assignment_trigger_handler(val); }},
           m_candidate{etcd, m_prefix.leader,
                       (candidate_observer::id_t)storage_id,
-                      [this](bool is_leader) {
-                          election_handler(is_leader);
-                          storage_states_handler();
-                      }},
-          m_storage_states{m_prefix.storage_states, m_group_config.storages,
-                           [this](std::size_t id, storage_state& state) {
-                               storage_states_handler();
-                           }},
+                      [this](bool is_leader) { election_handler(is_leader); }},
+          m_storage_states{m_prefix.storage_states, m_group_config.storages},
           m_storage_state_manager{etcd, m_group_config.id, storage_id,
                                   service_cfg.working_dir},
 
-          m_subscriber{std::format("[group {}, storage {}]", m_group_config.id,
-                                   m_storage_id),
-                       etcd,
-                       m_prefix,
-                       {m_group_initialized, m_storage_assignment_trigger,
-                        m_candidate, m_storage_states}} {}
+          m_subscriber{
+              std::format("[group {}, storage {}]", m_group_config.id,
+                          m_storage_id),
+              etcd,
+              m_prefix,
+              {m_group_initialized, m_storage_assignment_trigger, m_candidate,
+               m_storage_states},
+              [this]() {
+                  if (m_candidate.is_leader()) {
+                      storage_states_handler();
+                      LOG_DEBUG() << std::format(
+                          "[group {}, storage {}] "
+                          "callback finished -----------------------------",
+                          m_group_config.id, m_storage_id);
+                  }
+              }} {}
+
+    ~ec_maintainer() {
+        LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
+                                   m_group_config.id, m_storage_id);
+    }
 
     void election_handler(bool is_leader) {
 
@@ -67,6 +75,9 @@ public:
             auto manager = offset_manager(m_etcd, m_group_config.id,
                                           m_group_config.storages);
             auto offset = manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] summarized offset is {}",
+                m_group_config.id, m_storage_id, offset);
             set_offset(offset);
 
             m_candidate.proclaim();
@@ -80,28 +91,12 @@ public:
     offset_t get_offset() { return m_offset.load(std::memory_order_acquire); }
 
     void storage_states_handler() {
-        LOG_DEBUG() << std::format(
-            "[group {}, storage {}] storage states handler", m_group_config.id,
-            m_storage_id);
-
-        auto is_leader = m_candidate.is_leader();
-
-        if (!is_leader)
-            return;
-
-        LOG_DEBUG() << std::format("[group {}, storage {}] is leader",
-                                   m_group_config.id, m_storage_id);
-
         auto group_initialized = m_group_initialized.get();
         auto storage_states = m_storage_states.get();
 
         auto stats = get_statistics(storage_states);
 
         if (not(*group_initialized)) {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] Group isn't initialized",
-                m_group_config.id, m_storage_id);
-
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] assigned_count {}, has_down {}",
                 m_group_config.id, m_storage_id, stats.assigned_count,
@@ -113,11 +108,12 @@ public:
             auto trigger = m_storage_assignment_trigger.get();
             if (not(*trigger)) {
 
-                LOG_DEBUG() << std::format(
-                    "[group {}, storage {}] `trigger assigning storages: This "
-                    "should be done only once",
-                    m_group_config.id, m_storage_id, stats.assigned_count,
-                    stats.has_down);
+                LOG_DEBUG()
+                    << std::format("[group {}, storage {}] trigger "
+                                   "assigning storages: This "
+                                   "should be done only once",
+                                   m_group_config.id, m_storage_id,
+                                   stats.assigned_count, stats.has_down);
 
                 storage_assignment_triggers_manager::put(
                     m_etcd, m_group_config.id, true);
@@ -207,12 +203,15 @@ private:
         return rv;
     }
 
-    void assignment_trigger_handler() {
-        if (m_storage_state_manager.get() == storage_state::ASSIGNED)
-            return;
+    void assignment_trigger_handler(bool& val) {
+        if (m_storage_state_manager.get() != storage_state::ASSIGNED and val) {
 
-        auto trigger = m_storage_assignment_trigger.get();
-        if (*trigger) {
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] set it's state to ASSIGNED",
+                m_group_config.id, m_storage_id);
+            if (!m_candidate.is_leader()) {
+                std::this_thread::sleep_for(1s);
+            }
             m_storage_state_manager.put(storage_state::ASSIGNED);
         }
     }

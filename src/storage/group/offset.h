@@ -21,11 +21,7 @@ public:
           m_prefix{get_storage_offset_prefix(group_id)},
           future{promise.get_future()},
           m_offset_candidates{m_prefix, num_storages, -1},
-          m_subscriber{"offset_manager",
-                       etcd,
-                       m_prefix,
-                       {m_offset_candidates},
-                       [this]() { this->callback(); }} {}
+          m_reader{"offset_manager", etcd, m_prefix, {m_offset_candidates}} {}
 
     ~offset_manager() { m_etcd.rm(m_prefix); }
 
@@ -46,21 +42,12 @@ public:
     }
 
 private:
-    void callback() {
-        auto offsets = m_offset_candidates.get();
-        auto all_set = std::ranges::all_of(
-            offsets, [](const auto& offset) { return *offset != -1; });
-        if (all_set) {
-            promise.set_value();
-        }
-    }
-
     etcd_manager& m_etcd;
     offset_prefix_t m_prefix;
     std::promise<void> promise;
     std::future<void> future;
     vector_observer<offset_t> m_offset_candidates;
-    subscriber m_subscriber;
+    reader m_reader;
 };
 
 } // namespace uh::cluster::storage
