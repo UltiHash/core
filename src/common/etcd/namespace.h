@@ -181,7 +181,6 @@ struct temporaries_t : public key_t {
 
 struct storage_groups_t : public key_t {
     subscriptable_key_t group_configs{"group_configs", this};
-    subscriptable_key_t storage_assignments{"storage_assignments", this};
     temporaries_t temporaries{"temporaries", this};
 
     struct impl_t : public key_t {

@@ -12,7 +12,6 @@ struct group_config {
 
     std::size_t id;
     type_t type;
-    // TODO: remove default value after getting config using ENV VAR
     std::size_t storages;
     std::size_t data_shards;
     std::size_t parity_shards;
@@ -23,7 +22,6 @@ struct group_config {
 };
 
 struct group_configs {
-    // TODO: remove default value after getting config using ENV VAR
     std::vector<group_config> configs;
 
     group_configs() = default;
