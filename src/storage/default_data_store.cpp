@@ -124,7 +124,7 @@ address default_data_store::write(const allocation_t allocation,
                                   const std::vector<std::size_t>& offsets) {
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
-    maintain_refcount(local_pointer, allocation.size, offsets);
+
     address rv;
 
     std::size_t written = 0ull;
@@ -150,8 +150,9 @@ address default_data_store::write(const allocation_t allocation,
     }
 
     m_used_space += allocation.size;
-
     sync();
+
+    maintain_refcount(allocation.offset, allocation.size, offsets);
     return rv;
 }
 
@@ -283,7 +284,7 @@ void default_data_store::update_last_page_ref(
 std::size_t default_data_store::internal_delete(std::size_t offset,
                                                 std::size_t size) {
     std::size_t last_page_offset =
-        (m_used_space / m_conf.page_size) * m_conf.page_size;
+        (m_write_offset / m_conf.page_size) * m_conf.page_size;
 
     if (offset >= last_page_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
