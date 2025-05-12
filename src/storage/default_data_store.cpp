@@ -259,8 +259,7 @@ void default_data_store::maintain_refcount(
 void default_data_store::update_last_page_ref(
     std::deque<reference_counter::refcount_cmd>& refcount_commands) {
 
-    std::size_t current_offset =
-        m_files.size() * m_filesize - m_files.back().free();
+    std::size_t current_offset = m_used_space.load();
     std::size_t last_page = current_offset / m_conf.page_size;
 
     if (m_locked_page.has_value()) {

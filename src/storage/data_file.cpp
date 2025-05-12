@@ -79,7 +79,7 @@ std::size_t data_file::read(std::size_t offset, std::span<char> buffer) {
     }
 
     return safe_pread(
-        m_fd, buffer.subspan(0, std::min(m_pointer - offset, buffer.size())),
+        m_fd, buffer.subspan(0, std::min(m_filesize - offset, buffer.size())),
         offset);
 }
 

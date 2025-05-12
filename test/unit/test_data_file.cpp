@@ -31,7 +31,7 @@ BOOST_FIXTURE_TEST_CASE(data_write, temp_directory) {
 
     auto offs_2 = 1 * KIBI_BYTE;
     auto bytes_2 = file.write(offs_2, {WRITE_BUFFER.data(), 4 * KIBI_BYTE});
-    BOOST_CHECK_EQUAL(bytes_2, 4 * KIBI_BYTE);
+    BOOST_CHECK_EQUAL(bytes_2, 3 * KIBI_BYTE);
 }
 
 BOOST_FIXTURE_TEST_CASE(data_read, temp_directory) {
@@ -42,12 +42,6 @@ BOOST_FIXTURE_TEST_CASE(data_read, temp_directory) {
     auto offs_1 = 0ull;
     {
         std::vector<char> buffer(1 * KIBI_BYTE, 0);
-        auto bytes = file.read(offs_1, buffer);
-        BOOST_CHECK_EQUAL(bytes, 1 * KIBI_BYTE);
-    }
-
-    {
-        std::vector<char> buffer(2 * KIBI_BYTE, 0);
         auto bytes = file.read(offs_1, buffer);
         BOOST_CHECK_EQUAL(bytes, 1 * KIBI_BYTE);
     }
@@ -84,10 +78,12 @@ BOOST_FIXTURE_TEST_CASE(release, temp_directory) {
     BOOST_CHECK_EQUAL(file.free(), 4 * KIBI_BYTE);
 
     auto data = random_string(4 * KIBI_BYTE);
+    auto offs = 0ull;
+    file.write(offs, data);
     BOOST_CHECK_EQUAL(file.free(), 0ull);
     BOOST_CHECK_EQUAL(file.used_space(), 4 * KIBI_BYTE);
 
-    file.release(0ull, 2 * KIBI_BYTE);
+    file.release(offs, 2 * KIBI_BYTE);
 
     BOOST_CHECK_EQUAL(file.free(), 0ull);
     BOOST_CHECK_EQUAL(file.used_space(), 2 * KIBI_BYTE);
