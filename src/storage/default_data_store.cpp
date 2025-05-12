@@ -67,7 +67,7 @@ default_data_store::default_data_store(data_store_config conf,
       m_filesize(m_conf.max_file_size),
       m_files(load_files(m_root, m_filesize)),
       m_file_count(m_files.size()),
-      m_meta_fd(open_metadata(working_dir / std::string(".ds_store"))),
+      m_meta_fd(open_metadata(working_dir / std::string("ds.meta"))),
       m_used_space(fetch_used_space()),
       m_refcounter(
           m_root, m_conf.page_size,
@@ -184,7 +184,7 @@ default_data_store::~default_data_store() {
 void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
     std::unique_lock lock(m_mutex);
 
-    auto required_file_count = (offset + size) / m_filesize;
+    auto required_file_count = ((offset + size) / m_filesize) + 1;
 
     if (required_file_count <= m_file_count) {
         return;
@@ -311,13 +311,13 @@ std::size_t default_data_store::internal_delete(std::size_t offset,
 }
 
 int default_data_store::open_metadata(const std::filesystem::path& path) {
-    bool is_new_file = std::filesystem::exists(path);
+    bool file_existed = std::filesystem::exists(path);
     int fd = ::open(path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
     if (fd == -1) {
         throw_from_errno("could not open file " + path.string());
     }
 
-    if (is_new_file) {
+    if (!file_existed) {
         metadata md{.write_offset = 0ull, .used_space = 0ull};
         safe_pwrite(fd,
                     std::span<const char>(reinterpret_cast<const char*>(&md),
