@@ -18,6 +18,14 @@ coro<fragment> messenger::recv_fragment(const header& message_header) {
     co_return frag;
 }
 
+coro<allocation_t> messenger::recv_allocation(const header& message_header) {
+    allocation_t allocation{};
+    register_read_buffer(allocation.offset);
+    register_read_buffer(allocation.size);
+    co_await recv_buffers(message_header);
+    co_return allocation;
+}
+
 coro<dedupe_response>
 messenger::recv_dedupe_response(const header& message_header) {
     dedupe_response dedupe_resp;
@@ -47,7 +55,7 @@ coro<write_request> messenger::recv_write(const header& message_header) {
     std::size_t alloc_offset;
     std::size_t alloc_size;
     unique_buffer<char> recv_buffer(message_header.size - sizeof(size_type) -
-                                    (2 * sizeof(uint128_t)));
+                                    (2 * sizeof(std::size_t)));
     register_read_buffer(alloc_offset);
     register_read_buffer(alloc_size);
     register_read_buffer(data_size);

@@ -12,6 +12,8 @@ public:
 
     coro<fragment> recv_fragment(const header& message_header);
 
+    coro<allocation_t> recv_allocation(const header& message_header);
+
     template <typename T>
     requires std::is_arithmetic_v<T>
     coro<T> recv_primitive(const header& message_header) {
