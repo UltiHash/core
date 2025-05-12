@@ -140,10 +140,15 @@ CLI::App* sub_storage(CLI::App& app, storage_config& cfg) {
                    "maximum size of data store")
         ->default_val(cfg.data_store.max_data_store_size);
 
-    rv->add_option("--storage-service-id", cfg.service_id,
+    rv->add_option("--storage-instance-id", cfg.instance_id,
                    "id of the storage service instance")
-        ->default_val(cfg.service_id)
+        ->default_val(cfg.instance_id)
         ->envname(ENV_CFG_STORAGE_SERVICE_ID);
+
+    rv->add_option("--storage-group-id", cfg.group_id,
+                   "id of the storage group")
+        ->default_val(cfg.group_id)
+        ->envname(ENV_CFG_STORAGE_GROUP_ID);
 
     return rv;
 }

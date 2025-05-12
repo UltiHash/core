@@ -24,7 +24,7 @@ public:
         : m_ioc(sc.server.threads),
           m_etcd{service_config.etcd_config},
           m_license_watcher(m_etcd),
-          m_storage_id(register_storage_service_id(m_etcd, sc.service_id)),
+          m_storage_id(register_storage_service_id(m_etcd, sc.instance_id)),
           m_group_id{deserialize<size_t>(m_etcd.wait(
               ns::root.storage_groups.storage_assignments[m_storage_id],
               SERVICE_GET_TIMEOUT))},
