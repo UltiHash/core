@@ -174,7 +174,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_b.data(), 'a', 2 * KIBI_BYTE);
     memset(fragment_b.data() + 2 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
     memset(fragment_b.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
-    memset(fragment_b.data() + 4 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
+    memset(fragment_b.data() + 6 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
 
     auto addr_b = boost::asio::co_spawn(
                       get_executor(), gdv->write(fragment_b.string_view(), {0}),
@@ -185,7 +185,7 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     memset(fragment_c.data(), 'a', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 2 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
     memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
-    memset(fragment_c.data() + 4 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
+    memset(fragment_c.data() + 6 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
     auto addr_c = boost::asio::co_spawn(
                       get_executor(), gdv->write(fragment_c.string_view(), {0}),
                       boost::asio::use_future)
