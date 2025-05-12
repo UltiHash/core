@@ -118,6 +118,7 @@ private:
 
     size_t internal_delete(std::size_t offset, std::size_t size);
 
+    int open_metadata(const std::filesystem::path& path);
     void read_metadata();
     void write_metadata();
 

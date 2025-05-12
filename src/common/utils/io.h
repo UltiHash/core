@@ -39,7 +39,7 @@ std::size_t safe_pwrite(int fd, std::span<const char> buffer,
 std::filesystem::path operator+(const std::filesystem::path& p, std::string s);
 
 /**
- * Open a file at the given path and return the file descriptor.
+ * Open an existing file at the given path and return the file descriptor.
  * Throws in case of an error.
  *
  * @param path path to the file
