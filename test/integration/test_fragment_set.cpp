@@ -163,29 +163,29 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
     storage::global::cache cache(get_executor(), *gdv, 1000);
     fragment_set frag_set(1000, cache);
 
-    shared_buffer<char> fragment_a(8 * KIBI_BYTE);
-    memset(fragment_a.data(), 'a', 8 * KIBI_BYTE);
+    shared_buffer<char> fragment_a(16 * 4);
+    memset(fragment_a.data(), 'a', 16 * 4);
     auto addr_a = boost::asio::co_spawn(
                       get_executor(), gdv->write(fragment_a.string_view(), {0}),
                       boost::asio::use_future)
                       .get();
 
-    shared_buffer<char> fragment_b(8 * KIBI_BYTE);
-    memset(fragment_b.data(), 'a', 2 * KIBI_BYTE);
-    memset(fragment_b.data() + 2 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
-    memset(fragment_b.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
-    memset(fragment_b.data() + 6 * KIBI_BYTE, 'b', 2 * KIBI_BYTE);
+    shared_buffer<char> fragment_b(16 * 4);
+    memset(fragment_b.data(), 'a', 16);
+    memset(fragment_b.data() + 16, 'b', 16);
+    memset(fragment_b.data() + 16 * 2, 'a', 16);
+    memset(fragment_b.data() + 16 * 3 * KIBI_BYTE, 'b', 16);
 
     auto addr_b = boost::asio::co_spawn(
                       get_executor(), gdv->write(fragment_b.string_view(), {0}),
                       boost::asio::use_future)
                       .get();
 
-    shared_buffer<char> fragment_c(8 * KIBI_BYTE);
-    memset(fragment_c.data(), 'a', 2 * KIBI_BYTE);
-    memset(fragment_c.data() + 2 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
-    memset(fragment_c.data() + 4 * KIBI_BYTE, 'a', 2 * KIBI_BYTE);
-    memset(fragment_c.data() + 6 * KIBI_BYTE, 'c', 2 * KIBI_BYTE);
+    shared_buffer<char> fragment_c(16 * 4);
+    memset(fragment_c.data(), 'a', 16);
+    memset(fragment_c.data() + 16, 'c', 16);
+    memset(fragment_c.data() + 16 * 2, 'a', 16);
+    memset(fragment_c.data() + 16 * 3, 'c', 16);
     auto addr_c = boost::asio::co_spawn(
                       get_executor(), gdv->write(fragment_c.string_view(), {0}),
                       boost::asio::use_future)
@@ -211,9 +211,9 @@ BOOST_FIXTURE_TEST_CASE(less_operator, global_data_view_fixture) {
 
     // Since all fragments have identical prefix, calling operator< will be
     // forced to consult gdv to get full body
-    BOOST_CHECK(frag_element_a < frag_element_b);
-    BOOST_CHECK(frag_element_a < frag_element_c);
-    BOOST_CHECK(frag_element_b < frag_element_c);
+    BOOST_TEST(frag_element_a < frag_element_b);
+    BOOST_TEST(frag_element_a < frag_element_c);
+    BOOST_TEST(frag_element_b < frag_element_c);
 }
 
 } // namespace uh::cluster
