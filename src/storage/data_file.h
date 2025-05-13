@@ -48,9 +48,6 @@ public:
     /// total size of file
     std::size_t filesize() const;
 
-    /// free space in file
-    std::size_t free() const;
-
     /// size of data
     std::size_t used_space() const;
 
@@ -72,7 +69,6 @@ private:
     int m_fd;
     int m_meta_fd;
 
-    std::atomic<std::size_t> m_pointer;
     std::atomic<std::size_t> m_used;
     std::size_t m_filesize;
     std::filesystem::path m_path;

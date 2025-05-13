@@ -14,7 +14,6 @@ namespace uh::cluster {
 namespace {
 
 struct metadata {
-    std::size_t pointer = 0ull;
     std::size_t used = 0ull;
     std::size_t filesize = 0ull;
 };
@@ -64,11 +63,6 @@ data_file::~data_file() {
 std::size_t data_file::write(std::size_t offset, std::span<const char> buffer) {
     std::size_t size = std::min(m_filesize - offset, buffer.size());
     m_used += size;
-    std::size_t pointer = m_pointer.load();
-    while (!m_pointer.compare_exchange_strong(
-        pointer, std::max(pointer, offset + size))) {
-        pointer = m_pointer.load();
-    }
     return safe_pwrite(m_fd, buffer.subspan(0, size), offset);
 }
 
@@ -86,7 +80,7 @@ std::size_t data_file::release(std::size_t offset, std::size_t size) {
         throw_from_errno("could not free space for " + m_path.string());
     }
 
-    m_used.fetch_sub(count);
+    m_used -= count;
     return count;
 }
 
@@ -100,8 +94,6 @@ void data_file::sync() {
 }
 
 std::size_t data_file::filesize() const { return m_filesize; }
-
-std::size_t data_file::free() const { return filesize() - m_pointer; }
 
 std::size_t data_file::used_space() const { return m_used; }
 
@@ -124,7 +116,7 @@ data_file data_file::create(const std::filesystem::path& root,
     close(fd);
 
     auto meta_path = root + EXTENSION_META_FILE;
-    metadata md{.pointer = 0ull, .used = 0ull, .filesize = size};
+    metadata md{.used = 0ull, .filesize = size};
 
     {
         std::ofstream meta_file(meta_path);
@@ -141,13 +133,12 @@ void data_file::read_metadata() {
                std::span<char>(reinterpret_cast<char*>(&md), sizeof(metadata)),
                0);
 
-    m_pointer = md.pointer;
     m_used = md.used;
     m_filesize = md.filesize;
 }
 
 void data_file::write_metadata() {
-    metadata md{.pointer = m_pointer, .used = m_used, .filesize = m_filesize};
+    metadata md{.used = m_used, .filesize = m_filesize};
 
     safe_pwrite(m_meta_fd,
                 std::span<const char>(reinterpret_cast<const char*>(&md),
