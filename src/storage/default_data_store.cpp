@@ -203,19 +203,18 @@ default_data_store::location default_data_store::file_location(size_t pointer) {
     auto index = pointer / m_filesize;
     auto offset = pointer % m_filesize;
 
-    auto size = m_file_count.load();
-    if (index >= size) {
+    if (index >= m_file_count) {
         throw std::out_of_range("pointer out of range");
     }
 
     return location{.file = m_files[index], .offset = offset};
 }
 
-uint64_t default_data_store::get_used_space() const noexcept {
+std::size_t default_data_store::get_used_space() const noexcept {
     return m_used_space;
 }
 
-size_t default_data_store::get_available_space() const noexcept {
+std::size_t default_data_store::get_available_space() const noexcept {
     auto capacity = m_conf.max_data_store_size - m_used_space;
     try {
         auto space = std::filesystem::space(m_root);
@@ -224,6 +223,11 @@ size_t default_data_store::get_available_space() const noexcept {
     }
 
     return capacity;
+}
+
+std::size_t default_data_store::get_write_offset() const noexcept {
+    std::shared_lock lock(m_mutex);
+    return m_write_offset;
 }
 
 allocation_t default_data_store::allocate(size_t size) {

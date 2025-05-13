@@ -24,7 +24,7 @@ public:
      * @return local pointer to the allocated storage space and size of
      * allocation
      */
-    allocation_t allocate(size_t size);
+    allocation_t allocate(std::size_t size);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -71,20 +71,26 @@ public:
      * @return number of bytes freed in response to removing references.
      * In case of an error, std::numeric_limits<std::size_t>::max() is returned.
      */
-    size_t unlink(const address& addr);
+    std::size_t unlink(const address& addr);
 
     /**
      * @brief Returns the current used space of the data store.
      * @return size_t: the used space in the data store
      */
-    size_t get_used_space() const noexcept;
+    std::size_t get_used_space() const noexcept;
 
     /**
      * @brief Returns the current available space in the data store. Available
      * = allocated - used
      * @return size_t: the available space in the data store
      */
-    size_t get_available_space() const noexcept;
+    std::size_t get_available_space() const noexcept;
+
+    /**
+     * @brief Returns the current write offset in the data store.
+     * @return size_t: the write offset in the data store
+     */
+    std::size_t get_write_offset() const noexcept;
 
     ~default_data_store();
 
@@ -124,13 +130,14 @@ private:
     const uint32_t m_storage_id;
     const std::filesystem::path m_root;
     data_store_config m_conf;
-    std::size_t m_filesize;
+    const std::size_t m_filesize;
 
-    mutable std::shared_mutex m_mutex;
     std::vector<data_file> m_files;
-    std::atomic<std::size_t> m_file_count;
+    std::size_t m_file_count;
 
     int m_meta_fd;
+
+    mutable std::shared_mutex m_mutex;
     std::size_t m_used_space{};
     std::size_t m_write_offset{};
 
