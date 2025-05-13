@@ -8,19 +8,17 @@
 
 namespace uh::cluster::storage {
 
-using offset_t = long;
+using offset_t = std::size_t;
 
 class offset_manager {
 public:
-    using type_t = long;
-
     using callback_t = subscriber::callback_t;
     offset_manager(etcd_manager& etcd, std::size_t group_id,
                    std::size_t num_storages)
         : m_etcd{etcd},
           m_prefix{get_storage_offset_prefix(group_id)},
           future{promise.get_future()},
-          m_offset_candidates{m_prefix, num_storages, -1},
+          m_offset_candidates{m_prefix, num_storages, 0},
           m_reader{"offset_manager", etcd, m_prefix, {m_offset_candidates}} {}
 
     ~offset_manager() { m_etcd.rm(m_prefix); }
