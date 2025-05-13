@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+#include <common/ec/reedsolomon_c.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/service_discovery/storage_index.h>
 #include <common/types/scoped_buffer.h>
@@ -115,7 +116,9 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
-
+    group_config m_config;
+    std::size_t m_block_size;
+    reedsolomon_c m_rs;
     externals_subscriber m_externals;
 };
 
