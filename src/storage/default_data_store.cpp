@@ -6,6 +6,7 @@
 #include <common/utils/io.h>
 #include <common/utils/pointer_traits.h>
 
+#include <mutex>
 #include <set>
 
 namespace uh::cluster {
@@ -84,6 +85,7 @@ default_data_store::default_data_store(data_store_config conf,
 
 std::size_t default_data_store::read(std::size_t local_pointer,
                                      std::span<char> buffer) {
+    std::shared_lock lock(m_mutex);
     std::size_t rv = 0ull;
 
     while (rv < buffer.size()) {
@@ -101,7 +103,6 @@ std::size_t default_data_store::read(std::size_t local_pointer,
 }
 
 void default_data_store::sync() {
-    std::unique_lock lock(m_mutex);
     m_files.back().sync();
 
     write_metadata();
@@ -122,6 +123,7 @@ std::size_t default_data_store::fetch_used_space() const {
 address default_data_store::write(const allocation_t allocation,
                                   std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
+    std::unique_lock lock(m_mutex);
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
@@ -183,8 +185,6 @@ default_data_store::~default_data_store() {
 }
 
 void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
-    std::unique_lock lock(m_mutex);
-
     auto required_file_count = ((offset + size) / m_filesize) + 1;
 
     if (required_file_count <= m_file_count) {
@@ -227,7 +227,6 @@ size_t default_data_store::get_available_space() const noexcept {
 }
 
 allocation_t default_data_store::allocate(size_t size) {
-
     std::unique_lock lock(m_mutex);
 
     if (m_conf.max_data_store_size - m_write_offset.load() < size) {
@@ -235,10 +234,15 @@ allocation_t default_data_store::allocate(size_t size) {
                                  std::to_string(size) + " bytes");
     }
 
-    std::size_t allocation_offset = m_write_offset.load();
-    m_write_offset += size;
+    allocation_t rv = {.offset = m_write_offset.load(), .size = size};
+    std::size_t allocation_offset = rv.offset;
+    while (!m_write_offset.compare_exchange_strong(allocation_offset,
+                                                   allocation_offset + size)) {
+        rv.offset = m_write_offset.load();
+        allocation_offset = rv.offset;
+    }
 
-    return {.offset = allocation_offset, .size = size};
+    return rv;
 }
 
 void default_data_store::maintain_refcount(

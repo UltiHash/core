@@ -8,7 +8,7 @@
 #include <atomic>
 #include <filesystem>
 #include <list>
-#include <mutex>
+#include <shared_mutex>
 
 namespace uh::cluster {
 
@@ -127,7 +127,7 @@ private:
     data_store_config m_conf;
     std::size_t m_filesize;
 
-    mutable std::mutex m_mutex;
+    mutable std::shared_mutex m_mutex;
     std::vector<data_file> m_files;
     std::atomic<std::size_t> m_file_count;
 
