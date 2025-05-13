@@ -60,14 +60,7 @@ mock_data_store::mock_data_store(data_store_config conf,
 address mock_data_store::write(const allocation_t allocation,
                                std::span<const char> data,
                                const std::vector<std::size_t>& offsets) {
-
-    if (m_current_offset.load() + data.size() > m_conf.max_data_store_size or
-        data.size() > static_cast<size_t>(m_conf.max_file_size)) [[unlikely]] {
-        throw std::bad_alloc();
-    }
-
     std::copy(data.begin(), data.end(), m_data.begin() + allocation.offset);
-    m_current_offset.fetch_add(data.size());
 
     address data_address;
     data_address.push({.pointer = pointer_traits::get_global_pointer(

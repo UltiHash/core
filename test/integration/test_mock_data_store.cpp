@@ -148,9 +148,7 @@ BOOST_AUTO_TEST_CASE(test_sync) {
 
     ds = make_data_store();
 
-    auto alloc = ds->allocate(throwing_data.size());
-    BOOST_CHECK_THROW(ds->write(alloc, throwing_data.string_view(), {0}),
-                      std::bad_alloc);
+    BOOST_CHECK_THROW(ds->allocate(throwing_data.size()), std::exception);
 
     char buf[MAX_FILE_SIZE_BYTES];
     size_t t_read = 0;
