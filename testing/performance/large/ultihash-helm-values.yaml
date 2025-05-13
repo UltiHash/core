@@ -74,40 +74,43 @@ entrypoint:
     enabled: false
 
 storage:
-  replicas: 4
-  storageClass: local-path             
-  storageSize: 800Gi
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: role
-            operator: In
-            values:
-            - storage
-        topologyKey: kubernetes.io/hostname                  
-  nodeSelector:
-    workload-type: storage
-    purpose: performance-testing-large
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
-  localVolumes:                      
-    - name: storage0
-      hostPath: "/storage0"
-      containerPath: "/var/lib/uh/storage0"
-    - name: storage1
-      hostPath: "/storage1"
-      containerPath: "/var/lib/uh/storage1"
-    - name: storage2
-      hostPath: "/storage2"
-      containerPath: "/var/lib/uh/storage2"
-    - name: storage3
-      hostPath: "/storage3"
-      containerPath: "/var/lib/uh/storage3"
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 4
+      storageClass: local-path
+      size: 800Gi
+      nodeSelector:
+        workload-type: storage
+        purpose: performance-testing-large
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - storage
+            topologyKey: kubernetes.io/hostname                  
+      localVolumes:                      
+        - name: storage0
+          hostPath: "/storage0"
+          containerPath: "/var/lib/uh/storage0"
+        - name: storage1
+          hostPath: "/storage1"
+          containerPath: "/var/lib/uh/storage1"
+        - name: storage2
+          hostPath: "/storage2"
+          containerPath: "/var/lib/uh/storage2"
+        - name: storage3
+          hostPath: "/storage3"
+          containerPath: "/var/lib/uh/storage3"
 
 deduplicator:
   replicas: 4

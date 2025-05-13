@@ -24,12 +24,11 @@ public:
         : m_ioc(sc.server.threads),
           m_etcd{service_config.etcd_config},
           m_license_watcher(m_etcd),
-          m_storage_id(register_storage_service_id(m_etcd, sc.service_id)),
-          m_group_id{deserialize<size_t>(m_etcd.wait(
-              ns::root.storage_groups.storage_assignments[m_storage_id],
-              SERVICE_GET_TIMEOUT))},
+          m_storage_id{sc.instance_id},
+          m_group_id{sc.group_id},
           m_group_config{group_config::create(
-              m_etcd.get(ns::root.storage_groups.group_configs[m_group_id]))},
+              m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
+                          SERVICE_GET_TIMEOUT))},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
                                                     sc.m_data_store_roots)),
 

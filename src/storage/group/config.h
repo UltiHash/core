@@ -10,12 +10,11 @@ namespace uh::cluster::storage {
 struct group_config {
     enum type_t { ROUND_ROBIN, ERASURE_CODING, REPLICA };
 
-    std::size_t id{};
-    type_t type{};
-    // TODO: remove default value after getting config using ENV VAR
-    std::size_t storages{3};
-    std::size_t data_shards{};
-    std::size_t parity_shards{};
+    std::size_t id;
+    type_t type;
+    std::size_t storages;
+    std::size_t data_shards;
+    std::size_t parity_shards;
     std::size_t chunk_size_kib;
 
     static group_config create(std::string_view json_str);
@@ -23,8 +22,7 @@ struct group_config {
 };
 
 struct group_configs {
-    // TODO: remove default value after getting config using ENV VAR
-    std::vector<group_config> configs{{}};
+    std::vector<group_config> configs;
 
     group_configs() = default;
 

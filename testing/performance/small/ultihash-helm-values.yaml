@@ -78,35 +78,37 @@ entrypoint:
     enabled: false
 
 storage:
-  replicas: 2
-  storageClass: local-path          
-  storageSize: 70Gi
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: role
-            operator: In
-            values:
-            - storage
-        topologyKey: kubernetes.io/hostname                  
-  nodeSelector:
-    workload-type: storage
-    purpose: performance-testing-small
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
-  localVolumes:                      
-    - name: storage0
-      hostPath: "/storage0"
-      containerPath: "/var/lib/uh/storage0"
-    - name: storage1
-      hostPath: "/storage1"
-      containerPath: "/var/lib/uh/storage1"
-
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 2
+      storageClass: local-path
+      size: 70Gi
+      nodeSelector:
+        workload-type: storage
+        purpose: performance-testing-small
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - storage
+            topologyKey: kubernetes.io/hostname
+      localVolumes:                      
+        - name: storage0
+          hostPath: "/storage0"
+          containerPath: "/var/lib/uh/storage0"
+        - name: storage1
+          hostPath: "/storage1"
+          containerPath: "/var/lib/uh/storage1"
 
 deduplicator:
   replicas: 2

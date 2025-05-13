@@ -109,16 +109,22 @@ databaseInit:
       effect: "NoSchedule"
 
 storage:
-  replicas: 1
-  storageClass: ebs-csi-gp3
-  storageSize: 5Gi
-  nodeSelector:
-    purpose: feature-testing
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 1
+      storageClass: ebs-csi-gp3
+      size: 5Gi
+      mountPaths:
+        - name: storage0
+          containerPath: /var/lib/uh/storage
+      nodeSelector:
+        purpose: feature-testing
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
 
 collector:
   config:

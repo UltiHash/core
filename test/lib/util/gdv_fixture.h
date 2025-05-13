@@ -23,10 +23,12 @@ public:
     virtual ~global_data_view_fixture() { teardown(); }
 
     void setup() {
+        auto group_id = 0ul;
         {
             storage::group_configs configs;
             storage::group_config config;
             config.type = storage::group_config::type_t::ROUND_ROBIN;
+            config.id = group_id;
             config.storages = NUM_STORAGE_INSTANCES;
             config.data_shards = 0;
             config.parity_shards = 0;
@@ -43,6 +45,8 @@ public:
                 storage_cfg.server.port = 10000 + i;
                 storage_cfg.m_data_store_roots = {
                     std::filesystem::path(service_cfg.working_dir) / "storage"};
+                storage_cfg.instance_id = i;
+                storage_cfg.group_id = group_id;
                 m_storage_instances.emplace_back(
                     std::make_unique<storage::service>(service_cfg,
                                                        storage_cfg));
