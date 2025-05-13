@@ -24,8 +24,6 @@ struct local_storage : public storage_interface {
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
-        // TODO: check if service ids in pointer is the same as this service id
-        // TODO: add test case that checks for the above mentioned behaviour
         shared_buffer<> buf(size);
         auto read_size = m_data_store->read(
             pointer_traits::get_pointer(pointer), buf.span());
@@ -35,8 +33,6 @@ struct local_storage : public storage_interface {
 
     coro<void> read_address(const address& addr, std::span<char> buffer,
                             const std::vector<size_t>& offsets) override {
-        // TODO: check if service ids in addr are the same as this service id
-        // TODO: add test case that checks for the above mentioned behaviour
         LOG_DEBUG() << "read addr start";
 
         for (size_t i = 0; i < addr.size(); i++) {
@@ -54,8 +50,6 @@ struct local_storage : public storage_interface {
     }
 
     coro<address> link(const address& addr) override {
-        // TODO: check if service ids in addr are the same as this service id
-        // TODO: add test case that checks for the above mentioned behaviour
         auto p = std::make_shared<std::promise<address>>();
         boost::asio::post(m_threads, [this, p, &addr]() {
             try {
@@ -68,8 +62,6 @@ struct local_storage : public storage_interface {
     }
 
     coro<std::size_t> unlink(const address& addr) override {
-        // TODO: check if service ids in addr are the same as this service id
-        // TODO: add test case that checks for the above mentioned behaviour
         auto p = std::make_shared<std::promise<std::size_t>>();
         boost::asio::post(m_threads, [this, p, &addr]() {
             try {
