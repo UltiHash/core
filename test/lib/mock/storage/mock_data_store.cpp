@@ -131,6 +131,10 @@ size_t mock_data_store::get_available_space() const noexcept {
     return m_conf.max_data_store_size - m_current_offset.load();
 }
 
+std::size_t mock_data_store::get_write_offset() const noexcept {
+    return m_current_offset.load();
+}
+
 void mock_data_store::clear() {
     m_data.clear();
     m_refcounter.clear();
