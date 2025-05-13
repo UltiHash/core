@@ -63,6 +63,7 @@ public:
     std::vector<std::string> keys(const std::string& prefix = "/") const;
     std::map<std::string, std::string>
     ls(const std::string& prefix = "/") const;
+    int64_t ls(const std::string& prefix, callback_t callback) const;
 
     /*
      * Remove methods

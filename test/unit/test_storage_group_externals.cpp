@@ -41,10 +41,11 @@ BOOST_AUTO_TEST_CASE(is_watched_well) {
     auto state = deserialize<group_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto subscriber =
-        externals_subscriber(m_etcd, group_id, num_storages,
-                             service_factory<storage_interface>(m_ioc, 2),
-                             [&](etcd_manager::response) { p.set_value(); });
+
+    // TODO: Change lambda input type to void.
+    auto subscriber = externals_subscriber(
+        m_etcd, group_id, num_storages,
+        service_factory<storage_interface>(m_ioc, 2), [&]() { p.set_value(); });
 
     m_etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
                serialize(state));
@@ -65,10 +66,9 @@ BOOST_AUTO_TEST_CASE(subscriber_gets_storage_state) {
     auto state = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto subscriber =
-        externals_subscriber(m_etcd, group_id, num_storages,
-                             service_factory<storage_interface>(m_ioc, 2),
-                             [&](etcd_manager::response) { p.set_value(); });
+    auto subscriber = externals_subscriber(
+        m_etcd, group_id, num_storages,
+        service_factory<storage_interface>(m_ioc, 2), [&]() { p.set_value(); });
 
     m_etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
                serialize(state));
@@ -86,10 +86,9 @@ BOOST_AUTO_TEST_CASE(gets_storage_states) {
     auto state = deserialize<storage_state>(literal);
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    auto subscriber =
-        externals_subscriber(m_etcd, group_id, num_storages,
-                             service_factory<storage_interface>(m_ioc, 2),
-                             [&](etcd_manager::response) { p.set_value(); });
+    auto subscriber = externals_subscriber(
+        m_etcd, group_id, num_storages,
+        service_factory<storage_interface>(m_ioc, 2), [&]() { p.set_value(); });
 
     m_etcd.put(ns::root.storage_groups[group_id].storage_states[storage_id],
                serialize(state));

@@ -47,6 +47,9 @@ TBD: `/<namespace>/<service_class>/hostports/<service_id>` \
   contains state of storage services: DOWN, NEW, and ASSIGNED as a number. \
   This key is watched by a leader.
 
+`/<namespace>/storage_groups/<storage_group_id>/storage_assignment_triggers/<storage_id>` \
+  triggers storage assignment. This key is watched by all followers.
+
 `/<namespace>/storage_groups/<storage_group_id>/group_initialized` \
   exists only when the storage group succeeded to assign all storage services. \
   This key has no ttl. A leader reads this key.
