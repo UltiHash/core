@@ -229,19 +229,13 @@ size_t default_data_store::get_available_space() const noexcept {
 allocation_t default_data_store::allocate(size_t size) {
     std::unique_lock lock(m_mutex);
 
-    if (m_conf.max_data_store_size - m_write_offset.load() < size) {
+    if (m_conf.max_data_store_size - m_write_offset < size) {
         throw std::runtime_error("datastore cannot store additional " +
                                  std::to_string(size) + " bytes");
     }
 
-    allocation_t rv = {.offset = m_write_offset.load(), .size = size};
-    std::size_t allocation_offset = rv.offset;
-    while (!m_write_offset.compare_exchange_strong(allocation_offset,
-                                                   allocation_offset + size)) {
-        rv.offset = m_write_offset.load();
-        allocation_offset = rv.offset;
-    }
-
+    allocation_t rv = {.offset = m_write_offset, .size = size};
+    m_write_offset += size;
     return rv;
 }
 

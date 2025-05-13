@@ -5,7 +5,6 @@
 #include <storage/data_file.h>
 #include <storage/interfaces/data_store.h>
 
-#include <atomic>
 #include <filesystem>
 #include <list>
 #include <shared_mutex>
@@ -132,8 +131,8 @@ private:
     std::atomic<std::size_t> m_file_count;
 
     int m_meta_fd;
-    std::atomic<std::size_t> m_used_space{};
-    std::atomic<std::size_t> m_write_offset{};
+    std::size_t m_used_space{};
+    std::size_t m_write_offset{};
 
     std::optional<std::size_t> m_locked_page = std::nullopt;
     reference_counter m_refcounter;
