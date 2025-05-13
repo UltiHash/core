@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common/network/messenger.h"
-#include <common/etcd/registry/storage_registry.h>
 #include <common/utils/protocol_handler.h>
+#include <storage/group/storage_state_manager.h>
 #include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {

@@ -6,7 +6,7 @@
 
 #include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
-#include <common/etcd/subscriber/subscriber.h>
+#include <common/etcd/subscriber.h>
 
 namespace uh::cluster::storage {
 
@@ -44,7 +44,8 @@ protected:
             cv.notify_one(); // Notify the waiting thread
             std::cerr << "Leader updated: " << new_leader << std::endl;
         }};
-    subscriber m_subscriber{m_etcd,
+    subscriber m_subscriber{"fixture",
+                            m_etcd,
                             ns::root.storage_groups[m_group_id].leader,
                             {m_leader_observer}};
 };
@@ -58,13 +59,13 @@ BOOST_AUTO_TEST_CASE(returns_default_value_when_the_key_has_no_value) {
 BOOST_AUTO_TEST_CASE(returns_default_value_when_the_key_has_empty_value) {
 
     m_etcd.put(ns::root.storage_groups[m_group_id].leader,
-               serialize<candidate::id_t>(candidate::staging_id));
+               serialize<candidate::id_t>(candidate_observer::staging_id));
 
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
 
-    BOOST_TEST(*m_leader_observer.get() == candidate::staging_id);
+    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

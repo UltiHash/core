@@ -19,8 +19,11 @@ public:
                       std::memory_order_release);
     }
 
+    value_observer(std::string expected_key, callback_t callback)
+        : value_observer(expected_key, {}, std::move(callback)) {}
+
     /*
-     * getters
+     * getter
      */
     std::shared_ptr<T> get() const {
         return m_value.load(std::memory_order_acquire);
