@@ -1,3 +1,9 @@
+#pragma once
+
+#include <boost/test/unit_test.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <ostream>
+
 #define TEST_DATA_DIR "@CMAKE_SOURCE_DIR@/data"
 
 static constexpr const char* test_license_string =
@@ -5,3 +11,36 @@ static constexpr const char* test_license_string =
 
 static constexpr const char* test_storage_group_config_string =
     R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"chunk_size_kib":1024},{"id":1,"type":"ROUND_ROBIN","storages":2}])";
+
+namespace boost {
+namespace test_tools {
+namespace tt_detail {
+
+template <typename Enum>
+requires std::is_enum_v<Enum>
+struct print_log_value<Enum> {
+    void operator()(std::ostream& os, const Enum& value) const {
+        if (auto name = magic_enum::enum_name(value); !name.empty()) {
+            os << name;
+        } else {
+            os << "Unknown";
+        }
+    }
+};
+
+template <typename T>
+requires requires(std::ostream& os, const T& v) {
+    { os << v } -> std::same_as<std::ostream&>;
+}
+struct print_log_value<std::vector<T>> {
+    void operator()(std::ostream& os, std::vector<T> const& value) {
+        os << '{';
+        for (auto x : value)
+            os << x << ' ';
+        os << '}';
+    }
+};
+
+} // namespace tt_detail
+} // namespace test_tools
+} // namespace boost
