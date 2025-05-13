@@ -8,7 +8,4 @@ namespace uh::cluster {
 std::size_t get_service_id(etcd_manager& client, const std::string& service,
                            const std::filesystem::path& data_dir);
 
-std::size_t register_storage_service_id(etcd_manager& client,
-                                        const std::size_t id);
-
 } // namespace uh::cluster

@@ -109,7 +109,7 @@ jobs:
       - name: Install the UltiHash cluster
         run: |
           echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values ultihash-helm-values.yaml --wait --timeout 15m
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ inputs.env_name }} --values ultihash-helm-values.yaml --wait --timeout 15m
 
       - name: Execute the performance test against UltiHash
         run: |

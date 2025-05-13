@@ -12,8 +12,6 @@ BOOST_AUTO_TEST_CASE(a_root_supports_group_namespace) {
                "/uh/storage_groups/group_configs");
     BOOST_TEST(std::string(root.storage_groups.group_configs[2]) ==
                "/uh/storage_groups/group_configs/2");
-    BOOST_TEST(std::string(root.storage_groups.storage_assignments[2]) ==
-               "/uh/storage_groups/storage_assignments/2");
     BOOST_TEST(std::string(root.storage_groups[2].storage_states[3]) ==
                "/uh/storage_groups/2/storage_states/3");
     BOOST_TEST(std::string(root.storage_groups[2].group_initialized) ==

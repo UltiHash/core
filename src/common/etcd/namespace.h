@@ -181,12 +181,12 @@ struct temporaries_t : public key_t {
 
 struct storage_groups_t : public key_t {
     subscriptable_key_t group_configs{"group_configs", this};
-    subscriptable_key_t storage_assignments{"storage_assignments", this};
     temporaries_t temporaries{"temporaries", this};
 
     struct impl_t : public key_t {
         subscriptable_key_t storage_hostports{"storage_hostports", this};
         subscriptable_key_t storage_states{"storage_states", this};
+        key_t storage_assignment_trigger{"storage_assignment_trigger", this};
         key_t group_initialized{"group_initialized", this};
         key_t group_state{"group_state", this};
         key_t leader{"leader", this};

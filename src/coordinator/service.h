@@ -78,14 +78,9 @@ public:
 
     static void publish_configs(etcd_manager& etcd,
                                 const storage::group_configs& group_configs) {
-        for (size_t g = 0; const auto& cfg : group_configs.configs) {
-            etcd.put(ns::root.storage_groups.group_configs[g], cfg.to_string());
-
-            for (auto s = 0ul; s < cfg.storages; ++s) {
-                etcd.put(ns::root.storage_groups.storage_assignments[s],
-                         std::to_string(g));
-            }
-            ++g;
+        for (const auto& cfg : group_configs.configs) {
+            etcd.put(ns::root.storage_groups.group_configs[cfg.id],
+                     cfg.to_string());
         }
     }
 

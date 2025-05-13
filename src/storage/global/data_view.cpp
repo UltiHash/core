@@ -33,9 +33,17 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
     // TODO: watch group configs and create group using factory function.
     // We should save groups using map, or using two vectors like group_indices,
     // group_views.
-    auto group_id = 0ul;
-    auto group_config = deserialize<storage::group_config>(etcd.wait(
-        ns::root.storage_groups.group_configs[group_id], SERVICE_GET_TIMEOUT));
+    etcd.wait(ns::root.storage_groups.group_configs, SERVICE_GET_TIMEOUT);
+    auto map = etcd.ls(ns::root.storage_groups.group_configs);
+    if (map.size() != 1) {
+        throw std::runtime_error("Now we support single storage group only");
+    }
+
+    auto key = std::filesystem::path(map.begin()->first);
+    auto group_id = stoul(key.filename().string());
+
+    auto group_config = deserialize<storage::group_config>(
+        etcd.get(ns::root.storage_groups.group_configs[group_id]));
 
     m_group_view = group_factory(m_ioc, etcd, group_id, group_config,
                                  config.storage_service_connection_count);

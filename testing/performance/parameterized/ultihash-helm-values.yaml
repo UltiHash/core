@@ -53,8 +53,15 @@ entrypoint:
 
 storage:
   replicas: $EC2_INSTANCE_COUNT
-  storageClass: $UH_STORAGE_CLASS         
+  storageClass: $UH_STORAGE_CLASS
   storageSize: $STORAGE_VOLUME_SIZE
+  nodeSelector:
+    purpose: parameterized-test-uh
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -64,14 +71,7 @@ storage:
             operator: In
             values:
             - storage
-        topologyKey: kubernetes.io/hostname                  
-  nodeSelector:
-    purpose: parameterized-test-uh
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
+        topologyKey: kubernetes.io/hostname              
 
 deduplicator:
   replicas: $EC2_INSTANCE_COUNT

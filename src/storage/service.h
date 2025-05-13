@@ -24,12 +24,11 @@ public:
         : m_ioc(sc.server.threads),
           m_etcd{service_config.etcd_config},
           m_license_watcher(m_etcd),
-          m_storage_id(register_storage_service_id(m_etcd, sc.service_id)),
-          m_group_id{deserialize<size_t>(m_etcd.wait(
-              ns::root.storage_groups.storage_assignments[m_storage_id],
-              SERVICE_GET_TIMEOUT))},
+          m_storage_id{sc.instance_id},
+          m_group_id{sc.group_id},
           m_group_config{group_config::create(
-              m_etcd.get(ns::root.storage_groups.group_configs[m_group_id]))},
+              m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
+                          SERVICE_GET_TIMEOUT))},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
                                                     sc.working_directory)),
 
@@ -40,8 +39,15 @@ public:
               (m_group_config.type == group_config::type_t::ERASURE_CODING)
                   ? std::make_optional<ec_maintainer>(
                         m_ioc, m_etcd, m_group_config, m_storage_id,
-                        service_config, sc.global_data_view)
+                        service_config, sc.global_data_view,
+                        /*offset*/ 0 // TODO: change this like
+                                     // m_storage.get_offset();
+                        )
                   : std::nullopt),
+
+          // TODO: You can get/set offset using
+          // m_ec_maintainer->set_offset(offset) and
+          // m_ec_maintainer->get_offset()
 
           m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
 

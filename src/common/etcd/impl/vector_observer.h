@@ -9,7 +9,7 @@ namespace uh::cluster {
 template <typename T> class vector_observer : public subscriber_observer {
 public:
     using callback_t = std::function<void(std::size_t index, T& value)>;
-    vector_observer(std::string expected_parent_key, size_t num_members,
+    vector_observer(std::string expected_parent_key, std::size_t num_members,
                     T default_value = {}, callback_t callback = nullptr)
         : m_expected_parent_key{std::move(expected_parent_key)},
           m_default_value{std::move(default_value)},
@@ -22,9 +22,18 @@ public:
         }
     }
 
+    vector_observer(std::string expected_parent_key, std::size_t num_members,
+                    callback_t callback)
+        : vector_observer(expected_parent_key, num_members, {},
+                          std::move(callback)) {}
+
     /*
      * getters
      */
+    auto get(std::size_t id) const {
+        return m_values[id].load(std::memory_order_acquire);
+    }
+
     std::vector<std::shared_ptr<T>> get() const {
         std::vector<std::shared_ptr<T>> result;
         result.reserve(m_values.size());
@@ -72,10 +81,6 @@ private:
     T m_default_value;
     callback_t m_callback;
     std::vector<std::atomic<std::shared_ptr<T>>> m_values;
-
-    auto get(size_t storage_id) const {
-        return m_values[storage_id].load(std::memory_order_acquire);
-    }
 };
 
 } // namespace uh::cluster

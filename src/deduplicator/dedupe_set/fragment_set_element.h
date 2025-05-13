@@ -63,6 +63,8 @@ public:
     mutable std::atomic<int> m_hint_count = 0;
 
 private:
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const fragment_set_element& value);
     storage::global::cache& m_storage;
     uint128_t m_pointer{};
     uint16_t m_size{};
@@ -71,4 +73,14 @@ private:
     void catch_frag(const fragment_set_element& f, shared_buffer<char>& data,
                     std::string_view& str, size_t size) const;
 };
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const fragment_set_element& value) {
+    shared_buffer<char> sb;
+    std::string_view sv;
+    value.catch_frag(value, sb, sv, value.m_size);
+    os << sv;
+    return os;
+}
+
 } // namespace uh::cluster

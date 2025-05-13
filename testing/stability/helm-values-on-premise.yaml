@@ -73,22 +73,27 @@ entrypoint:
     enabled: false
 
 storage:
-  replicas: 2
-  storageClass: local-path
-  storageSize: 50Gi
-  nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-01
-  extraEnvs:
-    - name: OTEL_RESOURCE_ATTRIBUTES
-      value: service.name=storage
-  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
-  extraVolumeMounts:
-    - name: core-dump
-      mountPath: /tmp/core-dumps/
-  extraVolumes:
-    - name: core-dump
-      hostPath:
-        path: /tmp/core-dumps/
+  - id: 0
+    type: ROUND_ROBIN
+    storages: 2
+    storageClass: local-path
+    size: 50Gi
+    mountPaths:
+        - name: storage0
+          containerPath: /var/lib/uh/storage
+    nodeSelector:
+      kubernetes.io/hostname: opm-k8s-worker-01
+    extraEnvs:
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.name=storage
+    # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+    extraVolumeMounts:
+      - name: core-dump
+        mountPath: /tmp/core-dumps/
+    extraVolumes:
+      - name: core-dump
+        hostPath:
+          path: /tmp/core-dumps/
 
 deduplicator:
   replicas: 2

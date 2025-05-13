@@ -71,11 +71,17 @@ databaseInit:
     kubernetes.io/hostname: opm-k8s-worker-02
 
 storage:
-  replicas: 1
-  storageClass: local-path
-  storageSize: 5Gi
-  nodeSelector:
-    kubernetes.io/hostname: opm-k8s-worker-02
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: 1
+      storageClass: local-path
+      size: 5Gi
+      mountPaths:
+        - name: storage0
+          containerPath: /var/lib/uh/storage
+      nodeSelector:
+        kubernetes.io/hostname: opm-k8s-worker-02
 
 collector:
   config:
