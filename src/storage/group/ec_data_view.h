@@ -117,7 +117,8 @@ public:
 private:
     boost::asio::io_context& m_ioc;
     group_config m_config;
-    std::size_t m_block_size;
+    std::size_t m_stripe_size;
+    std::size_t m_chunk_size;
     reedsolomon_c m_rs;
     externals_subscriber m_externals;
 };

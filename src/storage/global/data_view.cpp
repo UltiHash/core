@@ -47,6 +47,9 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
 
     m_group_view = group_factory(m_ioc, etcd, group_id, group_config,
                                  config.storage_service_connection_count);
+
+    etcd.wait(ns::root.storage_groups[group_id].group_state,
+              SERVICE_GET_TIMEOUT);
 }
 
 coro<address> global_data_view::write(std::span<const char> data,

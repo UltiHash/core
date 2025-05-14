@@ -39,8 +39,9 @@ public:
                                   service_cfg.working_dir},
 
           m_subscriber{
-              std::format("[group {}, storage {}]", m_group_config.id,
-                          m_storage_id),
+              // std::format("[group {}, storage {}]", m_group_config.id,
+              //             m_storage_id),
+              "",
               etcd,
               m_prefix,
               {m_group_initialized, m_storage_assignment_trigger, m_candidate,

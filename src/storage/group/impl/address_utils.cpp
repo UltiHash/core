@@ -5,8 +5,7 @@
 namespace uh::cluster {
 
 node_address_info
-extract_node_address_map(const address& addr,
-                         storage_index& storage_load_balancer,
+extract_node_address_map(const address& addr, storage_index& storages,
                          const std::vector<size_t>& existing_offsets) {
 
     if (!existing_offsets.empty() and addr.size() != existing_offsets.size()) {
@@ -18,8 +17,7 @@ extract_node_address_map(const address& addr,
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto& node_pos =
-            info.node_info_map[storage_load_balancer.get(frag.pointer)];
+        auto& node_pos = info.node_info_map[storages.get(frag.pointer)];
         auto& node_address = node_pos.addr;
         node_address.push(frag);
         if (!existing_offsets.empty()) {
@@ -35,15 +33,13 @@ extract_node_address_map(const address& addr,
 }
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_index& storage_load_balancer,
-    boost::asio::io_context& ioc,
+    const address& addr, storage_index& storages, boost::asio::io_context& ioc,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>
         fn,
     const std::vector<size_t>& existing_offsets) {
 
-    auto info =
-        extract_node_address_map(addr, storage_load_balancer, existing_offsets);
+    auto info = extract_node_address_map(addr, storages, existing_offsets);
 
     std::vector<future<void>> futures;
     futures.reserve(info.node_info_map.size());

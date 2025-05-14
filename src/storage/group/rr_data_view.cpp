@@ -8,6 +8,7 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t group_id, group_config group_config,
                            std::size_t service_connections)
     : m_ioc(ioc),
+      m_group_config{group_config},
       m_load_balancer{},
       m_storage_index{group_config.storages},
       m_storage_maintainer(
@@ -19,9 +20,17 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 
 coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
-    const auto client = m_load_balancer.get();
+    const auto [storage_id, client] = m_load_balancer.get();
     auto allocation = co_await client->allocate(data.size());
-    co_return co_await client->write(allocation, data, offsets);
+    auto addr = co_await client->write(allocation, data, offsets);
+    address rv;
+    for (auto i = 0ul; i < addr.size(); i++) {
+        auto frag = addr.get(i);
+        frag.pointer = pointer_traits::get_global_pointer(
+            frag.pointer.get_low(), m_group_config.id, storage_id, 0);
+        rv.push(frag);
+    }
+    co_return rv;
 }
 
 coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
