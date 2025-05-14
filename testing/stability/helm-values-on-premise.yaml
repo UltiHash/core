@@ -73,6 +73,7 @@ entrypoint:
     enabled: false
 
 storage:
+  groups:
   - id: 0
     type: ROUND_ROBIN
     storages: 2
