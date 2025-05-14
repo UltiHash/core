@@ -15,7 +15,7 @@ struct group_config {
     std::size_t storages;
     std::size_t data_shards;
     std::size_t parity_shards;
-    std::size_t chunk_size_kib;
+    std::size_t stripe_size_kib;
 
     static group_config create(std::string_view json_str);
     std::string to_string() const;
