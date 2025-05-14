@@ -29,13 +29,13 @@ public:
     }
 
 protected:
-    const std::size_t m_num_instances = 3;
+    const std::size_t m_num_instances = 4;
     group_config m_group_cfg{.id = 0,
                              .type = group_config::type_t::ERASURE_CODING,
                              .storages = m_num_instances,
                              .data_shards = m_num_instances - 1,
                              .parity_shards = 1,
-                             .chunk_size_kib = 64 * KIBI_BYTE};
+                             .stripe_size_kib = 64 * KIBI_BYTE};
     global_data_view_config m_gdv_cfg;
     boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
