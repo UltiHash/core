@@ -16,7 +16,7 @@ struct storage_config {
 
     global_data_view_config global_data_view;
 
-    std::list<std::filesystem::path> m_data_store_roots;
+    std::filesystem::path working_directory;
     data_store_config data_store = {
         .max_file_size = 1 * GIBI_BYTE,
         .max_data_store_size = 1ul * PEBI_BYTE,

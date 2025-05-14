@@ -13,49 +13,20 @@ namespace uh::cluster {
 struct local_storage : public storage_interface {
 
     local_storage(uint32_t index, const data_store_config& config,
-                  const std::list<std::filesystem::path>& paths)
-        : m_threads(16 * paths.size()) {
+                  const std::filesystem::path& path)
+        : m_threads(16),
+          m_data_store(
+              std::make_unique<default_data_store>(config, path, index)) {}
 
-        m_data_stores.reserve(paths.size());
-        size_t i = 0;
-        for (const auto& path : paths) {
-            m_data_stores.emplace_back(
-                std::make_unique<default_data_store>(config, path, index, i++));
-        }
-    }
-
-    coro<address> write(std::span<const char> data,
+    coro<address> write(allocation_t allocation, std::span<const char> data,
                         const std::vector<std::size_t>& offsets) override {
-
-        const size_t part_size =
-            std::ceil(static_cast<double>(data.size()) /
-                      static_cast<double>(m_data_stores.size()));
-
-        address total_addr;
-        std::size_t offsets_idx = 0;
-        for (size_t i = 0; i < m_data_stores.size(); ++i) {
-            const std::size_t start_pos = i * part_size;
-            const std::size_t current_part_size =
-                std::min(data.size() - start_pos, part_size);
-
-            std::vector<std::size_t> local_offsets;
-            while (offsets_idx < offsets.size() &&
-                   offsets[offsets_idx] < start_pos + current_part_size) {
-                local_offsets.push_back(offsets[offsets_idx] - start_pos);
-                ++offsets_idx;
-            }
-
-            auto addr = m_data_stores[i]->write(
-                data.subspan(start_pos, current_part_size), local_offsets);
-            total_addr.append(addr);
-        }
-
-        co_return total_addr;
+        co_return m_data_store->write(allocation, data, offsets);
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
         shared_buffer<> buf(size);
-        auto read_size = get_data_store(pointer).read(pointer, buf.span());
+        auto read_size = m_data_store->read(
+            pointer_traits::get_pointer(pointer), buf.span());
         buf.resize(read_size);
         co_return buf;
     }
@@ -66,9 +37,9 @@ struct local_storage : public storage_interface {
 
         for (size_t i = 0; i < addr.size(); i++) {
             const auto frag = addr.get(i);
-            if (get_data_store(frag.pointer)
-                    .read(frag.pointer,
-                          buffer.subspan(offsets[i], frag.size)) != frag.size) {
+            if (m_data_store->read(pointer_traits::get_pointer(frag.pointer),
+                                   buffer.subspan(offsets[i], frag.size)) !=
+                frag.size) {
                 throw std::runtime_error(
                     "Could not read the data with the given size");
             }
@@ -79,101 +50,46 @@ struct local_storage : public storage_interface {
     }
 
     coro<address> link(const address& addr) override {
-
-        std::vector<address> ds_addresses(m_data_stores.size());
-        for (size_t i = 0; i < addr.size(); i++) {
-            const auto f = addr.get(i);
-            const auto id = pointer_traits::get_data_store_id(f.pointer);
-            ds_addresses.at(id).push(f);
-        }
-
-        std::vector<std::future<address>> futures;
-        futures.reserve(m_data_stores.size());
-        for (size_t i = 0; i < m_data_stores.size(); ++i) {
-
-            auto p = std::make_shared<std::promise<address>>();
-            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
-                try {
-                    p->set_value(m_data_stores[i]->link(ds_addresses[i]));
-                } catch (const std::exception&) {
-                    p->set_exception(std::current_exception());
-                }
-            });
-            futures.emplace_back(p->get_future());
-        }
-
-        address rv;
-        for (auto& f : futures) {
-            rv.append(f.get());
-        }
-
-        co_return rv;
+        auto p = std::make_shared<std::promise<address>>();
+        boost::asio::post(m_threads, [this, p, &addr]() {
+            try {
+                p->set_value(m_data_store->link(addr));
+            } catch (const std::exception&) {
+                p->set_exception(std::current_exception());
+            }
+        });
+        co_return p->get_future().get();
     }
 
     coro<std::size_t> unlink(const address& addr) override {
-
-        std::vector<address> ds_addresses(m_data_stores.size());
-        for (size_t i = 0; i < addr.size(); i++) {
-            const auto f = addr.get(i);
-            const auto id = pointer_traits::get_data_store_id(f.pointer);
-            ds_addresses.at(id).push(f);
-        }
-
-        std::vector<std::future<std::size_t>> futures;
-        futures.reserve(m_data_stores.size());
-        for (size_t i = 0; i < m_data_stores.size(); ++i) {
-
-            auto p = std::make_shared<std::promise<std::size_t>>();
-            boost::asio::post(m_threads, [i, this, p, &ds_addresses]() {
-                try {
-                    p->set_value(m_data_stores[i]->unlink(ds_addresses[i]));
-                } catch (const std::exception&) {
-                    p->set_exception(std::current_exception());
-                }
-            });
-            futures.emplace_back(p->get_future());
-        }
-
-        std::size_t freed_bytes = 0;
-        for (auto& f : futures) {
-            freed_bytes += f.get();
-        }
-
-        co_return freed_bytes;
+        auto p = std::make_shared<std::promise<std::size_t>>();
+        boost::asio::post(m_threads, [this, p, &addr]() {
+            try {
+                p->set_value(m_data_store->unlink(addr));
+            } catch (const std::exception&) {
+                p->set_exception(std::current_exception());
+            }
+        });
+        co_return p->get_future().get();
     }
 
-    size_t get_used_space_func() {
-        size_t used = 0;
-        for (const auto& ds : m_data_stores) {
-            used += ds->get_used_space();
-        }
-        return used;
+    std::size_t get_used_space_func() { return m_data_store->get_used_space(); }
+
+    coro<std::size_t> get_used_space() override {
+        co_return get_used_space_func();
     }
 
-    coro<size_t> get_used_space() override { co_return get_used_space_func(); }
+    std::size_t get_available_space_func() {
+        return m_data_store->get_available_space();
+    }
 
-    size_t get_available_space_func() {
-
-        size_t free = 0;
-        for (const auto& ds : m_data_stores) {
-            free += ds->get_available_space();
-        }
-        return free;
+    coro<allocation_t> allocate(std::size_t size) override {
+        co_return m_data_store->allocate(size);
     }
 
 private:
-    std::vector<std::unique_ptr<data_store>> m_data_stores;
     boost::asio::thread_pool m_threads;
-
-    data_store& get_data_store(const uint128_t& pointer) const {
-        auto data_store_id = pointer_traits::get_data_store_id(pointer);
-
-        if (data_store_id >= m_data_stores.size()) {
-            throw std::runtime_error("data store id out of range");
-        }
-
-        return *m_data_stores[data_store_id];
-    }
+    std::unique_ptr<data_store> m_data_store;
 };
 
 } // namespace uh::cluster

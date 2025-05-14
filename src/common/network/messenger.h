@@ -12,6 +12,8 @@ public:
 
     coro<fragment> recv_fragment(const header& message_header);
 
+    coro<allocation_t> recv_allocation(const header& message_header);
+
     template <typename T>
     requires std::is_arithmetic_v<T>
     coro<T> recv_primitive(const header& message_header) {
@@ -41,6 +43,9 @@ public:
     coro<void> send_address(const message_type type, const address& addr);
 
     coro<void> send_fragment(const message_type type, const fragment frag);
+
+    coro<void> send_allocation(const message_type type,
+                               const allocation_t& allocation);
 
     template <typename T>
     requires std::is_arithmetic_v<T>

@@ -29,6 +29,8 @@ private:
 
     coro<void> handle_get_used(messenger& m, const messenger::header&);
 
+    coro<void> handle_allocate(messenger& m, const messenger::header&);
+
     local_storage& m_storage;
 };
 

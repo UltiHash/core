@@ -38,15 +38,6 @@ public:
     std::size_t read(std::size_t offset, std::span<char> buffer);
 
     /**
-     * Reserve `size` bytes of space, returning offset to write to.
-     * If `size > free()` this function will not return an error, however calls
-     * to `write(offset, ...)` may write less bytes than allocated.
-     *
-     * @note this function must not be used from concurrent threads
-     */
-    std::size_t alloc(std::size_t size);
-
-    /**
      * Free `size` bytes of used space at the given `offset`.
      */
     std::size_t release(std::size_t offset, std::size_t size);
@@ -56,9 +47,6 @@ public:
 
     /// total size of file
     std::size_t filesize() const;
-
-    /// free space in file
-    std::size_t free() const;
 
     /// size of data
     std::size_t used_space() const;
@@ -81,7 +69,6 @@ private:
     int m_fd;
     int m_meta_fd;
 
-    std::atomic<std::size_t> m_pointer;
     std::atomic<std::size_t> m_used;
     std::size_t m_filesize;
     std::filesystem::path m_path;

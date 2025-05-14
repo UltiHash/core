@@ -52,7 +52,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
 
     auto gdv = get_data_view();
     address addr;
-    addr.push({23, 42});
+    addr.push({std::numeric_limits<uint64_t>::max(), 42});
     auto result_buffer = unique_buffer<char>(addr.data_size());
 
     BOOST_REQUIRE_THROW(

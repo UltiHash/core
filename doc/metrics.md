@@ -18,7 +18,7 @@ Each service measures the number of requests it receives and handles using monot
 - `storage_link_req`: number of requests received for linking a fragment
 - `storage_unlink_req`: number of requests received for unlinking a fragment
 - `storage_used_req`: number of requests received to get the used space
-- `storage_update_state_req`: number of requests received for updating the state of the storage service
+- `storage_allocate_req`: number of requests received for allocating storage
 
 ### Deduplicator service requests (internal, custom protocol):
 

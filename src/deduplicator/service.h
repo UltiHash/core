@@ -25,7 +25,7 @@ public:
           m_etcd{sc.etcd_config},
           m_service_id(get_service_id(m_etcd,
                                       get_service_string(DEDUPLICATOR_SERVICE),
-                                      sc.working_dir)),
+                                      config.working_dir)),
           m_service_registry(m_etcd,
                              ns::root.deduplicator.hostports[m_service_id]),
 

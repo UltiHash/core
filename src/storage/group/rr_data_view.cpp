@@ -20,7 +20,8 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
     const auto client = m_load_balancer.get();
-    co_return co_await client->write(data, offsets);
+    auto allocation = co_await client->allocate(data.size());
+    co_return co_await client->write(allocation, data, offsets);
 }
 
 coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,

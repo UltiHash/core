@@ -20,21 +20,15 @@ struct dedupe_response {
     }
 };
 
-struct ds_write_request {
-    uint32_t ds_id;
-    uint64_t pointer;
-    std::variant<std::span<const char>, unique_buffer<>> data;
-};
-
-struct ds_read_request {
-    uint32_t ds_id;
-    uint64_t pointer;
-    size_t size;
+struct allocation_t {
+    std::size_t offset;
+    std::size_t size;
 };
 
 struct write_request {
-    std::vector<std::size_t> offsets;
+    allocation_t allocation;
     std::variant<std::span<const char>, unique_buffer<>> data;
+    std::vector<std::size_t> offsets;
 };
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;

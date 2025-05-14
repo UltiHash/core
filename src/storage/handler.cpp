@@ -81,6 +81,9 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         case STORAGE_USED_REQ:
             co_await handle_get_used(m, hdr);
             break;
+        case STORAGE_ALLOCATE_REQ:
+            co_await handle_allocate(m, hdr);
+            break;
         default:
             throw std::invalid_argument("Invalid message type!");
         }
@@ -112,7 +115,8 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
     write_request req = co_await m.recv_write(h);
     auto addr = co_await m_storage.write(
-        std::get<unique_buffer<>>(req.data).string_view(), req.offsets);
+        req.allocation, std::get<unique_buffer<>>(req.data).string_view(),
+        req.offsets);
     co_await m.send_address(SUCCESS, addr);
 }
 
@@ -161,6 +165,12 @@ coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
     const auto used = co_await m_storage.get_used_space();
     co_await m.send_primitive<size_t>(SUCCESS, used);
+}
+
+coro<void> handler::handle_allocate(messenger& m, const messenger::header& h) {
+    const auto size = co_await m.recv_primitive<std::size_t>(h);
+    auto rv = co_await m_storage.allocate(size);
+    co_await m.send_allocation(SUCCESS, rv);
 }
 
 } // namespace uh::cluster::storage

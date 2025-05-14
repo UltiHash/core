@@ -37,15 +37,15 @@ public:
                     const std::filesystem::path& working_dir,
                     uint32_t service_id, uint32_t data_store_id);
 
-    address write(std::span<const char> data,
+    allocation_t allocate(size_t size);
+    address write(const allocation_t allocation, std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
-    void manual_write(uint64_t internal_pointer, std::span<const char> data);
-    void manual_read(uint64_t pointer, std::span<char> buffer);
-    std::size_t read(const uint128_t& pointer, std::span<char> buffer);
+    std::size_t read(const std::size_t pointer, std::span<char> buffer);
     address link(const address& addr);
     size_t unlink(const address& addr);
     [[nodiscard]] size_t get_used_space() const noexcept;
     [[nodiscard]] size_t get_available_space() const noexcept;
+    [[nodiscard]] std::size_t get_write_offset() const noexcept;
     void clear(); // for testing
 
     size_t id() const noexcept;

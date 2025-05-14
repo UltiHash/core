@@ -43,7 +43,7 @@ public:
                 service_cfg.working_dir = m_temp_dirs.emplace_back().path();
                 storage_config storage_cfg;
                 storage_cfg.server.port = 10000 + i;
-                storage_cfg.m_data_store_roots = {
+                storage_cfg.working_directory = {
                     std::filesystem::path(service_cfg.working_dir) / "storage"};
                 storage_cfg.instance_id = i;
                 storage_cfg.group_id = group_id;
