@@ -18,7 +18,10 @@ class global_data_view_fixture {
 public:
     global_data_view_fixture()
         : m_etcd(),
-          m_service_cfg(make_service_config()) {}
+          m_service_cfg(make_service_config()) {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+    }
 
     virtual ~global_data_view_fixture() { teardown(); }
 
