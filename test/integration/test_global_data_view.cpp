@@ -28,6 +28,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     // fill_random(input_buffer.data(), input_buffer.size());
     auto input_buffer = random_buffer(64);
 
+    std::cout << "start writing" << std::endl;
     auto addr = boost::asio::co_spawn(
                     get_executor(), gdv->write(input_buffer.string_view(), {0}),
                     boost::asio::use_future)
@@ -36,6 +37,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     BOOST_TEST(addr.pointers.size() == 2ul);
     BOOST_TEST(addr.sizes.size() == 1ul);
 
+    std::cout << "start reading" << std::endl;
     unique_buffer<char> result_buffer(addr.data_size());
     boost::asio::co_spawn(get_executor(),
                           gdv->read_address(addr, result_buffer.span()),
