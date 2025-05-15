@@ -46,14 +46,12 @@ coro<address> ec_data_view::write(std::span<const char> data,
     auto write_size = data.size();
     auto num_chunks = div_ceil(write_size, m_stripe_size);
     auto allocation =
-        co_spawn(m_ioc,
-                 storages.at(leader)->allocate(num_chunks * m_chunk_size),
-                 boost::asio::use_future)
-            .get();
+        co_await storages.at(leader)->allocate(num_chunks * m_chunk_size);
 
     if (allocation.offset % m_chunk_size != 0)
         throw std::runtime_error("Allocation result is not aligned");
 
+    auto context = co_await boost::asio::this_coro::context;
     address rv;
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
@@ -64,7 +62,6 @@ coro<address> ec_data_view::write(std::span<const char> data,
         write_size -= m_stripe_size;
 
         auto encoded = m_rs.encode(data_chunk);
-        auto context = co_await boost::asio::this_coro::context;
         auto res =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
