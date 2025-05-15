@@ -141,6 +141,8 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                         std::min(read_size, m_chunk_size));
             dest += m_chunk_size;
             read_size -= m_chunk_size;
+            if (read_size <= 0)
+                break;
         }
     }
 
