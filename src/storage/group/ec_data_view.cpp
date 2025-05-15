@@ -112,9 +112,6 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     auto num_chunks = div_ceil(read_size, m_stripe_size);
     auto single_shard_size = num_chunks * m_chunk_size;
 
-    if (pointer.get_low() % m_config.data_shards != 0)
-        throw std::runtime_error("Pointer is not aligned");
-
     uint128_t shard_pointer = pointer.get_low() / m_config.data_shards;
 
     auto res = co_await run_for_all<shared_buffer<>,
