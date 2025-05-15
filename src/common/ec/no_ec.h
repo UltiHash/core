@@ -8,9 +8,9 @@ public:
     explicit no_ec(size_t data_nodes)
         : m_data_nodes(data_nodes) {}
 
-    encoded encode(std::span<const char> data) const override {
+    encoded encode(std::span<const char> data,
+                   std::size_t shard_size) const override {
         encoded enc;
-        const auto shard_size = (data.size() + m_data_nodes - 1) / m_data_nodes;
         std::vector<std::span<const char>> shards;
 
         size_t size = 0;

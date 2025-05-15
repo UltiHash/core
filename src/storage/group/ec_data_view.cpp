@@ -61,7 +61,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
                                        std::min(write_size, m_stripe_size));
         write_size -= m_stripe_size;
 
-        auto encoded = m_rs.encode(data_chunk);
+        auto encoded = m_rs.encode(data_chunk, m_chunk_size);
         auto res =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
