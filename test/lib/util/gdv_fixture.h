@@ -36,7 +36,7 @@ public:
             config.type = storage::group_config::type_t::ERASURE_CODING;
             config.parity_shards = 1;
             config.data_shards = config.storages - config.parity_shards;
-            config.chunk_size_kib = 8;
+            config.stripe_size_kib = config.data_shards * 2;
 #else
             config.type = storage::group_config::type_t::ROUND_ROBIN;
 #endif
@@ -131,7 +131,7 @@ private:
         service_cfg.working_dir = m_temp_dirs.emplace_back().path();
         return service_cfg;
     }
-    static constexpr size_t NUM_STORAGE_INSTANCES = 4;
+    static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
     std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 2};
     std::vector<temp_directory> m_temp_dirs;

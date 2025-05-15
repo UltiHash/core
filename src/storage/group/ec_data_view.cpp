@@ -18,7 +18,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t service_connections)
     : m_ioc(ioc),
       m_config{config},
-      m_stripe_size{m_config.chunk_size_kib * 1_KiB * m_config.data_shards},
+      m_stripe_size{m_config.stripe_size_kib * 1_KiB},
       m_chunk_size{[&]() {
           if (m_stripe_size % m_config.data_shards != 0)
               throw std::runtime_error(

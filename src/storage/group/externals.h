@@ -53,7 +53,7 @@ public:
                               std::move(service_factory),
                               {m_storage_index}},
           m_subscriber{
-              "externals_subscriber",
+              "",
               etcd,
               m_prefix,
               {m_leader, m_group_state, m_storage_states, m_storage_hostports},

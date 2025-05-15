@@ -24,7 +24,7 @@ void from_json(const ordered_json& j, group_config& config) {
                 "parity_shards");
         }
 
-        if (config.stripe_size_kib % config.storages != 0) {
+        if (config.stripe_size_kib % config.data_shards != 0) {
             throw std::invalid_argument(
                 "stripe_size_kib must be divisible by storages count");
         }
