@@ -37,7 +37,7 @@ public:
                     const std::filesystem::path& working_dir,
                     uint32_t service_id, uint32_t data_store_id);
 
-    allocation_t allocate(size_t size);
+    allocation_t allocate(std::size_t size, std::size_t alignment = 1);
     address write(const allocation_t allocation, std::span<const char> data,
                   const std::vector<std::size_t>& offsets);
     std::size_t read(const std::size_t pointer, std::span<char> buffer);

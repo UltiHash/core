@@ -13,7 +13,7 @@ struct data_store_config {
 };
 
 struct data_store {
-    virtual allocation_t allocate(size_t size) = 0;
+    virtual allocation_t allocate(size_t size, std::size_t alignment = 1) = 0;
 
     virtual address write(const allocation_t allocation,
                           std::span<const char> data,

@@ -643,6 +643,15 @@ BOOST_AUTO_TEST_CASE(deletion_space_reclaim) {
                       3 * (MAX_DATA_STORE_SIZE_BYTES / 4));
 }
 
+BOOST_AUTO_TEST_CASE(alignment) {
+    auto alloc = ds->allocate(23);
+    BOOST_CHECK(alloc.offset % (1 * KIBI_BYTE) == 0);
+    alloc = ds->allocate(42);
+    BOOST_CHECK(alloc.offset % (1 * KIBI_BYTE) != 0);
+    alloc = ds->allocate(1 * KIBI_BYTE, 1 * KIBI_BYTE);
+    BOOST_CHECK(alloc.offset % (1 * KIBI_BYTE) == 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // end namespace uh::cluster
