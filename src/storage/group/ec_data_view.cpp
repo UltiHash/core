@@ -52,7 +52,6 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("Allocation result is not aligned");
 
     auto context = co_await boost::asio::this_coro::context;
-    address rv;
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
@@ -62,30 +61,19 @@ coro<address> ec_data_view::write(std::span<const char> data,
         write_size -= m_stripe_size;
 
         auto encoded = m_rs.encode(data_chunk, m_chunk_size);
-        auto res =
-            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
-                m_ioc,
-                [&](size_t i, auto storage) -> coro<address> {
-                    co_return co_await storage
-                        ->write(alloc, encoded.get().at(i), offsets)
-                        .continue_trace(context);
-                },
-                storages);
-
-        auto& addr0 = res[0];
-        for (auto i = 0ul; i < addr0.size(); i++) {
-            auto pointer = pointer_traits::get_global_pointer(
-                addr0.get(i).pointer.get_low() * m_config.data_shards,
-                m_config.id, 0, 0);
-
-            std::size_t frag_size = 0;
-            for (auto j = 0ul; j < res.size(); j++) {
-                frag_size += res[j].get(i).size;
-            }
-
-            rv.push(fragment{.pointer = pointer, .size = frag_size});
-        }
+        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<address> {
+                co_return co_await storage
+                    ->write(alloc, encoded.get().at(i), offsets)
+                    .continue_trace(context);
+            },
+            storages);
     }
+    address rv;
+    auto pointer = pointer_traits::get_global_pointer(
+        allocation.offset * m_config.data_shards, m_config.id, 0, 0);
+    rv.push(fragment{.pointer = pointer, .size = data.size()});
     co_return rv;
 }
 
