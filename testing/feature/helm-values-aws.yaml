@@ -115,9 +115,7 @@ storage:
       storages: 1
       storageClass: ebs-csi-gp3
       size: 5Gi
-      mountPaths:
-        - name: storage0
-          containerPath: /var/lib/uh/storage
+      mountPath: /var/lib/uh/storage
       nodeSelector:
         purpose: feature-testing
       tolerations:
