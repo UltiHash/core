@@ -4,18 +4,18 @@ on:
   schedule:
     - cron: '0 0 * * MON-FRI'
   workflow_dispatch:
-    #inputs:
-    #  test-to-execute:
-    #    type: choice
-    #    description: Choose the test to execute
-    #    options: 
-    #      - feature-test-aarch64
-    #      - pyspark-test-x86-64
-    #      - s3a-test-x86-64
-    #      - stability-test-x86-64
-    #      - small-performance-test
-    #      - vulnerability-scanning
-    #    required: true
+    inputs:
+      test-to-execute:
+        type: choice
+        description: Choose the test to execute
+        options: 
+          - feature-test-aarch64
+          - pyspark-test-x86-64
+          - s3a-test-x86-64
+          - stability-test-x86-64
+          - small-performance-test
+          - vulnerability-scanning
+        required: true
 
 jobs:
 
@@ -48,9 +48,9 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
     uses: ./.github/workflows/feature_testing_on_aws.yml
     with:
       env_name: feature-testing-aarch64
@@ -70,9 +70,9 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64')
     uses: ./.github/workflows/pyspark_testing_on_premise.yml
     with:
       env_name: pyspark-testing-x86-64
@@ -91,9 +91,9 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64')
     uses: ./.github/workflows/s3a_testing_on_premise.yml
     with:
       env_name: s3a-testing-x86-64
@@ -112,9 +112,9 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
     uses: ./.github/workflows/stability_testing_on_premise.yml
     with:
       env_name: stability-testing-x86-64
@@ -133,9 +133,9 @@ jobs:
     needs: 
       - build-core
       - build-database-init
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test')
     uses: ./.github/workflows/performance_testing_small_aws.yml
     with:
       env_name: performance-testing-small-aarch64
@@ -154,9 +154,9 @@ jobs:
   vulnerability-scanning:
     needs: 
       - build-core
-    #if: |
-    #  github.event_name == 'schedule' || 
-    #  (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning')
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning')
     uses: ./.github/workflows/vulnerability_scanning.yml
     with:
       docker_image_tag: nightly-build
