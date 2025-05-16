@@ -104,9 +104,7 @@ storage:
       nodeSelector:
         workload-type: storage
         purpose: performance-and-stability-testing
-      mountPaths:
-        - name: storage0
-          containerPath: /var/lib/uh/storage
+      mountPath: /var/lib/uh/storage
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -79,9 +79,7 @@ storage:
     storages: 2
     storageClass: local-path
     size: 50Gi
-    mountPaths:
-        - name: storage0
-          containerPath: /var/lib/uh/storage
+    mountPath: /var/lib/uh/storage
     nodeSelector:
       kubernetes.io/hostname: opm-k8s-worker-01
     extraEnvs:
