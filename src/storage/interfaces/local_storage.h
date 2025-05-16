@@ -84,8 +84,9 @@ struct local_storage : public storage_interface {
         return m_data_store->get_available_space();
     }
 
-    coro<allocation_t> allocate(std::size_t size) override {
-        co_return m_data_store->allocate(size);
+    coro<allocation_t> allocate(std::size_t size,
+                                std::size_t alignment) override {
+        co_return m_data_store->allocate(size, alignment);
     }
 
 private:

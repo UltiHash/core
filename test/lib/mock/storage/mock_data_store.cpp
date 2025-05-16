@@ -141,7 +141,8 @@ void mock_data_store::clear() {
 
 size_t mock_data_store::id() const noexcept { return m_data_store_id; }
 
-allocation_t mock_data_store::allocate(size_t size) {
+allocation_t mock_data_store::allocate(std::size_t size,
+                                       std::size_t alignment) {
 
     std::unique_lock lock(m_mutex);
 
@@ -150,6 +151,9 @@ allocation_t mock_data_store::allocate(size_t size) {
                                  std::to_string(size) + " bytes");
     }
 
+    if (m_current_offset % alignment != 0) {
+        m_current_offset += alignment - (m_current_offset % alignment);
+    }
     std::size_t allocation_offset = m_current_offset.load();
     m_current_offset += size;
 

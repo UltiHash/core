@@ -71,9 +71,12 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
-    virtual coro<allocation_t> allocate(std::size_t size) override {
+    coro<allocation_t> allocate(std::size_t size,
+                                std::size_t alignment) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_primitive<size_t>(STORAGE_ALLOCATE_REQ, size);
+        m->register_write_buffer(size);
+        m->register_write_buffer(alignment);
+        co_await m->send_buffers(STORAGE_ALLOCATE_REQ);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_allocation(message_header);
     }

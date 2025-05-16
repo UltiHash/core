@@ -228,12 +228,16 @@ std::size_t default_data_store::get_write_offset() const noexcept {
     return m_write_offset;
 }
 
-allocation_t default_data_store::allocate(size_t size) {
+allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
     std::unique_lock lock(m_mutex);
 
     if (m_conf.max_data_store_size - m_write_offset < size) {
         throw std::runtime_error("datastore cannot store additional " +
                                  std::to_string(size) + " bytes");
+    }
+
+    if (m_write_offset % alignment != 0) {
+        m_write_offset += alignment - (m_write_offset % alignment);
     }
 
     allocation_t rv = {.offset = m_write_offset, .size = size};
