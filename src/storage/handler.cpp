@@ -168,8 +168,12 @@ coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
 }
 
 coro<void> handler::handle_allocate(messenger& m, const messenger::header& h) {
-    const auto size = co_await m.recv_primitive<std::size_t>(h);
-    auto rv = co_await m_storage.allocate(size);
+    std::size_t size;
+    std::size_t alignment;
+    m.register_read_buffer(size);
+    m.register_read_buffer(alignment);
+    co_await m.recv_buffers(h);
+    auto rv = co_await m_storage.allocate(size, alignment);
     co_await m.send_allocation(SUCCESS, rv);
 }
 
