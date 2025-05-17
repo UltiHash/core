@@ -19,7 +19,8 @@ struct fragment_set_fixture : public global_data_view_fixture {
     std::shared_ptr<storage::global::cache> cache;
     std::shared_ptr<fragment_set> frag_set;
 
-    fragment_set_fixture() {}
+    fragment_set_fixture()
+        : global_data_view_fixture() {}
 
     void setup() {
         global_data_view_fixture::setup();
@@ -28,6 +29,8 @@ struct fragment_set_fixture : public global_data_view_fixture {
                                                          1000);
         frag_set = std::make_shared<fragment_set>(1000, *cache);
     }
+
+    void teardown() { global_data_view_fixture::teardown(); }
 
     std::pair<shared_buffer<char>, address> create_fragment(char fill_char,
                                                             std::size_t size) {

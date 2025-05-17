@@ -120,9 +120,9 @@ void fragmentation::flush_fragments_internal(fragment_set& set) {
             continue;
         }
 
-        set.insert({frag.addr.pointers[0], frag.addr.pointers[1]},
-                   frag.data.substr(0, frag.addr.sizes.front()), frag.header,
-                   frag.hint);
+        set.insert({frag.addr.fragments[0].pointer},
+                   frag.data.substr(0, frag.addr.fragments[0].size),
+                   frag.header, frag.hint);
     }
 }
 

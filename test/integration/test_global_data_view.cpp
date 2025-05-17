@@ -34,8 +34,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
                     boost::asio::use_future)
                     .get();
     BOOST_TEST(input_buffer.size() == addr.data_size());
-    BOOST_TEST(addr.pointers.size() == 2ul);
-    BOOST_TEST(addr.sizes.size() == 1ul);
+    BOOST_TEST(addr.fragments.size() == 1ul);
 
     std::cout << "start reading" << std::endl;
     unique_buffer<char> result_buffer(addr.data_size());
@@ -126,6 +125,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
             .get());
 
     BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == 8);
 
     auto result_buffer = unique_buffer<char>(addr.data_size());
     boost::asio::co_spawn(get_executor(),

@@ -27,7 +27,7 @@ coro<address> rr_data_view::write(std::span<const char> data,
     for (auto i = 0ul; i < addr.size(); i++) {
         auto frag = addr.get(i);
         frag.pointer = pointer_traits::get_global_pointer(
-            frag.pointer.get_low(), m_group_config.id, storage_id, 0);
+            frag.pointer, m_group_config.id, storage_id, 0);
         rv.push(frag);
     }
     co_return rv;

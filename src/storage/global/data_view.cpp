@@ -17,6 +17,8 @@ std::unique_ptr<data_view> group_factory(boost::asio::io_context& ioc,
         return std::make_unique<rr_data_view>(
             ioc, etcd, group_id, std::move(config), service_connections);
     case group_config::type_t::ERASURE_CODING:
+        etcd.wait(ns::root.storage_groups[group_id].group_state,
+                  SERVICE_GET_TIMEOUT);
         return std::make_unique<ec_data_view>(
             ioc, etcd, group_id, std::move(config), service_connections);
     case group_config::type_t::REPLICA:
@@ -47,9 +49,6 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
 
     m_group_view = group_factory(m_ioc, etcd, group_id, group_config,
                                  config.storage_service_connection_count);
-
-    etcd.wait(ns::root.storage_groups[group_id].group_state,
-              SERVICE_GET_TIMEOUT);
 }
 
 coro<address> global_data_view::write(std::span<const char> data,

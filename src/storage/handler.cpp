@@ -137,9 +137,9 @@ coro<void> handler::handle_read_address(messenger& m,
     std::vector<size_t> offsets;
     offsets.reserve(addr.size());
     size_t offset = 0;
-    for (const auto fsize : addr.sizes) {
+    for (const auto frag : addr.fragments) {
         offsets.emplace_back(offset);
-        offset += fsize;
+        offset += frag.size;
     }
 
     co_await m_storage.read_address(addr, buffer.span(), offsets);

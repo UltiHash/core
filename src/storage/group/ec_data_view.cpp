@@ -45,8 +45,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
     auto write_size = data.size();
     auto num_chunks = div_ceil(write_size, m_stripe_size);
-    auto allocation =
-        co_await storages.at(leader)->allocate(num_chunks * m_chunk_size);
+    auto allocation = co_await storages.at(leader)->allocate(
+        num_chunks * m_chunk_size, m_chunk_size);
 
     if (allocation.offset % m_chunk_size != 0)
         throw std::runtime_error("Allocation result is not aligned");
@@ -100,7 +100,8 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     auto num_chunks = div_ceil(read_size, m_stripe_size);
     auto single_shard_size = num_chunks * m_chunk_size;
 
-    uint128_t shard_pointer = pointer.get_low() / m_config.data_shards;
+    uint128_t shard_pointer =
+        pointer_traits::get_group_address(pointer) / m_config.data_shards;
 
     auto res = co_await run_for_all<shared_buffer<>,
                                     std::shared_ptr<storage_interface>>(
@@ -139,7 +140,13 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    co_return 0;
+    auto storages = m_externals.get_storage_services();
+    co_return co_await perform_for_address(
+        addr, storages, m_ioc,
+        [buffer](size_t, std::shared_ptr<storage_interface> svc,
+                 const address_info& info) -> coro<void> {
+            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
+        });
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }

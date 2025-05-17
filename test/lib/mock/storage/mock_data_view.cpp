@@ -15,7 +15,7 @@ coro<address> mock_data_view::write(std::span<const char> data,
 coro<shared_buffer<>> mock_data_view::read(const uint128_t& pointer,
                                            size_t size) {
     shared_buffer<char> buffer(size);
-    m_storage.read(pointer.get_low(), buffer.span());
+    m_storage.read(pointer, buffer.span());
     co_return buffer;
 }
 
@@ -24,7 +24,7 @@ coro<std::size_t> mock_data_view::read_address(const address& addr,
     auto size = 0u;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        m_storage.read(frag.pointer.get_low(), buffer.first(frag.size));
+        m_storage.read(frag.pointer, buffer.first(frag.size));
         buffer = buffer.subspan(frag.size);
         size += frag.size;
     }

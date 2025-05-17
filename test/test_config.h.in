@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/test/unit_test.hpp>
+#include <common/types/big_int.h>
 #include <magic_enum/magic_enum.hpp>
 #include <ostream>
 
@@ -38,6 +39,12 @@ struct print_log_value<std::vector<T>> {
         for (auto x : value)
             os << x << ' ';
         os << '}';
+    }
+};
+
+template <> struct print_log_value<__uint128_t> {
+    void operator()(std::ostream& os, const __uint128_t& value) const {
+        ::operator<<(os, value);
     }
 };
 

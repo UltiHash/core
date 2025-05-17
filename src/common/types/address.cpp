@@ -1,10 +1,22 @@
 #include "address.h"
 
+#include <common/utils/pointer_traits.h>
+#include <format>
+
 namespace uh::cluster {
 
 std::string fragment::to_string() const {
-    return pointer.to_string() + "[" + std::to_string(size) + "]";
+    return std::format("{}, {} [{}]", pointer_traits::get_group_id(pointer),
+                       pointer_traits::get_group_address(pointer), size);
 }
+
+} // namespace uh::cluster
+
+std::ostream& operator<<(std::ostream& os, const uh::cluster::fragment& frag) {
+    return os << frag.to_string();
+}
+
+namespace uh::cluster {
 
 fragment fragment::subfrag(std::size_t start, std::size_t end) const {
     if (start >= end) {
@@ -15,8 +27,7 @@ fragment fragment::subfrag(std::size_t start, std::size_t end) const {
 }
 
 address::address(std::size_t size)
-    : pointers(size * 2),
-      sizes(size) {}
+    : fragments(size) {}
 
 address address::shrink() const {
     address rv;
@@ -25,24 +36,22 @@ address address::shrink() const {
         return rv;
     }
 
-    uint128_t ptr(pointers[0], pointers[1]);
-    std::size_t size = sizes[0];
+    auto frag = fragments[0];
 
-    for (std::size_t index = 1; index < sizes.size(); ++index) {
+    for (auto f : std::span(fragments).subspan(1)) {
 
-        uint128_t current(pointers[2 * index], pointers[2 * index + 1]);
-
-        if (ptr + size == current) {
-            size += sizes[index];
+        uint128_t current = f.pointer;
+        if (frag.pointer + frag.size == current) {
+            frag.size += f.size;
             continue;
         }
 
-        rv.push({ptr, size});
-        ptr = current;
-        size = sizes[index];
+        rv.push({frag.pointer, frag.size});
+        frag.pointer = current;
+        frag.size = f.size;
     }
 
-    rv.push({ptr, size});
+    rv.push({frag.pointer, frag.size});
 
     return rv;
 }
@@ -53,31 +62,26 @@ bool address::consecutive(const address& addr) {
     return this_addr_end == other_addr_start;
 }
 
-void address::push(const fragment& frag) {
-    pointers.emplace_back(frag.pointer.get_data()[0]);
-    pointers.emplace_back(frag.pointer.get_data()[1]);
-    sizes.emplace_back(frag.size);
-}
+void address::push(const fragment& frag) { fragments.push_back(frag); }
 
-void address::append(const address& addr) {
-    pointers.insert(pointers.cend(), addr.pointers.cbegin(),
-                    addr.pointers.cend());
-    sizes.insert(sizes.cend(), addr.sizes.cbegin(), addr.sizes.cend());
+void address::append(const address& other) {
+    fragments.insert(fragments.cend(), other.fragments.cbegin(),
+                     other.fragments.cend());
 }
 
 std::size_t address::data_size() const {
-    return std::accumulate(sizes.begin(), sizes.end(), 0ull);
+    return std::accumulate(
+        fragments.begin(), fragments.end(), 0ull,
+        [](std::size_t acc, const fragment& f) { return acc + f.size; });
 }
 
-[[nodiscard]] fragment address::get(size_t i) const {
-    return {{pointers[2 * i], pointers[2 * i + 1]}, sizes[i]};
-}
+[[nodiscard]] fragment address::get(size_t i) const { return fragments[i]; }
 
 [[nodiscard]] std::size_t address::size() const noexcept {
-    return sizes.size();
+    return fragments.size();
 }
 
-[[nodiscard]] bool address::empty() const noexcept { return sizes.empty(); }
+[[nodiscard]] bool address::empty() const noexcept { return fragments.empty(); }
 
 address address::range(std::size_t start, std::size_t end) const {
     fragment f;
@@ -114,12 +118,12 @@ address address::range(std::size_t start, std::size_t end) const {
 std::string address::to_string() const {
     std::string frags;
 
-    for (std::size_t index = 0; index < sizes.size(); ++index) {
+    for (auto f : fragments) {
         if (!frags.empty()) {
             frags += ", ";
         }
 
-        frags += get(index).to_string();
+        frags += f.to_string();
     }
 
     return frags;

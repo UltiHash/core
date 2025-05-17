@@ -59,7 +59,11 @@ public:
     }
 
     encoded encode(std::span<const char> data,
-                   std::size_t shard_size) const override {
+                   std::size_t shard_size = 0) const override {
+
+        if (shard_size == 0) {
+            shard_size = (data.size() + m_data_shards - 1) / m_data_shards;
+        }
 
         const auto total_blocks = m_data_shards + m_parity_shards;
 
