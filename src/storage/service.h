@@ -29,8 +29,18 @@ public:
           m_group_config{group_config::create(
               m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
                           SERVICE_GET_TIMEOUT))},
-          m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
-                                                    sc.working_directory)),
+          m_storage(std::make_shared<local_storage>(
+              m_storage_id,
+              [&sc, this]() {
+                  auto ds = sc.data_store;
+                  if (m_group_config.type ==
+                      group_config::type_t::ERASURE_CODING) {
+                      ds.page_size = m_group_config.chunk_size_kib /
+                                     m_group_config.data_shards;
+                  }
+                  return ds;
+              }(),
+              sc.working_directory)),
 
           m_service_registry(m_etcd, ns::root.storage_groups[m_group_id]
                                          .storage_hostports[m_storage_id]),
