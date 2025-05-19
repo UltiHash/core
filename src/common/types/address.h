@@ -2,17 +2,20 @@
 
 #include "big_int.h"
 #include <cstdint>
+#include <format>
+#include <functional>
+#include <iomanip>
+#include <ostream>
 #include <zpp_bits.h>
 
 namespace uh::cluster {
 
 struct fragment {
     uint128_t pointer;
-    size_t size{};
+    std::size_t size{};
 
-    bool operator==(const fragment& frag) const {
-        return pointer == frag.pointer && size == frag.size;
-    }
+    bool operator==(const fragment&) const = default;
+    auto operator<=>(const fragment&) const = default;
 
     std::string to_string() const;
 
@@ -23,6 +26,39 @@ struct fragment {
     subfrag(std::size_t start,
             std::size_t end = std::numeric_limits<std::size_t>::max()) const;
 };
+
+} // namespace uh::cluster
+
+std::ostream& operator<<(std::ostream& os, const uh::cluster::fragment& frag);
+
+template <>
+struct std::formatter<uh::cluster::fragment> : std::formatter<std::string> {
+    auto format(const uh::cluster::fragment& frag, std::format_context& ctx) {
+        return std::formatter<std::string>::format(frag.to_string(), ctx);
+    }
+};
+
+template <> struct std::hash<uh::cluster::fragment> {
+    std::size_t operator()(const uh::cluster::fragment& obj) const noexcept {
+        uint64_t high = static_cast<uint64_t>(obj.pointer >> 64);
+        uint64_t low = static_cast<uint64_t>(obj.pointer);
+
+        std::size_t hash_high = std::hash<uint64_t>{}(high);
+        std::size_t hash_low = std::hash<uint64_t>{}(low);
+        std::size_t hash_size = std::hash<std::size_t>{}(obj.size);
+
+        std::size_t seed = hash_high;
+        auto hash_combine = [&](std::size_t& s, std::size_t v) {
+            s ^= v + 0x9e3779b97f4a7c16ULL + (s << 6) + (s >> 2);
+        };
+        hash_combine(seed, hash_low);
+        hash_combine(seed, hash_size);
+
+        return seed;
+    }
+};
+
+namespace uh::cluster {
 
 struct address {
 
@@ -90,13 +126,12 @@ struct address {
      * Return number of fragments for a given allocation size.
      */
     static constexpr std::size_t allocated_elements(std::size_t size) {
-        return size / (2 * sizeof(uint64_t) + sizeof(uint32_t));
+        return size / sizeof(fragment);
     }
 
-    using serialize = zpp::bits::members<2>;
+    using serialize = zpp::bits::members<1>;
 
-    std::vector<uint64_t> pointers;
-    std::vector<uint32_t> sizes;
+    std::vector<fragment> fragments;
 };
 
 inline std::vector<char> to_buffer(const address& addr) {
@@ -112,11 +147,3 @@ inline address to_address(std::span<char> data) {
 }
 
 } // namespace uh::cluster
-
-template <> struct std::hash<uh::cluster::fragment> {
-    std::size_t operator()(const uh::cluster::fragment& frag) const {
-        return std::hash<std::uint64_t>{}(frag.pointer.get_high()) ^
-               std::hash<std::uint64_t>{}(frag.pointer.get_low()) ^
-               std::hash<std::size_t>{}(frag.size);
-    }
-};

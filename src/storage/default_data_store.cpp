@@ -138,9 +138,7 @@ address default_data_store::write(const allocation_t allocation,
             break;
         }
 
-        auto frag = fragment{.pointer = pointer_traits::get_global_pointer(
-                                 local_pointer, m_storage_id, 0),
-                             .size = count};
+        auto frag = fragment{.pointer = local_pointer, .size = count};
 
         local_pointer += count;
         written += count;

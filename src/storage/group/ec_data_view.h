@@ -2,6 +2,8 @@
 
 #include "config.h"
 
+#include <common/coroutines/coro_util.h>
+#include <common/ec/reedsolomon_c.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/service_discovery/storage_index.h>
 #include <common/types/scoped_buffer.h>
@@ -113,9 +115,24 @@ public:
      */
     coro<std::size_t> get_used_space();
 
+    uint128_t get_global_pointer(uint64_t storage_pointer, size_t storage_id) {
+        return pointer_traits::ec::get_global_pointer(
+            storage_pointer, m_config.id, storage_id, m_chunk_size,
+            m_stripe_size);
+    }
+
+    std::pair<std::size_t, uint64_t>
+    get_storage_pointer(uint128_t group_pointer) {
+        return pointer_traits::ec::get_storage_pointer(
+            group_pointer, m_chunk_size, m_stripe_size);
+    }
+
 private:
     boost::asio::io_context& m_ioc;
-
+    group_config m_config;
+    std::size_t m_stripe_size;
+    std::size_t m_chunk_size;
+    reedsolomon_c m_rs;
     externals_subscriber m_externals;
 };
 

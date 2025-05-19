@@ -21,6 +21,7 @@ mock_data_store::mock_data_store(data_store_config conf,
       m_conf{conf},
       m_data(m_conf.max_data_store_size, 0) {
 
+    assert(m_data_store_id == 0);
     if (!std::filesystem::exists(m_root)) {
         std::filesystem::create_directories(m_root);
     }
@@ -63,9 +64,7 @@ address mock_data_store::write(const allocation_t allocation,
     std::copy(data.begin(), data.end(), m_data.begin() + allocation.offset);
 
     address data_address;
-    data_address.push({.pointer = pointer_traits::get_global_pointer(
-                           allocation.offset, m_storage_id, m_data_store_id),
-                       .size = data.size()});
+    data_address.push({.pointer = allocation.offset, .size = data.size()});
     link(data_address);
     return data_address;
 }
@@ -112,7 +111,7 @@ size_t mock_data_store::unlink(const address& addr) {
                 // return std::numeric_limits<std::size_t>::max();
             }
             if (--(it->second) == 0) {
-                auto pointer = pointer_traits::get_pointer(frag.pointer);
+                auto pointer = frag.pointer;
                 std::fill(m_data.begin() + pointer,
                           m_data.begin() + pointer + frag.size, 0);
                 m_refcounter.erase(it);

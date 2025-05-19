@@ -61,8 +61,7 @@ address reference_counter::increment(const address& addr) {
 
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto page_range = get_page_range(
-            pointer_traits::get_pointer(frag.pointer), frag.size);
+        auto page_range = get_page_range(frag.pointer, frag.size);
         for (size_t page_id = page_range.first; page_id <= page_range.second;
              page_id++) {
             if (increment(page_id, 1, true, txn, dbi)) {
@@ -84,8 +83,7 @@ size_t reference_counter::decrement(const address& addr) {
 
     for (size_t i = 0; i < addr.size(); ++i) {
         const auto frag = addr.get(i);
-        auto page_range = get_page_range(
-            pointer_traits::get_pointer(frag.pointer), frag.size);
+        auto page_range = get_page_range(frag.pointer, frag.size);
         for (size_t page_id = page_range.first; page_id <= page_range.second;
              page_id++) {
             decrement(page_id, 1, pages_to_free, txn, dbi);

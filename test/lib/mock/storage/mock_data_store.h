@@ -10,26 +10,6 @@
 
 namespace uh::cluster {
 
-struct fragment_hash {
-    std::size_t operator()(const fragment& f) const {
-        uint64_t high = static_cast<uint64_t>(f.pointer.get_low());
-        uint64_t low = static_cast<uint64_t>(f.pointer.get_high());
-
-        std::size_t h1 = std::hash<uint64_t>()(high);
-        std::size_t h2 = std::hash<uint64_t>()(low);
-        std::size_t h3 = std::hash<std::size_t>()(f.size);
-
-        std::size_t seed = h1;
-        auto hash_combine = [&](std::size_t& s, std::size_t v) {
-            s ^= v + 0x9e3779b97f4a7c16ULL + (s << 6) + (s >> 2);
-        };
-        hash_combine(seed, h2);
-        hash_combine(seed, h3);
-
-        return seed;
-    }
-};
-
 class mock_data_store : public data_store {
 
 public:
@@ -64,7 +44,7 @@ private:
     data_store_config m_conf;
 
     std::vector<char> m_data;
-    std::unordered_map<fragment, int, fragment_hash> m_refcounter;
+    std::unordered_map<fragment, int> m_refcounter;
     std::mutex m_mutex;
 };
 

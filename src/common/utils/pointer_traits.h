@@ -7,51 +7,79 @@ namespace uh::cluster {
 struct pointer_traits {
 
     /**
-     * The data store id is in the lowest 32 bits of the high number of
-     * uint128_t
-     * @param global_pointer
-     * @return data store id
-     */
-    inline static uint32_t get_data_store_id(const uint128_t& global_pointer) {
-        return global_pointer.get_high() & 0xFFFFFFFF;
-    }
-
-    /**
+     * TODO: Let's remove this: The storage layer will receive the storage
+     * address space pointer, so they do not need to call this function
+     * themselves
+     *
      * The data store internal pointer is the low number of uint128_t
+     *
      * @param global_pointer
      * @return internal data store pointer
      */
-    inline static size_t get_pointer(const uint128_t& global_pointer) {
-        return global_pointer.get_low();
-    }
+    constexpr static const inline std::size_t group_id_bit_offset = 32 + 64;
+
+    struct rr {
+        constexpr static const inline std::size_t storage_id_bit_offset = 64;
+
+        inline static std::pair<std::size_t, uint64_t>
+        get_storage_pointer(uint128_t global_pointer) {
+            std::size_t storage_id = (global_pointer >> 64) & 0xFFFFFFFF;
+            std::size_t storage_ptr = static_cast<std::size_t>(global_pointer);
+            return {storage_id, storage_ptr};
+        }
+
+        /**
+         * @param pointer
+         * @param storage_id
+         * @return global pointer
+         */
+        [[nodiscard]] constexpr inline static uint128_t
+        get_global_pointer(uint64_t pointer, std::size_t group_id,
+                           std::size_t storage_id) {
+            return (static_cast<uint128_t>(group_id) << group_id_bit_offset) |
+                   (static_cast<uint128_t>(storage_id)
+                    << storage_id_bit_offset) |
+                   pointer;
+        }
+    };
+
+    struct ec {
+        [[nodiscard]] constexpr inline static uint128_t
+        get_global_pointer(uint64_t storage_pointer, size_t group_id,
+                           size_t storage_id, std::size_t chunk_size,
+                           std::size_t stripe_size) {
+            uint128_t group_ptr =
+                ((uint128_t)(storage_pointer / chunk_size) * stripe_size) +
+                (storage_pointer % chunk_size) +
+                ((uint128_t)chunk_size * storage_id);
+            return (static_cast<uint128_t>(group_id) << group_id_bit_offset) |
+                   group_ptr;
+        }
+
+        [[nodiscard]] constexpr inline static std::pair<std::size_t, uint64_t>
+        get_storage_pointer(uint128_t group_pointer, std::size_t chunk_size,
+                            std::size_t stripe_size) {
+            std::size_t group_mod = group_pointer % stripe_size;
+            std::size_t storage_id = group_mod / chunk_size;
+            std::size_t storage_ptr =
+                (group_pointer / stripe_size) * chunk_size +
+                (group_mod - storage_id * chunk_size);
+            return {storage_id, storage_ptr};
+        }
+    };
 
     /**
-     * The storage service id is the highest 32 bits of uint128_t
      * @param global_pointer
-     * @return storage service id
+     * @return group id
      */
-    inline static uint32_t get_service_id(const uint128_t& global_pointer) {
-        return global_pointer.get_high() >> 32;
+    [[nodiscard]] constexpr inline static std::size_t
+    get_group_id(uint128_t global_pointer) {
+        return global_pointer >> group_id_bit_offset;
     }
 
-    /**
-     * The global pointer is consisted of:
-     *  1. 32 bits for storage id
-     *  2. 32 bits for data store id
-     *  3. 64 bits for internal data store pointer
-     *
-     * @param pointer
-     * @param storage_id
-     * @param data_store_id
-     * @return global pointer
-     */
-    inline static uint128_t get_global_pointer(size_t pointer,
-                                               uint32_t storage_id,
-                                               uint32_t data_store_id) {
-        uint64_t high_num = storage_id;
-        high_num <<= 32;
-        high_num |= data_store_id;
-        return {high_num, pointer};
+    [[nodiscard]] constexpr inline static uint128_t
+    get_group_address(uint128_t global_pointer) noexcept {
+        return global_pointer & ((uint128_t(1) << group_id_bit_offset) - 1);
     }
 };
 } // namespace uh::cluster

@@ -18,6 +18,12 @@ public:
                        const std::filesystem::path& working_dir,
                        uint32_t service_id);
 
+    /**
+     * @brief Allocates the specified size of storage space in the data store.
+     * @param size
+     * @return local pointer to the allocated storage space and size of
+     * allocation
+     */
     allocation_t allocate(std::size_t size, std::size_t alignment = 1);
 
     /**

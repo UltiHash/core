@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/test/unit_test.hpp>
+#include <common/types/big_int.h>
 #include <magic_enum/magic_enum.hpp>
 #include <ostream>
 
@@ -10,7 +11,7 @@ static constexpr const char* test_license_string =
     R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";
 
 static constexpr const char* test_storage_group_config_string =
-    R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"chunk_size_kib":1024},{"id":1,"type":"ROUND_ROBIN","storages":2}])";
+    R"([{"id":0,"type":"ERASURE_CODING","storages":3,"data_shards":2,"parity_shards":1,"stripe_size_kib":1024},{"id":1,"type":"ROUND_ROBIN","storages":2}])";
 
 namespace boost {
 namespace test_tools {
@@ -38,6 +39,12 @@ struct print_log_value<std::vector<T>> {
         for (auto x : value)
             os << x << ' ';
         os << '}';
+    }
+};
+
+template <> struct print_log_value<__uint128_t> {
+    void operator()(std::ostream& os, const __uint128_t& value) const {
+        ::operator<<(os, value);
     }
 };
 

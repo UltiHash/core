@@ -23,13 +23,17 @@ public:
         m_services.at(id).store(nullptr, std::memory_order_release);
     }
 
-    std::shared_ptr<storage_interface> get(const uint128_t& pointer) {
-        const auto id = pointer_traits::get_service_id(pointer);
-        auto rv = m_services.at(id).load(std::memory_order_acquire);
-
-        if (rv == nullptr) {
+    std::shared_ptr<storage_interface> get(std::size_t id) {
+        if (id >= m_services.size()) {
             throw std::runtime_error("access wrong index storage");
         }
+
+        auto rv = m_services.at(id).load(std::memory_order_acquire);
+        if (rv == nullptr) {
+            throw std::runtime_error("storage " + std::to_string(id) +
+                                     " is not available");
+        }
+
         return rv;
     }
 

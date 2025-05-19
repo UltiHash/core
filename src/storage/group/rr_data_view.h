@@ -115,6 +115,7 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
+    group_config m_group_config;
 
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;

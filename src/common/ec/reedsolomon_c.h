@@ -24,13 +24,13 @@ static bool init_fec() {
 class reedsolomon_c : public ec_interface {
 public:
     reedsolomon_c(size_t data_nodes, size_t ec_nodes)
-        : m_data_nodes(data_nodes),
-          m_ec_nodes(ec_nodes),
+        : m_data_shards(data_nodes),
+          m_parity_shards(ec_nodes),
           m_rs(get_rs()) {}
 
     void recover(const std::vector<std::span<const char>>& shards,
                  std::vector<data_stat>& stats) const override {
-        if (shards.size() != m_ec_nodes + m_data_nodes and
+        if (shards.size() != m_parity_shards + m_data_shards and
             stats.size() != shards.size()) {
             throw std::logic_error(
                 "Insufficient shards/stats to perform recovery");
@@ -52,19 +52,23 @@ public:
                 reinterpret_cast<unsigned char**>(
                     const_cast<char**>(ushards.data())),
                 reinterpret_cast<unsigned char*>(stats.data()),
-                static_cast<int>(m_data_nodes + m_ec_nodes),
+                static_cast<int>(m_data_shards + m_parity_shards),
                 static_cast<int>(shard_size)) != 0) {
             throw std::runtime_error("Could not recover the data");
         }
     }
 
-    encoded encode(std::span<const char> data) const override {
+    encoded encode(std::span<const char> data,
+                   std::size_t shard_size = 0) const override {
 
-        const auto shard_size = (data.size() + m_data_nodes - 1) / m_data_nodes;
-        const auto total_blocks = m_data_nodes + m_ec_nodes;
+        if (shard_size == 0) {
+            shard_size = (data.size() + m_data_shards - 1) / m_data_shards;
+        }
+
+        const auto total_blocks = m_data_shards + m_parity_shards;
 
         std::vector<const char*> shard_ptrs;
-        shard_ptrs.reserve(m_data_nodes + m_ec_nodes);
+        shard_ptrs.reserve(m_data_shards + m_parity_shards);
 
         size_t size = 0;
         // use existing allocation for shards as much as possible
@@ -75,9 +79,8 @@ public:
 
         // if the last shard is not filled completely, allocate a new
         // shard and copy the remaining data into it
-
         std::vector<unique_buffer<char>> new_shards;
-        new_shards.reserve(m_ec_nodes + 1);
+        new_shards.reserve(m_data_shards - shard_ptrs.size() + m_parity_shards);
 
         if (const auto rem_size = data.size() - size; rem_size > 0) {
             new_shards.emplace_back(shard_size);
@@ -87,8 +90,14 @@ public:
             shard_ptrs.emplace_back(new_shards.back().data());
         }
 
+        while (shard_ptrs.size() < m_data_shards) {
+            new_shards.emplace_back(shard_size);
+            std::memset(new_shards.back().data(), 0, shard_size);
+            shard_ptrs.emplace_back(new_shards.back().data());
+        }
+
         // create parity shards
-        for (size_t i = 0; i < m_ec_nodes; i++) {
+        for (size_t i = 0; i < m_parity_shards; i++) {
             new_shards.emplace_back(shard_size);
             shard_ptrs.emplace_back(new_shards.back().data());
         }
@@ -109,16 +118,16 @@ public:
 private:
     [[nodiscard]] std::unique_ptr<reed_solomon, void (*)(reed_solomon*)>
     get_rs() const {
-        if (m_ec_nodes > 0) {
-            return {reed_solomon_new(static_cast<int>(m_data_nodes),
-                                     static_cast<int>(m_ec_nodes)),
+        if (m_parity_shards > 0) {
+            return {reed_solomon_new(static_cast<int>(m_data_shards),
+                                     static_cast<int>(m_parity_shards)),
                     [](reed_solomon* rs) { reed_solomon_release(rs); }};
         }
         return {nullptr, [](reed_solomon*) {}};
     }
 
-    const size_t m_data_nodes;
-    const size_t m_ec_nodes;
+    const size_t m_data_shards;
+    const size_t m_parity_shards;
     bool m_init = init_fec();
     const std::unique_ptr<reed_solomon, void (*)(reed_solomon*)> m_rs;
 };
