@@ -1,5 +1,6 @@
 #include "ec_data_view.h"
 
+#include <boost/align/align_up.hpp>
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
 #include <storage/group/impl/address_utils.h>
@@ -82,8 +83,6 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                                          size_t read_size) {
-    LOG_DEBUG() << "read request on pointer: " << pointer
-                << ", size: " << read_size;
     auto storages = get_valid_storages();
 
     auto need_reconstruction =
@@ -91,16 +90,33 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                     [](auto storage) { return storage != nullptr; });
 
     (void)need_reconstruction;
+
+    address addr;
+    auto p = pointer;
+    while (p < pointer + read_size) {
+        auto next_p = boost::alignment::align_up(p + 1, m_chunk_size);
+        next_p = std::min(next_p, pointer + read_size);
+        auto frag = fragment{.pointer = p,
+                             .size = static_cast<std::size_t>(next_p - p)};
+        addr.push(frag);
+        p = next_p;
+    }
+
     auto rv = shared_buffer<>(read_size);
+    co_await read_address(addr, rv);
 
     co_return rv;
 }
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    // Naive implementation with assumming every datashards are healthy
-
     auto storages = m_externals.get_storage_services();
+    auto need_reconstruction =
+        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
+                    [](auto storage) { return storage != nullptr; });
+
+    (void)need_reconstruction;
+
     co_return co_await perform_for_address(
         m_ioc, addr,
         [this](uint128_t pointer) -> auto {
