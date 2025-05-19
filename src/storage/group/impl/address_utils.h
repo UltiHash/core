@@ -10,8 +10,7 @@ struct address_info {
 };
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_index& storage_load_balancer,
-    boost::asio::io_context& ioc,
+    const address& addr, storage_index& storages, boost::asio::io_context& ioc,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>
         fn,
