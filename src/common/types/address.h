@@ -11,10 +11,11 @@
 namespace uh::cluster {
 
 struct fragment {
-    __uint128_t pointer;
+    uint128_t pointer;
     std::size_t size{};
 
     bool operator==(const fragment&) const = default;
+    auto operator<=>(const fragment&) const = default;
 
     std::string to_string() const;
 

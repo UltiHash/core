@@ -2,6 +2,7 @@
 
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
+#include <storage/group/impl/address_utils.h>
 #include <type_traits>
 
 namespace {
@@ -60,6 +61,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
                                        std::min(write_size, m_stripe_size));
         write_size -= m_stripe_size;
 
+        // TODO: Offsets are not yet transformed and distributed to each
+        // storages
         auto encoded = m_rs.encode(data_chunk, m_chunk_size);
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
@@ -71,8 +74,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
             storages);
     }
     address rv;
-    auto pointer = pointer_traits::rr::get_global_pointer(
-        allocation.offset * m_config.data_shards, m_config.id, 0, 0);
+    auto pointer = get_global_pointer(allocation.offset, 0);
     rv.push(fragment{.pointer = pointer, .size = data.size()});
     co_return rv;
 }
@@ -100,8 +102,7 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     auto num_chunks = div_ceil(read_size, m_stripe_size);
     auto single_shard_size = num_chunks * m_chunk_size;
 
-    uint128_t shard_pointer =
-        pointer_traits::get_group_address(pointer) / m_config.data_shards;
+    auto [storage_id, storage_pointer] = get_storage_pointer(pointer);
 
     auto res = co_await run_for_all<shared_buffer<>,
                                     std::shared_ptr<storage_interface>>(
@@ -111,7 +112,7 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                 co_return shared_buffer<>(single_shard_size);
             } else {
                 co_return co_await storage
-                    ->read(shard_pointer, single_shard_size)
+                    ->read(storage_pointer, single_shard_size)
                     .continue_trace(context);
             }
         },
@@ -140,13 +141,18 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    auto storages = m_externals.get_storage_services();
-    co_return co_await perform_for_address(
-        addr, storages, m_ioc,
-        [buffer](size_t, std::shared_ptr<storage_interface> svc,
-                 const address_info& info) -> coro<void> {
-            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
-        });
+    // auto storages = m_externals.get_storage_services();
+    // co_return co_await perform_for_address(
+    //     addr, storages, m_ioc,
+    //     [buffer](size_t, std::shared_ptr<storage_interface> svc,
+    //              const address_info& info) -> coro<void> {
+    //         co_await svc->read_address(info.addr, buffer,
+    //         info.pointer_offsets);
+    //     },
+    //     [this](uint128_t pointer) -> auto {
+    //         return get_storage_pointer(pointer);
+    //     });
+    co_return 0;
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }

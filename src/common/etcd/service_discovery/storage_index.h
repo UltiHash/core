@@ -23,8 +23,7 @@ public:
         m_services.at(id).store(nullptr, std::memory_order_release);
     }
 
-    std::shared_ptr<storage_interface> get(const uint128_t& pointer) {
-        const auto id = pointer_traits::rr::get_storage_id(pointer);
+    std::shared_ptr<storage_interface> get(std::size_t id) {
         auto rv = m_services.at(id).load(std::memory_order_acquire);
 
         if (rv == nullptr) {

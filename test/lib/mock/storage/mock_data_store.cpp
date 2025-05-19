@@ -111,7 +111,7 @@ size_t mock_data_store::unlink(const address& addr) {
                 // return std::numeric_limits<std::size_t>::max();
             }
             if (--(it->second) == 0) {
-                auto pointer = pointer_traits::get_pointer(frag.pointer);
+                auto pointer = frag.pointer;
                 std::fill(m_data.begin() + pointer,
                           m_data.begin() + pointer + frag.size, 0);
                 m_refcounter.erase(it);

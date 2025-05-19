@@ -115,19 +115,16 @@ public:
      */
     coro<std::size_t> get_used_space();
 
-    uint128_t group_pointer(size_t storage_id, uint64_t storage_pointer) {
-        return ((uint128_t)(storage_pointer / m_chunk_size) * m_stripe_size) +
-               (storage_pointer % m_chunk_size) +
-               ((uint128_t)m_chunk_size * storage_id);
+    uint128_t get_global_pointer(uint64_t storage_pointer, size_t storage_id) {
+        return pointer_traits::ec::get_global_pointer(
+            storage_pointer, m_config.id, storage_id, m_chunk_size,
+            m_stripe_size);
     }
 
-    std::pair<std::size_t, uint64_t> storage_pointer(uint128_t group_pointer) {
-        std::size_t group_mod = group_pointer % m_stripe_size;
-        std::size_t storage_id = group_mod / m_chunk_size;
-        std::size_t storage_ptr =
-            (group_pointer / m_stripe_size) * m_chunk_size +
-            (group_mod - storage_id * m_chunk_size);
-        return {storage_id, storage_ptr};
+    std::pair<std::size_t, uint64_t>
+    get_storage_pointer(uint128_t group_pointer) {
+        return pointer_traits::ec::get_storage_pointer(
+            group_pointer, m_chunk_size, m_stripe_size);
     }
 
 private:
@@ -137,57 +134,6 @@ private:
     std::size_t m_chunk_size;
     reedsolomon_c m_rs;
     externals_subscriber m_externals;
-
-    struct address_info {
-        address addr;
-        std::vector<size_t> pointer_offsets;
-    };
-
-    struct node_address_info {
-        std::unordered_map<std::size_t, address_info> node_info_map;
-        size_t data_size;
-    };
-
-    node_address_info extract_node_address_map(const address& addr) {
-        node_address_info info;
-        size_t offset = 0;
-        for (size_t i = 0; i < addr.size(); ++i) {
-            const auto frag = addr.get(i);
-            auto [storage_id, storage_poniter] = storage_pointer(frag.pointer);
-            // frag.pointer / m_chunk_size / m_config.data_shards
-            auto& node_pos = info.node_info_map[storage_id];
-            auto& node_address = node_pos.addr;
-            node_address.push(frag);
-            node_pos.pointer_offsets.emplace_back(offset);
-            offset += frag.size;
-        }
-
-        info.data_size = offset;
-        return info;
-    }
-
-    coro<size_t> perform_for_address(
-        const address& addr,
-        const std::vector<std::shared_ptr<storage_interface>>& storages,
-        boost::asio::io_context& ioc,
-        std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
-                                 const address_info&)>
-            fn) {
-
-        auto info = extract_node_address_map(addr);
-
-        auto context = co_await boost::asio::this_coro::context;
-
-        co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&](size_t i, auto storage) -> coro<void> {
-                co_return co_await fn(i, storage, info.node_info_map[i])
-                    .continue_trace(context);
-            },
-            storages);
-
-        co_return info.data_size;
-    }
 };
 
 } // namespace uh::cluster::storage

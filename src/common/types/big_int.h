@@ -66,9 +66,9 @@ template <> struct std::formatter<__uint128_t> {
     }
 };
 
-namespace std {
-template <> struct is_arithmetic<__uint128_t> : std::true_type {};
-} // namespace std
+// namespace std {
+// template <> struct is_arithmetic<__uint128_t> : std::true_type {};
+// } // namespace std
 
 // template <>
 // struct std::hash<__uint128_t> {
