@@ -78,6 +78,9 @@ public:
             i++;
         }
 
+        m_gdv = std::make_unique<storage::global::global_data_view>(
+            m_ioc, m_etcd, m_gdv_config);
+
         m_threads.emplace_back([this, i] {
             try {
                 m_ioc.run();
@@ -85,11 +88,6 @@ public:
                 m_excp_ptrs[i] = std::current_exception();
             }
         });
-
-        std::this_thread::sleep_for(100ms);
-
-        m_gdv = std::make_unique<storage::global::global_data_view>(
-            m_ioc, m_etcd, m_gdv_config);
     }
 
     void teardown() {

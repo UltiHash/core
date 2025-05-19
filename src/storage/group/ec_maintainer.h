@@ -38,18 +38,15 @@ public:
           m_storage_state_manager{etcd, m_group_config.id, storage_id,
                                   service_cfg.working_dir},
 
-          m_subscriber{
-              // std::format("[group {}, storage {}]", m_group_config.id,
-              //             m_storage_id),
-              "",
-              etcd,
-              m_prefix,
-              {m_group_initialized, m_storage_assignment_trigger, m_candidate,
-               m_storage_states},
-              [this]() {
-                  if (m_candidate.is_leader())
-                      storage_states_handler();
-              }} {}
+          m_subscriber{"",
+                       etcd,
+                       m_prefix,
+                       {m_group_initialized, m_storage_assignment_trigger,
+                        m_candidate, m_storage_states},
+                       [this]() {
+                           if (m_candidate.is_leader())
+                               storage_states_handler();
+                       }} {}
 
     ~ec_maintainer() {
         LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
