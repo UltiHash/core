@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/log/sources/record_ostream.hpp>
 #include <cstdint>
 #include <format>
 #include <functional>
@@ -27,3 +28,18 @@ inline std::ostream& operator<<(std::ostream& os, const __uint128_t& value) {
 
     return os;
 }
+
+namespace boost {
+namespace log {
+
+template <typename CharT>
+inline boost::log::basic_record_ostream<CharT>&
+operator<<(boost::log::basic_record_ostream<CharT>& os,
+           const __uint128_t& value) {
+    std::ostream& stream = os.stream();
+    ::operator<<(stream, value);
+    return os;
+}
+
+} // namespace log
+} // namespace boost

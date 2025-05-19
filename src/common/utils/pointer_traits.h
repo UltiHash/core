@@ -78,7 +78,7 @@ struct pointer_traits {
     }
 
     [[nodiscard]] constexpr inline static uint128_t
-    get_group_address(uint128_t global_pointer) noexcept {
+    get_group_pointer(uint128_t global_pointer) noexcept {
         return global_pointer & ((uint128_t(1) << group_id_bit_offset) - 1);
     }
 };
