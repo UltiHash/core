@@ -52,10 +52,12 @@ coro<size_t> perform_for_address(
     for (auto& dn : info.node_info_map) {
         promise<void> p;
         futures.emplace_back(p.get_future());
-
+        auto storage = storages[dn.first];
+        if (storage == nullptr) {
+            throw std::runtime_error("Storage service is not available");
+        }
         boost::asio::co_spawn(
-            ioc,
-            func(i++, storages[dn.first], dn.second).continue_trace(context),
+            ioc, func(i++, storage, dn.second).continue_trace(context),
             use_promise_cospawn(std::move(p)));
     }
 
