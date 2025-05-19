@@ -82,77 +82,12 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                                          size_t read_size) {
-    auto storages = m_externals.get_storage_services();
-    auto states = m_externals.get_storage_states();
-
-    size_t count = 0, valid_datashards_count = 0;
-    for (auto i = 0ul; i < m_config.data_shards; ++i) {
-        if (storages[i] != nullptr && *states[i] == storage_state::ASSIGNED) {
-            ++count;
-            if (i < m_config.data_shards)
-                ++valid_datashards_count;
-        } else
-            storages[i] = nullptr;
-    }
-
-    if (count < m_config.data_shards)
-        throw std::runtime_error("Not enough shards to reconstruct data: " +
-                                 std::to_string(count));
-
-    auto context = co_await boost::asio::this_coro::context;
-    auto num_chunks = div_ceil(read_size, m_stripe_size);
-    auto single_shard_size = num_chunks * m_chunk_size;
-
-    auto [storage_id, storage_pointer] = get_storage_pointer(pointer);
-
-    auto res = co_await run_for_all<shared_buffer<>,
-                                    std::shared_ptr<storage_interface>>(
-        m_ioc,
-        [&](size_t i, auto storage) -> coro<shared_buffer<>> {
-            if (storage == nullptr) {
-                co_return shared_buffer<>(single_shard_size);
-            } else {
-                co_return co_await storage
-                    ->read(storage_pointer, single_shard_size)
-                    .continue_trace(context);
-            }
-        },
-        storages);
-
-    if (valid_datashards_count != m_config.data_shards) {
-        // TODO: do reconstruction
-    }
-
     auto rv = shared_buffer<>(read_size);
-
-    auto dest = rv.data();
-    for (auto i = 0ul; i < num_chunks; ++i) {
-        for (auto j = 0ul; j < m_config.data_shards; ++j) {
-            std::memcpy(dest, res[j].data() + i * m_chunk_size,
-                        std::min(read_size, m_chunk_size));
-            dest += m_chunk_size;
-            read_size -= m_chunk_size;
-            if (read_size <= 0)
-                break;
-        }
-    }
-
     co_return rv;
 }
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    // auto storages = m_externals.get_storage_services();
-    // co_return co_await perform_for_address(
-    //     addr, storages, m_ioc,
-    //     [buffer](size_t, std::shared_ptr<storage_interface> svc,
-    //              const address_info& info) -> coro<void> {
-    //         co_await svc->read_address(info.addr, buffer,
-    //         info.pointer_offsets);
-    //     },
-    //     [this](uint128_t pointer) -> auto {
-    //         return get_storage_pointer(pointer);
-    //     });
     co_return 0;
 }
 
