@@ -71,7 +71,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
             storages);
     }
     address rv;
-    auto pointer = pointer_traits::get_global_pointer(
+    auto pointer = pointer_traits::rr::get_global_pointer(
         allocation.offset * m_config.data_shards, m_config.id, 0, 0);
     rv.push(fragment{.pointer = pointer, .size = data.size()});
     co_return rv;

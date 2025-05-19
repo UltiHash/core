@@ -24,7 +24,7 @@ public:
     }
 
     std::shared_ptr<storage_interface> get(const uint128_t& pointer) {
-        const auto id = pointer_traits::get_service_id(pointer);
+        const auto id = pointer_traits::rr::get_storage_id(pointer);
         auto rv = m_services.at(id).load(std::memory_order_acquire);
 
         if (rv == nullptr) {

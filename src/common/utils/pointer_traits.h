@@ -22,33 +22,53 @@ struct pointer_traits {
 
     constexpr static const inline std::size_t group_id_bit_offset = 32 + 64;
 
-    constexpr static const inline std::size_t storage_id_bit_offset = 64;
-    /**
-     * NOTE: It's for ec group only
-     *
-     * @param global_pointer
-     * @return storage service id
-     */
-    constexpr inline static uint32_t
-    get_service_id(const uint128_t& global_pointer) {
-        return global_pointer >> 64;
-    }
+    struct rr {
+        constexpr static const inline std::size_t storage_id_bit_offset = 64;
+        /**
+         * @param global_pointer
+         * @return storage service id
+         */
+        constexpr inline static uint32_t
+        get_storage_id(const uint128_t& global_pointer) {
+            return global_pointer >> 64;
+        }
 
-    /**
-     * NOTE: It's for ec group only
-     *
-     * @param pointer
-     * @param storage_id
-     * @param data_store_id
-     * @return global pointer
-     */
-    [[nodiscard]] constexpr inline static uint128_t
-    get_global_pointer(uint64_t pointer, uint32_t group_id, uint32_t storage_id,
-                       uint32_t data_store_id) {
-        return (static_cast<uint128_t>(group_id) << group_id_bit_offset) |
-               (static_cast<uint128_t>(storage_id) << storage_id_bit_offset) |
-               pointer;
-    }
+        /**
+         * @param pointer
+         * @param storage_id
+         * @param data_store_id
+         * @return global pointer
+         */
+        [[nodiscard]] constexpr inline static uint128_t
+        get_global_pointer(uint64_t pointer, uint32_t group_id,
+                           uint32_t storage_id, uint32_t data_store_id) {
+            return (static_cast<uint128_t>(group_id) << group_id_bit_offset) |
+                   (static_cast<uint128_t>(storage_id)
+                    << storage_id_bit_offset) |
+                   pointer;
+        }
+    };
+
+    struct ec {
+        [[nodiscard]] constexpr inline static uint128_t
+        group_pointer(size_t storage_id, uint64_t storage_pointer,
+                      std::size_t chunk_size, std::size_t stripe_size) {
+            return ((uint128_t)(storage_pointer / chunk_size) * stripe_size) +
+                   (storage_pointer % chunk_size) +
+                   ((uint128_t)chunk_size * storage_id);
+        }
+
+        [[nodiscard]] constexpr inline static std::pair<std::size_t, uint64_t>
+        storage_pointer(uint128_t group_pointer, std::size_t chunk_size,
+                        std::size_t stripe_size) {
+            std::size_t group_mod = group_pointer % stripe_size;
+            std::size_t storage_id = group_mod / chunk_size;
+            std::size_t storage_ptr =
+                (group_pointer / stripe_size) * chunk_size +
+                (group_mod - storage_id * chunk_size);
+            return {storage_id, storage_ptr};
+        }
+    };
 
     /**
      * @param global_pointer
