@@ -29,6 +29,10 @@ public:
         }
 
         auto rv = m_services.at(id).load(std::memory_order_acquire);
+        if (rv == nullptr) {
+            throw std::runtime_error("storage " + std::to_string(id) +
+                                     " is not available");
+        }
 
         return rv;
     }
