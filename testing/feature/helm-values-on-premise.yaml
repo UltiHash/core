@@ -76,9 +76,7 @@ storage:
       storages: 1
       storageClass: local-path
       size: 5Gi
-      mountPaths:
-        - name: storage0
-          containerPath: /var/lib/uh/storage
+      mountPath: /var/lib/uh/storage
       nodeSelector:
         kubernetes.io/hostname: $KUBERNETES_NODE
 
