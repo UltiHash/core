@@ -115,6 +115,21 @@ public:
      */
     coro<std::size_t> get_used_space();
 
+    uint128_t group_pointer(size_t storage_id, uint64_t storage_pointer) {
+        return ((uint128_t)(storage_pointer / m_chunk_size) * m_stripe_size) +
+               (storage_pointer % m_chunk_size) +
+               ((uint128_t)m_chunk_size * storage_id);
+    }
+
+    std::pair<std::size_t, uint64_t> storage_pointer(uint128_t group_pointer) {
+        std::size_t group_mod = group_pointer % m_stripe_size;
+        std::size_t storage_id = group_mod / m_chunk_size;
+        std::size_t storage_ptr =
+            (group_pointer / m_stripe_size) * m_chunk_size +
+            (group_mod - storage_id * m_chunk_size);
+        return {storage_id, storage_ptr};
+    }
+
 private:
     boost::asio::io_context& m_ioc;
     group_config m_config;
@@ -132,16 +147,6 @@ private:
         std::unordered_map<std::size_t, address_info> node_info_map;
         size_t data_size;
     };
-
-    uint128_t group_pointer(uint64_t storage_pointer, size_t storage_id) {
-        return (uint128_t)storage_pointer * m_config.data_shards +
-               (uint128_t)storage_id * m_chunk_size;
-    }
-
-    std::pair<std::size_t, uint64_t> storage_pointer(uint128_t group_pointer) {
-        return {(group_pointer / m_chunk_size) % m_config.data_shards,
-                group_pointer / m_config.data_shards};
-    }
 
     node_address_info extract_node_address_map(const address& addr) {
         node_address_info info;
