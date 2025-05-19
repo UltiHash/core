@@ -42,7 +42,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
     auto leader = *m_externals.get_leader();
 
     if (leader < 0 or leader >= (candidate::id_t)m_config.storages)
-        throw std::runtime_error("Read size must be larger than zero");
+        throw std::runtime_error("Invalid leader id: " +
+                                 std::to_string(leader));
 
     auto write_size = data.size();
     auto num_chunks = div_ceil(write_size, m_stripe_size);

@@ -152,8 +152,7 @@ int main(int argc, char** argv) {
         case ::config::command::read:
             boost::asio::co_spawn(
                 executor,
-                read_addr(storage,
-                          uh::cluster::uint128_t(cfg->host_id, cfg->offset),
+                read_addr(storage, uh::cluster::uint128_t(cfg->offset),
                           cfg->length, cfg->output_file, cfg->no_output),
                 handler);
             break;
