@@ -27,7 +27,6 @@ struct local_storage : public storage_interface {
         shared_buffer<> buf(size);
         auto read_size = m_data_store->read(pointer, buf.span());
         buf.resize(read_size);
-        // TODO: is there a case like read_size != size?
         co_return buf;
     }
 

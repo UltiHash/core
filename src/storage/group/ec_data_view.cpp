@@ -82,13 +82,35 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                                          size_t read_size) {
+    LOG_DEBUG() << "read request on pointer: " << pointer
+                << ", size: " << read_size;
+    auto storages = get_valid_storages();
+
+    auto need_reconstruction =
+        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
+                    [](auto storage) { return storage != nullptr; });
+
+    (void)need_reconstruction;
     auto rv = shared_buffer<>(read_size);
+
     co_return rv;
 }
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    co_return 0;
+    // Naive implementation with assumming every datashards are healthy
+
+    auto storages = m_externals.get_storage_services();
+    co_return co_await perform_for_address(
+        m_ioc, addr,
+        [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        },
+        [buffer](size_t, std::shared_ptr<storage_interface> svc,
+                 const address_info& info) -> coro<void> {
+            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
+        },
+        storages);
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }

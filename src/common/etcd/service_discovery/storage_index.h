@@ -25,7 +25,7 @@ public:
 
     std::shared_ptr<storage_interface> get(std::size_t id) {
         if (id >= m_services.size()) {
-            throw std::runtime_error("access wrong index storage");
+            throw std::out_of_range("access wrong index storage");
         }
 
         auto rv = m_services.at(id).load(std::memory_order_acquire);

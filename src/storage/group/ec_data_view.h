@@ -115,6 +115,14 @@ public:
      */
     coro<std::size_t> get_used_space();
 
+private:
+    boost::asio::io_context& m_ioc;
+    group_config m_config;
+    std::size_t m_stripe_size;
+    std::size_t m_chunk_size;
+    reedsolomon_c m_rs;
+    externals_subscriber m_externals;
+
     uint128_t get_global_pointer(uint64_t storage_pointer, size_t storage_id) {
         return pointer_traits::ec::get_global_pointer(
             storage_pointer, m_config.id, storage_id, m_chunk_size,
@@ -127,13 +135,23 @@ public:
             group_pointer, m_chunk_size, m_stripe_size);
     }
 
-private:
-    boost::asio::io_context& m_ioc;
-    group_config m_config;
-    std::size_t m_stripe_size;
-    std::size_t m_chunk_size;
-    reedsolomon_c m_rs;
-    externals_subscriber m_externals;
+    auto get_valid_storages() {
+        auto storages = m_externals.get_storage_services();
+        auto states = m_externals.get_storage_states();
+
+        size_t count = 0;
+        for (auto i = 0ul; i < m_config.data_shards; ++i) {
+            if (storages[i] != nullptr &&
+                *states[i] == storage_state::ASSIGNED) {
+                ++count;
+            } else
+                storages[i] = nullptr;
+        }
+        if (count < m_config.data_shards)
+            throw std::runtime_error("Not enough shards to reconstruct data: " +
+                                     std::to_string(count));
+        return storages;
+    }
 };
 
 } // namespace uh::cluster::storage

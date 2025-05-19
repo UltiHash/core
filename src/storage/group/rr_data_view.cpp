@@ -49,12 +49,12 @@ coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
 coro<std::size_t> rr_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
     co_return co_await perform_for_address(
-        addr, m_storage_index, m_ioc,
+        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [buffer](size_t, std::shared_ptr<storage_interface> svc,
                  const address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
         },
-        pointer_traits::rr::get_storage_pointer);
+        m_storage_index.get());
 }
 
 coro<std::size_t> rr_data_view::get_used_space() {
@@ -72,12 +72,12 @@ coro<std::size_t> rr_data_view::get_used_space() {
 [[nodiscard]] coro<address> rr_data_view::link(const address& addr) {
     std::map<size_t, address> addresses;
     co_await perform_for_address(
-        addr, m_storage_index, m_ioc,
+        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [&addresses](size_t id, std::shared_ptr<storage_interface> svc,
                      const address_info& info) -> coro<void> {
             addresses.emplace(id, co_await svc->link(info.addr));
         },
-        pointer_traits::rr::get_storage_pointer);
+        m_storage_index.get());
 
     address rv;
     for (const auto& a : addresses) {
@@ -90,12 +90,12 @@ coro<std::size_t> rr_data_view::get_used_space() {
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
-        addr, m_storage_index, m_ioc,
+        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [&freed_bytes](size_t, std::shared_ptr<storage_interface> svc,
                        const address_info& info) -> coro<void> {
             freed_bytes += co_await svc->unlink(info.addr);
         },
-        pointer_traits::rr::get_storage_pointer);
+        m_storage_index.get());
     co_return freed_bytes;
 }
 
