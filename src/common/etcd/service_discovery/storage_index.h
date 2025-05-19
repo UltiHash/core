@@ -24,11 +24,12 @@ public:
     }
 
     std::shared_ptr<storage_interface> get(std::size_t id) {
-        auto rv = m_services.at(id).load(std::memory_order_acquire);
-
-        if (rv == nullptr) {
+        if (id >= m_services.size()) {
             throw std::runtime_error("access wrong index storage");
         }
+
+        auto rv = m_services.at(id).load(std::memory_order_acquire);
+
         return rv;
     }
 
