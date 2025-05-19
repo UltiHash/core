@@ -228,6 +228,11 @@ std::size_t default_data_store::get_write_offset() const noexcept {
     return m_write_offset;
 }
 
+void default_data_store::set_write_offset(std::size_t val) noexcept {
+    std::shared_lock lock(m_mutex);
+    m_write_offset = val;
+}
+
 allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
     std::unique_lock lock(m_mutex);
 

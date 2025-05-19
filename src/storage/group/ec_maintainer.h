@@ -7,6 +7,7 @@
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
 #include <storage/group/offset.h>
+#include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {
 
@@ -17,12 +18,13 @@ public:
     ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
                   const group_config& group_cfg, std::size_t storage_id,
                   const service_config& service_cfg,
-                  const global_data_view_config& gdv_cfg, offset_t offset)
+                  const global_data_view_config& gdv_cfg,
+                  std::shared_ptr<local_storage> storage)
         : m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
-          m_offset{offset},
+          m_storage{storage},
 
           m_group_state_manager{etcd, group_cfg.id},
 
@@ -52,12 +54,6 @@ public:
         LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
                                    m_group_config.id, m_storage_id);
     }
-
-    void set_offset(std::size_t offset) {
-        m_offset.store(offset, std::memory_order_release);
-    }
-
-    offset_t get_offset() { return m_offset.load(std::memory_order_acquire); }
 
 private:
     struct statistics {
@@ -90,7 +86,7 @@ private:
                                    m_group_config.id, m_storage_id);
 
         offset_manager::put(m_etcd, m_group_config.id, m_storage_id,
-                            get_offset());
+                            m_storage->get_write_offset());
 
         if (is_leader) {
             LOG_DEBUG() << std::format("[group {}, storage {}] won election",
@@ -102,7 +98,8 @@ private:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] summarized offset is {}",
                 m_group_config.id, m_storage_id, offset);
-            set_offset(offset);
+
+            m_storage->set_write_offset(offset);
 
             m_candidate.proclaim();
         }
@@ -204,7 +201,7 @@ private:
     const group_config& m_group_config;
     std::size_t m_storage_id;
 
-    std::atomic<offset_t> m_offset;
+    std::shared_ptr<local_storage> m_storage;
 
     group_state_manager m_group_state_manager;
 

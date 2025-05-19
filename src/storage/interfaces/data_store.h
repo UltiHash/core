@@ -30,8 +30,6 @@ struct data_store {
 
     virtual std::size_t get_available_space() const noexcept = 0;
 
-    virtual std::size_t get_write_offset() const noexcept = 0;
-
     virtual ~data_store() = default;
 };
 
