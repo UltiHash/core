@@ -68,7 +68,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
     }
     address rv;
     auto pointer = get_global_pointer(allocation.offset, 0);
-    rv.push(fragment{.pointer = pointer, .size = data.size()});
+    rv.emplace_back(pointer, data.size());
     co_return rv;
 }
 
@@ -83,14 +83,21 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     (void)need_reconstruction;
 
     address addr;
-    auto p = pointer;
-    while (p < pointer + read_size) {
-        auto next_p = align_up_next<uint128_t>(p, m_chunk_size);
-        next_p = std::min(next_p, pointer + read_size);
-        auto frag = fragment{.pointer = p,
-                             .size = static_cast<std::size_t>(next_p - p)};
-        addr.push(frag);
-        p = next_p;
+    auto end = pointer + read_size;
+    auto current_p = pointer;
+
+    {
+        auto size =
+            std::min(align_up_next<uint128_t>(current_p, m_chunk_size), end) -
+            current_p;
+        addr.emplace_back(current_p, static_cast<std::size_t>(size));
+        current_p += size;
+    }
+
+    while (current_p < end) {
+        auto size = std::min(current_p + m_chunk_size, end) - current_p;
+        addr.emplace_back(current_p, static_cast<std::size_t>(size));
+        current_p += size;
     }
 
     auto rv = shared_buffer<>(read_size);

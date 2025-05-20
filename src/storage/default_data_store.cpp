@@ -138,12 +138,10 @@ address default_data_store::write(const allocation_t allocation,
             break;
         }
 
-        auto frag = fragment{.pointer = local_pointer, .size = count};
+        rv.emplace_back(local_pointer, count);
 
         local_pointer += count;
         written += count;
-
-        rv.push(frag);
     }
     if (written != allocation.size) {
         throw std::runtime_error("could not complete buffer write");
