@@ -1,18 +1,9 @@
 #include "ec_data_view.h"
 
-#include <boost/align/align_up.hpp>
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
+#include <common/utils/integral.h>
 #include <storage/group/impl/address_utils.h>
-#include <type_traits>
-
-namespace {
-template <typename T> constexpr T div_ceil(T x, T y) {
-    static_assert(std::is_integral<T>::value,
-                  "div_ceil only supports integral types");
-    return (x + y - 1) / y;
-}
-} // namespace
 
 namespace uh::cluster::storage {
 ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
@@ -94,7 +85,7 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     address addr;
     auto p = pointer;
     while (p < pointer + read_size) {
-        auto next_p = boost::alignment::align_up(p + 1, m_chunk_size);
+        auto next_p = align_up_next<uint128_t>(p, m_chunk_size);
         next_p = std::min(next_p, pointer + read_size);
         auto frag = fragment{.pointer = p,
                              .size = static_cast<std::size_t>(next_p - p)};
