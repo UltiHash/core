@@ -41,6 +41,16 @@ protected:
     etcd_manager m_etcd;
 };
 
+struct write_offset_interface {
+    write_offset_interface(std::size_t val)
+        : m_val{val} {}
+    std::size_t get_write_offset() { return m_val; }
+    void set_write_offset(std::size_t val) { m_val = val; }
+
+private:
+    std::size_t m_val;
+};
+
 BOOST_FIXTURE_TEST_SUITE(a_maintainer, basic_fixture)
 
 BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
@@ -48,8 +58,9 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     temp_directory dir;
     service_config service_cfg{.working_dir = dir.path()};
 
+    auto wo_interface = std::make_shared<write_offset_interface>(0);
     ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg, 0 /*offset*/);
+                             service_cfg, m_gdv_cfg, wo_interface);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -64,9 +75,12 @@ public:
         temp_directory dir;
         service_config service_cfg{.working_dir = dir.path()};
 
-        auto maintainer = std::make_optional<ec_maintainer>(
-            m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
-            m_gdv_cfg, storage_id);
+        auto wo_interface =
+            std::make_shared<write_offset_interface>(storage_id * 1_KiB);
+        auto maintainer =
+            std::make_optional<ec_maintainer<write_offset_interface>>(
+                m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
+                m_gdv_cfg, wo_interface);
 
         while (!stoken.stop_requested()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
