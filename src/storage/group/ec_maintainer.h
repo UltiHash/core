@@ -7,7 +7,6 @@
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
 #include <storage/group/offset.h>
-#include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {
 
