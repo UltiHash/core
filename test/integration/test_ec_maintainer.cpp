@@ -41,6 +41,16 @@ protected:
     etcd_manager m_etcd;
 };
 
+struct write_offset_interface {
+    write_offset_interface(std::size_t val)
+        : m_val{val} {}
+    std::size_t get_write_offset() { return m_val; }
+    void set_write_offset(std::size_t val) { m_val = val; }
+
+private:
+    std::size_t m_val;
+};
+
 BOOST_FIXTURE_TEST_SUITE(a_maintainer, basic_fixture)
 
 BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
@@ -49,7 +59,8 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     service_config service_cfg{.working_dir = dir.path()};
 
     ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg, 0 /*offset*/);
+                             service_cfg, m_gdv_cfg,
+                             std::make_shared<write_offset_interface>(0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -59,14 +70,17 @@ public:
     fixture_for_ec_maintainer()
         : basic_fixture{} {}
 
-    void spawn_ec_maintainer(std::stop_token stoken, std::size_t storage_id) {
+    void
+    spawn_ec_maintainer(std::stop_token stoken, std::size_t storage_id,
+                        std::shared_ptr<write_offset_interface> wo_interface) {
         etcd_manager thread_local_etcd;
         temp_directory dir;
         service_config service_cfg{.working_dir = dir.path()};
 
-        auto maintainer = std::make_optional<ec_maintainer>(
-            m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
-            m_gdv_cfg, storage_id);
+        auto maintainer =
+            std::make_optional<ec_maintainer<write_offset_interface>>(
+                m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
+                m_gdv_cfg, wo_interface);
 
         while (!stoken.stop_requested()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -81,8 +95,10 @@ public:
         : fixture_for_ec_maintainer{} {
 
         for (std::size_t i = 0; i < m_num_instances; ++i) {
+            wo_interfaces[i] =
+                std::make_shared<write_offset_interface>(i * 1_KiB);
             threads[i] = std::jthread([&, i](std::stop_token stoken) {
-                spawn_ec_maintainer(stoken, i);
+                spawn_ec_maintainer(stoken, i, wo_interfaces[i]);
             });
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -124,6 +140,9 @@ public:
         storage_states_updated = false;
         return true;
     }
+
+    std::map<std::size_t, std::shared_ptr<write_offset_interface>>
+        wo_interfaces;
 
 protected:
     std::condition_variable cv;
@@ -174,6 +193,15 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
+}
+
+BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
+    if (wait_for_group_state_key() == false) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
+    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(wo_interfaces[leader_id]->get_write_offset() ==
+               (m_num_instances - 1) * 1_KiB);
 }
 
 BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
@@ -339,7 +367,8 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
     std::cout << std::format("Thread for storage {} created", leader_id)
               << std::endl;
     threads[leader_id] = std::jthread([&, leader_id](std::stop_token stoken) {
-        spawn_ec_maintainer(stoken, leader_id);
+        spawn_ec_maintainer(stoken, leader_id,
+                            std::make_shared<write_offset_interface>(0));
     });
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
