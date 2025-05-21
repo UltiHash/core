@@ -21,15 +21,17 @@ static bool init_fec() {
     return init;
 };
 
-class reedsolomon_c : public ec_interface {
+class reedsolomon_c {
 public:
-    reedsolomon_c(size_t data_nodes, size_t ec_nodes)
+    reedsolomon_c(std::size_t data_nodes, std::size_t ec_nodes,
+                  std::size_t shard_size = 0)
         : m_data_shards(data_nodes),
           m_parity_shards(ec_nodes),
+          m_shard_size(shard_size),
           m_rs(get_rs()) {}
 
     void recover(const std::vector<std::span<const char>>& shards,
-                 std::vector<data_stat>& stats) const override {
+                 std::vector<data_stat>& stats) const {
         if (shards.size() != m_parity_shards + m_data_shards and
             stats.size() != shards.size()) {
             throw std::logic_error(
@@ -37,6 +39,10 @@ public:
         }
 
         const auto shard_size = shards.front().size();
+        if (m_shard_size != 0 and m_shard_size != shard_size) {
+            throw std::logic_error(
+                "Shard size mismatch between shards and configuration");
+        }
 
         std::vector<const char*> ushards;
         ushards.reserve(shards.size());
@@ -58,19 +64,19 @@ public:
         }
     }
 
-    encoded encode(std::span<const char> data,
-                   std::size_t shard_size = 0) const override {
+    encoded encode(std::span<const char> data) const {
 
-        if (shard_size == 0) {
-            shard_size = (data.size() + m_data_shards - 1) / m_data_shards;
-        }
+        auto shard_size =
+            (m_shard_size != 0)
+                ? m_shard_size
+                : (data.size() + m_data_shards - 1) / m_data_shards;
 
         const auto total_blocks = m_data_shards + m_parity_shards;
 
         std::vector<const char*> shard_ptrs;
         shard_ptrs.reserve(m_data_shards + m_parity_shards);
 
-        size_t size = 0;
+        std::size_t size = 0;
         // use existing allocation for shards as much as possible
         while (size + shard_size <= data.size()) {
             shard_ptrs.emplace_back(data.data() + size);
@@ -97,7 +103,7 @@ public:
         }
 
         // create parity shards
-        for (size_t i = 0; i < m_parity_shards; i++) {
+        for (std::size_t i = 0; i < m_parity_shards; i++) {
             new_shards.emplace_back(shard_size);
             shard_ptrs.emplace_back(new_shards.back().data());
         }
@@ -126,8 +132,9 @@ private:
         return {nullptr, [](reed_solomon*) {}};
     }
 
-    const size_t m_data_shards;
-    const size_t m_parity_shards;
+    const std::size_t m_data_shards;
+    const std::size_t m_parity_shards;
+    const std::size_t m_shard_size;
     bool m_init = init_fec();
     const std::unique_ptr<reed_solomon, void (*)(reed_solomon*)> m_rs;
 };

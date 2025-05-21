@@ -34,9 +34,10 @@ void fill_random(char* buf, size_t size) {
 }
 
 BOOST_AUTO_TEST_CASE(ec_basic) {
-
-    reedsolomon_c ec(4, 2);
-    std::string data(64 * KIBI_BYTE, '0');
+    const auto stripe_size = 64 * KIBI_BYTE;
+    const auto data_shards = 4;
+    reedsolomon_c ec(data_shards, 2, stripe_size / data_shards);
+    std::string data(stripe_size, '0');
     fill_random(data.data(), data.size());
     auto encoded = ec.encode(data);
     auto shards = encoded.get();

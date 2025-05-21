@@ -8,6 +8,7 @@
 #include <common/etcd/service_discovery/storage_index.h>
 #include <common/types/scoped_buffer.h>
 #include <storage/group/externals.h>
+#include <storage/group/impl/address_utils.h>
 #include <storage/interfaces/data_view.h>
 
 namespace uh::cluster::storage {
@@ -152,6 +153,10 @@ private:
                                      std::to_string(count));
         return storages;
     }
+
+    coro<std::unordered_map<std::size_t, bool>>
+    read_from_storages(std::unordered_map<std::size_t, address_info> addr_map,
+                       std::span<char> buffer);
 };
 
 } // namespace uh::cluster::storage

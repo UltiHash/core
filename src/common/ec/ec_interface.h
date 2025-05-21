@@ -38,14 +38,4 @@ struct encoded {
     std::vector<std::span<const char>> m_encoded;
 };
 
-class ec_interface {
-public:
-    virtual void recover(const std::vector<std::span<const char>>& shards,
-                         std::vector<data_stat>& stats) const = 0;
-
-    virtual encoded encode(std::span<const char> data,
-                           std::size_t shard_size) const = 0;
-    virtual ~ec_interface() = default;
-};
-
 } // end namespace uh::cluster
