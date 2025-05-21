@@ -118,6 +118,7 @@ private:
 
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
+    const std::size_t m_stripe_size;
     service_maintainer<storage_interface> m_storage_maintainer;
 };
 

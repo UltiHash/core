@@ -61,8 +61,8 @@ struct local_storage : public storage_interface {
         co_return p->get_future().get();
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
-        auto p = std::make_shared<std::promise<std::size_t>>();
+    coro<std::vector<std::size_t>> unlink(const address& addr) override {
+        auto p = std::make_shared<std::promise<std::vector<std::size_t>>>();
         boost::asio::post(m_threads, [this, p, &addr]() {
             try {
                 p->set_value(m_data_store->unlink(addr));
