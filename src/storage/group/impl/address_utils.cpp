@@ -4,32 +4,26 @@
 
 namespace uh::cluster {
 
-struct node_address_info {
-    std::unordered_map<std::size_t, address_info> node_info_map;
-    size_t data_size;
-};
-
-node_address_info extract_node_address_map(
+std::unordered_map<std::size_t, address_info> extract_node_address_map(
     const address& addr,
     const std::vector<std::shared_ptr<storage_interface>>& storages,
     std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
         get_storage_pointer) {
 
-    node_address_info info;
+    std::unordered_map<std::size_t, address_info> info;
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         const auto [id, storage_ptr] = get_storage_pointer(frag.pointer);
         frag.pointer = storage_ptr;
 
-        auto& node_pos = info.node_info_map[id];
+        auto& node_pos = info[id];
         auto& node_address = node_pos.addr;
         node_address.push(frag);
         node_pos.pointer_offsets.emplace_back(offset);
         offset += frag.size;
     }
 
-    info.data_size = offset;
     return info;
 }
 
@@ -45,11 +39,12 @@ coro<size_t> perform_for_address(
     auto info = extract_node_address_map(addr, storages, get_storage_pointer);
 
     std::vector<future<void>> futures;
-    futures.reserve(info.node_info_map.size());
+    futures.reserve(info.size());
 
     auto context = co_await boost::asio::this_coro::context;
     size_t i = 0;
-    for (auto& dn : info.node_info_map) {
+    std::size_t size = 0;
+    for (auto& dn : info) {
         promise<void> p;
         futures.emplace_back(p.get_future());
         auto storage = storages[dn.first];
@@ -59,13 +54,14 @@ coro<size_t> perform_for_address(
         boost::asio::co_spawn(
             ioc, func(i++, storage, dn.second).continue_trace(context),
             use_promise_cospawn(std::move(p)));
+        size += dn.second.addr.data_size();
     }
 
     for (auto& f : futures) {
         co_await f.get();
     }
 
-    co_return info.data_size;
+    co_return size;
 }
 
 } // namespace uh::cluster
