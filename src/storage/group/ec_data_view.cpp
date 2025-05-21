@@ -2,16 +2,8 @@
 
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
+#include <common/utils/integral.h>
 #include <storage/group/impl/address_utils.h>
-#include <type_traits>
-
-namespace {
-template <typename T> constexpr T div_ceil(T x, T y) {
-    static_assert(std::is_integral<T>::value,
-                  "div_ceil only supports integral types");
-    return (x + y - 1) / y;
-}
-} // namespace
 
 namespace uh::cluster::storage {
 ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
@@ -82,13 +74,50 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
                                          size_t read_size) {
+    auto storages = get_valid_storages();
+
+    auto need_reconstruction =
+        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
+                    [](auto storage) { return storage != nullptr; });
+
+    (void)need_reconstruction;
+
+    address addr;
+    auto p = pointer;
+    while (p < pointer + read_size) {
+        auto next_p = align_up_next<uint128_t>(p, m_chunk_size);
+        next_p = std::min(next_p, pointer + read_size);
+        auto frag = fragment{.pointer = p,
+                             .size = static_cast<std::size_t>(next_p - p)};
+        addr.push(frag);
+        p = next_p;
+    }
+
     auto rv = shared_buffer<>(read_size);
+    co_await read_address(addr, rv);
+
     co_return rv;
 }
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    co_return 0;
+    auto storages = m_externals.get_storage_services();
+    auto need_reconstruction =
+        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
+                    [](auto storage) { return storage != nullptr; });
+
+    (void)need_reconstruction;
+
+    co_return co_await perform_for_address(
+        m_ioc, addr,
+        [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        },
+        [buffer](size_t, std::shared_ptr<storage_interface> svc,
+                 const address_info& info) -> coro<void> {
+            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
+        },
+        storages);
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }
