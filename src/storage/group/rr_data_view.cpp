@@ -10,6 +10,7 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     : m_ioc(ioc),
       m_load_balancer{},
       m_storage_index{group_config.storages},
+      m_stripe_size{group_config.chunk_size_kib},
       m_storage_maintainer(
           etcd, ns::root.storage_groups[group_id].storage_hostports,
           service_factory<storage_interface>(ioc, service_connections),
@@ -78,9 +79,10 @@ coro<std::size_t> rr_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
     co_await perform_for_address(
         addr, m_storage_index, m_ioc,
-        [&freed_bytes](size_t, std::shared_ptr<storage_interface> svc,
-                       const address_info& info) -> coro<void> {
-            freed_bytes += co_await svc->unlink(info.addr);
+        [&freed_bytes, this](size_t, std::shared_ptr<storage_interface> svc,
+                             const address_info& info) -> coro<void> {
+            auto freed_pages = co_await svc->unlink(info.addr);
+            freed_bytes += freed_pages.size() * m_stripe_size;
         });
     co_return freed_bytes;
 }

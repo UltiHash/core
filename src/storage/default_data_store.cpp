@@ -163,7 +163,7 @@ address default_data_store::link(const address& addr) {
     return m_refcounter.increment(addr);
 }
 
-size_t default_data_store::unlink(const address& addr) {
+std::vector<std::size_t> default_data_store::unlink(const address& addr) {
     std::unique_lock lock(m_mutex);
     return m_refcounter.decrement(addr);
 }
