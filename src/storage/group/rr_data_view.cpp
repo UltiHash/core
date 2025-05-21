@@ -42,7 +42,7 @@ coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
 
     auto [id, storage_pointer] =
         pointer_traits::rr::get_storage_pointer(pointer);
-    auto storage = m_storage_index.get(id);
+    auto storage = m_storage_index.at(id);
     co_return co_await storage->read(storage_pointer, size);
 }
 
