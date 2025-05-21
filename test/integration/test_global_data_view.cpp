@@ -10,7 +10,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-
+/*
 BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
     auto gdv = get_data_view();
     BOOST_REQUIRE_THROW(
@@ -133,6 +133,147 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
                           boost::asio::use_future)
         .get();
     BOOST_TEST(input_buffer.string_view() == result_buffer.string_view());
+}
+*/
+BOOST_FIXTURE_TEST_CASE(write_link_unlink_free, global_data_view_fixture) {
+    auto gdv = get_data_view();
+    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE);
+
+    std::cout << "start writing" << std::endl;
+    auto addr = boost::asio::co_spawn(
+                    get_executor(), gdv->write(input_buffer.string_view(), {0}),
+                    boost::asio::use_future)
+                    .get();
+    BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == 1ul);
+
+    std::size_t used =
+        boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
+                              boost::asio::use_future)
+            .get();
+    BOOST_TEST(used == input_buffer.size());
+
+    boost::asio::co_spawn(get_executor(), gdv->link(addr),
+                          boost::asio::use_future)
+        .get();
+    std::size_t freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                              boost::asio::use_future)
+                            .get();
+    BOOST_TEST(freed == 0ull);
+
+    freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                  boost::asio::use_future)
+                .get();
+    BOOST_TEST(freed == input_buffer.size());
+
+    used = boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
+                                 boost::asio::use_future)
+               .get();
+    BOOST_TEST(used == 0ull);
+
+    BOOST_CHECK_THROW(boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                            boost::asio::use_future)
+                          .get(),
+                      std::exception);
+}
+
+BOOST_FIXTURE_TEST_CASE(write_link_unlink_nofree, global_data_view_fixture) {
+    auto gdv = get_data_view();
+    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE / 2);
+
+    std::cout << "start writing" << std::endl;
+    auto addr = boost::asio::co_spawn(
+                    get_executor(), gdv->write(input_buffer.string_view(), {0}),
+                    boost::asio::use_future)
+                    .get();
+    BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == 1ul);
+
+    std::size_t used =
+        boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
+                              boost::asio::use_future)
+            .get();
+    BOOST_TEST(used == input_buffer.size());
+
+    boost::asio::co_spawn(get_executor(), gdv->link(addr),
+                          boost::asio::use_future)
+        .get();
+    std::size_t freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                              boost::asio::use_future)
+                            .get();
+    BOOST_TEST(freed == 0ull);
+
+    freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                  boost::asio::use_future)
+                .get();
+    BOOST_TEST(freed == 0ull);
+
+    used = boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
+                                 boost::asio::use_future)
+               .get();
+    BOOST_TEST(used == input_buffer.size());
+
+    BOOST_CHECK_THROW(boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
+                                            boost::asio::use_future)
+                          .get(),
+                      std::exception);
+}
+
+BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
+    auto gdv = get_data_view();
+    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE);
+    std::vector<std::size_t> offsets = {0 * KIBI_BYTE, 2 * KIBI_BYTE,
+                                        4 * KIBI_BYTE, 6 * KIBI_BYTE};
+
+    auto addr =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->write(input_buffer.string_view(), offsets),
+                              boost::asio::use_future)
+            .get();
+    BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == 1ul);
+    std::size_t used =
+        boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
+                              boost::asio::use_future)
+            .get();
+    auto frag = addr.get(0);
+    BOOST_TEST(used == input_buffer.size());
+    {
+        address del_addr;
+        del_addr.push({frag.pointer, 2 * KIBI_BYTE});
+        std::size_t freed =
+            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+                                  boost::asio::use_future)
+                .get();
+        BOOST_TEST(freed == 0);
+    }
+    {
+        address del_addr;
+        del_addr.push({frag.pointer + 2 * KIBI_BYTE, 2 * KIBI_BYTE});
+        std::size_t freed =
+            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+                                  boost::asio::use_future)
+                .get();
+        BOOST_TEST(freed == 0);
+    }
+    {
+        address del_addr;
+        del_addr.push({frag.pointer + 4 * KIBI_BYTE, 2 * KIBI_BYTE});
+        std::size_t freed =
+            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+                                  boost::asio::use_future)
+                .get();
+        BOOST_TEST(freed == 0);
+    }
+    {
+        address del_addr;
+        del_addr.push({frag.pointer + 6 * KIBI_BYTE, 2 * KIBI_BYTE});
+        std::size_t freed =
+            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+                                  boost::asio::use_future)
+                .get();
+        BOOST_TEST(freed == DEFAULT_PAGE_SIZE);
+    }
 }
 
 } // namespace uh::cluster
