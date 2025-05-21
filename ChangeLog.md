@@ -1,6 +1,7 @@
 ## UNRELEASED;
 
 - Add missing Last-Modified header to GetObject
+- Bump CLI11 version to 2.5.0
 
 ## [1.3.1] 2025-04-04
 
