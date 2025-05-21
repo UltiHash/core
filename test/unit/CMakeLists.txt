@@ -31,3 +31,5 @@ uh_add_test(test_strings)
 uh_add_test(test_variables PRIVATE uh_mock_entrypoint)
 uh_add_test(test_xml_parser)
 uh_add_test(test_namespace)
+uh_add_test(test_integral)
+

@@ -10,11 +10,12 @@ struct address_info {
 };
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_index& storages, boost::asio::io_context& ioc,
+    boost::asio::io_context& ioc, const address& addr,
+    std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
+        get_storage_pointer,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>
-        fn,
-    std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
-        get_storage_pointer);
+        func,
+    const std::vector<std::shared_ptr<storage_interface>>& storages);
 
 } // end namespace uh::cluster
