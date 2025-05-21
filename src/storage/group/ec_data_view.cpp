@@ -115,16 +115,33 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     (void)need_reconstruction;
 
-    co_return co_await perform_for_address(
-        m_ioc, addr,
-        [this](uint128_t pointer) -> auto {
+    auto size = 0ul;
+
+    auto addr_map =
+        extract_node_address_map(addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
+        });
+
+    co_await run_for_all<bool>(
+        m_ioc,
+        [&size, &storages, buffer](std::size_t id,
+                                   const address_info& info) -> coro<bool> {
+            size += info.addr.data_size();
+            try {
+                auto storage = storages.at(id);
+                if (storage == nullptr)
+                    co_return false;
+
+                co_await storage->read_address(info.addr, buffer,
+                                               info.pointer_offsets);
+            } catch (...) {
+                LOG_ERROR() << "Failed to read address";
+                co_return false;
+            }
+            co_return true;
         },
-        [buffer](std::shared_ptr<storage_interface> svc,
-                 const address_info& info) -> coro<void> {
-            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
-        },
-        storages);
+        addr_map);
+    co_return size;
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }

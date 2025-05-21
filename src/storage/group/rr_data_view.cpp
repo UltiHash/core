@@ -48,13 +48,17 @@ coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
 
 coro<std::size_t> rr_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    co_return co_await perform_for_address(
+    auto size = 0ul;
+    co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [buffer](std::shared_ptr<storage_interface> svc,
-                 const address_info& info) -> coro<void> {
+        [&size, buffer](std::shared_ptr<storage_interface> svc,
+                        const address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
+            size += info.addr.data_size();
         },
         m_storage_index.get());
+
+    co_return size;
 }
 
 coro<std::size_t> rr_data_view::get_used_space() {
@@ -71,7 +75,7 @@ coro<std::size_t> rr_data_view::get_used_space() {
 
 [[nodiscard]] coro<address> rr_data_view::link(const address& addr) {
     std::vector<address> addresses;
-    co_await perform_for_address(
+    co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [&addresses](std::shared_ptr<storage_interface> svc,
                      const address_info& info) -> coro<void> {
@@ -89,13 +93,14 @@ coro<std::size_t> rr_data_view::get_used_space() {
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
     std::atomic<size_t> freed_bytes;
-    co_await perform_for_address(
+    co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
         [&freed_bytes](std::shared_ptr<storage_interface> svc,
                        const address_info& info) -> coro<void> {
             freed_bytes += co_await svc->unlink(info.addr);
         },
         m_storage_index.get());
+
     co_return freed_bytes;
 }
 
