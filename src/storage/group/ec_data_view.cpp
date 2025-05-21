@@ -120,7 +120,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
         [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         },
-        [buffer](size_t, std::shared_ptr<storage_interface> svc,
+        [buffer](std::shared_ptr<storage_interface> svc,
                  const address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
         },

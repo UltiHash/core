@@ -31,7 +31,7 @@ coro<size_t> perform_for_address(
     boost::asio::io_context& ioc, const address& addr,
     std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
         get_storage_pointer,
-    std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
+    std::function<coro<void>(std::shared_ptr<storage_interface>,
                              const address_info&)>
         func,
     const std::vector<std::shared_ptr<storage_interface>>& storages) {
@@ -42,7 +42,6 @@ coro<size_t> perform_for_address(
     futures.reserve(info.size());
 
     auto context = co_await boost::asio::this_coro::context;
-    size_t i = 0;
     std::size_t size = 0;
     for (auto& dn : info) {
         promise<void> p;
@@ -51,9 +50,9 @@ coro<size_t> perform_for_address(
         if (storage == nullptr) {
             throw std::runtime_error("Storage service is not available");
         }
-        boost::asio::co_spawn(
-            ioc, func(i++, storage, dn.second).continue_trace(context),
-            use_promise_cospawn(std::move(p)));
+        boost::asio::co_spawn(ioc,
+                              func(storage, dn.second).continue_trace(context),
+                              use_promise_cospawn(std::move(p)));
         size += dn.second.addr.data_size();
     }
 
