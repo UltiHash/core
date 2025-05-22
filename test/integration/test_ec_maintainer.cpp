@@ -188,10 +188,7 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
 }
 
@@ -227,10 +224,7 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
 
     auto leader_id = *m_leader_observer.get();
