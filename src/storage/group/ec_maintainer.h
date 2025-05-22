@@ -136,12 +136,14 @@ private:
 
             storage_assignment_triggers_manager::put(m_etcd, m_group_config.id,
                                                      false);
+            m_storage_assignment_trigger.set(false);
 
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] Group is now initialized",
                 m_group_config.id, m_storage_id);
             group_initialized_manager::put_persistant(m_etcd, m_group_config.id,
                                                       true);
+            m_group_initialized.set(true);
         }
 
         auto state = m_group_state_manager.get();
