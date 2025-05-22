@@ -1,6 +1,9 @@
 ## UNRELEASED;
 
 - Add missing Last-Modified header to GetObject
+- Bump CLI11 version to 2.5.0
+- Bump magic-enum to 0.9.7
+- Bump nlohmann-json to 3.12.0
 
 ## [1.3.1] 2025-04-04
 

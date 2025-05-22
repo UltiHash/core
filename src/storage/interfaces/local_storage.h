@@ -87,9 +87,17 @@ struct local_storage : public storage_interface {
         co_return m_data_store->allocate(size, alignment);
     }
 
+    std::size_t get_write_offset() const noexcept {
+        return m_data_store->get_write_offset();
+    }
+
+    void set_write_offset(std::size_t val) noexcept {
+        m_data_store->set_write_offset(val);
+    }
+
 private:
     boost::asio::thread_pool m_threads;
-    std::unique_ptr<data_store> m_data_store;
+    std::unique_ptr<default_data_store> m_data_store;
 };
 
 } // namespace uh::cluster

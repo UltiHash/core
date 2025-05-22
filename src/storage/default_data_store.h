@@ -92,6 +92,8 @@ public:
      */
     std::size_t get_write_offset() const noexcept;
 
+    void set_write_offset(std::size_t val) noexcept;
+
     ~default_data_store();
 
 private:
