@@ -64,12 +64,11 @@ private:
         std::size_t assigned_count = 0ul;
     };
 
-    statistics get_statistics(
-        std::vector<std::shared_ptr<storage_state>>& storage_states) {
+    statistics get_statistics(std::vector<storage_state>& storage_states) {
 
         statistics rv;
         for (const auto& val : storage_states) {
-            switch (*val) {
+            switch (val) {
             case storage_state::DOWN:
                 rv.has_down = true;
                 break;
@@ -114,12 +113,12 @@ private:
 
         auto stats = get_statistics(storage_states);
 
-        if (not(*group_initialized)) {
+        if (not(group_initialized)) {
             if (stats.has_down)
                 return;
 
             auto trigger = m_storage_assignment_trigger.get();
-            if (not(*trigger)) {
+            if (not(trigger)) {
 
                 LOG_DEBUG()
                     << std::format("[group {}, storage {}] trigger "
@@ -213,10 +212,10 @@ private:
     /*
      * subscriber's observers
      */
-    value_observer<bool> m_group_initialized;
-    value_observer<bool> m_storage_assignment_trigger;
+    sync_value_observer<bool> m_group_initialized;
+    sync_value_observer<bool> m_storage_assignment_trigger;
     candidate_observer m_candidate; // It removes leader key on it's destructor
-    vector_observer<storage_state> m_storage_states;
+    sync_vector_observer<storage_state> m_storage_states;
 
     // NOTE: Order is important! The storage state should be destroyed
     // before the leader key, which is handled by the candidate_observer.
