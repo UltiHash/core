@@ -36,7 +36,7 @@ copy_encoded(std::size_t data_shards,
     for (size_t i = 0; i < input_shards.size() - data_shards; ++i) {
         new_shards.emplace_back(parity[i].data(), chunk_size);
     }
-    for (int i = 0; i < input_shards.size(); ++i) {
+    for (size_t i = 0; i < input_shards.size(); ++i) {
         std::ranges::copy(input_shards.at(i), new_shards.at(i).begin());
     }
     return {std::move(data), std::move(parity), std::move(new_shards)};
