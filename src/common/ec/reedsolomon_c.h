@@ -30,7 +30,7 @@ public:
           m_shard_size(shard_size),
           m_rs(get_rs()) {}
 
-    void recover(const std::vector<std::span<const char>>& shards,
+    void recover(std::vector<std::span<char>>& shards,
                  std::vector<data_stat>& stats) const {
         if (shards.size() != m_parity_shards + m_data_shards and
             stats.size() != shards.size()) {
@@ -44,7 +44,7 @@ public:
                 "Shard size mismatch between shards and configuration");
         }
 
-        std::vector<const char*> ushards;
+        std::vector<char*> ushards;
         ushards.reserve(shards.size());
         for (const auto& s : shards) {
             if (s.size() != shard_size) {
@@ -54,9 +54,7 @@ public:
             ushards.emplace_back(s.data());
         }
         if (reed_solomon_reconstruct(
-                m_rs.get(),
-                reinterpret_cast<unsigned char**>(
-                    const_cast<char**>(ushards.data())),
+                m_rs.get(), reinterpret_cast<unsigned char**>(ushards.data()),
                 reinterpret_cast<unsigned char*>(stats.data()),
                 static_cast<int>(m_data_shards + m_parity_shards),
                 static_cast<int>(shard_size)) != 0) {

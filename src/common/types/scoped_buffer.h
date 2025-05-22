@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 #include <span>
 
 namespace uh::cluster {
@@ -56,6 +57,13 @@ public:
         }
     }
 
+    bool operator==(const scoped_buffer& other) const {
+        return m_data_info->m_size == other.m_data_info->m_size &&
+               std::equal(m_data_info->m_data_ptr,
+                          m_data_info->m_data_ptr + m_data_info->m_size,
+                          other.m_data_info->m_data_ptr);
+    }
+
     inline constexpr T& operator[](size_t index) const noexcept {
         return m_data_info->m_data_ptr[index];
     }
@@ -99,4 +107,15 @@ public:
 template <typename T = char> using shared_buffer = scoped_buffer<T, true>;
 
 template <typename T = char> using unique_buffer = scoped_buffer<T, false>;
+
 } // namespace uh::cluster
+
+template <typename T, bool shared>
+inline std::ostream&
+operator<<(std::ostream& os,
+           const uh::cluster::scoped_buffer<T, shared>& value) {
+    for (auto i = 0ul; i < value.m_size; ++i) {
+        os << value.m_data_ptr[i];
+    }
+    return os;
+}

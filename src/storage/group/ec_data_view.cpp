@@ -107,14 +107,14 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
 }
 
 coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
-    std::unordered_map<std::size_t, address_info> addr_map,
+    std::unordered_map<std::size_t, address_info> addr_info_map,
     std::span<char> buffer) {
-    auto size = 0ul;
     co_return co_await run_for_all<bool>(
         m_ioc,
-        [&size, &storage_index = m_externals.get_storage_index(),
+        // NOTE: doesn't check storage_states, since unassigned storages will
+        // throw exception
+        [&storage_index = m_externals.get_storage_index(),
          buffer](std::size_t id, const address_info& info) -> coro<bool> {
-            size += info.addr.data_size();
             try {
                 auto storage = storage_index.at(id);
                 if (storage == nullptr)
@@ -128,22 +128,53 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
             }
             co_return true;
         },
-        addr_map);
+        addr_info_map);
 }
+
+std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
+ec_data_view::get_stripe_ids(
+    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, bool> success_map) {
+    std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
+        rv;
+    for (auto& [id, success] : success_map) {
+        if (not success) {
+            auto& addr = addr_info_map[id].addr;
+            for (size_t i = 0; i < addr.fragments.size(); ++i) {
+                auto& frag = addr.fragments[i];
+                auto global_pointer = get_global_pointer(frag.pointer, id);
+                auto stripe_id = static_cast<uint64_t>(div_floor(
+                    global_pointer, static_cast<uint128_t>(m_stripe_size)));
+
+                rv[stripe_id].emplace_back(
+                    fragment(global_pointer, frag.size),
+                    addr_info_map[id].pointer_offsets[i]);
+            }
+        }
+    }
+    return rv;
+}
+
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
 
-    auto addr_map =
+    auto addr_info_map =
         extract_node_address_map(addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         });
 
-    auto success_map = co_await read_from_storages(addr_map, buffer);
+    auto success_map = co_await read_from_storages(addr_info_map, buffer);
 
     auto success = std::ranges::all_of(success_map | std::views::values,
                                        [](auto success) { return success; });
     if (!success) {
         auto storages = m_externals.get_storage_services();
+        auto states = m_externals.get_storage_states();
+        for (auto i = 0ul; i < states.size(); ++i) {
+            if (storages[i] != nullptr && *states[i] != storage_state::ASSIGNED)
+                storages[i] = nullptr;
+        }
+
         auto num_valid_storages = std::ranges::count_if(
             storages, [](auto& s) { return s != nullptr; });
 
@@ -163,33 +194,61 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
                 "storages was failed");
         }
 
-        // get needed stripe ids from failed read_address operations
-        std::unordered_map<uint64_t, std::vector<fragment>> stripe_map;
-        for (auto& [id, success] : success_map) {
-            if (not success) {
-                auto& addr = addr_map[id].addr;
-                for (auto& frag : addr.fragments) {
-                    (void)frag;
-                    auto global_pointer = get_global_pointer(frag.pointer, id);
-                    auto stripe_id = static_cast<uint64_t>(div_floor(
-                        global_pointer, static_cast<uint128_t>(m_stripe_size)));
-                    stripe_map[stripe_id].push_back(frag);
-                }
-            }
+        // NOTE: this function translates storage pointer to global pointer
+        auto stripe_map = get_stripe_ids(addr_info_map, success_map);
+
+        unique_buffer<char> stripe(m_stripe_size);
+        std::vector<std::span<char>> shards;
+        shards.reserve(m_config.storages);
+        for (auto& [stripe_id, frags] : stripe_map) {
+            auto shard =
+                stripe.span().subspan(m_chunk_size * stripe_id, m_chunk_size);
+            shards.push_back(shard);
         }
 
-        // Repeat the following steps for each stripe:
-        for (auto& [stripe_id, frags] : stripe_map) {
+        for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
             address addr;
             addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
-            // storages
-            // std::vector stats(6, data_stat::valid);
-            // stats[1] = data_stat::lost;
-            // stats[3] = data_stat::lost;
-            // m_rs.recover(shards, stats);
-            // TODO: 2. Read a chunk on the enough number of shards
-            // TODO: 3. Reconstruct needed data
-            // TODO: 4. Copy recustructed data to the buffer
+
+            co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&shards, &addr, chunk_size = m_chunk_size](
+                    std::size_t id,
+                    const std::shared_ptr<storage_interface>& storage)
+                    -> coro<void> {
+                    try {
+                        if (storage == nullptr) {
+                            std::ranges::fill(shards[id], 0);
+                        } else {
+                            std::vector<size_t> pointer_offsets = {chunk_size *
+                                                                   id};
+                            co_await storage->read_address(addr, shards[id],
+                                                           {0});
+                        }
+                    } catch (...) {
+                        LOG_ERROR() << "Failed to read address";
+                    }
+                },
+                storages);
+
+            std::vector<data_stat> stats;
+            stats.reserve(m_config.storages);
+            for (auto& s : storages) {
+                if (s != nullptr) {
+                    stats.push_back(data_stat::valid);
+                } else {
+                    stats.push_back(data_stat::lost);
+                }
+            }
+            m_rs.recover(shards, stats);
+
+            for (auto& [frag, offset] : frags_and_offsets) {
+                auto [id, pointer] = get_storage_pointer(frag.pointer);
+                std::size_t chunk_offset = pointer % m_chunk_size;
+
+                std::ranges::copy(shards[id].subspan(chunk_offset, frag.size),
+                                  buffer.subspan(offset, frag.size).begin());
+            }
         }
     }
 
