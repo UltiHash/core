@@ -113,8 +113,11 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
                     co_return false;
                 co_await storage->read_address(info.addr, buffer,
                                                info.pointer_offsets);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "Failed to read address: " << e.what();
+                co_return false;
             } catch (...) {
-                LOG_ERROR() << "Failed to read address";
+                LOG_ERROR() << "Failed to read address: Unknown exception";
                 co_return false;
             }
             co_return true;
@@ -158,88 +161,86 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     auto success = std::ranges::all_of(success_map | std::views::values,
                                        [](auto success) { return success; });
-    if (!success) {
-        auto storages = m_externals.get_storage_services();
-        auto states = m_externals.get_storage_states();
-        for (auto i = 0ul; i < states.size(); ++i) {
-            if (storages[i] != nullptr && *states[i] != storage_state::ASSIGNED)
-                storages[i] = nullptr;
-        }
+    if (success)
+        co_return addr.data_size();
 
-        auto num_valid_storages = std::ranges::count_if(
-            storages, [](auto& s) { return s != nullptr; });
+    LOG_DEBUG() << "Start reconstruction...";
+    auto storages = m_externals.get_storage_services();
+    auto states = m_externals.get_storage_states();
+    for (auto i = 0ul; i < states.size(); ++i) {
+        if (storages[i] != nullptr && *states[i] != storage_state::ASSIGNED)
+            storages[i] = nullptr;
+    }
 
-        if ((std::size_t)num_valid_storages < m_config.data_shards) {
-            throw std::runtime_error(
-                "Failed to read address: there's not enough "
-                "valid storages");
-        }
+    auto num_valid_storages =
+        std::ranges::count_if(storages, [](auto& s) { return s != nullptr; });
 
-        auto need_reconstruction = std::any_of(
-            storages.begin(), storages.begin() + m_config.data_shards,
-            [](auto storage) { return storage != nullptr; });
+    if ((std::size_t)num_valid_storages < m_config.data_shards) {
+        throw std::runtime_error("Failed to read address: there's not enough "
+                                 "valid storages");
+    }
 
-        if (not need_reconstruction) {
-            throw std::runtime_error(
-                "Failed to read address: but don't know why read_address for "
-                "storages was failed");
-        }
+    auto need_reconstruction =
+        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
+                    [](auto storage) { return storage != nullptr; });
 
-        // NOTE: this function translates storage pointer to global pointer
-        auto stripe_map = get_stripe_ids(addr_info_map, success_map);
+    if (not need_reconstruction) {
+        throw std::runtime_error(
+            "Failed to read address: but don't know why read_address for "
+            "storages was failed");
+    }
 
-        unique_buffer<char> stripe(m_stripe_size);
-        std::vector<std::span<char>> shards;
-        shards.reserve(m_config.storages);
-        for (auto& [stripe_id, frags] : stripe_map) {
-            auto shard =
-                stripe.span().subspan(m_chunk_size * stripe_id, m_chunk_size);
-            shards.push_back(shard);
-        }
+    // NOTE: this function translates storage pointer to global pointer
+    auto stripe_map = get_stripe_ids(addr_info_map, success_map);
 
-        for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
-            address addr;
-            addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
+    unique_buffer<char> stripe(m_chunk_size * m_config.storages);
+    std::vector<std::span<char>> shards;
+    shards.reserve(m_config.storages);
+    for (auto i = 0ul; i < m_config.storages; ++i) {
+        auto shard = stripe.span().subspan(m_chunk_size * i, m_chunk_size);
+        shards.push_back(shard);
+    }
 
-            co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-                m_ioc,
-                [&shards, &addr, chunk_size = m_chunk_size](
-                    std::size_t id,
-                    const std::shared_ptr<storage_interface>& storage)
-                    -> coro<void> {
-                    try {
-                        if (storage == nullptr) {
-                            std::ranges::fill(shards[id], 0);
-                        } else {
-                            std::vector<size_t> pointer_offsets = {chunk_size *
-                                                                   id};
-                            co_await storage->read_address(addr, shards[id],
-                                                           {0});
-                        }
-                    } catch (...) {
-                        LOG_ERROR() << "Failed to read address";
+    for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
+        address addr;
+        addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
+
+        co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&shards, &addr, chunk_size = m_chunk_size](
+                std::size_t id,
+                const std::shared_ptr<storage_interface>& storage)
+                -> coro<void> {
+                try {
+                    if (storage == nullptr) {
+                        std::ranges::fill(shards[id], 0);
+                    } else {
+                        std::vector<size_t> pointer_offsets = {chunk_size * id};
+                        co_await storage->read_address(addr, shards[id], {0});
                     }
-                },
-                storages);
-
-            std::vector<data_stat> stats;
-            stats.reserve(m_config.storages);
-            for (auto& s : storages) {
-                if (s != nullptr) {
-                    stats.push_back(data_stat::valid);
-                } else {
-                    stats.push_back(data_stat::lost);
+                } catch (...) {
+                    LOG_ERROR() << "Failed to read address";
                 }
-            }
-            m_rs.recover(shards, stats);
+            },
+            storages);
 
-            for (auto& [frag, offset] : frags_and_offsets) {
-                auto [id, pointer] = get_storage_pointer(frag.pointer);
-                std::size_t chunk_offset = pointer % m_chunk_size;
-
-                std::ranges::copy(shards[id].subspan(chunk_offset, frag.size),
-                                  buffer.subspan(offset, frag.size).begin());
+        std::vector<data_stat> stats;
+        stats.reserve(m_config.storages);
+        for (auto& s : storages) {
+            if (s != nullptr) {
+                stats.push_back(data_stat::valid);
+            } else {
+                stats.push_back(data_stat::lost);
             }
+        }
+        m_rs.recover(shards, stats);
+
+        for (auto& [frag, offset] : frags_and_offsets) {
+            auto [id, pointer] = get_storage_pointer(frag.pointer);
+            std::size_t chunk_offset = pointer % m_chunk_size;
+
+            std::ranges::copy(shards[id].subspan(chunk_offset, frag.size),
+                              buffer.subspan(offset, frag.size).begin());
         }
     }
 
