@@ -15,9 +15,9 @@ std::unordered_map<std::size_t, address_info> extract_node_address_map(
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         const auto [id, storage_ptr] = get_storage_pointer(frag.pointer);
-        const auto [last_id, _] =
+        const auto [last_id, last_storage_ptr] =
             get_storage_pointer(frag.pointer + frag.size - 1);
-        if (id != last_id) {
+        if (id != last_id or storage_ptr >= last_storage_ptr) {
             throw error_exception(
                 error(error::type::unknown,
                       std::format("fragment covers multiple storages; "
