@@ -6,6 +6,7 @@
 - Bump nlohmann-json to 3.12.0
 - Bump zppbits to 4.5
 - Bump etcd-cpp-apiv3 version to 0.15.4
+- Bump lmdbxx to latest version
 
 ## [1.3.1] 2025-04-04
 
