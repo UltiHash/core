@@ -73,15 +73,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
 }
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
-                                         size_t read_size) {
-    auto storages = get_valid_storages();
-
-    auto need_reconstruction =
-        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage != nullptr; });
-
-    (void)need_reconstruction;
-
+                                         std::size_t read_size) {
     address addr;
     auto end = pointer + read_size;
     auto current_p = pointer;
@@ -119,7 +111,6 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
                 auto storage = storage_index.at(id);
                 if (storage == nullptr)
                     co_return false;
-
                 co_await storage->read_address(info.addr, buffer,
                                                info.pointer_offsets);
             } catch (...) {
@@ -178,7 +169,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
         auto num_valid_storages = std::ranges::count_if(
             storages, [](auto& s) { return s != nullptr; });
 
-        if (num_valid_storages < m_config.data_shards) {
+        if ((std::size_t)num_valid_storages < m_config.data_shards) {
             throw std::runtime_error(
                 "Failed to read address: there's not enough "
                 "valid storages");

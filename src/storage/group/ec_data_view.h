@@ -61,7 +61,7 @@ public:
      * @param size A size_t specifying the size of the fragment.
      * @return
      */
-    coro<shared_buffer<>> read(const uint128_t& pointer, size_t size);
+    coro<shared_buffer<>> read(const uint128_t& pointer, std::size_t size);
 
     /**
      * @brief Retrieves the contents of an entire address from storage services.
@@ -124,7 +124,8 @@ private:
     reedsolomon_c m_rs;
     externals_subscriber m_externals;
 
-    uint128_t get_global_pointer(uint64_t storage_pointer, size_t storage_id) {
+    uint128_t get_global_pointer(uint64_t storage_pointer,
+                                 std::size_t storage_id) {
         return pointer_traits::ec::get_global_pointer(
             storage_pointer, m_config.id, storage_id, m_chunk_size,
             m_stripe_size);
@@ -132,15 +133,20 @@ private:
 
     std::pair<std::size_t, uint64_t>
     get_storage_pointer(uint128_t group_pointer) {
-        return pointer_traits::ec::get_storage_pointer(
+        auto [id, pointer] = pointer_traits::ec::get_storage_pointer(
             group_pointer, m_chunk_size, m_stripe_size);
+        if (id >= m_config.storages) {
+            throw std::runtime_error("Invalid storage id: " +
+                                     std::to_string(id));
+        }
+        return {id, pointer};
     }
 
     auto get_valid_storages() {
         auto storages = m_externals.get_storage_services();
         auto states = m_externals.get_storage_states();
 
-        size_t count = 0;
+        std::size_t count = 0;
         for (auto i = 0ul; i < m_config.data_shards; ++i) {
             if (storages[i] != nullptr &&
                 *states[i] == storage_state::ASSIGNED) {
