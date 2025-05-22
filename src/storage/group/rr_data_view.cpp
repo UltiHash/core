@@ -48,17 +48,15 @@ coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
 
 coro<std::size_t> rr_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    auto size = 0ul;
     co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [&size, buffer](std::shared_ptr<storage_interface> svc,
-                        const address_info& info) -> coro<void> {
+        [buffer](std::shared_ptr<storage_interface> svc,
+                 const address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
-            size += info.addr.data_size();
         },
         m_storage_index.get());
 
-    co_return size;
+    co_return addr.data_size();
 }
 
 coro<std::size_t> rr_data_view::get_used_space() {

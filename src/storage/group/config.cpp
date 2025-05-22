@@ -1,4 +1,3 @@
-#include <common/telemetry/log.h>
 #include <storage/group/config.h>
 
 using nlohmann::ordered_json;
