@@ -39,24 +39,30 @@ public:
         : m_config{config},
           m_etcd(),
           m_service_cfg(make_service_config()) {
+    }
+
+    virtual ~global_data_view_fixture() {}
+
+    void setup() {
 
         m_etcd.clear_all();
         std::this_thread::sleep_for(100ms);
 
-        if (config.type == storage::group_config::type_t::ERASURE_CODING) {
-            if (config.storages != config.data_shards + config.parity_shards or
-                config.stripe_size_kib % config.data_shards != 0) {
+        if (m_config.type == storage::group_config::type_t::ERASURE_CODING) {
+            if (m_config.storages !=
+                    m_config.data_shards + m_config.parity_shards or
+                m_config.stripe_size_kib % m_config.data_shards != 0) {
                 throw std::runtime_error("Invalid group config");
             }
         }
 
         // NOTE: Now support only one group
         storage::group_configs configs;
-        configs.configs.push_back(config);
+        configs.configs.push_back(m_config);
 
         coordinator::service::publish_configs(m_etcd, configs);
         try {
-            for (size_t i = 0; i < config.storages; i++) {
+            for (size_t i = 0; i < m_config.storages; i++) {
                 service_config service_cfg;
                 service_cfg.working_dir = m_temp_dirs.emplace_back().path();
                 storage_config storage_cfg;
@@ -64,7 +70,7 @@ public:
                 storage_cfg.working_directory = {
                     std::filesystem::path(service_cfg.working_dir) / "storage"};
                 storage_cfg.instance_id = i;
-                storage_cfg.group_id = config.id;
+                storage_cfg.group_id = m_config.id;
                 m_storage_instances.emplace_back(
                     std::make_unique<storage::service>(service_cfg,
                                                        storage_cfg));
@@ -100,8 +106,7 @@ public:
         });
     }
 
-    virtual ~global_data_view_fixture() {
-
+    void teardown() {
         m_gdv.reset();
 
         for (const auto& node : m_storage_instances) {
