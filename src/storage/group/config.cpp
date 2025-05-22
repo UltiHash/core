@@ -45,7 +45,6 @@ void to_json(ordered_json& j, const group_config& config) {
 }
 
 group_config group_config::create(std::string_view json_str) {
-    LOG_DEBUG() << "Parsing group config: " << json_str;
     ordered_json j = ordered_json::parse(json_str);
     return j.get<group_config>();
 }

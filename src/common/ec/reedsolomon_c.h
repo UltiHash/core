@@ -64,11 +64,6 @@ public:
 
     encoded encode(std::span<const char> data) const {
 
-        auto shard_size =
-            (m_shard_size != 0)
-                ? m_shard_size
-                : (data.size() + m_data_shards - 1) / m_data_shards;
-
         const auto total_blocks = m_data_shards + m_parity_shards;
 
         std::vector<const char*> shard_ptrs;
@@ -76,9 +71,9 @@ public:
 
         std::size_t size = 0;
         // use existing allocation for shards as much as possible
-        while (size + shard_size <= data.size()) {
+        while (size + m_shard_size <= data.size()) {
             shard_ptrs.emplace_back(data.data() + size);
-            size += shard_size;
+            size += m_shard_size;
         }
 
         // if the last shard is not filled completely, allocate a new
@@ -87,22 +82,22 @@ public:
         new_shards.reserve(m_data_shards - shard_ptrs.size() + m_parity_shards);
 
         if (const auto rem_size = data.size() - size; rem_size > 0) {
-            new_shards.emplace_back(shard_size);
+            new_shards.emplace_back(m_shard_size);
             std::memcpy(new_shards.back().data(), data.data() + size, rem_size);
             std::memset(new_shards.back().data() + rem_size, 0,
-                        shard_size - rem_size);
+                        m_shard_size - rem_size);
             shard_ptrs.emplace_back(new_shards.back().data());
         }
 
         while (shard_ptrs.size() < m_data_shards) {
-            new_shards.emplace_back(shard_size);
-            std::memset(new_shards.back().data(), 0, shard_size);
+            new_shards.emplace_back(m_shard_size);
+            std::memset(new_shards.back().data(), 0, m_shard_size);
             shard_ptrs.emplace_back(new_shards.back().data());
         }
 
         // create parity shards
         for (std::size_t i = 0; i < m_parity_shards; i++) {
-            new_shards.emplace_back(shard_size);
+            new_shards.emplace_back(m_shard_size);
             shard_ptrs.emplace_back(new_shards.back().data());
         }
 
@@ -110,7 +105,7 @@ public:
                                  reinterpret_cast<unsigned char**>(
                                      const_cast<char**>(shard_ptrs.data())),
                                  static_cast<int>(total_blocks),
-                                 static_cast<int>(shard_size)) != 0) {
+                                 static_cast<int>(m_shard_size)) != 0) {
             throw std::runtime_error("Error in EC calculation");
         }
 

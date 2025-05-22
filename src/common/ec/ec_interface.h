@@ -19,9 +19,9 @@ struct encoded {
 
     std::span<const char> get(std::size_t index) { return m_encoded.at(index); }
 
-    void set(std::vector<const char*>& shard_ptrs,
+    void set(const std::vector<const char*>& shard_ptrs,
              std::vector<unique_buffer<char>> new_shards) {
-        auto shard_size = new_shards.front().size();
+        const auto shard_size = new_shards.front().size();
         for (const char* ptr : shard_ptrs) {
             m_encoded.emplace_back(ptr, shard_size);
         }
