@@ -83,7 +83,7 @@ public:
                 m_gdv_cfg, wo_interface);
 
         while (!stoken.stop_requested()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            std::this_thread::yield();
         }
         maintainer.reset();
     }
@@ -101,7 +101,7 @@ public:
                 spawn_ec_maintainer(stoken, i, wo_interfaces[i]);
             });
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::yield();
     }
     ~fixture_with_subscribers() {
         for (auto& [key, thread] : threads) {
@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         spawn_ec_maintainer(stoken, leader_id,
                             std::make_shared<write_offset_interface>(0));
     });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::yield();
 
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
