@@ -194,9 +194,9 @@ private:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] set it's state to ASSIGNED",
                 m_group_config.id, m_storage_id);
-            if (!m_candidate.is_leader()) {
-                std::this_thread::sleep_for(1s);
-            }
+
+            std::this_thread::sleep_for(1s);
+
             m_storage_state_manager.put(storage_state::ASSIGNED);
         }
     }
