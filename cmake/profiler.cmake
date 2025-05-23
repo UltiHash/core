@@ -6,7 +6,7 @@ CPMAddPackage(
     GITHUB_REPOSITORY
     google/benchmark
     VERSION
-    1.8.5
+    1.9.4
     OPTIONS
     "BENCHMARK_ENABLE_TESTING Off"
     CPM_ARGS

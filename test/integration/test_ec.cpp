@@ -1,6 +1,5 @@
 #define BOOST_TEST_MODULE "ec tests"
 
-#include <common/ec/no_ec.h>
 #include <common/ec/reedsolomon_c.h>
 #include <common/telemetry/log.h>
 #include <common/types/common_types.h>
@@ -141,22 +140,6 @@ BOOST_AUTO_TEST_CASE(two_times_ec) {
         for (auto s : shards) {
             BOOST_CHECK(s == encoded.get(i++));
         }
-    }
-}
-
-BOOST_AUTO_TEST_CASE(no_ec_test) {
-    no_ec nec(4);
-    std::string data(64 * KIBI_BYTE, '0');
-    fill_random(data.data(), data.size());
-    auto encoded = nec.encode(data);
-    auto shards = encoded.get();
-    const auto shard_size = shards.front().size();
-    size_t i = 0;
-    for (auto s : shards) {
-        BOOST_CHECK(s == data.substr(i * shard_size,
-                                     std::min(shard_size,
-                                              data.size() - i * shard_size)));
-        i++;
     }
 }
 

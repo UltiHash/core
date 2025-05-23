@@ -11,12 +11,6 @@
 
 namespace uh::cluster {
 
-static void fill_random(char* buf, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-        buf[i] = rand() & 0xff;
-    }
-}
-
 BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
     auto gdv = get_data_view();
     BOOST_REQUIRE_THROW(
@@ -30,16 +24,19 @@ BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
     auto gdv = get_data_view();
-    auto input_buffer = unique_buffer<char>(8 * KIBI_BYTE);
-    fill_random(input_buffer.data(), input_buffer.size());
+    // auto input_buffer = unique_buffer<char>(8 * KIBI_BYTE);
+    // fill_random(input_buffer.data(), input_buffer.size());
+    auto input_buffer = random_buffer(64);
+
+    std::cout << "start writing" << std::endl;
     auto addr = boost::asio::co_spawn(
                     get_executor(), gdv->write(input_buffer.string_view(), {0}),
                     boost::asio::use_future)
                     .get();
     BOOST_TEST(input_buffer.size() == addr.data_size());
-    BOOST_TEST(addr.pointers.size() == 2ul);
-    BOOST_TEST(addr.sizes.size() == 1ul);
+    BOOST_TEST(addr.fragments.size() == 1ul);
 
+    std::cout << "start reading" << std::endl;
     unique_buffer<char> result_buffer(addr.data_size());
     boost::asio::co_spawn(get_executor(),
                           gdv->read_address(addr, result_buffer.span()),
@@ -128,6 +125,7 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
             .get());
 
     BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == 8);
 
     auto result_buffer = unique_buffer<char>(addr.data_size());
     boost::asio::co_spawn(get_executor(),

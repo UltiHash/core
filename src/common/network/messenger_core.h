@@ -33,14 +33,15 @@ public:
     messenger_core(messenger_core&& m) noexcept;
 
     template <typename T>
-    requires(std::is_arithmetic_v<T> or std::is_enum_v<T>)
+    requires(std::is_trivially_copyable_v<T> and
+             !std::ranges::contiguous_range<T>)
     inline void register_read_buffer(T& t) {
         m_read_buffers.emplace_back(&t, sizeof(T));
         m_read_size += sizeof(T);
     }
 
     template <typename T>
-    requires(std::is_arithmetic_v<T> or std::is_enum_v<T>)
+    requires(std::is_trivially_copyable_v<T>)
     inline void register_read_buffer(T* t, size_type size) {
         m_read_buffers.emplace_back(t, size * sizeof(T));
         m_read_size += size * sizeof(T);
@@ -48,7 +49,7 @@ public:
 
     template <typename T, typename InnerType = std::ranges::range_value_t<T>>
     requires std::ranges::contiguous_range<T> and
-             (std::is_arithmetic_v<InnerType>)
+             (std::is_trivially_copyable_v<InnerType>)
     inline void register_read_buffer(T& t) {
         m_read_buffers.emplace_back(std::ranges::data(t),
                                     std::ranges::size(t) * sizeof(InnerType));
@@ -62,14 +63,15 @@ public:
     }
 
     template <typename T>
-    requires(std::is_arithmetic_v<T> or std::is_enum_v<T>)
+    requires(std::is_trivially_copyable_v<T> and
+             !std::ranges::contiguous_range<T>)
     inline void register_write_buffer(const T& t) {
         m_write_buffers.emplace_back(&t, sizeof(T));
         m_write_size += sizeof(T);
     }
 
     template <typename T>
-    requires(std::is_arithmetic_v<T> or std::is_enum_v<T>)
+    requires(std::is_trivially_copyable_v<T>)
     inline void register_write_buffer(const T* t, size_type size) {
         m_write_buffers.emplace_back(t, size * sizeof(T));
         m_write_size += size * sizeof(T);
@@ -77,7 +79,7 @@ public:
 
     template <typename T, typename InnerType = std::ranges::range_value_t<T>>
     requires std::ranges::contiguous_range<T> and
-             (std::is_arithmetic_v<InnerType>)
+             (std::is_trivially_copyable_v<InnerType>)
     inline void register_write_buffer(const T& t) {
         m_write_buffers.emplace_back(std::ranges::data(t),
                                      std::ranges::size(t) * sizeof(InnerType));

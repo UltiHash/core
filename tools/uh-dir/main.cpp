@@ -116,10 +116,7 @@ uh::cluster::coro<void> object_info(directory& dir, const std::string& bucket,
                   << ", datasize: " << object->addr->data_size() << ")\n";
         for (std::size_t i = 0; i < object->addr->size(); ++i) {
             auto fragment = object->addr->get(i);
-            std::cout << "  - " << std::hex << std::setfill('0')
-                      << std::setw(16) << fragment.pointer.get_high() << ":"
-                      << std::setw(16) << fragment.pointer.get_low() << " w/ "
-                      << std::dec << fragment.size << " bytes\n";
+            std::cout << fragment;
         }
     }
 }

@@ -1,5 +1,7 @@
 #define BOOST_TEST_MODULE "address tests"
 
+#include "test_config.h"
+
 #include <boost/test/unit_test.hpp>
 #include <common/types/address.h>
 

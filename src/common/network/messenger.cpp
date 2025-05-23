@@ -4,24 +4,23 @@ namespace uh::cluster {
 
 coro<address> messenger::recv_address(const header& message_header) {
     address addr(address::allocated_elements(message_header.size));
-    register_read_buffer(addr.pointers);
-    register_read_buffer(addr.sizes);
+    LOG_DEBUG() << "messenge_header.size: "
+                << std::to_string(message_header.size);
+    register_read_buffer(addr.fragments);
     co_await recv_buffers(message_header);
-    co_return std::move(addr);
+    co_return addr;
 }
 
 coro<fragment> messenger::recv_fragment(const header& message_header) {
     fragment frag;
-    register_read_buffer(frag.pointer.ref_data());
-    register_read_buffer(frag.size);
+    register_read_buffer(frag);
     co_await recv_buffers(message_header);
     co_return frag;
 }
 
 coro<allocation_t> messenger::recv_allocation(const header& message_header) {
     allocation_t allocation{};
-    register_read_buffer(allocation.offset);
-    register_read_buffer(allocation.size);
+    register_read_buffer(allocation);
     co_await recv_buffers(message_header);
     co_return allocation;
 }
@@ -32,17 +31,15 @@ messenger::recv_dedupe_response(const header& message_header) {
     register_read_buffer(dedupe_resp.effective_size);
     dedupe_resp.addr = address(address::allocated_elements(
         message_header.size - sizeof(dedupe_resp.effective_size)));
-    register_read_buffer(dedupe_resp.addr.pointers);
-    register_read_buffer(dedupe_resp.addr.sizes);
+    register_read_buffer(dedupe_resp.addr.fragments);
     co_await recv_buffers(message_header);
-    co_return std::move(dedupe_resp);
+    co_return dedupe_resp;
 }
 
 coro<void> messenger::send_write(const write_request& req) {
     auto data = std::get<std::span<const char>>(req.data);
     const size_type data_size = static_cast<size_type>(data.size());
-    register_write_buffer(req.allocation.offset);
-    register_write_buffer(req.allocation.size);
+    register_write_buffer(req.allocation);
     register_write_buffer(data_size);
     register_write_buffer(data);
     register_write_buffer(req.offsets);
@@ -78,15 +75,13 @@ coro<write_request> messenger::recv_write(const header& message_header) {
 
 coro<void> messenger::send_address(const message_type type,
                                    const address& addr) {
-    register_write_buffer(addr.pointers);
-    register_write_buffer(addr.sizes);
+    register_write_buffer(addr.fragments);
     co_await send_buffers(type);
 }
 
 coro<void> messenger::send_fragment(const message_type type,
                                     const fragment frag) {
-    register_write_buffer(frag.pointer.get_data(), 2);
-    register_write_buffer(frag.size);
+    register_write_buffer(frag);
     co_await send_buffers(type);
 }
 
@@ -99,8 +94,7 @@ coro<void> messenger::send_allocation(const message_type type,
 
 coro<void> messenger::send_dedupe_response(const dedupe_response& dedupe_resp) {
     register_write_buffer(dedupe_resp.effective_size);
-    register_write_buffer(dedupe_resp.addr.pointers);
-    register_write_buffer(dedupe_resp.addr.sizes);
+    register_write_buffer(dedupe_resp.addr.fragments);
     co_await send_buffers(SUCCESS);
 }
 

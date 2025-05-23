@@ -138,9 +138,7 @@ address default_data_store::write(const allocation_t allocation,
             break;
         }
 
-        auto frag = fragment{.pointer = pointer_traits::get_global_pointer(
-                                 local_pointer, m_storage_id, 0),
-                             .size = count};
+        auto frag = fragment{.pointer = local_pointer, .size = count};
 
         local_pointer += count;
         written += count;
@@ -228,6 +226,11 @@ std::size_t default_data_store::get_available_space() const noexcept {
 std::size_t default_data_store::get_write_offset() const noexcept {
     std::shared_lock lock(m_mutex);
     return m_write_offset;
+}
+
+void default_data_store::set_write_offset(std::size_t val) noexcept {
+    std::shared_lock lock(m_mutex);
+    m_write_offset = val;
 }
 
 allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {

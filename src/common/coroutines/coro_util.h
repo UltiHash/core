@@ -6,9 +6,10 @@
 namespace uh::cluster {
 
 template <typename R, typename I>
-coro<std::vector<R>> run_for_all(boost::asio::io_context& ioc,
-                                 std::function<coro<R>(size_t, I)> func,
-                                 const std::vector<I>& inputs) {
+coro<std::conditional_t<std::is_void_v<R>, void, std::vector<R>>>
+run_for_all(boost::asio::io_context& ioc,
+            std::function<coro<R>(size_t, I)> func,
+            const std::vector<I>& inputs) {
     std::vector<future<R>> futures;
     futures.reserve(inputs.size());
 
@@ -22,12 +23,19 @@ coro<std::vector<R>> run_for_all(boost::asio::io_context& ioc,
                               use_promise_cospawn(std::move(p)));
     }
 
-    std::vector<R> res;
-    res.reserve(inputs.size());
-    for (auto& f : futures) {
-        res.emplace_back(co_await f.get());
+    if constexpr (std::is_void_v<R>) {
+        for (auto& f : futures) {
+            co_await f.get();
+        }
+        co_return;
+    } else {
+        std::vector<R> res;
+        res.reserve(inputs.size());
+        for (auto& f : futures) {
+            res.emplace_back(co_await f.get());
+        }
+        co_return res;
     }
-    co_return res;
 }
 
 } // namespace uh::cluster

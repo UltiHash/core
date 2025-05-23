@@ -2,6 +2,8 @@
 
 #include "config.h"
 
+#include <common/coroutines/coro_util.h>
+#include <common/ec/reedsolomon_c.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/service_discovery/storage_index.h>
 #include <common/types/scoped_buffer.h>
@@ -115,8 +117,41 @@ public:
 
 private:
     boost::asio::io_context& m_ioc;
-
+    group_config m_config;
+    std::size_t m_stripe_size;
+    std::size_t m_chunk_size;
+    reedsolomon_c m_rs;
     externals_subscriber m_externals;
+
+    uint128_t get_global_pointer(uint64_t storage_pointer, size_t storage_id) {
+        return pointer_traits::ec::get_global_pointer(
+            storage_pointer, m_config.id, storage_id, m_chunk_size,
+            m_stripe_size);
+    }
+
+    std::pair<std::size_t, uint64_t>
+    get_storage_pointer(uint128_t group_pointer) {
+        return pointer_traits::ec::get_storage_pointer(
+            group_pointer, m_chunk_size, m_stripe_size);
+    }
+
+    auto get_valid_storages() {
+        auto storages = m_externals.get_storage_services();
+        auto states = m_externals.get_storage_states();
+
+        size_t count = 0;
+        for (auto i = 0ul; i < m_config.data_shards; ++i) {
+            if (storages[i] != nullptr &&
+                *states[i] == storage_state::ASSIGNED) {
+                ++count;
+            } else
+                storages[i] = nullptr;
+        }
+        if (count < m_config.data_shards)
+            throw std::runtime_error("Not enough shards to reconstruct data: " +
+                                     std::to_string(count));
+        return storages;
+    }
 };
 
 } // namespace uh::cluster::storage

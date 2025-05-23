@@ -17,7 +17,17 @@ void from_json(const ordered_json& j, group_config& config) {
     if (type_enum == group_config::type_t::ERASURE_CODING) {
         j.at("data_shards").get_to(config.data_shards);
         j.at("parity_shards").get_to(config.parity_shards);
-        j.at("chunk_size_kib").get_to(config.chunk_size_kib);
+        j.at("stripe_size_kib").get_to(config.stripe_size_kib);
+        if (config.storages != config.data_shards + config.parity_shards) {
+            throw std::invalid_argument(
+                "For erasure coding, storages count must equal data_shards + "
+                "parity_shards");
+        }
+
+        if (config.stripe_size_kib % config.data_shards != 0) {
+            throw std::invalid_argument(
+                "stripe_size_kib must be divisible by storages count");
+        }
     }
 }
 
@@ -29,7 +39,7 @@ void to_json(ordered_json& j, const group_config& config) {
     if (config.type == group_config::type_t::ERASURE_CODING) {
         j["data_shards"] = config.data_shards;
         j["parity_shards"] = config.parity_shards;
-        j["chunk_size_kib"] = config.chunk_size_kib;
+        j["stripe_size_kib"] = config.stripe_size_kib;
     }
 }
 

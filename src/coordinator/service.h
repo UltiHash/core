@@ -81,7 +81,7 @@ public:
         for (const auto& cfg : group_configs.configs) {
             if (cfg.type != storage::group_config::type_t::ERASURE_CODING) {
                 storage::group_config modified_config = cfg;
-                modified_config.chunk_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
+                modified_config.stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
                 etcd.put(
                     ns::root.storage_groups.group_configs[modified_config.id],
                     modified_config.to_string());

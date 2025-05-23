@@ -18,7 +18,10 @@ class global_data_view_fixture {
 public:
     global_data_view_fixture()
         : m_etcd(),
-          m_service_cfg(make_service_config()) {}
+          m_service_cfg(make_service_config()) {
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+    }
 
     virtual ~global_data_view_fixture() { teardown(); }
 
@@ -27,11 +30,16 @@ public:
         {
             storage::group_configs configs;
             storage::group_config config;
-            config.type = storage::group_config::type_t::ROUND_ROBIN;
             config.id = group_id;
             config.storages = NUM_STORAGE_INSTANCES;
-            config.data_shards = 0;
-            config.parity_shards = 0;
+#if defined(WITH_EC)
+            config.type = storage::group_config::type_t::ERASURE_CODING;
+            config.parity_shards = 1;
+            config.data_shards = config.storages - config.parity_shards;
+            config.stripe_size_kib = config.data_shards * 2;
+#else
+            config.type = storage::group_config::type_t::ROUND_ROBIN;
+#endif
             configs.configs.clear();
             configs.configs.push_back(config);
 

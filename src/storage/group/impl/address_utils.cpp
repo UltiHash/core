@@ -4,29 +4,28 @@
 
 namespace uh::cluster {
 
-node_address_info
-extract_node_address_map(const address& addr,
-                         storage_index& storage_load_balancer,
-                         const std::vector<size_t>& existing_offsets) {
+struct node_address_info {
+    std::unordered_map<std::size_t, address_info> node_info_map;
+    size_t data_size;
+};
 
-    if (!existing_offsets.empty() and addr.size() != existing_offsets.size()) {
-        throw std::invalid_argument(
-            "offset size must be equal to the address size");
-    }
+node_address_info extract_node_address_map(
+    const address& addr,
+    const std::vector<std::shared_ptr<storage_interface>>& storages,
+    std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
+        get_storage_pointer) {
 
     node_address_info info;
     size_t offset = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
-        const auto frag = addr.get(i);
-        auto& node_pos =
-            info.node_info_map[storage_load_balancer.get(frag.pointer)];
+        auto frag = addr.get(i);
+        const auto [id, storage_ptr] = get_storage_pointer(frag.pointer);
+        frag.pointer = storage_ptr;
+
+        auto& node_pos = info.node_info_map[id];
         auto& node_address = node_pos.addr;
         node_address.push(frag);
-        if (!existing_offsets.empty()) {
-            node_pos.pointer_offsets.emplace_back(existing_offsets.at(i));
-        } else {
-            node_pos.pointer_offsets.emplace_back(offset);
-        }
+        node_pos.pointer_offsets.emplace_back(offset);
         offset += frag.size;
     }
 
@@ -35,15 +34,15 @@ extract_node_address_map(const address& addr,
 }
 
 coro<size_t> perform_for_address(
-    const address& addr, storage_index& storage_load_balancer,
-    boost::asio::io_context& ioc,
+    boost::asio::io_context& ioc, const address& addr,
+    std::function<std::pair<std::size_t, uint64_t>(uint128_t)>
+        get_storage_pointer,
     std::function<coro<void>(size_t, std::shared_ptr<storage_interface>,
                              const address_info&)>
-        fn,
-    const std::vector<size_t>& existing_offsets) {
+        func,
+    const std::vector<std::shared_ptr<storage_interface>>& storages) {
 
-    auto info =
-        extract_node_address_map(addr, storage_load_balancer, existing_offsets);
+    auto info = extract_node_address_map(addr, storages, get_storage_pointer);
 
     std::vector<future<void>> futures;
     futures.reserve(info.node_info_map.size());
@@ -53,9 +52,12 @@ coro<size_t> perform_for_address(
     for (auto& dn : info.node_info_map) {
         promise<void> p;
         futures.emplace_back(p.get_future());
-
+        auto storage = storages[dn.first];
+        if (storage == nullptr) {
+            throw std::runtime_error("Storage service is not available");
+        }
         boost::asio::co_spawn(
-            ioc, fn(i++, dn.first, dn.second).continue_trace(context),
+            ioc, func(i++, storage, dn.second).continue_trace(context),
             use_promise_cospawn(std::move(p)));
     }
 

@@ -17,6 +17,8 @@ std::unique_ptr<data_view> group_factory(boost::asio::io_context& ioc,
         return std::make_unique<rr_data_view>(
             ioc, etcd, group_id, std::move(config), service_connections);
     case group_config::type_t::ERASURE_CODING:
+        etcd.wait(ns::root.storage_groups[group_id].group_state,
+                  SERVICE_GET_TIMEOUT);
         return std::make_unique<ec_data_view>(
             ioc, etcd, group_id, std::move(config), service_connections);
     case group_config::type_t::REPLICA:
