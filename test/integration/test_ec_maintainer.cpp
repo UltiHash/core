@@ -107,6 +107,7 @@ public:
         for (auto& [key, thread] : threads) {
             if (!thread.get_stop_token().stop_requested()) {
                 thread.request_stop();
+                thread.join();
             }
         }
     }
@@ -188,7 +189,10 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
+    if (wait_for_leader_key() == false) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
     BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
 }
 
@@ -229,13 +233,10 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
 
     auto leader_id = *m_leader_observer.get();
 
-    std::cout << "Kill the leader" << std::endl;
+    std::cout << "Kill the leader: " << leader_id << std::endl;
     threads[leader_id].request_stop();
+    threads[leader_id].join();
 
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
@@ -262,6 +263,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
         }
         std::cout << std::format("Kill service {}", key) << std::endl;
         threads[key].request_stop();
+        threads[key].join();
         if (++cnt >= m_group_cfg.parity_shards)
             break;
     }
@@ -281,6 +283,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
 
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     threads[leader_id].request_stop();
+    threads[leader_id].join();
 
     {
         if (wait_for_group_state_key() == false) {
@@ -312,6 +315,7 @@ BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
         }
         std::cout << std::format("Kill service {}", key) << std::endl;
         threads[key].request_stop();
+        threads[key].join();
         if (++cnt >= m_group_cfg.parity_shards)
             break;
     }
@@ -323,6 +327,8 @@ BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
     BOOST_TEST(state == group_state::DEGRADED);
 
     threads[leader_id].request_stop();
+    threads[leader_id].join();
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }

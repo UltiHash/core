@@ -114,6 +114,10 @@ private:
         auto stats = get_statistics(storage_states);
 
         if (not(group_initialized)) {
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] has_down: {}, assigned_count: {}",
+                m_group_config.id, m_storage_id, stats.has_down,
+                stats.assigned_count);
             if (stats.has_down)
                 return;
 
@@ -194,6 +198,8 @@ private:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] set it's state to ASSIGNED",
                 m_group_config.id, m_storage_id);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             m_storage_state_manager.put(storage_state::ASSIGNED);
         }
