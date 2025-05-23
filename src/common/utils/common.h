@@ -5,6 +5,26 @@
 
 namespace uh::cluster {
 
+constexpr unsigned long long operator""_KiB(unsigned long long value) {
+    return value * 1024;
+}
+
+constexpr unsigned long long operator""_MiB(unsigned long long value) {
+    return value * 1024 * 1024;
+}
+
+constexpr unsigned long long operator""_GiB(unsigned long long value) {
+    return value * 1024 * 1024 * 1024;
+}
+
+constexpr unsigned long long operator""_TiB(unsigned long long value) {
+    return value * 1024 * 1024 * 1024 * 1024;
+}
+
+constexpr unsigned long long operator""_PiB(unsigned long long value) {
+    return value * 1024 * 1024 * 1024 * 1024 * 1024;
+}
+
 static constexpr std::size_t KIBI_BYTE = 1024;
 static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
 static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;

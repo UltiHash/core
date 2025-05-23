@@ -39,12 +39,12 @@ struct remote_storage : public storage_interface {
         auto m = co_await m_storage_service.acquire_messenger();
 
         co_await m->send_address(STORAGE_READ_ADDRESS_REQ, addr);
-        const auto h = co_await m->recv_header();
 
+        const auto h = co_await m->recv_header();
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
             m->register_read_buffer(buffer.data() + offsets.at(i),
-                                    addr.sizes[i]);
+                                    addr.fragments[i].size);
         }
 
         co_await m->recv_buffers(h);

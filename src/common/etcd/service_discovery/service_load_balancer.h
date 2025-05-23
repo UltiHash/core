@@ -36,7 +36,7 @@ public:
         }
     }
 
-    std::shared_ptr<service_interface> get() {
+    std::pair<std::size_t, std::shared_ptr<service_interface>> get() {
 
         std::unique_lock lk(m_mutex);
 
@@ -52,7 +52,8 @@ public:
             m_robin_index = m_services.cbegin();
         }
 
-        auto rv = (*m_robin_index).second;
+        auto rv = std::pair<std::size_t, std::shared_ptr<service_interface>>(
+            m_robin_index->first, m_robin_index->second);
         ++m_robin_index;
 
         return rv;

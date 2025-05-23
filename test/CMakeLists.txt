@@ -21,29 +21,38 @@ target_link_libraries(uh_test_config INTERFACE magic_enum)
 function(uh_add_test name)
     # Parse Arguments
     set(options "")
+    set(one_value_args MODE)
     set(multi_value_args PRIVATE PUBLIC LABELS)
     cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
                           "${multi_value_args}" ${ARGN})
 
-    add_executable(${name} ${name}.cpp)
-    target_link_libraries(${name}
+    set(target_name "${name}")
+    if(ARGS_MODE)
+        set(target_name "${target_name}_${ARGS_MODE}")
+    endif()
+    add_executable(${target_name} ${name}.cpp)
+    if(ARGS_MODE)
+        string(TOUPPER "${ARGS_MODE}" MODE_STRING)
+        target_compile_definitions(${target_name} PRIVATE "-D${MODE_STRING}")
+    endif()
+    target_link_libraries(${target_name}
         PRIVATE Boost::unit_test_framework uh_test_util
                 uh_test_config ${ARGS_PRIVATE}
         PUBLIC ${ARGS_PUBLIC})
 
-    target_precompile_headers(${name} REUSE_FROM uh_precompile_headers)
+    target_precompile_headers(${target_name} REUSE_FROM uh_precompile_headers)
 
     # execute_process(
-    #     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${name} --list_content
+    #     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${target_name} --list_content
     #     ERROR_VARIABLE TEST_LIST
     #     OUTPUT_STRIP_TRAILING_WHITESPACE
     # )
 
     # boost test exec option: --log_level=all --run_test=multiple*/determine*
 
-    add_test(NAME ${name} COMMAND ${name})
+    add_test(NAME ${target_name} COMMAND ${target_name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
-    set_tests_properties(${name} PROPERTIES LABELS ${LABELS})
+    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS})
 endfunction()
 
 add_subdirectory(unit)

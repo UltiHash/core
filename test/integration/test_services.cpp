@@ -45,6 +45,10 @@ struct fixture {
         return std::ranges::all_of(services.get(),
                                    [](auto& s) { return s == nullptr; });
     }
+    auto get_storage_id(uint128_t pointer) {
+        auto [id, _] = pointer_traits::rr::get_storage_pointer(pointer);
+        return id;
+    }
 };
 
 BOOST_FIXTURE_TEST_CASE(Empty, fixture) {
@@ -135,7 +139,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
      */
 
     BOOST_TEST(all_null_services());
-    BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
+    BOOST_CHECK_THROW(services.get(get_storage_id(uint128_t())),
+                      std::exception);
 
     {
         test::server srv("0.0.0.0", 8081);
@@ -144,13 +149,13 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
         sr.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 1u);
-        BOOST_CHECK_NO_THROW(services.get(uint128_t()));
+        BOOST_CHECK_NO_THROW(services.get(get_storage_id(uint128_t())));
     }
 
     WAIT_UNTIL_CHECK(3000, all_null_services());
 
-    auto node_addr_range = pointer_traits::get_global_pointer(
-        data_store_config().max_data_store_size, 1, 0);
+    auto node_addr_range = pointer_traits::rr::get_global_pointer(
+        data_store_config().max_data_store_size, 0, 1);
     (void)node_addr_range;
 
     {
@@ -161,10 +166,13 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 1u);
 
-        BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
-        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
-        BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)),
+        BOOST_CHECK_THROW(services.get(get_storage_id(uint128_t())),
                           std::exception);
+        BOOST_CHECK_NO_THROW(
+            services.get(get_storage_id(uint128_t(node_addr_range))));
+        BOOST_CHECK_THROW(
+            services.get(get_storage_id(uint128_t(node_addr_range * 2))),
+            std::exception);
     }
 
     {
@@ -177,17 +185,22 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
         sr2.register_service({.port = 8081});
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 2u);
-        BOOST_CHECK_THROW(services.get(uint128_t()), std::exception);
-        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range)));
-        BOOST_CHECK_THROW(services.get(uint128_t(node_addr_range * 2)),
+        BOOST_CHECK_THROW(services.get(get_storage_id(uint128_t())),
                           std::exception);
-        BOOST_CHECK_NO_THROW(services.get(uint128_t(node_addr_range * 3)));
+        BOOST_CHECK_NO_THROW(
+            services.get(get_storage_id(uint128_t(node_addr_range))));
+        BOOST_CHECK_THROW(
+            services.get(get_storage_id(uint128_t(node_addr_range * 2))),
+            std::exception);
+        BOOST_CHECK_NO_THROW(
+            services.get(get_storage_id(uint128_t(node_addr_range * 3))));
     }
 }
 
 BOOST_FIXTURE_TEST_CASE(WaitForDependency, fixture) {
     BOOST_TEST(all_null_services());
-    BOOST_CHECK_THROW(services.get(uint128_t()), std::runtime_error);
+    BOOST_CHECK_THROW(services.get(get_storage_id(uint128_t())),
+                      std::runtime_error);
 
     {
         test::server svr("0.0.0.0", 8081);
@@ -195,7 +208,7 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, fixture) {
                             ns::root.storage_groups[0].storage_hostports[0]);
         sr.register_service({.port = 8081});
 
-        WAIT_UNTIL_NO_THROW(1000, services.get(uint128_t()));
+        WAIT_UNTIL_NO_THROW(1000, services.get(get_storage_id(uint128_t())));
     }
 }
 

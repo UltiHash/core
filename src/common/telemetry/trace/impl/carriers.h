@@ -1,8 +1,18 @@
 #pragma once
 
-#include <concepts>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+#ifdef __clang__
+# pragma GCC diagnostic ignored "-Wdeprecated-builtins"
+#endif
+
 #include <opentelemetry/context/propagation/text_map_propagator.h>
 #include <opentelemetry/trace/propagation/http_trace_context.h>
+
+#pragma GCC diagnostic pop
+
+#include <concepts>
 #include <string>
 
 template <typename T>

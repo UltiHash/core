@@ -126,8 +126,7 @@ private:
             std::vector<asio::mutable_buffer> buffers{
                 boost::asio::buffer(&dedupe_resp.effective_size,
                                     sizeof dedupe_resp.effective_size),
-                boost::asio::buffer(dedupe_resp.addr.pointers),
-                boost::asio::buffer(dedupe_resp.addr.sizes),
+                boost::asio::buffer(dedupe_resp.addr.fragments),
             };
 
             read(sock, buffers);

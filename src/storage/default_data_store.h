@@ -18,6 +18,12 @@ public:
                        const std::filesystem::path& working_dir,
                        uint32_t service_id);
 
+    /**
+     * @brief Allocates the specified size of storage space in the data store.
+     * @param size
+     * @return local pointer to the allocated storage space and size of
+     * allocation
+     */
     allocation_t allocate(std::size_t size, std::size_t alignment = 1);
 
     /**
@@ -85,6 +91,8 @@ public:
      * @return size_t: the write offset in the data store
      */
     std::size_t get_write_offset() const noexcept;
+
+    void set_write_offset(std::size_t val) noexcept;
 
     ~default_data_store();
 
