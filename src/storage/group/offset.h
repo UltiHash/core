@@ -5,6 +5,7 @@
 #include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/utils/strings.h>
+#include <storage/group/state.h>
 
 namespace uh::cluster::storage {
 
@@ -29,18 +30,25 @@ public:
         auto start_time = std::chrono::steady_clock::now();
 
         std::size_t max_offset = 0;
-        std::vector<bool> is_read(m_num_storages, false);
         while (true) {
-            auto m_offset_candidates = sync_vector_observer<std::size_t>(
-                m_prefix, m_num_storages, 0,
-                [&is_read](std::size_t id, std::size_t& value) {
-                    is_read[id] = true;
-                });
+            auto m_offset_candidates =
+                sync_vector_observer<std::optional<std::size_t>>(
+                    m_prefix, m_num_storages, std::nullopt);
+
+            for (auto i = 0ul; i < m_num_storages; ++i) {
+                LOG_DEBUG() << *m_offset_candidates.get(i);
+            }
             reader r("", m_etcd, m_prefix, {m_offset_candidates});
             auto candidates = m_offset_candidates.get();
 
-            bool all_read = std::all_of(is_read.begin(), is_read.end(),
-                                        [](const bool val) { return val; });
+            bool all_read = [&]() {
+                for (auto i = 0ul; i < m_offset_candidates.get().size(); ++i) {
+                    if (!m_offset_candidates.get(i).has_value()) {
+                        return false;
+                    }
+                }
+                return true;
+            }();
 
             auto current_time = std::chrono::steady_clock::now();
             if (all_read or current_time - start_time > timeout) {
@@ -49,9 +57,10 @@ public:
                     []<typename T>(const T& a, const T& b) { return a < b; });
 
                 max_offset =
-                    (max_offset_it != candidates.end() ? *max_offset_it : 0);
+                    (max_offset_it != candidates.end() ? **max_offset_it : 0);
                 break;
             }
+            std::this_thread::yield();
         }
 
         return max_offset;

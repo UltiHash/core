@@ -84,11 +84,10 @@ private:
 
     void election_handler(bool is_leader) {
 
-        LOG_DEBUG() << std::format("[group {}, storage {}] put offset",
-                                   m_group_config.id, m_storage_id);
-
-        offset_manager::put(m_etcd, m_group_config.id, m_storage_id,
-                            m_write_offset_interface->get_write_offset());
+        auto offset = m_write_offset_interface->get_write_offset();
+        LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
+                                   m_group_config.id, m_storage_id, offset);
+        offset_manager::put(m_etcd, m_group_config.id, m_storage_id, offset);
 
         if (is_leader) {
             LOG_DEBUG() << std::format("[group {}, storage {}] won election",
@@ -198,8 +197,6 @@ private:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] set it's state to ASSIGNED",
                 m_group_config.id, m_storage_id);
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             m_storage_state_manager.put(storage_state::ASSIGNED);
         }
