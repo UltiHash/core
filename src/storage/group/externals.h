@@ -63,6 +63,7 @@ public:
     auto get_group_state() { return m_group_state.get(); };
     auto get_storage_states() { return m_storage_states.get(); };
     auto get_storage_services() { return m_storage_index.get(); };
+    auto& get_storage_index() { return m_storage_index; };
 
 private:
     prefix_t m_prefix;

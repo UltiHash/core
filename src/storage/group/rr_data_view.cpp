@@ -3,6 +3,9 @@
 
 #include <common/telemetry/log.h>
 
+#include <numeric>
+#include <ranges>
+
 namespace uh::cluster::storage {
 rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t group_id, group_config group_config,
@@ -42,19 +45,21 @@ coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
 
     auto [id, storage_pointer] =
         pointer_traits::rr::get_storage_pointer(pointer);
-    auto storage = m_storage_index.get(id);
+    auto storage = m_storage_index.at(id);
     co_return co_await storage->read(storage_pointer, size);
 }
 
 coro<std::size_t> rr_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    co_return co_await perform_for_address(
+    co_await perform_for_address<void>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [buffer](size_t, std::shared_ptr<storage_interface> svc,
+        [buffer](std::shared_ptr<storage_interface> svc,
                  const address_info& info) -> coro<void> {
             co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
         },
         m_storage_index.get());
+
+    co_return addr.data_size();
 }
 
 coro<std::size_t> rr_data_view::get_used_space() {
@@ -70,32 +75,31 @@ coro<std::size_t> rr_data_view::get_used_space() {
 }
 
 [[nodiscard]] coro<address> rr_data_view::link(const address& addr) {
-    std::map<size_t, address> addresses;
-    co_await perform_for_address(
+    auto addr_map = co_await perform_for_address<address>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [&addresses](size_t id, std::shared_ptr<storage_interface> svc,
-                     const address_info& info) -> coro<void> {
-            addresses.emplace(id, co_await svc->link(info.addr));
-        },
+        [](std::shared_ptr<storage_interface> svc, const address_info& info)
+            -> coro<address> { co_return co_await svc->link(info.addr); },
         m_storage_index.get());
 
     address rv;
-    for (const auto& a : addresses) {
-        rv.append(a.second);
+    for (const auto& a : addr_map | std::views::values) {
+        rv.append(a);
     }
 
     co_return rv;
 }
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
-    std::atomic<size_t> freed_bytes;
-    co_await perform_for_address(
+    auto freed_bytes_map = co_await perform_for_address<std::size_t>(
         m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [&freed_bytes](size_t, std::shared_ptr<storage_interface> svc,
-                       const address_info& info) -> coro<void> {
-            freed_bytes += co_await svc->unlink(info.addr);
-        },
+        [](std::shared_ptr<storage_interface> svc, const address_info& info)
+            -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
         m_storage_index.get());
+
+    auto freed_bytes = std::accumulate(
+        std::ranges::begin(freed_bytes_map | std::views::values),
+        std::ranges::end(freed_bytes_map | std::views::values), 0ul,
+        [](std::size_t acc, std::size_t val) { return acc + val; });
     co_return freed_bytes;
 }
 
