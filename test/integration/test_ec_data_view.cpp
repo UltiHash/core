@@ -28,6 +28,40 @@ struct fixture : public global_data_view_fixture {
 
 BOOST_FIXTURE_TEST_SUITE(a_ec_data_view, fixture)
 
+BOOST_AUTO_TEST_CASE(reads_small_data_when_two_storages_are_down) {
+    auto& etcd = get_etcd_manager();
+    auto config = get_group_config();
+    etcd.wait(ns::root.storage_groups[config.id].group_state);
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(64);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    LOG_DEBUG() << "kill storage 1";
+    stop_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    stop_storage(4);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    LOG_DEBUG() << "buffer: " << buffer.string_view();
+    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
+
+    BOOST_TEST(buffer == read_buffer);
+}
+
 BOOST_AUTO_TEST_CASE(reads_two_stripes_when_two_storages_are_down) {
     auto& etcd = get_etcd_manager();
     auto config = get_group_config();

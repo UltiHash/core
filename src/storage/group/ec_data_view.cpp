@@ -46,17 +46,28 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("Allocation result is not aligned");
 
     auto context = co_await boost::asio::this_coro::context;
+
+    // NOTE: Now we allocatate a buffer for data shards, not for whole stripe.
+    // It's because we allocate parity shards in the encode function. I'd like
+    // to change this in the future.
+    unique_buffer<char> stripe(m_chunk_size * m_config.data_shards);
+
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
+        auto s = std::min(write_size, m_stripe_size);
+        auto d = data.subspan(i * m_stripe_size, s);
+        if (s != m_stripe_size) {
+            std::copy(d.begin(), d.end(), stripe.span().begin());
+            std::ranges::fill(stripe.span().subspan(s), 0);
+            d = stripe.span();
+        }
 
-        auto data_chunk = data.subspan(i * m_stripe_size,
-                                       std::min(write_size, m_stripe_size));
         write_size -= m_stripe_size;
 
         // TODO: Offsets are not yet transformed and distributed to each
         // storages
-        auto encoded = m_rs.encode(data_chunk);
+        auto encoded = m_rs.encode(d);
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<address> {
