@@ -9,7 +9,8 @@ namespace uh::cluster {
 class candidate_observer : public subscriber_observer {
 public:
     using id_t = int; // to represent -1 as empty
-    constexpr static id_t staging_id = -1;
+    constexpr static id_t staging_id = -2;
+    constexpr static id_t default_id = -1;
     using callback_t = std::function<void(bool is_leader)>;
     candidate_observer(etcd_manager& etcd, std::string expected_key, id_t id,
                        callback_t callback = nullptr)

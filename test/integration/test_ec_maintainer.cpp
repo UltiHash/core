@@ -61,6 +61,16 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
                              service_cfg, m_gdv_cfg,
                              std::make_shared<write_offset_interface>(0));
+    auto thread = std::thread([&] {
+        try {
+            m_ioc.run();
+        } catch (...) {
+        }
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    m_ioc.stop();
+    thread.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -84,8 +94,20 @@ public:
                     m_ioc, *m_etcds.back(), m_group_cfg, i, service_cfg,
                     m_gdv_cfg, m_wo_interfaces.back()));
         }
+
+        m_thread = std::make_optional<std::thread>([&] {
+            try {
+                m_ioc.run();
+            } catch (...) {
+            }
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    ~fixture_with_subscribers() {}
+    ~fixture_with_subscribers() {
+        m_ioc.stop();
+        m_thread->join();
+    }
 
     bool wait_for_leader_key() {
         std::unique_lock<std::mutex> lock(cv_mutex);
@@ -127,7 +149,7 @@ protected:
     bool storage_states_updated = false;
     value_observer<int> m_leader_observer{
         ns::root.storage_groups[m_group_cfg.id].leader,
-        candidate_observer::staging_id, [&](int leader_id) {
+        candidate_observer::default_id, [&](int leader_id) {
             std::lock_guard<std::mutex> lock(cv_mutex);
             leader_updated = true;
             cv.notify_one();
@@ -158,6 +180,7 @@ protected:
     std::vector<std::unique_ptr<etcd_manager>> m_etcds;
     std::vector<std::unique_ptr<ec_maintainer<write_offset_interface>>>
         m_ec_maintainers;
+    std::optional<std::thread> m_thread;
 };
 
 BOOST_FIXTURE_TEST_SUITE(multiple_ec_maintainers, fixture_with_subscribers)
@@ -167,7 +190,7 @@ BOOST_AUTO_TEST_CASE(find_who_is_leader) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
+    BOOST_TEST(*m_leader_observer.get() != candidate_observer::default_id);
 }
 
 BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
@@ -203,7 +226,7 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
+    BOOST_TEST(*m_leader_observer.get() != candidate_observer::default_id);
 
     auto leader_id = *m_leader_observer.get();
 
@@ -214,7 +237,7 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     // deletion
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
+    BOOST_TEST(*m_leader_observer.get() == candidate_observer::default_id);
 
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
@@ -227,7 +250,7 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
     }
     // proclamation
     auto new_leader_id = *m_leader_observer.get();
-    BOOST_TEST(new_leader_id != candidate_observer::staging_id);
+    BOOST_TEST(new_leader_id >= 0);
     BOOST_TEST(new_leader_id < m_num_instances);
     BOOST_TEST(new_leader_id != leader_id);
 }
@@ -237,7 +260,7 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
     auto leader_id = *m_leader_observer.get();
-    BOOST_TEST(leader_id != candidate_observer::staging_id);
+    BOOST_TEST(leader_id != candidate_observer::default_id);
 
     auto cnt = 0ul;
     for (auto i = 0ul; i < m_ec_maintainers.size(); ++i) {

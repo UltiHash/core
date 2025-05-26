@@ -45,7 +45,7 @@ public:
                          service_factory<storage_interface> service_factory,
                          callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
-          m_leader{m_prefix.leader, candidate_observer::staging_id},
+          m_leader{m_prefix.leader, candidate_observer::default_id},
           m_group_state{m_prefix.group_state},
           m_storage_states{m_prefix.storage_states, num_storages},
           m_storage_index{num_storages},
