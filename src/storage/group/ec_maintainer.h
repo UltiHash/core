@@ -23,7 +23,8 @@ public:
                   const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
                   std::shared_ptr<T> write_offset_interface)
-        : m_etcd{etcd},
+        : m_ioc{ioc},
+          m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
@@ -36,24 +37,41 @@ public:
           m_storage_assignment_trigger{
               m_prefix.storage_assignment_trigger,
               [this](bool& val) { assignment_trigger_handler(val); }},
-          m_candidate{etcd, m_prefix.leader,
-                      (candidate_observer::id_t)storage_id,
-                      [this](bool is_leader) { election_handler(is_leader); }},
+          m_candidate{
+              etcd,
+              m_prefix.leader,
+              (candidate_observer::id_t)storage_id,
+              [this](bool is_leader) { election_handler(m_ioc, is_leader); },
+              [this](bool is_leader) {
+                  (void)is_leader;
+                  (void)this;
+                  LOG_DEBUG() << "proclaim detected on " << m_group_config.id
+                              << " storage: " << m_storage_id;
+              },
+          },
           m_storage_states{m_prefix.storage_states, m_group_config.storages},
           m_storage_state_manager{etcd, m_group_config.id, storage_id,
-                                  service_cfg.working_dir},
+                                  service_cfg.working_dir} {
 
-          m_subscriber{"",
-                       etcd,
-                       m_prefix,
-                       {m_group_initialized, m_storage_assignment_trigger,
-                        m_candidate, m_storage_states},
-                       [this]() {
-                           if (m_candidate.is_leader())
-                               storage_states_handler();
-                       }} {}
+        m_subscriber.emplace(
+            std::format("[group {}, storage {}] subscriber", m_group_config.id,
+                        m_storage_id),
+            etcd, m_prefix,
+            std::initializer_list<std::reference_wrapper<subscriber_observer>>{
+                std::ref(m_group_initialized),
+                std::ref(m_storage_assignment_trigger), std::ref(m_candidate),
+                std::ref(m_storage_states)},
+            [this]() {
+                if (m_candidate.is_leader())
+                    storage_states_handler();
+            });
+    }
 
     ~ec_maintainer() {
+        m_subscriber.reset();
+        for (auto& f : m_coroutine_futures) {
+            f.get();
+        }
         LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
                                    m_group_config.id, m_storage_id);
     }
@@ -82,7 +100,7 @@ private:
         return rv;
     }
 
-    void election_handler(bool is_leader) {
+    void election_handler(boost::asio::io_context& ioc, bool is_leader) {
 
         auto offset = m_write_offset_interface->get_write_offset();
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
@@ -90,19 +108,51 @@ private:
         offset_manager::put(m_etcd, m_group_config.id, m_storage_id, offset);
 
         if (is_leader) {
-            LOG_DEBUG() << std::format("[group {}, storage {}] won election",
-                                       m_group_config.id, m_storage_id);
+            // boost::asio::co_spawn(
+            //     ioc,
+            //     [this]() -> coro<void> {
+            //         LOG_DEBUG()
+            //             << std::format("[group {}, storage {}] won election",
+            //                            m_group_config.id, m_storage_id);
+            //
+            //         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            //         auto manager = offset_manager(m_etcd, m_group_config.id,
+            //                                       m_group_config.storages);
+            //         auto offset =
+            //             manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
+            //         LOG_DEBUG() << std::format(
+            //             "[group {}, storage {}] summarized offset is {}",
+            //             m_group_config.id, m_storage_id, offset);
+            //
+            //         m_write_offset_interface->set_write_offset(offset);
+            //
+            //         m_candidate.proclaim();
+            //         co_return;
+            //     },
+            //     boost::asio::detached);
 
-            auto manager = offset_manager(m_etcd, m_group_config.id,
-                                          m_group_config.storages);
-            auto offset = manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] summarized offset is {}",
-                m_group_config.id, m_storage_id, offset);
+            {
+                LOG_DEBUG()
+                    << std::format("[group {}, storage {}] won election",
+                                   m_group_config.id, m_storage_id);
 
-            m_write_offset_interface->set_write_offset(offset);
+                auto manager = offset_manager(m_etcd, m_group_config.id,
+                                              m_group_config.storages);
+                auto offset =
+                    manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
+                LOG_DEBUG() << std::format(
+                    "[group {}, storage {}] summarized offset is {}",
+                    m_group_config.id, m_storage_id, offset);
 
-            m_candidate.proclaim();
+                m_write_offset_interface->set_write_offset(offset);
+
+                m_candidate.proclaim();
+            }
+            // std::promise<void> p;
+            // p.set_value();
+            //
+            // auto lock = std::unique_lock<std::mutex>(m_mutex);
+            // m_coroutine_futures.push_back(p.get_future());
         }
     }
 
@@ -111,12 +161,17 @@ private:
         auto storage_states = m_storage_states.get();
 
         auto stats = get_statistics(storage_states);
+        auto state = m_group_state_manager.get();
 
         if (not(group_initialized)) {
             LOG_DEBUG() << std::format(
-                "[group {}, storage {}] has_down: {}, assigned_count: {}",
+                "[group {}, storage {}] group uninitialized: has_down: {}, "
+                "assigned_count: {}",
                 m_group_config.id, m_storage_id, stats.has_down,
                 stats.assigned_count);
+            // LOG_DEBUG() << "group initialized: " +
+            // serialize(group_initialized_manager::get(m_etcd,
+            // m_group_config.id));
             if (stats.has_down)
                 return;
 
@@ -147,9 +202,15 @@ private:
             group_initialized_manager::put_persistant(m_etcd, m_group_config.id,
                                                       true);
             m_group_initialized.set(true);
+
+        } else {
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] group uninitialized: has_down: {}, "
+                "assigned_count: {}, state: {}",
+                m_group_config.id, m_storage_id, stats.has_down,
+                stats.assigned_count, magic_enum::enum_name(state));
         }
 
-        auto state = m_group_state_manager.get();
         auto new_state = state;
 
         if (state != group_state::HEALTHY and
@@ -202,6 +263,7 @@ private:
         }
     }
 
+    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     const group_config& m_group_config;
     std::size_t m_storage_id;
@@ -211,6 +273,9 @@ private:
     group_state_manager m_group_state_manager;
 
     prefix_t m_prefix;
+
+    std::mutex m_mutex;
+    std::vector<std::future<void>> m_coroutine_futures;
 
     /*
      * subscriber's observers
@@ -224,7 +289,7 @@ private:
     // before the leader key, which is handled by the candidate_observer.
     storage_state_manager m_storage_state_manager; // It removes storage state
                                                    // on it's destructor
-    subscriber m_subscriber;
+    std::optional<subscriber> m_subscriber;
 };
 
 } // namespace uh::cluster::storage

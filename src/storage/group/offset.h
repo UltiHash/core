@@ -34,9 +34,6 @@ public:
             sync_vector_observer<std::optional<std::size_t>>(
                 m_prefix, m_num_storages, std::nullopt);
 
-        for (auto i = 0ul; i < m_num_storages; ++i) {
-            LOG_DEBUG() << *m_offset_candidates.get(i);
-        }
         reader r("", m_etcd, m_prefix, {m_offset_candidates});
         auto candidates = m_offset_candidates.get();
 
