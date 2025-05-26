@@ -38,30 +38,49 @@ coro<address> ec_data_view::write(std::span<const char> data,
                                  std::to_string(leader));
 
     auto write_size = data.size();
-    auto num_chunks = div_ceil(write_size, m_stripe_size);
+    auto num_stripes = div_ceil(write_size, m_stripe_size);
     auto allocation = co_await storages.at(leader)->allocate(
-        num_chunks * m_chunk_size, m_chunk_size);
+        num_stripes * m_chunk_size, m_chunk_size);
 
     if (allocation.offset % m_chunk_size != 0)
         throw std::runtime_error("Allocation result is not aligned");
 
     auto context = co_await boost::asio::this_coro::context;
-    for (auto i = 0ul; i < num_chunks; i++) {
+    for (auto i = 0ul; i < num_stripes; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
 
-        auto data_chunk = data.subspan(i * m_stripe_size,
-                                       std::min(write_size, m_stripe_size));
+        auto data_stripe = data.subspan(i * m_stripe_size,
+                                        std::min(write_size, m_stripe_size));
         write_size -= m_stripe_size;
 
-        // TODO: Offsets are not yet transformed and distributed to each
-        // storages
-        auto encoded = m_rs.encode(data_chunk, m_chunk_size);
+        auto encoded = m_rs.encode(data_stripe, m_chunk_size);
+        std::vector<std::vector<std::size_t>> stripe_offsets(
+            m_config.data_shards + m_config.parity_shards,
+            std::vector<std::size_t>{0});
+
+        // Translate offsets into chunk-local offsets for each stripe.
+        const std::size_t stripe_offset = i * m_stripe_size;
+        auto current_offset =
+            std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
+
+        for (size_t j = 0; j < m_config.data_shards; ++j) {
+            const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+            while (current_offset != offsets.end() and
+                   *current_offset < chunk_offset + m_chunk_size) {
+                auto local_offset = *current_offset - chunk_offset;
+                if (local_offset != 0) {
+                    stripe_offsets.at(j).push_back(local_offset);
+                }
+                ++current_offset;
+            }
+        }
+
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<address> {
                 co_return co_await storage
-                    ->write(alloc, encoded.get().at(i), offsets)
+                    ->write(alloc, encoded.get().at(i), stripe_offsets.at(i))
                     .continue_trace(context);
             },
             storages);
@@ -126,6 +145,69 @@ coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }
     co_return address{};
 }
 
-coro<std::size_t> ec_data_view::unlink(const address& addr) { co_return 0; }
+coro<std::size_t> ec_data_view::unlink(const address& addr) {
+    auto storages = m_externals.get_storage_services();
+    std::atomic<size_t> freed_bytes;
+    co_await perform_for_address(
+        m_ioc, addr,
+        [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        },
+        [&freed_bytes, this](size_t, std::shared_ptr<storage_interface> svc,
+                             const address_info& info) -> coro<void> {
+            auto freed_chunks = co_await svc->unlink(info.addr);
+            // todo: recalculate parity data for deleted chunks/pages
+            freed_bytes += freed_chunks.size() * m_chunk_size;
+        },
+        storages);
+
+    // Now handle parity shards
+    // Group fragments by stripe to process parity shards efficiently
+    std::unordered_map<uint64_t, std::vector<fragment>> stripe_fragments;
+
+    for (size_t i = 0; i < addr.size(); ++i) {
+        auto frag = addr.get(i);
+        auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
+
+        // Calculate the stripe base pointer (aligned to stripe boundaries)
+        uint64_t stripe_base = (storage_ptr / m_stripe_size) * m_stripe_size;
+        stripe_fragments[stripe_base].push_back(frag);
+    }
+
+    // Process each affected stripe
+    for (const auto& [stripe_base, fragments] : stripe_fragments) {
+        // Create virtual parity addresses for each parity shard in this stripe
+        for (size_t p = 0; p < m_config.parity_shards; ++p) {
+            size_t parity_shard_id = m_config.data_shards + p;
+            if (!storages[parity_shard_id])
+                continue;
+
+            address parity_addr;
+            for (const auto& frag : fragments) {
+                auto [data_shard_id, data_ptr] =
+                    get_storage_pointer(frag.pointer);
+
+                // Calculate the corresponding parity pointer
+                uint64_t parity_ptr = stripe_base + (data_ptr % m_chunk_size);
+                uint128_t global_parity_ptr =
+                    get_global_pointer(parity_ptr, parity_shard_id);
+
+                // Create a fragment for this parity piece
+                fragment parity_frag{
+                    .pointer = global_parity_ptr,
+                    .size = std::min(frag.size,
+                                     m_chunk_size - (data_ptr % m_chunk_size))};
+                parity_addr.push(parity_frag);
+            }
+
+            // Unlink the parity fragments
+            if (parity_addr.size() > 0) {
+                co_await storages[parity_shard_id]->unlink(parity_addr);
+            }
+        }
+    }
+
+    co_return freed_bytes;
+}
 
 } // namespace uh::cluster::storage
