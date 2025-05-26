@@ -55,19 +55,21 @@ coro<address> ec_data_view::write(std::span<const char> data,
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
-        auto s = std::min(write_size, m_stripe_size);
-        auto d = data.subspan(i * m_stripe_size, s);
-        if (s != m_stripe_size) {
-            std::copy(d.begin(), d.end(), stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(s), 0);
-            d = stripe.span();
+        auto data_size =
+            std::min(write_size - i * m_stripe_size, m_stripe_size);
+        auto data_span = data.subspan(i * m_stripe_size, data_size);
+        if (data_size != m_stripe_size) {
+            std::copy(data_span.begin(), data_span.end(),
+                      stripe.span().begin());
+            std::ranges::fill(stripe.span().subspan(data_size), 0);
+            data_span = stripe.span();
         }
 
         write_size -= m_stripe_size;
 
         // TODO: Offsets are not yet transformed and distributed to each
         // storages
-        auto encoded = m_rs.encode(d);
+        auto encoded = m_rs.encode(data_span);
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<address> {
@@ -193,7 +195,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     auto need_reconstruction =
         std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage != nullptr; });
+                    [](auto storage) { return storage == nullptr; });
 
     if (not need_reconstruction) {
         throw std::runtime_error(
