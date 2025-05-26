@@ -2,9 +2,19 @@
 
 #include <boost/asio.hpp>
 #include <functional>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+#ifdef __clang__
+# pragma GCC diagnostic ignored "-Wdeprecated-builtins"
+#endif
+
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
+
+#pragma GCC diagnostic pop
 
 namespace boost {
 namespace asio {
