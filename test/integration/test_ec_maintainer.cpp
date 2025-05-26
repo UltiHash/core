@@ -20,13 +20,10 @@ public:
     basic_fixture()
         : m_etcd{} {
         m_etcd.clear_all();
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(500ms);
     }
 
-    virtual ~basic_fixture() {
-        m_etcd.clear_all();
-        std::this_thread::sleep_for(100ms);
-    }
+    virtual ~basic_fixture() { m_etcd.clear_all(); }
 
 protected:
     const std::size_t m_num_instances = 4;

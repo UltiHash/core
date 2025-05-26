@@ -37,8 +37,6 @@ public:
         return m_is_leader.load(std::memory_order_acquire);
     }
 
-    void proclaim() const { m_etcd.put(m_expected_key, serialize<int>(m_id)); }
-
     /*
      * listener
      */
@@ -84,6 +82,8 @@ private:
         if (m_after_campaign) {
             m_after_campaign(resp.is_ok());
         }
+
+        m_etcd.put(m_expected_key, serialize<int>(m_id));
 
         auto won = resp.is_ok();
         return won;

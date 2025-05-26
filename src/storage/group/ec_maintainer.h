@@ -68,12 +68,13 @@ public:
     }
 
     ~ec_maintainer() {
-        m_subscriber.reset();
-        for (auto& f : m_coroutine_futures) {
-            f.get();
-        }
         LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
                                    m_group_config.id, m_storage_id);
+
+        m_subscriber.reset();
+
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_thread.reset();
     }
 
 private:
@@ -108,34 +109,13 @@ private:
         offset_manager::put(m_etcd, m_group_config.id, m_storage_id, offset);
 
         if (is_leader) {
-            // boost::asio::co_spawn(
-            //     ioc,
-            //     [this]() -> coro<void> {
-            //         LOG_DEBUG()
-            //             << std::format("[group {}, storage {}] won election",
-            //                            m_group_config.id, m_storage_id);
-            //
-            //         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            //         auto manager = offset_manager(m_etcd, m_group_config.id,
-            //                                       m_group_config.storages);
-            //         auto offset =
-            //             manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
-            //         LOG_DEBUG() << std::format(
-            //             "[group {}, storage {}] summarized offset is {}",
-            //             m_group_config.id, m_storage_id, offset);
-            //
-            //         m_write_offset_interface->set_write_offset(offset);
-            //
-            //         m_candidate.proclaim();
-            //         co_return;
-            //     },
-            //     boost::asio::detached);
-
-            {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_thread.emplace([this](std::stop_token _) {
                 LOG_DEBUG()
                     << std::format("[group {}, storage {}] won election",
                                    m_group_config.id, m_storage_id);
 
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 auto manager = offset_manager(m_etcd, m_group_config.id,
                                               m_group_config.storages);
                 auto offset =
@@ -145,14 +125,26 @@ private:
                     m_group_config.id, m_storage_id, offset);
 
                 m_write_offset_interface->set_write_offset(offset);
+            });
 
-                m_candidate.proclaim();
-            }
             // std::promise<void> p;
-            // p.set_value();
+            // {
+            //     LOG_DEBUG()
+            //         << std::format("[group {}, storage {}] won election",
+            //                        m_group_config.id, m_storage_id);
             //
-            // auto lock = std::unique_lock<std::mutex>(m_mutex);
-            // m_coroutine_futures.push_back(p.get_future());
+            //     auto manager = offset_manager(m_etcd, m_group_config.id,
+            //                                   m_group_config.storages);
+            //     auto offset =
+            //         manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
+            //     LOG_DEBUG() << std::format(
+            //         "[group {}, storage {}] summarized offset is {}",
+            //         m_group_config.id, m_storage_id, offset);
+            //
+            //     m_write_offset_interface->set_write_offset(offset);
+            //
+            //     p.set_value();
+            // }
         }
     }
 
@@ -275,7 +267,7 @@ private:
     prefix_t m_prefix;
 
     std::mutex m_mutex;
-    std::vector<std::future<void>> m_coroutine_futures;
+    std::optional<std::jthread> m_thread;
 
     /*
      * subscriber's observers
