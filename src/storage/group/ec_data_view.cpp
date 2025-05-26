@@ -55,14 +55,15 @@ coro<address> ec_data_view::write(std::span<const char> data,
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
-        auto data_size =
-            std::min(write_size - i * m_stripe_size, m_stripe_size);
-        auto data_span = data.subspan(i * m_stripe_size, data_size);
-        if (data_size != m_stripe_size) {
+        auto data_span = data.subspan(i * m_stripe_size);
+        auto data_span_size = std::min(data_span.size(), m_stripe_size);
+        if (data_span_size != m_stripe_size) {
             std::copy(data_span.begin(), data_span.end(),
                       stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(data_size), 0);
+            std::ranges::fill(stripe.span().subspan(data_span_size), 0);
             data_span = stripe.span();
+        } else {
+            data_span = data_span.first(m_stripe_size);
         }
 
         write_size -= m_stripe_size;
