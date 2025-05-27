@@ -42,9 +42,8 @@ public:
               m_prefix.leader,
               (candidate_observer::id_t)storage_id,
               [this](bool is_leader) { election_handler(m_ioc, is_leader); },
-              [this](bool is_leader) {
-                  (void)is_leader;
-                  (void)this;
+              [this](bool _) {
+                  offset_manager::rm(m_etcd, m_group_config.id, m_storage_id);
                   LOG_DEBUG()
                       << "proclaim detected on the group " << m_group_config.id
                       << " storage " << m_storage_id;
@@ -118,11 +117,9 @@ private:
                     "[group {}, storage {}] won election, waiting for offsets",
                     m_group_config.id, m_storage_id);
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                auto manager = offset_manager(m_etcd, m_group_config.id,
-                                              m_group_config.storages);
-                auto offset =
-                    manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
+                std::this_thread::sleep_for(OFFSET_GATHERING_TIMEOUT);
+                auto offset = offset_manager::summarize_offsets(
+                    m_etcd, m_group_config.id, m_group_config.storages);
                 LOG_DEBUG() << std::format(
                     "[group {}, storage {}] summarized offset is {}",
                     m_group_config.id, m_storage_id, offset);
@@ -135,27 +132,6 @@ private:
                     << std::format("[group {}, storage {}] proclaimed election",
                                    m_group_config.id, m_storage_id);
             });
-
-            // std::promise<void> p;
-            // {
-            //     LOG_DEBUG()
-            //         << std::format("[group {}, storage {}] won election",
-            //                        m_group_config.id, m_storage_id);
-            //
-            //     auto manager = offset_manager(m_etcd, m_group_config.id,
-            //                                   m_group_config.storages);
-            //     auto offset =
-            //         manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
-            //     LOG_DEBUG() << std::format(
-            //         "[group {}, storage {}] summarized offset is {}",
-            //         m_group_config.id, m_storage_id, offset);
-            //
-            //     m_write_offset_interface->set_write_offset(offset);
-            //
-            //     m_candidate.proclaim();
-            //
-            //     p.set_value();
-            // }
         }
     }
 
