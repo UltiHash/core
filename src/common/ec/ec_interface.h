@@ -17,9 +17,7 @@ struct encoded {
         return m_encoded;
     }
 
-    std::span<const char> get(std::size_t index) const {
-        return m_encoded.at(index);
-    }
+    std::span<const char> get(std::size_t index) { return m_encoded.at(index); }
 
     void set(const std::vector<const char*>& shard_ptrs,
              std::vector<unique_buffer<char>> new_shards) {
@@ -36,16 +34,6 @@ struct encoded {
 
     std::vector<unique_buffer<char>> m_shard_allocations{};
     std::vector<std::span<const char>> m_encoded;
-};
-
-class ec_interface {
-public:
-    virtual void recover(const std::vector<std::span<const char>>& shards,
-                         std::vector<data_stat>& stats) const = 0;
-
-    virtual encoded encode(std::span<const char> data,
-                           std::size_t shard_size) const = 0;
-    virtual ~ec_interface() = default;
 };
 
 } // end namespace uh::cluster

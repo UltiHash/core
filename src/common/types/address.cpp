@@ -64,6 +64,10 @@ bool address::consecutive(const address& addr) {
 
 void address::push(const fragment& frag) { fragments.push_back(frag); }
 
+void address::emplace_back(uint128_t p, std::size_t s) {
+    fragments.emplace_back(p, s);
+}
+
 void address::append(const address& other) {
     fragments.insert(fragments.cend(), other.fragments.cbegin(),
                      other.fragments.cend());
