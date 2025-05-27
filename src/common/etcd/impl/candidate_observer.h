@@ -4,6 +4,8 @@
 
 #include <common/utils/strings.h>
 
+#include <atomic>
+
 namespace uh::cluster {
 
 class candidate_observer : public subscriber_observer {
@@ -21,7 +23,7 @@ public:
           m_after_campaign{std::move(after_campaign)},
           m_after_proclaim{std::move(after_proclaim)} {
 
-        m_is_leader.store(campaign(), std::memory_order_release);
+        campaign();
     }
 
     ~candidate_observer() {
@@ -35,6 +37,12 @@ public:
      */
     auto is_leader() const -> bool {
         return m_is_leader.load(std::memory_order_acquire);
+    }
+
+    void proclaim() {
+        // NOTE: order is imporant here
+        m_is_leader.store(true, std::memory_order_release);
+        m_etcd.put(m_expected_key, serialize<int>(m_id));
     }
 
     /*
@@ -60,7 +68,7 @@ public:
             break;
         }
         case etcd_action::DELETE:
-            m_is_leader.store(campaign(), std::memory_order_release);
+            campaign();
             break;
         default:
             return false;
@@ -82,8 +90,6 @@ private:
         if (m_after_campaign) {
             m_after_campaign(resp.is_ok());
         }
-
-        m_etcd.put(m_expected_key, serialize<int>(m_id));
 
         auto won = resp.is_ok();
         return won;

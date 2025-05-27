@@ -45,8 +45,9 @@ public:
               [this](bool is_leader) {
                   (void)is_leader;
                   (void)this;
-                  LOG_DEBUG() << "proclaim detected on " << m_group_config.id
-                              << " storage: " << m_storage_id;
+                  LOG_DEBUG()
+                      << "proclaim detected on the group " << m_group_config.id
+                      << " storage " << m_storage_id;
               },
           },
           m_storage_states{m_prefix.storage_states, m_group_config.storages},
@@ -54,16 +55,18 @@ public:
                                   service_cfg.working_dir} {
 
         m_subscriber.emplace(
-            std::format("[group {}, storage {}] subscriber", m_group_config.id,
-                        m_storage_id),
-            etcd, m_prefix,
+            "", etcd, m_prefix,
             std::initializer_list<std::reference_wrapper<subscriber_observer>>{
                 std::ref(m_group_initialized),
                 std::ref(m_storage_assignment_trigger), std::ref(m_candidate),
                 std::ref(m_storage_states)},
             [this]() {
-                if (m_candidate.is_leader())
+                if (m_candidate.is_leader()) {
+                    LOG_DEBUG() << std::format(
+                        "[group {}, storage {}] subscriber callback",
+                        m_group_config.id, m_storage_id);
                     storage_states_handler();
+                }
             });
     }
 
@@ -110,10 +113,10 @@ private:
 
         if (is_leader) {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_thread.emplace([this](std::stop_token _) {
-                LOG_DEBUG()
-                    << std::format("[group {}, storage {}] won election",
-                                   m_group_config.id, m_storage_id);
+            m_thread.emplace([this]() {
+                LOG_DEBUG() << std::format(
+                    "[group {}, storage {}] won election, waiting for offsets",
+                    m_group_config.id, m_storage_id);
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 auto manager = offset_manager(m_etcd, m_group_config.id,
@@ -125,6 +128,12 @@ private:
                     m_group_config.id, m_storage_id, offset);
 
                 m_write_offset_interface->set_write_offset(offset);
+
+                m_candidate.proclaim();
+
+                LOG_DEBUG()
+                    << std::format("[group {}, storage {}] proclaimed election",
+                                   m_group_config.id, m_storage_id);
             });
 
             // std::promise<void> p;
@@ -142,6 +151,8 @@ private:
             //         m_group_config.id, m_storage_id, offset);
             //
             //     m_write_offset_interface->set_write_offset(offset);
+            //
+            //     m_candidate.proclaim();
             //
             //     p.set_value();
             // }
@@ -194,13 +205,6 @@ private:
             group_initialized_manager::put_persistant(m_etcd, m_group_config.id,
                                                       true);
             m_group_initialized.set(true);
-
-        } else {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] group uninitialized: has_down: {}, "
-                "assigned_count: {}, state: {}",
-                m_group_config.id, m_storage_id, stats.has_down,
-                stats.assigned_count, magic_enum::enum_name(state));
         }
 
         auto new_state = state;

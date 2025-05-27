@@ -22,6 +22,10 @@ public:
           m_key{get_prefix(group_id).group_state},
           m_group_state{group_state::UNDETERMINED} {}
 
+    ~group_state_manager() {
+        // NOTE: didn't remove the group state key, to let leader manages it
+    }
+
     void put(group_state state) {
         m_group_state = state;
         m_etcd.put(m_key, serialize(state));
