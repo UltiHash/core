@@ -4,214 +4,120 @@
 #include <common/telemetry/log.h>
 #include <common/types/common_types.h>
 #include <common/utils/time_utils.h>
+#include <util/random.h>
 
 #include <boost/test/unit_test.hpp>
 
 // ------------- Tests Suites Follow --------------
 
-namespace std {
-
-bool operator==(std::span<const char> a, std::span<const char> b) {
-    if (a.size() != b.size()) {
-        return false;
-    }
-
-    return memcmp(a.data(), b.data(), a.size()) == 0;
-}
-
-bool operator!=(std::span<const char> a, std::span<const char> b) {
-    return !(a == b);
-}
-
-} // namespace std
-
 namespace uh::cluster {
 
-void fill_random(char* buf, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-        buf[i] = rand() & 0xff;
+struct EncodedData {
+    unique_buffer<char> data;
+    std::vector<unique_buffer<char>> parity;
+    std::vector<std::span<char>> shards;
+};
+
+EncodedData
+copy_encoded(std::size_t data_shards,
+             const std::vector<std::span<const char>>& input_shards) {
+    auto chunk_size = input_shards.at(0).size();
+
+    unique_buffer<char> data(data_shards * input_shards.at(0).size());
+    std::vector<unique_buffer<char>> parity;
+    for (auto i = 0ul; i < input_shards.size() - data_shards; ++i) {
+        parity.emplace_back(chunk_size);
     }
+    std::vector<std::span<char>> new_shards;
+    new_shards.reserve(input_shards.size());
+    for (size_t i = 0; i < data_shards; ++i) {
+        new_shards.emplace_back(data.data() + i * chunk_size, chunk_size);
+    }
+    for (size_t i = 0; i < input_shards.size() - data_shards; ++i) {
+        new_shards.emplace_back(parity[i].data(), chunk_size);
+    }
+    for (size_t i = 0; i < input_shards.size(); ++i) {
+        std::ranges::copy(input_shards.at(i), new_shards.at(i).begin());
+    }
+    return {std::move(data), std::move(parity), std::move(new_shards)};
 }
 
 BOOST_AUTO_TEST_CASE(ec_basic) {
-
-    reedsolomon_c ec(4, 2);
-    std::string data(64 * KIBI_BYTE, '0');
-    fill_random(data.data(), data.size());
+    const auto data_shards = 4ul;
+    const auto parity_shards = 2ul;
+    const auto chunk_size = 16_KiB;
+    reedsolomon_c ec(data_shards, parity_shards, chunk_size);
+    auto data = random_buffer(data_shards * chunk_size);
     auto encoded = ec.encode(data);
     auto shards = encoded.get();
 
-    std::vector stats(6, data_stat::valid);
+    EncodedData new_enc = copy_encoded(data_shards, shards);
+
+    std::vector stats(data_shards + parity_shards, data_stat::valid);
     stats[1] = data_stat::lost;
     stats[3] = data_stat::lost;
 
-    std::string s1(shards.at(1).size(), '0');
-    std::string s3(shards.at(1).size(), '0');
-    shards.at(1) = s1;
-    shards.at(3) = s3;
+    std::ranges::fill(new_enc.shards[1], 0);
+    std::ranges::fill(new_enc.shards[3], 0);
 
-    BOOST_CHECK(shards.at(1) != encoded.get(1));
-    BOOST_CHECK(shards.at(3) != encoded.get(3));
-    ec.recover(shards, stats);
+    ec.recover(new_enc.shards, stats);
 
-    int i = 0;
-    for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get(i++));
-    }
+    BOOST_CHECK(std::ranges::equal(shards[0], new_enc.shards[0]));
+    BOOST_CHECK(std::ranges::equal(shards[1], new_enc.shards[1]));
+    BOOST_CHECK(std::ranges::equal(shards[2], new_enc.shards[2]));
+    BOOST_CHECK(std::ranges::equal(shards[3], new_enc.shards[3]));
+    BOOST_CHECK(std::ranges::equal(shards[4], new_enc.shards[4]));
+    BOOST_CHECK(std::ranges::equal(shards[5], new_enc.shards[5]));
 }
 
 BOOST_AUTO_TEST_CASE(ec_basic_lost) {
 
-    reedsolomon_c ec(4, 2);
-    std::string data(64 * KIBI_BYTE, '0');
-    fill_random(data.data(), data.size());
+    const auto data_shards = 4ul;
+    const auto parity_shards = 2ul;
+    const auto chunk_size = 16_KiB;
+    reedsolomon_c ec(data_shards, parity_shards, chunk_size);
+    auto data = random_buffer(data_shards * chunk_size);
     auto encoded = ec.encode(data);
     auto shards = encoded.get();
 
-    std::vector stats(6, data_stat::valid);
+    EncodedData new_enc = copy_encoded(data_shards, shards);
+
+    std::vector stats(data_shards + parity_shards, data_stat::valid);
     stats[1] = data_stat::lost;
     stats[3] = data_stat::lost;
     stats[4] = data_stat::lost;
 
-    std::string s1(shards.at(1).size(), '0');
-    std::string s3(shards.at(1).size(), '0');
-    std::string s4(shards.at(1).size(), '0');
+    std::ranges::fill(new_enc.shards[1], 0);
+    std::ranges::fill(new_enc.shards[3], 0);
+    std::ranges::fill(new_enc.shards[4], 0);
 
-    shards.at(1) = s1;
-    shards.at(3) = s3;
-    shards.at(4) = s4;
-
-    BOOST_CHECK(shards.at(1) != encoded.get(1));
-    BOOST_CHECK(shards.at(3) != encoded.get(3));
-    BOOST_CHECK(shards.at(4) != encoded.get(4));
-
-    BOOST_CHECK_THROW(ec.recover(shards, stats), std::runtime_error);
+    BOOST_CHECK_THROW(ec.recover(new_enc.shards, stats), std::runtime_error);
 }
 
 BOOST_AUTO_TEST_CASE(two_times_ec) {
-    reedsolomon_c ec(4, 2);
-    {
-        std::string data(64 * KIBI_BYTE, '0');
-        fill_random(data.data(), data.size());
+    const auto data_shards = 4ul;
+    const auto parity_shards = 2ul;
+    const auto chunk_size = 16;
+    reedsolomon_c ec(data_shards, parity_shards, chunk_size);
+
+    for (auto i = 0ul; i < 2; ++i) {
+        auto data = random_buffer(data_shards * chunk_size);
         auto encoded = ec.encode(data);
         auto shards = encoded.get();
-        std::vector stats(6, data_stat::valid);
+
+        EncodedData new_enc = copy_encoded(data_shards, shards);
+
+        std::vector stats(data_shards + parity_shards, data_stat::valid);
         stats[1] = data_stat::lost;
         stats[3] = data_stat::lost;
 
-        std::string s1(shards.at(1).size(), '0');
-        std::string s3(shards.at(1).size(), '0');
+        std::ranges::fill(new_enc.shards[1], 0);
+        std::ranges::fill(new_enc.shards[3], 0);
 
-        shards.at(1) = s1;
-        shards.at(3) = s3;
+        ec.recover(new_enc.shards, stats);
 
-        BOOST_CHECK(shards.at(1) != encoded.get(1));
-        BOOST_CHECK(shards.at(3) != encoded.get(3));
-
-        ec.recover(shards, stats);
-
-        int i = 0;
-        for (auto s : shards) {
-            BOOST_CHECK(s == encoded.get(i++));
-        }
-    }
-
-    {
-        std::string data(64 * KIBI_BYTE, '0');
-        fill_random(data.data(), data.size());
-        auto encoded = ec.encode(data);
-        auto shards = encoded.get();
-        std::vector stats(6, data_stat::valid);
-        stats[1] = data_stat::lost;
-        stats[3] = data_stat::lost;
-
-        std::string s1(shards.at(1).size(), '0');
-        std::string s3(shards.at(1).size(), '0');
-
-        shards.at(1) = s1;
-        shards.at(3) = s3;
-
-        BOOST_CHECK(shards.at(1) != encoded.get(1));
-        BOOST_CHECK(shards.at(3) != encoded.get(3));
-
-        ec.recover(shards, stats);
-
-        int i = 0;
-        for (auto s : shards) {
-            BOOST_CHECK(s == encoded.get(i++));
-        }
-    }
-}
-
-/**
- * The following test yields an error under address sanitizer when run
- * under -DCMAKE_BUILD_TYPE=RelWithDebInfo.
- */
-BOOST_AUTO_TEST_CASE(ec_non_divisable, *boost::unit_test::disabled()) {
-
-    reedsolomon_c ec(7, 3);
-    std::string data(64 * KIBI_BYTE, '0');
-    fill_random(data.data(), data.size());
-    auto encoded = ec.encode(data);
-    auto shards = encoded.get();
-
-    std::vector stats(7, data_stat::valid);
-    stats[1] = data_stat::lost;
-    stats[3] = data_stat::lost;
-    stats[4] = data_stat::lost;
-
-    std::string s1(shards.at(1).size(), '0');
-    std::string s3(shards.at(1).size(), '0');
-    std::string s4(shards.at(1).size(), '0');
-
-    shards.at(1) = s1;
-    shards.at(3) = s3;
-    shards.at(4) = s4;
-
-    BOOST_CHECK(shards.at(1) != encoded.get(1));
-    BOOST_CHECK(shards.at(3) != encoded.get(3));
-    BOOST_CHECK(shards.at(4) != encoded.get(4));
-
-    ec.recover(shards, stats);
-
-    int i = 0;
-    for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get(i++));
-    }
-}
-
-BOOST_AUTO_TEST_CASE(large_data) {
-
-    reedsolomon_c ec(8, 4);
-
-    std::string data(1 * GIBI_BYTE, '0');
-    fill_random(data.data(), data.size());
-
-    auto encoded = ec.encode(data);
-
-    auto shards = encoded.get();
-    std::vector stats(12, data_stat::valid);
-    stats[1] = data_stat::lost;
-    stats[3] = data_stat::lost;
-    stats[4] = data_stat::lost;
-
-    std::string s1(shards.at(1).size(), '0');
-    std::string s3(shards.at(1).size(), '0');
-    std::string s4(shards.at(1).size(), '0');
-
-    shards.at(1) = s1;
-    shards.at(3) = s3;
-    shards.at(4) = s4;
-
-    BOOST_CHECK(shards.at(1) != encoded.get(1));
-    BOOST_CHECK(shards.at(3) != encoded.get(3));
-    BOOST_CHECK(shards.at(4) != encoded.get(4));
-
-    ec.recover(shards, stats);
-
-    int i = 0;
-    for (auto s : shards) {
-        BOOST_CHECK(s == encoded.get(i++));
+        BOOST_CHECK(std::ranges::equal(shards[1], new_enc.shards[1]));
+        BOOST_CHECK(std::ranges::equal(shards[3], new_enc.shards[3]));
     }
 }
 

@@ -14,6 +14,12 @@ struct fragment {
     uint128_t pointer;
     std::size_t size{};
 
+    fragment() = default;
+
+    fragment(uint128_t p, std::size_t s)
+        : pointer(p),
+          size(s) {}
+
     bool operator==(const fragment&) const = default;
     auto operator<=>(const fragment&) const = default;
 
@@ -25,6 +31,8 @@ struct fragment {
     fragment
     subfrag(std::size_t start,
             std::size_t end = std::numeric_limits<std::size_t>::max()) const;
+
+    using serialize = zpp::bits::members<2>;
 };
 
 } // namespace uh::cluster
@@ -81,6 +89,11 @@ struct address {
      * Push a fragment to the end of the address.
      */
     void push(const fragment& frag);
+
+    /**
+     * Push a fragment to the end of the address.
+     */
+    void emplace_back(uint128_t p, std::size_t s);
 
     /**
      * Get a fragment at a given index.

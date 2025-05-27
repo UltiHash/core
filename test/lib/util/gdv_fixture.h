@@ -16,37 +16,53 @@ using namespace std::chrono_literals;
 namespace uh::cluster {
 class global_data_view_fixture {
 public:
-    global_data_view_fixture()
-        : m_etcd(),
+#if defined(WITH_EC)
+    global_data_view_fixture(
+        const storage::group_config& config =
+            {
+                .id = 0,
+                .type = storage::group_config::type_t::ERASURE_CODING,
+                .storages = 3,
+                .data_shards = 2,
+                .parity_shards = 1,
+                .stripe_size_kib = 2 * 2,
+            })
+#else
+    global_data_view_fixture(
+        const storage::group_config& config =
+            {
+                .id = 0,
+                .type = storage::group_config::type_t::ROUND_ROBIN,
+                .storages = 3,
+            })
+#endif
+        : m_config{config},
+          m_etcd(),
           m_service_cfg(make_service_config()) {
-        m_etcd.clear_all();
-        std::this_thread::sleep_for(100ms);
     }
 
-    virtual ~global_data_view_fixture() { teardown(); }
+    virtual ~global_data_view_fixture() {}
 
     void setup() {
-        auto group_id = 0ul;
-        {
-            storage::group_configs configs;
-            storage::group_config config;
-            config.id = group_id;
-            config.storages = NUM_STORAGE_INSTANCES;
-#if defined(WITH_EC)
-            config.type = storage::group_config::type_t::ERASURE_CODING;
-            config.parity_shards = 1;
-            config.data_shards = config.storages - config.parity_shards;
-            config.stripe_size_kib = config.data_shards * 2;
-#else
-            config.type = storage::group_config::type_t::ROUND_ROBIN;
-#endif
-            configs.configs.clear();
-            configs.configs.push_back(config);
 
-            coordinator::service::publish_configs(m_etcd, configs);
+        m_etcd.clear_all();
+        std::this_thread::sleep_for(100ms);
+
+        if (m_config.type == storage::group_config::type_t::ERASURE_CODING) {
+            if (m_config.storages !=
+                    m_config.data_shards + m_config.parity_shards or
+                m_config.stripe_size_kib % m_config.data_shards != 0) {
+                throw std::runtime_error("Invalid group config");
+            }
         }
+
+        // NOTE: Now support only one group
+        storage::group_configs configs;
+        configs.configs.push_back(m_config);
+
+        coordinator::service::publish_configs(m_etcd, configs);
         try {
-            for (size_t i = 0; i < NUM_STORAGE_INSTANCES; i++) {
+            for (size_t i = 0; i < m_config.storages; i++) {
                 service_config service_cfg;
                 service_cfg.working_dir = m_temp_dirs.emplace_back().path();
                 storage_config storage_cfg;
@@ -54,7 +70,7 @@ public:
                 storage_cfg.working_directory = {
                     std::filesystem::path(service_cfg.working_dir) / "storage"};
                 storage_cfg.instance_id = i;
-                storage_cfg.group_id = group_id;
+                storage_cfg.group_id = m_config.id;
                 m_storage_instances.emplace_back(
                     std::make_unique<storage::service>(service_cfg,
                                                        storage_cfg));
@@ -94,7 +110,8 @@ public:
         m_gdv.reset();
 
         for (const auto& node : m_storage_instances) {
-            node->stop();
+            if (node != nullptr)
+                node->stop();
         }
 
         m_storage_instances.clear();
@@ -120,12 +137,25 @@ public:
         m_temp_dirs.clear();
         m_etcd.clear_all();
     }
+    etcd_manager& get_etcd_manager() { return m_etcd; }
+
+    auto get_group_config() { return m_config; }
+
+    void stop_storage(std::size_t id) {
+        auto& node = m_storage_instances.at(id);
+        if (node != nullptr) {
+            node->stop();
+            node.reset();
+        }
+    }
 
     auto get_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
 
 private:
+    storage::group_config m_config;
+
     service_config make_service_config() {
         service_config service_cfg;
         service_cfg.working_dir = m_temp_dirs.emplace_back().path();
@@ -133,7 +163,7 @@ private:
     }
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
-    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 2};
+    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
     std::vector<temp_directory> m_temp_dirs;
     etcd_manager m_etcd;
     global_data_view_config m_gdv_config;

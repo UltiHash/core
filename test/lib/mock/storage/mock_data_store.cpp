@@ -64,7 +64,7 @@ address mock_data_store::write(const allocation_t allocation,
     std::copy(data.begin(), data.end(), m_data.begin() + allocation.offset);
 
     address data_address;
-    data_address.push({.pointer = allocation.offset, .size = data.size()});
+    data_address.emplace_back(allocation.offset, data.size());
     link(data_address);
     return data_address;
 }
