@@ -161,50 +161,20 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
         },
         storages);
 
-    // Now handle parity shards
-    // Group fragments by stripe to process parity shards efficiently
-    std::unordered_map<uint64_t, std::vector<fragment>> stripe_fragments;
-
+    address parity_addr;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
 
-        // Calculate the stripe base pointer (aligned to stripe boundaries)
-        uint64_t stripe_base = (storage_ptr / m_stripe_size) * m_stripe_size;
-        stripe_fragments[stripe_base].push_back(frag);
+        uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
+        parity_addr.push({chunk_base, m_chunk_size});
     }
 
-    // Process each affected stripe
-    for (const auto& [stripe_base, fragments] : stripe_fragments) {
-        // Create virtual parity addresses for each parity shard in this stripe
-        for (size_t p = 0; p < m_config.parity_shards; ++p) {
-            size_t parity_shard_id = m_config.data_shards + p;
-            if (!storages[parity_shard_id])
-                continue;
-
-            address parity_addr;
-            for (const auto& frag : fragments) {
-                auto [data_shard_id, data_ptr] =
-                    get_storage_pointer(frag.pointer);
-
-                // Calculate the corresponding parity pointer
-                uint64_t parity_ptr = stripe_base + (data_ptr % m_chunk_size);
-                uint128_t global_parity_ptr =
-                    get_global_pointer(parity_ptr, parity_shard_id);
-
-                // Create a fragment for this parity piece
-                fragment parity_frag{
-                    .pointer = global_parity_ptr,
-                    .size = std::min(frag.size,
-                                     m_chunk_size - (data_ptr % m_chunk_size))};
-                parity_addr.push(parity_frag);
-            }
-
-            // Unlink the parity fragments
-            if (parity_addr.size() > 0) {
-                co_await storages[parity_shard_id]->unlink(parity_addr);
-            }
-        }
+    for (size_t p = 0; p < m_config.parity_shards; ++p) {
+        size_t parity_shard_id = m_config.data_shards + p;
+        if (!storages[parity_shard_id])
+            continue;
+        co_await storages[parity_shard_id]->unlink(parity_addr);
     }
 
     co_return freed_bytes;
