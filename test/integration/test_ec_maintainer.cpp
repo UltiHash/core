@@ -249,9 +249,11 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
             BOOST_FAIL("Callback was not called within the timeout period");
         }
         auto new_leader_id = *m_leader_observer.get();
-        if (new_leader_id >= 0 && new_leader_id < m_num_instances)
+        if (new_leader_id >= 0 && new_leader_id < (int)m_num_instances) {
+            LOG_DEBUG() << "New leader ID: " << new_leader_id;
             BOOST_TEST(new_leader_id != leader_id);
-        break;
+            break;
+        }
     }
 }
 
