@@ -3,7 +3,7 @@
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
 #include <common/utils/integral.h>
-#include <storage/group/impl/address_utils.h>
+#include <unordered_set>
 
 namespace uh::cluster::storage {
 ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
@@ -18,7 +18,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                   "Stripe size must be divisible by data shards");
           return m_stripe_size / m_config.data_shards;
       }()},
-      m_rs{config.data_shards, config.parity_shards},
+      m_rs{config.data_shards, config.parity_shards, m_chunk_size},
       m_externals(
           etcd, group_id, config.storages,
           service_factory<storage_interface>(ioc, service_connections)) {}
@@ -46,17 +46,31 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("Allocation result is not aligned");
 
     auto context = co_await boost::asio::this_coro::context;
+
+    // NOTE: Now we allocatate a buffer for data shards, not for whole stripe.
+    // It's because we allocate parity shards in the encode function. I'd like
+    // to change this in the future.
+    unique_buffer<char> stripe(m_chunk_size * m_config.data_shards);
+
     for (auto i = 0ul; i < num_chunks; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
+        auto data_span = data.subspan(i * m_stripe_size);
+        auto data_span_size = std::min(data_span.size(), m_stripe_size);
+        if (data_span_size != m_stripe_size) {
+            std::copy(data_span.begin(), data_span.end(),
+                      stripe.span().begin());
+            std::ranges::fill(stripe.span().subspan(data_span_size), 0);
+            data_span = stripe.span();
+        } else {
+            data_span = data_span.first(m_stripe_size);
+        }
 
-        auto data_chunk = data.subspan(i * m_stripe_size,
-                                       std::min(write_size, m_stripe_size));
         write_size -= m_stripe_size;
 
         // TODO: Offsets are not yet transformed and distributed to each
         // storages
-        auto encoded = m_rs.encode(data_chunk, m_chunk_size);
+        auto encoded = m_rs.encode(data_span);
         co_await run_for_all<address, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<address> {
@@ -68,29 +82,28 @@ coro<address> ec_data_view::write(std::span<const char> data,
     }
     address rv;
     auto pointer = get_global_pointer(allocation.offset, 0);
-    rv.push(fragment{.pointer = pointer, .size = data.size()});
+    rv.emplace_back(pointer, data.size());
     co_return rv;
 }
 
 coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
-                                         size_t read_size) {
-    auto storages = get_valid_storages();
-
-    auto need_reconstruction =
-        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage != nullptr; });
-
-    (void)need_reconstruction;
-
+                                         std::size_t read_size) {
     address addr;
-    auto p = pointer;
-    while (p < pointer + read_size) {
-        auto next_p = align_up_next<uint128_t>(p, m_chunk_size);
-        next_p = std::min(next_p, pointer + read_size);
-        auto frag = fragment{.pointer = p,
-                             .size = static_cast<std::size_t>(next_p - p)};
-        addr.push(frag);
-        p = next_p;
+    auto end = pointer + read_size;
+    auto current_p = pointer;
+
+    {
+        auto size =
+            std::min(align_up_next<uint128_t>(current_p, m_chunk_size), end) -
+            current_p;
+        addr.emplace_back(current_p, static_cast<std::size_t>(size));
+        current_p += size;
+    }
+
+    while (current_p < end) {
+        auto size = std::min(current_p + m_chunk_size, end) - current_p;
+        addr.emplace_back(current_p, static_cast<std::size_t>(size));
+        current_p += size;
     }
 
     auto rv = shared_buffer<>(read_size);
@@ -99,25 +112,153 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
     co_return rv;
 }
 
+coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
+    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::span<char> buffer) {
+    co_return co_await run_for_all<bool>(
+        m_ioc,
+        // NOTE: doesn't check storage_states, since unassigned storages will
+        // throw exception
+        [&storage_index = m_externals.get_storage_index(),
+         buffer](std::size_t id, const address_info& info) -> coro<bool> {
+            try {
+                auto storage = storage_index.at(id);
+                if (storage == nullptr)
+                    co_return false;
+                co_await storage->read_address(info.addr, buffer,
+                                               info.pointer_offsets);
+            } catch (const std::exception& e) {
+                LOG_ERROR() << "Failed to read address: " << e.what();
+                co_return false;
+            } catch (...) {
+                LOG_ERROR() << "Failed to read address: Unknown exception";
+                co_return false;
+            }
+            co_return true;
+        },
+        addr_info_map);
+}
+
+std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
+ec_data_view::get_stripe_ids(
+    std::unordered_map<std::size_t, address_info> addr_info_map,
+    std::unordered_map<std::size_t, bool> success_map) {
+    std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
+        rv;
+    for (auto& [id, success] : success_map) {
+        if (not success) {
+            auto& addr = addr_info_map[id].addr;
+            for (size_t i = 0; i < addr.fragments.size(); ++i) {
+                auto& frag = addr.fragments[i];
+                auto global_pointer = get_global_pointer(frag.pointer, id);
+                auto stripe_id = static_cast<uint64_t>(div_floor(
+                    global_pointer, static_cast<uint128_t>(m_stripe_size)));
+
+                rv[stripe_id].emplace_back(
+                    fragment(global_pointer, frag.size),
+                    addr_info_map[id].pointer_offsets[i]);
+            }
+        }
+    }
+    return rv;
+}
+
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
+
+    auto addr_info_map =
+        extract_node_address_map(addr, [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        });
+
+    auto success_map = co_await read_from_storages(addr_info_map, buffer);
+
+    auto success = std::ranges::all_of(success_map | std::views::values,
+                                       [](auto success) { return success; });
+    if (success)
+        co_return addr.data_size();
+
+    LOG_DEBUG() << "Start reconstruction...";
     auto storages = m_externals.get_storage_services();
+    auto states = m_externals.get_storage_states();
+    for (auto i = 0ul; i < states.size(); ++i) {
+        if (storages[i] != nullptr && *states[i] != storage_state::ASSIGNED)
+            storages[i] = nullptr;
+    }
+
+    auto num_valid_storages =
+        std::ranges::count_if(storages, [](auto& s) { return s != nullptr; });
+
+    if ((std::size_t)num_valid_storages < m_config.data_shards) {
+        throw std::runtime_error("Failed to read address: there's not enough "
+                                 "valid storages");
+    }
+
     auto need_reconstruction =
         std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage != nullptr; });
+                    [](auto storage) { return storage == nullptr; });
 
-    (void)need_reconstruction;
+    if (not need_reconstruction) {
+        throw std::runtime_error(
+            "Failed to read address: but don't know why read_address for "
+            "storages was failed");
+    }
 
-    co_return co_await perform_for_address(
-        m_ioc, addr,
-        [this](uint128_t pointer) -> auto {
-            return get_storage_pointer(pointer);
-        },
-        [buffer](size_t, std::shared_ptr<storage_interface> svc,
-                 const address_info& info) -> coro<void> {
-            co_await svc->read_address(info.addr, buffer, info.pointer_offsets);
-        },
-        storages);
+    // NOTE: this function translates storage pointer to global pointer
+    auto stripe_map = get_stripe_ids(addr_info_map, success_map);
+
+    unique_buffer<char> stripe(m_chunk_size * m_config.storages);
+    std::vector<std::span<char>> shards;
+    shards.reserve(m_config.storages);
+    for (auto i = 0ul; i < m_config.storages; ++i) {
+        auto shard = stripe.span().subspan(m_chunk_size * i, m_chunk_size);
+        shards.push_back(shard);
+    }
+
+    for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
+        address addr;
+        addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
+
+        co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&shards, &addr, chunk_size = m_chunk_size](
+                std::size_t id,
+                const std::shared_ptr<storage_interface>& storage)
+                -> coro<void> {
+                try {
+                    if (storage == nullptr) {
+                        std::ranges::fill(shards[id], 0);
+                    } else {
+                        std::vector<size_t> pointer_offsets = {chunk_size * id};
+                        co_await storage->read_address(addr, shards[id], {0});
+                    }
+                } catch (...) {
+                    LOG_ERROR() << "Failed to read address";
+                }
+            },
+            storages);
+
+        std::vector<data_stat> stats;
+        stats.reserve(m_config.storages);
+        for (auto& s : storages) {
+            if (s != nullptr) {
+                stats.push_back(data_stat::valid);
+            } else {
+                stats.push_back(data_stat::lost);
+            }
+        }
+        m_rs.recover(shards, stats);
+
+        for (auto& [frag, offset] : frags_and_offsets) {
+            auto [id, pointer] = get_storage_pointer(frag.pointer);
+            std::size_t chunk_offset = pointer % m_chunk_size;
+
+            std::ranges::copy(shards[id].subspan(chunk_offset, frag.size),
+                              buffer.subspan(offset, frag.size).begin());
+        }
+    }
+
+    co_return addr.data_size();
 }
 
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }

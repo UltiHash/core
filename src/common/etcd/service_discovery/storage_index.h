@@ -23,7 +23,7 @@ public:
         m_services.at(id).store(nullptr, std::memory_order_release);
     }
 
-    std::shared_ptr<storage_interface> get(std::size_t id) {
+    std::shared_ptr<storage_interface> at(std::size_t id) {
         if (id >= m_services.size()) {
             throw std::out_of_range("access wrong index storage");
         }
