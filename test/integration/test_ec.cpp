@@ -215,4 +215,20 @@ BOOST_AUTO_TEST_CASE(large_data) {
     }
 }
 
+BOOST_AUTO_TEST_CASE(ec_zeros) {
+    const auto data_shards = 3ul;
+    const auto parity_shards = 2ul;
+    const auto chunk_size = 4_KiB;
+    reedsolomon_c ec(data_shards, parity_shards, chunk_size);
+    shared_buffer<char> data(data_shards * chunk_size);
+    std::ranges::fill(data, 0);
+    auto encoded = ec.encode(data);
+    auto shards = encoded.get();
+
+    BOOST_CHECK(std::ranges::equal(shards[0], shards[1]));
+    BOOST_CHECK(std::ranges::equal(shards[1], shards[2]));
+    BOOST_CHECK(std::ranges::equal(shards[2], shards[3]));
+    BOOST_CHECK(std::ranges::equal(shards[3], shards[4]));
+}
+
 } // namespace uh::cluster
