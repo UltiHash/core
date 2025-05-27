@@ -12,42 +12,39 @@ namespace uh::cluster::storage {
 class offset_manager {
 public:
     using callback_t = subscriber::callback_t;
-    offset_manager(etcd_manager& etcd, std::size_t group_id,
-                   std::size_t num_storages)
-        : m_etcd{etcd},
-          m_prefix{get_storage_offset_prefix(group_id)},
-          m_num_storages{num_storages} {}
+    offset_manager() = delete;
 
-    ~offset_manager() { m_etcd.rm(m_prefix); }
-
+    static void rm(etcd_manager& etcd, std::size_t group_id,
+                   std::size_t storage_id) {
+        etcd.rm(get_storage_offset_prefix(group_id)[storage_id]);
+    }
     static void put(etcd_manager& etcd, std::size_t group_id,
                     std::size_t storage_id, std::size_t val) {
         etcd.put(get_storage_offset_prefix(group_id)[storage_id],
                  serialize(val));
     }
 
-    auto summarize_offsets(std::chrono::seconds timeout = 2s) {
-        auto start_time = std::chrono::steady_clock::now();
-
+    static auto summarize_offsets(etcd_manager& etcd, std::size_t group_id,
+                                  std::size_t num_storages) {
         std::size_t max_offset = 0;
-        auto m_offset_candidates =
+        std::string prefix = get_storage_offset_prefix(group_id);
+        auto offset_candidates =
             sync_vector_observer<std::optional<std::size_t>>(
-                m_prefix, m_num_storages, std::nullopt);
+                prefix, num_storages, std::nullopt);
 
-        reader r("", m_etcd, m_prefix, {m_offset_candidates});
-        auto candidates = m_offset_candidates.get();
+        reader r("", etcd, prefix, {offset_candidates});
+        auto candidates = offset_candidates.get();
 
         bool all_read = [&]() {
-            for (auto i = 0ul; i < m_offset_candidates.get().size(); ++i) {
-                if (!m_offset_candidates.get(i).has_value()) {
+            for (auto i = 0ul; i < offset_candidates.get().size(); ++i) {
+                if (!offset_candidates.get(i).has_value()) {
                     return false;
                 }
             }
             return true;
         }();
 
-        auto current_time = std::chrono::steady_clock::now();
-        if (all_read or current_time - start_time > timeout) {
+        if (all_read) {
             auto max_offset_it = std::ranges::max_element(
                 candidates,
                 []<typename T>(const T& a, const T& b) { return a < b; });
@@ -58,11 +55,6 @@ public:
 
         return max_offset;
     }
-
-private:
-    etcd_manager& m_etcd;
-    offset_prefix_t m_prefix;
-    std::size_t m_num_storages;
 };
 
 } // namespace uh::cluster::storage
