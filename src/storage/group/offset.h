@@ -32,26 +32,14 @@ public:
             sync_vector_observer<std::optional<std::size_t>>(
                 prefix, num_storages, std::nullopt);
 
-        reader r("", etcd, prefix, {offset_candidates});
+        reader r("offset reader", etcd, prefix, {offset_candidates});
         auto candidates = offset_candidates.get();
 
-        bool all_read = [&]() {
-            for (auto i = 0ul; i < offset_candidates.get().size(); ++i) {
-                if (!offset_candidates.get(i).has_value()) {
-                    return false;
-                }
-            }
-            return true;
-        }();
+        auto max_offset_it = std::ranges::max_element(
+            candidates,
+            []<typename T>(const T& a, const T& b) { return a < b; });
 
-        if (all_read) {
-            auto max_offset_it = std::ranges::max_element(
-                candidates,
-                []<typename T>(const T& a, const T& b) { return a < b; });
-
-            max_offset =
-                (max_offset_it != candidates.end() ? **max_offset_it : 0);
-        }
+        max_offset = (max_offset_it != candidates.end() ? **max_offset_it : 0);
 
         return max_offset;
     }

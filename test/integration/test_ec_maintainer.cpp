@@ -208,14 +208,39 @@ BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
     BOOST_TEST(leader_id != candidate_observer::staging_id);
     BOOST_TEST(m_wo_interfaces[leader_id]->get_write_offset() ==
                (m_num_instances - 1) * 1_KiB);
+
+    if (wait_for_group_state_key() == false) {
+        BOOST_FAIL("Callback was not called within the timeout period");
+    }
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
+
+    for (auto i = 0ul; i < m_num_instances; ++i) {
+        m_wo_interfaces[i]->set_write_offset(1_MiB);
+    }
+
+    std::cout << "Kill the leader: " << leader_id << std::endl;
+    m_ec_maintainers.at(leader_id).reset();
+
+    while (true) {
+        if (wait_for_leader_key() == false) {
+            BOOST_FAIL("Callback was not called within the timeout period");
+        }
+        auto new_leader_id = *m_leader_observer.get();
+        if (new_leader_id >= 0 && new_leader_id < (int)m_num_instances) {
+            LOG_DEBUG() << "New leader ID: " << new_leader_id;
+            BOOST_TEST(new_leader_id != leader_id);
+            BOOST_TEST(m_wo_interfaces[new_leader_id]->get_write_offset() ==
+                       1_MiB);
+            break;
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::HEALTHY);
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 }
 
 BOOST_AUTO_TEST_CASE(assign_storages) {
