@@ -61,9 +61,6 @@ public:
                 std::ref(m_storage_states)},
             [this]() {
                 if (m_candidate.is_leader()) {
-                    LOG_DEBUG() << std::format(
-                        "[group {}, storage {}] subscriber callback",
-                        m_group_config.id, m_storage_id);
                     storage_states_handler();
                 }
             });

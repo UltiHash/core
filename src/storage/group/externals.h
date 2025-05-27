@@ -4,7 +4,6 @@
 
 #include <common/etcd/subscriber.h>
 
-#include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/service_interfaces/hostport.h>
@@ -71,7 +70,7 @@ public:
 
 private:
     prefix_t m_prefix;
-    value_observer<candidate::id_t> m_leader;
+    value_observer<candidate_observer::id_t> m_leader;
     value_observer<group_state> m_group_state;
     vector_observer<storage_state> m_storage_states;
 

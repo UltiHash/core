@@ -4,7 +4,6 @@
 
 #include "test_config.h"
 
-#include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/subscriber.h>
 
@@ -58,8 +57,9 @@ BOOST_AUTO_TEST_CASE(returns_default_value_when_the_key_has_no_value) {
 
 BOOST_AUTO_TEST_CASE(returns_default_value_when_the_key_has_empty_value) {
 
-    m_etcd.put(ns::root.storage_groups[m_group_id].leader,
-               serialize<candidate::id_t>(candidate_observer::staging_id));
+    m_etcd.put(
+        ns::root.storage_groups[m_group_id].leader,
+        serialize<candidate_observer::id_t>(candidate_observer::staging_id));
 
     if (wait_for_leader_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
