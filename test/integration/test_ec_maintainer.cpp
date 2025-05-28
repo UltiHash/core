@@ -20,7 +20,7 @@ public:
     basic_fixture()
         : m_etcd{} {
         m_etcd.clear_all();
-        std::this_thread::sleep_for(500ms);
+        std::this_thread::sleep_for(100ms);
     }
 
     virtual ~basic_fixture() { m_etcd.clear_all(); }
