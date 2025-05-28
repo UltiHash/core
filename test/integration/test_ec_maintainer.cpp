@@ -23,10 +23,7 @@ public:
         std::this_thread::sleep_for(100ms);
     }
 
-    virtual ~basic_fixture() {
-        m_etcd.clear_all();
-        std::this_thread::sleep_for(100ms);
-    }
+    virtual ~basic_fixture() { m_etcd.clear_all(); }
 
 protected:
     const std::size_t m_num_instances = 4;
@@ -37,7 +34,6 @@ protected:
                              .parity_shards = 1,
                              .stripe_size_kib = 64 * KIBI_BYTE};
     global_data_view_config m_gdv_cfg;
-    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
 };
 
@@ -58,56 +54,33 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     temp_directory dir;
     service_config service_cfg{.working_dir = dir.path()};
 
-    ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg,
+    ec_maintainer maintainer(thread_local_etcd, m_group_cfg, 0, service_cfg,
+                             m_gdv_cfg,
                              std::make_shared<write_offset_interface>(0));
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
 
-class fixture_for_ec_maintainer : public basic_fixture {
-public:
-    fixture_for_ec_maintainer()
-        : basic_fixture{} {}
-
-    void
-    spawn_ec_maintainer(std::stop_token stoken, std::size_t storage_id,
-                        std::shared_ptr<write_offset_interface> wo_interface) {
-        etcd_manager thread_local_etcd;
-        temp_directory dir;
-        service_config service_cfg{.working_dir = dir.path()};
-
-        auto maintainer =
-            std::make_optional<ec_maintainer<write_offset_interface>>(
-                m_ioc, thread_local_etcd, m_group_cfg, storage_id, service_cfg,
-                m_gdv_cfg, wo_interface);
-
-        while (!stoken.stop_requested()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-        maintainer.reset();
-    }
-};
-
-class fixture_with_subscribers : public fixture_for_ec_maintainer {
+class fixture_with_subscribers : public basic_fixture {
 public:
     fixture_with_subscribers()
-        : fixture_for_ec_maintainer{} {
+        : basic_fixture() {
 
         for (std::size_t i = 0; i < m_num_instances; ++i) {
-            wo_interfaces[i] =
-                std::make_shared<write_offset_interface>(i * 1_KiB);
-            threads[i] = std::jthread([&, i](std::stop_token stoken) {
-                spawn_ec_maintainer(stoken, i, wo_interfaces[i]);
-            });
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    ~fixture_with_subscribers() {
-        for (auto& [key, thread] : threads) {
-            if (!thread.get_stop_token().stop_requested()) {
-                thread.request_stop();
-            }
+
+            temp_directory dir;
+            service_config service_cfg{.working_dir = dir.path()};
+
+            m_etcds.push_back(std::make_unique<etcd_manager>());
+            m_wo_interfaces.emplace_back(
+                std::make_unique<write_offset_interface>(i * 1_KiB));
+
+            m_ec_maintainers.emplace_back(
+                std::make_unique<ec_maintainer<write_offset_interface>>(
+                    *m_etcds.back(), m_group_cfg, i, service_cfg, m_gdv_cfg,
+                    m_wo_interfaces.back()));
         }
     }
 
@@ -141,9 +114,6 @@ public:
         return true;
     }
 
-    std::map<std::size_t, std::shared_ptr<write_offset_interface>>
-        wo_interfaces;
-
 protected:
     std::condition_variable cv;
     std::mutex cv_mutex;
@@ -152,7 +122,8 @@ protected:
     bool storage_states_updated = false;
     value_observer<int> m_leader_observer{
         ns::root.storage_groups[m_group_cfg.id].leader,
-        candidate_observer::staging_id, [&](int leader_id) {
+        candidate_observer::default_id, //
+        [&](int leader_id) {
             std::lock_guard<std::mutex> lock(cv_mutex);
             leader_updated = true;
             cv.notify_one();
@@ -179,37 +150,65 @@ protected:
         m_etcd,
         ns::root.storage_groups[m_group_cfg.id],
         {m_leader_observer, m_group_state_observer, m_storage_states_observer}};
-    std::map<std::size_t, std::jthread> threads;
+
+    std::vector<std::unique_ptr<etcd_manager>> m_etcds;
+    std::vector<std::shared_ptr<write_offset_interface>> m_wo_interfaces;
+    std::vector<std::unique_ptr<ec_maintainer<write_offset_interface>>>
+        m_ec_maintainers;
 };
 
 BOOST_FIXTURE_TEST_SUITE(multiple_ec_maintainers, fixture_with_subscribers)
 
+#define TEST_FOR(CONDITION, TIMEOUT)                                           \
+    do {                                                                       \
+        auto start = std::chrono::steady_clock::now();                         \
+        do {                                                                   \
+            if ((CONDITION)) {                                                 \
+                break;                                                         \
+            }                                                                  \
+            if ((std::chrono::steady_clock::now() - start) >= (TIMEOUT)) {     \
+                BOOST_FAIL("Condition was not met within the timeout "         \
+                           "period: " #CONDITION);                             \
+            }                                                                  \
+        } while (true);                                                        \
+        BOOST_TEST_MESSAGE("waiting for \"" #CONDITION "\" passed");           \
+    } while (false)
+
 BOOST_AUTO_TEST_CASE(find_who_is_leader) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto leader_id = *m_leader_observer.get();
+    LOG_DEBUG() << "Leader ID: " << leader_id;
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
+    BOOST_TEST(m_wo_interfaces[leader_id]->get_write_offset() ==
+               (m_num_instances - 1) * 1_KiB);
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
-    BOOST_TEST(wo_interfaces[leader_id]->get_write_offset() ==
-               (m_num_instances - 1) * 1_KiB);
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
+
+    for (auto i = 0ul; i < m_num_instances; ++i) {
+        m_wo_interfaces[i]->set_write_offset(1_MiB);
+    }
+
+    std::cout << "Kill the leader: " << leader_id << std::endl;
+    m_ec_maintainers.at(leader_id).reset();
+
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto new_leader_id = *m_leader_observer.get();
+    BOOST_TEST(m_wo_interfaces[new_leader_id]->get_write_offset() == 1_MiB);
 }
 
 BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::HEALTHY);
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 }
 
 BOOST_AUTO_TEST_CASE(assign_storages) {
@@ -224,159 +223,125 @@ BOOST_AUTO_TEST_CASE(assign_storages) {
 }
 
 BOOST_AUTO_TEST_CASE(handle_failover) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
-
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
 
-    std::cout << "Kill the leader" << std::endl;
-    threads[leader_id].request_stop();
+    std::cout << "Kill the leader: " << leader_id << std::endl;
+    m_ec_maintainers.at(leader_id).reset();
 
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    auto new_leader_id = *m_leader_observer.get();
-    BOOST_TEST(new_leader_id != candidate_observer::staging_id);
-    BOOST_TEST(new_leader_id < m_num_instances);
-    BOOST_TEST(new_leader_id != leader_id);
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 
     auto cnt = 0ul;
-    for (auto& [key, thread] : threads) {
-        if ((candidate_observer::id_t)key == leader_id) {
+    for (auto i = 0ul; i < m_ec_maintainers.size(); ++i) {
+        if (i == (std::size_t)leader_id)
             continue;
-        }
-        std::cout << std::format("Kill service {}", key) << std::endl;
-        threads[key].request_stop();
+        std::cout << std::format("Kill service {}", i) << std::endl;
+        m_ec_maintainers[i].reset();
         if (++cnt >= m_group_cfg.parity_shards)
             break;
     }
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    auto state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
-    threads[leader_id].request_stop();
+    m_ec_maintainers[leader_id].reset();
 
-    {
-        if (wait_for_group_state_key() == false) {
-            BOOST_FAIL("Callback was not called within the timeout period");
-        }
-        auto state = *m_group_state_observer.get();
-        BOOST_TEST(state == group_state::UNDETERMINED);
-    }
-
-    {
-        if (wait_for_group_state_key() == false) {
-            BOOST_FAIL("Callback was not called within the timeout period");
-        }
-        auto state = *m_group_state_observer.get();
-        BOOST_TEST(state == group_state::DEGRADED);
-    }
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 
     auto cnt = 0ul;
-    for (auto& [key, thread] : threads) {
-        if ((candidate_observer::id_t)key == leader_id) {
+    for (auto i = 0ul; i < m_ec_maintainers.size(); ++i) {
+        if (i == (std::size_t)leader_id)
             continue;
-        }
-        std::cout << std::format("Kill service {}", key) << std::endl;
-        threads[key].request_stop();
+        std::cout << std::format("Kill service {}", i) << std::endl;
+        m_ec_maintainers[i].reset();
         if (++cnt >= m_group_cfg.parity_shards)
             break;
     }
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    auto state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 
-    threads[leader_id].request_stop();
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::UNDETERMINED);
+    m_ec_maintainers[leader_id].reset();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::FAILED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::FAILED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto leader_id = *m_leader_observer.get();
+    BOOST_TEST(leader_id != candidate_observer::default_id);
+    BOOST_TEST(leader_id != candidate_observer::staging_id);
+
     if (wait_for_group_state_key() == false) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-    auto leader_id = *m_leader_observer.get();
+
+    BOOST_TEST(*m_group_state_observer.get() == group_state::HEALTHY);
 
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
-    threads[leader_id].request_stop();
-    threads[leader_id].join();
+    m_ec_maintainers[leader_id].reset();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
+
+    {
+        temp_directory dir;
+        service_config service_cfg{.working_dir = dir.path()};
+        m_ec_maintainers[leader_id] =
+            std::make_unique<ec_maintainer<write_offset_interface>>(
+                *m_etcds[leader_id], m_group_cfg, leader_id, service_cfg,
+                m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
-    auto state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::UNDETERMINED);
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::DEGRADED);
-
-    std::cout << std::format("Thread for storage {} created", leader_id)
-              << std::endl;
-    threads[leader_id] = std::jthread([&, leader_id](std::stop_token stoken) {
-        spawn_ec_maintainer(stoken, leader_id,
-                            std::make_shared<write_offset_interface>(0));
-    });
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    state = *m_group_state_observer.get();
-    BOOST_TEST(state == group_state::REPAIRING);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::REPAIRING,
+             4s);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

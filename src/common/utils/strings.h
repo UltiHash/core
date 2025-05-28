@@ -241,6 +241,39 @@ requires requires(std::istream& is, T& v) {
     return value;
 }
 
+template <typename T>
+std::string serialize(const std::optional<T>& opt)
+requires requires(std::ostream& os, const T& v) {
+    { os << v } -> std::same_as<std::ostream&>;
+}
+{
+    if (!opt) {
+        return "nullopt";
+    }
+    return serialize(*opt);
+}
+
+template <typename T>
+concept IsOptional = requires {
+    typename T::value_type;
+    requires std::same_as<T, std::optional<typename T::value_type>>;
+};
+
+template <typename T>
+T deserialize(auto&& str)
+requires IsOptional<T> &&
+         requires(std::istream& is, typename T::value_type& v) {
+             { is >> v } -> std::same_as<std::istream&>;
+         }
+{
+    std::string input = std::forward<decltype(str)>(str);
+    if (input == "nullopt" || input.size() == 0) {
+        return std::nullopt;
+    }
+    using ValueType = typename T::value_type;
+    return deserialize<ValueType>(input);
+}
+
 template <typename Enum>
 std::string serialize(Enum value)
 requires std::is_enum_v<Enum>

@@ -27,6 +27,11 @@ public:
         : vector_observer(expected_parent_key, num_members, {},
                           std::move(callback)) {}
 
+    void set(std::size_t id, const T& value) {
+        m_values[id].store(std::make_shared<T>(value),
+                           std::memory_order_release);
+    }
+
     /*
      * getters
      */
