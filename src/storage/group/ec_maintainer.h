@@ -17,13 +17,11 @@ concept SupportsWriteOffset = requires(T t, std::size_t offset) {
 
 template <SupportsWriteOffset T> class ec_maintainer {
 public:
-    ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
-                  const group_config& group_cfg, std::size_t storage_id,
-                  const service_config& service_cfg,
+    ec_maintainer(etcd_manager& etcd, const group_config& group_cfg,
+                  std::size_t storage_id, const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
                   std::shared_ptr<T> write_offset_interface)
-        : m_ioc{ioc},
-          m_etcd{etcd},
+        : m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
@@ -40,7 +38,7 @@ public:
               etcd,
               m_prefix.leader,
               (candidate_observer::id_t)storage_id,
-              [this](bool is_leader) { election_handler(m_ioc, is_leader); },
+              [this](bool is_leader) { election_handler(is_leader); },
               [this](bool _) {
                   m_etcd.rm(get_storage_offset_prefix(
                       m_group_config.id)[m_storage_id]);
@@ -100,7 +98,7 @@ private:
         return rv;
     }
 
-    void election_handler(boost::asio::io_context& ioc, bool is_leader) {
+    void election_handler(bool is_leader) {
 
         auto write_offset = m_write_offset_interface->get_write_offset();
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
@@ -150,7 +148,8 @@ private:
 
                 if (max_offset_it == offsets.end() ||
                     !max_offset_it->has_value()) {
-                    throw std::runtime_error("All elements are std::nullopt");
+                    LOG_WARN() << "All offsets are empty";
+                    return;
                 }
 
                 auto offset = max_offset_it->value();
@@ -183,9 +182,7 @@ private:
                 "assigned_count: {}",
                 m_group_config.id, m_storage_id, stats.has_down,
                 stats.assigned_count);
-            // LOG_DEBUG() << "group initialized: " +
-            // serialize(group_initialized_manager::get(m_etcd,
-            // m_group_config.id));
+
             if (stats.has_down)
                 return;
 
@@ -270,7 +267,6 @@ private:
         }
     }
 
-    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     const group_config& m_group_config;
     std::size_t m_storage_id;
