@@ -6,7 +6,6 @@
 #include <storage/group/config.h>
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
-#include <storage/group/offset.h>
 
 namespace uh::cluster::storage {
 
@@ -41,7 +40,8 @@ public:
               (candidate_observer::id_t)storage_id,
               [this](bool is_leader) { election_handler(is_leader); },
               [this](bool _) {
-                  offset_manager::rm(m_etcd, m_group_config.id, m_storage_id);
+                  m_etcd.rm(get_storage_offset_prefix(
+                      m_group_config.id)[m_storage_id]);
                   LOG_DEBUG()
                       << "proclaim detected on the group " << m_group_config.id
                       << " storage " << m_storage_id;
@@ -70,6 +70,7 @@ public:
 
         m_subscriber.reset();
 
+        m_is_running.store(false, std::memory_order_release);
         std::lock_guard<std::mutex> lock(m_mutex);
         m_thread.reset();
     }
@@ -100,10 +101,12 @@ private:
 
     void election_handler(bool is_leader) {
 
-        auto offset = m_write_offset_interface->get_write_offset();
+        auto write_offset = m_write_offset_interface->get_write_offset();
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
-                                   m_group_config.id, m_storage_id, offset);
-        offset_manager::put(m_etcd, m_group_config.id, m_storage_id, offset);
+                                   m_group_config.id, m_storage_id,
+                                   write_offset);
+        m_etcd.put(get_storage_offset_prefix(m_group_config.id)[m_storage_id],
+                   serialize(write_offset));
 
         if (is_leader) {
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -112,8 +115,44 @@ private:
                     "[group {}, storage {}] won election, waiting for offsets",
                     m_group_config.id, m_storage_id);
 
-                auto offset = offset_manager::summarize_offsets(
-                    m_etcd, m_group_config.id, m_group_config.storages);
+                std::string prefix =
+                    get_storage_offset_prefix(m_group_config.id);
+                auto offset_observer =
+                    sync_vector_observer<std::optional<std::size_t>>(
+                        prefix, m_group_config.storages, std::nullopt);
+
+                auto start = std::chrono::steady_clock::now();
+
+                while (m_is_running.load(std::memory_order_acquire)) {
+                    reader r("", m_etcd, prefix, {offset_observer});
+                    auto candidates = offset_observer.get();
+
+                    bool all_have_value =
+                        std::ranges::all_of(candidates, [](const auto& opt) {
+                            return opt.has_value();
+                        });
+                    if (all_have_value) {
+                        break;
+                    }
+                    if ((std::chrono::steady_clock::now() - start) >=
+                        (OFFSET_GATHERING_TIMEOUT)) {
+                        break;
+                    }
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                };
+
+                auto offsets = offset_observer.get();
+
+                auto max_offset_it = std::ranges::max_element(
+                    offsets,
+                    []<typename U>(const U& a, const U& b) { return a < b; });
+
+                if (max_offset_it == offsets.end() ||
+                    !max_offset_it->has_value()) {
+                    throw std::runtime_error("All elements are std::nullopt");
+                }
+
+                auto offset = max_offset_it->value();
 
                 LOG_DEBUG() << std::format(
                     "[group {}, storage {}] summarized offset is {}",
@@ -239,6 +278,7 @@ private:
     prefix_t m_prefix;
 
     std::mutex m_mutex;
+    std::atomic<bool> m_is_running{true};
     std::optional<std::jthread> m_thread;
 
     /*
