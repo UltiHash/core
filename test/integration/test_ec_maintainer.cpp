@@ -34,7 +34,6 @@ protected:
                              .parity_shards = 1,
                              .stripe_size_kib = 64 * KIBI_BYTE};
     global_data_view_config m_gdv_cfg;
-    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
 };
 
@@ -55,19 +54,11 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     temp_directory dir;
     service_config service_cfg{.working_dir = dir.path()};
 
-    ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg,
+    ec_maintainer maintainer(thread_local_etcd, m_group_cfg, 0, service_cfg,
+                             m_gdv_cfg,
                              std::make_shared<write_offset_interface>(0));
-    auto thread = std::thread([&] {
-        try {
-            m_ioc.run();
-        } catch (...) {
-        }
-    });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    m_ioc.stop();
-    thread.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -88,22 +79,9 @@ public:
 
             m_ec_maintainers.emplace_back(
                 std::make_unique<ec_maintainer<write_offset_interface>>(
-                    m_ioc, *m_etcds.back(), m_group_cfg, i, service_cfg,
-                    m_gdv_cfg, m_wo_interfaces.back()));
+                    *m_etcds.back(), m_group_cfg, i, service_cfg, m_gdv_cfg,
+                    m_wo_interfaces.back()));
         }
-
-        m_thread = std::make_optional<std::thread>([&] {
-            try {
-                m_ioc.run();
-            } catch (...) {
-            }
-        });
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    ~fixture_with_subscribers() {
-        m_ioc.stop();
-        m_thread->join();
     }
 
     bool wait_for_leader_key() {
@@ -177,7 +155,6 @@ protected:
     std::vector<std::shared_ptr<write_offset_interface>> m_wo_interfaces;
     std::vector<std::unique_ptr<ec_maintainer<write_offset_interface>>>
         m_ec_maintainers;
-    std::optional<std::thread> m_thread;
 };
 
 BOOST_FIXTURE_TEST_SUITE(multiple_ec_maintainers, fixture_with_subscribers)
@@ -412,7 +389,7 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         service_config service_cfg{.working_dir = dir.path()};
         m_ec_maintainers[leader_id] =
             std::make_unique<ec_maintainer<write_offset_interface>>(
-                m_ioc, *m_etcds[leader_id], m_group_cfg, leader_id, service_cfg,
+                *m_etcds[leader_id], m_group_cfg, leader_id, service_cfg,
                 m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
 
