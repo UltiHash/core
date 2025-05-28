@@ -88,6 +88,13 @@ coro<address> ec_data_view::write(std::span<const char> data,
                 auto local_offset = *current_offset - chunk_offset;
                 if (local_offset != 0) {
                     stripe_offsets.at(j).push_back(local_offset);
+                    for (std::size_t p = m_config.data_shards;
+                         p < m_config.data_shards + m_config.parity_shards;
+                         ++p) {
+                        // goal: stripe_offsets.at(p).size() for any p ==
+                        // sum(stripe_offsets.at(j).size()) for all j
+                        stripe_offsets.at(p).push_back(0);
+                    }
                 }
                 ++current_offset;
             }
@@ -357,7 +364,7 @@ address ec_data_view::compute_parity_address(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
-
+        // TODO: handle fragments spanning multiple chunks/stripes
         uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
         parity_addr.push({chunk_base, m_chunk_size});
     }
