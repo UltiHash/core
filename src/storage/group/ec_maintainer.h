@@ -70,7 +70,6 @@ public:
 
         m_subscriber.reset();
 
-        m_is_running.store(false, std::memory_order_release);
         std::lock_guard<std::mutex> lock(m_mutex);
         m_thread.reset();
     }
@@ -110,7 +109,7 @@ private:
 
         if (is_leader) {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_thread.emplace([this]() {
+            m_thread.emplace([this](std::stop_token stop_token) {
                 LOG_DEBUG() << std::format(
                     "[group {}, storage {}] won election, waiting for offsets",
                     m_group_config.id, m_storage_id);
@@ -123,7 +122,7 @@ private:
 
                 auto start = std::chrono::steady_clock::now();
 
-                while (m_is_running.load(std::memory_order_acquire)) {
+                while (!stop_token.stop_requested()) {
                     reader r("", m_etcd, prefix, {offset_observer});
                     auto candidates = offset_observer.get();
 
@@ -278,7 +277,6 @@ private:
     prefix_t m_prefix;
 
     std::mutex m_mutex;
-    std::atomic<bool> m_is_running{true};
     std::optional<std::jthread> m_thread;
 
     /*
