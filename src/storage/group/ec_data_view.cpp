@@ -286,7 +286,36 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }
 
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
-    co_return address{};
+    auto storages = m_externals.get_storage_services();
+    auto addr_map = co_await perform_for_address<address>(
+        m_ioc, addr,
+        [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        },
+        [](std::shared_ptr<storage_interface> svc, const address_info& info)
+            -> coro<address> { co_return co_await svc->link(info.addr); },
+        storages);
+
+    address parity_addr = compute_parity_address(addr);
+
+    for (size_t p = 0; p < m_config.parity_shards; ++p) {
+        size_t parity_shard_id = m_config.data_shards + p;
+        if (!storages[parity_shard_id])
+            continue;
+        auto rejected_addr =
+            co_await storages[parity_shard_id]->link(parity_addr);
+        if (!rejected_addr.empty()) {
+            throw std::runtime_error("Failed to link parity address: " +
+                                     rejected_addr.to_string());
+        }
+    }
+
+    address rv;
+    for (const auto& a : addr_map | std::views::values) {
+        rv.append(a);
+    }
+
+    co_return rv;
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {
@@ -305,14 +334,7 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
 
     // TODO: recompute parity shards for freed chunks
 
-    address parity_addr;
-    for (size_t i = 0; i < addr.size(); ++i) {
-        auto frag = addr.get(i);
-        auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
-
-        uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
-        parity_addr.push({chunk_base, m_chunk_size});
-    }
+    address parity_addr = compute_parity_address(addr);
 
     for (size_t p = 0; p < m_config.parity_shards; ++p) {
         size_t parity_shard_id = m_config.data_shards + p;
@@ -328,6 +350,18 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
             return acc + val.size() * m_chunk_size;
         });
     co_return freed_bytes;
+}
+
+address ec_data_view::compute_parity_address(const address& addr) {
+    address parity_addr;
+    for (size_t i = 0; i < addr.size(); ++i) {
+        auto frag = addr.get(i);
+        auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
+
+        uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
+        parity_addr.push({chunk_base, m_chunk_size});
+    }
+    return parity_addr;
 }
 
 } // namespace uh::cluster::storage
