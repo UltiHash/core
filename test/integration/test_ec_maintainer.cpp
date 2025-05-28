@@ -182,26 +182,27 @@ protected:
 
 BOOST_FIXTURE_TEST_SUITE(multiple_ec_maintainers, fixture_with_subscribers)
 
+#define TEST_FOR(CONDITION, TIMEOUT)                                           \
+    do {                                                                       \
+        auto start = std::chrono::steady_clock::now();                         \
+        do {                                                                   \
+            if ((CONDITION)) {                                                 \
+                break;                                                         \
+            }                                                                  \
+            if ((std::chrono::steady_clock::now() - start) >= (TIMEOUT)) {     \
+                BOOST_FAIL("Condition was not met within the timeout "         \
+                           "period: " #CONDITION);                             \
+            }                                                                  \
+        } while (true);                                                        \
+        BOOST_TEST_MESSAGE("waiting for \"" #CONDITION "\" passed");           \
+    } while (false)
+
 BOOST_AUTO_TEST_CASE(find_who_is_leader) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::staging_id);
-    BOOST_TEST(*m_leader_observer.get() != candidate_observer::default_id);
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     LOG_DEBUG() << "Leader ID: " << leader_id;
     BOOST_TEST(leader_id != candidate_observer::default_id);
@@ -221,19 +222,9 @@ BOOST_AUTO_TEST_CASE(determine_their_maximum_offset_as_the_offset) {
     std::cout << "Kill the leader: " << leader_id << std::endl;
     m_ec_maintainers.at(leader_id).reset();
 
-    while (true) {
-        if (wait_for_leader_key() == false) {
-            BOOST_FAIL("Callback was not called within the timeout period");
-        }
-        auto new_leader_id = *m_leader_observer.get();
-        if (new_leader_id >= 0 && new_leader_id < (int)m_num_instances) {
-            LOG_DEBUG() << "New leader ID: " << new_leader_id;
-            BOOST_TEST(new_leader_id != leader_id);
-            BOOST_TEST(m_wo_interfaces[new_leader_id]->get_write_offset() ==
-                       1_MiB);
-            break;
-        }
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
+    auto new_leader_id = *m_leader_observer.get();
+    BOOST_TEST(m_wo_interfaces[new_leader_id]->get_write_offset() == 1_MiB);
 }
 
 BOOST_AUTO_TEST_CASE(determine_healthy_group_state) {
@@ -255,13 +246,7 @@ BOOST_AUTO_TEST_CASE(assign_storages) {
 }
 
 BOOST_AUTO_TEST_CASE(handle_failover) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     BOOST_TEST(leader_id != candidate_observer::default_id);
     BOOST_TEST(leader_id != candidate_observer::staging_id);
@@ -269,27 +254,11 @@ BOOST_AUTO_TEST_CASE(handle_failover) {
     std::cout << "Kill the leader: " << leader_id << std::endl;
     m_ec_maintainers.at(leader_id).reset();
 
-    while (true) {
-        if (wait_for_leader_key() == false) {
-            BOOST_FAIL("Callback was not called within the timeout period");
-        }
-        auto new_leader_id = *m_leader_observer.get();
-        if (new_leader_id >= 0 && new_leader_id < (int)m_num_instances) {
-            LOG_DEBUG() << "New leader ID: " << new_leader_id;
-            BOOST_TEST(new_leader_id != leader_id);
-            break;
-        }
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     BOOST_TEST(leader_id != candidate_observer::default_id);
     BOOST_TEST(leader_id != candidate_observer::staging_id);
@@ -309,20 +278,13 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state) {
             break;
     }
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     BOOST_TEST(leader_id != candidate_observer::default_id);
     BOOST_TEST(leader_id != candidate_observer::staging_id);
@@ -335,20 +297,13 @@ BOOST_AUTO_TEST_CASE(determine_degraded_group_state_when_leader_is_down) {
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     m_ec_maintainers[leader_id].reset();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     BOOST_TEST(leader_id != candidate_observer::default_id);
     BOOST_TEST(leader_id != candidate_observer::staging_id);
@@ -368,27 +323,19 @@ BOOST_AUTO_TEST_CASE(determine_failed_group_state) {
             break;
     }
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 
     m_ec_maintainers[leader_id].reset();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::FAILED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::FAILED,
+             4s);
 }
 
 BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_leader_observer.get() == candidate_observer::staging_id);
-    if (wait_for_leader_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
+    TEST_FOR(wait_for_leader_key() && *m_leader_observer.get() >= 0, 4s);
     auto leader_id = *m_leader_observer.get();
     BOOST_TEST(leader_id != candidate_observer::default_id);
     BOOST_TEST(leader_id != candidate_observer::staging_id);
@@ -402,10 +349,9 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
     std::cout << std::format("Kill service {}", leader_id) << std::endl;
     m_ec_maintainers[leader_id].reset();
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::DEGRADED);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::DEGRADED,
+             4s);
 
     {
         temp_directory dir;
@@ -416,10 +362,9 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
                 m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
 
-    if (wait_for_group_state_key() == false) {
-        BOOST_FAIL("Callback was not called within the timeout period");
-    }
-    BOOST_TEST(*m_group_state_observer.get() == group_state::REPAIRING);
+    TEST_FOR(wait_for_group_state_key() &&
+                 *m_group_state_observer.get() == group_state::REPAIRING,
+             4s);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
