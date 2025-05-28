@@ -112,7 +112,6 @@ private:
                     "[group {}, storage {}] won election, waiting for offsets",
                     m_group_config.id, m_storage_id);
 
-                std::this_thread::sleep_for(OFFSET_GATHERING_TIMEOUT);
                 auto offset = offset_manager::summarize_offsets(
                     m_etcd, m_group_config.id, m_group_config.storages);
 
