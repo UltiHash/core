@@ -90,16 +90,21 @@ coro<std::size_t> rr_data_view::get_used_space() {
 }
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
-    auto freed_bytes_map = co_await perform_for_address<std::size_t>(
-        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [](std::shared_ptr<storage_interface> svc, const address_info& info)
-            -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
-        m_storage_index.get());
+    auto freed_pages_map =
+        co_await perform_for_address<std::vector<std::size_t>>(
+            m_ioc, addr, pointer_traits::rr::get_storage_pointer,
+            [](std::shared_ptr<storage_interface> svc,
+               const address_info& info) -> coro<std::vector<std::size_t>> {
+                co_return co_await svc->unlink(info.addr);
+            },
+            m_storage_index.get());
 
     auto freed_bytes = std::accumulate(
-        std::ranges::begin(freed_bytes_map | std::views::values),
-        std::ranges::end(freed_bytes_map | std::views::values), 0ul,
-        [](std::size_t acc, std::size_t val) { return acc + val; });
+        std::ranges::begin(freed_pages_map | std::views::values),
+        std::ranges::end(freed_pages_map | std::views::values), 0ul,
+        [&, this](std::size_t acc, std::vector<std::size_t> val) {
+            return acc + val.size() * m_group_config.stripe_size_kib;
+        });
     co_return freed_bytes;
 }
 
