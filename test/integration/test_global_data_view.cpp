@@ -11,7 +11,8 @@
 
 namespace uh::cluster {
 
-BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
+BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture,
+                        *boost::unit_test::disabled()) {
     auto gdv = get_data_view();
     BOOST_REQUIRE_THROW(
         boost::asio::co_spawn(

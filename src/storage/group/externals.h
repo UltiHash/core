@@ -4,7 +4,6 @@
 
 #include <common/etcd/subscriber.h>
 
-#include <common/etcd/candidate.h>
 #include <common/etcd/namespace.h>
 #include <common/etcd/utils.h>
 #include <common/service_interfaces/hostport.h>
@@ -21,6 +20,10 @@ public:
         : m_etcd{etcd},
           m_key{get_prefix(group_id).group_state},
           m_group_state{group_state::UNDETERMINED} {}
+
+    ~group_state_manager() {
+        // NOTE: didn't remove the group state key, to let leader manages it
+    }
 
     void put(group_state state) {
         m_group_state = state;
@@ -45,7 +48,7 @@ public:
                          service_factory<storage_interface> service_factory,
                          callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
-          m_leader{m_prefix.leader, candidate_observer::staging_id},
+          m_leader{m_prefix.leader, candidate_observer::default_id},
           m_group_state{m_prefix.group_state},
           m_storage_states{m_prefix.storage_states, num_storages},
           m_storage_index{num_storages},
@@ -67,7 +70,7 @@ public:
 
 private:
     prefix_t m_prefix;
-    value_observer<candidate::id_t> m_leader;
+    value_observer<candidate_observer::id_t> m_leader;
     value_observer<group_state> m_group_state;
     vector_observer<storage_state> m_storage_states;
 

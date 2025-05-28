@@ -22,6 +22,10 @@ public:
     value_observer(std::string expected_key, callback_t callback)
         : value_observer(expected_key, {}, std::move(callback)) {}
 
+    void set(const T& value) {
+        m_value.store(std::make_shared<T>(value), std::memory_order_release);
+    }
+
     /*
      * getter
      */

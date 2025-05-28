@@ -18,9 +18,8 @@ concept SupportsWriteOffset = requires(T t, std::size_t offset) {
 
 template <SupportsWriteOffset T> class ec_maintainer {
 public:
-    ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
-                  const group_config& group_cfg, std::size_t storage_id,
-                  const service_config& service_cfg,
+    ec_maintainer(etcd_manager& etcd, const group_config& group_cfg,
+                  std::size_t storage_id, const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
                   std::shared_ptr<T> write_offset_interface)
         : m_etcd{etcd},
@@ -36,26 +35,43 @@ public:
           m_storage_assignment_trigger{
               m_prefix.storage_assignment_trigger,
               [this](bool& val) { assignment_trigger_handler(val); }},
-          m_candidate{etcd, m_prefix.leader,
-                      (candidate_observer::id_t)storage_id,
-                      [this](bool is_leader) { election_handler(is_leader); }},
+          m_candidate{
+              etcd,
+              m_prefix.leader,
+              (candidate_observer::id_t)storage_id,
+              [this](bool is_leader) { election_handler(is_leader); },
+              [this](bool _) {
+                  offset_manager::rm(m_etcd, m_group_config.id, m_storage_id);
+                  LOG_DEBUG()
+                      << "proclaim detected on the group " << m_group_config.id
+                      << " storage " << m_storage_id;
+              },
+          },
           m_storage_states{m_prefix.storage_states, m_group_config.storages},
           m_storage_state_manager{etcd, m_group_config.id, storage_id,
-                                  service_cfg.working_dir},
+                                  service_cfg.working_dir} {
 
-          m_subscriber{"",
-                       etcd,
-                       m_prefix,
-                       {m_group_initialized, m_storage_assignment_trigger,
-                        m_candidate, m_storage_states},
-                       [this]() {
-                           if (m_candidate.is_leader())
-                               storage_states_handler();
-                       }} {}
+        m_subscriber.emplace(
+            "", etcd, m_prefix,
+            std::initializer_list<std::reference_wrapper<subscriber_observer>>{
+                std::ref(m_group_initialized),
+                std::ref(m_storage_assignment_trigger), std::ref(m_candidate),
+                std::ref(m_storage_states)},
+            [this]() {
+                if (m_candidate.is_leader()) {
+                    storage_states_handler();
+                }
+            });
+    }
 
     ~ec_maintainer() {
         LOG_DEBUG() << std::format("[group {}, storage {}] destroy",
                                    m_group_config.id, m_storage_id);
+
+        m_subscriber.reset();
+
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_thread.reset();
     }
 
 private:
@@ -64,12 +80,11 @@ private:
         std::size_t assigned_count = 0ul;
     };
 
-    statistics get_statistics(
-        std::vector<std::shared_ptr<storage_state>>& storage_states) {
+    statistics get_statistics(std::vector<storage_state>& storage_states) {
 
         statistics rv;
         for (const auto& val : storage_states) {
-            switch (*val) {
+            switch (val) {
             case storage_state::DOWN:
                 rv.has_down = true;
                 break;
@@ -85,26 +100,34 @@ private:
 
     void election_handler(bool is_leader) {
 
-        LOG_DEBUG() << std::format("[group {}, storage {}] put offset",
-                                   m_group_config.id, m_storage_id);
-
-        offset_manager::put(m_etcd, m_group_config.id, m_storage_id,
-                            m_write_offset_interface->get_write_offset());
+        auto offset = m_write_offset_interface->get_write_offset();
+        LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
+                                   m_group_config.id, m_storage_id, offset);
+        offset_manager::put(m_etcd, m_group_config.id, m_storage_id, offset);
 
         if (is_leader) {
-            LOG_DEBUG() << std::format("[group {}, storage {}] won election",
-                                       m_group_config.id, m_storage_id);
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_thread.emplace([this]() {
+                LOG_DEBUG() << std::format(
+                    "[group {}, storage {}] won election, waiting for offsets",
+                    m_group_config.id, m_storage_id);
 
-            auto manager = offset_manager(m_etcd, m_group_config.id,
-                                          m_group_config.storages);
-            auto offset = manager.summarize_offsets(OFFSET_GATHERING_TIMEOUT);
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] summarized offset is {}",
-                m_group_config.id, m_storage_id, offset);
+                std::this_thread::sleep_for(OFFSET_GATHERING_TIMEOUT);
+                auto offset = offset_manager::summarize_offsets(
+                    m_etcd, m_group_config.id, m_group_config.storages);
 
-            m_write_offset_interface->set_write_offset(offset);
+                LOG_DEBUG() << std::format(
+                    "[group {}, storage {}] summarized offset is {}",
+                    m_group_config.id, m_storage_id, offset);
 
-            m_candidate.proclaim();
+                m_write_offset_interface->set_write_offset(offset);
+
+                m_candidate.proclaim();
+
+                LOG_DEBUG()
+                    << std::format("[group {}, storage {}] proclaimed election",
+                                   m_group_config.id, m_storage_id);
+            });
         }
     }
 
@@ -113,13 +136,20 @@ private:
         auto storage_states = m_storage_states.get();
 
         auto stats = get_statistics(storage_states);
+        auto state = m_group_state_manager.get();
 
-        if (not(*group_initialized)) {
+        if (not(group_initialized)) {
+            LOG_DEBUG() << std::format(
+                "[group {}, storage {}] group uninitialized: has_down: {}, "
+                "assigned_count: {}",
+                m_group_config.id, m_storage_id, stats.has_down,
+                stats.assigned_count);
+
             if (stats.has_down)
                 return;
 
             auto trigger = m_storage_assignment_trigger.get();
-            if (not(*trigger)) {
+            if (not(trigger)) {
 
                 LOG_DEBUG()
                     << std::format("[group {}, storage {}] trigger "
@@ -137,15 +167,16 @@ private:
 
             storage_assignment_triggers_manager::put(m_etcd, m_group_config.id,
                                                      false);
+            m_storage_assignment_trigger.set(false);
 
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] Group is now initialized",
                 m_group_config.id, m_storage_id);
             group_initialized_manager::put_persistant(m_etcd, m_group_config.id,
                                                       true);
+            m_group_initialized.set(true);
         }
 
-        auto state = m_group_state_manager.get();
         auto new_state = state;
 
         if (state != group_state::HEALTHY and
@@ -193,9 +224,7 @@ private:
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] set it's state to ASSIGNED",
                 m_group_config.id, m_storage_id);
-            if (!m_candidate.is_leader()) {
-                std::this_thread::sleep_for(1s);
-            }
+
             m_storage_state_manager.put(storage_state::ASSIGNED);
         }
     }
@@ -210,19 +239,22 @@ private:
 
     prefix_t m_prefix;
 
+    std::mutex m_mutex;
+    std::optional<std::jthread> m_thread;
+
     /*
      * subscriber's observers
      */
-    value_observer<bool> m_group_initialized;
-    value_observer<bool> m_storage_assignment_trigger;
+    sync_value_observer<bool> m_group_initialized;
+    sync_value_observer<bool> m_storage_assignment_trigger;
     candidate_observer m_candidate; // It removes leader key on it's destructor
-    vector_observer<storage_state> m_storage_states;
+    sync_vector_observer<storage_state> m_storage_states;
 
     // NOTE: Order is important! The storage state should be destroyed
     // before the leader key, which is handled by the candidate_observer.
     storage_state_manager m_storage_state_manager; // It removes storage state
                                                    // on it's destructor
-    subscriber m_subscriber;
+    std::optional<subscriber> m_subscriber;
 };
 
 } // namespace uh::cluster::storage
