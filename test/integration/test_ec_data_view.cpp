@@ -124,6 +124,63 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_when_two_storages_are_down) {
     BOOST_TEST(buffer == read_buffer);
 }
 
+BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_full) {
+    auto& etcd = get_etcd_manager();
+    auto config = get_group_config();
+    etcd.wait(ns::root.storage_groups[config.id].group_state);
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * KIBI_BYTE * 2);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+    auto chunk_size = (config.stripe_size_kib * KIBI_BYTE) / config.data_shards;
+    auto num_chunks = buffer.size() / chunk_size;
+    BOOST_TEST(addr.size() == num_chunks);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    BOOST_TEST(buffer == read_buffer);
+}
+
+BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_padded) {
+    auto& etcd = get_etcd_manager();
+    auto config = get_group_config();
+    etcd.wait(ns::root.storage_groups[config.id].group_state);
+    auto gdv = get_data_view();
+    auto chunk_size = (config.stripe_size_kib * KIBI_BYTE) / config.data_shards;
+    auto buffer = random_buffer(chunk_size);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    auto num_chunks = buffer.size() / chunk_size;
+    BOOST_TEST(addr.size() == num_chunks);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    BOOST_TEST(buffer == read_buffer);
+}
+
 // BOOST_AUTO_TEST_CASE(reads_when_one_storage_is_down) {
 //     //
 // }
