@@ -28,7 +28,7 @@ struct fixture : public global_data_view_fixture {
 
 BOOST_FIXTURE_TEST_SUITE(a_ec_data_view, fixture)
 
-BOOST_AUTO_TEST_CASE(reads_small_data_when_two_storages_are_down) {
+BOOST_AUTO_TEST_CASE(reads_small_data_on_degraded_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(64);
 
@@ -39,10 +39,10 @@ BOOST_AUTO_TEST_CASE(reads_small_data_when_two_storages_are_down) {
                     .get();
 
     LOG_DEBUG() << "kill storage 1";
-    stop_storage(1);
+    deactivate_storage(1);
 
     LOG_DEBUG() << "kill storage 4";
-    stop_storage(4);
+    deactivate_storage(4);
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(reads_small_data_when_two_storages_are_down) {
     BOOST_TEST(buffer == read_buffer);
 }
 
-BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_when_two_storages_are_down) {
+BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_on_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1.5);
@@ -71,10 +71,10 @@ BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_when_two_storages_are_down) {
                     .get();
 
     LOG_DEBUG() << "kill storage 1";
-    stop_storage(1);
+    deactivate_storage(1);
 
     LOG_DEBUG() << "kill storage 4";
-    stop_storage(4);
+    deactivate_storage(4);
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_when_two_storages_are_down) {
     BOOST_TEST(buffer == read_buffer);
 }
 
-BOOST_AUTO_TEST_CASE(reads_two_stripes_when_two_storages_are_down) {
+BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 2);
@@ -103,10 +103,10 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_when_two_storages_are_down) {
                     .get();
 
     LOG_DEBUG() << "kill storage 1";
-    stop_storage(1);
+    deactivate_storage(1);
 
     LOG_DEBUG() << "kill storage 4";
-    stop_storage(4);
+    deactivate_storage(4);
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
@@ -124,10 +124,116 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_when_two_storages_are_down) {
     BOOST_TEST(buffer == read_buffer);
 }
 
-// BOOST_AUTO_TEST_CASE(reads_when_one_storage_is_down) {
-//     //
-// }
-//
+BOOST_AUTO_TEST_CASE(reads_two_stripes_after_down_and_up_of_storages) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 2);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    LOG_DEBUG() << "revive storage 1";
+    activate_storage(1);
+
+    LOG_DEBUG() << "revive storage 4";
+    activate_storage(4);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    LOG_DEBUG() << "buffer: " << buffer.string_view();
+    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
+
+    BOOST_TEST(buffer == read_buffer);
+}
+
+BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 2);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    boost::asio::co_spawn(get_executor(),
+                          gdv->read_address(addr, read_buffer.span()),
+                          boost::asio::use_future)
+        .get();
+    BOOST_REQUIRE_THROW(
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get(),
+        std::runtime_error);
+}
+
+BOOST_AUTO_TEST_CASE(fails_to_read_after_recovery_from_failed_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 2);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    LOG_DEBUG() << "revive storage 5";
+    activate_storage(5);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    LOG_DEBUG() << "buffer: " << buffer.string_view();
+    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
+
+    BOOST_TEST(buffer == read_buffer);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 } // namespace uh::cluster

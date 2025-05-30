@@ -56,7 +56,7 @@ public:
             break;
         case etcd_action::DELETE:
             LOG_INFO() << std::format(
-                "Removing connection to service {} with id{} and hostport {}",
+                "Removing connection to service {} with id {} and hostport {}",
                 get_service_string(service_interface::service_role), id,
                 resp.value);
             remove(id);

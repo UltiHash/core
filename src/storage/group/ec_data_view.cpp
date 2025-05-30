@@ -129,10 +129,14 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
          buffer](std::size_t id, const address_info& info) -> coro<bool> {
             try {
                 auto storage = storage_index.at(id);
-                if (storage == nullptr)
+                if (storage == nullptr) {
                     co_return false;
+                }
+                LOG_DEBUG() << "try to read from storage " << id;
                 co_await storage->read_address(info.addr, buffer,
                                                info.pointer_offsets);
+                LOG_DEBUG() << "read from storage done" << id;
+                co_return true;
             } catch (const std::exception& e) {
                 LOG_ERROR() << "Failed to read address: " << e.what();
                 co_return false;
@@ -140,7 +144,6 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
                 LOG_ERROR() << "Failed to read address: Unknown exception";
                 co_return false;
             }
-            co_return true;
         },
         addr_info_map);
 }
@@ -177,6 +180,10 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
             return get_storage_pointer(pointer);
         });
 
+    for (const auto& pair : addr_info_map) {
+        std::cout << "Key: " << pair.first << std::endl;
+    }
+
     for (auto& id : addr_info_map | std::views::keys) {
         if (id >= m_config.data_shards) {
             throw std::runtime_error("Invalid storage id in address: " +
@@ -187,6 +194,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     auto success = std::ranges::all_of(success_map | std::views::values,
                                        [](auto success) { return success; });
+
     if (success)
         co_return addr.data_size();
 
