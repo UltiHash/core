@@ -44,9 +44,9 @@ coro<address> ec_data_view::write(std::span<const char> data,
                                  std::to_string(leader));
 
     auto write_size = data.size();
-    auto num_chunks = div_ceil(write_size, m_stripe_size);
+    auto num_stripes = div_ceil(write_size, m_stripe_size);
     auto allocation = co_await storages.at(leader)->allocate(
-        num_chunks * m_chunk_size, m_chunk_size);
+        num_stripes * m_chunk_size, m_chunk_size);
 
     if (allocation.offset % m_chunk_size != 0)
         throw std::runtime_error("Allocation result is not aligned");
@@ -57,8 +57,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
     // It's because we allocate parity shards in the encode function. I'd like
     // to change this in the future.
     unique_buffer<char> stripe(m_chunk_size * m_config.data_shards);
-
-    for (auto i = 0ul; i < num_chunks; i++) {
+    address rv;
+    for (auto i = 0ul; i < num_stripes; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
         auto data_span = data.subspan(i * m_stripe_size);
@@ -74,21 +74,73 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         write_size -= m_stripe_size;
 
-        // TODO: Offsets are not yet transformed and distributed to each
-        // storages
         auto encoded = m_rs.encode(data_span);
-        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&](size_t i, auto storage) -> coro<address> {
-                co_return co_await storage
-                    ->write(alloc, encoded.get().at(i), offsets)
-                    .continue_trace(context);
-            },
-            storages);
+
+        std::vector<std::vector<std::size_t>> stripe_offsets(
+            m_config.data_shards + m_config.parity_shards,
+            std::vector<std::size_t>{0});
+
+        // translate offsets into chunk-local offsets for each stripe.
+        const std::size_t stripe_offset = i * m_stripe_size;
+        auto current_offset =
+            std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
+
+        for (size_t j = 0; j < m_config.data_shards; ++j) {
+            const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+            while (current_offset != offsets.end() and
+                   *current_offset < chunk_offset + m_chunk_size) {
+                auto local_offset = *current_offset - chunk_offset;
+                if (local_offset != 0) {
+                    stripe_offsets.at(j).push_back(local_offset);
+                    for (std::size_t p = m_config.data_shards;
+                         p < m_config.data_shards + m_config.parity_shards;
+                         ++p) {
+                        // goal: stripe_offsets.at(p).size() for any p ==
+                        // sum(stripe_offsets.at(j).size()) for all j
+                        stripe_offsets.at(p).push_back(0);
+                    }
+                }
+                ++current_offset;
+            }
+        }
+
+        auto addresses =
+            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&](size_t i, auto storage) -> coro<address> {
+                    auto storage_addr = co_await storage
+                                            ->write(alloc, encoded.get().at(i),
+                                                    stripe_offsets.at(i))
+                                            .continue_trace(context);
+                    address global_addr;
+                    // translate storage address into global address
+                    for (std::size_t j = 0; j < storage_addr.size(); ++j) {
+                        fragment frag = storage_addr.get(j);
+                        global_addr.emplace_back(
+                            get_global_pointer(frag.pointer, i), frag.size);
+                    }
+                    co_return global_addr;
+                },
+                storages);
+
+        // combine partial addresses into complete return address
+        std::size_t user_data_size = data.size_bytes();
+        for (std::size_t j = 0; j < m_config.data_shards; ++j) {
+            for (auto& frag : addresses.at(j).fragments) {
+                if (user_data_size == 0) {
+                    break;
+                }
+
+                if (frag.size < user_data_size) {
+                    user_data_size -= frag.size;
+                    rv.emplace_back(frag.pointer, frag.size);
+                } else {
+                    rv.emplace_back(frag.pointer, user_data_size);
+                    user_data_size = 0;
+                }
+            }
+        }
     }
-    address rv;
-    auto pointer = get_global_pointer(allocation.offset, 0);
-    rv.emplace_back(pointer, data.size());
     co_return rv;
 }
 
