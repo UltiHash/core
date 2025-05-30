@@ -182,12 +182,6 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
          buffer](std::size_t id, const address_info& info) -> coro<bool> {
             try {
                 auto storage = storage_index.at(id);
-                LOG_DEBUG() << "addr: " << info.addr.to_string();
-                for (auto i = 0ul; i < info.pointer_offsets.size(); ++i) {
-                    LOG_DEBUG()
-                        << "offsets[" << i << "]: " << info.pointer_offsets[i];
-                }
-
                 if (storage == nullptr) {
                     co_return false;
                 }
