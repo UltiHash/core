@@ -315,7 +315,26 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     co_return addr.data_size();
 }
 
-coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }
+coro<std::size_t> ec_data_view::get_used_space() {
+    auto storages = m_externals.get_storage_services();
+    auto context = co_await boost::asio::this_coro::context;
+    auto used_spaces =
+        co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<std::size_t> {
+                if (i >= m_config.data_shards) {
+                    co_return 0; // skip parity shards
+                }
+                co_return co_await storage->get_used_space().continue_trace(
+                    context);
+            },
+            storages);
+
+    auto used_space =
+        std::accumulate(used_spaces.begin(), used_spaces.end(), 0ul);
+
+    co_return used_space;
+}
 
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
     auto storages = m_externals.get_storage_services();
