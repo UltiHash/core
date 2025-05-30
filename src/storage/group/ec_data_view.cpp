@@ -21,7 +21,13 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
       m_rs{config.data_shards, config.parity_shards, m_chunk_size},
       m_externals(
           etcd, group_id, config.storages,
-          service_factory<storage_interface>(ioc, service_connections)) {}
+          service_factory<storage_interface>(ioc, service_connections)) {
+
+    LOG_DEBUG() << "[ec_data_view] waiting group state for group " << group_id;
+    etcd.wait(ns::root.storage_groups[group_id].group_state,
+              GROUP_STATE_WAIT_TIMEOUT);
+    LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
+}
 
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
@@ -33,7 +39,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
     auto storages = m_externals.get_storage_services();
     auto leader = *m_externals.get_leader();
 
-    if (leader < 0 or leader >= (candidate::id_t)m_config.storages)
+    if (leader < 0 or leader >= (candidate_observer::id_t)m_config.storages)
         throw std::runtime_error("Invalid leader id: " +
                                  std::to_string(leader));
 
@@ -225,6 +231,12 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
             return get_storage_pointer(pointer);
         });
 
+    for (auto& id : addr_info_map | std::views::keys) {
+        if (id >= m_config.data_shards) {
+            throw std::runtime_error("Invalid storage id in address: " +
+                                     std::to_string(id));
+        }
+    }
     auto success_map = co_await read_from_storages(addr_info_map, buffer);
 
     auto success = std::ranges::all_of(success_map | std::views::values,
@@ -232,7 +244,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     if (success)
         co_return addr.data_size();
 
-    LOG_DEBUG() << "Start reconstruction...";
+    LOG_DEBUG() << "[read_address] try to reconstruct";
     auto storages = m_externals.get_storage_services();
     auto states = m_externals.get_storage_states();
     for (auto i = 0ul; i < states.size(); ++i) {

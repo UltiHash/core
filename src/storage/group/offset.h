@@ -5,47 +5,44 @@
 #include <common/etcd/subscriber.h>
 #include <common/etcd/utils.h>
 #include <common/utils/strings.h>
+#include <storage/group/state.h>
 
 namespace uh::cluster::storage {
-
-using offset_t = std::size_t;
 
 class offset_manager {
 public:
     using callback_t = subscriber::callback_t;
-    offset_manager(etcd_manager& etcd, std::size_t group_id,
-                   std::size_t num_storages)
-        : m_etcd{etcd},
-          m_prefix{get_storage_offset_prefix(group_id)},
-          future{promise.get_future()},
-          m_offset_candidates{m_prefix, num_storages, 0},
-          m_reader{"offset_manager", etcd, m_prefix, {m_offset_candidates}} {}
+    offset_manager() = delete;
 
-    ~offset_manager() { m_etcd.rm(m_prefix); }
-
+    static void rm(etcd_manager& etcd, std::size_t group_id,
+                   std::size_t storage_id) {
+        etcd.rm(get_storage_offset_prefix(group_id)[storage_id]);
+    }
     static void put(etcd_manager& etcd, std::size_t group_id,
-                    std::size_t storage_id, offset_t val) {
+                    std::size_t storage_id, std::size_t val) {
         etcd.put(get_storage_offset_prefix(group_id)[storage_id],
                  serialize(val));
     }
 
-    auto summarize_offsets(std::chrono::seconds timeout = 5s) {
-        future.wait_for(timeout);
-        auto candidates = m_offset_candidates.get();
-        auto max_offset = std::ranges::max_element(
+    static auto summarize_offsets(etcd_manager& etcd, std::size_t group_id,
+                                  std::size_t num_storages) {
+        std::size_t max_offset = 0;
+        std::string prefix = get_storage_offset_prefix(group_id);
+        auto offset_candidates =
+            sync_vector_observer<std::optional<std::size_t>>(
+                prefix, num_storages, std::nullopt);
+
+        reader r("offset reader", etcd, prefix, {offset_candidates});
+        auto candidates = offset_candidates.get();
+
+        auto max_offset_it = std::ranges::max_element(
             candidates,
-            []<typename T>(const T& a, const T& b) { return *a < *b; });
+            []<typename T>(const T& a, const T& b) { return a < b; });
 
-        return (max_offset != candidates.end() ? **max_offset : 0);
+        max_offset = (max_offset_it != candidates.end() ? **max_offset_it : 0);
+
+        return max_offset;
     }
-
-private:
-    etcd_manager& m_etcd;
-    offset_prefix_t m_prefix;
-    std::promise<void> promise;
-    std::future<void> future;
-    vector_observer<offset_t> m_offset_candidates;
-    reader m_reader;
 };
 
 } // namespace uh::cluster::storage

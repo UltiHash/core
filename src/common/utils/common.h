@@ -85,6 +85,7 @@ constexpr const char* ENV_CFG_STORAGE_GROUP_ID = "UH_STORAGE_GROUP_ID";
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
 constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
+constexpr auto GROUP_STATE_WAIT_TIMEOUT = std::chrono::seconds(10);
 constexpr auto OFFSET_GATHERING_TIMEOUT = std::chrono::seconds(2);
 
 constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
