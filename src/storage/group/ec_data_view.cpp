@@ -51,7 +51,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
     // It's because we allocate parity shards in the encode function. I'd like
     // to change this in the future.
     unique_buffer<char> stripe(m_chunk_size * m_config.data_shards);
-
+    address rv;
     for (auto i = 0ul; i < num_stripes; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
@@ -100,18 +100,43 @@ coro<address> ec_data_view::write(std::span<const char> data,
             }
         }
 
-        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&](size_t i, auto storage) -> coro<address> {
-                co_return co_await storage
-                    ->write(alloc, encoded.get().at(i), stripe_offsets.at(i))
-                    .continue_trace(context);
-            },
-            storages);
+        auto addresses =
+            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&](size_t i, auto storage) -> coro<address> {
+                    auto storage_addr = co_await storage
+                                            ->write(alloc, encoded.get().at(i),
+                                                    stripe_offsets.at(i))
+                                            .continue_trace(context);
+                    address global_addr;
+                    // translate storage address into global address
+                    for (std::size_t j = 0; j < storage_addr.size(); ++j) {
+                        fragment frag = storage_addr.get(j);
+                        global_addr.emplace_back(
+                            get_global_pointer(frag.pointer, i), frag.size);
+                    }
+                    co_return global_addr;
+                },
+                storages);
+
+        // combine partial addresses into complete return address
+        std::size_t user_data_size = data.size_bytes();
+        for (std::size_t j = 0; j < m_config.data_shards; ++j) {
+            for (auto& frag : addresses.at(j).fragments) {
+                if (user_data_size == 0) {
+                    break;
+                }
+
+                if (frag.size < user_data_size) {
+                    user_data_size -= frag.size;
+                    rv.emplace_back(frag.pointer, frag.size);
+                } else {
+                    rv.emplace_back(frag.pointer, user_data_size);
+                    user_data_size = 0;
+                }
+            }
+        }
     }
-    address rv;
-    auto pointer = get_global_pointer(allocation.offset, 0);
-    rv.emplace_back(pointer, data.size());
     co_return rv;
 }
 
@@ -364,7 +389,6 @@ address ec_data_view::compute_parity_address(const address& addr) {
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
-        // TODO: handle fragments spanning multiple chunks/stripes
         uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
         parity_addr.push({chunk_base, m_chunk_size});
     }
