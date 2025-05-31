@@ -233,10 +233,6 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
             return get_storage_pointer(pointer);
         });
 
-    for (const auto& pair : addr_info_map) {
-        std::cout << "Key: " << pair.first << std::endl;
-    }
-
     for (auto& id : addr_info_map | std::views::keys) {
         if (id >= m_config.data_shards) {
             throw std::runtime_error("Invalid storage id in address: " +
