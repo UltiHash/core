@@ -59,7 +59,8 @@ service::service(const service_config& sc, entrypoint_config config)
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
       // TODO: add support for non-persistent service_id
-      m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id]),
+      m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
+                         m_config.server.port),
 
       m_gdv{m_ioc, m_etcd, config.global_data_view},
       m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
@@ -109,7 +110,6 @@ void service::run() {
                int64_t>::remove_gauge_callback();
     });
 
-    m_service_registry.register_service(m_server.get_server_config());
     m_server.run();
 }
 

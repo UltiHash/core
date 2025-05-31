@@ -251,12 +251,18 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     auto storages = m_externals.get_storage_services();
     auto states = m_externals.get_storage_states();
     for (auto i = 0ul; i < states.size(); ++i) {
+        LOG_DEBUG() << "[read_address] storage " << i
+                    << " instance: " << storages[i]
+                    << " state: " << serialize(*states[i]);
         if (storages[i] != nullptr && *states[i] != storage_state::ASSIGNED)
             storages[i] = nullptr;
     }
 
     auto num_valid_storages =
         std::ranges::count_if(storages, [](auto& s) { return s != nullptr; });
+
+    LOG_DEBUG() << "[read_address] num of valid storages: "
+                << num_valid_storages;
 
     if ((std::size_t)num_valid_storages < m_config.data_shards) {
         throw std::runtime_error("Failed to read address: there's not enough "
@@ -288,6 +294,8 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
         address addr;
         addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
 
+        LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
+                    << stripe_id;
         co_await run_for_all<void, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&shards, &addr](std::size_t id,
@@ -297,7 +305,9 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
                     if (storage == nullptr) {
                         std::ranges::fill(shards[id], 0);
                     } else {
+                        LOG_DEBUG() << "try to read from storage " << id;
                         co_await storage->read_address(addr, shards[id], {0});
+                        LOG_DEBUG() << "read from storage done" << id;
                     }
                 } catch (...) {
                     LOG_ERROR() << "Failed to read address";
@@ -314,8 +324,10 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
                 stats.push_back(data_stat::lost);
             }
         }
+        LOG_DEBUG() << "[read_address] call recover";
         m_rs.recover(shards, stats);
 
+        LOG_DEBUG() << "[read_address] copy recovered data to buffer";
         for (auto& [frag, offset] : frags_and_offsets) {
             auto [id, pointer] = get_storage_pointer(frag.pointer);
             std::size_t chunk_offset = pointer % m_chunk_size;

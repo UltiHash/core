@@ -139,11 +139,11 @@ public:
         }
     }
 
-    void activate_storage(std::size_t id) {
+    void activate_storage(std::size_t id, std::size_t port_offset = 10000) {
         service_config service_cfg;
         service_cfg.working_dir = m_temp_dirs[id].path();
         storage_config storage_cfg;
-        storage_cfg.server.port = 10000 + id;
+        storage_cfg.server.port = port_offset + id;
         storage_cfg.working_directory = {
             std::filesystem::path(service_cfg.working_dir) / "storage"};
         LOG_DEBUG() << "storage " << id

@@ -10,15 +10,14 @@ using namespace boost::asio;
 
 namespace uh::cluster {
 
-service_registry::service_registry(etcd_manager& etcd, const std::string& key)
+service_registry::service_registry(etcd_manager& etcd, const std::string& key,
+                                   uint16_t port)
     : m_etcd(etcd),
-      m_key{key} {}
+      m_key{key} {
+    LOG_DEBUG() << "Registering service with port: " << port;
+    m_etcd.put(m_key, serialize(hostport(get_host(), port)));
+}
 
 service_registry::~service_registry() { m_etcd.rm(m_key); }
-
-void service_registry::register_service(const server_config& config) {
-    // TODO: move it into the constructor
-    m_etcd.put(m_key, serialize(hostport(get_host(), config.port)));
-}
 
 } // namespace uh::cluster

@@ -27,7 +27,8 @@ public:
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       config.working_dir)),
           m_service_registry(m_etcd,
-                             ns::root.deduplicator.hostports[m_service_id]),
+                             ns::root.deduplicator.hostports[m_service_id],
+                             config.server.port),
 
           m_gdv{m_ioc, m_etcd, config.global_data_view},
           m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
@@ -36,10 +37,7 @@ public:
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
                    m_ioc) {}
 
-    void run() {
-        m_service_registry.register_service(m_server.get_server_config());
-        m_server.run();
-    }
+    void run() { m_server.run(); }
 
     void stop() { m_server.stop(); }
 
