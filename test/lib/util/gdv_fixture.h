@@ -62,7 +62,7 @@ public:
         coordinator::service::publish_configs(m_etcd, configs);
         try {
             for (size_t i = 0; i < m_config.storages; i++) {
-                m_temp_dirs.emplace_back();
+                m_temp_dirs.emplace_back(std::make_unique<temp_directory>());
                 activate_storage(i);
             }
         } catch (...) {
@@ -141,7 +141,7 @@ public:
 
     void activate_storage(std::size_t id, std::size_t port_offset = 10000) {
         service_config service_cfg;
-        service_cfg.working_dir = m_temp_dirs[id].path();
+        service_cfg.working_dir = m_temp_dirs[id]->path();
         storage_config storage_cfg;
         storage_cfg.server.port = port_offset + id;
         storage_cfg.working_directory = {
@@ -154,6 +154,12 @@ public:
             std::make_unique<storage::service>(service_cfg, storage_cfg);
     }
 
+    void introduce_new_storage(std::size_t id,
+                               std::size_t port_offset = 10000) {
+        m_temp_dirs[id] = std::make_unique<temp_directory>();
+        activate_storage(id, port_offset);
+    }
+
     auto get_data_view() { return m_gdv; }
 
     boost::asio::io_context& get_executor() { return m_ioc; }
@@ -164,7 +170,7 @@ private:
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
     std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
-    std::vector<temp_directory> m_temp_dirs;
+    std::vector<std::unique_ptr<temp_directory>> m_temp_dirs;
     etcd_manager m_etcd;
     global_data_view_config m_gdv_config;
     boost::asio::io_context m_ioc;

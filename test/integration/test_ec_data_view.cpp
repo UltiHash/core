@@ -227,6 +227,7 @@ BOOST_AUTO_TEST_CASE(reads_after_recovery_from_failed_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
+    LOG_DEBUG() << "write starting...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
