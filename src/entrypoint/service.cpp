@@ -58,10 +58,6 @@ service::service(const service_config& sc, entrypoint_config config)
       m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
-      // TODO: add support for non-persistent service_id
-      m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
-                         m_config.server.port),
-
       m_gdv{m_ioc, m_etcd, config.global_data_view},
       m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
 
@@ -81,6 +77,10 @@ service::service(const service_config& sc, entrypoint_config config)
                    std::make_unique<policy::module>(m_directory),
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
                m_ioc),
+      // TODO: add support for non-persistent service_id
+      m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
+                         m_config.server.port),
+
       m_gc(m_ioc, m_directory, m_gdv) {
 
     co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),

@@ -222,8 +222,7 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
         std::runtime_error);
 }
 
-BOOST_AUTO_TEST_CASE(reads_after_recovery_from_failed_state,
-                     *boost::unit_test::disabled()) {
+BOOST_AUTO_TEST_CASE(reads_after_recovery_from_failed_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
