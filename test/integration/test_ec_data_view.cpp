@@ -54,9 +54,6 @@ BOOST_AUTO_TEST_CASE(reads_small_data_on_degraded_state) {
             .get();
 
     BOOST_TEST(buffer.size() == read_size);
-    LOG_DEBUG() << "buffer: " << buffer.string_view();
-    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
-
     BOOST_TEST(buffer == read_buffer);
 }
 
@@ -87,7 +84,7 @@ BOOST_AUTO_TEST_CASE(writes_returns_correct_address) {
     BOOST_TEST(buffer.size() == size);
 }
 
-BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_on_degraded_state) {
+BOOST_AUTO_TEST_CASE(reads_one_stripe_and_more_data_on_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 1);
@@ -113,9 +110,6 @@ BOOST_AUTO_TEST_CASE(reads_one_and_half_stripes_on_degraded_state) {
             .get();
 
     BOOST_TEST(buffer.size() == read_size);
-    LOG_DEBUG() << "buffer: " << buffer.string_view();
-    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
-
     BOOST_TEST(buffer == read_buffer);
 }
 
@@ -145,13 +139,10 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
             .get();
 
     BOOST_TEST(buffer.size() == read_size);
-    LOG_DEBUG() << "buffer: " << buffer.string_view();
-    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
-
     BOOST_TEST(buffer == read_buffer);
 }
 
-BOOST_AUTO_TEST_CASE(reads_two_stripes_after_down_and_up_of_storages) {
+BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
@@ -183,9 +174,6 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_after_down_and_up_of_storages) {
             .get();
 
     BOOST_TEST(buffer.size() == read_size);
-    LOG_DEBUG() << "buffer: " << buffer.string_view();
-    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
-
     BOOST_TEST(buffer == read_buffer);
 }
 
@@ -222,7 +210,7 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
         std::runtime_error);
 }
 
-BOOST_AUTO_TEST_CASE(reads_after_recovery_from_failed_state) {
+BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
@@ -255,9 +243,39 @@ BOOST_AUTO_TEST_CASE(reads_after_recovery_from_failed_state) {
             .get();
 
     BOOST_TEST(buffer.size() == read_size);
-    LOG_DEBUG() << "buffer: " << buffer.string_view();
-    LOG_DEBUG() << "read_buffer: " << read_buffer.string_view();
+    BOOST_TEST(buffer == read_buffer);
+}
 
+BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_reparing_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+
+    LOG_DEBUG() << "write starting...";
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    LOG_DEBUG() << "introduce new storage as storage 5";
+    introduce_new_storage(5);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
     BOOST_TEST(buffer == read_buffer);
 }
 
