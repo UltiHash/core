@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(reads_small_data_on_degraded_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
-    LOG_DEBUG() << "write data: " << buffer.string_view();
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -74,6 +74,7 @@ BOOST_AUTO_TEST_CASE(writes_returns_correct_address) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -98,6 +99,7 @@ BOOST_AUTO_TEST_CASE(reads_one_stripe_and_more_data_on_degraded_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -135,6 +137,7 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -182,6 +185,7 @@ BOOST_AUTO_TEST_CASE(fails_to_write_on_degraded_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::DEGRADED));
 
+    LOG_DEBUG() << "start writing...";
     BOOST_REQUIRE_THROW(
         boost::asio::co_spawn(get_executor(),
                               gdv->write(buffer.string_view(), {0}),
@@ -199,6 +203,7 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -245,13 +250,16 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
-    {
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    try {
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
-
-        auto addr = boost::asio::co_spawn(get_executor(),
-                                          gdv->write(buffer.string_view(), {0}),
-                                          boost::asio::use_future)
-                        .get();
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    } catch (const std::exception& e) {
+        BOOST_FAIL("Write failed: " + std::string(e.what()));
     }
 
     LOG_DEBUG() << "kill storage 1";
@@ -276,19 +284,25 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
 
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 2);
 
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
     LOG_DEBUG() << "start reading...";
-    auto read_size =
-        boost::asio::co_spawn(get_executor(),
-                              gdv->read_address(addr, read_buffer.span()),
-                              boost::asio::use_future)
-            .get();
+    std::size_t read_size;
+    BOOST_REQUIRE_NO_THROW({
+        read_size =
+            boost::asio::co_spawn(get_executor(),
+                                  gdv->read_address(addr, read_buffer.span()),
+                                  boost::asio::use_future)
+                .get();
+    });
 
     BOOST_TEST(buffer.size() == read_size);
     BOOST_TEST(buffer == read_buffer);
@@ -304,6 +318,7 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
         ns::root.storage_groups[get_group_config().id].group_state,
         serialize(storage::group_state::HEALTHY));
 
+    LOG_DEBUG() << "start writing...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
