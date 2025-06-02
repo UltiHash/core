@@ -63,9 +63,8 @@ BOOST_FIXTURE_TEST_CASE(DetectStateChange, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         WAIT_UNTIL_CHECK(1000, count_valid_services() == 1u);
     }
@@ -78,9 +77,8 @@ BOOST_FIXTURE_TEST_CASE(GetClient, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         WAIT_UNTIL_NO_THROW(1000, load_balancer.get());
     }
@@ -99,9 +97,8 @@ BOOST_FIXTURE_TEST_CASE(Wait, fixture) {
         CHECK_STABLE(100, !has_result);
 
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         WAIT_UNTIL_CHECK(100, has_result);
 
@@ -118,9 +115,8 @@ BOOST_AUTO_TEST_CASE(FindInitial) {
     {
         test::server srv("0.0.0.0", 8081);
         etcd_manager etcd;
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         fixture f;
         BOOST_TEST(!f.all_null_services());
@@ -143,9 +139,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 1u);
         BOOST_CHECK_NO_THROW(services.at(get_storage_id(uint128_t())));
@@ -159,9 +154,8 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[1]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[1], 8081);
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 1u);
 
@@ -176,12 +170,10 @@ BOOST_FIXTURE_TEST_CASE(GetClientByOffset, fixture) {
 
     {
         test::server srv("0.0.0.0", 8081);
-        service_registry sr1(etcd,
-                             ns::root.storage_groups[0].storage_hostports[1]);
-        sr1.register_service({.port = 8081});
-        service_registry sr2(etcd,
-                             ns::root.storage_groups[0].storage_hostports[3]);
-        sr2.register_service({.port = 8081});
+        service_registry sr1(
+            etcd, ns::root.storage_groups[0].storage_hostports[1], 8081);
+        service_registry sr2(
+            etcd, ns::root.storage_groups[0].storage_hostports[3], 8081);
 
         WAIT_UNTIL_CHECK(3000, count_valid_services() == 2u);
         BOOST_CHECK_THROW(services.at(get_storage_id(uint128_t())),
@@ -203,9 +195,8 @@ BOOST_FIXTURE_TEST_CASE(WaitForDependency, fixture) {
 
     {
         test::server svr("0.0.0.0", 8081);
-        service_registry sr(etcd,
-                            ns::root.storage_groups[0].storage_hostports[0]);
-        sr.register_service({.port = 8081});
+        service_registry sr(
+            etcd, ns::root.storage_groups[0].storage_hostports[0], 8081);
 
         WAIT_UNTIL_NO_THROW(1000, services.at(get_storage_id(uint128_t())));
     }

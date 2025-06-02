@@ -30,7 +30,6 @@ private:
     boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
     std::size_t m_service_id;
-    service_registry m_service_registry;
 
     storage::global::global_data_view m_gdv;
     storage::global::cache m_cache;
@@ -43,6 +42,7 @@ private:
     license_watcher m_license_watcher;
     limits m_limits;
     server m_server;
+    service_registry m_service_registry;
     garbage_collector m_gc;
 };
 

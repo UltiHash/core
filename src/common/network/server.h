@@ -52,32 +52,30 @@ public:
                         LOG_ERROR() << "accept: " << e.what();
                     }
             });
-    }
-
-    void run() {
         LOG_INFO() << "starting server, listening at " << m_config.bind_address
                    << ":" << m_config.port;
-        std::exception_ptr excp_ptr;
 
         for (size_t i = 0; i < m_config.threads - 1; i++)
             m_thread_container.emplace_back([&] {
                 try {
                     m_ioc.run();
                 } catch (const std::exception&) {
-                    excp_ptr = std::current_exception();
+                    m_excp_ptr = std::current_exception();
                 }
             });
+    }
 
+    void run() {
         // the calling thread is also running the I/O service
         try {
             m_ioc.run();
         } catch (std::exception& e) {
-            excp_ptr = std::current_exception();
+            m_excp_ptr = std::current_exception();
         }
 
-        if (excp_ptr) {
+        if (m_excp_ptr) {
             try {
-                std::rethrow_exception(excp_ptr);
+                std::rethrow_exception(m_excp_ptr);
             } catch (std::exception& e) {
                 throw e;
             }
@@ -155,6 +153,7 @@ private:
         m_acceptors;
     std::unique_ptr<protocol_handler> m_handler;
     std::atomic<bool> m_is_running;
+    std::exception_ptr m_excp_ptr;
 };
 
 //------------------------------------------------------------------------------
