@@ -205,8 +205,6 @@ private:
         }
 
         if (new_state != state) {
-            m_group_state_manager.put(new_state);
-
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] assigned_count {}, has_down {}",
                 m_group_config.id, m_storage_id, stats.assigned_count,
@@ -215,6 +213,8 @@ private:
                 "[group {}, storage {}] change group state to {}",
                 m_group_config.id, m_storage_id,
                 magic_enum::enum_name(new_state));
+
+            m_group_state_manager.put(new_state);
         }
     }
 
