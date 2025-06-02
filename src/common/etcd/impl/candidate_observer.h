@@ -54,6 +54,7 @@ public:
             return false;
 
         switch (get_etcd_action_enum(resp.action)) {
+        case etcd_action::GET:
         case etcd_action::SET: {
             auto val = deserialize<id_t>(resp.value);
             if (val == default_id) {
@@ -64,6 +65,14 @@ public:
                 if (m_after_proclaim) {
                     m_after_proclaim(is_leader());
                 }
+            }
+            break;
+        }
+        case etcd_action::CREATE: {
+            auto val = deserialize<id_t>(resp.value);
+            if (val != staging_id) {
+                throw std::runtime_error("Creating candidate key needs to be "
+                                         "done with value `default_id`");
             }
             break;
         }
