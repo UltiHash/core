@@ -54,20 +54,13 @@ public:
                               {m_storage_index}},
           m_storage_states{m_prefix.storage_states, num_storages},
           m_leader{m_prefix.leader, candidate_observer::default_id},
-          m_group_state{m_prefix.group_state,
-                        [this](group_state& state) {
-                            if (state != group_state::UNDETERMINED) {
-                                m_group_state_promise.set_value();
-                            }
-                        }},
+          m_group_state{m_prefix.group_state},
           m_subscriber{
               "externals_subscriber",
               etcd,
               m_prefix,
               {m_storage_hostports, m_storage_states, m_leader, m_group_state},
-              std::move(callback)} {
-        m_group_state_promise.get_future().get();
-    }
+              std::move(callback)} {}
 
     // NOTE: get method is heavy: it retrieves all atomic variables
     auto get_storage_services() { return m_storage_index.get(); };
@@ -83,7 +76,6 @@ private:
     hostports_observer<storage_interface> m_storage_hostports;
     vector_observer<storage_state> m_storage_states;
     value_observer<candidate_observer::id_t> m_leader;
-    std::promise<void> m_group_state_promise;
     value_observer<group_state> m_group_state;
 
     subscriber m_subscriber;
