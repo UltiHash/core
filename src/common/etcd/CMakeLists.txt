@@ -4,7 +4,7 @@ add_library(etcd
             utils.cpp)
 
 target_link_libraries(etcd
-    etcd-cpp-apiv3
+    etcd-cpp-api
     ec
     service_interfaces
     network
