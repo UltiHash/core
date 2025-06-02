@@ -180,7 +180,7 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
         // throw exception
         [this, buffer](std::size_t id, const address_info& info) -> coro<bool> {
             try {
-                auto storage = m_externals.get_storage_index().at(id);
+                auto storage = m_externals.get_storage_service(id);
                 auto state = m_externals.get_storage_states().at(id);
                 if (storage == nullptr or *state != storage_state::ASSIGNED) {
                     co_return false;
