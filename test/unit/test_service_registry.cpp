@@ -30,8 +30,7 @@ BOOST_AUTO_TEST_CASE(basic_register_retrieve_deregister) {
     }
 
     {
-        service_registry registering_registry(etcd, key);
-        registering_registry.register_service({.port = port_address});
+        service_registry registering_registry(etcd, key, port_address);
 
         auto hp = deserialize<hostport>(etcd.get(key));
         BOOST_TEST(hp.hostname == boost::asio::ip::host_name());

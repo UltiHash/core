@@ -37,8 +37,7 @@ public:
             })
 #endif
         : m_config{config},
-          m_etcd(),
-          m_service_cfg(make_service_config()) {
+          m_etcd() {
     }
 
     virtual ~global_data_view_fixture() {}
@@ -59,21 +58,12 @@ public:
         // NOTE: Now support only one group
         storage::group_configs configs;
         configs.configs.push_back(m_config);
-
+        m_storage_instances.resize(m_config.storages);
         coordinator::service::publish_configs(m_etcd, configs);
         try {
             for (size_t i = 0; i < m_config.storages; i++) {
-                service_config service_cfg;
-                service_cfg.working_dir = m_temp_dirs.emplace_back().path();
-                storage_config storage_cfg;
-                storage_cfg.server.port = 10000 + i;
-                storage_cfg.working_directory = {
-                    std::filesystem::path(service_cfg.working_dir) / "storage"};
-                storage_cfg.instance_id = i;
-                storage_cfg.group_id = m_config.id;
-                m_storage_instances.emplace_back(
-                    std::make_unique<storage::service>(service_cfg,
-                                                       storage_cfg));
+                m_temp_dirs.emplace_back(std::make_unique<temp_directory>());
+                activate_storage(i);
             }
         } catch (...) {
             LOG_ERROR() << "Failed to create storage instances";
@@ -141,12 +131,33 @@ public:
 
     auto get_group_config() { return m_config; }
 
-    void stop_storage(std::size_t id) {
+    void deactivate_storage(std::size_t id) {
         auto& node = m_storage_instances.at(id);
         if (node != nullptr) {
             node->stop();
             node.reset();
         }
+    }
+
+    void activate_storage(std::size_t id, std::size_t port_offset = 10000) {
+        service_config service_cfg;
+        service_cfg.working_dir = m_temp_dirs[id]->path();
+        storage_config storage_cfg;
+        storage_cfg.server.port = port_offset + id;
+        storage_cfg.working_directory = {
+            std::filesystem::path(service_cfg.working_dir) / "storage"};
+        LOG_DEBUG() << "storage " << id
+                    << " path: " << storage_cfg.working_directory;
+        storage_cfg.instance_id = id;
+        storage_cfg.group_id = m_config.id;
+        m_storage_instances[id] =
+            std::make_unique<storage::service>(service_cfg, storage_cfg);
+    }
+
+    void introduce_new_storage(std::size_t id,
+                               std::size_t port_offset = 10000) {
+        m_temp_dirs[id] = std::make_unique<temp_directory>();
+        activate_storage(id, port_offset);
     }
 
     auto get_data_view() { return m_gdv; }
@@ -156,18 +167,12 @@ public:
 private:
     storage::group_config m_config;
 
-    service_config make_service_config() {
-        service_config service_cfg;
-        service_cfg.working_dir = m_temp_dirs.emplace_back().path();
-        return service_cfg;
-    }
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
     std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
-    std::vector<temp_directory> m_temp_dirs;
+    std::vector<std::unique_ptr<temp_directory>> m_temp_dirs;
     etcd_manager m_etcd;
     global_data_view_config m_gdv_config;
-    service_config m_service_cfg;
     boost::asio::io_context m_ioc;
     std::vector<std::thread> m_threads;
 

@@ -42,19 +42,17 @@ public:
               }(),
               sc.working_directory)),
 
-          m_service_registry(m_etcd, ns::root.storage_groups[m_group_id]
-                                         .storage_hostports[m_storage_id]),
-
+          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc),
+          m_service_registry(m_etcd,
+                             ns::root.storage_groups[m_group_id]
+                                 .storage_hostports[m_storage_id],
+                             sc.server.port),
           m_ec_maintainer(
               (m_group_config.type == group_config::type_t::ERASURE_CODING)
                   ? std::make_optional<ec_maintainer<local_storage>>(
                         m_etcd, m_group_config, m_storage_id, service_config,
                         sc.global_data_view, m_storage)
-                  : std::nullopt),
-
-          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc) {}
-
-    void run() {
+                  : std::nullopt) {
         metric<storage_available_space_gauge, byte, int64_t>::
             register_gauge_callback(
                 [this]() { return m_storage->get_available_space_func(); },
@@ -85,10 +83,9 @@ public:
             metric<storage_used_space_gauge, byte,
                    int64_t>::remove_gauge_callback();
         });
-
-        m_service_registry.register_service(m_server.get_server_config());
-        m_server.run();
     }
+
+    void run() { m_server.run(); }
 
     void stop() { m_server.stop(); }
 
@@ -104,8 +101,8 @@ private:
     std::size_t m_group_id;
     group_config m_group_config;
     std::shared_ptr<local_storage> m_storage;
+    server m_server;
     service_registry m_service_registry;
     std::optional<ec_maintainer<local_storage>> m_ec_maintainer;
-    server m_server;
 };
 } // namespace uh::cluster::storage

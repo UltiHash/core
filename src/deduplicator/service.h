@@ -26,20 +26,17 @@ public:
           m_service_id(get_service_id(m_etcd,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       config.working_dir)),
-          m_service_registry(m_etcd,
-                             ns::root.deduplicator.hostports[m_service_id]),
-
           m_gdv{m_ioc, m_etcd, config.global_data_view},
           m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_gdv, m_cache)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
-                   m_ioc) {}
+                   m_ioc),
+          m_service_registry(m_etcd,
+                             ns::root.deduplicator.hostports[m_service_id],
+                             config.server.port) {}
 
-    void run() {
-        m_service_registry.register_service(m_server.get_server_config());
-        m_server.run();
-    }
+    void run() { m_server.run(); }
 
     void stop() { m_server.stop(); }
 
@@ -54,12 +51,11 @@ private:
     etcd_manager m_etcd;
     std::size_t m_service_id;
 
-    service_registry m_service_registry;
-
     storage::global::global_data_view m_gdv;
     storage::global::cache m_cache;
 
     std::shared_ptr<local_deduplicator> m_deduplicator;
     server m_server;
+    service_registry m_service_registry;
 };
 } // namespace uh::cluster::deduplicator

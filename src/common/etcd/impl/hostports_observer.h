@@ -41,14 +41,14 @@ public:
         case etcd_action::GET:
         case etcd_action::CREATE:
             LOG_INFO() << std::format(
-                "Connecting to service {} with id{} and hostport {}",
+                "Connecting to service {} with id {} and hostport {}",
                 get_service_string(service_interface::service_role), id,
                 resp.value);
             add(id, deserialize<hostport>(resp.value));
             break;
         case etcd_action::SET:
             LOG_INFO() << std::format(
-                "updating connection to service {} with id{} and hostport {}",
+                "updating connection to service {} with id {} and hostport {}",
                 get_service_string(service_interface::service_role), id,
                 resp.value);
             remove(id);
@@ -56,7 +56,7 @@ public:
             break;
         case etcd_action::DELETE:
             LOG_INFO() << std::format(
-                "Removing connection to service {} with id{} and hostport {}",
+                "Removing connection to service {} with id {} and hostport {}",
                 get_service_string(service_interface::service_role), id,
                 resp.value);
             remove(id);
