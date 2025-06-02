@@ -94,6 +94,7 @@ public:
                 m_excp_ptrs[i] = std::current_exception();
             }
         });
+        std::this_thread::sleep_for(100ms);
     }
 
     void teardown() {
