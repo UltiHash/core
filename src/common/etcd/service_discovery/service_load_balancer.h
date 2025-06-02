@@ -15,14 +15,15 @@ public:
         std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
         : m_service_get_timeout{service_get_timeout} {}
 
-    void add_client(size_t id,
-                    std::shared_ptr<service_interface> service) override {
+    void
+    add_client(size_t id,
+               std::shared_ptr<service_interface> service) noexcept override {
         std::lock_guard l(m_mutex);
         m_services.emplace(id, service);
         m_cv.notify_one();
     }
 
-    void remove_client(size_t id) override {
+    void remove_client(size_t id) noexcept override {
         std::lock_guard l(m_mutex);
 
         auto it = m_services.find(id);
