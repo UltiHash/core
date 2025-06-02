@@ -189,9 +189,14 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback,
     }
 
     auto wrapper = [cb = std::move(callback)](const etcd::Response& resp) {
-        auto val = resp.value();
         if (resp.is_ok()) {
-            cb(response(resp.action(), val.key(), val.as_string()));
+            auto values = resp.values();
+            auto actions = resp.actions();
+            for (auto i = 0u; i < values.size(); ++i) {
+                auto action = actions[i];
+                auto val = values[i];
+                cb(response(action, val.key(), val.as_string()));
+            }
         }
     };
     m_watcher_entries[prefix] = watcher_entry(
