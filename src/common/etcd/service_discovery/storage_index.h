@@ -15,17 +15,25 @@ public:
     explicit storage_index(std::size_t num_storages)
         : m_services(num_storages) {}
 
-    void
-    add_client(size_t id,
-               std::shared_ptr<storage_interface> service) noexcept override {
+    void add_client(size_t id,
+                    std::shared_ptr<storage_interface> service) override {
         m_services.at(id).store(service, std::memory_order_release);
     }
-    void remove_client(size_t id) noexcept override {
+    void remove_client(size_t id) override {
         m_services.at(id).store(nullptr, std::memory_order_release);
     }
 
     std::shared_ptr<storage_interface> at(std::size_t id) {
+        if (id >= m_services.size()) {
+            throw std::out_of_range("access wrong index storage");
+        }
+
         auto rv = m_services.at(id).load(std::memory_order_acquire);
+        if (rv == nullptr) {
+            throw std::runtime_error("storage " + std::to_string(id) +
+                                     " is not available");
+        }
+
         return rv;
     }
 
