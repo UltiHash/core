@@ -37,10 +37,17 @@ jobs:
     needs:
       - build-core
       - build-database-init
+    strategy:
+      matrix:
+        test: 
+          - name: simple-rr
+            helm_values: testing/feature/helm-values-on-premise-rr.yaml
+          - name: simple-ec
+            helm_values: testing/feature/helm-values-on-premise-ec.yaml
     steps:
 
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test.name }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
@@ -69,7 +76,7 @@ jobs:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
         with:
-          input: testing/feature/helm-values-on-premise.yaml
+          input: ${{ matrix.test.helm_values }}
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
