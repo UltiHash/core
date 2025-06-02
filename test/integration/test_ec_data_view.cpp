@@ -142,6 +142,25 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
     BOOST_TEST(buffer == read_buffer);
 }
 
+BOOST_AUTO_TEST_CASE(fails_to_write_on_degraded_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    BOOST_REQUIRE_THROW(
+        boost::asio::co_spawn(get_executor(),
+                              gdv->write(buffer.string_view(), {0}),
+                              boost::asio::use_future)
+            .get(),
+        std::runtime_error);
+}
+
 BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
@@ -163,6 +182,50 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
 
     LOG_DEBUG() << "revive storage 4";
     activate_storage(4);
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    BOOST_TEST(buffer == read_buffer);
+}
+
+BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+    {
+        auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+
+        auto addr = boost::asio::co_spawn(get_executor(),
+                                          gdv->write(buffer.string_view(), {0}),
+                                          boost::asio::use_future)
+                        .get();
+    }
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    LOG_DEBUG() << "revive storage 1";
+    activate_storage(1);
+
+    LOG_DEBUG() << "revive storage 4";
+    activate_storage(4);
+
+    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 2);
+
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
@@ -246,6 +309,56 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
     BOOST_TEST(buffer == read_buffer);
 }
 
+BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
+    auto config = get_group_config();
+    auto gdv = get_data_view();
+
+    {
+        auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+        LOG_DEBUG() << "write starting...";
+        auto addr = boost::asio::co_spawn(get_executor(),
+                                          gdv->write(buffer.string_view(), {0}),
+                                          boost::asio::use_future)
+                        .get();
+    }
+
+    LOG_DEBUG() << "kill storage 1";
+    deactivate_storage(1);
+
+    LOG_DEBUG() << "kill storage 4";
+    deactivate_storage(4);
+
+    LOG_DEBUG() << "kill storage 5";
+    deactivate_storage(5);
+
+    LOG_DEBUG() << "revive storage 1";
+    activate_storage(1);
+
+    LOG_DEBUG() << "revive storage 4";
+    activate_storage(4);
+
+    LOG_DEBUG() << "revive storage 5";
+    activate_storage(5);
+
+    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 2);
+    LOG_DEBUG() << "write starting...";
+    auto addr = boost::asio::co_spawn(get_executor(),
+                                      gdv->write(buffer.string_view(), {0}),
+                                      boost::asio::use_future)
+                    .get();
+
+    auto read_buffer = shared_buffer<char>(buffer.size());
+
+    LOG_DEBUG() << "start reading...";
+    auto read_size =
+        boost::asio::co_spawn(get_executor(),
+                              gdv->read_address(addr, read_buffer.span()),
+                              boost::asio::use_future)
+            .get();
+
+    BOOST_TEST(buffer.size() == read_size);
+    BOOST_TEST(buffer == read_buffer);
+}
 BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_reparing_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
