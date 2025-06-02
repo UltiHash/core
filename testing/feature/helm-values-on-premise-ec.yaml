@@ -76,7 +76,7 @@ storage:
       storages: 5
       data_shards: 3
       parity_shards: 2
-      stripe_size_kib: 1024
+      stripe_size_kib: 1020
       storageClass: local-path
       size: 5Gi
       mountPath: /var/lib/uh/storage
