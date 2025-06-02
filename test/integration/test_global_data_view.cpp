@@ -11,16 +11,24 @@
 
 namespace uh::cluster {
 
-BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture,
-                        *boost::unit_test::disabled()) {
+BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
     auto gdv = get_data_view();
     BOOST_REQUIRE_THROW(
         boost::asio::co_spawn(
             get_executor(),
-            gdv->read(std::numeric_limits<uint64_t>::max(), 8 * KIBI_BYTE),
+            gdv->read(
+#if defined(WITH_EC)
+                ((static_cast<uint128_t>(std::numeric_limits<uint64_t>::max()) +
+                  1) *
+                 get_group_config().data_shards) -
+                    1,
+#else
+                std::numeric_limits<uint64_t>::max(),
+#endif
+                8 * KIBI_BYTE),
             boost::asio::use_future)
             .get(),
-        uh::cluster::error_exception);
+        std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_fragment, global_data_view_fixture) {
@@ -58,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE(invalid_read_address, global_data_view_fixture) {
                               gdv->read_address(addr, result_buffer.span()),
                               boost::asio::use_future)
             .get(),
-        uh::cluster::error_exception);
+        std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
