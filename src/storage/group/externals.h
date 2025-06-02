@@ -48,34 +48,36 @@ public:
                          service_factory<storage_interface> service_factory,
                          callback_t callback = nullptr)
         : m_prefix{get_prefix(group_id)},
-          m_leader{m_prefix.leader, candidate_observer::default_id},
-          m_group_state{m_prefix.group_state},
-          m_storage_states{m_prefix.storage_states, num_storages},
           m_storage_index{num_storages},
           m_storage_hostports{m_prefix.storage_hostports,
                               std::move(service_factory),
                               {m_storage_index}},
+          m_storage_states{m_prefix.storage_states, num_storages},
+          m_leader{m_prefix.leader, candidate_observer::default_id},
+          m_group_state{m_prefix.group_state},
           m_subscriber{
               "externals_subscriber",
               etcd,
               m_prefix,
-              {m_leader, m_group_state, m_storage_states, m_storage_hostports},
+              {m_storage_hostports, m_storage_states, m_leader, m_group_state},
               std::move(callback)} {}
 
+    // NOTE: get method is heavy: it retrieves all atomic variables
+    auto get_storage_services() { return m_storage_index.get(); };
+    auto get_storage_service(size_t id) { return m_storage_index.at(id); };
+    auto get_storage_states() { return m_storage_states.get(); };
     auto get_leader() { return m_leader.get(); };
     auto get_group_state() { return m_group_state.get(); };
-    auto get_storage_states() { return m_storage_states.get(); };
-    auto get_storage_services() { return m_storage_index.get(); };
-    auto& get_storage_index() { return m_storage_index; };
 
 private:
     prefix_t m_prefix;
-    value_observer<candidate_observer::id_t> m_leader;
-    value_observer<group_state> m_group_state;
-    vector_observer<storage_state> m_storage_states;
 
     storage_index m_storage_index;
     hostports_observer<storage_interface> m_storage_hostports;
+    vector_observer<storage_state> m_storage_states;
+    value_observer<candidate_observer::id_t> m_leader;
+    value_observer<group_state> m_group_state;
+
     subscriber m_subscriber;
 };
 
