@@ -149,15 +149,15 @@ etcd_manager::ls(const std::string& prefix) const {
 int64_t etcd_manager::ls(const std::string& prefix, callback_t callback) const {
 
     auto client = m_client.load();
-    auto ls_resp = client->ls(prefix);
-    if (ls_resp.is_ok()) {
-        auto values = ls_resp.values();
+    auto resp = client->ls(prefix);
+    if (resp.is_ok()) {
+        auto values = resp.values();
         for (auto i = 0u; i < values.size(); ++i) {
             auto val = values[i];
-            callback(response(ls_resp.action(), val.key(), val.as_string()));
+            callback(response(resp.action(), val.key(), val.as_string()));
         }
     }
-    return ls_resp.index();
+    return resp.index();
 }
 
 void etcd_manager::rm(const std::string& key) noexcept {
