@@ -38,23 +38,31 @@ private:
     }
 
     void on_watch(etcd_manager::response resp) {
-        try {
-            if (!m_name.empty()) {
-                LOG_INFO() << std::format(
-                    "{} has detected {} action on {} with value {}", m_name,
-                    resp.action, resp.key, resp.value);
-            }
+        if (!m_name.empty()) {
+            LOG_INFO() << std::format(
+                "{} has detected {} action on {} with value {}", m_name,
+                resp.action, resp.key, resp.value);
+        }
 
-            for (auto& o : m_observers) {
+        for (auto& o : m_observers) {
+            try {
                 o.get().on_watch(resp);
+            } catch (const std::runtime_error& e) {
+                LOG_WARN()
+                    << "if you see stoul exception, it might be the case "
+                       "deserialize function get's wrong value: "
+                    << e.what();
+            } catch (const std::exception& e) {
+                LOG_WARN() << "error on  a observer: " << e.what();
             }
-            run_callback();
+        }
 
+        try {
+            run_callback();
         } catch (const std::runtime_error& e) {
             LOG_WARN() << "if you see stoul exception, it might be the case "
                           "deserialize function get's wrong value: "
                        << e.what();
-
         } catch (const std::exception& e) {
             LOG_WARN() << "error updating externals: " << e.what();
         }

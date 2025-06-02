@@ -68,10 +68,11 @@ public:
     fixture_with_subscribers()
         : basic_fixture() {
 
+        m_temp_dirs.resize(m_num_instances);
+
         for (std::size_t i = 0; i < m_num_instances; ++i) {
 
-            temp_directory dir;
-            service_config service_cfg{.working_dir = dir.path()};
+            service_config service_cfg{.working_dir = m_temp_dirs[i].path()};
 
             m_etcds.push_back(std::make_unique<etcd_manager>());
             m_wo_interfaces.emplace_back(
@@ -151,6 +152,7 @@ protected:
         ns::root.storage_groups[m_group_cfg.id],
         {m_leader_observer, m_group_state_observer, m_storage_states_observer}};
 
+    std::vector<temp_directory> m_temp_dirs;
     std::vector<std::unique_ptr<etcd_manager>> m_etcds;
     std::vector<std::shared_ptr<write_offset_interface>> m_wo_interfaces;
     std::vector<std::unique_ptr<ec_maintainer<write_offset_interface>>>
@@ -330,8 +332,8 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
                  *m_group_state_observer.get() == group_state::DEGRADED,
              4s);
 
+    temp_directory dir;
     {
-        temp_directory dir;
         service_config service_cfg{.working_dir = dir.path()};
         m_ec_maintainers[leader_id] =
             std::make_unique<ec_maintainer<write_offset_interface>>(
