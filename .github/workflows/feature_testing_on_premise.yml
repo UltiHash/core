@@ -7,36 +7,36 @@ on:
 
 jobs:
 
-  #build-core:
-  #  uses: ./.github/workflows/docker_build_template.yml 
-  #  with:
-  #    docker_context: .
-  #    dockerfile_path: Dockerfile
-  #    docker_build_args: |
-  #      BuildType=RelWithDebInfo
-  #      DebugTools=True
-  #    docker_images: ghcr.io/ultihash/cluster
-  #    docker_tags: "pr-${{ github.event.pull_request.number }}"
-  #    platforms: linux/amd64
-  #  secrets:
-  #    ghcr_token: ${{ secrets.PAT }}
+  build-core:
+    uses: ./.github/workflows/docker_build_template.yml 
+    with:
+      docker_context: .
+      dockerfile_path: Dockerfile
+      docker_build_args: |
+        BuildType=RelWithDebInfo
+        DebugTools=True
+      docker_images: ghcr.io/ultihash/cluster
+      docker_tags: "pr-${{ github.event.pull_request.number }}"
+      platforms: linux/amd64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
         
-  #build-database-init:
-  #  uses: ./.github/workflows/docker_build_template.yml
-  #  with:
-  #    docker_context: .
-  #    dockerfile_path: tools/database-init/Dockerfile
-  #    docker_images: ghcr.io/ultihash/database-init
-  #    docker_tags: "pr-${{ github.event.pull_request.number }}"
-  #    platforms: linux/amd64
-  #  secrets:
-  #    ghcr_token: ${{ secrets.PAT }}
+  build-database-init:
+    uses: ./.github/workflows/docker_build_template.yml
+    with:
+      docker_context: .
+      dockerfile_path: tools/database-init/Dockerfile
+      docker_images: ghcr.io/ultihash/database-init
+      docker_tags: "pr-${{ github.event.pull_request.number }}"
+      platforms: linux/amd64
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
 
   deploy-and-test:
     runs-on: lightweight-generic-jobs
-    #needs:
-    #  - build-core
-    #  - build-database-init
+    needs:
+      - build-core
+      - build-database-init
     strategy:
       matrix:
         test: 
