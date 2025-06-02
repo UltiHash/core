@@ -32,6 +32,10 @@ BOOST_AUTO_TEST_CASE(reads_small_data_on_degraded_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(64);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     LOG_DEBUG() << "write data: " << buffer.string_view();
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
@@ -66,6 +70,10 @@ BOOST_AUTO_TEST_CASE(writes_returns_correct_address) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 1);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -85,6 +93,10 @@ BOOST_AUTO_TEST_CASE(reads_one_stripe_and_more_data_on_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 1);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
 
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
@@ -119,6 +131,10 @@ BOOST_AUTO_TEST_CASE(reads_two_stripes_on_degraded_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -152,6 +168,10 @@ BOOST_AUTO_TEST_CASE(fails_to_write_on_degraded_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     LOG_DEBUG() << "kill storage 1";
     deactivate_storage(1);
 
@@ -174,6 +194,10 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
 
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
@@ -216,6 +240,11 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_healthy_state) {
 BOOST_AUTO_TEST_CASE(writes_after_transition_from_degraded_to_healthy_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     {
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
@@ -271,6 +300,10 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
     std::cout << "buffer size: " << buffer.string_view().size();
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -306,6 +339,10 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
 
     LOG_DEBUG() << "write starting...";
     auto addr = boost::asio::co_spawn(get_executor(),
@@ -349,6 +386,10 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
 BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
     auto config = get_group_config();
     auto gdv = get_data_view();
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
 
     {
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
@@ -410,6 +451,10 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_repairing_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     LOG_DEBUG() << "write starting...";
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
@@ -456,6 +501,10 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_full) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
+
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
                                       boost::asio::use_future)
@@ -484,6 +533,10 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_padded) {
     auto gdv = get_data_view();
     auto chunk_size = (config.stripe_size_kib * 1_KiB) / config.data_shards;
     auto buffer = random_buffer(chunk_size);
+
+    get_etcd_manager().wait(
+        ns::root.storage_groups[get_group_config().id].group_state,
+        serialize(storage::group_state::HEALTHY));
 
     auto addr = boost::asio::co_spawn(get_executor(),
                                       gdv->write(buffer.string_view(), {0}),
