@@ -30,7 +30,7 @@ jobs:
 
       - name: Delete the testing environment
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
-          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
-          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
-          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true
