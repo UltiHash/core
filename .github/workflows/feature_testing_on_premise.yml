@@ -47,7 +47,9 @@ jobs:
     steps:
 
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test.name }}" >> $GITHUB_ENV
+        run: |
+          echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test.name }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
@@ -73,8 +75,8 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.DOCKER_TAG }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.DOCKER_TAG }}
         with:
           input: ${{ matrix.test.helm_values }}
           output: helm-values.yaml
