@@ -116,6 +116,7 @@ void service::run() {
 void service::stop() {
     LOG_INFO() << "stopping entrypoint " << m_service_id;
 
+    m_gc.stop();
     m_server.stop();
 }
 
