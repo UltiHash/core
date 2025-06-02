@@ -1,12 +1,5 @@
 set(CMAKE_CXX_STANDARD 20)
 
-option(BUILD_SHARED_LIBS "Build etcd-cpp-apiv3 shared libraries" OFF)
-option(BUILD_ETCD_CORE_ONLY "Build etcd-cpp-apiv3 core library (the synchronous runtime) only" ON)
-add_subdirectory(etcd-cpp-apiv3)
-add_library(etcd-cpp-apiv3 INTERFACE)
-target_link_libraries(etcd-cpp-apiv3 INTERFACE etcd-cpp-api-core)
-target_include_directories(etcd-cpp-apiv3 INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/etcd-cpp-apiv3)
-
 add_subdirectory(CLI11)
 
 option(WITH_OTLP_GRPC "Whether to include the OTLP gRPC exporter in the SDK" ON)
