@@ -21,7 +21,13 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
       m_rs{config.data_shards, config.parity_shards, m_chunk_size},
       m_externals(
           etcd, group_id, config.storages,
-          service_factory<storage_interface>(ioc, service_connections)) {}
+          service_factory<storage_interface>(ioc, service_connections)) {
+
+    LOG_DEBUG() << "[ec_data_view] waiting group state for group " << group_id;
+    etcd.wait(ns::root.storage_groups[group_id].group_state,
+              GROUP_STATE_WAIT_TIMEOUT);
+    LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
+}
 
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
