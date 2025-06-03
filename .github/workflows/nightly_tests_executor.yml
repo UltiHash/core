@@ -152,7 +152,7 @@ jobs:
   #    monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   stability-test-x86-64-ec:
-    needs: 
+    #needs: 
     #  - build-core
     #  - build-database-init
     #- stability-test-x86-64-rr
