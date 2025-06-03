@@ -69,6 +69,10 @@ add_custom_target(
     ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_CURRENT_LIST_DIR})
 
+#
+# Compile options for our build and for third-party libraries as well
+#
+add_compile_options(-fPIC)
 
 #
 # External dependencies
@@ -143,7 +147,6 @@ endif()
 # Compile Options
 #
 set(CMAKE_CXX_STANDARD 20)
-add_compile_options(-fPIC)
 add_compile_options(-Wall -Werror)
 
 #
