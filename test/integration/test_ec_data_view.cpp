@@ -312,10 +312,13 @@ BOOST_AUTO_TEST_CASE(fails_to_read_on_failed_state) {
     std::cout << "buffer size: " << buffer.string_view().size();
 
     LOG_DEBUG() << "start writing...";
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     std::cout << "address size: " << addr.size() << std::endl;
 
@@ -348,11 +351,14 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_failed_to_degraded_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
-    LOG_DEBUG() << "write starting...";
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     LOG_DEBUG() << "kill storage 1";
     deactivate_storage(1);
@@ -396,11 +402,14 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
 
     {
         auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
-        LOG_DEBUG() << "write starting...";
-        auto addr = boost::asio::co_spawn(get_executor(),
-                                          gdv->write(buffer.string_view(), {0}),
-                                          boost::asio::use_future)
-                        .get();
+        LOG_DEBUG() << "start writing...";
+        address addr;
+        BOOST_REQUIRE_NO_THROW({
+            addr = boost::asio::co_spawn(get_executor(),
+                                         gdv->write(buffer.string_view(), {0}),
+                                         boost::asio::use_future)
+                       .get();
+        });
     }
 
     LOG_DEBUG() << "kill storage 1";
@@ -430,11 +439,14 @@ BOOST_AUTO_TEST_CASE(writes_after_transition_from_failed_to_healthy_state) {
         serialize(storage::group_state::HEALTHY));
 
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB + 2);
-    LOG_DEBUG() << "write starting...";
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     auto read_buffer = shared_buffer<char>(buffer.size());
 
@@ -457,11 +469,14 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_repairing_state) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
-    LOG_DEBUG() << "write starting...";
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     LOG_DEBUG() << "kill storage 1";
     deactivate_storage(1);
@@ -506,10 +521,15 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_full) {
     auto gdv = get_data_view();
     auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
 
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
+
     auto chunk_size = (config.stripe_size_kib * 1_KiB) / config.data_shards;
     auto num_chunks = buffer.size() / chunk_size;
     BOOST_TEST(addr.size() == num_chunks);
@@ -538,10 +558,14 @@ BOOST_AUTO_TEST_CASE(write_chunk_fragmentation_padded) {
     auto chunk_size = (config.stripe_size_kib * 1_KiB) / config.data_shards;
     auto buffer = random_buffer(chunk_size);
 
-    auto addr = boost::asio::co_spawn(get_executor(),
-                                      gdv->write(buffer.string_view(), {0}),
-                                      boost::asio::use_future)
-                    .get();
+    LOG_DEBUG() << "start writing...";
+    address addr;
+    BOOST_REQUIRE_NO_THROW({
+        addr = boost::asio::co_spawn(get_executor(),
+                                     gdv->write(buffer.string_view(), {0}),
+                                     boost::asio::use_future)
+                   .get();
+    });
 
     auto num_chunks = buffer.size() / chunk_size;
     BOOST_TEST(addr.size() == num_chunks);
