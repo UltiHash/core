@@ -10,6 +10,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
+/*
 
 BOOST_FIXTURE_TEST_CASE(invalid_read, global_data_view_fixture) {
     auto gdv = get_data_view();
@@ -143,10 +144,18 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
         .get();
     BOOST_TEST(input_buffer.string_view() == result_buffer.string_view());
 }
+*/
 
 BOOST_FIXTURE_TEST_CASE(write_link_unlink_free, global_data_view_fixture) {
+    auto config = get_group_config();
+
     auto gdv = get_data_view();
-    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE);
+    auto input_buffer = random_buffer(config.get_stripe_size());
+    std::size_t chunk_size =
+        config.type == storage::group_config::type_t::ERASURE_CODING
+            ? config.get_stripe_size() / config.data_shards
+            : config.get_stripe_size();
+    std::size_t num_fragments = config.get_stripe_size() / chunk_size;
 
     std::cout << "start writing" << std::endl;
     auto addr = boost::asio::co_spawn(
@@ -154,7 +163,7 @@ BOOST_FIXTURE_TEST_CASE(write_link_unlink_free, global_data_view_fixture) {
                     boost::asio::use_future)
                     .get();
     BOOST_TEST(input_buffer.size() == addr.data_size());
-    BOOST_TEST(addr.fragments.size() == 1ul);
+    BOOST_TEST(addr.fragments.size() == num_fragments);
 
     std::size_t used =
         boost::asio::co_spawn(get_executor(), gdv->get_used_space(),

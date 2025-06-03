@@ -283,7 +283,10 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
 
     auto alloc = ds->allocate(buffer.size());
     auto addr = ds->write(alloc, buffer.string_view(), {0});
-    BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
+
+    auto freed_pages = ds->unlink(addr);
+    auto freed_bytes = freed_pages.size() * DEFAULT_PAGE_SIZE;
+    BOOST_CHECK_EQUAL(freed_bytes, addr.data_size());
 
     auto alloc2 = ds->allocate(buffer.size());
     addr = ds->write(alloc2, buffer.string_view(), {0});

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <unordered_set>
 
 namespace uh::cluster {
 
@@ -99,8 +100,8 @@ address mock_data_store::link(const address& addr) {
     return new_fragments;
 }
 
-size_t mock_data_store::unlink(const address& addr) {
-    size_t size = 0;
+std::vector<std::size_t> mock_data_store::unlink(const address& addr) {
+    std::unordered_set<std::size_t> pages_to_free;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         {
@@ -108,18 +109,20 @@ size_t mock_data_store::unlink(const address& addr) {
             auto it = m_refcounter.find(frag);
             if (it == m_refcounter.end()) {
                 throw std::exception();
-                // return std::numeric_limits<std::size_t>::max();
             }
             if (--(it->second) == 0) {
-                auto pointer = frag.pointer;
-                std::fill(m_data.begin() + pointer,
-                          m_data.begin() + pointer + frag.size, 0);
+                std::fill(m_data.begin() + frag.pointer,
+                          m_data.begin() + frag.pointer + frag.size, 0);
                 m_refcounter.erase(it);
-                size += frag.size;
+                pages_to_free.insert(frag.pointer / m_conf.page_size);
             }
         }
     }
-    return size;
+
+    std::vector<std::size_t> sorted_pages_to_free(pages_to_free.begin(),
+                                                  pages_to_free.end());
+    std::sort(sorted_pages_to_free.begin(), sorted_pages_to_free.end());
+    return sorted_pages_to_free;
 }
 
 uint64_t mock_data_store::get_used_space() const noexcept {
@@ -158,6 +161,10 @@ allocation_t mock_data_store::allocate(std::size_t size,
     m_current_offset += size;
 
     return {.offset = allocation_offset, .size = size};
+}
+
+std::size_t mock_data_store::get_page_size() const noexcept {
+    return m_conf.page_size;
 }
 
 mock_data_store::~mock_data_store() {

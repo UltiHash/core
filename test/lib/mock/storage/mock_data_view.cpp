@@ -41,7 +41,8 @@ coro<std::size_t> mock_data_view::get_used_space() {
 }
 
 coro<std::size_t> mock_data_view::unlink(const address& addr) {
-    co_return m_storage.unlink(addr);
+    auto freed_pages = m_storage.unlink(addr);
+    co_return freed_pages.size() * m_storage.get_page_size();
 }
 
 } // namespace uh::cluster

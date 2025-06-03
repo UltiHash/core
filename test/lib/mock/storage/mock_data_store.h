@@ -22,13 +22,14 @@ public:
                   const std::vector<std::size_t>& offsets);
     std::size_t read(const std::size_t pointer, std::span<char> buffer);
     address link(const address& addr);
-    size_t unlink(const address& addr);
+    std::vector<std::size_t> unlink(const address& addr);
     [[nodiscard]] size_t get_used_space() const noexcept;
     [[nodiscard]] size_t get_available_space() const noexcept;
     [[nodiscard]] std::size_t get_write_offset() const noexcept;
     void clear(); // for testing
 
     size_t id() const noexcept;
+    std::size_t get_page_size() const noexcept;
 
     ~mock_data_store();
 
