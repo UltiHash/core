@@ -118,6 +118,7 @@ jobs:
       env_name: s3a-testing-x86-64-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: ${{ matrix.test.helm_values }}
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
