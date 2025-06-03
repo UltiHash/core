@@ -106,7 +106,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         std::size_t num_fragments = std::accumulate(
             stripe_offsets.begin(), stripe_offsets.end(), 0ul,
-            [&, this](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
+            [](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
                 return acc + chunk_offsets.size();
             });
 
