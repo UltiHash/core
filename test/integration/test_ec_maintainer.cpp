@@ -32,7 +32,7 @@ protected:
                              .storages = m_num_instances,
                              .data_shards = m_num_instances - 1,
                              .parity_shards = 1,
-                             .stripe_size_kib = 64 * KIBI_BYTE};
+                             .stripe_size_kib = 64};
     global_data_view_config m_gdv_cfg;
     etcd_manager m_etcd;
 };
