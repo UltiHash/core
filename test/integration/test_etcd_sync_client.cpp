@@ -29,6 +29,8 @@ public:
           etcd_client{etcd_address} {
         When(Method(mock, handle_state_changes))
             .AlwaysDo([&](const etcd::Response& resp) { watch_resp = resp; });
+        etcd_client.rmdir("/", true);
+        std::this_thread::sleep_for(100ms);
     }
 
     ~fixture() {
@@ -329,16 +331,27 @@ BOOST_FIXTURE_TEST_CASE(watches_changes_previous_watcher_changes_using_index,
 
 BOOST_FIXTURE_TEST_CASE(
     watches_changes_recursively_previous_watcher_changes_using_index, fixture) {
-    etcd_client.put("/test0/sub", "initial_value");
-    auto ls_resp = etcd_client.ls("/test0");
-    etcd_client.put("/test0/sub2", "second_value");
+    etcd_client.put("/test/0", "val_0");
+    auto ls_resp = etcd_client.ls("/test");
+    etcd_client.put("/test/1", "val_1");
+    etcd_client.put("/test/2", "val_2");
+    etcd_client.rm("/test/2");
+
     auto promise = std::promise<void>();
     auto future = promise.get_future();
 
     auto watcher = etcd::Watcher(
-        etcd_client, "/test0", ls_resp.index() + 1,
-        [&cb = mock.get(), &promise](const etcd::Response& response) {
-            cb.handle_state_changes(response);
+        etcd_client, "/test", ls_resp.index() + 1,
+        [&promise](const etcd::Response& resp) {
+            BOOST_TEST(resp.action(0) == "create");
+            BOOST_TEST(resp.value(0).key() == "/test/1");
+            BOOST_TEST(resp.value(0).as_string() == "val_1");
+            BOOST_TEST(resp.action(1) == "create");
+            BOOST_TEST(resp.value(1).key() == "/test/2");
+            BOOST_TEST(resp.value(1).as_string() == "val_2");
+            BOOST_TEST(resp.action(2) == "delete");
+            BOOST_TEST(resp.value(2).key() == "/test/2");
+            BOOST_TEST(resp.value(2).as_string() == "");
             promise.set_value();
         },
         true /*recursive*/);
@@ -347,11 +360,6 @@ BOOST_FIXTURE_TEST_CASE(
         std::future_status::timeout) {
         BOOST_FAIL("Callback was not called within the timeout period");
     }
-
-    Verify(Method(mock, handle_state_changes)).Exactly(1_Time);
-    BOOST_TEST(watch_resp.action() == "create");
-    BOOST_TEST(watch_resp.value().key() == "/test0/sub2");
-    BOOST_TEST(watch_resp.value().as_string() == "second_value");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

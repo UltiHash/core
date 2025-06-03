@@ -149,15 +149,15 @@ etcd_manager::ls(const std::string& prefix) const {
 int64_t etcd_manager::ls(const std::string& prefix, callback_t callback) const {
 
     auto client = m_client.load();
-    auto ls_resp = client->ls(prefix);
-    if (ls_resp.is_ok()) {
-        auto values = ls_resp.values();
+    auto resp = client->ls(prefix);
+    if (resp.is_ok()) {
+        auto values = resp.values();
         for (auto i = 0u; i < values.size(); ++i) {
             auto val = values[i];
-            callback(response(ls_resp.action(), val.key(), val.as_string()));
+            callback(response(resp.action(), val.key(), val.as_string()));
         }
     }
-    return ls_resp.index();
+    return resp.index();
 }
 
 void etcd_manager::rm(const std::string& key) noexcept {
@@ -189,9 +189,14 @@ void etcd_manager::add_watcher(const std::string& prefix, callback_t callback,
     }
 
     auto wrapper = [cb = std::move(callback)](const etcd::Response& resp) {
-        auto val = resp.value();
         if (resp.is_ok()) {
-            cb(response(resp.action(), val.key(), val.as_string()));
+            auto values = resp.values();
+            auto actions = resp.actions();
+            for (auto i = 0u; i < values.size(); ++i) {
+                auto action = actions[i];
+                auto val = values[i];
+                cb(response(action, val.key(), val.as_string()));
+            }
         }
     };
     m_watcher_entries[prefix] = watcher_entry(

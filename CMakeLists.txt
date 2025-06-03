@@ -102,6 +102,18 @@ CPMAddPackage(
     CPM_ARGS
     "TIMEOUT 300")
 
+CPMAddPackage(
+    NAME
+    etcd
+    GITHUB_REPOSITORY
+    UltiHash/etcd-cpp-apiv3
+    GIT_TAG
+    v0.15.4+ultihash.patch1
+    OPTIONS
+    "BUILD_SHARED_LIBS OFF;BUILD_ETCD_CORE_ONLY ON"
+    CPM_ARGS
+    "TIMEOUT 300")
+
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory
