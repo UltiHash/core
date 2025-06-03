@@ -148,7 +148,8 @@ private:
 
                 if (max_offset_it == offsets.end() ||
                     !max_offset_it->has_value()) {
-                    throw std::runtime_error("All elements are std::nullopt");
+                    LOG_WARN() << "All elements are std::nullopt";
+                    return;
                 }
 
                 auto offset = max_offset_it->value();
