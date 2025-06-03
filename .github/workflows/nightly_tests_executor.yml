@@ -15,42 +15,44 @@ on:
           - stability-test-x86-64
           - small-performance-test
           - vulnerability-scanning
+          - all
         required: true
 
 jobs:
 
-  build-core:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: Dockerfile
-      docker_build_args: |
-        BuildType=RelWithDebInfo
-        DebugTools=True
-      docker_images: ghcr.io/ultihash/cluster
-      docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
+  #build-core:
+  #  uses: ./.github/workflows/docker_build_template.yml 
+  #  with:
+  #    docker_context: .
+  #    dockerfile_path: Dockerfile
+  #    docker_build_args: |
+  #      BuildType=RelWithDebInfo
+  #      DebugTools=True
+  #    docker_images: ghcr.io/ultihash/cluster
+  #    docker_tags: nightly-build
+  #    platforms: linux/amd64,linux/arm64
+  #  secrets:
+  #    ghcr_token: ${{ secrets.PAT }}
     
-  build-database-init:
-    uses: ./.github/workflows/docker_build_template.yml 
-    with:
-      docker_context: .
-      dockerfile_path: tools/database-init/Dockerfile
-      docker_images: ghcr.io/ultihash/database-init
-      docker_tags: nightly-build
-      platforms: linux/amd64,linux/arm64
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
+  #build-database-init:
+  #  uses: ./.github/workflows/docker_build_template.yml 
+  #  with:
+  #    docker_context: .
+  #    dockerfile_path: tools/database-init/Dockerfile
+  #    docker_images: ghcr.io/ultihash/database-init
+  #    docker_tags: nightly-build
+  #    platforms: linux/amd64,linux/arm64
+  #  secrets:
+  #    ghcr_token: ${{ secrets.PAT }}
 
   feature-test-aarch64:
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'feature-test-aarch64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/feature_testing_on_aws.yml
     with:
       env_name: feature-testing-aarch64
@@ -67,17 +69,26 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
   pyspark-test-x86-64:
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
+    strategy:
+      matrix:
+        test: 
+          - name: simple-rr
+            helm_values: testing/pyspark/helm-values-on-premise-rr.yaml
+          - name: simple-ec
+            helm_values: testing/pyspark/helm-values-on-premise-ec.yaml
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'pyspark-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/pyspark_testing_on_premise.yml
     with:
-      env_name: pyspark-testing-x86-64
+      env_name: pyspark-testing-x86-64-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: ${{ matrix.test.helm_values }}
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -88,12 +99,13 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   s3a-test-x86-64:
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/s3a_testing_on_premise.yml
     with:
       env_name: s3a-testing-x86-64
@@ -109,12 +121,13 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   stability-test-x86-64:
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/stability_testing_on_premise.yml
     with:
       env_name: stability-testing-x86-64
@@ -130,12 +143,13 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
   
   small-performance-test:
-    needs: 
-      - build-core
-      - build-database-init
+    #needs: 
+    #  - build-core
+    #  - build-database-init
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/performance_testing_small_aws.yml
     with:
       env_name: performance-testing-small-aarch64
@@ -152,11 +166,12 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
   vulnerability-scanning:
-    needs: 
-      - build-core
+    #needs: 
+    #  - build-core
     if: |
       github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/vulnerability_scanning.yml
     with:
       docker_image_tag: nightly-build
