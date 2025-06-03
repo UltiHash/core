@@ -148,6 +148,8 @@ address default_data_store::write(const allocation_t allocation,
     }
 
     m_used_space += allocation.size;
+    m_write_offset =
+        std::max(m_write_offset, allocation.offset + allocation.size);
     sync();
 
     maintain_refcount(allocation.offset, allocation.size, offsets);
