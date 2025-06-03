@@ -71,13 +71,11 @@ public:
             throw;
         }
 
-        int i = 0;
-
-        m_threads.emplace_back([this, i] {
+        m_thread = std::thread([this] {
             try {
                 m_ioc.run();
             } catch (std::exception& e) {
-                m_excp_ptrs[i] = std::current_exception();
+                m_exception_ptr = std::current_exception();
             }
         });
 
@@ -99,24 +97,16 @@ public:
 
         m_work_guard.reset();
 
-        for (auto& thread : m_threads) {
-            thread.join();
-        }
+        m_thread.join();
 
-        int i = 0;
-        for (auto& exp : m_excp_ptrs) {
-            if (exp) {
-                LOG_ERROR() << "Exception in thread " << i;
-                try {
-                    std::rethrow_exception(exp);
-                } catch (std::exception& e) {
-                    throw e;
-                }
+        if (m_exception_ptr) {
+            try {
+                std::rethrow_exception(m_exception_ptr);
+            } catch (std::exception& e) {
+                throw e;
             }
-            i++;
         }
 
-        m_threads.clear();
         m_temp_dirs.clear();
         m_etcd.clear_all();
     }
@@ -162,14 +152,14 @@ private:
 
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
-    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
+    std::exception_ptr m_exception_ptr;
     std::vector<std::unique_ptr<temp_directory>> m_temp_dirs;
     etcd_manager m_etcd;
     global_data_view_config m_gdv_config;
     boost::asio::io_context m_ioc;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
         m_work_guard;
-    std::vector<std::thread> m_threads;
+    std::thread m_thread;
 
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
 
