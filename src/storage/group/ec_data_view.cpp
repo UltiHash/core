@@ -11,7 +11,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t service_connections)
     : m_ioc(ioc),
       m_config{config},
-      m_stripe_size{m_config.stripe_size_kib * 1_KiB},
+      m_stripe_size{m_config.get_stripe_size()},
       m_chunk_size{[&]() {
           if (m_stripe_size % m_config.data_shards != 0)
               throw std::runtime_error(
@@ -63,26 +63,23 @@ coro<address> ec_data_view::write(std::span<const char> data,
     for (auto i = 0ul; i < num_stripes; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
-        auto data_span = data.subspan(i * m_stripe_size);
-        auto data_span_size = std::min(data_span.size(), m_stripe_size);
-        if (data_span_size != m_stripe_size) {
-            std::copy(data_span.begin(), data_span.end(),
+        auto stripe_data = data.subspan(i * m_stripe_size);
+        auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
+        if (stripe_data_size != m_stripe_size) {
+            std::copy(stripe_data.begin(), stripe_data.end(),
                       stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(data_span_size), 0);
-            data_span = stripe.span();
+            std::ranges::fill(stripe.span().subspan(stripe_data_size), 0);
+            stripe_data = stripe.span();
         } else {
-            data_span = data_span.first(m_stripe_size);
+            stripe_data = stripe_data.first(stripe_data_size);
         }
 
-        auto data_stripe = data.subspan(i * m_stripe_size,
-                                        std::min(write_size, m_stripe_size));
-        write_size -= m_stripe_size;
+        write_size -= stripe_data_size;
 
-        auto encoded = m_rs.encode(data_span);
+        auto encoded = m_rs.encode(stripe_data);
 
         std::vector<std::vector<std::size_t>> stripe_offsets(
-            m_config.data_shards + m_config.parity_shards,
-            std::vector<std::size_t>{0});
+            m_config.data_shards + m_config.parity_shards);
 
         // translate offsets into chunk-local offsets for each stripe.
         const std::size_t stripe_offset = i * m_stripe_size;
@@ -91,20 +88,33 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         for (size_t j = 0; j < m_config.data_shards; ++j) {
             const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+            if (stripe_data_size > j * m_chunk_size) {
+                // if chunk actually contains user data, and if so add a zero
+                // offset to denote the start of the chunk and thus a new
+                // fragment, as fragments may not span across chunks
+                stripe_offsets.at(j).push_back(0);
+            }
             while (current_offset != offsets.end() and
                    *current_offset < chunk_offset + m_chunk_size) {
                 auto local_offset = *current_offset - chunk_offset;
                 if (local_offset != 0) {
                     stripe_offsets.at(j).push_back(local_offset);
-                    for (std::size_t p = m_config.data_shards;
-                         p < m_config.data_shards + m_config.parity_shards;
-                         ++p) {
-                        // goal: stripe_offsets.at(p).size() for any p ==
-                        // sum(stripe_offsets.at(j).size()) for all j
-                        stripe_offsets.at(p).push_back(0);
-                    }
                 }
                 ++current_offset;
+            }
+        }
+
+        std::size_t num_fragments = std::accumulate(
+            stripe_offsets.begin(), stripe_offsets.end(), 0ul,
+            [&, this](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
+                return acc + chunk_offsets.size();
+            });
+
+        // goal: stripe_offsets.at(p).size() for any p == num_fragments
+        for (std::size_t p = m_config.data_shards;
+             p < m_config.data_shards + m_config.parity_shards; ++p) {
+            for (std::size_t o = 0; o < num_fragments; ++o) {
+                stripe_offsets.at(p).push_back(0);
             }
         }
 

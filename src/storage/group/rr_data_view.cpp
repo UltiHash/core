@@ -103,7 +103,7 @@ coro<std::size_t> rr_data_view::unlink(const address& addr) {
         std::ranges::begin(freed_pages_map | std::views::values),
         std::ranges::end(freed_pages_map | std::views::values), 0ul,
         [&, this](std::size_t acc, std::vector<std::size_t> val) {
-            return acc + val.size() * m_group_config.stripe_size_kib;
+            return acc + val.size() * m_group_config.get_stripe_size();
         });
     co_return freed_bytes;
 }
