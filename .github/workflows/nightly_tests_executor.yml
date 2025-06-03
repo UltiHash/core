@@ -102,13 +102,20 @@ jobs:
     #needs: 
     #  - build-core
     #  - build-database-init
+    strategy:
+      matrix:
+        test: 
+          - name: simple-rr
+            helm_values: testing/s3a/helm-values-on-premise-rr.yaml
+          - name: simple-ec
+            helm_values: testing/s3a/helm-values-on-premise-ec.yaml
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 's3a-test-x86-64') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/s3a_testing_on_premise.yml
     with:
-      env_name: s3a-testing-x86-64
+      env_name: s3a-testing-x86-64-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
     secrets:
