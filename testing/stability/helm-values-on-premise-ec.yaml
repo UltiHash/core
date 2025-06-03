@@ -76,10 +76,10 @@ storage:
   groups:
   - id: 0
     type: ERASURE_CODING
-    storages: 5
-    data_shards: 3
-    parity_shards: 2
-    stripe_size_kib: 1020
+    storages: 3
+    data_shards: 2
+    parity_shards: 1
+    stripe_size_kib: 256
     storageClass: local-path
     size: 50Gi
     mountPath: /var/lib/uh/storage
