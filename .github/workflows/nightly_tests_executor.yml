@@ -132,15 +132,23 @@ jobs:
     #needs: 
     #  - build-core
     #  - build-database-init
+    strategy:
+      matrix:
+        test: 
+          - name: simple-rr
+            helm_values: testing/stability/helm-values-on-premise-rr.yaml
+          - name: simple-ec
+            helm_values: testing/stability/helm-values-on-premise-ec.yaml
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/stability_testing_on_premise.yml
     with:
-      env_name: stability-testing-x86-64
+      env_name: stability-testing-x86-64-${{ matrix.test.name }}
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: ${{ matrix.test.helm_values }}
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
