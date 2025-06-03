@@ -515,7 +515,7 @@ BOOST_AUTO_TEST_CASE(reads_after_transition_from_degraded_to_repairing_state) {
 }
 
 BOOST_AUTO_TEST_CASE(
-    test_data_persistence_after_killing_and_reviving_storages_and_writing) {
+    preserves_data_after_killing_and_reviving_storages_and_writing) {
     auto config = get_group_config();
     auto gdv = get_data_view();
 
@@ -529,12 +529,12 @@ BOOST_AUTO_TEST_CASE(
                      .get();
     });
 
-    for (auto i = 0ul; i < config.storages - 2; ++i) {
+    for (auto i = 0ul; i < config.storages; ++i) {
         LOG_DEBUG() << "kill storage " << i;
         deactivate_storage(i);
     }
 
-    for (auto i = 0ul; i < config.storages - 2; ++i) {
+    for (auto i = 0ul; i < config.storages; ++i) {
         LOG_DEBUG() << "revive storage " << i;
         activate_storage(i);
     }
