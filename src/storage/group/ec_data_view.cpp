@@ -178,11 +178,11 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
         m_ioc,
         // NOTE: doesn't check storage_states, since unassigned storages will
         // throw exception
-        [&storage_index = m_externals.get_storage_index(),
-         buffer](std::size_t id, const address_info& info) -> coro<bool> {
+        [this, buffer](std::size_t id, const address_info& info) -> coro<bool> {
             try {
-                auto storage = storage_index.at(id);
-                if (storage == nullptr) {
+                auto storage = m_externals.get_storage_service(id);
+                auto state = m_externals.get_storage_states().at(id);
+                if (storage == nullptr or *state != storage_state::ASSIGNED) {
                     co_return false;
                 }
                 LOG_DEBUG() << "try to read from storage " << id;

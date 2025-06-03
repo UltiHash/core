@@ -209,6 +209,13 @@ private:
                 "[group {}, storage {}] assigned_count {}, has_down {}",
                 m_group_config.id, m_storage_id, stats.assigned_count,
                 stats.has_down);
+
+            std::stringstream ss;
+            for (auto& s : storage_states) {
+                ss << serialize(s) << ", ";
+            }
+            LOG_DEBUG() << "storage states: " << ss.str();
+
             LOG_DEBUG() << std::format(
                 "[group {}, storage {}] change group state to {}",
                 m_group_config.id, m_storage_id,
