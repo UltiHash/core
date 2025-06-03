@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/utils/common.h>
 #include <magic_enum/magic_enum.hpp>
 #include <nlohmann/json.hpp>
 #include <string_view>
@@ -19,6 +20,7 @@ struct group_config {
 
     static group_config create(std::string_view json_str);
     std::string to_string() const;
+    std::size_t get_stripe_size() const { return stripe_size_kib * KIBI_BYTE; }
 };
 
 struct group_configs {

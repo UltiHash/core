@@ -35,7 +35,7 @@ public:
                   auto ds = sc.data_store;
                   if (m_group_config.type ==
                       group_config::type_t::ERASURE_CODING) {
-                      ds.page_size = m_group_config.stripe_size_kib /
+                      ds.page_size = m_group_config.get_stripe_size() /
                                      m_group_config.data_shards;
                   }
                   return ds;
