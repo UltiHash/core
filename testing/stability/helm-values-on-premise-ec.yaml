@@ -1,0 +1,173 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+    - registry-credentials
+  ultihashSecret:
+    name: ultihash
+    key: license
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
+
+stabilityTest:
+  readTimeout: 600
+  maxAttempts: 3
+  concurentJobs: 2
+  extraEnv:
+    - name: AWS_DEFAULT_REGION
+      value: "eu-central-1"
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  inputVolume:
+    type: hostPath
+    mountPath: /data
+    hostPath: /data/corpora_test/stability-test
+  outputVolume:
+    pvcName: stability-test-output
+    mountPath: /testing/test
+
+coordinator:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+entrypoint:
+  replicas: 2
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=entrypoint
+  extraVolumeMounts:
+    - name: core-dump
+      mountPath: /tmp/core-dumps/
+  extraVolumes:
+    - name: core-dump
+      hostPath:
+        path: /tmp/core-dumps/
+
+  ingress:
+    enabled: false
+
+storage:
+  groups:
+  - id: 0
+    type: ERASURE_CODING
+    storages: 3
+    data_shards: 2
+    parity_shards: 1
+    stripe_size_kib: 256
+    storageClass: local-path
+    size: 50Gi
+    mountPath: /var/lib/uh/storage
+    nodeSelector:
+      kubernetes.io/hostname: opm-k8s-worker-01
+    extraEnvs:
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.name=storage
+    # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+    extraVolumeMounts:
+      - name: core-dump
+        mountPath: /tmp/core-dumps/
+    extraVolumes:
+      - name: core-dump
+        hostPath:
+          path: /tmp/core-dumps/
+
+deduplicator:
+  enabled: false
+  replicas: 2
+  storageClass: local-path
+  storageSize: 4Gi
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=deduplicator
+  # Save the core dump to the /tmp/core-dumps/ directory on opm-k8s-worker-01
+  extraVolumeMounts:
+    - name: core-dump
+      mountPath: /tmp/core-dumps/
+  extraVolumes:
+    - name: core-dump
+      hostPath:
+        path: /tmp/core-dumps/
+
+database:
+  primary:
+    nodeSelector:
+      kubernetes.io/hostname: opm-k8s-worker-01
+
+    persistence:
+      storageClass: local-path
+      size: 4Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+
+collector:
+  nodeSelector:
+    kubernetes.io/hostname: opm-k8s-worker-01
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
+  presets:
+    kubeletMetrics:
+      enabled: false
+  config:
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://opm-k8s-worker-04.ultihash.io
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@opm-k8s-worker-04.ultihash.io
+    receivers:
+      prometheus: null
+      kubeletstats: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+            - otlp
+        traces:
+          exporters:
+          - debug
+          - otlphttp/uptrace
+
+exporter:
+  enabled: false
