@@ -167,8 +167,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
     co_return rv;
 }
 
-coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
-                                         std::size_t read_size) {
+address ec_data_view::split_fragment(const uint128_t& pointer,
+                                     std::size_t read_size) const {
     address addr;
     auto end = pointer + read_size;
     auto current_p = pointer;
@@ -186,8 +186,13 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
         addr.emplace_back(current_p, static_cast<std::size_t>(size));
         current_p += size;
     }
+    return addr;
+}
 
+coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
+                                         std::size_t read_size) {
     auto rv = shared_buffer<>(read_size);
+    auto addr = split_fragment(pointer, read_size);
     co_await read_address(addr, rv);
 
     co_return rv;
@@ -249,9 +254,13 @@ ec_data_view::get_stripe_ids(
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-
-    auto addr_info_map =
-        extract_node_address_map(addr, [this](uint128_t pointer) -> auto {
+    auto aligned_addr = address{};
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+    auto addr_info_map = extract_node_address_map(
+        aligned_addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         });
 
@@ -313,22 +322,22 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     }
 
     for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
-        address addr;
-        addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
+        address _addr;
+        _addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
 
         LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
                     << stripe_id;
         co_await run_for_all<void, std::shared_ptr<storage_interface>>(
             m_ioc,
-            [&shards, &addr](std::size_t id,
-                             const std::shared_ptr<storage_interface>& storage)
+            [&shards, &_addr](std::size_t id,
+                              const std::shared_ptr<storage_interface>& storage)
                 -> coro<void> {
                 try {
                     if (storage == nullptr) {
                         std::ranges::fill(shards[id], 0);
                     } else {
                         LOG_DEBUG() << "try to read from storage " << id;
-                        co_await storage->read_address(addr, shards[id], {0});
+                        co_await storage->read_address(_addr, shards[id], {0});
                         LOG_DEBUG() << "read from storage done" << id;
                     }
                 } catch (...) {
