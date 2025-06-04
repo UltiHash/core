@@ -98,6 +98,7 @@ storage:
           path: /tmp/core-dumps/
 
 deduplicator:
+  enabled: false
   replicas: 2
   storageClass: local-path
   storageSize: 4Gi
