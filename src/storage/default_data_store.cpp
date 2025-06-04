@@ -256,8 +256,12 @@ void default_data_store::maintain_refcount(
     std::deque<reference_counter::refcount_cmd> refcount_commands;
 
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
-        std::size_t frag_size =
-            std::next(it) == offsets.end() ? size - *it : *std::next(it) - *it;
+        auto next_different =
+            std::find_if(std::next(it), offsets.end(),
+                         [it](const std::size_t& val) { return val != *it; });
+        std::size_t frag_size = next_different == offsets.end()
+                                    ? size - *it
+                                    : *next_different - *it;
         refcount_commands.emplace_back(reference_counter::INCREMENT,
                                        local_pointer + *it, frag_size);
     }

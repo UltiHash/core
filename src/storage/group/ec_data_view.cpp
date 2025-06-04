@@ -73,24 +73,23 @@ coro<address> ec_data_view::write(std::span<const char> data,
     for (auto i = 0ul; i < num_stripes; i++) {
         allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
                            .size = m_chunk_size};
-        auto data_span = data.subspan(i * m_stripe_size);
-        auto data_span_size = std::min(data_span.size(), m_stripe_size);
-        if (data_span_size != m_stripe_size) {
-            std::copy(data_span.begin(), data_span.end(),
+        auto stripe_data = data.subspan(i * m_stripe_size);
+        auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
+        if (stripe_data_size != m_stripe_size) {
+            std::copy(stripe_data.begin(), stripe_data.end(),
                       stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(data_span_size), 0);
-            data_span = stripe.span();
+            std::ranges::fill(stripe.span().subspan(stripe_data_size), 0);
+            stripe_data = stripe.span();
         } else {
-            data_span = data_span.first(m_stripe_size);
+            stripe_data = stripe_data.first(stripe_data_size);
         }
 
-        write_size -= m_stripe_size;
+        write_size -= stripe_data_size;
 
-        auto encoded = m_rs.encode(data_span);
+        auto encoded = m_rs.encode(stripe_data);
 
         std::vector<std::vector<std::size_t>> stripe_offsets(
-            m_config.data_shards + m_config.parity_shards,
-            std::vector<std::size_t>{0});
+            m_config.data_shards + m_config.parity_shards);
 
         // translate offsets into chunk-local offsets for each stripe.
         const std::size_t stripe_offset = i * m_stripe_size;
@@ -99,20 +98,33 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         for (size_t j = 0; j < m_config.data_shards; ++j) {
             const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+            if (stripe_data_size > j * m_chunk_size) {
+                // if chunk actually contains user data, and if so add a zero
+                // offset to denote the start of the chunk and thus a new
+                // fragment, as fragments may not span across chunks
+                stripe_offsets.at(j).push_back(0);
+            }
             while (current_offset != offsets.end() and
                    *current_offset < chunk_offset + m_chunk_size) {
                 auto local_offset = *current_offset - chunk_offset;
                 if (local_offset != 0) {
                     stripe_offsets.at(j).push_back(local_offset);
-                    for (std::size_t p = m_config.data_shards;
-                         p < m_config.data_shards + m_config.parity_shards;
-                         ++p) {
-                        // goal: stripe_offsets.at(p).size() for any p ==
-                        // sum(stripe_offsets.at(j).size()) for all j
-                        stripe_offsets.at(p).push_back(0);
-                    }
                 }
                 ++current_offset;
+            }
+        }
+
+        std::size_t num_fragments = std::accumulate(
+            stripe_offsets.begin(), stripe_offsets.end(), 0ul,
+            [](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
+                return acc + chunk_offsets.size();
+            });
+
+        // goal: stripe_offsets.at(p).size() for any p == num_fragments
+        for (std::size_t p = m_config.data_shards;
+             p < m_config.data_shards + m_config.parity_shards; ++p) {
+            for (std::size_t o = 0; o < num_fragments; ++o) {
+                stripe_offsets.at(p).push_back(0);
             }
         }
 
@@ -350,7 +362,26 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     co_return addr.data_size();
 }
 
-coro<std::size_t> ec_data_view::get_used_space() { co_return 0; }
+coro<std::size_t> ec_data_view::get_used_space() {
+    auto storages = m_externals.get_storage_services();
+    auto context = co_await boost::asio::this_coro::context;
+    auto used_spaces =
+        co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<std::size_t> {
+                if (i >= m_config.data_shards) {
+                    co_return 0; // skip parity shards
+                }
+                co_return co_await storage->get_used_space().continue_trace(
+                    context);
+            },
+            storages);
+
+    auto used_space =
+        std::accumulate(used_spaces.begin(), used_spaces.end(), 0ul);
+
+    co_return used_space;
+}
 
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
     co_return address{};
