@@ -57,7 +57,7 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 5Gi
-    storageClass: local-path
+    storageClass: ebs-csi-gp3
 
 entrypoint:
   replicas: 1
@@ -74,7 +74,7 @@ entrypoint:
 
 deduplicator:
   replicas: 1
-  storageClass: local-path
+  storageClass: ebs-csi-gp3
   storageSize: 2Gi
   nodeSelector:
     purpose: feature-testing
@@ -95,7 +95,7 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: local-path
+      storageClass: ebs-csi-gp3
       size: 2Gi
 
 databaseInit:
@@ -116,7 +116,7 @@ storage:
       data_shards: 2
       parity_shards: 1
       stripe_size_kib: 256
-      storageClass: local-path
+      storageClass: ebs-csi-gp3
       size: 5Gi
       mountPath: /var/lib/uh/storage
       nodeSelector:
