@@ -1,0 +1,171 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+  - registry-credentials
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  ultihashSecret:
+    key: license
+    name: ultihash
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
+    
+
+featureTests:
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+coordinator:
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  extraEnvs:
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      value: service.name=coordinator
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  persistence:
+    size: 5Gi
+    storageClass: ebs-csi-gp3
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  
+  ingress:
+    enabled: false
+
+deduplicator:
+  replicas: 1
+  storageClass: ebs-csi-gp3
+  storageSize: 2Gi
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+database:
+  primary:
+    nodeSelector:
+      purpose: feature-testing
+    tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+    persistence:
+      storageClass: ebs-csi-gp3
+      size: 2Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+
+storage:
+  groups:
+    - id: 0
+      type: ERASURE_CODING
+      storages: 3
+      data_shards: 2
+      parity_shards: 1
+      stripe_size_kib: 256
+      storageClass: ebs-csi-gp3
+      size: 5Gi
+      mountPath: /var/lib/uh/storage
+      nodeSelector:
+        purpose: feature-testing
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
+
+collector:
+  config:
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://uptrace-backend.uptrace.svc.cluster.local:14318
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@uptrace-backend.uptrace.svc.cluster.local:14318
+    receivers:
+      kubeletstats: null
+      prometheus: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+          - otlp
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN 
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
+  nodeSelector:
+    purpose: feature-testing
+  tolerations:
+    - key: "purpose"
+      operator: "Equal"
+      value: "testing"
+      effect: "NoSchedule"
+  presets:
+    kubeletMetrics:
+      enabled: false
+
+exporter:
+  enabled: false
