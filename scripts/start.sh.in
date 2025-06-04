@@ -1,69 +1,66 @@
 #!/bin/bash
 
+dedup=1
+storage_cfg='[{"id":0,"type":"ROUND_ROBIN","storages":1}]'
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -d|--dedup)
+            dedup="$2"
+            shift 2
+            ;;
+        -s|--storage-cfg)
+            storage_cfg="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
 UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
-export UH_STORAGE_GROUPS
 BUILD_DIR=@PROJECT_BINARY_DIR@
 UH_DATA=/var/lib/uh
 export UH_LOG_LEVEL=DEBUG
 UH_CLUSTER=$<TARGET_FILE:uh-cluster>
-
-storage_type="ROUND_ROBIN"
-instances=1
-
-if [ -n "$1" ]; then
-    storage_type="$1"
+log_dir=$BUILD_DIR/logs
+if [[ -d "$log_dir" ]]; then
+    rm -f "$log_dir"/*
 fi
+mkdir -p $log_dir
 
-if [ -n "$2" ]; then
-    instances="$2"
-fi
+parse_json_by_type() {
+    local json="$1"
+    echo "$json" | jq -c '.[]' | while read -r item; do
+        id=$(echo "$item" | jq -r '.id')
+        type=$(echo "$item" | jq -r '.type')
+        storages=$(echo "$item" | jq -r '.storages')
 
-if [ "$storage_type" == "ROUND_ROBIN" ]; then
-    uh_storage_groups=$(cat <<EOF
-[{
-  "id": 0,
-  "type": "ROUND_ROBIN",
-  "storages": $instances
-}]
-EOF
-    )
+        echo "ID: $id"
+        echo "Type: $type"
+        echo "Storages: $storages"
 
-elif [ "$storage_type" == "ERASURE_CODING" ]; then
+        if [[ "$type" == "ERASURE_CODING" ]]; then
+            data_shards=$(echo "$item" | jq -r '.data_shards')
+            parity_shards=$(echo "$item" | jq -r '.parity_shards')
+            stripe_size_kib=$(echo "$item" | jq -r '.stripe_size_kib')
+            echo "  Data Shards: $data_shards"
+            echo "  Parity Shards: $parity_shards"
+            echo "  Stripe Size (KiB): $stripe_size_kib"
+        fi
 
-    if [ -n "$3" ]; then
-        parity_shards="$3"
-    else
-        parity_shards=1
-    fi
-
-    data_shards=$(expr $instances - $parity_shards)
-
-    if [ -n "$4" ]; then
-        stripe_size_kib="$4"
-    else
-        stripe_size_kib=$data_shards
-    fi
-
-    uh_storage_groups=$(cat <<EOF
-[{
-  "id": 0,
-  "type": "ERASURE_CODING",
-  "storages": $instances,
-  "data_shards": $data_shards,
-  "parity_shards": $parity_shards,
-  "stripe_size_kib": $stripe_size_kib
-}]
-EOF
-    )
-else
-    echo "Error: Unsupported storage type '$storage_type'."
-    exit 1
-fi
-
-export UH_STORAGE_GROUPS="$uh_storage_groups"
-
-echo "UH_STORAGE_GROUPS has been set to:"
-echo "$UH_STORAGE_GROUPS"
+        export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
+        for ((storage_id = 0; storage_id < $storages; ++storage_id)); do
+            data_path=$UH_DATA/storage-$id-$storage_id
+            port=$((9300 + id * 10 + storage_id))
+            echo " Storage port: $port"
+            mkdir -p $data_path
+            UH_STORAGE_GROUP_ID=$id UH_STORAGE_INSTANCE_ID=$storage_id $UH_CLUSTER --workdir $data_path storage --port $port &> $log_dir/storage-$id-$storage_id.log &
+        done
+    done
+}
 
 set -e
 
@@ -77,33 +74,38 @@ echo "*** wipe etcd data"
 ETCDCTL_API=3 etcdctl del --from-key /
 
 echo "*** starting services"
-log_dir=$BUILD_DIR/logs
-mkdir -p $log_dir
-
 export TSAN_OPTIONS="detect_odr_violation=0,suppressions=@PROJECT_SOURCE_DIR@/tsan-suppressions"
+
+if [[ -n "$storage_cfg" ]]; then
+    echo "Parsing storage configuration JSON..."
+    parse_json_by_type "$storage_cfg"
+fi
+
+export UH_STORAGE_GROUPS="$storage_cfg"
+
+echo "UH_STORAGE_GROUPS has been set to:"
+echo "$UH_STORAGE_GROUPS"
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
 $UH_CLUSTER coordinator &> $log_dir/coordinator.log &
 
-export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
-for ((id = 0; id < $instances; ++id)); do
-    mkdir -p $UH_DATA/storage-$id
-    UH_STORAGE_GROUP_ID=0 UH_STORAGE_INSTANCE_ID=$id $UH_CLUSTER --workdir $UH_DATA/storage-$id storage --port $((9200 + id)) &> $log_dir/storage-$id.log &
-done
-
 export OTEL_RESOURCE_ATTRIBUTES="service.name=deduplicator"
-for ((id = 0; id < $instances; ++id)); do
+for ((id = 0; id < $dedup; ++id)); do
     mkdir -p $UH_DATA/deduplicator-$id
-    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9300 + id)) &> $log_dir/deduplicator-$id.log &
+    $UH_CLUSTER --workdir $UH_DATA/deduplicator-$id deduplicator --port $((9200 + id)) &> $log_dir/deduplicator-$id.log &
 done
 
 export OTEL_RESOURCE_ATTRIBUTES="service.name=entrypoint"
 $UH_CLUSTER entrypoint &> $log_dir/entrypoint.log &
 
+get_running_processes() {
+    ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'
+}
+
 echo "All services are running. Log files are written $log_dir and will"
 echo "not be removed after the script has finished."
 echo
-ps -ao pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster .*' | sed 's/\S*uh-cluster/uh-cluster/'
+get_running_processes
 echo
 echo "Hit <Return> to kill all spawned processes and shutdown the cluster."
 
@@ -114,5 +116,16 @@ fi
 
 read
 
-kill $(jobs -p)
-wait $(jobs -p)
+echo "Killing all spawned processes..."
+pkill uh-cluster
+
+sleep 0.3 
+
+if pgrep -x "uh-cluster" > /dev/null; then
+    echo
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo " More than one uh-cluster process is still running "
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo
+    get_running_processes
+fi

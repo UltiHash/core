@@ -12,6 +12,9 @@ on:
       docker_registry:
         required: true
         type: string
+      helm_values:
+        required: true
+        type: string
     secrets:
       ghcr_token:
         required: true
@@ -103,7 +106,7 @@ jobs:
           CORE_IMAGE: ghcr.io/ultihash/cluster:${{ inputs.docker_image_tag }}
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
         with:
-          input: testing/performance/small/ultihash-helm-values.yaml
+          input: ${{ inputs.helm_values }}
           output: ultihash-helm-values.yaml
           
       - name: Install the UltiHash cluster
