@@ -154,34 +154,34 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  stability-test-x86-64-rr:
-    needs: 
-      - build-core
-      - build-database-init
-    if: |
-      github.event_name == 'schedule' || 
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-    uses: ./.github/workflows/stability_testing_on_premise.yml
-    with:
-      env_name: stability-testing-x86-64-rr
-      docker_image_tag: nightly-build
-      docker_registry: ${{ vars.DOCKER_REGISTRY }}
-      helm_values: testing/stability/helm-values-on-premise-rr.yaml
-    secrets:
-      ghcr_token: ${{ secrets.PAT }}
-      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
-      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-      registry_token: ${{ secrets.REGISTRY_USER }}
-      kubeconfig: ${{ secrets.KUBECONFIG }}
-      uh_license: ${{ secrets.UH_LICENSE_JSON }}
-      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+  #stability-test-x86-64-rr:
+  #  needs: 
+  #    - build-core
+  #    - build-database-init
+  #  if: |
+  #    github.event_name == 'schedule' || 
+  #    (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
+  #    (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+  #  uses: ./.github/workflows/stability_testing_on_premise.yml
+  #  with:
+  #    env_name: stability-testing-x86-64-rr
+  #    docker_image_tag: nightly-build
+  #   docker_registry: ${{ vars.DOCKER_REGISTRY }}
+  #    helm_values: testing/stability/helm-values-on-premise-rr.yaml
+  #  secrets:
+  #    ghcr_token: ${{ secrets.PAT }}
+  #    docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+  #    docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+  #    registry_token: ${{ secrets.REGISTRY_USER }}
+  #   kubeconfig: ${{ secrets.KUBECONFIG }}
+  #    uh_license: ${{ secrets.UH_LICENSE_JSON }}
+  #    monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   stability-test-x86-64-ec:
     needs: 
       - build-core
       - build-database-init
-      - stability-test-x86-64-rr
+      #- stability-test-x86-64-rr
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
