@@ -30,7 +30,7 @@ jobs:
         DebugTools=True
       docker_images: ghcr.io/ultihash/cluster
       docker_tags: nightly-build
-      platforms: linux/amd64
+      platforms: linux/amd64, linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
     
@@ -41,7 +41,7 @@ jobs:
       dockerfile_path: tools/database-init/Dockerfile
       docker_images: ghcr.io/ultihash/database-init
       docker_tags: nightly-build
-      platforms: linux/amd64
+      platforms: linux/amd64, linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
 
@@ -154,34 +154,34 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
-  #stability-test-x86-64-rr:
-  #  needs: 
-  #    - build-core
-  #    - build-database-init
-  #  if: |
-  #    github.event_name == 'schedule' || 
-  #    (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
-  #    (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
-  #  uses: ./.github/workflows/stability_testing_on_premise.yml
-  #  with:
-  #    env_name: stability-testing-x86-64-rr
-  #    docker_image_tag: nightly-build
-  #   docker_registry: ${{ vars.DOCKER_REGISTRY }}
-  #    helm_values: testing/stability/helm-values-on-premise-rr.yaml
-  #  secrets:
-  #    ghcr_token: ${{ secrets.PAT }}
-  #    docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
-  #    docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
-  #    registry_token: ${{ secrets.REGISTRY_USER }}
-  #   kubeconfig: ${{ secrets.KUBECONFIG }}
-  #    uh_license: ${{ secrets.UH_LICENSE_JSON }}
-  #    monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
+  stability-test-x86-64-rr:
+    needs: 
+      - build-core
+      - build-database-init
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+    uses: ./.github/workflows/stability_testing_on_premise.yml
+    with:
+      env_name: stability-testing-x86-64-rr
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/stability/helm-values-on-premise-rr.yaml
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
 
   stability-test-x86-64-ec:
     needs: 
       - build-core
       - build-database-init
-      #- stability-test-x86-64-rr
+      - stability-test-x86-64-rr
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'stability-test-x86-64') ||
@@ -201,7 +201,7 @@ jobs:
       uh_license: ${{ secrets.UH_LICENSE_JSON }}
       monitoring_token: ${{ secrets.MONITORING_TOKEN_ON_PREMISE }}
   
-  small-performance-test:
+  small-performance-test-rr:
     needs: 
       - build-core
       - build-database-init
@@ -211,9 +211,35 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
     uses: ./.github/workflows/performance_testing_small_aws.yml
     with:
-      env_name: performance-testing-small-aarch64
+      env_name: performance-testing-small-aarch64-rr
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/performance/small/ultihash-helm-values-rr.yaml
+    secrets:
+      ghcr_token: ${{ secrets.PAT }}
+      docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
+      docker_registry_password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      registry_token: ${{ secrets.REGISTRY_USER }}
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY}}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_KEY}}
+      uh_license: ${{ secrets.UH_LICENSE_JSON }}
+      monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
+
+  small-performance-test-ec:
+    needs: 
+      - build-core
+      - build-database-init
+      - small-performance-test-rr
+    if: |
+      github.event_name == 'schedule' || 
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'small-performance-test') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'all')
+    uses: ./.github/workflows/performance_testing_small_aws.yml
+    with:
+      env_name: performance-testing-small-aarch64-ec
+      docker_image_tag: nightly-build
+      docker_registry: ${{ vars.DOCKER_REGISTRY }}
+      helm_values: testing/performance/small/ultihash-helm-values-ec.yaml
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
