@@ -52,22 +52,6 @@ void fragmentation::flush_fragment_set(fragment_set& set) {
 std::size_t fragmentation::effective_size() const { return m_effective_size; }
 std::size_t fragmentation::unstored_size() const { return m_unstored_size; }
 
-void fragmentation::merge_consecutive_unstored() {
-    auto it = m_frags.begin();
-    while (it != m_frags.end()) {
-        if (it->type == UNSTORED) {
-            auto next_it = std::next(it);
-            while (next_it != m_frags.end() && next_it->type == UNSTORED &&
-                   it->addr.consecutive(next_it->addr)) {
-                it->addr.append(next_it->addr);
-                next_it = m_frags.erase(next_it);
-            }
-            it->addr = it->addr.shrink();
-        }
-        ++it;
-    }
-};
-
 address fragmentation::make_address() const {
     address rv;
 
@@ -129,35 +113,39 @@ void fragmentation::flush_fragments_internal(fragment_set& set) {
 void fragmentation::mark_as_uploaded() { m_unstored_size = 0ull; }
 
 void fragmentation::compute_unstored_addresses() {
-    std::optional<fragment> current;
-    std::size_t current_ofs = 0ull;
-    std::size_t current_idx = 0ull;
+    std::optional<fragment> storage_frag;
+    std::size_t storage_frag_offset = 0ull;
+    std::size_t storage_frag_id = 0ull;
 
-    for (auto& frag : m_frags) {
-        if (frag.type != UNSTORED) {
+    for (auto& dd_frag : m_frags) {
+        if (dd_frag.type != UNSTORED) {
             continue;
         }
 
-        std::size_t frag_offs = 0ull;
+        std::size_t dd_frag_offset = 0ull;
+        while (dd_frag_offset < dd_frag.data.size()) {
 
-        while (frag_offs < frag.data.size()) {
-
-            if (!current || current_ofs >= current->size) {
-                if (current_idx >= m_buffer_address.size()) {
+            if (!storage_frag || storage_frag_offset == storage_frag->size) {
+                if (storage_frag_id >= m_buffer_address.size()) {
                     throw std::runtime_error("insufficient data");
                 }
 
-                current = m_buffer_address.get(current_idx);
-                current_ofs = 0ull;
-                ++current_idx;
+                storage_frag = m_buffer_address.get(storage_frag_id);
+                storage_frag_offset = 0ull;
+                ++storage_frag_id;
             }
 
-            auto size = std::min(current->size - current_ofs,
-                                 frag.data.size() - frag_offs);
+            auto size = std::min(storage_frag->size - storage_frag_offset,
+                                 dd_frag.data.size() - dd_frag_offset);
 
-            frag.addr.push(fragment{current->pointer + current_ofs, size});
-            frag_offs += size;
-            current_ofs += size;
+            dd_frag.addr.push(
+                fragment{storage_frag->pointer + storage_frag_offset, size});
+            dd_frag_offset += size;
+            storage_frag_offset += size;
+
+            if (storage_frag_offset > storage_frag->size) {
+                throw std::out_of_range("storage fragment overflow");
+            }
         }
     }
 }
