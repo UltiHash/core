@@ -36,8 +36,18 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("group state should be healthy: " +
                                  serialize(*m_externals.get_group_state()));
 
+    // NOTE: We intentionally don't check the storage's state here, as it is
+    // essential for supporting repairs.
+
     auto storages = m_externals.get_storage_services();
     auto leader = *m_externals.get_leader();
+
+    LOG_DEBUG() << "[ec_data_view] writing data to leader " << leader;
+    std::stringstream ss;
+    for (auto& s : storages) {
+        ss << std::hex << serialize(s) << ", ";
+    }
+    LOG_DEBUG() << "storage states: " << ss.str();
 
     if (leader < 0 or leader >= (candidate_observer::id_t)m_config.storages)
         throw std::runtime_error("Invalid leader id: " +
