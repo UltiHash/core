@@ -30,39 +30,6 @@ fragment fragment::subfrag(std::size_t start, std::size_t end) const {
 address::address(std::size_t size)
     : fragments(size) {}
 
-address address::shrink() const {
-    address rv;
-
-    if (empty()) {
-        return rv;
-    }
-
-    auto frag = fragments[0];
-
-    for (auto f : std::span(fragments).subspan(1)) {
-
-        uint128_t current = f.pointer;
-        if (frag.pointer + frag.size == current) {
-            frag.size += f.size;
-            continue;
-        }
-
-        rv.push({frag.pointer, frag.size});
-        frag.pointer = current;
-        frag.size = f.size;
-    }
-
-    rv.push({frag.pointer, frag.size});
-
-    return rv;
-}
-
-bool address::consecutive(const address& addr) {
-    auto this_addr_end = get(0).pointer + data_size();
-    auto other_addr_start = addr.get(0).pointer;
-    return this_addr_end == other_addr_start;
-}
-
 void address::push(const fragment& frag) { fragments.push_back(frag); }
 
 void address::emplace_back(uint128_t p, std::size_t s) {

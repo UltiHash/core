@@ -76,7 +76,6 @@ private:
     void mark_as_uploaded();
 
     void compute_unstored_addresses();
-    void merge_consecutive_unstored();
 
     unique_buffer<char> unstored_to_buffer();
 
