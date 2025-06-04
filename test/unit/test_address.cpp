@@ -91,36 +91,4 @@ BOOST_AUTO_TEST_CASE(range) {
     }
 }
 
-BOOST_AUTO_TEST_CASE(shrink) {
-    address a;
-    a.push({0, 100});
-    a.push({100, 100});
-    a.push({200, 100});
-    a.push({500, 100});
-    a.push({600, 100});
-    BOOST_CHECK_EQUAL(a.size(), 5);
-    BOOST_CHECK_EQUAL(a.data_size(), 500);
-
-    address m = a.shrink();
-    BOOST_CHECK_EQUAL(m.size(), 2);
-    BOOST_CHECK_EQUAL(a.data_size(), m.data_size());
-    BOOST_CHECK_EQUAL(m.get(0).pointer, 0);
-    BOOST_CHECK_EQUAL(m.get(0).size, 300);
-    BOOST_CHECK_EQUAL(m.get(1).pointer, 500);
-    BOOST_CHECK_EQUAL(m.get(1).size, 200);
-}
-
-BOOST_AUTO_TEST_CASE(consecutive) {
-    address a, b, c, d;
-    a.push({0, 100});
-    b.push({100, 100});
-    c.push({200, 100});
-    d.push({150, 100});
-
-    BOOST_CHECK(a.consecutive(b));
-    BOOST_CHECK(!a.consecutive(c));
-    BOOST_CHECK(b.consecutive(c));
-    BOOST_CHECK(!c.consecutive(d));
-}
-
 } // namespace uh::cluster

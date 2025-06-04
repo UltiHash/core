@@ -122,7 +122,9 @@ coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
 
-    LOG_DEBUG() << "deduplicate finished";
+    LOG_DEBUG() << "deduplicate finished: " << result.effective_size
+                << " effective bytes, " << result.addr.data_size()
+                << " raw bytes, " << result.addr.size() << " fragments";
     co_return result;
 }
 
