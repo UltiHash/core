@@ -1,4 +1,4 @@
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: parameterized-test-uh
@@ -16,7 +16,7 @@ spec:
           operator: In
           values: ["$EC2_INSTANCE_TYPE"]
       nodeClassRef:
-        apiVersion: karpenter.k8s.aws/v1beta1
+        group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: testing
       taints:
@@ -27,7 +27,7 @@ spec:
     consolidationPolicy: WhenEmpty
     consolidateAfter: 1m
 --- 
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: parameterized-test-tester
@@ -45,7 +45,7 @@ spec:
           operator: In
           values: ["$TESTER_EC2_INSTANCE_TYPE"]
       nodeClassRef:
-        apiVersion: karpenter.k8s.aws/v1beta1
+        group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: testing
       taints:
