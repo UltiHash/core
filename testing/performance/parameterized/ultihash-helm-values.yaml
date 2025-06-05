@@ -52,26 +52,29 @@ entrypoint:
     enabled: false
 
 storage:
-  replicas: $EC2_INSTANCE_COUNT
-  storageClass: $UH_STORAGE_CLASS
-  storageSize: $STORAGE_VOLUME_SIZE
-  nodeSelector:
-    purpose: parameterized-test-uh
-  tolerations:
-    - key: "purpose"
-      operator: "Equal"
-      value: "testing"
-      effect: "NoSchedule"
-  affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: role
-            operator: In
-            values:
-            - storage
-        topologyKey: kubernetes.io/hostname              
+  groups:
+    - id: 0
+      type: ROUND_ROBIN
+      storages: $EC2_INSTANCE_COUNT
+      storageClass: $UH_STORAGE_CLASS
+      size: $STORAGE_VOLUME_SIZE
+      nodeSelector:
+        purpose: parameterized-test-uh
+      tolerations:
+        - key: "purpose"
+          operator: "Equal"
+          value: "testing"
+          effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - storage
+            topologyKey: kubernetes.io/hostname              
 
 deduplicator:
   replicas: $EC2_INSTANCE_COUNT
