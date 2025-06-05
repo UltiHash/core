@@ -41,6 +41,13 @@ _create() {
     process_map["$group_id-$id"]=$!
 }
 
+print_error_message() {
+    local message="$1"
+    echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+    echo "- $message"
+    echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+}
+
 provision() {
     local group_id="$1"
     local id="$2"
@@ -49,9 +56,7 @@ provision() {
     mkdir -p "$data_path"
 
     if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- You need to deactivate/kill storage first"
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- You need to deactivate/kill storage first"
         return
     fi
 
@@ -68,9 +73,7 @@ deactivate() {
     local pid="${process_map[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- Storage $id is not active."
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- Storage $id is not active."
         return
     fi
 
@@ -85,9 +88,7 @@ deactivate_force() {
     local pid="${process_map[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- Storage $id is not active."
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- Storage $id is not active."
         return
     fi
 
@@ -102,9 +103,7 @@ activate() {
     mkdir -p "$data_path"
 
     if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- You need to deactivate/kill storage first"
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- You need to deactivate/kill storage first"
         return
     fi
 
@@ -221,26 +220,27 @@ echo
 echo "Use the commands below to manage storages."
 echo
 
+echo "---------------------------------------------------------------"
 echo "Commands:"
 echo "  a[id] - Activate storage (e.g., a1 to activate storage 1)"
 echo "  d[id] - Deactivate storage (e.g., d3 to deactivate storage 3)"
 echo "  k[id] - Kill (kill -9) storage (e.g., k0 to kill storage 0)"
 echo "  p[id] - Provision storage (e.g., p9 to provision storage 9)"
 echo "  q     - Quit the program"
+echo "---------------------------------------------------------------"
 
 last_id=-1 # Initialize last_id with an invalid value
 
 echo 
-echo "----------------------------------------"
 while true; do
     display_states
 
     echo 
     echo "----------------------------------------"
     if [[ "$last_id" -eq -1 ]]; then
-        prompt_message="Enter command (e.g., 0d): "
+        prompt_message="Enter command (e.g., 1d): "
     else
-        prompt_message="Enter command (e.g., just a): "
+        prompt_message="Enter command (e.g., 1d, you can put just a/d/k/p): "
     fi
 
     echo -n "$prompt_message"
@@ -263,16 +263,12 @@ while true; do
             echo
         else
             echo
-            echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-            echo "- No valid ID stored. Please enter a number first (e.g., 0d)."
-            echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            print_error_message "- No valid ID stored. Please enter a number first (e.g., 0d)."
             continue
         fi
     else
         echo
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- Invalid input. Please enter a valid command (e.g., 0d or just a)."
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- Invalid input. Please enter a valid command (e.g., 0d or just a)."
         continue
     fi
 
@@ -283,15 +279,11 @@ while true; do
             k) deactivate_force 0 "$id" ;;
             p) provision 0 "$id" ;;
             *) 
-                echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-                echo "- Invalid action. Please enter one of: a, d, k, p."
-                echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                print_error_message "- Invalid action. Please enter one of: a, d, k, p."
                 ;;
         esac
     else
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        echo "- Invalid ID. Please enter a number between 0 and $((storages - 1))."
-        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        print_error_message "- Invalid ID. Please enter a number between 0 and $((storages - 1))."
     fi
 done
 
