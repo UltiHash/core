@@ -49,7 +49,9 @@ provision() {
     mkdir -p "$data_path"
 
     if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
         echo "- You need to deactivate/kill storage first"
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
         return
     fi
 
@@ -66,23 +68,27 @@ deactivate() {
     local pid="${process_map[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
-      echo "- Storage $id is not active."
-      return
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        echo "- Storage $id is not active."
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        return
     fi
 
     kill "$pid" && unset process_map["$group_id-$id"]
     storage_state["$group_id-$id"]="." # Mark as deactivated
 }
 
-kill() {
+deactivate_force() {
     local group_id="$1"
     local id="$2"
     echo "- Killing storage $id on group $group_id"
     local pid="${process_map[$group_id-$id]}"
 
     if [[ -z "$pid" ]]; then
-      echo "- Storage $id is not active."
-      return
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        echo "- Storage $id is not active."
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        return
     fi
 
     kill -9 "$pid" && unset process_map["$group_id-$id"]
@@ -96,7 +102,9 @@ activate() {
     mkdir -p "$data_path"
 
     if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
         echo "- You need to deactivate/kill storage first"
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
         return
     fi
 
@@ -107,7 +115,7 @@ activate() {
     if [[ -z "$once_provisioned" ]]; then
         storage_state["$group_id-$id"]="o"
     else
-        echo "- You activated already newly provisioned storage"
+        echo "- You activated already newly provisioned storage, so it's on the provisioned state"
         storage_state["$group_id-$id"]="-"
     fi
 }
@@ -220,51 +228,71 @@ echo "  k[id] - Kill (kill -9) storage (e.g., k0 to kill storage 0)"
 echo "  p[id] - Provision storage (e.g., p9 to provision storage 9)"
 echo "  q     - Quit the program"
 
-# Add a separator for clarity
+last_id=-1 # Initialize last_id with an invalid value
+
 echo 
 echo "----------------------------------------"
 while true; do
     display_states
 
-    # Read a single character without waiting for Enter
     echo 
     echo "----------------------------------------"
-    read -n 1 -p "Enter command: " first_char
-    echo # Move to the next line after the first character
+    if [[ "$last_id" -eq -1 ]]; then
+        prompt_message="Enter command (e.g., 0d): "
+    else
+        prompt_message="Enter command (e.g., just a): "
+    fi
 
-    # Check if the first character is 'q'
+    echo -n "$prompt_message"
+    read -n 1 first_char
+
     if [[ "$first_char" == "q" ]]; then
         echo
         echo "Bye!"
         echo
         break
-    fi
-
-
-    # Add a separator for clarity
-    # If the first character is 'a', 'd', or 'p', read the next character
-    if [[ "$first_char" =~ [adp] ]]; then
-        read -n 1 -p "Enter ID(0-$((storages - 1))): " second_char
-        echo # Move to the next line after the second character
-
-        # Validate the second character
-        if [[ "$second_char" =~ ^[0-9]+$ && "$second_char" -ge 0 && "$second_char" -lt "$storages" ]]; then
+    elif [[ "$first_char" =~ ^[0-9]$ ]]; then
+        id="$first_char"
+        read -n 1 action
+        echo
+        last_id="$id"
+    elif [[ "$first_char" =~ ^[adkp]$ ]]; then
+        if [[ "$last_id" -ge 0 && "$last_id" -lt "$storages" ]]; then
             action="$first_char"
-            id="$second_char"
-
-            case "$action" in
-                a) activate 0 "$id" ;;
-                d) deactivate 0 "$id" ;;
-                k) kill 0 "$id" ;;
-                p) provision 0 "$id" ;;
-            esac
+            id="$last_id"
+            echo
         else
-            echo "- Invalid ID. Please enter a number between 0 and $((storages - 1))."
+            echo
+            echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            echo "- No valid ID stored. Please enter a number first (e.g., 0d)."
+            echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            continue
         fi
     else
-        echo "- Invalid input. Please enter one of: a0–a$((storages - 1)), d0–d$((storages - 1)), k0–k$((storages - 1)), p0–p$((storages - 1)), or 'q' to quit."
+        echo
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        echo "- Invalid input. Please enter a valid command (e.g., 0d or just a)."
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        continue
     fi
 
+    if [[ "$id" -ge 0 && "$id" -lt "$storages" ]]; then
+        case "$action" in
+            a) activate 0 "$id" ;;
+            d) deactivate 0 "$id" ;;
+            k) deactivate_force 0 "$id" ;;
+            p) provision 0 "$id" ;;
+            *) 
+                echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                echo "- Invalid action. Please enter one of: a, d, k, p."
+                echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+                ;;
+        esac
+    else
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        echo "- Invalid ID. Please enter a number between 0 and $((storages - 1))."
+        echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+    fi
 done
 
 echo "Killing all spawned processes..."
