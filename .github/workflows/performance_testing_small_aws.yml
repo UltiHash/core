@@ -116,7 +116,7 @@ jobs:
 
       - name: Execute the performance test against UltiHash
         run: |
-          bash testing/performance/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ inputs.env_name }} 1h
+          bash testing/performance/execute_job.sh performance-tester-ultihash.yaml performance-tester ${{ inputs.env_name }} 3h
  
   cleanup:
     runs-on: lightweight-generic-jobs

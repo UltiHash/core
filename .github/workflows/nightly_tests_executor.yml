@@ -26,11 +26,11 @@ jobs:
       docker_context: .
       dockerfile_path: Dockerfile
       docker_build_args: |
-       BuildType=RelWithDebInfo
+        BuildType=RelWithDebInfo
         DebugTools=True
       docker_images: ghcr.io/ultihash/cluster
       docker_tags: nightly-build
-      platforms: linux/amd64, linux/arm64
+      platforms: linux/amd64,linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
     
@@ -41,7 +41,7 @@ jobs:
       dockerfile_path: tools/database-init/Dockerfile
       docker_images: ghcr.io/ultihash/database-init
       docker_tags: nightly-build
-      platforms: linux/amd64, linux/arm64
+      platforms: linux/amd64,linux/arm64
     secrets:
       ghcr_token: ${{ secrets.PAT }}
 
