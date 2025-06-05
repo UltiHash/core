@@ -251,8 +251,8 @@ jobs:
       monitoring_token: ${{ secrets.MONITORING_TOKEN_AWS }}
 
   vulnerability-scanning:
-    needs: 
-      - build-core
+    #needs: 
+    #  - build-core
     if: |
       github.event_name == 'schedule' || 
       (github.event_name == 'workflow_dispatch' && github.event.inputs.test-to-execute == 'vulnerability-scanning') ||
