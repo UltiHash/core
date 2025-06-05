@@ -355,7 +355,7 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
         auto num_valid_storages =
             std::ranges::count_if(succeeded, [](auto s) { return s == true; });
 
-        if (num_valid_storages < m_config.data_shards) {
+        if ((std::size_t)num_valid_storages < m_config.data_shards) {
             throw std::runtime_error(
                 "Failed to read address: there's not enough valid shards");
         }
