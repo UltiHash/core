@@ -222,11 +222,12 @@ echo
 
 echo "---------------------------------------------------------------"
 echo "Commands:"
-echo "  a[id] - Activate storage (e.g., a1 to activate storage 1)"
-echo "  d[id] - Deactivate storage (e.g., d3 to deactivate storage 3)"
-echo "  k[id] - Kill (kill -9) storage (e.g., k0 to kill storage 0)"
-echo "  p[id] - Provision storage (e.g., p9 to provision storage 9)"
-echo "  q     - Quit the program"
+echo "  [0-$storages] - Set storage id (e.g., 1 to set storage id to control as 1)"
+echo "  a - Activate storage (e.g., a to activate storage 1)"
+echo "  d - Deactivate storage (e.g., 0d to deactivate storage 0)"
+echo "  k - Kill (kill -9) storage (e.g., k to kill storage 0)"
+echo "  p - Provision storage (e.g., 2p to provision storage 2)"
+echo "  q - Quit the program"
 echo "---------------------------------------------------------------"
 
 last_id=-1 # Initialize last_id with an invalid value
@@ -238,9 +239,9 @@ while true; do
     echo 
     echo "----------------------------------------"
     if [[ "$last_id" -eq -1 ]]; then
-        prompt_message="Enter command (e.g., 1d): "
+        prompt_message="Enter command (e.g., 1k): "
     else
-        prompt_message="Enter command (e.g., 1d, you can put just a/d/k/p): "
+        prompt_message="Enter command (e.g., 1k, you can put just a/d/k/p): "
     fi
 
     echo -n "$prompt_message"
@@ -263,12 +264,12 @@ while true; do
             echo
         else
             echo
-            print_error_message "- No valid ID stored. Please enter a number first (e.g., 0d)."
+            print_error_message "- No valid ID stored. Please enter a number first (e.g., 0k)."
             continue
         fi
     else
         echo
-        print_error_message "- Invalid input. Please enter a valid command (e.g., 0d or just a)."
+        print_error_message "- Invalid input. Please enter a valid command (e.g., 0k or just a)."
         continue
     fi
 
