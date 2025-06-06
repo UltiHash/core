@@ -289,6 +289,14 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
             storages[i] = nullptr;
     }
 
+    for (auto& [id, success] : success_map) {
+        if (not success) {
+            LOG_DEBUG() << "[read_address] storage " << id
+                        << " is not successful, set to nullptr";
+            storages[id] = nullptr;
+        }
+    }
+
     auto num_valid_storages =
         std::ranges::count_if(storages, [](auto& s) { return s != nullptr; });
 
@@ -298,16 +306,6 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     if ((std::size_t)num_valid_storages < m_config.data_shards) {
         throw std::runtime_error("Failed to read address: there's not enough "
                                  "valid storages");
-    }
-
-    auto need_reconstruction =
-        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage == nullptr; });
-
-    if (not need_reconstruction) {
-        throw std::runtime_error(
-            "Failed to read address: but don't know why read_address for "
-            "storages was failed");
     }
 
     // NOTE: this function translates storage pointer to global pointer
@@ -327,34 +325,51 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
         LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
                     << stripe_id;
-        co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&shards, &_addr](std::size_t id,
-                              const std::shared_ptr<storage_interface>& storage)
-                -> coro<void> {
-                try {
-                    if (storage == nullptr) {
+        auto succeeded =
+            co_await run_for_all<bool, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&shards,
+                 &_addr](std::size_t id,
+                         const std::shared_ptr<storage_interface>& storage)
+                    -> coro<bool> {
+                    try {
+                        if (storage == nullptr) {
+                            std::ranges::fill(shards[id], 0);
+                            co_return false;
+                        } else {
+                            LOG_DEBUG() << "read from storage " << id;
+                            co_await storage->read_address(_addr, shards[id],
+                                                           {0});
+                            LOG_DEBUG()
+                                << "read from storage " << id << " done";
+                            co_return true;
+                        }
+                    } catch (...) {
+                        LOG_ERROR() << "Failed to read from storage " << id;
                         std::ranges::fill(shards[id], 0);
-                    } else {
-                        LOG_DEBUG() << "try to read from storage " << id;
-                        co_await storage->read_address(_addr, shards[id], {0});
-                        LOG_DEBUG() << "read from storage done" << id;
+                        co_return false;
                     }
-                } catch (...) {
-                    LOG_ERROR() << "Failed to read address";
-                }
-            },
-            storages);
+                },
+                storages);
+
+        auto num_valid_storages =
+            std::ranges::count_if(succeeded, [](auto s) { return s == true; });
+
+        if ((std::size_t)num_valid_storages < m_config.data_shards) {
+            throw std::runtime_error(
+                "Failed to read address: there's not enough valid shards");
+        }
 
         std::vector<data_stat> stats;
         stats.reserve(m_config.storages);
-        for (auto& s : storages) {
-            if (s != nullptr) {
+        for (const auto& f : succeeded) {
+            if (f) {
                 stats.push_back(data_stat::valid);
             } else {
                 stats.push_back(data_stat::lost);
             }
         }
+
         LOG_DEBUG() << "[read_address] call recover";
         m_rs.recover(shards, stats);
 

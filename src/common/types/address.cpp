@@ -6,7 +6,7 @@
 namespace uh::cluster {
 
 std::string fragment::to_string() const {
-    return std::format("group {}, pointer {}, size {}",
+    return std::format("[group {}, pointer {}, size {}]",
                        pointer_traits::get_group_id(pointer),
                        pointer_traits::get_group_pointer(pointer), size);
 }

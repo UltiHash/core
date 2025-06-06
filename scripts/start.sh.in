@@ -31,14 +31,102 @@ if [[ -d "$log_dir" ]]; then
 fi
 mkdir -p $log_dir
 
+declare -A process_map
+declare -A storage_state
+declare -A new_storage_provisioned
+
+_create() {
+    local port=$((9300 + group_id + 10 + id))
+    UH_STORAGE_GROUP_ID=$group_id UH_STORAGE_INSTANCE_ID="$id" $UH_CLUSTER --workdir "$data_path" storage --port "$port" &> "$log_dir/storage-$group_id-$id.log" &
+    process_map["$group_id-$id"]=$!
+}
+
+print_error_message() {
+    local message="$1"
+    echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+    echo "- $message"
+    echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+}
+
+provision() {
+    local group_id="$1"
+    local id="$2"
+    local data_path="$UH_DATA/storage-$group_id-$id"
+    rm -rf "$data_path"
+    mkdir -p "$data_path"
+
+    if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
+        print_error_message "- You need to deactivate/kill storage first"
+        return
+    fi
+
+    echo "- Provisioning storage $id on group $group_id"
+    _create "$group_id" "$id"
+    storage_state["$group_id-$id"]="-" # Mark as provisioned
+    new_storage_provisioned["$group_id-$id"]="1"
+}
+
+deactivate() {
+    local group_id="$1"
+    local id="$2"
+    echo "- Deactivating storage $id on group $group_id"
+    local pid="${process_map[$group_id-$id]}"
+
+    if [[ -z "$pid" ]]; then
+        print_error_message "- Storage $id is not active."
+        return
+    fi
+
+    kill "$pid" && unset process_map["$group_id-$id"]
+    storage_state["$group_id-$id"]="." # Mark as deactivated
+}
+
+deactivate_force() {
+    local group_id="$1"
+    local id="$2"
+    echo "- Killing storage $id on group $group_id"
+    local pid="${process_map[$group_id-$id]}"
+
+    if [[ -z "$pid" ]]; then
+        print_error_message "- Storage $id is not active."
+        return
+    fi
+
+    kill -9 "$pid" && unset process_map["$group_id-$id"]
+    storage_state["$group_id-$id"]="." # Mark as deactivated
+}
+
+activate() {
+    local group_id="$1"
+    local id="$2"
+    local data_path="$UH_DATA/storage-$group_id-$id"
+    mkdir -p "$data_path"
+
+    if [[ "${storage_state["$group_id-$id"]}" != "." ]]; then
+        print_error_message "- You need to deactivate/kill storage first"
+        return
+    fi
+
+    echo "- Activating storage $id on group $group_id"
+    _create "$group_id" "$id"
+
+    once_provisioned="${new_storage_provisioned["$group_id-$id"]}"
+    if [[ -z "$once_provisioned" ]]; then
+        storage_state["$group_id-$id"]="o"
+    else
+        echo "- You activated already newly provisioned storage, so it's on the provisioned state"
+        storage_state["$group_id-$id"]="-"
+    fi
+}
+
 parse_json_by_type() {
     local json="$1"
-    echo "$json" | jq -c '.[]' | while read -r item; do
-        id=$(echo "$item" | jq -r '.id')
+    while read -r item; do
+        group_id=$(echo "$item" | jq -r '.id')
         type=$(echo "$item" | jq -r '.type')
         storages=$(echo "$item" | jq -r '.storages')
 
-        echo "ID: $id"
+        echo "ID: $group_id"
         echo "Type: $type"
         echo "Storages: $storages"
 
@@ -52,14 +140,11 @@ parse_json_by_type() {
         fi
 
         export OTEL_RESOURCE_ATTRIBUTES="service.name=storage"
-        for ((storage_id = 0; storage_id < $storages; ++storage_id)); do
-            data_path=$UH_DATA/storage-$id-$storage_id
-            port=$((9300 + id * 10 + storage_id))
-            echo " Storage port: $port"
-            mkdir -p $data_path
-            UH_STORAGE_GROUP_ID=$id UH_STORAGE_INSTANCE_ID=$storage_id $UH_CLUSTER --workdir $data_path storage --port $port &> $log_dir/storage-$id-$storage_id.log &
+        for ((id = 0; id < $storages; ++id)); do
+            storage_state["$group_id-$id"]="."
+            activate "$group_id" "$id"
         done
-    done
+    done < <(echo "$json" | jq -c '.[]')
 }
 
 set -e
@@ -83,9 +168,6 @@ fi
 
 export UH_STORAGE_GROUPS="$storage_cfg"
 
-echo "UH_STORAGE_GROUPS has been set to:"
-echo "$UH_STORAGE_GROUPS"
-
 export OTEL_RESOURCE_ATTRIBUTES="service.name=coordinator"
 $UH_CLUSTER coordinator &> $log_dir/coordinator.log &
 
@@ -102,19 +184,109 @@ get_running_processes() {
     ps -eo pid,cmd | grep -E '^\s*[0-9]+\s+\S*uh-cluster' | sed 's/\S*uh-cluster/uh-cluster/'
 }
 
+echo 
 echo "All services are running. Log files are written $log_dir and will"
 echo "not be removed after the script has finished."
 echo
 get_running_processes
-echo
-echo "Hit <Return> to kill all spawned processes and shutdown the cluster."
 
 notify_path=$(which notify-send)
 if [ -x "$notify_path" ]; then
     $notify_path --expire-time=3000 'UH cluster is running'
 fi
 
-read
+display_states() {
+    group_id=0
+    echo    "     group id: $group_id"
+    echo -n "   storage id: "
+    for ((id = 0; id < $storages; ++id)); do
+        printf "%d " "$id"
+    done
+    echo
+    echo -n "storage state: "
+    for ((id = 0; id < $storages; ++id)); do
+        state="${storage_state["$group_id-$id"]}"
+        if [[ -z "$state" ]]; then
+            state="?"
+        fi
+        printf "%s " "$state"
+    done
+    echo
+}
+
+# Main loop
+# Print initial messages (these will remain on the screen)
+echo 
+echo "Use the commands below to manage storages."
+echo
+
+echo "---------------------------------------------------------------"
+echo "Commands:"
+echo "  [0-$storages] - Set storage id (e.g., 1 to set storage id to control as 1)"
+echo "  a - Activate storage (e.g., a to activate storage 1)"
+echo "  d - Deactivate storage (e.g., 0d to deactivate storage 0)"
+echo "  k - Kill (kill -9) storage (e.g., k to kill storage 0)"
+echo "  p - Provision storage (e.g., 2p to provision storage 2)"
+echo "  q - Quit the program"
+echo "---------------------------------------------------------------"
+
+last_id=-1 # Initialize last_id with an invalid value
+
+echo 
+while true; do
+    display_states
+
+    echo 
+    echo "----------------------------------------"
+    if [[ "$last_id" -eq -1 ]]; then
+        prompt_message="Enter command (e.g., 1k): "
+    else
+        prompt_message="Enter command (e.g., 1k, you can put just a/d/k/p): "
+    fi
+
+    echo -n "$prompt_message"
+    read -n 1 first_char
+
+    if [[ "$first_char" == "q" ]]; then
+        echo
+        echo "Bye!"
+        echo
+        break
+    elif [[ "$first_char" =~ ^[0-9]$ ]]; then
+        id="$first_char"
+        read -n 1 action
+        echo
+        last_id="$id"
+    elif [[ "$first_char" =~ ^[adkp]$ ]]; then
+        if [[ "$last_id" -ge 0 && "$last_id" -lt "$storages" ]]; then
+            action="$first_char"
+            id="$last_id"
+            echo
+        else
+            echo
+            print_error_message "- No valid ID stored. Please enter a number first (e.g., 0k)."
+            continue
+        fi
+    else
+        echo
+        print_error_message "- Invalid input. Please enter a valid command (e.g., 0k or just a)."
+        continue
+    fi
+
+    if [[ "$id" -ge 0 && "$id" -lt "$storages" ]]; then
+        case "$action" in
+            a) activate 0 "$id" ;;
+            d) deactivate 0 "$id" ;;
+            k) deactivate_force 0 "$id" ;;
+            p) provision 0 "$id" ;;
+            *) 
+                print_error_message "- Invalid action. Please enter one of: a, d, k, p."
+                ;;
+        esac
+    else
+        print_error_message "- Invalid ID. Please enter a number between 0 and $((storages - 1))."
+    fi
+done
 
 echo "Killing all spawned processes..."
 pkill uh-cluster
