@@ -24,3 +24,6 @@ uh_add_test(test_services PRIVATE etcd storage)
 uh_add_test(test_storage_state_manager PRIVATE etcd storage)
 uh_add_test(test_ec_maintainer PRIVATE storage)
 uh_add_test(test_subscriber PRIVATE etcd)
+
+uh_add_test(test_service_outage PRIVATE etcd)
+
