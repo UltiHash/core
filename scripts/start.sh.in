@@ -22,7 +22,7 @@ done
 
 UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
 BUILD_DIR=@PROJECT_BINARY_DIR@
-UH_DATA=/var/lib/uh
+UH_DATA=${UH_DATA:-/var/lib/uh}
 export UH_LOG_LEVEL=DEBUG
 UH_CLUSTER=$<TARGET_FILE:uh-cluster>
 log_dir=$BUILD_DIR/logs
