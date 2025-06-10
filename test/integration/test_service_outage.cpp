@@ -31,9 +31,9 @@ struct fixture {
     std::string m_data_path = "/var/lib/uh";
 };
 
-BOOST_FIXTURE_TEST_SUITE(a_uh_cluster, fixture)
+BOOST_FIXTURE_TEST_SUITE(a_storage_quorum, fixture)
 
-BOOST_AUTO_TEST_CASE(test_service_outage) {
+BOOST_AUTO_TEST_CASE(handles_storage_outage) {
     bp::environment env = boost::this_process::environment();
     env[ENV_CFG_LICENSE] = test_license_string;
     env[ENV_CFG_LOG_LEVEL] = "DEBUG";
@@ -60,8 +60,8 @@ BOOST_AUTO_TEST_CASE(test_signal_handling) {
     std::cout << "Process started with PID: " << c.id() << std::endl;
 
     std::this_thread::sleep_for(std::chrono::seconds(5));
-    std::cout << "Sending SIGTERM to process...\n";
-    send_signal_to_process(c.id(), SIGTERM);
+    std::cout << "Sending SIGKILL to process...\n";
+    send_signal_to_process(c.id(), SIGKILL);
 
     c.wait();
     std::cout << "Process terminated.\n";
