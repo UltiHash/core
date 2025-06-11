@@ -33,12 +33,25 @@ public:
         std::size_t buffer_size = 0;
 
         address partial_addr;
-        while (m_addr_index < m_obj->addr->size() and
-               buffer_size < buffer.size()) {
-            const auto frag = m_obj->addr->get(m_addr_index);
+        while (m_addr_index < m_obj->addr->size() && buffer_size < buffer.size()) {
+
+            auto frag = m_obj->addr->get(m_addr_index);
+            if (m_frag_offset > 0) {
+                frag.pointer += m_frag_offset;
+                frag.size -= m_frag_offset;
+            }
+
             if (frag.size + buffer_size > buffer.size()) {
+                auto remains = buffer.size() - buffer_size;
+
+                m_frag_offset += remains;
+                frag.size = remains;
+                partial_addr.push(frag);
+                buffer_size += frag.size;
                 break;
             }
+
+            m_frag_offset = 0;
             partial_addr.push(frag);
             buffer_size += frag.size;
             m_addr_index++;
@@ -59,6 +72,7 @@ private:
 
         metric<entrypoint_egressed_data_counter, byte>::increase(m_total);
 
+        LOG_INFO() << "retrieval size " << m_total << " b";
         LOG_INFO() << "retrieval duration " << duration.count() << " s";
         LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
     }
@@ -66,6 +80,7 @@ private:
     storage::global::global_data_view& m_storage;
     directory::object_lock m_obj;
     size_t m_addr_index = 0;
+    std::size_t m_frag_offset = 0;
 
     std::size_t m_size;
 

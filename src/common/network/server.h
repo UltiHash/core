@@ -136,9 +136,11 @@ private:
     }
 
     coro<void> do_session(boost::asio::ip::tcp::socket stream) {
-        LOG_INFO() << "connection from: " << stream.remote_endpoint();
+        auto ep = stream.remote_endpoint();
+        LOG_INFO() << "connection from: " << ep;
         counter_guard<active_connections> guard;
         co_await m_handler->handle(std::move(stream));
+        LOG_INFO() << "session ended: " << ep;
         co_return;
     }
 
