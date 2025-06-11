@@ -1,3 +1,7 @@
+## [1.3.2] 2025-06-11
+
+- Fix issue with get-object which lead to stale downloads with high CPU utilization
+
 ## [1.3.1] 2025-04-04
 
 - Add labels to distinguish users on metrics
