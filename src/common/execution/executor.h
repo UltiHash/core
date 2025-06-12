@@ -44,14 +44,21 @@ public:
      */
     template <typename func, typename ... params>
     requires std::invocable<func, std::stop_token, params...>
-    void spawn(func f, params && ... p) {
-        boost::asio::co_spawn(m_ioc, std::invoke(f, m_stop.get_token(), std::forward<params>(p)...).start_trace(), boost::asio::detached);
+    void spawn(func&& f, params && ... p) {
+        boost::asio::co_spawn(
+            m_ioc,
+            std::invoke(std::move(f), m_stop.get_token(), std::forward<params>(p)...).start_trace(),
+            boost::asio::detached);
     }
 
     template <typename func, typename ... args>
-    void spawn(func f, args && ... a) {
-        boost::asio::co_spawn(m_ioc, std::invoke(f, std::forward<args>(a)...).start_trace(), boost::asio::detached);
+    void spawn(func&& f, args && ... a) {
+        boost::asio::co_spawn(
+            m_ioc,
+            std::invoke(std::move(f), std::forward<args>(a)...).start_trace(),
+            boost::asio::detached);
     }
+
 
     /**
      * Repeatedly call `f` until the executor is stopped, waiting `interval` between calls.

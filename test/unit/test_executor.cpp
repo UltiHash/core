@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(spawn_class_method_forward) {
     BOOST_CHECK_EQUAL(value, 0);
 
     helper h{value};
-    e.spawn(std::bind(&helper::foo, &h));
+    e.spawn(&helper::foo, &h);
     e.run();
 
     BOOST_CHECK_EQUAL(value, 1);

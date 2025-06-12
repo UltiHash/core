@@ -2,6 +2,7 @@
 
 #include "config.h"
 
+#include <common/execution/executor.h>
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
@@ -24,56 +25,45 @@ class service {
 public:
     service(const service_config& service, const coordinator_config& cc)
         : m_etcd{service.etcd_config},
-          m_ioc(cc.thread_count),
-          m_ioc_runner(m_ioc, cc.thread_count),
-          m_usage{m_ioc, cc.database_config} {
+          m_executor(cc.thread_count),
+          m_usage{m_executor.get_executor(), cc.database_config} {
 
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
-                m_ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
+                m_executor.get_executor(), m_etcd, pseudo_backend_client(cc.license.to_string()));
 
-            boost::asio::co_spawn(m_ioc,
-                                  m_license_updater->update().start_trace(),
-                                  boost::asio::detached);
+            m_executor.spawn(&license_updater::update, *m_license_updater);
         } else {
             LOG_INFO() << "using license from licensing host "
                        << cc.backend_config.backend_host;
             const auto& bc = cc.backend_config;
-            m_license_updater.emplace(m_ioc, m_etcd,
+            m_license_updater.emplace(m_executor.get_executor(), m_etcd,
                                       default_backend_client(bc.backend_host,
                                                              bc.customer_id,
                                                              bc.access_token));
-            boost::asio::co_spawn(
-                m_ioc,
-                m_license_updater->periodic_update(LICENSE_FETCH_PERIOD)
-                    .start_trace(),
-                boost::asio::detached);
+            m_executor.repeated(
+                LICENSE_FETCH_PERIOD,
+                &license_updater::update, *m_license_updater);
 
-            m_usage_updater.emplace(m_ioc, m_usage, *m_license_updater,
+            m_usage_updater.emplace(m_executor.get_executor(), m_usage, *m_license_updater,
                                     default_backend_client(bc.backend_host,
                                                            bc.customer_id,
                                                            bc.access_token));
         }
+
         publish_configs(m_etcd, cc.storage_groups);
     }
 
     void run() {
         LOG_INFO() << "running coordinator service";
 
-        while (!m_stopped) {
-            std::unique_lock lock(m_mutex);
-            m_cv.wait(lock, [this] { return m_stopped; });
-        }
+        m_executor.run();
     }
 
     void stop() {
         LOG_INFO() << "stopping coordinator service";
-        {
-            std::lock_guard lock(m_mutex);
-            m_stopped = true;
-        }
-        m_cv.notify_all();
+        m_executor.stop();
     }
 
     static void publish_configs(etcd_manager& etcd,
@@ -86,12 +76,7 @@ public:
 
 private:
     etcd_manager m_etcd;
-    boost::asio::io_context m_ioc;
-    std::condition_variable m_cv;
-    std::mutex m_mutex;
-    bool m_stopped = false;
-
-    io_context_runner m_ioc_runner;
+    executor m_executor;
 
     usage m_usage;
     std::optional<license_updater> m_license_updater;
