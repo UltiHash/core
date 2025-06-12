@@ -1,18 +1,24 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "unit")
 
+#
+# Please keep the list sorted by test name
+#
 uh_add_test(test_address)
-uh_add_test(test_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_async_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_backend_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_cpr PRIVATE http_server nlohmann_json cpr::cpr)
 uh_add_test(test_cors PRIVATE entrypoint)
 uh_add_test(test_data_file PRIVATE storage)
+uh_add_test(test_executor PRIVATE execution)
 uh_add_test(test_exp_backoff PRIVATE license)
 uh_add_test(test_formats PRIVATE entrypoint)
 uh_add_test(test_hash PRIVATE uhcrypto)
+uh_add_test(test_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_http_range PRIVATE entrypoint)
+uh_add_test(test_integral)
 uh_add_test(test_lfu_cache)
 uh_add_test(test_license PRIVATE license)
+uh_add_test(test_namespace)
 uh_add_test(test_storage_group_config PRIVATE group_data)
 uh_add_test(test_storage_group_externals PRIVATE group_data storage_interfaces)
 uh_add_test(test_storage_group_internals PRIVATE group_data)
@@ -30,6 +36,3 @@ uh_add_test(test_service_registry PRIVATE etcd)
 uh_add_test(test_strings)
 uh_add_test(test_variables PRIVATE uh_mock_entrypoint)
 uh_add_test(test_xml_parser)
-uh_add_test(test_namespace)
-uh_add_test(test_integral)
-
