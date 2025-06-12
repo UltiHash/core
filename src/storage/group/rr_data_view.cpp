@@ -24,8 +24,7 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
     const auto [storage_id, client] = m_load_balancer.get();
-    auto allocation = co_await client->allocate(
-        data.size(), m_group_config.stripe_size_kib * KIBI_BYTE);
+    auto allocation = co_await client->allocate(data.size());
     auto addr = co_await client->write(allocation, data, offsets);
     address rv;
     for (auto i = 0ul; i < addr.size(); i++) {
