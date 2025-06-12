@@ -49,4 +49,13 @@ void executor::wait() {
     }
 }
 
+void executor::keep_alive() {
+    m_work_guard = std::make_unique<boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>(m_ioc.get_executor());
+
+    {
+        std::unique_lock lock(m_mutex);
+        m_stop_functions.emplace_back([this](){ m_work_guard.reset(); });
+    }
+}
+
 }

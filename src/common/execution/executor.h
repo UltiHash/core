@@ -35,6 +35,12 @@ public:
     void wait();
 
     /**
+     * Block executor from exiting on its own. This creates a work_guard that is
+     * reset when calling `stop()`
+     */
+    void keep_alive();
+
+    /**
      * Access underlying executor.
      */
     boost::asio::io_context& get_executor() { return m_ioc; }
@@ -140,6 +146,8 @@ private:
     std::mutex m_stop_mutex;
     bool m_stopped = true;
     std::condition_variable m_stop_cond;
+
+    std::unique_ptr<boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>> m_work_guard;
 };
 
 }
