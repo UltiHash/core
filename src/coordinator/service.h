@@ -57,7 +57,6 @@ public:
 
     void run() {
         LOG_INFO() << "running coordinator service";
-
         m_executor.run();
     }
 
