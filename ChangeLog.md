@@ -1,3 +1,6 @@
+## [Unreleased]
+- Fix issue with get-object which lead to stale downloads with high CPU utilization
+
 ## [1.4.0] 2025-06-04
 - Add missing Last-Modified header to GetObject
 - Bump CLI11 version to 2.5.0
