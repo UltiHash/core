@@ -34,6 +34,7 @@ public:
                 m_executor.get_executor(), m_etcd, pseudo_backend_client(cc.license.to_string()));
 
             m_executor.spawn(&license_updater::update, *m_license_updater);
+            m_executor.keep_alive();
         } else {
             LOG_INFO() << "using license from licensing host "
                        << cc.backend_config.backend_host;
