@@ -12,7 +12,7 @@ public:
         directory& dir,
         storage::global::global_data_view& gdv);
 
-    static constexpr auto POLL_INTERVALL = std::chrono::seconds(5);
+    static constexpr auto POLL_INTERVAL = std::chrono::seconds(5);
 };
 
 } // namespace uh::cluster::ep
