@@ -24,8 +24,7 @@ public:
      * @return local pointer to the allocated storage space and size of
      * allocation
      */
-    allocation_t allocate(std::size_t size,
-                          std::size_t alignment = DEFAULT_PAGE_SIZE);
+    allocation_t allocate(std::size_t size, std::size_t alignment);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
