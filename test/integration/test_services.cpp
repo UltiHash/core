@@ -25,7 +25,7 @@ struct fixture {
     std::size_t service_id;
     std::size_t num_storages = 5;
     storage_index services{num_storages};
-    service_load_balancer<storage_interface> load_balancer{1s};
+    service_load_balancer<storage_interface> load_balancer;
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
     fixture()
@@ -35,7 +35,9 @@ struct fixture {
           service_maintainer(
               etcd, ns::root.storage_groups[0].storage_hostports,
               service_factory<storage_interface>(ioc, 2 /*num_connections*/),
-              {services, load_balancer}) {}
+              {services, load_balancer}) {
+        time_settings::instance().set_service_get_timeout(1s);
+    }
 
     auto count_valid_services() {
         return std::ranges::count_if(services.get(),
