@@ -25,7 +25,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 
     LOG_DEBUG() << "[ec_data_view] waiting group state for group " << group_id;
     etcd.wait(ns::root.storage_groups[group_id].group_state,
-              GROUP_STATE_WAIT_TIMEOUT);
+              time_settings::instance().get_group_state_wait_timeout());
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
@@ -47,7 +47,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
     for (auto& s : storages) {
         ss << std::hex << serialize(s) << ", ";
     }
-    LOG_DEBUG() << "storage states: " << ss.str();
+    LOG_DEBUG() << "storage services: " << ss.str();
 
     if (leader < 0 or leader >= (candidate_observer::id_t)m_config.storages)
         throw std::runtime_error("Invalid leader id: " +
@@ -212,16 +212,27 @@ coro<std::unordered_map<std::size_t, bool>> ec_data_view::read_from_storages(
                 if (storage == nullptr or *state != storage_state::ASSIGNED) {
                     co_return false;
                 }
-                LOG_DEBUG() << "try to read from storage " << id;
+                LOG_DEBUG() << std::format(
+                    "[read_from_storages: group {}, storage {}] try to read...",
+                    m_config.id, id);
+
                 co_await storage->read_address(info.addr, buffer,
                                                info.pointer_offsets);
-                LOG_DEBUG() << "read from storage done" << id;
+                LOG_DEBUG() << std::format(
+                    "[read_from_storages: group {}, storage {}] done",
+                    m_config.id, id);
                 co_return true;
             } catch (const std::exception& e) {
-                LOG_ERROR() << "Failed to read address: " << e.what();
+                LOG_DEBUG() << std::format("[read_from_storages: group {}, "
+                                           "storage {}] failed, ",
+                                           m_config.id, id)
+                            << e.what();
                 co_return false;
             } catch (...) {
-                LOG_ERROR() << "Failed to read address: Unknown exception";
+                LOG_DEBUG()
+                    << std::format("[read_from_storages: group {}, storage {}] "
+                                   "failed, unknown exception",
+                                   m_config.id, id);
                 co_return false;
             }
         },

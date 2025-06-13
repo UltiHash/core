@@ -56,7 +56,7 @@ public:
         co_return;
     }
 
-    coro<void> periodic_update(std::chrono::seconds interval) {
+    coro<void> periodic_update(std::chrono::steady_clock::duration interval) {
         while (true) {
             auto start_time = std::chrono::steady_clock::now();
 

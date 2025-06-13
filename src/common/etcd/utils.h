@@ -110,7 +110,7 @@ public:
     }
 
     std::string wait(const std::string& prefix, std::string expected_value,
-                     std::chrono::seconds timeout = 5s) {
+                     std::chrono::steady_clock::duration timeout = 5s) {
         std::promise<std::string> promise;
         auto future = promise.get_future();
         auto wg = watch(prefix, [&](response resp) {
@@ -135,7 +135,7 @@ public:
     }
 
     std::string wait(const std::string& prefix,
-                     std::chrono::seconds timeout = 5s) {
+                     std::chrono::steady_clock::duration timeout = 5s) {
         std::promise<std::string> promise;
         auto future = promise.get_future();
         auto wg = watch(prefix, [&](response resp) {

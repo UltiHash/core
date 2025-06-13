@@ -46,7 +46,9 @@ public:
                                                              bc.access_token));
             boost::asio::co_spawn(
                 m_ioc,
-                m_license_updater->periodic_update(LICENSE_FETCH_PERIOD)
+                m_license_updater
+                    ->periodic_update(
+                        time_settings::instance().get_license_fetch_period())
                     .start_trace(),
                 boost::asio::detached);
 

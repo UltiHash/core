@@ -6,11 +6,15 @@ namespace uh::cluster {
 messenger_core::messenger_core(boost::asio::io_context& ioc,
                                const std::string& ip_addr,
                                const std::uint16_t port)
-    : m_socket(ioc) {
+    : m_tcp_stream(ioc) {
     boost::asio::ip::tcp::endpoint endpoint(
         boost::asio::ip::make_address(ip_addr), port);
     try {
-        m_socket.connect(endpoint);
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        auto future =
+            m_tcp_stream.async_connect(endpoint, boost::asio::use_future);
+        future.get();
     } catch (const std::exception& e) {
         throw create_internal_network_error("socket connection failed", e);
     }
@@ -18,12 +22,12 @@ messenger_core::messenger_core(boost::asio::io_context& ioc,
 }
 
 messenger_core::messenger_core(boost::asio::ip::tcp::socket&& socket)
-    : m_socket(std::move(socket)) {
+    : m_tcp_stream(std::move(socket)) {
     clear_buffers();
 }
 
 messenger_core::messenger_core(messenger_core&& m) noexcept
-    : m_socket(std::move(m.m_socket)),
+    : m_tcp_stream(std::move(m.m_tcp_stream)),
       m_read_buffers(std::move(m.m_read_buffers)),
       m_write_buffers(std::move(m.m_write_buffers)),
       m_read_size(m.m_read_size),
@@ -40,7 +44,9 @@ coro<messenger_core::header> messenger_core::recv_header() {
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
 
-        co_await boost::asio::async_read(m_socket, buffers,
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
@@ -72,7 +78,9 @@ messenger_core::recv_header_with_context() {
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
 
-        co_await boost::asio::async_read(m_socket, buffers,
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
@@ -111,7 +119,9 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     }
 
     try {
-        co_await boost::asio::async_read(m_socket, m_read_buffers,
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        co_await boost::asio::async_read(m_tcp_stream, m_read_buffers,
                                          boost::asio::use_awaitable);
         m_read_buffers.clear();
         m_read_size = 0;
@@ -166,8 +176,14 @@ coro<void> messenger_core::send_buffers(const message_type type) {
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        co_await boost::asio::async_write(m_socket, m_write_buffers,
+        LOG_DEBUG() << "[messenger_core::send_buffers] async_write";
+
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        co_await boost::asio::async_write(m_tcp_stream, m_write_buffers,
                                           boost::asio::use_awaitable);
+        LOG_DEBUG() << "[messenger_core::send_buffers] async_write done";
+
     } catch (const std::exception& e) {
         throw create_internal_network_error("send_buffers failed", e);
     }
@@ -222,7 +238,9 @@ coro<void> messenger_core::send(const message_type type,
             boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
-        co_await boost::asio::async_write(m_socket, buffers,
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        co_await boost::asio::async_write(m_tcp_stream, buffers,
                                           boost::asio::use_awaitable);
     } catch (const std::exception& e) {
         throw create_internal_network_error("send failed", e);
@@ -235,26 +253,15 @@ void messenger_core::clear_buffers() {
 }
 
 boost::asio::ip::tcp::endpoint messenger_core::local() const {
-    return m_socket.local_endpoint();
+    return m_tcp_stream.socket().local_endpoint();
 }
 
 boost::asio::ip::tcp::endpoint messenger_core::peer() const {
-    return m_socket.remote_endpoint();
+    return m_tcp_stream.socket().remote_endpoint();
 }
 
 boost::asio::ip::tcp::socket& messenger_core::get_socket() noexcept {
-    return m_socket;
-}
-
-messenger_core::~messenger_core() {
-    try {
-        if (m_socket.is_open()) {
-            m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            m_socket.close();
-        }
-    } catch (const std::exception& e) {
-        LOG_ERROR() << "Error in closing the socket: " << e.what();
-    }
+    return m_tcp_stream.socket();
 }
 
 error_exception

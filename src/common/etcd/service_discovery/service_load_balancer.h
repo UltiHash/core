@@ -11,9 +11,7 @@ template <typename service_interface>
 class service_load_balancer : public service_observer<service_interface> {
 
 public:
-    explicit service_load_balancer(
-        std::chrono::milliseconds service_get_timeout = SERVICE_GET_TIMEOUT)
-        : m_service_get_timeout{service_get_timeout} {}
+    explicit service_load_balancer() {}
 
     void add_client(size_t id,
                     std::shared_ptr<service_interface> service) override {
@@ -40,7 +38,8 @@ public:
 
         std::unique_lock lk(m_mutex);
 
-        if (!m_cv.wait_for(lk, m_service_get_timeout,
+        if (!m_cv.wait_for(lk,
+                           time_settings::instance().get_service_get_timeout(),
                            [this] { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +
@@ -64,7 +63,6 @@ public:
     [[nodiscard]] size_t size() const noexcept { return m_services.size(); }
 
 protected:
-    std::chrono::milliseconds m_service_get_timeout;
     std::condition_variable m_cv;
     std::mutex m_mutex;
     std::map<std::size_t, std::shared_ptr<service_interface>> m_services;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <string>
 
@@ -84,11 +85,52 @@ constexpr const char* ENV_CFG_STORAGE_GROUP_ID = "UH_STORAGE_GROUP_ID";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
-constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
-constexpr auto GROUP_STATE_WAIT_TIMEOUT = std::chrono::seconds(10);
-constexpr auto OFFSET_GATHERING_TIMEOUT = std::chrono::seconds(2);
+class time_settings {
+public:
+    using duration_t = std::chrono::steady_clock::duration;
+    static time_settings& instance() {
+        static time_settings inst;
+        return inst;
+    }
+    auto get_service_get_timeout() const {
+        return service_get_timeout.load(std::memory_order_acquire);
+    }
+    auto get_group_state_wait_timeout() const {
+        return group_state_wait_timeout.load(std::memory_order_acquire);
+    }
+    auto get_offset_gathering_timeout() const {
+        return offset_gathering_timeout.load(std::memory_order_acquire);
+    }
+    auto get_async_io_timeout() const {
+        return async_io_timeout.load(std::memory_order_acquire);
+    }
+    auto get_license_fetch_period() const {
+        return license_fetch_period.load(std::memory_order_acquire);
+    }
 
-constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
+    void set_service_get_timeout(duration_t timeout) {
+        service_get_timeout.store(timeout, std::memory_order_release);
+    }
+    void set_group_state_wait_timeout(duration_t timeout) {
+        group_state_wait_timeout.store(timeout, std::memory_order_release);
+    }
+    void set_offset_gathering_timeout(duration_t timeout) {
+        offset_gathering_timeout.store(timeout, std::memory_order_release);
+    }
+    void set_async_io_timeout(duration_t timeout) {
+        async_io_timeout.store(timeout, std::memory_order_release);
+    }
+    void set_license_fetch_period(duration_t timeout) {
+        license_fetch_period.store(timeout, std::memory_order_release);
+    }
+
+private:
+    std::atomic<duration_t> service_get_timeout{std::chrono::seconds(10)};
+    std::atomic<duration_t> group_state_wait_timeout{std::chrono::seconds(10)};
+    std::atomic<duration_t> offset_gathering_timeout{std::chrono::seconds(2)};
+    std::atomic<duration_t> async_io_timeout{std::chrono::seconds(30)};
+    std::atomic<duration_t> license_fetch_period{std::chrono::hours(1)};
+};
 
 constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
 

@@ -26,9 +26,18 @@ public:
           m_license_watcher(m_etcd),
           m_storage_id{sc.instance_id},
           m_group_id{sc.group_id},
-          m_group_config{group_config::create(
-              m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
-                          SERVICE_GET_TIMEOUT))},
+          m_group_config{group_config::create([&]() -> std::string {
+              LOG_DEBUG()
+                  << "removing host_port group while initializing, on storage "
+                  << m_storage_id;
+              m_etcd.rm(ns::root.storage_groups[m_group_id]
+                            .storage_hostports[m_storage_id]);
+              LOG_DEBUG() << "waiting for group config to be ready, for group "
+                          << m_group_id;
+              return m_etcd.wait(
+                  ns::root.storage_groups.group_configs[m_group_id],
+                  time_settings::instance().get_group_state_wait_timeout());
+          }())},
           m_storage(std::make_shared<local_storage>(m_storage_id, sc.data_store,
                                                     sc.working_directory)),
 

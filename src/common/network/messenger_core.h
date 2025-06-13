@@ -9,7 +9,8 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <chrono>
 
 namespace uh::cluster {
 
@@ -121,10 +122,10 @@ public:
     boost::asio::ip::tcp::endpoint peer() const;
     boost::asio::ip::tcp::socket& get_socket() noexcept;
 
-    ~messenger_core();
+    ~messenger_core() = default;
 
 private:
-    boost::asio::ip::tcp::socket m_socket;
+    boost::beast::tcp_stream m_tcp_stream;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;

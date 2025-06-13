@@ -25,5 +25,6 @@ uh_add_test(test_storage_state_manager PRIVATE etcd storage)
 uh_add_test(test_ec_maintainer PRIVATE storage)
 uh_add_test(test_subscriber PRIVATE etcd)
 
-uh_add_test(test_service_outage PRIVATE etcd)
+uh_add_test(test_storage_outage PRIVATE storage coordinator)
+add_dependencies(test_storage_outage uh-cluster)
 
