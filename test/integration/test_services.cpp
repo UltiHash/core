@@ -34,7 +34,7 @@ struct fixture {
 
               return get_service_id(
                   etcd, get_service_string(storage_interface::service_role),
-                  tmp.path())
+                  tmp.path());
           }()},
           service_maintainer(
               etcd, ns::root.storage_groups[0].storage_hostports,
