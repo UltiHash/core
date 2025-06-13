@@ -20,8 +20,8 @@ struct storage_interface {
     virtual coro<std::size_t> unlink(const address& addr) = 0;
     virtual coro<std::size_t> get_used_space() = 0;
 
-    virtual coro<allocation_t> allocate(std::size_t size,
-                                        std::size_t alignment = 1) = 0;
+    virtual coro<allocation_t>
+    allocate(std::size_t size, std::size_t alignment = DEFAULT_PAGE_SIZE) = 0;
 
     virtual ~storage_interface() noexcept = default;
     static constexpr role service_role = STORAGE_SERVICE;
