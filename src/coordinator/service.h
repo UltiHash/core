@@ -51,6 +51,10 @@ public:
                                     default_backend_client(bc.backend_host,
                                                            bc.customer_id,
                                                            bc.access_token));
+            m_executor.repeated(
+                usage_updater::POLL_INTERVAL,
+                &usage_updater::hourly_update, *m_usage_updater);
+
         }
 
         publish_configs(m_etcd, cc.storage_groups);
