@@ -88,7 +88,7 @@ void service::run() {
     });
 
     m_executor.repeated(
-        garbage_collector::POLL_INTERVALL,
+        garbage_collector::POLL_INTERVAL,
         &garbage_collector::collect, m_directory, m_gdv);
 
     m_executor.repeated(
