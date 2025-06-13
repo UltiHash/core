@@ -117,6 +117,7 @@ public:
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::GET:
             case etcd_action::CREATE:
+            case etcd_action::SET:
                 if (resp.value == expected_value) {
                     promise.set_value(resp.value);
                 }
@@ -141,6 +142,7 @@ public:
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::GET:
             case etcd_action::CREATE:
+            case etcd_action::SET:
                 promise.set_value(resp.value);
                 break;
             default:
