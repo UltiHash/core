@@ -244,9 +244,6 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
         throw std::invalid_argument("allocation size must be larger than zero");
     }
 
-    if (alignment > 1) {
-    }
-
     if (m_write_offset % alignment != 0) {
         auto adjustment = alignment - (m_write_offset % alignment);
 
