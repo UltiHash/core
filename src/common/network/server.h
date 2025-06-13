@@ -4,16 +4,8 @@
 #include <common/telemetry/log.h>
 #include <common/telemetry/metrics.h>
 #include <common/utils/protocol_handler.h>
-#include <boost/asio/awaitable.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/config.hpp>
-#include <cstdlib>
 #include <memory>
-#include <string>
-#include <thread>
-#include <utility>
-#include <vector>
 
 namespace uh::cluster {
 
@@ -42,10 +34,6 @@ public:
             [&exec, this]() -> coro<void> {
                 exec.spawn(&server::do_session, this, co_await m_acceptor.async_accept());
             });
-    }
-
-    [[nodiscard]] const server_config& get_server_config() const {
-        return m_config;
     }
 
 private:
