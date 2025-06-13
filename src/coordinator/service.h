@@ -7,7 +7,6 @@
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
-#include <common/utils/io_context_runner.h>
 #include <common/utils/strings.h>
 #include <storage/interfaces/remote_storage.h>
 
