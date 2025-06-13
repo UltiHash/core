@@ -148,6 +148,8 @@ address default_data_store::write(const allocation_t allocation,
     }
 
     m_used_space += allocation.size;
+    m_write_offset =
+        std::max(m_write_offset, allocation.offset + allocation.size);
     sync();
 
     maintain_refcount(allocation.offset, allocation.size, offsets);
@@ -234,13 +236,29 @@ void default_data_store::set_write_offset(std::size_t val) noexcept {
 allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
     std::unique_lock lock(m_mutex);
 
-    if (m_conf.max_data_store_size - m_write_offset < size) {
-        throw std::runtime_error("datastore cannot store additional " +
-                                 std::to_string(size) + " bytes");
+    if (alignment == 0) {
+        throw std::invalid_argument("alignment must be larger than zero");
+    }
+
+    if (size == 0) {
+        throw std::invalid_argument("allocation size must be larger than zero");
     }
 
     if (m_write_offset % alignment != 0) {
-        m_write_offset += alignment - (m_write_offset % alignment);
+        auto adjustment = alignment - (m_write_offset % alignment);
+
+        if (m_conf.max_data_store_size - m_write_offset < adjustment) {
+            throw std::runtime_error("satisfying alignment adjustment (" +
+                                     std::to_string(adjustment) +
+                                     " bytes) "
+                                     "exceeds maximum data store size");
+        }
+        m_write_offset += adjustment;
+    }
+
+    if (m_conf.max_data_store_size - m_write_offset < size) {
+        throw std::runtime_error("datastore cannot store additional " +
+                                 std::to_string(size) + " bytes");
     }
 
     allocation_t rv = {.offset = m_write_offset, .size = size};
@@ -264,52 +282,28 @@ void default_data_store::maintain_refcount(
                                        local_pointer + *it, frag_size);
     }
 
-    update_last_page_ref(refcount_commands);
     m_refcounter.execute(refcount_commands);
-}
-
-void default_data_store::update_last_page_ref(
-    std::deque<reference_counter::refcount_cmd>& refcount_commands) {
-
-    std::size_t last_page = m_write_offset / m_conf.page_size;
-
-    if (m_locked_page.has_value()) {
-        if (last_page != m_locked_page.value()) {
-            refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                           last_page * m_conf.page_size,
-                                           m_conf.page_size);
-            refcount_commands.emplace_back(
-                reference_counter::DECREMENT,
-                m_locked_page.value() * m_conf.page_size, m_conf.page_size);
-            m_locked_page = last_page;
-        }
-    } else {
-        refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                       last_page * m_conf.page_size,
-                                       m_conf.page_size);
-        m_locked_page = last_page;
-    }
 }
 
 std::size_t default_data_store::internal_delete(std::size_t offset,
                                                 std::size_t size) {
-    std::size_t last_page_offset =
-        (m_write_offset / m_conf.page_size) * m_conf.page_size;
-
-    if (offset >= last_page_offset) {
+    if (offset >= m_write_offset) {
         LOG_WARN() << "attempted to delete data at the out-of-bounds offset="
-                   << offset << ", with last_page_offset=" << last_page_offset;
+                   << offset << ", with m_write_offset=" << m_write_offset;
         throw std::out_of_range("pointer for delete operation is out of range");
     }
 
+    std::size_t adjusted_size = std::min(size, m_write_offset - offset);
+
     LOG_DEBUG() << "page " << offset / m_conf.page_size
                 << " dropped to 0, deleting page (offset=" << offset
-                << ", size=" << size << ")";
+                << ", size=" << adjusted_size << ")";
 
     std::size_t rv = 0ull;
-    while (rv < size) {
+    while (rv < adjusted_size) {
+        // it seems pointer of of range is coming from here
         auto loc = file_location(offset + rv);
-        auto count = loc.file.release(loc.offset, size - rv);
+        auto count = loc.file.release(loc.offset, adjusted_size - rv);
         if (count == 0) {
             break;
         }

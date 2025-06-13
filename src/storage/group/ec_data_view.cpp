@@ -36,8 +36,18 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("group state should be healthy: " +
                                  serialize(*m_externals.get_group_state()));
 
+    // NOTE: We intentionally don't check the storage's state here, as it is
+    // essential for supporting repairs.
+
     auto storages = m_externals.get_storage_services();
     auto leader = *m_externals.get_leader();
+
+    LOG_DEBUG() << "[ec_data_view] writing data to leader " << leader;
+    std::stringstream ss;
+    for (auto& s : storages) {
+        ss << std::hex << serialize(s) << ", ";
+    }
+    LOG_DEBUG() << "storage states: " << ss.str();
 
     if (leader < 0 or leader >= (candidate_observer::id_t)m_config.storages)
         throw std::runtime_error("Invalid leader id: " +
@@ -157,8 +167,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
     co_return rv;
 }
 
-coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
-                                         std::size_t read_size) {
+address ec_data_view::split_fragment(const uint128_t& pointer,
+                                     std::size_t read_size) const {
     address addr;
     auto end = pointer + read_size;
     auto current_p = pointer;
@@ -176,8 +186,13 @@ coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
         addr.emplace_back(current_p, static_cast<std::size_t>(size));
         current_p += size;
     }
+    return addr;
+}
 
+coro<shared_buffer<>> ec_data_view::read(const uint128_t& pointer,
+                                         std::size_t read_size) {
     auto rv = shared_buffer<>(read_size);
+    auto addr = split_fragment(pointer, read_size);
     co_await read_address(addr, rv);
 
     co_return rv;
@@ -239,9 +254,13 @@ ec_data_view::get_stripe_ids(
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-
-    auto addr_info_map =
-        extract_node_address_map(addr, [this](uint128_t pointer) -> auto {
+    auto aligned_addr = address{};
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+    auto addr_info_map = extract_node_address_map(
+        aligned_addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         });
 
@@ -270,6 +289,14 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
             storages[i] = nullptr;
     }
 
+    for (auto& [id, success] : success_map) {
+        if (not success) {
+            LOG_DEBUG() << "[read_address] storage " << id
+                        << " is not successful, set to nullptr";
+            storages[id] = nullptr;
+        }
+    }
+
     auto num_valid_storages =
         std::ranges::count_if(storages, [](auto& s) { return s != nullptr; });
 
@@ -279,16 +306,6 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     if ((std::size_t)num_valid_storages < m_config.data_shards) {
         throw std::runtime_error("Failed to read address: there's not enough "
                                  "valid storages");
-    }
-
-    auto need_reconstruction =
-        std::any_of(storages.begin(), storages.begin() + m_config.data_shards,
-                    [](auto storage) { return storage == nullptr; });
-
-    if (not need_reconstruction) {
-        throw std::runtime_error(
-            "Failed to read address: but don't know why read_address for "
-            "storages was failed");
     }
 
     // NOTE: this function translates storage pointer to global pointer
@@ -303,39 +320,56 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
     }
 
     for (auto& [stripe_id, frags_and_offsets] : stripe_map) {
-        address addr;
-        addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
+        address _addr;
+        _addr.emplace_back(m_chunk_size * stripe_id, m_chunk_size);
 
         LOG_DEBUG() << "[read_address] call run_for_all for a stripe "
                     << stripe_id;
-        co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&shards, &addr](std::size_t id,
-                             const std::shared_ptr<storage_interface>& storage)
-                -> coro<void> {
-                try {
-                    if (storage == nullptr) {
+        auto succeeded =
+            co_await run_for_all<bool, std::shared_ptr<storage_interface>>(
+                m_ioc,
+                [&shards,
+                 &_addr](std::size_t id,
+                         const std::shared_ptr<storage_interface>& storage)
+                    -> coro<bool> {
+                    try {
+                        if (storage == nullptr) {
+                            std::ranges::fill(shards[id], 0);
+                            co_return false;
+                        } else {
+                            LOG_DEBUG() << "read from storage " << id;
+                            co_await storage->read_address(_addr, shards[id],
+                                                           {0});
+                            LOG_DEBUG()
+                                << "read from storage " << id << " done";
+                            co_return true;
+                        }
+                    } catch (...) {
+                        LOG_ERROR() << "Failed to read from storage " << id;
                         std::ranges::fill(shards[id], 0);
-                    } else {
-                        LOG_DEBUG() << "try to read from storage " << id;
-                        co_await storage->read_address(addr, shards[id], {0});
-                        LOG_DEBUG() << "read from storage done" << id;
+                        co_return false;
                     }
-                } catch (...) {
-                    LOG_ERROR() << "Failed to read address";
-                }
-            },
-            storages);
+                },
+                storages);
+
+        auto num_valid_storages =
+            std::ranges::count_if(succeeded, [](auto s) { return s == true; });
+
+        if ((std::size_t)num_valid_storages < m_config.data_shards) {
+            throw std::runtime_error(
+                "Failed to read address: there's not enough valid shards");
+        }
 
         std::vector<data_stat> stats;
         stats.reserve(m_config.storages);
-        for (auto& s : storages) {
-            if (s != nullptr) {
+        for (const auto& f : succeeded) {
+            if (f) {
                 stats.push_back(data_stat::valid);
             } else {
                 stats.push_back(data_stat::lost);
             }
         }
+
         LOG_DEBUG() << "[read_address] call recover";
         m_rs.recover(shards, stats);
 

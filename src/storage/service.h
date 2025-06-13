@@ -18,6 +18,21 @@
 
 namespace uh::cluster::storage {
 
+namespace {
+data_store_config make_ds_config(const data_store_config& current_config,
+                                 const group_config& group_config) {
+    if (group_config.type != group_config::type_t::ERASURE_CODING) {
+        return current_config;
+    } else {
+        data_store_config new_config = current_config;
+        new_config.page_size = (group_config.stripe_size_kib * KIBI_BYTE) /
+                               group_config.data_shards;
+        return new_config;
+    }
+}
+
+} // namespace
+
 class service {
 public:
     service(const service_config& service_config, const storage_config& sc)
@@ -30,16 +45,7 @@ public:
               m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
                           SERVICE_GET_TIMEOUT))},
           m_storage(std::make_shared<local_storage>(
-              m_storage_id,
-              [&sc, this]() {
-                  auto ds = sc.data_store;
-                  if (m_group_config.type ==
-                      group_config::type_t::ERASURE_CODING) {
-                      ds.page_size = m_group_config.get_stripe_size() /
-                                     m_group_config.data_shards;
-                  }
-                  return ds;
-              }(),
+              m_storage_id, make_ds_config(sc.data_store, m_group_config),
               sc.working_directory)),
 
           m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc),

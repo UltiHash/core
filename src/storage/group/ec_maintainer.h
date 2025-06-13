@@ -154,6 +154,12 @@ private:
 
                 auto offset = max_offset_it->value();
 
+                std::stringstream ss;
+                for (auto& s : offsets) {
+                    ss << serialize(s) << ", ";
+                }
+
+                LOG_DEBUG() << "offsets: " << ss.str();
                 LOG_DEBUG() << std::format(
                     "[group {}, storage {}] summarized offset is {}",
                     m_group_config.id, m_storage_id, offset);

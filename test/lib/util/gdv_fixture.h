@@ -37,7 +37,8 @@ public:
             })
 #endif
         : m_config{config},
-          m_etcd() {
+          m_etcd(),
+          m_work_guard(boost::asio::make_work_guard(m_ioc)) {
     }
 
     virtual ~global_data_view_fixture() {}
@@ -70,30 +71,17 @@ public:
             throw;
         }
 
-        int i = 0;
-
-        for (const auto& node : m_storage_instances) {
-            boost::asio::post(m_ioc, [&node] { node->run(); });
-            m_threads.emplace_back([this, i] {
-                try {
-                    m_ioc.run();
-                } catch (std::exception& e) {
-                    m_excp_ptrs[i] = std::current_exception();
-                }
-            });
-            i++;
-        }
+        m_thread = std::thread([this] {
+            try {
+                m_ioc.run();
+            } catch (std::exception& e) {
+                m_exception_ptr = std::current_exception();
+            }
+        });
 
         m_gdv = std::make_unique<storage::global::global_data_view>(
             m_ioc, m_etcd, m_gdv_config);
 
-        m_threads.emplace_back([this, i] {
-            try {
-                m_ioc.run();
-            } catch (std::exception& e) {
-                m_excp_ptrs[i] = std::current_exception();
-            }
-        });
         std::this_thread::sleep_for(100ms);
     }
 
@@ -107,24 +95,18 @@ public:
 
         m_storage_instances.clear();
 
-        for (auto& thread : m_threads) {
-            thread.join();
-        }
+        m_work_guard.reset();
 
-        int i = 0;
-        for (auto& exp : m_excp_ptrs) {
-            if (exp) {
-                LOG_ERROR() << "Exception in thread " << i;
-                try {
-                    std::rethrow_exception(exp);
-                } catch (std::exception& e) {
-                    throw e;
-                }
+        m_thread.join();
+
+        if (m_exception_ptr) {
+            try {
+                std::rethrow_exception(m_exception_ptr);
+            } catch (std::exception& e) {
+                throw e;
             }
-            i++;
         }
 
-        m_threads.clear();
         m_temp_dirs.clear();
         m_etcd.clear_all();
     }
@@ -170,12 +152,14 @@ private:
 
     static constexpr size_t NUM_STORAGE_INSTANCES = 3;
 
-    std::vector<std::exception_ptr> m_excp_ptrs{NUM_STORAGE_INSTANCES + 1};
+    std::exception_ptr m_exception_ptr;
     std::vector<std::unique_ptr<temp_directory>> m_temp_dirs;
     etcd_manager m_etcd;
     global_data_view_config m_gdv_config;
     boost::asio::io_context m_ioc;
-    std::vector<std::thread> m_threads;
+    boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
+        m_work_guard;
+    std::thread m_thread;
 
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
 

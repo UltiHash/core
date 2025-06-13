@@ -4,7 +4,7 @@ file(GENERATE
     INPUT ${CMAKE_CURRENT_BINARY_DIR}/reset-db.sh.tmp
     USE_SOURCE_PERMISSIONS)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start.sh.in ${CMAKE_CURRENT_BINARY_DIR}/start.sh.tmp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start.sh.in ${CMAKE_CURRENT_BINARY_DIR}/start.sh.tmp @ONLY)
 file(GENERATE
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/start.sh
     INPUT ${CMAKE_CURRENT_BINARY_DIR}/start.sh.tmp

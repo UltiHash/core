@@ -8,9 +8,12 @@ on:
 jobs:
   cleanup:
     runs-on: lightweight-generic-jobs
+    strategy:
+      matrix:
+        test_names: [simple-rr, simple-ec]
     steps:
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test_names }}" >> $GITHUB_ENV
 
       - uses: azure/setup-kubectl@v3
         with:
@@ -27,7 +30,7 @@ jobs:
 
       - name: Delete the testing environment
         run: |
-          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait
-          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force
-          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force
-          kubectl delete ns ${{ env.ENVIRONMENT_NAME }}
+          helm uninstall ${{ env.ENVIRONMENT_NAME }} -n ${{ env.ENVIRONMENT_NAME }} --wait || true
+          kubectl delete pvc -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
+          kubectl delete secrets -n ${{ env.ENVIRONMENT_NAME }} --all --force || true
+          kubectl delete ns ${{ env.ENVIRONMENT_NAME }} || true

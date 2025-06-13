@@ -62,6 +62,10 @@ public:
               {m_storage_hostports, m_storage_states, m_leader, m_group_state},
               std::move(callback)} {}
 
+    ~externals_subscriber() {
+        LOG_DEBUG() << "externals_subscriber is destroyed";
+    }
+
     // NOTE: get method is heavy: it retrieves all atomic variables
     auto get_storage_services() { return m_storage_index.get(); };
     auto get_storage_service(size_t id) { return m_storage_index.at(id); };

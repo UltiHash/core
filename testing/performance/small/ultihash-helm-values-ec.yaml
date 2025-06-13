@@ -1,15 +1,33 @@
 global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
   imagePullSecrets:               
     - registry-credentials
   ultihashSecret:
     name: ultihash
     key: license
-  logLevel: WARN
+  logLevel: DEBUG
   telemetryExportInterval: 30000
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
 
-recovery:
+coordinator:
   nodeSelector:
-    purpose: parameterized-test-uh
+    workload-type: directory
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -19,7 +37,8 @@ recovery:
 etcd:
   replicaCount: 1
   nodeSelector:
-    purpose: parameterized-test-uh
+    workload-type: directory
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -27,11 +46,13 @@ etcd:
       effect: "NoSchedule"
   persistence:
     size: 8Gi
+    storageClass: local-path
 
 entrypoint:
-  replicas: $EC2_INSTANCE_COUNT
+  replicas: 2
   nodeSelector:
-    purpose: parameterized-test-uh
+    workload-type: storage
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -47,6 +68,11 @@ entrypoint:
             values:
             - entrypoint
         topologyKey: kubernetes.io/hostname
+  extraEnv:
+    - name: UH_DB_DIRECTORY_CONNECTIONS
+      value: "5"
+    - name: UH_DB_MULTIPART_CONNECTIONS
+      value: "5"
 
   ingress:
     enabled: false
@@ -54,12 +80,17 @@ entrypoint:
 storage:
   groups:
     - id: 0
-      type: ROUND_ROBIN
-      storages: $EC2_INSTANCE_COUNT
-      storageClass: $UH_STORAGE_CLASS
-      size: $STORAGE_VOLUME_SIZE
+      type: ERASURE_CODING
+      storages: 3
+      data_shards: 2
+      parity_shards: 1
+      stripe_size_kib: 256
+      storageClass: local-path
+      size: 70Gi
+      mountPath: /var/lib/uh/storage
       nodeSelector:
-        purpose: parameterized-test-uh
+        workload-type: storage
+        purpose: performance-testing-small
       tolerations:
         - key: "purpose"
           operator: "Equal"
@@ -74,12 +105,12 @@ storage:
                 operator: In
                 values:
                 - storage
-            topologyKey: kubernetes.io/hostname              
+            topologyKey: kubernetes.io/hostname
 
 deduplicator:
-  replicas: $EC2_INSTANCE_COUNT
-  storageClass: $UH_STORAGE_CLASS
-  storageSize: $DEDUPLICATOR_VOLUME_SIZE
+  replicas: 2
+  storageClass: local-path
+  storageSize: 10Gi
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -91,7 +122,8 @@ deduplicator:
             - deduplicator
         topologyKey: kubernetes.io/hostname
   nodeSelector:
-    purpose: parameterized-test-uh
+    workload-type: storage
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -101,7 +133,8 @@ deduplicator:
 database:
   primary:
     nodeSelector:
-      purpose: parameterized-test-uh
+      workload-type: directory
+      purpose: performance-testing-small
     tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -109,12 +142,14 @@ database:
       effect: "NoSchedule"
 
     persistence:
-      storageClass: $UH_STORAGE_CLASS
-      size: $DATABASE_VOLUME_SIZE
+      storageClass: local-path
+      size: 20Gi
 
 databaseInit:
+  image: $DATABASE_INIT_IMAGE
   nodeSelector:
-    purpose: parameterized-test-uh
+    workload-type: directory
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"
@@ -123,7 +158,7 @@ databaseInit:
 
 collector:
   nodeSelector:
-    purpose: parameterized-test-uh
+    purpose: performance-testing-small
   tolerations:
     - key: "purpose"
       operator: "Equal"

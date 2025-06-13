@@ -167,6 +167,9 @@ private:
     std::unordered_map<uint64_t, std::vector<std::pair<fragment, std::size_t>>>
     get_stripe_ids(std::unordered_map<std::size_t, address_info> addr_map,
                    std::unordered_map<std::size_t, bool> success_map);
+
+    address split_fragment(const uint128_t& pointer,
+                           std::size_t read_size) const;
     address compute_parity_address(const address& addr);
 };
 

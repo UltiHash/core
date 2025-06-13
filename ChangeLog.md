@@ -1,5 +1,7 @@
-## UNRELEASED;
+## [Unreleased]
+- Fix issue with get-object which lead to stale downloads with high CPU utilization
 
+## [1.4.0] 2025-06-04
 - Add missing Last-Modified header to GetObject
 - Bump CLI11 version to 2.5.0
 - Bump magic-enum to 0.9.7
@@ -9,9 +11,9 @@
 - Bump lmdbxx to latest version
 - Bump cpr to version 1.11.2
 - Bump opentelemetry-cpp to 1.20.0
+- Add support for erasure-coded storage groups
 
 ## [1.3.1] 2025-04-04
-
 - Add labels to distinguish users on metrics
 
 ## [1.3.0] 2025-02-24

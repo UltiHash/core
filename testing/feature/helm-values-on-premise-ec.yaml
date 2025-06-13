@@ -1,0 +1,122 @@
+global:
+  image: $CORE_IMAGE
+  imagePullPolicy: Always
+  imagePullSecrets:
+  - registry-credentials
+  logLevel: DEBUG
+  telemetryExportInterval: 30000
+  ultihashSecret:
+    key: license
+    name: ultihash
+  securityContext:
+    capabilities:
+      add:
+      - SYS_PTRACE
+  policies: |
+    {
+      "Version": "2012-10-17",
+      "Statement": {
+         "Sid":  "AllowAllForAnybody",
+         "Effect": "Allow",
+         "Action": "*",
+         "Principal": "*",
+         "Resource": "*"
+       }
+    }
+
+featureTests:
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+etcd:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  persistence:
+    size: 5Gi
+    storageClass: local-path
+
+coordinator:
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+entrypoint:
+  replicas: 1
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  
+  ingress:
+    enabled: false
+
+deduplicator:
+  replicas: 1
+  storageClass: local-path
+  storageSize: 2Gi
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+database:
+  primary:
+    nodeSelector:
+      kubernetes.io/hostname: $KUBERNETES_NODE
+
+    persistence:
+      storageClass: local-path
+      size: 2Gi
+
+databaseInit:
+  image: $DATABASE_INIT_IMAGE
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+
+storage:
+  groups:
+    - id: 0
+      type: ERASURE_CODING
+      storages: 3
+      data_shards: 2
+      parity_shards: 1
+      stripe_size_kib: 256
+      storageClass: local-path
+      size: 5Gi
+      mountPath: /var/lib/uh/storage
+      nodeSelector:
+        kubernetes.io/hostname: $KUBERNETES_NODE
+
+collector:
+  config:
+    exporters:
+      otlphttp/uptrace:
+        endpoint: http://opm-k8s-worker-04.ultihash.io
+        headers:
+          uptrace-dsn: http://${env:UH_EXPORTER_TOKEN}@opm-k8s-worker-04.ultihash.io
+    receivers:
+      kubeletstats: null
+      prometheus: null
+    service:
+      pipelines:
+        metrics:
+          receivers:
+          - otlp
+  extraEnvs:
+  - name: UH_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: UH_NODE_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.hostIP
+  - name: UH_EXPORTER_TOKEN 
+    valueFrom:
+      secretKeyRef:
+        name: ultihash
+        key: token
+  nodeSelector:
+    kubernetes.io/hostname: $KUBERNETES_NODE
+  presets:
+    kubeletMetrics:
+      enabled: false
+
+exporter:
+  enabled: false

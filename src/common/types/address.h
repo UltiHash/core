@@ -80,12 +80,6 @@ struct address {
     auto operator<=>(const address&) const = default;
 
     /**
-     * Return an address describing the same buffer but with adjacent fragments
-     * merged.
-     */
-    address shrink() const;
-
-    /**
      * Push a fragment to the end of the address.
      */
     void push(const fragment& frag);
@@ -119,14 +113,6 @@ struct address {
      * Return true if the address is empty, ie. was default constructed.
      */
     [[nodiscard]] bool empty() const noexcept;
-
-    /**
-     * Checks if the provided address is consecutive to this address.
-     * address
-     * @param addr
-     * @return true if the provided address is consecutive to this address.
-     */
-    bool consecutive(const address& addr);
 
     /**
      * Return a sub range of the address.

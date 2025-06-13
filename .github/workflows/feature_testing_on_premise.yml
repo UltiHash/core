@@ -37,10 +37,19 @@ jobs:
     needs:
       - build-core
       - build-database-init
+    strategy:
+      matrix:
+        test: 
+          - name: simple-rr
+            helm_values: testing/feature/helm-values-on-premise-rr.yaml
+          - name: simple-ec
+            helm_values: testing/feature/helm-values-on-premise-ec.yaml
     steps:
 
       - name: Define testing environment name
-        run: echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+        run: |
+          echo "ENVIRONMENT_NAME=pr-${{ github.event.pull_request.number }}-${{ matrix.test.name }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=pr-${{ github.event.pull_request.number }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
@@ -66,10 +75,10 @@ jobs:
       - name: Generate Helm values
         uses: danielr1996/envsubst-action@1.0.0
         env:
-          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.ENVIRONMENT_NAME }}
-          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.ENVIRONMENT_NAME }}
+          CORE_IMAGE: ghcr.io/ultihash/cluster:${{ env.DOCKER_TAG }}
+          DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ env.DOCKER_TAG }}
         with:
-          input: testing/feature/helm-values-on-premise.yaml
+          input: ${{ matrix.test.helm_values }}
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
@@ -86,7 +95,7 @@ jobs:
           kubectl create secret docker-registry registry-credentials -n ${{ env.ENVIRONMENT_NAME }} --docker-server='${{ vars.DOCKER_REGISTRY }}' --docker-username='${{ secrets.DOCKER_REGISTRY_USERNAME }}' --docker-password='${{ secrets.DOCKER_REGISTRY_PASSWORD }}'
           kubectl create secret generic ultihash -n ${{ env.ENVIRONMENT_NAME }} --from-literal=license='${{ secrets.UH_LICENSE_JSON }}' --from-literal=token='${{ secrets.MONITORING_TOKEN_ON_PREMISE }}'
           echo '${{ secrets.REGISTRY_USER }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
+          helm install ${{ env.ENVIRONMENT_NAME }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ env.ENVIRONMENT_NAME }} --values helm-values.yaml --wait --timeout 15m
 
       - name: Run feature tests
         run: |

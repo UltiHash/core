@@ -24,7 +24,8 @@ public:
      * @return local pointer to the allocated storage space and size of
      * allocation
      */
-    allocation_t allocate(std::size_t size, std::size_t alignment = 1);
+    allocation_t allocate(std::size_t size,
+                          std::size_t alignment = DEFAULT_PAGE_SIZE);
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -120,9 +121,6 @@ private:
 
     std::size_t fetch_used_space() const;
 
-    void update_last_page_ref(
-        std::deque<reference_counter::refcount_cmd>& refcount_commands);
-
     size_t internal_delete(std::size_t offset, std::size_t size);
 
     int open_metadata(const std::filesystem::path& path);
@@ -143,7 +141,6 @@ private:
     std::size_t m_used_space{};
     std::size_t m_write_offset{};
 
-    std::optional<std::size_t> m_locked_page = std::nullopt;
     reference_counter m_refcounter;
 };
 

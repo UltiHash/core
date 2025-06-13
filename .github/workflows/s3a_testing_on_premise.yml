@@ -12,6 +12,9 @@ on:
       docker_registry:
         required: true
         type: string
+      helm_values:
+        required: true
+        type: string
     secrets:
       ghcr_token:
         required: true
@@ -57,7 +60,7 @@ jobs:
           DATABASE_INIT_IMAGE: ghcr.io/ultihash/database-init:${{ inputs.docker_image_tag }}
           GITHUB_PAT: ${{ secrets.ghcr_token }}
         with:
-          input: testing/s3a/helm-values-on-premise.yaml
+          input: ${{ inputs.helm_values }}
           output: helm-values.yaml
 
       - name: Delete the testing environment if exists
@@ -74,7 +77,7 @@ jobs:
           kubectl create secret docker-registry registry-credentials -n ${{ inputs.env_name }} --docker-server='${{ inputs.docker_registry }}' --docker-username='${{ secrets.docker_registry_username }}' --docker-password='${{ secrets.docker_registry_password }}'
           kubectl create secret generic ultihash -n ${{ inputs.env_name }} --from-literal=license='${{ secrets.uh_license }}' --from-literal=token='${{ secrets.monitoring_token }}'
           echo '${{ secrets.registry_token }}' | helm registry login registry.ultihash.io -u github --password-stdin
-          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/staging/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 15m
+          helm install ${{ inputs.env_name }} oci://registry.ultihash.io/stable/ultihash-cluster -n ${{ inputs.env_name }} --values helm-values.yaml --wait --timeout 15m
 
       - name: Run S3A tests
         run: |
