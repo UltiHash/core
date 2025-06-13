@@ -176,13 +176,10 @@ coro<void> messenger_core::send_buffers(const message_type type) {
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        LOG_DEBUG() << "[messenger_core::send_buffers] async_write";
-
         m_tcp_stream.expires_after(
             time_settings::instance().get_async_io_timeout());
         co_await boost::asio::async_write(m_tcp_stream, m_write_buffers,
                                           boost::asio::use_awaitable);
-        LOG_DEBUG() << "[messenger_core::send_buffers] async_write done";
 
     } catch (const std::exception& e) {
         throw create_internal_network_error("send_buffers failed", e);
