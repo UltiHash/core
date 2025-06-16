@@ -5,6 +5,7 @@
 #include "config.h"
 #include "handler.h"
 
+#include <common/execution/executor.h>
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
@@ -36,7 +37,7 @@ data_store_config make_ds_config(const data_store_config& current_config,
 class service {
 public:
     service(const service_config& service_config, const storage_config& sc)
-        : m_ioc(sc.server.threads),
+        : m_executor(sc.server.threads),
           m_etcd{service_config.etcd_config},
           m_license_watcher(m_etcd),
           m_storage_id{sc.instance_id},
@@ -47,8 +48,7 @@ public:
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),
               sc.working_directory)),
-
-          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc),
+          m_server(sc.server, std::make_unique<handler>(*m_storage), m_executor),
           m_service_registry(m_etcd,
                              ns::root.storage_groups[m_group_id]
                                  .storage_hostports[m_storage_id],
@@ -91,16 +91,16 @@ public:
         });
     }
 
-    void run() { m_server.run(); }
+    void run() { m_executor.run(); }
 
-    void stop() { m_server.stop(); }
+    void stop() { m_executor.stop(); }
 
     size_t id() const noexcept { return m_storage_id; }
 
     std::shared_ptr<local_storage> get_local_interface() { return m_storage; }
 
 private:
-    boost::asio::io_context m_ioc;
+    executor m_executor;
     etcd_manager m_etcd;
     license_watcher m_license_watcher;
     std::size_t m_storage_id;
