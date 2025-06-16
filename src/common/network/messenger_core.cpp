@@ -10,14 +10,11 @@ messenger_core::messenger_core(boost::asio::io_context& ioc,
     boost::asio::ip::tcp::endpoint endpoint(
         boost::asio::ip::make_address(ip_addr), port);
     try {
-        m_tcp_stream.connect(endpoint);
-        // TODO: Use the code below:
-        //
-        // m_tcp_stream.expires_after(
-        //     time_settings::instance().get_async_io_timeout());
-        // auto future =
-        //     m_tcp_stream.async_connect(endpoint, boost::asio::use_future);
-        // future.get();
+        m_tcp_stream.expires_after(
+            time_settings::instance().get_async_io_timeout());
+        auto future =
+            m_tcp_stream.async_connect(endpoint, boost::asio::use_future);
+        future.get();
     } catch (const std::exception& e) {
         throw create_internal_network_error("socket connection failed", e);
     }
