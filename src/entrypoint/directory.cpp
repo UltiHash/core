@@ -6,6 +6,30 @@ using namespace uh::cluster::ep::http;
 
 namespace uh::cluster {
 
+std::string to_string(bucket_versioning versioning) {
+    switch (versioning) {
+        case bucket_versioning::disabled: return "Disabled";
+        case bucket_versioning::enabled: return "Enabled";
+        case bucket_versioning::suspended: return "Suspended";
+    }
+
+    throw std::runtime_error("unsupported versioning type");
+}
+
+bucket_versioning to_versioning(std::string s) {
+    if (equals_nocase(s, "Disabled")) {
+        return bucket_versioning::disabled;
+    }
+    if (equals_nocase(s, "Enabled")) {
+        return bucket_versioning::enabled;
+    }
+    if (equals_nocase(s, "Suspended")) {
+        return bucket_versioning::suspended;
+    }
+
+    throw std::runtime_error("unsupported versioning type: " + s);
+}
+
 coro<void> directory::put_object(const std::string& bucket, const object& obj) {
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
@@ -186,14 +210,6 @@ coro<void> directory::set_bucket_policy(const std::string& bucket,
     co_await handle->execv("CALL uh_bucket_set_policy($1, $2)", bucket, policy);
 }
 
-coro<void> directory::set_bucket_cors(const std::string& bucket,
-                                      std::optional<std::string> cors) {
-    co_await bucket_exists(bucket);
-
-    auto handle = co_await m_db.get();
-    co_await handle->execv("CALL uh_bucket_set_cors($1, $2)", bucket, cors);
-}
-
 coro<std::optional<std::string>>
 directory::get_bucket_cors(const std::string& bucket) {
 
@@ -208,6 +224,34 @@ directory::get_bucket_cors(const std::string& bucket) {
     }
 
     co_return std::nullopt;
+}
+
+coro<void> directory::set_bucket_cors(const std::string& bucket,
+                                      std::optional<std::string> cors) {
+    co_await bucket_exists(bucket);
+
+    auto handle = co_await m_db.get();
+    co_await handle->execv("CALL uh_bucket_set_cors($1, $2)", bucket, cors);
+}
+
+coro<bucket_versioning> directory::get_bucket_versioning(const std::string& bucket) {
+    try {
+        auto handle = co_await m_db.get();
+        auto row = co_await handle->execv("SELECT status FROM uh_bucket_versioning($1)", bucket);
+
+        co_return to_versioning(*row->string(0));
+    } catch (const std::exception& e) {
+        throw command_exception(status::not_found, "NoSuchBucket",
+                                "The specified bucket does not exist.");
+    }
+}
+
+coro<void> directory::set_bucket_versioning(const std::string& bucket,
+        bucket_versioning versioning) {
+    co_await bucket_exists(bucket);
+
+    auto handle = co_await m_db.get();
+    co_await handle->execv("CALL uh_bucket_set_versioning($1, $2)", bucket, to_string(versioning));
 }
 
 coro<std::vector<object>>

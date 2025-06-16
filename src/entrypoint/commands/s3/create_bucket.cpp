@@ -11,7 +11,8 @@ create_bucket::create_bucket(directory& dir)
 bool create_bucket::can_handle(const request& req) {
     return req.method() == verb::put && req.bucket() != RESERVED_BUCKET_NAME &&
            !req.bucket().empty() && req.object_key().empty() &&
-           !req.query("policy") && !req.query("cors");
+           !req.query("policy") && !req.query("cors") &&
+           !req.query("versioning");
 }
 
 coro<response> create_bucket::handle(request& req) {
