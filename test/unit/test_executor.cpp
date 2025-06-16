@@ -31,7 +31,8 @@ BOOST_AUTO_TEST_CASE(spawn_method) {
     unsigned value = 0;
     BOOST_CHECK_EQUAL(value, 0);
 
-    e.spawn([&value]() -> coro<void> { value = 1; co_return; });
+    auto func = [&value]() -> coro<void> { value = 1; co_return; };
+    e.spawn(func);
     e.run();
 
     BOOST_CHECK_EQUAL(value, 1);
