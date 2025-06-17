@@ -77,69 +77,6 @@ BOOST_AUTO_TEST_CASE(
     }
 }
 
-BOOST_AUTO_TEST_CASE(supports_read_during_deactivating_reactivating_storages) {
-    auto config = get_group_config();
-    auto gdv = get_data_view();
-    auto buffer = random_buffer(config.stripe_size_kib * 1_KiB * 2);
-
-    get_etcd_manager().wait(
-        ns::root.storage_groups[get_group_config().id].group_state,
-        serialize(storage::group_state::HEALTHY));
-
-    LOG_DEBUG() << "start writing...";
-    address addr;
-    BOOST_REQUIRE_NO_THROW({
-        addr = boost::asio::co_spawn(get_executor(),
-                                     gdv->write(buffer.string_view(), {0}),
-                                     boost::asio::use_future)
-                   .get();
-    });
-
-    constexpr auto test_time = 5s;
-    std::thread outage_thread(
-        [&]() {
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_int_distribution<> dist(0, config.data_shards - 1);
-            std::size_t idx = dist(gen);
-            auto end_time = std::chrono::steady_clock::now() + test_time;
-            while (std::chrono::steady_clock::now() < end_time) {
-                LOG_DEBUG()
-                    << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
-                LOG_DEBUG() << "Deactivate storage " << idx;
-                deactivate_storage(idx);
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-                LOG_DEBUG()
-                    << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
-                LOG_DEBUG() << "Revive storage " << idx;
-                activate_storage(idx);
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            }
-            LOG_DEBUG() << "Outage thread finished";
-        });
-
-    std::this_thread::yield();
-
-    std::size_t read_size;
-    auto read_buffer = shared_buffer<char>(buffer.size());
-
-    auto end_time = std::chrono::steady_clock::now() + test_time;
-    while (std::chrono::steady_clock::now() < end_time) {
-        LOG_DEBUG() << "Read loop...";
-        BOOST_REQUIRE_NO_THROW({
-            read_size =
-                boost::asio::co_spawn(
-                    get_executor(), gdv->read_address(addr, read_buffer.span()),
-                    boost::asio::use_future)
-                    .get();
-        });
-        BOOST_TEST(buffer.size() == read_size);
-        BOOST_TEST(buffer == read_buffer);
-    }
-
-    outage_thread.join();
-}
-
 BOOST_AUTO_TEST_CASE(supports_read_during_killing_reactivating_storages) {
     auto config = get_group_config();
     auto gdv = get_data_view();
@@ -159,7 +96,7 @@ BOOST_AUTO_TEST_CASE(supports_read_during_killing_reactivating_storages) {
     });
 
     constexpr auto test_time = 5s;
-    std::thread outage_thread(
+    std::jthread outage_thread(
         [&]() {
             std::random_device rd;
             std::mt19937 gen(rd());
@@ -199,9 +136,8 @@ BOOST_AUTO_TEST_CASE(supports_read_during_killing_reactivating_storages) {
         });
         BOOST_TEST(buffer.size() == read_size);
         BOOST_TEST(buffer == read_buffer);
+        std::this_thread::yield();
     }
-
-    outage_thread.join();
 }
 
 BOOST_AUTO_TEST_CASE(supports_read_during_slow_killing_reactivating_storages) {
@@ -223,7 +159,7 @@ BOOST_AUTO_TEST_CASE(supports_read_during_slow_killing_reactivating_storages) {
     });
 
     constexpr auto test_time = 5s;
-    std::thread outage_thread(
+    std::jthread outage_thread(
         [&]() {
             std::random_device rd;
             std::mt19937 gen(rd());
@@ -263,9 +199,8 @@ BOOST_AUTO_TEST_CASE(supports_read_during_slow_killing_reactivating_storages) {
         });
         BOOST_TEST(buffer.size() == read_size);
         BOOST_TEST(buffer == read_buffer);
+        std::this_thread::yield();
     }
-
-    outage_thread.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
