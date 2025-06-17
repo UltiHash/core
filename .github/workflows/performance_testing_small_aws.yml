@@ -15,6 +15,9 @@ on:
       helm_values:
         required: true
         type: string
+      storage_group_type:
+        required: true
+        type: string
     secrets:
       ghcr_token:
         required: true
@@ -96,6 +99,7 @@ jobs:
           RELEASE_NAME: ${{ inputs.env_name }}
           READ_TIMEOUT: "600"
           JOBS: "4"
+          STORAGE_GROUP_TYPE: ${{ inputs.storage_group_type }}
         with:
           input: testing/performance/small/performance-tester.yaml
           output: performance-tester-ultihash.yaml
