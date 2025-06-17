@@ -27,30 +27,58 @@ struct fixture {
 
 BOOST_FIXTURE_TEST_SUITE(a_traced_coro, fixture)
 
+BOOST_AUTO_TEST_CASE(set_and_get_value) {
+
+    auto context = opentelemetry::context::Context();
+    int64_t val = 42;
+
+    boost::asio::context::set_value(context, "key", val);
+    auto ret = boost::asio::context::get_value<int64_t>(context, "key");
+
+    BOOST_TEST(42 == ret);
+}
+
+BOOST_AUTO_TEST_CASE(set_and_get_pointer) {
+
+    auto context = opentelemetry::context::Context();
+    int val = 42;
+
+    boost::asio::context::set_pointer(context, "key", &val);
+    auto p = boost::asio::context::get_pointer<int>(context, "key");
+
+    BOOST_TEST(42 == *p);
+}
+
+BOOST_AUTO_TEST_CASE(set_and_get_baggage) {
+    auto context = opentelemetry::context::Context();
+    auto val = "42";
+
+    boost::asio::context::set_baggage(context, "key", val);
+    auto ret = boost::asio::context::get_baggage(context, "key");
+
+    BOOST_TEST("42" == ret);
+}
+
 BOOST_AUTO_TEST_CASE(propagates_context_through_coro) {
 
     boost::asio::co_spawn(
         ioc,
         []() -> coro<void> {
             auto context = co_await boost::asio::this_coro::context;
+            boost::asio::context::set_value(context, "peer_port", 11UL);
 
             co_await [context]() -> coro<void> {
                 auto context = co_await boost::asio::this_coro::context;
-                auto peer_port = context.GetValue("peer_port");
-                std::cout << "test" << std::endl;
-                BOOST_TEST(true == std::holds_alternative<uint64_t>(peer_port));
-                BOOST_TEST(11 == std::get<uint64_t>(peer_port));
+                BOOST_TEST(11 == boost::asio::context::get_value<uint64_t>(
+                                     context, "peer_port"));
 
                 co_await [context]() -> coro<void> {
                     auto context = co_await boost::asio::this_coro::context;
-                    auto peer_port = context.GetValue("peer_port");
-                    std::cout << "test" << std::endl;
-                    BOOST_TEST(true ==
-                               std::holds_alternative<uint64_t>(peer_port));
-                    BOOST_TEST(11 == std::get<uint64_t>(peer_port));
+                    BOOST_TEST(11 == boost::asio::context::get_value<uint64_t>(
+                                         context, "peer_port"));
                 }();
                 // clang-format off
-            }().continue_trace(context.SetValue("peer_port", static_cast<uint64_t>(11)));
+            }().continue_trace(context);
         },
         // clang-format on
         boost::asio::use_future)
@@ -60,23 +88,22 @@ BOOST_AUTO_TEST_CASE(propagates_context_through_coro) {
 BOOST_AUTO_TEST_CASE(propagates_context_through_continue) {
 
     auto context = opentelemetry::context::Context();
+    boost::asio::context::set_value(context, "peer_port", 11UL);
 
     boost::asio::co_spawn(
         ioc,
         []() -> coro<void> {
             auto context = co_await boost::asio::this_coro::context;
-            auto peer_port = context.GetValue("peer_port");
-            BOOST_TEST(true == std::holds_alternative<uint64_t>(peer_port));
-            BOOST_TEST(11 == std::get<uint64_t>(peer_port));
+            BOOST_TEST(11 == boost::asio::context::get_value<uint64_t>(
+                                 context, "peer_port"));
 
             co_await []() -> coro<void> {
                 auto span = co_await boost::asio::this_coro::span;
-                auto peer_port = span->context().GetValue("peer_port");
-                BOOST_TEST(true == std::holds_alternative<uint64_t>(peer_port));
-                BOOST_TEST(11 == std::get<uint64_t>(peer_port));
+                BOOST_TEST(11 == boost::asio::context::get_value<uint64_t>(
+                                     span->context(), "peer_port"));
             }();
             // clang-format off
-        }().continue_trace(context.SetValue("peer_port", static_cast<uint64_t>(11))),
+        }().continue_trace(context),
         // clang-format on
         boost::asio::use_future)
         .get();

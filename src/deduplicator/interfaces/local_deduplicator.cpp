@@ -44,8 +44,9 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
 coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     auto span = co_await boost::asio::this_coro::span;
 
-    auto peer = boost::asio::get_pointer<boost::asio::ip::tcp::endpoint>(
-        span->context(), "peer");
+    auto peer =
+        boost::asio::context::get_pointer<boost::asio::ip::tcp::endpoint>(
+            span->context(), "peer");
 
     span->set_attribute("data-size", data.size());
 

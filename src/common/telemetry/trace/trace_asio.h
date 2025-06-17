@@ -10,6 +10,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-builtins"
 #endif
 
+#include <opentelemetry/baggage/baggage.h>
 #include <opentelemetry/context/context.h>
 #include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
@@ -33,7 +34,89 @@ struct context_t {
 };
 
 inline constexpr context_t context;
+
 } // namespace this_coro
+
+namespace context {
+
+template <typename T>
+concept value_type_t = std::is_same_v<T, bool> || std::is_same_v<T, int64_t> ||
+                       std::is_same_v<T, uint64_t> || std::is_same_v<T, double>;
+template <value_type_t T>
+void set_value(opentelemetry::context::Context& ctx, const std::string& key,
+               T val) {
+    ctx = ctx.SetValue(key, val);
+}
+
+template <value_type_t T>
+T get_value(const opentelemetry::context::Context& ctx,
+            const std::string& key) {
+    auto val = ctx.GetValue(key);
+    if (!std::holds_alternative<T>(val)) {
+        throw std::runtime_error(
+            "Value type mismatch for key: " + key +
+            ". Expected type: " + std::string(typeid(T).name()));
+    }
+    return std::get<T>(val);
+}
+
+/*
+ * NOTE: You can set and get pointers only in a single process.
+ */
+template <typename T>
+void set_pointer(opentelemetry::context::Context& ctx, const std::string& key,
+                 T* ptr) {
+    ctx = ctx.SetValue(key, reinterpret_cast<uint64_t>(ptr));
+}
+
+template <typename T>
+T* get_pointer(const opentelemetry::context::Context& ctx,
+               const std::string& key) {
+    auto val = ctx.GetValue(key);
+    if (std::holds_alternative<uint64_t>(val)) {
+        return reinterpret_cast<T*>(std::get<uint64_t>(val));
+    }
+    return nullptr;
+}
+
+inline void set_baggage(opentelemetry::context::Context& ctx,
+                        const std::string& key, const std::string& value) {
+    auto baggage_val = ctx.GetValue("baggage");
+    opentelemetry::nostd::shared_ptr<opentelemetry::baggage::Baggage> baggage;
+
+    if (std::holds_alternative<
+            opentelemetry::nostd::shared_ptr<opentelemetry::baggage::Baggage>>(
+            baggage_val)) {
+        baggage = std::get<
+            opentelemetry::nostd::shared_ptr<opentelemetry::baggage::Baggage>>(
+            baggage_val);
+    } else {
+        baggage = opentelemetry::baggage::Baggage::GetDefault();
+    }
+
+    auto new_baggage = baggage->Set(key, value);
+    ctx = ctx.SetValue("baggage", new_baggage);
+}
+
+// baggage get 함수
+inline std::string get_baggage(const opentelemetry::context::Context& ctx,
+                               const std::string& key) {
+    auto baggage_val = ctx.GetValue("baggage");
+    if (std::holds_alternative<
+            opentelemetry::nostd::shared_ptr<opentelemetry::baggage::Baggage>>(
+            baggage_val)) {
+        auto baggage = std::get<
+            opentelemetry::nostd::shared_ptr<opentelemetry::baggage::Baggage>>(
+            baggage_val);
+        std::string value;
+        if (baggage && baggage->GetValue(key, value)) {
+            return value;
+        }
+    }
+    return {};
+}
+
+} // namespace context
 
 namespace detail {
 template <typename, typename> class traced_awaitable_frame;
@@ -509,22 +592,6 @@ inline void traced_asio_initialize(const std::string& tracer_name,
     boost::asio::trace_span::enable = true;
     boost::asio::trace_span::tracer_name = tracer_name;
     boost::asio::trace_span::tracer_version = tracer_version;
-}
-
-template <typename T>
-void set_pointer(opentelemetry::context::Context& ctx, const std::string& key,
-                 T* ptr) {
-    ctx = ctx.SetValue(key, reinterpret_cast<uint64_t>(ptr));
-}
-
-template <typename T>
-T* get_pointer(const opentelemetry::context::Context& ctx,
-               const std::string& key) {
-    auto val = ctx.GetValue(key);
-    if (std::holds_alternative<uint64_t>(val)) {
-        return reinterpret_cast<T*>(std::get<uint64_t>(val));
-    }
-    return nullptr;
 }
 
 } // namespace asio
