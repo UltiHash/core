@@ -35,10 +35,7 @@ namespace uh::cluster {
 void initialize_trace(const std::string& tracer_name,
                       const std::string& tracer_version,
                       const std::string& endpoint) {
-
-    boost::asio::trace_span::enable = true;
-    boost::asio::trace_span::tracer_name = tracer_name;
-    boost::asio::trace_span::tracer_version = tracer_version;
+    boost::asio::traced_asio_initialize(tracer_name, tracer_version);
 
     if (endpoint == TRACE_STDOUT_ENDPOINT) {
         auto exporter = opentelemetry::exporter::trace::
