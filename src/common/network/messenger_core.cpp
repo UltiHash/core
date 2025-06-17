@@ -47,6 +47,7 @@ coro<messenger_core::header> messenger_core::recv_header() {
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_header failed", e);
     }
+    m_tcp_stream.expires_never();
 
     h.peer = peer();
 
@@ -79,7 +80,8 @@ messenger_core::recv_header_with_context() {
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_header failed", e);
+        throw create_internal_network_error("recv_header_with_context failed",
+                                            e);
     }
 
     h.peer = peer();
@@ -125,6 +127,7 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     } catch (const std::exception& e) {
         throw create_internal_network_error("recv_buffers failed", e);
     }
+    m_tcp_stream.expires_never();
 }
 
 void messenger_core::reserve_write_buffers(size_t capacity) {
@@ -180,6 +183,7 @@ coro<void> messenger_core::send_buffers(const message_type type) {
     } catch (const std::exception& e) {
         throw create_internal_network_error("send_buffers failed", e);
     }
+    m_tcp_stream.expires_never();
 
     reset_write_buffers();
 }
@@ -238,6 +242,7 @@ coro<void> messenger_core::send(const message_type type,
     } catch (const std::exception& e) {
         throw create_internal_network_error("send failed", e);
     }
+    m_tcp_stream.expires_never();
 }
 
 void messenger_core::clear_buffers() {
