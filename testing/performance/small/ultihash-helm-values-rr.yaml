@@ -81,7 +81,7 @@ storage:
   groups:
     - id: 0
       type: ROUND_ROBIN
-      storages: 2
+      storages: 3
       storageClass: local-path
       size: 70Gi
       mountPath: /var/lib/uh/storage
