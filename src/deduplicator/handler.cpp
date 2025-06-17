@@ -10,10 +10,10 @@ handler::handler(local_deduplicator& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
-    messenger m(std::move(s));
-    auto peer = m.peer();
     std::stringstream remote;
-    remote << peer;
+    remote << s.remote_endpoint();
+
+    messenger m(std::move(s));
 
     for (;;) {
         std::optional<error> err;
@@ -21,11 +21,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         opentelemetry::context::Context context;
 
         std::tie(hdr, context) = co_await m.recv_header_with_context();
-
         LOG_DEBUG() << remote.str() << " received "
                     << magic_enum::enum_name(hdr.type);
-
-        boost::asio::set_pointer(context, "peer", &peer);
 
         auto control =
             co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
