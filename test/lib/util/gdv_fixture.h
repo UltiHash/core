@@ -68,8 +68,8 @@ public:
                 m_temp_dirs.emplace_back(std::make_unique<temp_directory>());
                 activate_storage(i);
             }
-        } catch (...) {
-            LOG_ERROR() << "Failed to create storage instances";
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "Failed to create storage instances: " << e.what();
             throw;
         }
 
@@ -140,7 +140,8 @@ public:
         m_storage_instances[id] =
             std::make_unique<storage::service>(service_cfg, storage_cfg);
 
-        m_storage_threads[id] = std::thread([id, this]() { m_storage_instances[id]->run(); });
+        m_storage_threads[id] =
+            std::thread([id, this]() { m_storage_instances[id]->run(); });
     }
 
     void introduce_new_storage(std::size_t id,

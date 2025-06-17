@@ -355,8 +355,9 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
                                 << "read from storage " << id << " done";
                             co_return true;
                         }
-                    } catch (...) {
-                        LOG_ERROR() << "Failed to read from storage " << id;
+                    } catch (const std::exception& e) {
+                        LOG_ERROR() << "Failed to read from storage " << id
+                                    << ": " << e.what();
                         std::ranges::fill(shards[id], 0);
                         co_return false;
                     }
