@@ -7,7 +7,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #ifdef __clang__
-# pragma GCC diagnostic ignored "-Wdeprecated-builtins"
+#pragma GCC diagnostic ignored "-Wdeprecated-builtins"
 #endif
 
 #include <opentelemetry/context/context.h>
@@ -106,17 +106,10 @@ public:
         }
     }
 
-    auto context() noexcept {
-        if (enable) {
-            if (is_started()) {
-                opentelemetry::context::Context context;
-                return opentelemetry::trace::SetSpan(context, m_data);
-            }
-        }
-        return opentelemetry::context::Context();
-    }
+    auto context() noexcept { return *m_context; }
 
     bool is_started() noexcept { return m_data != nullptr; }
+    bool has_context() noexcept { return m_context != nullptr; }
 
     // For Debugging
     void iterate_call_stack(std::function<void(source_location)> process) {
@@ -156,7 +149,8 @@ private:
 
     source_location m_location;
 
-    opentelemetry::nostd::shared_ptr<trace_api::Span> m_data;
+    opentelemetry::nostd::shared_ptr<trace_api::Span> m_data{nullptr};
+    std::unique_ptr<opentelemetry::context::Context> m_context{nullptr};
 
     static auto root_context() noexcept {
         opentelemetry::context::Context context;
@@ -173,6 +167,11 @@ private:
             m_data = tracer->StartSpan(m_location.function_name(),
                                        {.parent = context});
             decorate_span();
+            m_context = std::make_unique<opentelemetry::context::Context>(
+                opentelemetry::trace::SetSpan(context, m_data));
+        } else {
+            m_context =
+                std::make_unique<opentelemetry::context::Context>(context);
         }
     }
 
@@ -204,7 +203,7 @@ public:
         if (m_frame != nullptr) {
             auto current_span = m_frame->span();
             current_span->set_parent(parent_span);
-            if (!current_span->is_started() && parent_span->is_started()) {
+            if (!current_span->has_context() && parent_span->has_context()) {
                 current_span->start_span(parent_span->context());
             }
         }
@@ -220,15 +219,15 @@ public:
     auto& continue_trace(opentelemetry::context::Context parent_context) & {
         if (m_frame != nullptr) {
             auto current_span = m_frame->span();
-            if (!current_span->is_started()) {
-                current_span->start_span(parent_context);
+            if (!current_span->has_context()) {
+                current_span->start_span(std::move(parent_context));
             }
         }
         return *this;
     }
 
     auto&& continue_trace(opentelemetry::context::Context parent_context) && {
-        return std::move(this->continue_trace(parent_context));
+        return std::move(this->continue_trace(std::move(parent_context)));
     }
 
     auto& start_trace() & { return continue_trace(trace_span::root_context()); }
@@ -498,6 +497,29 @@ inline BOOST_ASIO_INITFN_AUTO_RESULT_TYPE(
                                          execution_context&>::value> = 0) {
     return (co_spawn)(ctx.get_executor(), std::forward<F>(f),
                       std::forward<CompletionToken>(token));
+}
+
+inline void traced_asio_initialize(const std::string& tracer_name,
+                                   const std::string& tracer_version) {
+    boost::asio::trace_span::enable = true;
+    boost::asio::trace_span::tracer_name = tracer_name;
+    boost::asio::trace_span::tracer_version = tracer_version;
+}
+
+template <typename T>
+void set_pointer(opentelemetry::context::Context& ctx, const std::string& key,
+                 T* ptr) {
+    ctx = ctx.SetValue(key, reinterpret_cast<uint64_t>(ptr));
+}
+
+template <typename T>
+T* get_pointer(const opentelemetry::context::Context& ctx,
+               const std::string& key) {
+    auto val = ctx.GetValue(key);
+    if (std::holds_alternative<uint64_t>(val)) {
+        return reinterpret_cast<T*>(std::get<uint64_t>(val));
+    }
+    return nullptr;
 }
 
 } // namespace asio
