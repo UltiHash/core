@@ -130,18 +130,16 @@ coro<address> ec_data_view::write(std::span<const char> data,
             }
         }
 
-        auto addresses =
-            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+        auto context = co_await boost::asio::this_coro::context;
+
+        auto futures =
+            spawn_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
-                [alloc, encoded, stripe_offsets, &context,
+                [alloc, encoded, stripe_offsets,
                  this](size_t i, auto storage) -> coro<address> {
-                    auto storage_addr =
-                        co_await storage
-                            ->write(*alloc, encoded->get().at(i),
-                                    stripe_offsets->at(i))
-                            .continue_trace(context);
+                    auto storage_addr = co_await storage->write(
+                        *alloc, encoded->get().at(i), stripe_offsets->at(i));
                     address global_addr;
-                    // translate storage address into global address
                     for (std::size_t j = 0; j < storage_addr.size(); ++j) {
                         fragment frag = storage_addr.get(j);
                         global_addr.emplace_back(
@@ -149,7 +147,9 @@ coro<address> ec_data_view::write(std::span<const char> data,
                     }
                     co_return global_addr;
                 },
-                storages);
+                storages, context);
+
+        auto addresses = co_await await_for_all<address>(futures);
 
         // combine partial addresses into complete return address
         for (std::size_t j = 0; j < m_config.data_shards; ++j) {
@@ -400,8 +400,7 @@ coro<std::size_t> ec_data_view::get_used_space() {
                 if (i >= m_config.data_shards) {
                     co_return 0; // skip parity shards
                 }
-                co_return co_await storage->get_used_space().continue_trace(
-                    context);
+                co_return co_await storage->get_used_space();
             },
             storages);
 
