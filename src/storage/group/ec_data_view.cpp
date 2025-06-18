@@ -25,7 +25,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 
     LOG_DEBUG() << "[ec_data_view] waiting group state for group " << group_id;
     etcd.wait(ns::root.storage_groups[group_id].group_state,
-              time_settings::instance().get_group_state_wait_timeout());
+              time_settings::instance().group_state_wait_timeout);
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 

@@ -28,7 +28,7 @@ struct fixture : public gdv_fixture_using_process {
           }) {
 
         // To make test faster,
-        time_settings::instance().set_async_io_timeout(1s);
+        time_settings::instance().async_io_timeout = 1s;
     }
 };
 
