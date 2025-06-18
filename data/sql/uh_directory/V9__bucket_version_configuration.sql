@@ -1,29 +1,19 @@
 --
--- Constants to describe versioning state
+-- Enum to describe versioning state
 --
-CREATE OR REPLACE FUNCTION versioning_disabled() RETURNS TEXT
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
-    'SELECT ''Disabled''';
-
-CREATE OR REPLACE FUNCTION versioning_enabled() RETURNS TEXT
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
-    'SELECT ''Enabled''';
-
-CREATE OR REPLACE FUNCTION versioning_suspended() RETURNS TEXT
-LANGUAGE sql IMMUTABLE PARALLEL SAFE AS
-    'SELECT ''Suspended''';
+CREATE TYPE versioning_type as ENUM ('Disabled', 'Enabled', 'Suspended');
 
 --
 -- Add column defining configured versioning for a bucket.
 --
 ALTER TABLE buckets ADD COLUMN
-    versioning TEXT NOT NULL DEFAULT versioning_disabled();
+    versioning versioning_type NOT NULL DEFAULT 'Disabled';
 
 --
 -- uh_bucket_versioning(bucket): return configured versioning
 -- for the given bucket
 --
-CREATE OR REPLACE PROCEDURE uh_bucket_set_versioning(bucket TEXT, status TEXT)
+CREATE OR REPLACE PROCEDURE uh_bucket_set_versioning(bucket TEXT, status versioning_type)
 LANGUAGE plpgsql AS $$
 BEGIN
     UPDATE buckets SET versioning = status WHERE name = bucket;
