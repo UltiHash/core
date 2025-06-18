@@ -47,7 +47,7 @@ public:
                           << m_group_id;
               return m_etcd.wait(
                   ns::root.storage_groups.group_configs[m_group_id],
-                  time_settings::instance().get_group_state_wait_timeout());
+                  time_settings::instance().group_state_wait_timeout);
           }())},
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),

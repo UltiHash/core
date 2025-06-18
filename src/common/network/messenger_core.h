@@ -122,8 +122,6 @@ public:
     boost::asio::ip::tcp::endpoint peer() const;
     boost::asio::ip::tcp::socket& get_socket() noexcept;
 
-    ~messenger_core() = default;
-
 private:
     boost::beast::tcp_stream m_tcp_stream;
 
