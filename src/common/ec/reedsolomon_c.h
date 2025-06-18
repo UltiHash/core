@@ -62,7 +62,7 @@ public:
         }
     }
 
-    encoded encode(std::span<const char> data) const {
+    std::shared_ptr<encoded> encode(std::span<const char> data) const {
 
         const auto total_blocks = m_data_shards + m_parity_shards;
 
@@ -109,8 +109,8 @@ public:
             throw std::runtime_error("Error in EC calculation");
         }
 
-        encoded enc;
-        enc.set(shard_ptrs, std::move(new_shards));
+        auto enc = std::make_shared<encoded>();
+        enc->set(shard_ptrs, std::move(new_shards));
         return enc;
     }
 

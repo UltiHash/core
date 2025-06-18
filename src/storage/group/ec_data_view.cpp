@@ -71,8 +71,9 @@ coro<address> ec_data_view::write(std::span<const char> data,
     std::size_t user_data_size = data.size_bytes();
 
     for (auto i = 0ul; i < num_stripes; i++) {
-        allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
-                           .size = m_chunk_size};
+        auto alloc = std::make_shared<allocation_t>(
+            allocation.offset + i * m_chunk_size, m_chunk_size);
+
         auto stripe_data = data.subspan(i * m_stripe_size);
         auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
         if (stripe_data_size != m_stripe_size) {
@@ -88,8 +89,9 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         auto encoded = m_rs.encode(stripe_data);
 
-        std::vector<std::vector<std::size_t>> stripe_offsets(
-            m_config.data_shards + m_config.parity_shards);
+        auto stripe_offsets =
+            std::make_shared<std::vector<std::vector<std::size_t>>>(
+                m_config.data_shards + m_config.parity_shards);
 
         // translate offsets into chunk-local offsets for each stripe.
         const std::size_t stripe_offset = i * m_stripe_size;
@@ -102,41 +104,42 @@ coro<address> ec_data_view::write(std::span<const char> data,
                 // if chunk actually contains user data, and if so add a zero
                 // offset to denote the start of the chunk and thus a new
                 // fragment, as fragments may not span across chunks
-                stripe_offsets.at(j).push_back(0);
+                stripe_offsets->at(j).push_back(0);
             }
             while (current_offset != offsets.end() and
                    *current_offset < chunk_offset + m_chunk_size) {
                 auto local_offset = *current_offset - chunk_offset;
                 if (local_offset != 0) {
-                    stripe_offsets.at(j).push_back(local_offset);
+                    stripe_offsets->at(j).push_back(local_offset);
                 }
                 ++current_offset;
             }
         }
 
         std::size_t num_fragments = std::accumulate(
-            stripe_offsets.begin(), stripe_offsets.end(), 0ul,
+            stripe_offsets->begin(), stripe_offsets->end(), 0ul,
             [](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
                 return acc + chunk_offsets.size();
             });
 
-        // goal: stripe_offsets.at(p).size() for any p == num_fragments
+        // goal: stripe_offsets->at(p).size() for any p == num_fragments
         for (std::size_t p = m_config.data_shards;
              p < m_config.data_shards + m_config.parity_shards; ++p) {
             for (std::size_t o = 0; o < num_fragments; ++o) {
-                stripe_offsets.at(p).push_back(0);
+                stripe_offsets->at(p).push_back(0);
             }
         }
 
         auto addresses =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
-                [&context, &alloc, &encoded, &stripe_offsets,
+                [alloc, encoded, stripe_offsets, &context,
                  this](size_t i, auto storage) -> coro<address> {
-                    auto storage_addr = co_await storage
-                                            ->write(alloc, encoded.get().at(i),
-                                                    stripe_offsets.at(i))
-                                            .continue_trace(context);
+                    auto storage_addr =
+                        co_await storage
+                            ->write(*alloc, encoded->get().at(i),
+                                    stripe_offsets->at(i))
+                            .continue_trace(context);
                     address global_addr;
                     // translate storage address into global address
                     for (std::size_t j = 0; j < storage_addr.size(); ++j) {

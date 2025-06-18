@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(ec_basic) {
     reedsolomon_c ec(data_shards, parity_shards, chunk_size);
     auto data = random_buffer(data_shards * chunk_size);
     auto encoded = ec.encode(data);
-    auto shards = encoded.get();
+    auto shards = encoded->get();
 
     EncodedData new_enc = copy_encoded(data_shards, shards);
 
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(ec_basic_lost) {
     reedsolomon_c ec(data_shards, parity_shards, chunk_size);
     auto data = random_buffer(data_shards * chunk_size);
     auto encoded = ec.encode(data);
-    auto shards = encoded.get();
+    auto shards = encoded->get();
 
     EncodedData new_enc = copy_encoded(data_shards, shards);
 
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(two_times_ec) {
     for (auto i = 0ul; i < 2; ++i) {
         auto data = random_buffer(data_shards * chunk_size);
         auto encoded = ec.encode(data);
-        auto shards = encoded.get();
+        auto shards = encoded->get();
 
         EncodedData new_enc = copy_encoded(data_shards, shards);
 
