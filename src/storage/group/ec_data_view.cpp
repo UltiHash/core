@@ -29,6 +29,69 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
+std::pair<std::span<const char>, std::size_t>
+ec_data_view::prepare_stripe_data(std::span<const char> data,
+                                  unique_buffer<char>& stripe,
+                                  std::size_t stripe_index) const {
+    auto stripe_data = data.subspan(stripe_index * m_stripe_size);
+    auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
+    if (stripe_data_size != m_stripe_size) {
+        std::copy(stripe_data.begin(), stripe_data.end(),
+                  stripe.span().begin());
+        std::ranges::fill(stripe.span().subspan(stripe_data_size), 0);
+        stripe_data = stripe.span();
+    } else {
+        stripe_data = stripe_data.first(stripe_data_size);
+    }
+    return {stripe_data, stripe_data_size};
+}
+
+std::shared_ptr<std::vector<std::vector<std::size_t>>>
+ec_data_view::prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
+                                     std::size_t stripe_index,
+                                     std::size_t stripe_data_size) const {
+    auto stripe_offsets =
+        std::make_shared<std::vector<std::vector<std::size_t>>>(
+            m_config.data_shards + m_config.parity_shards);
+
+    // translate offsets into chunk-local offsets for each stripe.
+    const std::size_t stripe_offset = stripe_index * m_stripe_size;
+    auto current_offset =
+        std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
+
+    for (size_t j = 0; j < m_config.data_shards; ++j) {
+        const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+        if (stripe_data_size > j * m_chunk_size) {
+            // if chunk actually contains user data, and if so add a zero
+            // offset to denote the start of the chunk and thus a new
+            // fragment, as fragments may not span across chunks
+            stripe_offsets->at(j).push_back(0);
+        }
+        while (current_offset != offsets.end() &&
+               *current_offset < chunk_offset + m_chunk_size) {
+            auto local_offset = *current_offset - chunk_offset;
+            if (local_offset != 0) {
+                stripe_offsets->at(j).push_back(local_offset);
+            }
+            ++current_offset;
+        }
+    }
+
+    std::size_t num_fragments = std::accumulate(
+        stripe_offsets->begin(), stripe_offsets->end(), 0ul,
+        [](std::size_t acc, const std::vector<std::size_t>& chunk_offsets) {
+            return acc + chunk_offsets.size();
+        });
+
+    // goal: stripe_offsets->at(p).size() for any p == num_fragments
+    for (std::size_t p = m_config.data_shards;
+         p < m_config.data_shards + m_config.parity_shards; ++p) {
+        for (std::size_t o = 0; o < num_fragments; ++o) {
+            stripe_offsets->at(p).push_back(0);
+        }
+    }
+    return stripe_offsets;
+}
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
 
@@ -71,64 +134,19 @@ coro<address> ec_data_view::write(std::span<const char> data,
     std::size_t user_data_size = data.size_bytes();
 
     for (auto i = 0ul; i < num_stripes; i++) {
+
         auto alloc = std::make_shared<allocation_t>(
             allocation.offset + i * m_chunk_size, m_chunk_size);
 
-        auto stripe_data = data.subspan(i * m_stripe_size);
-        auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
-        if (stripe_data_size != m_stripe_size) {
-            std::copy(stripe_data.begin(), stripe_data.end(),
-                      stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(stripe_data_size), 0);
-            stripe_data = stripe.span();
-        } else {
-            stripe_data = stripe_data.first(stripe_data_size);
-        }
+        auto [stripe_data, stripe_data_size] =
+            prepare_stripe_data(data, stripe, i);
 
         write_size -= stripe_data_size;
 
         auto encoded = m_rs.encode(stripe_data);
 
         auto stripe_offsets =
-            std::make_shared<std::vector<std::vector<std::size_t>>>(
-                m_config.data_shards + m_config.parity_shards);
-
-        // translate offsets into chunk-local offsets for each stripe.
-        const std::size_t stripe_offset = i * m_stripe_size;
-        auto current_offset =
-            std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
-
-        for (size_t j = 0; j < m_config.data_shards; ++j) {
-            const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
-            if (stripe_data_size > j * m_chunk_size) {
-                // if chunk actually contains user data, and if so add a zero
-                // offset to denote the start of the chunk and thus a new
-                // fragment, as fragments may not span across chunks
-                stripe_offsets->at(j).push_back(0);
-            }
-            while (current_offset != offsets.end() and
-                   *current_offset < chunk_offset + m_chunk_size) {
-                auto local_offset = *current_offset - chunk_offset;
-                if (local_offset != 0) {
-                    stripe_offsets->at(j).push_back(local_offset);
-                }
-                ++current_offset;
-            }
-        }
-
-        std::size_t num_fragments = std::accumulate(
-            stripe_offsets->begin(), stripe_offsets->end(), 0ul,
-            [](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
-                return acc + chunk_offsets.size();
-            });
-
-        // goal: stripe_offsets->at(p).size() for any p == num_fragments
-        for (std::size_t p = m_config.data_shards;
-             p < m_config.data_shards + m_config.parity_shards; ++p) {
-            for (std::size_t o = 0; o < num_fragments; ++o) {
-                stripe_offsets->at(p).push_back(0);
-            }
-        }
+            prepare_stripe_offsets(offsets, i, stripe_data_size);
 
         auto context = co_await boost::asio::this_coro::context;
 
