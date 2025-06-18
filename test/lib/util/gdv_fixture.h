@@ -1,7 +1,5 @@
 #pragma once
 
-#include "test_config.h"
-
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
@@ -140,7 +138,8 @@ public:
         m_storage_instances[id] =
             std::make_unique<storage::service>(service_cfg, storage_cfg);
 
-        m_storage_threads[id] = std::thread([id, this]() { m_storage_instances[id]->run(); });
+        m_storage_threads[id] =
+            std::thread([id, this]() { m_storage_instances[id]->run(); });
     }
 
     void introduce_new_storage(std::size_t id,

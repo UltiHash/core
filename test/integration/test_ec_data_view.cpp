@@ -9,6 +9,8 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include "test_config.h"
+
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
