@@ -131,7 +131,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
         auto addresses =
             co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
-                [&](size_t i, auto storage) -> coro<address> {
+                [&context, &alloc, &encoded, &stripe_offsets,
+                 this](size_t i, auto storage) -> coro<address> {
                     auto storage_addr = co_await storage
                                             ->write(alloc, encoded.get().at(i),
                                                     stripe_offsets.at(i))
