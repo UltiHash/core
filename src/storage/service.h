@@ -5,11 +5,11 @@
 #include "config.h"
 #include "handler.h"
 
-#include <common/execution/executor.h>
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
 #include <common/etcd/utils.h>
+#include <common/execution/executor.h>
 #include <common/license/license_watcher.h>
 #include <common/network/server.h>
 #include <common/utils/scope_guard.h>
@@ -42,13 +42,18 @@ public:
           m_license_watcher(m_etcd),
           m_storage_id{sc.instance_id},
           m_group_id{sc.group_id},
-          m_group_config{group_config::create(
-              m_etcd.wait(ns::root.storage_groups.group_configs[m_group_id],
-                          SERVICE_GET_TIMEOUT))},
+          m_group_config{group_config::create([&]() -> std::string {
+              LOG_DEBUG() << "waiting for group config to be ready, for group "
+                          << m_group_id;
+              return m_etcd.wait(
+                  ns::root.storage_groups.group_configs[m_group_id],
+                  time_settings::instance().group_state_wait_timeout);
+          }())},
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),
               sc.working_directory)),
-          m_server(sc.server, std::make_unique<handler>(*m_storage), m_executor),
+          m_server(sc.server, std::make_unique<handler>(*m_storage),
+                   m_executor),
           m_service_registry(m_etcd,
                              ns::root.storage_groups[m_group_id]
                                  .storage_hostports[m_storage_id],

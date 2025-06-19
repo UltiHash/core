@@ -12,14 +12,14 @@ struct hostport {
     std::string to_string() const {
         return hostname + ":" + std::to_string(port);
     }
-    static hostport create(std::string_view str) {
+    static hostport create(const std::string& str) {
         size_t pos = str.rfind(':');
         if (pos == std::string_view::npos) {
             throw std::invalid_argument("Invalid hostport format, missing ':'");
         }
 
         std::string hostname(str.substr(0, pos));
-        std::string_view port_str = str.substr(pos + 1);
+        std::string_view port_str = std::string_view(str).substr(pos + 1);
 
         uint16_t port;
         try {

@@ -18,7 +18,7 @@ struct license {
 
     enum class verify : std::uint8_t { VERIFY, SKIP_VERIFY };
 
-    static license create(std::string_view json_str,
+    static license create(const std::string& json_str,
                           verify option = verify::VERIFY);
 
     std::string to_string() const { return m_compact_json; };
