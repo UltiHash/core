@@ -13,11 +13,12 @@ struct remote_storage : public storage_interface {
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
-    coro<address> write(allocation_t allocation, std::span<const char> data,
-                        const std::vector<std::size_t>& offsets) override {
+    coro<address> write(allocation_t allocation,
+                        const std::vector<std::span<const char>>& buffers,
+                        std::span<const std::size_t> offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
         write_request req = {
-            .allocation = allocation, .data = data, .offsets = offsets};
+            .allocation = allocation, .buffers = buffers, .offsets = offsets};
 
         co_await m->send_write(req);
         const auto message_header = co_await m->recv_header();

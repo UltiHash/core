@@ -4,6 +4,12 @@
 
 namespace uh::cluster {
 
+struct write_request {
+    allocation_t allocation;
+    std::vector<std::span<const char>> buffers;
+    std::span<const std::size_t> offsets;
+};
+
 class messenger : public messenger_core {
 public:
     using messenger_core::messenger_core;
@@ -38,7 +44,8 @@ public:
 
     coro<void> send_write(const write_request& req);
 
-    coro<write_request> recv_write(const header& message_header);
+    coro<std::pair<write_request, unique_buffer<char>>>
+    recv_write(const header& message_header);
 
     coro<void> send_address(const message_type type, const address& addr);
 

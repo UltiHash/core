@@ -174,7 +174,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
                 [alloc, encoded, stripe_offsets,
                  this](size_t i, auto storage) -> coro<address> {
                     auto storage_addr = co_await storage->write(
-                        *alloc, encoded->get().at(i), stripe_offsets->at(i));
+                        *alloc, {encoded->get().at(i)}, stripe_offsets->at(i));
                     address global_addr;
                     for (std::size_t j = 0; j < storage_addr.size(); ++j) {
                         fragment frag = storage_addr.get(j);

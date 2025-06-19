@@ -1,5 +1,7 @@
 #include "messenger.h"
 
+#include <ranges>
+
 namespace uh::cluster {
 
 coro<address> messenger::recv_address(const header& message_header) {
@@ -37,40 +39,64 @@ messenger::recv_dedupe_response(const header& message_header) {
 }
 
 coro<void> messenger::send_write(const write_request& req) {
-    auto data = std::get<std::span<const char>>(req.data);
-    const size_type data_size = static_cast<size_type>(data.size());
     register_write_buffer(req.allocation);
-    register_write_buffer(data_size);
-    register_write_buffer(data);
+
+    std::size_t num_offsets = req.offsets.size();
+    register_write_buffer(num_offsets);
+    std::size_t num_buffers = req.buffers.size();
+    register_write_buffer(num_buffers);
+
     register_write_buffer(req.offsets);
+
+    auto sizes_view = req.buffers | std::views::transform(
+                                        [](const auto& s) { return s.size(); });
+    std::vector<std::size_t> sizes(sizes_view.begin(), sizes_view.end());
+    register_write_buffer(sizes);
+
+    for (const auto& buf : req.buffers) {
+        register_write_buffer(buf);
+    }
 
     co_await send_buffers(STORAGE_WRITE_REQ);
 }
 
-coro<write_request> messenger::recv_write(const header& message_header) {
-    size_type data_size;
-    std::size_t alloc_offset;
-    std::size_t alloc_size;
-    unique_buffer<char> recv_buffer(message_header.size - sizeof(size_type) -
-                                    (2 * sizeof(std::size_t)));
-    register_read_buffer(alloc_offset);
-    register_read_buffer(alloc_size);
-    register_read_buffer(data_size);
-    register_read_buffer(recv_buffer);
+coro<std::pair<write_request, unique_buffer<char>>>
+messenger::recv_write(const header& message_header) {
+    allocation_t allocation;
+    register_read_buffer(allocation);
+    std::size_t num_offsets;
+    register_read_buffer(num_offsets);
+    std::size_t num_buffers;
+    register_read_buffer(num_buffers);
+    unique_buffer<char> buffer(message_header.size - sizeof(allocation) -
+                               sizeof(num_buffers) - sizeof(num_offsets));
+    register_read_buffer(buffer);
+
     co_await recv_buffers(message_header);
 
-    std::size_t offsets_size = recv_buffer.size() - data_size;
+    auto p = buffer.begin();
 
-    write_request req = {
-        .allocation = {.offset = alloc_offset, .size = alloc_size},
-        .data = unique_buffer<char>(data_size),
-        .offsets =
-            std::vector<std::size_t>(offsets_size / sizeof(std::size_t))};
-    std::memcpy(std::get<unique_buffer<char>>(req.data).data(),
-                recv_buffer.data(), data_size);
-    std::memcpy(req.offsets.data(), recv_buffer.data() + data_size,
-                offsets_size);
-    co_return req;
+    auto offsets = std::span<const std::size_t>((std::size_t*)p, num_offsets);
+
+    p += offsets.size_bytes();
+
+    auto buffer_sizes =
+        std::span<const std::size_t>((std::size_t*)p, num_buffers);
+
+    p += buffer_sizes.size_bytes();
+
+    std::vector<std::span<const char>> buffers;
+    buffers.reserve(num_buffers);
+    for (std::size_t sz : buffer_sizes) {
+        buffers.emplace_back(p, sz);
+        p += sz;
+    }
+
+    write_request req = {.allocation = std::move(allocation),
+                         .buffers = std::move(buffers),
+                         .offsets = std::move(offsets)};
+
+    co_return std::make_pair(std::move(req), std::move(buffer));
 }
 
 coro<void> messenger::send_address(const message_type type,

@@ -35,12 +35,28 @@ public:
      * @affects get_available_space()
      *
      * @param allocation: allocation to which data is written
-     * @param data: buffer to be written
+     * @param buffer: buffer to be written
      * @param offsets: offsets of fragments in the buffer
      * @return allocated address
      */
-    address write(const allocation_t allocation, std::span<const char> data,
-                  const std::vector<std::size_t>& offsets);
+    address write(const allocation_t allocation, std::span<const char> buffer,
+                  std::span<const std::size_t> offsets);
+
+    /**
+     * Writes data to persistent storage. On completion, the provided data
+     * is guaranteed to be written to persistent storage.
+     *
+     * @affects get_used_space()
+     * @affects get_available_space()
+     *
+     * @param allocation: allocation to which data is written
+     * @param buffers: buffers to be written
+     * @param offsets: offsets of fragments in the buffer
+     * @return allocated address
+     */
+    address write(const allocation_t allocation,
+                  const std::vector<std::span<const char>>& buffers,
+                  std::span<const std::size_t> offsets);
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -113,7 +129,7 @@ private:
 
     void maintain_refcount(const std::size_t local_pointer,
                            const std::size_t size,
-                           const std::vector<std::size_t>& offsets);
+                           std::span<const std::size_t> offsets);
 
     void allocate_files(std::size_t offset, std::size_t size);
 
