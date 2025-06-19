@@ -148,10 +148,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
         auto stripe_offsets =
             prepare_stripe_offsets(offsets, i, stripe_data_size);
 
-        auto context = co_await boost::asio::this_coro::context;
-
-        auto futures =
-            spawn_for_all<address, std::shared_ptr<storage_interface>>(
+        auto addresses =
+            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
                 [alloc, encoded, stripe_offsets,
                  this](size_t i, auto storage) -> coro<address> {
@@ -165,9 +163,7 @@ coro<address> ec_data_view::write(std::span<const char> data,
                     }
                     co_return global_addr;
                 },
-                storages, context);
-
-        auto addresses = co_await await_for_all<address>(futures);
+                storages);
 
         // combine partial addresses into complete return address
         for (std::size_t j = 0; j < m_config.data_shards; ++j) {
