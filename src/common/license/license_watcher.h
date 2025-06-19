@@ -50,7 +50,7 @@ private:
         }
     }
 
-    void parse_and_save(std::string_view license_str) {
+    void parse_and_save(const std::string& license_str) {
         auto lic = license::create(license_str, license::verify::SKIP_VERIFY);
 
         LOG_INFO() << "license loaded for " << lic.customer_id;

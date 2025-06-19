@@ -1,9 +1,9 @@
 #pragma once
 
-#include <common/types/common_types.h>
-#include <common/telemetry/log.h>
 #include <boost/asio.hpp>
 #include <boost/type_traits/function_traits.hpp>
+#include <common/telemetry/log.h>
+#include <common/types/common_types.h>
 
 #include <chrono>
 #include <thread>
@@ -23,14 +23,15 @@ public:
     void run();
 
     /**
-     * Issue a stop request to the executor and return immediately. This calls all
-     * configured stop functions and sets the stop_source to *stop_requested*.
+     * Issue a stop request to the executor and return immediately. This calls
+     * all configured stop functions and sets the stop_source to
+     * *stop_requested*.
      */
     void stop();
 
     /**
-     * Wait until the executor has shut down. This returns immediately when executor
-     * is not running.
+     * Wait until the executor has shut down. This returns immediately when
+     * executor is not running.
      */
     void wait();
 
@@ -48,50 +49,53 @@ public:
     /**
      * Spawn a new co-routine in executor.
      */
-    template <typename func, typename ... params>
+    template <typename func, typename... params>
     requires std::invocable<func, std::stop_token, params...>
-    void spawn(func&& f, params && ... p) {
-        boost::asio::co_spawn(
-            m_ioc,
-            std::invoke(std::move(f), m_stop.get_token(), std::forward<params>(p)...).start_trace(),
-            boost::asio::detached);
+    void spawn(func&& f, params&&... p) {
+        boost::asio::co_spawn(m_ioc,
+                              std::invoke(std::move(f), m_stop.get_token(),
+                                          std::forward<params>(p)...)
+                                  .start_trace(),
+                              boost::asio::detached);
     }
 
-    template <typename func, typename ... args>
-    void spawn(func&& f, args && ... a) {
+    template <typename func, typename... args>
+    void spawn(func&& f, args&&... a) {
         boost::asio::co_spawn(
             m_ioc,
             std::invoke(std::move(f), std::forward<args>(a)...).start_trace(),
             boost::asio::detached);
     }
 
-
     /**
-     * Repeatedly call `f` until the executor is stopped, waiting `interval` between calls.
+     * Repeatedly call `f` until the executor is stopped, waiting `interval`
+     * between calls.
      */
-    template <typename func, typename ... args>
+    template <typename func, typename... args>
     requires std::invocable<func, args...>
-    void repeated(std::chrono::milliseconds interval, func f, args&& ... a)  {
-        spawn(&executor::run_loop<func, args...>, this, std::move(interval), std::move(f), a...);
+    void repeated(std::chrono::steady_clock::duration interval, func f,
+                  args&&... a) {
+        spawn(&executor::run_loop<func, args...>, this, std::move(interval),
+              std::move(f), a...);
     }
 
     /**
      * Repeatedly call `f` until the executor is stopped.
      */
-    template <typename func, typename ... args>
+    template <typename func, typename... args>
     requires std::invocable<func, args...>
-    void repeated(func f, args&& ... a)  {
+    void repeated(func f, args&&... a) {
         repeated(std::chrono::milliseconds(0), std::move(f), a...);
     }
 
     /**
      * Repeatedly call `f` until the executor is stopped.
-     * Additionally, register a stop function `stop` that is called from inside `executor::stop()`
-     * to cancel any pending operation in `f`.
+     * Additionally, register a stop function `stop` that is called from inside
+     * `executor::stop()` to cancel any pending operation in `f`.
      */
-    template <typename func, std::invocable<> stop_func, typename ... args>
+    template <typename func, std::invocable<> stop_func, typename... args>
     requires std::invocable<func, args...>
-    void repeated(stop_func stop, func f, args&& ... a) {
+    void repeated(stop_func stop, func f, args&&... a) {
         {
             std::unique_lock lock(m_mutex);
             m_stop_functions.push_back(std::move(stop));
@@ -101,13 +105,15 @@ public:
     }
 
     /**
-     * Repeatedly call `f` until the executor is stopped, waiting `interval` between calls.
-     * Additionally, register a stop function `stop` that is called from inside `executor::stop()`
-     * to cancel any pending operation in `f`.
+     * Repeatedly call `f` until the executor is stopped, waiting `interval`
+     * between calls. Additionally, register a stop function `stop` that is
+     * called from inside `executor::stop()` to cancel any pending operation in
+     * `f`.
      */
-    template <typename func, std::invocable<> stop_func, typename ... args>
+    template <typename func, std::invocable<> stop_func, typename... args>
     requires std::invocable<func, args...>
-    void repeated(std::chrono::milliseconds interval, stop_func stop, func f, args&& ... a) {
+    void repeated(std::chrono::steady_clock::duration interval, stop_func stop,
+                  func f, args&&... a) {
         {
             std::unique_lock lock(m_mutex);
             m_stop_functions.push_back(std::move(stop));
@@ -117,8 +123,9 @@ public:
     }
 
 private:
-    template <typename func, typename ... args>
-    coro<void> run_loop(std::chrono::milliseconds interval, func f, args&& ... a) {
+    template <typename func, typename... args>
+    coro<void> run_loop(std::chrono::steady_clock::duration interval, func f,
+                        args&&... a) {
         while (!m_stop.stop_requested()) {
             auto start_time = std::chrono::steady_clock::now();
 
@@ -129,7 +136,8 @@ private:
             }
 
             auto elapsed_time = std::chrono::steady_clock::now() - start_time;
-            auto sleep_duration = interval.count() ? interval - elapsed_time : interval;
+            auto sleep_duration =
+                interval.count() ? interval - elapsed_time : interval;
 
             boost::asio::steady_timer timer(m_ioc, sleep_duration);
             co_await timer.async_wait();
@@ -147,7 +155,9 @@ private:
     bool m_stopped = true;
     std::condition_variable m_stop_cond;
 
-    std::unique_ptr<boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>> m_work_guard;
+    std::unique_ptr<
+        boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>
+        m_work_guard;
 };
 
-}
+} // namespace uh::cluster

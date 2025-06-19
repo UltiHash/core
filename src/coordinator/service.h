@@ -2,8 +2,8 @@
 
 #include "config.h"
 
-#include <common/execution/executor.h>
 #include <common/etcd/service.h>
+#include <common/execution/executor.h>
 #include <common/telemetry/log.h>
 #include <common/utils/common.h>
 
@@ -23,7 +23,8 @@ public:
         if (cc.license) {
             LOG_INFO() << "using license from UH_LICENSE";
             m_license_updater.emplace(
-                m_executor.get_executor(), m_etcd, pseudo_backend_client(cc.license.to_string()));
+                m_executor.get_executor(), m_etcd,
+                pseudo_backend_client(cc.license.to_string()));
 
             m_executor.spawn(&license_updater::update, *m_license_updater);
             m_executor.keep_alive();
@@ -35,18 +36,16 @@ public:
                                       default_backend_client(bc.backend_host,
                                                              bc.customer_id,
                                                              bc.access_token));
-            m_executor.repeated(
-                LICENSE_FETCH_PERIOD,
-                &license_updater::update, *m_license_updater);
+            m_executor.repeated(time_settings::instance().license_fetch_period,
+                                &license_updater::update, *m_license_updater);
 
-            m_usage_updater.emplace(m_executor.get_executor(), m_usage, *m_license_updater,
-                                    default_backend_client(bc.backend_host,
-                                                           bc.customer_id,
-                                                           bc.access_token));
-            m_executor.repeated(
-                usage_updater::POLL_INTERVAL,
-                &usage_updater::hourly_update, *m_usage_updater);
-
+            m_usage_updater.emplace(
+                m_executor.get_executor(), m_usage, *m_license_updater,
+                default_backend_client(bc.backend_host, bc.customer_id,
+                                       bc.access_token));
+            m_executor.repeated(usage_updater::POLL_INTERVAL,
+                                &usage_updater::hourly_update,
+                                *m_usage_updater);
         }
 
         publish_configs(m_etcd, cc.storage_groups);

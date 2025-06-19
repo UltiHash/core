@@ -49,7 +49,7 @@ void from_json(const json& j, license& p) {
     }
 }
 
-license license::create(std::string_view json_str, verify option) {
+license license::create(const std::string& json_str, verify option) {
     auto j = nlohmann::ordered_json::parse(json_str);
 
     auto rv = j.template get<license>();

@@ -52,7 +52,7 @@ function(uh_add_test name)
 
     add_test(NAME ${target_name} COMMAND ${target_name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
-    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS})
+    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS} TIMEOUT 300)
 endfunction()
 
 add_subdirectory(unit)

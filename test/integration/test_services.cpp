@@ -21,21 +21,33 @@ namespace uh::cluster {
 struct fixture {
     temp_directory tmp;
     boost::asio::io_context ioc;
+    boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
+        work_guard;
+    std::thread m_thread;
     etcd_manager etcd;
     std::size_t service_id;
     std::size_t num_storages = 5;
     storage_index services{num_storages};
-    service_load_balancer<storage_interface> load_balancer{1s};
+    service_load_balancer<storage_interface> load_balancer;
     uh::cluster::service_maintainer<storage_interface> service_maintainer;
 
     fixture()
-        : service_id(get_service_id(
+        : work_guard(boost::asio::make_work_guard(ioc)),
+          m_thread{[this] { ioc.run(); }},
+          service_id(get_service_id(
               etcd, get_service_string(storage_interface::service_role),
               tmp.path())),
           service_maintainer(
               etcd, ns::root.storage_groups[0].storage_hostports,
               service_factory<storage_interface>(ioc, 2 /*num_connections*/),
-              {services, load_balancer}) {}
+              {services, load_balancer}) {
+        time_settings::instance().service_get_timeout = 1s;
+    }
+    ~fixture() {
+        work_guard.reset();
+        ioc.stop();
+        m_thread.join();
+    }
 
     auto count_valid_services() {
         return std::ranges::count_if(services.get(),
