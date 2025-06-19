@@ -133,8 +133,6 @@ coro<address> ec_data_view::write(std::span<const char> data,
     address rv;
     std::size_t user_data_size = data.size_bytes();
 
-    std::vector<future<address>> prev_futures;
-
     for (auto i = 0ul; i < num_stripes; i++) {
 
         auto alloc = std::make_shared<allocation_t>(
@@ -149,26 +147,10 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         auto stripe_offsets =
             prepare_stripe_offsets(offsets, i, stripe_data_size);
-        if (not prev_futures.empty()) {
-            auto addresses = co_await await_for_all<address>(prev_futures);
-            // combine partial addresses into complete return address
-            for (std::size_t j = 0; j < m_config.data_shards; ++j) {
-                for (auto& frag : addresses.at(j).fragments) {
-                    if (user_data_size == 0) {
-                        break;
-                    }
 
-                    if (frag.size < user_data_size) {
-                        user_data_size -= frag.size;
-                        rv.emplace_back(frag.pointer, frag.size);
-                    } else {
-                        rv.emplace_back(frag.pointer, user_data_size);
-                        user_data_size = 0;
-                    }
-                }
-            }
-        }
-        prev_futures =
+        auto context = co_await boost::asio::this_coro::context;
+
+        auto futures =
             spawn_for_all<address, std::shared_ptr<storage_interface>>(
                 m_ioc,
                 [alloc, encoded, stripe_offsets,
@@ -183,11 +165,10 @@ coro<address> ec_data_view::write(std::span<const char> data,
                     }
                     co_return global_addr;
                 },
-                storages, co_await boost::asio::this_coro::context);
-    }
+                storages, context);
 
-    if (not prev_futures.empty()) {
-        auto addresses = co_await await_for_all<address>(prev_futures);
+        auto addresses = co_await await_for_all<address>(futures);
+
         // combine partial addresses into complete return address
         for (std::size_t j = 0; j < m_config.data_shards; ++j) {
             for (auto& frag : addresses.at(j).fragments) {
