@@ -38,6 +38,8 @@ add_library(entrypoint
             commands/s3/create_bucket.cpp
             commands/s3/put_bucket_policy.cpp
             commands/s3/complete_multipart.cpp
+            commands/s3/put_bucket_versioning.cpp
+            commands/s3/get_bucket_versioning.cpp
             formats.cpp
             multipart_state.cpp
             directory.cpp
