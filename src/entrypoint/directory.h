@@ -10,7 +10,14 @@
 
 namespace uh::cluster {
 
-enum class bucket_delete_policy { only_empty, all };
+enum class bucket_versioning {
+    disabled,
+    enabled,
+    suspended
+};
+
+std::string to_string(bucket_versioning versioning);
+bucket_versioning to_versioning(std::string s);
 
 class directory {
 public:
@@ -55,6 +62,10 @@ public:
 
     coro<void> set_bucket_cors(const std::string& bucket,
                                std::optional<std::string> cors);
+
+    coro<bucket_versioning> get_bucket_versioning(const std::string& bucket);
+    coro<void> set_bucket_versioning(const std::string& bucket,
+            bucket_versioning versioning);
 
     coro<std::vector<object>>
     list_objects(const std::string& bucket,

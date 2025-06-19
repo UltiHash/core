@@ -11,6 +11,7 @@
 #include <entrypoint/commands/s3/delete_objects.h>
 #include <entrypoint/commands/s3/get_bucket_cors.h>
 #include <entrypoint/commands/s3/get_bucket_policy.h>
+#include <entrypoint/commands/s3/get_bucket_versioning.h>
 #include <entrypoint/commands/s3/get_object.h>
 #include <entrypoint/commands/s3/head_bucket.h>
 #include <entrypoint/commands/s3/head_object.h>
@@ -22,6 +23,7 @@
 #include <entrypoint/commands/s3/multipart.h>
 #include <entrypoint/commands/s3/put_bucket_cors.h>
 #include <entrypoint/commands/s3/put_bucket_policy.h>
+#include <entrypoint/commands/s3/put_bucket_versioning.h>
 #include <entrypoint/commands/s3/put_object.h>
 
 #include <entrypoint/commands/uh/get_license_info.h>
@@ -172,15 +174,22 @@ coro<std::unique_ptr<command>> command_factory::create(ep::http::request& req) {
     if (get_ready::can_handle(req)) {
         co_return std::make_unique<get_ready>(m_directory, m_gdv);
     }
+
     if (get_bucket_cors::can_handle(req)) {
         co_return std::make_unique<get_bucket_cors>(m_directory);
     }
     if (delete_bucket_cors::can_handle(req)) {
         co_return std::make_unique<delete_bucket_cors>(m_directory);
     }
-
     if (put_bucket_cors::can_handle(req)) {
         co_return std::make_unique<put_bucket_cors>(m_directory);
+    }
+
+    if (get_bucket_versioning::can_handle(req)) {
+        co_return std::make_unique<get_bucket_versioning>(m_directory);
+    }
+    if (put_bucket_versioning::can_handle(req)) {
+        co_return std::make_unique<put_bucket_versioning>(m_directory);
     }
 
     throw command_exception(ep::http::status::bad_request, "InvalidURI",
