@@ -129,7 +129,7 @@ default_data_store::write(const allocation_t allocation,
     allocate_files(local_pointer, allocation.size);
 
     auto size_sum =
-        std::accumulate(buffers.begin(), buffers.end(), 0,
+        std::accumulate(buffers.begin(), buffers.end(), 0ul,
                         [](auto acc, const auto& v) { return acc + v.size(); });
     if (size_sum != allocation.size) {
         throw std::runtime_error("data is shorter than allocation size: " +
