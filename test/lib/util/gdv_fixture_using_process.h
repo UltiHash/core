@@ -1,5 +1,8 @@
 #pragma once
 
+#include "test_config.h"
+
+#include <boost/process.hpp>
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
@@ -9,13 +12,23 @@
 
 #include <util/temp_directory.h>
 
+namespace bp = boost::process;
 using namespace std::chrono_literals;
 
 namespace uh::cluster {
-class global_data_view_fixture {
+
+void send_signal_to_process(pid_t pid, int signal) {
+    if (kill(pid, signal) == 0) {
+        std::cout << "Signal " << signal << " sent to process " << pid << ".\n";
+    } else {
+        perror("Failed to send signal");
+    }
+}
+
+class gdv_fixture_using_process {
 public:
 #if defined(WITH_EC)
-    global_data_view_fixture(
+    gdv_fixture_using_process(
         const storage::group_config& config =
             {
                 .id = 0,
@@ -26,7 +39,7 @@ public:
                 .stripe_size_kib = 2 * 2,
             })
 #else
-    global_data_view_fixture(
+    gdv_fixture_using_process(
         const storage::group_config& config =
             {
                 .id = 0,
@@ -39,7 +52,7 @@ public:
           m_work_guard(boost::asio::make_work_guard(m_ioc)) {
     }
 
-    virtual ~global_data_view_fixture() {}
+    virtual ~gdv_fixture_using_process() {}
 
     void setup() {
 
@@ -58,16 +71,14 @@ public:
         storage::group_configs configs;
         configs.configs.push_back(m_config);
         m_storage_instances.resize(m_config.storages);
-        m_storage_threads.resize(m_config.storages);
-
         coordinator::service::publish_configs(m_etcd, configs);
         try {
             for (size_t i = 0; i < m_config.storages; i++) {
                 m_temp_dirs.emplace_back(std::make_unique<temp_directory>());
                 activate_storage(i);
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR() << "Failed to create storage instances: " << e.what();
+        } catch (...) {
+            LOG_ERROR() << "Failed to create storage instances";
             throw;
         }
 
@@ -88,12 +99,20 @@ public:
     void teardown() {
         m_gdv.reset();
 
-        for (unsigned i = 0; i < m_storage_instances.size(); ++i) {
-            deactivate_storage(i);
+        for (const auto& node : m_storage_instances) {
+            if (node != nullptr) {
+                node->terminate();
+            }
+        }
+
+        for (auto& node : m_storage_instances) {
+            if (node != nullptr) {
+                node->wait();
+                node.reset();
+            }
         }
 
         m_storage_instances.clear();
-        m_storage_threads.clear();
 
         m_work_guard.reset();
 
@@ -110,7 +129,6 @@ public:
         m_temp_dirs.clear();
         m_etcd.clear_all();
     }
-
     etcd_manager& get_etcd_manager() { return m_etcd; }
 
     auto get_group_config() { return m_config; }
@@ -118,28 +136,39 @@ public:
     void deactivate_storage(std::size_t id) {
         auto& node = m_storage_instances.at(id);
         if (node != nullptr) {
-            node->stop();
+            send_signal_to_process(node->id(), SIGTERM);
+            node->wait();
             node.reset();
-            m_storage_threads[id].join();
+        }
+    }
+
+    void kill_storage(std::size_t id) {
+        auto& node = m_storage_instances.at(id);
+        if (node != nullptr) {
+            // node->terminate();
+            send_signal_to_process(node->id(), SIGKILL);
+            node->wait();
+            node.reset();
         }
     }
 
     void activate_storage(std::size_t id, std::size_t port_offset = 10000) {
-        service_config service_cfg;
-        service_cfg.working_dir = m_temp_dirs[id]->path();
-        storage_config storage_cfg;
-        storage_cfg.server.port = port_offset + id;
-        storage_cfg.working_directory = {
-            std::filesystem::path(service_cfg.working_dir) / "storage"};
-        LOG_DEBUG() << "storage " << id
-                    << " path: " << storage_cfg.working_directory;
-        storage_cfg.instance_id = id;
-        storage_cfg.group_id = m_config.id;
-        m_storage_instances[id] =
-            std::make_unique<storage::service>(service_cfg, storage_cfg);
+        bp::environment env = boost::this_process::environment();
+        env[ENV_CFG_LICENSE] = test_license_string;
+        env[ENV_CFG_LOG_LEVEL] = "DEBUG";
+        env["OTEL_RESOURCE_ATTRIBUTES"] = "service.name=storage";
+        env[ENV_CFG_STORAGE_GROUP_ID] = serialize(m_config.id);
+        env[ENV_CFG_STORAGE_SERVICE_ID] = serialize(id);
 
-        m_storage_threads[id] =
-            std::thread([id, this]() { m_storage_instances[id]->run(); });
+        std::vector<std::string> args = {"--workdir", m_temp_dirs[id]->path(),
+                                         "storage", //
+                                         "--port", serialize(port_offset + id)};
+
+        m_storage_instances[id] = std::make_unique<bp::child>(
+            UH_CLUSTER_EXECUTABLE, bp::env = env, bp::args = args);
+
+        LOG_DEBUG() << "storage " << id << " is spawned with process id: "
+                    << m_storage_instances[id]->id();
     }
 
     void introduce_new_storage(std::size_t id,
@@ -166,8 +195,7 @@ private:
         m_work_guard;
     std::thread m_thread;
 
-    std::vector<std::unique_ptr<storage::service>> m_storage_instances;
-    std::vector<std::thread> m_storage_threads;
+    std::vector<std::unique_ptr<bp::child>> m_storage_instances;
 
     std::shared_ptr<storage::global::global_data_view> m_gdv;
 };

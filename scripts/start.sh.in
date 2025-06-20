@@ -22,7 +22,7 @@ done
 
 UH_LICENSE=$(<@PROJECT_SOURCE_DIR@/data/licenses/UltiHash-Test-1PB.lic)
 BUILD_DIR=@PROJECT_BINARY_DIR@
-UH_DATA=/var/lib/uh
+UH_DATA=${UH_DATA:-/var/lib/uh}
 export UH_LOG_LEVEL=DEBUG
 UH_CLUSTER=$<TARGET_FILE:uh-cluster>
 log_dir=$BUILD_DIR/logs
@@ -288,10 +288,21 @@ while true; do
     fi
 done
 
-echo "Killing all spawned processes..."
+echo "Killing all spawned processes. It can take more than 5 seconds."
 pkill uh-cluster
 
 sleep 0.3 
+
+timeout=7
+interval=0.2
+
+for ((i=0; i<$(echo "$timeout/$interval" | bc); i++)); do
+  if ! pgrep "uh-cluster" > /dev/null; then
+    echo "All process successfully destroyed"
+    exit 0
+  fi
+  sleep $interval
+done
 
 if pgrep -x "uh-cluster" > /dev/null; then
     echo
@@ -300,4 +311,5 @@ if pgrep -x "uh-cluster" > /dev/null; then
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo
     get_running_processes
+    exit 1
 fi
