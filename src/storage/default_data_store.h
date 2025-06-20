@@ -35,21 +35,6 @@ public:
      * @affects get_available_space()
      *
      * @param allocation: allocation to which data is written
-     * @param buffer: buffer to be written
-     * @param offsets: offsets of fragments in the buffer
-     * @return allocated address
-     */
-    address write(const allocation_t allocation, std::span<const char> buffer,
-                  std::span<const std::size_t> offsets);
-
-    /**
-     * Writes data to persistent storage. On completion, the provided data
-     * is guaranteed to be written to persistent storage.
-     *
-     * @affects get_used_space()
-     * @affects get_available_space()
-     *
-     * @param allocation: allocation to which data is written
      * @param buffers: buffers to be written
      * @param offsets: offsets of fragments in the buffer
      * @return allocated address

@@ -58,13 +58,6 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(const allocation_t allocation,
-                               std::span<const char> buffer,
-                               std::span<const std::size_t> offsets) {
-    return write(allocation, std::vector<std::span<const char>>{buffer},
-                 offsets);
-}
-
 address
 mock_data_store::write(const allocation_t allocation,
                        const std::vector<std::span<const char>>& buffers,

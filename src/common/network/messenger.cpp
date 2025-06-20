@@ -48,10 +48,12 @@ coro<void> messenger::send_write(const write_request& req) {
 
     register_write_buffer(req.offsets);
 
-    auto sizes_view = req.buffers | std::views::transform(
-                                        [](const auto& s) { return s.size(); });
-    std::vector<std::size_t> sizes(sizes_view.begin(), sizes_view.end());
-    register_write_buffer(sizes);
+    auto buffer_sizes_view =
+        req.buffers |
+        std::views::transform([](const auto& s) { return s.size(); });
+    std::vector<std::size_t> buffer_sizes(buffer_sizes_view.begin(),
+                                          buffer_sizes_view.end());
+    register_write_buffer(buffer_sizes);
 
     for (const auto& buf : req.buffers) {
         register_write_buffer(buf);

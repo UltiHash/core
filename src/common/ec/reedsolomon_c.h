@@ -62,56 +62,26 @@ public:
         }
     }
 
-    std::shared_ptr<encoded> encode(std::span<const char> data) const {
+    void encode(std::vector<std::span<const char>>& data,
+                std::vector<std::span<char>>& parity) const {
+        // NOTE: we don't need to initialize parities
 
-        const auto total_blocks = m_data_shards + m_parity_shards;
+        auto begins = data | std::views::transform([](const auto& s) {
+                          return reinterpret_cast<unsigned char*>(
+                              const_cast<char*>(s.data()));
+                      });
+        auto p_shards =
+            std::vector<unsigned char*>(begins.begin(), begins.end());
 
-        std::vector<const char*> shard_ptrs;
-        shard_ptrs.reserve(m_data_shards + m_parity_shards);
-
-        std::size_t size = 0;
-        // use existing allocation for shards as much as possible
-        while (size + m_shard_size <= data.size()) {
-            shard_ptrs.emplace_back(data.data() + size);
-            size += m_shard_size;
+        for (const auto& p : parity) {
+            p_shards.push_back(reinterpret_cast<unsigned char*>(p.data()));
         }
 
-        // if the last shard is not filled completely, allocate a new
-        // shard and copy the remaining data into it
-        std::vector<unique_buffer<char>> new_shards;
-        new_shards.reserve(m_data_shards - shard_ptrs.size() + m_parity_shards);
-
-        if (const auto rem_size = data.size() - size; rem_size > 0) {
-            new_shards.emplace_back(m_shard_size);
-            std::memcpy(new_shards.back().data(), data.data() + size, rem_size);
-            std::memset(new_shards.back().data() + rem_size, 0,
-                        m_shard_size - rem_size);
-            shard_ptrs.emplace_back(new_shards.back().data());
-        }
-
-        while (shard_ptrs.size() < m_data_shards) {
-            new_shards.emplace_back(m_shard_size);
-            std::memset(new_shards.back().data(), 0, m_shard_size);
-            shard_ptrs.emplace_back(new_shards.back().data());
-        }
-
-        // create parity shards
-        for (std::size_t i = 0; i < m_parity_shards; i++) {
-            new_shards.emplace_back(m_shard_size);
-            shard_ptrs.emplace_back(new_shards.back().data());
-        }
-
-        if (reed_solomon_encode2(m_rs.get(),
-                                 reinterpret_cast<unsigned char**>(
-                                     const_cast<char**>(shard_ptrs.data())),
-                                 static_cast<int>(total_blocks),
-                                 static_cast<int>(m_shard_size)) != 0) {
+        if (reed_solomon_encode2(m_rs.get(), p_shards.data(),
+                                 m_data_shards + m_parity_shards,
+                                 m_shard_size) != 0) {
             throw std::runtime_error("Error in EC calculation");
         }
-
-        auto enc = std::make_shared<encoded>();
-        enc->set(shard_ptrs, std::move(new_shards));
-        return enc;
     }
 
 private:

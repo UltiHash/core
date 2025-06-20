@@ -18,8 +18,6 @@ public:
                     uint32_t service_id, uint32_t data_store_id);
 
     allocation_t allocate(std::size_t size, std::size_t alignment = 1);
-    address write(const allocation_t allocation, std::span<const char> buffer,
-                  std::span<const std::size_t> offsets);
     address write(const allocation_t allocation,
                   const std::vector<std::span<const char>>& buffers,
                   std::span<const std::size_t> offsets);

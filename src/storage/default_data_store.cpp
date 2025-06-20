@@ -120,13 +120,6 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address default_data_store::write(const allocation_t allocation,
-                                  std::span<const char> buffer,
-                                  std::span<const std::size_t> offsets) {
-    return write(allocation, std::vector<std::span<const char>>{buffer},
-                 offsets);
-}
-
 address
 default_data_store::write(const allocation_t allocation,
                           const std::vector<std::span<const char>>& buffers,
@@ -135,24 +128,29 @@ default_data_store::write(const allocation_t allocation,
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
-    address rv;
+    auto size_sum =
+        std::accumulate(buffers.begin(), buffers.end(), 0,
+                        [](auto acc, const auto& v) { return acc + v.size(); });
+    if (size_sum != allocation.size) {
+        throw std::runtime_error("data is shorter than allocation size: " +
+                                 std::to_string(size_sum) + " vs " +
+                                 std::to_string(allocation.size));
+    }
 
-    std::size_t written = 0ull;
     for (const auto& data : buffers) {
+        std::size_t written = 0ull;
         while (written < data.size()) {
             auto loc = file_location(local_pointer);
             std::size_t file_offset = local_pointer % m_filesize;
             auto count = loc.file.write(file_offset, data.subspan(written));
             if (count == 0) {
-                break; // why?
+                break;
             }
-
-            rv.emplace_back(local_pointer, count);
 
             local_pointer += count;
             written += count;
         }
-        if (written != allocation.size) {
+        if (written != data.size()) {
             throw std::runtime_error("could not complete buffer write");
         }
     }
@@ -163,6 +161,9 @@ default_data_store::write(const allocation_t allocation,
     sync();
 
     maintain_refcount(allocation.offset, allocation.size, offsets);
+
+    address rv;
+    rv.emplace_back(allocation.offset, allocation.size);
     return rv;
 }
 

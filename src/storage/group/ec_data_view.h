@@ -171,10 +171,7 @@ private:
     address split_fragment(const uint128_t& pointer,
                            std::size_t read_size) const;
 
-    std::pair<std::span<const char>, std::size_t>
-    prepare_stripe_data(std::span<const char> data, unique_buffer<char>& stripe,
-                        std::size_t stripe_index) const;
-    std::shared_ptr<std::vector<std::vector<std::size_t>>>
+    std::vector<std::vector<std::size_t>>
     prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
                            std::size_t stripe_index,
                            std::size_t stripe_data_size) const;

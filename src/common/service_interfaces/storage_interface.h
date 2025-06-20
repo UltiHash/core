@@ -14,6 +14,14 @@ struct storage_interface {
           const std::vector<std::span<const char>>& buffers,
           std::span<const std::size_t> offsets) = 0;
 
+    coro<address> write(const allocation_t allocation, //
+                        const std::vector<std::span<const char>>& buffers,
+                        std::initializer_list<std::size_t> offsets) {
+        co_return co_await write(
+            allocation, buffers,
+            std::span<const std::size_t>(offsets.begin(), offsets.size()));
+    }
+
     virtual coro<shared_buffer<>> read(const uint128_t& pointer,
                                        size_t size) = 0;
 

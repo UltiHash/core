@@ -72,7 +72,7 @@ struct data_store_fixture {
     std::vector<shared_buffer<char>> test_data;
     shared_buffer<char> throwing_data;
 
-    std::unique_ptr<mock_data_store> ds;
+    std::unique_ptr<data_store> ds;
     std::size_t m_expected_used{};
     std::size_t m_expected_last_file_space{};
 };
