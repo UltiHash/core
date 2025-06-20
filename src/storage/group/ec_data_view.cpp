@@ -176,19 +176,6 @@ coro<address> ec_data_view::write(std::span<const char> data,
         }
     }
 
-    {
-        std::stringstream ss;
-        for (auto& s : storage_buffers_view) {
-            ss << s.size() << ", ";
-        }
-        LOG_DEBUG() << "[ec_data_view] storage_buffers_view's size: "
-                    << ss.str();
-    }
-    for (size_t i = 0; i < m_config.parity_shards; ++i) {
-        LOG_DEBUG() << "[ec_data_view] parity size: "
-                    << storage_buffers_view[m_config.data_shards + i][0].size();
-    }
-
     co_await run_for_all<address, std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<address> {
