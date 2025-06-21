@@ -20,7 +20,7 @@ public:
     allocation_t allocate(std::size_t size, std::size_t alignment = 1);
     address write(const allocation_t allocation,
                   const std::vector<std::span<const char>>& buffers,
-                  std::span<const std::size_t> offsets);
+                  std::span<const std::size_t> offsets = {});
     std::size_t read(const std::size_t pointer, std::span<char> buffer);
     address link(const address& addr);
     size_t unlink(const address& addr);

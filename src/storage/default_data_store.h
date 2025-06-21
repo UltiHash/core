@@ -41,7 +41,7 @@ public:
      */
     address write(const allocation_t allocation,
                   const std::vector<std::span<const char>>& buffers,
-                  std::span<const std::size_t> offsets);
+                  std::span<const std::size_t> offsets = {});
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and

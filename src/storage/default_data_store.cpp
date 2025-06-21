@@ -282,6 +282,13 @@ void default_data_store::maintain_refcount(
     std::span<const std::size_t> offsets) {
     std::deque<reference_counter::refcount_cmd> refcount_commands;
 
+    if (offsets.empty()) {
+        refcount_commands.emplace_back(reference_counter::INCREMENT,
+                                       local_pointer, size);
+        m_refcounter.execute(refcount_commands);
+        return;
+    }
+
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
         auto next_different =
             std::find_if(std::next(it), offsets.end(),
