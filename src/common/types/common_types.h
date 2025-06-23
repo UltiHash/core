@@ -25,12 +25,6 @@ struct allocation_t {
     std::size_t size;
 };
 
-struct write_request {
-    allocation_t allocation;
-    std::variant<std::span<const char>, unique_buffer<>> data;
-    std::vector<std::size_t> offsets;
-};
-
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;
 
 struct object {
