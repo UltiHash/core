@@ -4,7 +4,14 @@
 
 namespace uh::cluster {
 
-struct write_request {
+struct write_request_store {
+    allocation_t allocation;
+    std::vector<std::span<const char>> buffers;
+    std::span<const std::size_t> offsets;
+    unique_buffer<> backing_buffer;
+};
+
+struct write_request_view {
     allocation_t allocation;
     std::vector<std::span<const char>> buffers;
     std::span<const std::size_t> offsets;
@@ -42,10 +49,9 @@ public:
 
     coro<dedupe_response> recv_dedupe_response(const header& message_header);
 
-    coro<void> send_write(const write_request& req);
+    coro<void> send_write(const write_request_view& req);
 
-    coro<std::pair<write_request, unique_buffer<char>>>
-    recv_write(const header& message_header);
+    coro<write_request_store> recv_write(const header& message_header);
 
     coro<void> send_address(const message_type type, const address& addr);
 

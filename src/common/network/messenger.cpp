@@ -38,7 +38,7 @@ messenger::recv_dedupe_response(const header& message_header) {
     co_return dedupe_resp;
 }
 
-coro<void> messenger::send_write(const write_request& req) {
+coro<void> messenger::send_write(const write_request_view& req) {
     register_write_buffer(req.allocation);
 
     std::size_t num_offsets = req.offsets.size();
@@ -62,8 +62,7 @@ coro<void> messenger::send_write(const write_request& req) {
     co_await send_buffers(STORAGE_WRITE_REQ);
 }
 
-coro<std::pair<write_request, unique_buffer<char>>>
-messenger::recv_write(const header& message_header) {
+coro<write_request_store> messenger::recv_write(const header& message_header) {
     allocation_t allocation;
     register_read_buffer(allocation);
     std::size_t num_offsets;
@@ -94,11 +93,10 @@ messenger::recv_write(const header& message_header) {
         p += sz;
     }
 
-    write_request req = {.allocation = std::move(allocation),
-                         .buffers = std::move(buffers),
-                         .offsets = std::move(offsets)};
-
-    co_return std::make_pair(std::move(req), std::move(buffer));
+    co_return write_request_store{.allocation = std::move(allocation),
+                                  .buffers = std::move(buffers),
+                                  .offsets = std::move(offsets),
+                                  .backing_buffer = std::move(buffer)};
 }
 
 coro<void> messenger::send_address(const message_type type,

@@ -113,7 +113,7 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
 }
 
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
-    auto [req, backing_buffer] = co_await m.recv_write(h);
+    auto req = co_await m.recv_write(h);
 
     // Use buffers directly from the write_request
     auto addr =

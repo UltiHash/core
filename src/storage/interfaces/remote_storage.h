@@ -17,7 +17,7 @@ struct remote_storage : public storage_interface {
                         const std::vector<std::span<const char>>& buffers,
                         std::span<const std::size_t> offsets) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        write_request req = {
+        write_request_view req = {
             .allocation = allocation, .buffers = buffers, .offsets = offsets};
 
         co_await m->send_write(req);
