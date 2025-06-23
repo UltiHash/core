@@ -113,10 +113,11 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
 }
 
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
-    write_request req = co_await m.recv_write(h);
-    auto addr = co_await m_storage.write(
-        req.allocation, std::get<unique_buffer<>>(req.data).string_view(),
-        req.offsets);
+    auto req = co_await m.recv_write(h);
+
+    // Use buffers directly from the write_request
+    auto addr =
+        co_await m_storage.write(req.allocation, req.buffers, req.offsets);
     co_await m.send_address(SUCCESS, addr);
 }
 

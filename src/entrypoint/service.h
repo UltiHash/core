@@ -8,9 +8,9 @@
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/license/license_watcher.h>
+#include <common/execution/executor.h>
 #include <deduplicator/service.h>
 #include <entrypoint/directory.h>
-#include <entrypoint/garbage_collector.h>
 #include <entrypoint/http/request_factory.h>
 #include <entrypoint/limits.h>
 #include <storage/global/data_view.h>
@@ -27,7 +27,7 @@ public:
 
 private:
     entrypoint_config m_config;
-    boost::asio::io_context m_ioc;
+    executor m_executor;
     etcd_manager m_etcd;
     std::size_t m_service_id;
 
@@ -43,7 +43,6 @@ private:
     limits m_limits;
     server m_server;
     service_registry m_service_registry;
-    garbage_collector m_gc;
 };
 
 } // namespace uh::cluster::ep

@@ -18,7 +18,7 @@ struct group_config {
     std::size_t parity_shards = 0;
     std::size_t stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
 
-    static group_config create(std::string_view json_str);
+    static group_config create(const std::string& json_str);
     std::string to_string() const;
     std::size_t get_stripe_size() const { return stripe_size_kib * KIBI_BYTE; }
 };
@@ -31,7 +31,7 @@ struct group_configs {
     explicit group_configs(std::vector<group_config>&& v)
         : configs(std::move(v)) {}
 
-    static group_configs create(std::string_view json_str);
+    static group_configs create(const std::string& json_str);
     std::string to_string() const;
 
     group_config get_config(std::size_t id) const {

@@ -59,14 +59,19 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address mock_data_store::write(const allocation_t allocation,
-                               std::span<const char> data,
-                               const std::vector<std::size_t>& offsets) {
-    std::copy(data.begin(), data.end(), m_data.begin() + allocation.offset);
-
+address
+mock_data_store::write(const allocation_t allocation,
+                       const std::vector<std::span<const char>>& buffers,
+                       std::span<const std::size_t> offsets) {
     address data_address;
-    data_address.emplace_back(allocation.offset, data.size());
-    link(data_address);
+    auto offset = allocation.offset;
+    for (const auto& data : buffers) {
+        std::copy(data.begin(), data.end(), m_data.begin() + offset);
+        data_address.emplace_back(offset, data.size());
+        link(data_address);
+        offset += data.size();
+    }
+
     return data_address;
 }
 

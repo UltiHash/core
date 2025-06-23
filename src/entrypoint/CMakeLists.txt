@@ -38,6 +38,8 @@ add_library(entrypoint
             commands/s3/create_bucket.cpp
             commands/s3/put_bucket_policy.cpp
             commands/s3/complete_multipart.cpp
+            commands/s3/put_bucket_versioning.cpp
+            commands/s3/get_bucket_versioning.cpp
             formats.cpp
             multipart_state.cpp
             directory.cpp
@@ -65,4 +67,4 @@ add_library(entrypoint
             policy/module.cpp
             policy/variables.cpp)
 
-target_link_libraries(entrypoint db etcd nlohmann_json deduplicator storage uhcrypto utils license)
+target_link_libraries(entrypoint db etcd nlohmann_json deduplicator storage uhcrypto utils license execution)

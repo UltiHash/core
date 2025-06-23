@@ -11,6 +11,7 @@ add_library(httplib INTERFACE)
 target_include_directories(httplib INTERFACE ${CMAKE_BINARY_DIR}/test)
 
 add_subdirectory(lib)
+
 add_subdirectory(performance)
 
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h @ONLY)
@@ -52,7 +53,7 @@ function(uh_add_test name)
 
     add_test(NAME ${target_name} COMMAND ${target_name})
     get_property(LABELS GLOBAL PROPERTY TEST_TYPE)
-    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS})
+    set_tests_properties(${target_name} PROPERTIES LABELS ${LABELS} TIMEOUT 300)
 endfunction()
 
 add_subdirectory(unit)

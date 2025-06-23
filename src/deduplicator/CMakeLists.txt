@@ -8,4 +8,4 @@ add_library(deduplicator
             interfaces/noop_deduplicator.cpp
             interfaces/dedupe_array.cpp)
 
-target_link_libraries(deduplicator network storage)
+target_link_libraries(deduplicator network storage execution)

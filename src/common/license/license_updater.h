@@ -20,8 +20,6 @@ public:
           m_etcd{etcd},
           m_backend_client{std::make_unique<T>(std::forward<T>(client))} {}
 
-    void start_update() {}
-
     coro<void> update() {
         auto backoff = exponential_backoff<std::string>{m_ioc, 7, 100, 200};
         try {
@@ -54,23 +52,6 @@ public:
         }
 
         co_return;
-    }
-
-    coro<void> periodic_update(std::chrono::seconds interval) {
-        while (true) {
-            auto start_time = std::chrono::steady_clock::now();
-
-            co_await update();
-
-            auto end_time = std::chrono::steady_clock::now();
-            auto elapsed_time = end_time - start_time;
-            auto sleep_duration = interval - elapsed_time;
-
-            if (sleep_duration > 0s) {
-                boost::asio::steady_timer timer(m_ioc, sleep_duration);
-                co_await timer.async_wait(boost::asio::use_awaitable);
-            }
-        }
     }
 
     std::shared_ptr<license> current() const { return m_license; }
