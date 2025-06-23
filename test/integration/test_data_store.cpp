@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(write_updates_space) {
 
     auto data = random_buffer(1 * MEBI_BYTE);
     auto alloc = ds->allocate(data.size());
-    ds->write(alloc, {{data.string_view()}});
+    ds->write(alloc, {data.string_view()});
 
     BOOST_CHECK_EQUAL(ds->get_used_space(), 1 * MEBI_BYTE);
     BOOST_CHECK_EQUAL(ds->get_available_space(),
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(test_used_and_available_space) {
 
     for (auto& data : test_data) {
         auto alloc = ds->allocate(data.size());
-        ds->write(alloc, {{data.string_view()}});
+        ds->write(alloc, {data.string_view()});
 
         auto used_size = get_expected_used(data.size());
         BOOST_TEST(ds->get_used_space() == used_size);
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(test_read) {
     long failures = 0;
     for (auto& data : test_data) {
         auto alloc = ds->allocate(data.size());
-        auto address = ds->write(alloc, {{data.string_view()}});
+        auto address = ds->write(alloc, {data.string_view()});
         size_t t_read = 0;
         for (size_t i = 0; i < address.size(); i++) {
             const auto p = address.get(i);
