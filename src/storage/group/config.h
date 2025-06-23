@@ -12,11 +12,11 @@ struct group_config {
     enum type_t { ROUND_ROBIN, ERASURE_CODING, REPLICA };
 
     std::size_t id;
-    type_t type;
-    std::size_t storages;
-    std::size_t data_shards;
-    std::size_t parity_shards;
-    std::size_t stripe_size_kib;
+    type_t type = ROUND_ROBIN;
+    std::size_t storages = 1;
+    std::size_t data_shards = 1;
+    std::size_t parity_shards = 0;
+    std::size_t stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
 
     static group_config create(std::string_view json_str);
     std::string to_string() const;
