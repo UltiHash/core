@@ -158,10 +158,9 @@ coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
 coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 
     const auto addr = co_await m.recv_address(h);
-    std::vector<std::size_t> freed_pages = co_await m_storage.unlink(addr);
+    std::size_t freed_bytes = co_await m_storage.unlink(addr);
 
-    m.register_write_buffer(freed_pages);
-    co_await m.send_buffers(SUCCESS);
+    co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);
 }
 
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {

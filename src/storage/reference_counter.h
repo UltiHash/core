@@ -49,22 +49,23 @@ public:
      * transaction is rolled back and a std::runtime exception is thrown.
      * This call can safely be exported to be used by upstream services.
      * @param addr
-     * @return std::vector containing storage page ids reclaimed in the context
-     * of this call.
+     * @return Disk space reclaimed in the context of this call
      */
-    std::vector<std::size_t> decrement(const address& addr);
+    std::size_t decrement(const address& addr);
 
 private:
     lmdb::env m_env;
     std::size_t m_page_size;
     std::function<std::size_t(std::size_t offset, std::size_t size)> m_cb;
+    uint32_t m_storage_id;
 
     bool increment(std::size_t page_id, std::size_t count, bool upstream,
                    lmdb::txn& txn, lmdb::dbi& dbi);
     void decrement(std::size_t page_id, std::size_t count,
                    std::unordered_set<std::size_t>& marked_for_deletion,
                    lmdb::txn& txn, lmdb::dbi& dbi);
-    void free_storage(std::vector<std::size_t>& pages_to_free);
-    std::pair<size_t, size_t> get_page_range(size_t offset, size_t size) const;
+    std::size_t free_storage(std::unordered_set<std::size_t>& pages_to_free);
+    std::pair<std::size_t, std::size_t> get_page_range(std::size_t offset,
+                                                       std::size_t size) const;
 };
 } // namespace uh::cluster

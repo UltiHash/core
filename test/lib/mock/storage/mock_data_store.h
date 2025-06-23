@@ -23,7 +23,7 @@ public:
                   std::span<const std::size_t> offsets = {});
     std::size_t read(const std::size_t pointer, std::span<char> buffer);
     address link(const address& addr);
-    std::vector<std::size_t> unlink(const address& addr);
+    std::size_t unlink(const address& addr);
     [[nodiscard]] size_t get_used_space() const noexcept;
     [[nodiscard]] size_t get_available_space() const noexcept;
     [[nodiscard]] std::size_t get_write_offset() const noexcept;

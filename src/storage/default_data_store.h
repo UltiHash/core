@@ -70,10 +70,9 @@ public:
      * If a storage location is no longer referenced, it is deleted and the
      * space it was using is made available for reuse.
      * @param address: storage locations that are to be unreferenced.
-     * @return std::vector containing storage page ids reclaimed in the context
-     * of this call.
+     * @return number of bytes freed in response to removing references.
      */
-    std::vector<std::size_t> unlink(const address& addr);
+    std::size_t unlink(const address& addr);
 
     /**
      * @brief Returns the current used space of the data store.

@@ -46,11 +46,7 @@ void reference_counter::execute(std::deque<refcount_cmd>& cmd_queue) {
     }
     txn.commit();
 
-    std::vector<std::size_t> sorted_pages_to_free(marked_for_deletion.begin(),
-                                                  marked_for_deletion.end());
-    std::sort(sorted_pages_to_free.begin(), sorted_pages_to_free.end());
-
-    free_storage(sorted_pages_to_free);
+    free_storage(marked_for_deletion);
 }
 std::pair<std::size_t, std::size_t>
 reference_counter::get_page_range(std::size_t offset, std::size_t size) const {
@@ -79,7 +75,7 @@ address reference_counter::increment(const address& addr) {
     return rv;
 }
 
-std::vector<std::size_t> reference_counter::decrement(const address& addr) {
+std::size_t reference_counter::decrement(const address& addr) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -95,11 +91,7 @@ std::vector<std::size_t> reference_counter::decrement(const address& addr) {
     }
     txn.commit();
 
-    std::vector<std::size_t> sorted_pages_to_free(pages_to_free.begin(),
-                                                  pages_to_free.end());
-    std::sort(sorted_pages_to_free.begin(), sorted_pages_to_free.end());
-    free_storage(sorted_pages_to_free);
-    return sorted_pages_to_free;
+    return free_storage(pages_to_free);
 }
 
 bool reference_counter::increment(const std::size_t page_id,
@@ -151,10 +143,15 @@ void reference_counter::decrement(
     }
 }
 
-void reference_counter::free_storage(std::vector<std::size_t>& sorted_pages) {
-    if (sorted_pages.empty()) {
-        return;
+std::size_t reference_counter::free_storage(
+    std::unordered_set<std::size_t>& pages_to_free) {
+    if (pages_to_free.empty()) {
+        return 0;
     }
+
+    std::vector<std::size_t> sorted_pages(pages_to_free.begin(),
+                                          pages_to_free.end());
+    std::sort(sorted_pages.begin(), sorted_pages.end());
 
     size_t freed_storage = 0;
 
@@ -177,9 +174,7 @@ void reference_counter::free_storage(std::vector<std::size_t>& sorted_pages) {
     std::size_t del_size = (range_end - range_start + 1) * m_page_size;
     freed_storage += this->m_cb(del_offset, del_size);
 
-    LOG_DEBUG() << "freed storage: " << freed_storage
-                << ", pages: " << sorted_pages.size() << ", page range: ["
-                << range_start << ", " << range_end << "]";
+    return freed_storage;
 }
 
 } // namespace uh::cluster
