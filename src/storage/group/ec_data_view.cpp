@@ -478,8 +478,7 @@ address ec_data_view::compute_parity_address(const address& addr) {
     address parity_addr;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
-        auto [storage_id, storage_ptr] = get_storage_pointer(frag.pointer);
-        uint64_t chunk_base = (storage_ptr / m_stripe_size) * m_chunk_size;
+        std::size_t chunk_base = (frag.pointer / m_stripe_size) * m_chunk_size;
         parity_addr.push({chunk_base, m_chunk_size});
     }
     return parity_addr;
