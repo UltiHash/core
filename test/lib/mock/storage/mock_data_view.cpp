@@ -9,7 +9,8 @@ mock_data_view::mock_data_view(mock_data_store& storage)
 coro<address> mock_data_view::write(std::span<const char> data,
                                     const std::vector<std::size_t>& offsets) {
     auto alloc = m_storage.allocate(data.size());
-    co_return m_storage.write(alloc, data, offsets);
+    co_return m_storage.write(alloc, std::vector<std::span<const char>>{data},
+                              offsets);
 }
 
 coro<shared_buffer<>> mock_data_view::read(const uint128_t& pointer,

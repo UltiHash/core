@@ -1,3 +1,4 @@
 include(profiler)
 
 uh_add_profiler(profile_deduplicator PRIVATE uh_mock_global_data uh_test_util deduplicator group_data)
+uh_add_profiler(profile_ec_write PRIVATE uh_test_util storage)
