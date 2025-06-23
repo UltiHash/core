@@ -285,9 +285,6 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     auto addr = ds->write(alloc, {buffer.string_view()});
     BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
 
-    auto freed_bytes = ds->unlink(addr);
-    BOOST_CHECK_EQUAL(freed_bytes, addr.data_size());
-
     auto alloc2 = ds->allocate(buffer.size());
     addr = ds->write(alloc2, {buffer.string_view()});
 

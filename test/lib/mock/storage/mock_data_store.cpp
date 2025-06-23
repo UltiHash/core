@@ -105,8 +105,8 @@ address mock_data_store::link(const address& addr) {
     return new_fragments;
 }
 
-std::vector<std::size_t> mock_data_store::unlink(const address& addr) {
-    std::unordered_set<std::size_t> pages_to_free;
+std::size_t mock_data_store::unlink(const address& addr) {
+    size_t size = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
         {
@@ -119,15 +119,11 @@ std::vector<std::size_t> mock_data_store::unlink(const address& addr) {
                 std::fill(m_data.begin() + frag.pointer,
                           m_data.begin() + frag.pointer + frag.size, 0);
                 m_refcounter.erase(it);
-                pages_to_free.insert(frag.pointer / m_conf.page_size);
+                size += frag.size;
             }
         }
     }
-
-    std::vector<std::size_t> sorted_pages_to_free(pages_to_free.begin(),
-                                                  pages_to_free.end());
-    std::sort(sorted_pages_to_free.begin(), sorted_pages_to_free.end());
-    return sorted_pages_to_free;
+    return size;
 }
 
 uint64_t mock_data_store::get_used_space() const noexcept {

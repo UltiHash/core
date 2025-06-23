@@ -58,15 +58,11 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_address(message_header);
     }
 
-    coro<std::vector<std::size_t>> unlink(const address& addr) override {
+    coro<std::size_t> unlink(const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_address(STORAGE_UNLINK_REQ, addr);
         const auto message_header = co_await m->recv_header();
-        std::vector<std::size_t> page_ids(message_header.size /
-                                          sizeof(std::size_t));
-        m->register_read_buffer(page_ids);
-        co_await m->recv_buffers(message_header);
-        co_return page_ids;
+        co_return co_await m->recv_primitive<size_t>(message_header);
     }
 
     coro<std::size_t> get_used_space() override {

@@ -24,7 +24,7 @@ struct data_store {
 
     virtual address link(const address& addr) = 0;
 
-    virtual std::vector<std::size_t> unlink(const address& addr) = 0;
+    virtual std::size_t unlink(const address& addr) = 0;
 
     virtual std::size_t get_used_space() const noexcept = 0;
 

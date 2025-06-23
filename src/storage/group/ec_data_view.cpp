@@ -476,17 +476,14 @@ coro<std::size_t> ec_data_view::get_used_space() {
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {
     auto storages = m_externals.get_storage_services();
-    auto freed_pages_map =
-        co_await perform_for_address<std::vector<std::size_t>>(
-            m_ioc, addr,
-            [this](uint128_t pointer) -> auto {
-                return get_storage_pointer(pointer);
-            },
-            [](std::shared_ptr<storage_interface> svc,
-               const address_info& info) -> coro<std::vector<std::size_t>> {
-                co_return co_await svc->unlink(info.addr);
-            },
-            storages);
+    auto freed_pages_map = co_await perform_for_address<std::size_t>(
+        m_ioc, addr,
+        [this](uint128_t pointer) -> auto {
+            return get_storage_pointer(pointer);
+        },
+        [](std::shared_ptr<storage_interface> svc, const address_info& info)
+            -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
+        storages);
 
     // TODO: recompute parity shards for freed chunks
 
@@ -502,9 +499,7 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
     auto freed_bytes = std::accumulate(
         std::ranges::begin(freed_pages_map | std::views::values),
         std::ranges::end(freed_pages_map | std::views::values), 0ul,
-        [&, this](std::size_t acc, std::vector<std::size_t> val) {
-            return acc + val.size() * m_chunk_size;
-        });
+        [&, this](std::size_t acc, std::size_t val) { return acc + val; });
     co_return freed_bytes;
 }
 
