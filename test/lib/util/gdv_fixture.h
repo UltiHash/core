@@ -1,7 +1,5 @@
 #pragma once
 
-#include "test_config.h"
-
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
@@ -60,14 +58,16 @@ public:
         storage::group_configs configs;
         configs.configs.push_back(m_config);
         m_storage_instances.resize(m_config.storages);
+        m_storage_threads.resize(m_config.storages);
+
         coordinator::service::publish_configs(m_etcd, configs);
         try {
             for (size_t i = 0; i < m_config.storages; i++) {
                 m_temp_dirs.emplace_back(std::make_unique<temp_directory>());
                 activate_storage(i);
             }
-        } catch (...) {
-            LOG_ERROR() << "Failed to create storage instances";
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "Failed to create storage instances: " << e.what();
             throw;
         }
 
@@ -88,12 +88,12 @@ public:
     void teardown() {
         m_gdv.reset();
 
-        for (const auto& node : m_storage_instances) {
-            if (node != nullptr)
-                node->stop();
+        for (unsigned i = 0; i < m_storage_instances.size(); ++i) {
+            deactivate_storage(i);
         }
 
         m_storage_instances.clear();
+        m_storage_threads.clear();
 
         m_work_guard.reset();
 
@@ -110,6 +110,7 @@ public:
         m_temp_dirs.clear();
         m_etcd.clear_all();
     }
+
     etcd_manager& get_etcd_manager() { return m_etcd; }
 
     auto get_group_config() { return m_config; }
@@ -119,6 +120,7 @@ public:
         if (node != nullptr) {
             node->stop();
             node.reset();
+            m_storage_threads[id].join();
         }
     }
 
@@ -135,6 +137,9 @@ public:
         storage_cfg.group_id = m_config.id;
         m_storage_instances[id] =
             std::make_unique<storage::service>(service_cfg, storage_cfg);
+
+        m_storage_threads[id] =
+            std::thread([id, this]() { m_storage_instances[id]->run(); });
     }
 
     void introduce_new_storage(std::size_t id,
@@ -162,6 +167,7 @@ private:
     std::thread m_thread;
 
     std::vector<std::unique_ptr<storage::service>> m_storage_instances;
+    std::vector<std::thread> m_storage_threads;
 
     std::shared_ptr<storage::global::global_data_view> m_gdv;
 };

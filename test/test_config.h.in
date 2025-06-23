@@ -6,6 +6,7 @@
 #include <ostream>
 
 #define TEST_DATA_DIR "@CMAKE_SOURCE_DIR@/data"
+#define UH_CLUSTER_EXECUTABLE "@PROJECT_BINARY_DIR@/bin/uh-cluster"
 
 static constexpr const char* test_license_string =
     R"({"version":"v1","customer_id":"big corp xy","license_type":"freemium","storage_cap_gib":10240,"signature":"cCurQURiyIRlLvpHPQA64Qldl78gIoMdoHInbYjolIHL232cKqmLRUxOfb3Sbre7NCKWVClqQMOAj56DdqQwDg=="})";

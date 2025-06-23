@@ -25,7 +25,8 @@ coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
     const auto [storage_id, client] = m_load_balancer.get();
     auto allocation = co_await client->allocate(data.size());
-    auto addr = co_await client->write(allocation, data, offsets);
+    auto addr = co_await client->write(allocation, {data}, offsets);
+
     address rv;
     for (auto i = 0ul; i < addr.size(); i++) {
         auto frag = addr.get(i);

@@ -110,13 +110,14 @@ public:
     }
 
     std::string wait(const std::string& prefix, std::string expected_value,
-                     std::chrono::seconds timeout = 5s) {
+                     std::chrono::steady_clock::duration timeout = 5s) {
         std::promise<std::string> promise;
         auto future = promise.get_future();
         auto wg = watch(prefix, [&](response resp) {
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::GET:
             case etcd_action::CREATE:
+            case etcd_action::SET:
                 if (resp.value == expected_value) {
                     promise.set_value(resp.value);
                 }
@@ -134,13 +135,14 @@ public:
     }
 
     std::string wait(const std::string& prefix,
-                     std::chrono::seconds timeout = 5s) {
+                     std::chrono::steady_clock::duration timeout = 5s) {
         std::promise<std::string> promise;
         auto future = promise.get_future();
         auto wg = watch(prefix, [&](response resp) {
             switch (get_etcd_action_enum(resp.action)) {
             case etcd_action::GET:
             case etcd_action::CREATE:
+            case etcd_action::SET:
                 promise.set_value(resp.value);
                 break;
             default:

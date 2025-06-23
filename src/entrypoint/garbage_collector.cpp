@@ -2,28 +2,13 @@
 
 namespace uh::cluster::ep {
 
-garbage_collector::garbage_collector(boost::asio::io_context& ioc,
-                                     directory& dir,
-                                     storage::global::global_data_view& gdv)
-    : m_dir(dir),
-      m_gdv(gdv) {
-    boost::asio::co_spawn(ioc, collect().start_trace(), boost::asio::detached);
-}
+coro<void> garbage_collector::collect(directory& dir,
+                                      storage::global::global_data_view& gdv) {
 
-coro<void> garbage_collector::collect() {
-    boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
-
-    while (true) {
-        auto to_delete = co_await m_dir.next_deleted();
-        if (!to_delete) {
-            co_await m_dir.clear_buckets();
-            timer.expires_after(POLL_INTERVALL);
-            co_await timer.async_wait(boost::asio::use_awaitable);
-            continue;
-        }
-
+    auto to_delete = co_await dir.next_deleted();
+    while (to_delete) {
         try {
-            auto freed = co_await m_gdv.unlink(to_delete->addr);
+            auto freed = co_await gdv.unlink(to_delete->addr);
             LOG_DEBUG() << "reclaimed " << freed
                         << " bytes of data by disposing object "
                         << to_delete->id;
@@ -32,7 +17,8 @@ coro<void> garbage_collector::collect() {
                        << " failed: " << e.what();
         }
 
-        co_await m_dir.remove_object(to_delete->id);
+        co_await dir.remove_object(to_delete->id);
+        to_delete = co_await dir.next_deleted();
     }
 }
 

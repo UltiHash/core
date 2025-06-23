@@ -215,6 +215,7 @@ jobs:
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: testing/performance/small/ultihash-helm-values-rr.yaml
+      storage_group_type: rr
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}
@@ -240,6 +241,7 @@ jobs:
       docker_image_tag: nightly-build
       docker_registry: ${{ vars.DOCKER_REGISTRY }}
       helm_values: testing/performance/small/ultihash-helm-values-ec.yaml
+      storage_group_type: ec
     secrets:
       ghcr_token: ${{ secrets.PAT }}
       docker_registry_username: ${{ secrets.DOCKER_REGISTRY_USERNAME }}

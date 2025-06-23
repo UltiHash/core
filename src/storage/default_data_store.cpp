@@ -120,31 +120,39 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address default_data_store::write(const allocation_t allocation,
-                                  std::span<const char> data,
-                                  const std::vector<std::size_t>& offsets) {
+address
+default_data_store::write(const allocation_t allocation,
+                          const std::vector<std::span<const char>>& buffers,
+                          std::span<const std::size_t> offsets) {
     std::unique_lock lock(m_mutex);
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
-    address rv;
-
-    std::size_t written = 0ull;
-    while (written < data.size()) {
-        auto loc = file_location(local_pointer);
-        std::size_t file_offset = local_pointer % m_filesize;
-        auto count = loc.file.write(file_offset, data.subspan(written));
-        if (count == 0) {
-            break;
-        }
-
-        rv.emplace_back(local_pointer, count);
-
-        local_pointer += count;
-        written += count;
+    auto size_sum =
+        std::accumulate(buffers.begin(), buffers.end(), 0ul,
+                        [](auto acc, const auto& v) { return acc + v.size(); });
+    if (size_sum != allocation.size) {
+        throw std::runtime_error("data is shorter than allocation size: " +
+                                 std::to_string(size_sum) + " vs " +
+                                 std::to_string(allocation.size));
     }
-    if (written != allocation.size) {
-        throw std::runtime_error("could not complete buffer write");
+
+    for (const auto& data : buffers) {
+        std::size_t written = 0ull;
+        while (written < data.size()) {
+            auto loc = file_location(local_pointer);
+            std::size_t file_offset = local_pointer % m_filesize;
+            auto count = loc.file.write(file_offset, data.subspan(written));
+            if (count == 0) {
+                break;
+            }
+
+            local_pointer += count;
+            written += count;
+        }
+        if (written != data.size()) {
+            throw std::runtime_error("could not complete buffer write");
+        }
     }
 
     m_used_space += allocation.size;
@@ -153,6 +161,9 @@ address default_data_store::write(const allocation_t allocation,
     sync();
 
     maintain_refcount(allocation.offset, allocation.size, offsets);
+
+    address rv;
+    rv.emplace_back(allocation.offset, allocation.size);
     return rv;
 }
 
@@ -268,8 +279,15 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
 
 void default_data_store::maintain_refcount(
     const std::size_t local_pointer, const std::size_t size,
-    const std::vector<std::size_t>& offsets) {
+    std::span<const std::size_t> offsets) {
     std::deque<reference_counter::refcount_cmd> refcount_commands;
+
+    if (offsets.empty()) {
+        refcount_commands.emplace_back(reference_counter::INCREMENT,
+                                       local_pointer, size);
+        m_refcounter.execute(refcount_commands);
+        return;
+    }
 
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
         auto next_different =

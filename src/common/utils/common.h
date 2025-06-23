@@ -84,11 +84,20 @@ constexpr const char* ENV_CFG_STORAGE_GROUP_ID = "UH_STORAGE_GROUP_ID";
 
 constexpr const char* RESERVED_BUCKET_NAME = "ultihash";
 
-constexpr auto SERVICE_GET_TIMEOUT = std::chrono::seconds(10);
-constexpr auto GROUP_STATE_WAIT_TIMEOUT = std::chrono::seconds(10);
-constexpr auto OFFSET_GATHERING_TIMEOUT = std::chrono::seconds(2);
+struct time_settings {
+    using duration_t = std::chrono::steady_clock::duration;
 
-constexpr auto LICENSE_FETCH_PERIOD = std::chrono::hours(1);
+    duration_t service_get_timeout{std::chrono::seconds(10)};
+    duration_t group_state_wait_timeout{std::chrono::seconds(10)};
+    duration_t offset_gathering_timeout{std::chrono::seconds(2)};
+    duration_t async_io_timeout{std::chrono::seconds(30)};
+    duration_t license_fetch_period{std::chrono::hours(1)};
+
+    static time_settings& instance() {
+        static time_settings inst;
+        return inst;
+    }
+};
 
 constexpr std::string_view CONFIG_PATH_DELIMETER = ":";
 
