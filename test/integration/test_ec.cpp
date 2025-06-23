@@ -152,15 +152,18 @@ BOOST_AUTO_TEST_CASE(ec_zeros) {
     const auto parity_shards = 2ul;
     const auto chunk_size = 4_KiB;
     reedsolomon_c ec(data_shards, parity_shards, chunk_size);
-    shared_buffer<char> data(data_shards * chunk_size);
-    std::ranges::fill(data, 0);
-    auto encoded = ec.encode(data);
-    auto shards = encoded.get();
+    unique_buffer<char> data(data_shards * chunk_size);
+    auto data_view = split_buffer<const char>(data, chunk_size);
+    auto parity = unique_buffer<char>{parity_shards * chunk_size};
+    auto parity_view = split_buffer<char>(parity, chunk_size);
 
-    BOOST_CHECK(std::ranges::equal(shards[0], shards[1]));
-    BOOST_CHECK(std::ranges::equal(shards[1], shards[2]));
-    BOOST_CHECK(std::ranges::equal(shards[2], shards[3]));
-    BOOST_CHECK(std::ranges::equal(shards[3], shards[4]));
+    std::ranges::fill(data, 0);
+    ec.encode(data_view, parity_view);
+
+    BOOST_CHECK(std::ranges::equal(data_view[0], data_view[1]));
+    BOOST_CHECK(std::ranges::equal(data_view[1], data_view[2]));
+    BOOST_CHECK(std::ranges::equal(data_view[2], parity_view[0]));
+    BOOST_CHECK(std::ranges::equal(parity_view[0], parity_view[1]));
 }
 
 } // namespace uh::cluster
