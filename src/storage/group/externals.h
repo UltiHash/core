@@ -85,4 +85,47 @@ private:
     subscriber m_subscriber;
 };
 
+class storages_reader {
+public:
+    using callback_t = reader::callback_t;
+    storages_reader(etcd_manager& etcd, std::size_t group_id,
+                    std::size_t num_storages, std::size_t my_storage_id,
+                    std::shared_ptr<storage_interface> my_storage,
+                    service_factory<storage_interface> service_factory,
+                    callback_t callback = nullptr)
+        : m_prefix{get_prefix(group_id).storage_hostports},
+          m_my_storage_id{my_storage_id},
+          m_my_storage{my_storage},
+          m_storage_index{num_storages},
+          m_storage_hostports{m_prefix,
+                              std::move(service_factory),
+                              {m_storage_index},
+                              my_storage_id},
+          m_reader{"hostports_reader",
+                   etcd,
+                   m_prefix,
+                   {m_storage_hostports},
+                   std::move(callback)} {}
+
+    ~storages_reader() { LOG_DEBUG() << "hostports_reader is destroyed"; }
+
+    // NOTE: get method is heavy: it retrieves all atomic variables
+    auto get_storage_services() {
+        auto storages = m_storage_index.get();
+        storages[m_my_storage_id] = m_my_storage;
+        return storages;
+    };
+
+private:
+    prefix_t m_prefix;
+
+    std::size_t m_my_storage_id;
+    std::shared_ptr<storage_interface> m_my_storage;
+
+    storage_index m_storage_index;
+    hostports_observer<storage_interface> m_storage_hostports;
+
+    reader m_reader;
+};
+
 } // namespace uh::cluster::storage

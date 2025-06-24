@@ -8,28 +8,23 @@
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
 #include <storage/group/repairer.h>
+#include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {
 
-template <typename T>
-concept SupportsWriteOffset = requires(T t, std::size_t offset) {
-    { t.get_write_offset() } -> std::same_as<std::size_t>;
-    { t.set_write_offset(offset) } -> std::same_as<void>;
-};
-
-template <SupportsWriteOffset T> class ec_maintainer {
+class ec_maintainer {
 public:
     ec_maintainer(executor& executor, etcd_manager& etcd,
                   const group_config& group_cfg, std::size_t storage_id,
                   const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
-                  std::shared_ptr<T> write_offset_interface)
+                  std::shared_ptr<local_storage> my_storage)
         : m_executor{executor},
           m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
-          m_write_offset_interface{write_offset_interface},
+          m_my_storage{my_storage},
 
           m_group_state_manager{etcd, group_cfg.id},
 
@@ -104,7 +99,7 @@ private:
 
     void election_handler(bool is_leader) {
 
-        auto write_offset = m_write_offset_interface->get_write_offset();
+        auto write_offset = m_my_storage->get_write_offset();
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
                                    m_group_config.id, m_storage_id,
                                    write_offset);
@@ -168,7 +163,7 @@ private:
                     "[group {}, storage {}] summarized offset is {}",
                     m_group_config.id, m_storage_id, offset);
 
-                m_write_offset_interface->set_write_offset(offset);
+                m_my_storage->set_write_offset(offset);
 
                 m_candidate.proclaim();
 
@@ -273,7 +268,7 @@ private:
             update_group_state(group_state::REPAIRING);
 
             m_repairer.emplace(
-                m_executor, m_etcd, m_group_config, m_storage_id,
+                m_executor, m_etcd, m_group_config, m_storage_id, m_my_storage,
                 global_data_view_config{.storage_service_connection_count = 1,
                                         .read_cache_capacity_l2 = 0});
         }
@@ -295,7 +290,7 @@ private:
     const group_config& m_group_config;
     std::size_t m_storage_id;
 
-    std::shared_ptr<T> m_write_offset_interface;
+    std::shared_ptr<local_storage> m_my_storage;
 
     group_state_manager m_group_state_manager;
 

@@ -38,11 +38,19 @@ protected:
     etcd_manager m_etcd;
 };
 
-struct write_offset_interface {
-    write_offset_interface(std::size_t val)
-        : m_val{val} {}
+struct dummy_storage : local_storage {
+    dummy_storage(std::size_t val, const std::filesystem::path& path)
+        : local_storage(0,
+                        {
+                            .max_file_size = 1_GiB,
+                            .max_data_store_size = 1_PiB,
+                            .page_size = DEFAULT_PAGE_SIZE,
+                        },
+                        path),
+          m_val{val} {}
     std::size_t get_write_offset() { return m_val; }
     void set_write_offset(std::size_t val) { m_val = val; }
+    // Implement other methods as needed
 
 private:
     std::size_t m_val;
@@ -55,9 +63,10 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     temp_directory dir;
     service_config service_cfg{.working_dir = dir.path()};
 
-    ec_maintainer maintainer(m_executor, thread_local_etcd, m_group_cfg, 0,
-                             service_cfg, m_gdv_cfg,
-                             std::make_shared<write_offset_interface>(0));
+    temp_directory storage_dir;
+    ec_maintainer maintainer(
+        m_executor, thread_local_etcd, m_group_cfg, 0, service_cfg, m_gdv_cfg,
+        std::make_shared<dummy_storage>(0, storage_dir.path()));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 }
@@ -70,19 +79,19 @@ public:
         : basic_fixture() {
 
         m_temp_dirs.resize(m_num_instances);
+        m_storage_dirs.resize(m_num_instances);
 
         for (std::size_t i = 0; i < m_num_instances; ++i) {
 
             service_config service_cfg{.working_dir = m_temp_dirs[i].path()};
 
             m_etcds.push_back(std::make_unique<etcd_manager>());
-            m_wo_interfaces.emplace_back(
-                std::make_unique<write_offset_interface>(i * 1_KiB));
+            m_wo_interfaces.emplace_back(std::make_unique<dummy_storage>(
+                i * 1_KiB, m_storage_dirs[i].path()));
 
-            m_ec_maintainers.emplace_back(
-                std::make_unique<ec_maintainer<write_offset_interface>>(
-                    m_executor, *m_etcds.back(), m_group_cfg, i, service_cfg,
-                    m_gdv_cfg, m_wo_interfaces.back()));
+            m_ec_maintainers.emplace_back(std::make_unique<ec_maintainer>(
+                m_executor, *m_etcds.back(), m_group_cfg, i, service_cfg,
+                m_gdv_cfg, m_wo_interfaces.back()));
         }
     }
 
@@ -154,10 +163,10 @@ protected:
         {m_leader_observer, m_group_state_observer, m_storage_states_observer}};
 
     std::vector<temp_directory> m_temp_dirs;
+    std::vector<temp_directory> m_storage_dirs;
     std::vector<std::unique_ptr<etcd_manager>> m_etcds;
-    std::vector<std::shared_ptr<write_offset_interface>> m_wo_interfaces;
-    std::vector<std::unique_ptr<ec_maintainer<write_offset_interface>>>
-        m_ec_maintainers;
+    std::vector<std::shared_ptr<dummy_storage>> m_wo_interfaces;
+    std::vector<std::unique_ptr<ec_maintainer>> m_ec_maintainers;
 };
 
 BOOST_FIXTURE_TEST_SUITE(multiple_ec_maintainers, fixture_with_subscribers)
@@ -336,11 +345,11 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
     temp_directory dir;
     {
         service_config service_cfg{.working_dir = dir.path()};
-        m_ec_maintainers[leader_id] =
-            std::make_unique<ec_maintainer<write_offset_interface>>(
-                m_executor, *m_etcds[leader_id], m_group_cfg, leader_id,
-                service_cfg, m_gdv_cfg, m_wo_interfaces[leader_id]);
+        m_ec_maintainers[leader_id] = std::make_unique<ec_maintainer>(
+            m_executor, *m_etcds[leader_id], m_group_cfg, leader_id,
+            service_cfg, m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
+    auto thread = std::jthread([&]() { m_executor.get_executor().run(); });
 
     TEST_FOR(wait_for_group_state_key() &&
                  *m_group_state_observer.get() == group_state::REPAIRING,
