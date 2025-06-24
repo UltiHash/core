@@ -12,7 +12,7 @@ constexpr std::size_t PREFIX_SIZE = 16;
 
 struct deduplicator_config {
     server_config server = {
-        .threads = 4,
+        .threads = 10,
         .port = 9300,
         .bind_address = "0.0.0.0",
     };
