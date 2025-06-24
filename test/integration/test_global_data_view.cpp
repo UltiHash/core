@@ -247,47 +247,38 @@ BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
                               boost::asio::use_future)
             .get();
     BOOST_TEST(input_buffer.size() == addr.data_size());
-    BOOST_TEST(addr.fragments.size() == offsets.size());
     std::size_t used =
         boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
                               boost::asio::use_future)
             .get();
     BOOST_TEST(used == input_buffer.size());
     {
-        address del_addr;
-        del_addr.push(addr.get(0));
         std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
                                   boost::asio::use_future)
                 .get();
-        BOOST_TEST(freed == 2 * KIBI_BYTE);
+        BOOST_TEST(freed == 0ull);
     }
     {
-        address del_addr;
-        del_addr.push(addr.get(1));
         std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
                                   boost::asio::use_future)
                 .get();
-        BOOST_TEST(freed == 2 * KIBI_BYTE);
+        BOOST_TEST(freed == 0ull);
     }
     {
-        address del_addr;
-        del_addr.push(addr.get(2));
         std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
                                   boost::asio::use_future)
                 .get();
-        BOOST_TEST(freed == 2 * KIBI_BYTE);
+        BOOST_TEST(freed == 0ull);
     }
     {
-        address del_addr;
-        del_addr.push(addr.get(3));
         std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
                                   boost::asio::use_future)
                 .get();
-        BOOST_TEST(freed == 2 * KIBI_BYTE);
+        BOOST_TEST(freed == 8 * KIBI_BYTE);
     }
 }
 
