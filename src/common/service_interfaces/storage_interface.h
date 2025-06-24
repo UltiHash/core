@@ -28,9 +28,11 @@ struct storage_interface {
     virtual coro<void> read_address(const address& addr, std::span<char> buffer,
                                     const std::vector<size_t>& offsets) = 0;
 
-    virtual coro<address> link(const address& addr) = 0;
+    virtual coro<address> link(const address& addr,
+                               const std::size_t count = 1) = 0;
 
-    virtual coro<std::size_t> unlink(const address& addr) = 0;
+    virtual coro<std::size_t> unlink(const address& addr,
+                                     const std::size_t count = 1) = 0;
 
     virtual coro<std::size_t> get_used_space() = 0;
 

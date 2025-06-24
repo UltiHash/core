@@ -54,7 +54,8 @@ reference_counter::get_page_range(std::size_t offset, std::size_t size) const {
                           (offset + size - 1) / m_page_size);
 }
 
-address reference_counter::increment(const address& addr) {
+address reference_counter::increment(const address& addr,
+                                     const std::size_t count) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
     address rv;
@@ -64,7 +65,7 @@ address reference_counter::increment(const address& addr) {
         auto page_range = get_page_range(frag.pointer, frag.size);
         for (size_t page_id = page_range.first; page_id <= page_range.second;
              page_id++) {
-            if (increment(page_id, 1, true, txn, dbi)) {
+            if (increment(page_id, count, true, txn, dbi)) {
                 rv.push(frag);
                 break;
             }
@@ -75,7 +76,8 @@ address reference_counter::increment(const address& addr) {
     return rv;
 }
 
-std::size_t reference_counter::decrement(const address& addr) {
+std::size_t reference_counter::decrement(const address& addr,
+                                         const std::size_t count) {
     lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
     lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
 
@@ -86,7 +88,7 @@ std::size_t reference_counter::decrement(const address& addr) {
         auto page_range = get_page_range(frag.pointer, frag.size);
         for (size_t page_id = page_range.first; page_id <= page_range.second;
              page_id++) {
-            decrement(page_id, 1, pages_to_free, txn, dbi);
+            decrement(page_id, count, pages_to_free, txn, dbi);
         }
     }
     txn.commit();

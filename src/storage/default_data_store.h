@@ -61,18 +61,20 @@ public:
      * Invalid/non-existing fragments will be reported as rejected fragments
      * in a returned address.
      * @param address: storage locations that are to be referenced.
+     * @param count: number of references to register
      * @return an address containing rejected fragments.
      */
-    address link(const address& addr);
+    address link(const address& addr, const std::size_t count = 1);
 
     /**
      * @brief Removes a reference to one or multiple storage locations.
      * If a storage location is no longer referenced, it is deleted and the
      * space it was using is made available for reuse.
      * @param address: storage locations that are to be unreferenced.
+     * @param count: number of references to deregister
      * @return number of bytes freed in response to removing references.
      */
-    std::size_t unlink(const address& addr);
+    std::size_t unlink(const address& addr, const std::size_t count = 1);
 
     /**
      * @brief Returns the current used space of the data store.

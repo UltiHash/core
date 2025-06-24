@@ -22,9 +22,10 @@ struct data_store {
     virtual std::size_t read(const std::size_t local_pointer,
                              std::span<char> buffer) = 0;
 
-    virtual address link(const address& addr) = 0;
+    virtual address link(const address& addr, const std::size_t count) = 0;
 
-    virtual std::size_t unlink(const address& addr) = 0;
+    virtual std::size_t unlink(const address& addr,
+                               const std::size_t count) = 0;
 
     virtual std::size_t get_used_space() const noexcept = 0;
 

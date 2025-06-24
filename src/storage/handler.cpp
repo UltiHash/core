@@ -148,17 +148,25 @@ coro<void> handler::handle_read_address(messenger& m,
 }
 
 coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
+    std::size_t count;
+    m.register_read_buffer(count);
+    address addr(address::allocated_elements(h.size - sizeof(count)));
+    m.register_read_buffer(addr.fragments);
+    co_await m.recv_buffers(h);
 
-    const auto addr = co_await m.recv_address(h);
-    auto rejected_addr = co_await m_storage.link(addr);
+    auto rejected_addr = co_await m_storage.link(addr, count);
 
     co_await m.send_address(SUCCESS, rejected_addr);
 }
 
 coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
+    std::size_t count;
+    m.register_read_buffer(count);
+    address addr(address::allocated_elements(h.size - sizeof(count)));
+    m.register_read_buffer(addr.fragments);
+    co_await m.recv_buffers(h);
 
-    const auto addr = co_await m.recv_address(h);
-    std::size_t freed_bytes = co_await m_storage.unlink(addr);
+    std::size_t freed_bytes = co_await m_storage.unlink(addr, count);
 
     co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);
 }

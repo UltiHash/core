@@ -51,16 +51,21 @@ struct remote_storage : public storage_interface {
         co_await m->recv_buffers(h);
     }
 
-    coro<address> link(const address& addr) override {
+    coro<address> link(const address& addr, const std::size_t count) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_address(STORAGE_LINK_REQ, addr);
+        m->register_write_buffer(count);
+        m->register_write_buffer(addr.fragments);
+        co_await m->send_buffers(STORAGE_LINK_REQ);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_address(message_header);
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
+    coro<std::size_t> unlink(const address& addr,
+                             const std::size_t count) override {
         auto m = co_await m_storage_service.acquire_messenger();
-        co_await m->send_address(STORAGE_UNLINK_REQ, addr);
+        m->register_write_buffer(count);
+        m->register_write_buffer(addr.fragments);
+        co_await m->send_buffers(STORAGE_UNLINK_REQ);
         const auto message_header = co_await m->recv_header();
         co_return co_await m->recv_primitive<size_t>(message_header);
     }

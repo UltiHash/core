@@ -68,7 +68,7 @@ mock_data_store::write(const allocation_t allocation,
     for (const auto& data : buffers) {
         std::copy(data.begin(), data.end(), m_data.begin() + offset);
         data_address.emplace_back(offset, data.size());
-        link(data_address);
+        link(data_address, 1);
         offset += data.size();
     }
 
@@ -89,7 +89,7 @@ std::size_t mock_data_store::read(const std::size_t pointer,
     return buffer.size();
 }
 
-address mock_data_store::link(const address& addr) {
+address mock_data_store::link(const address& addr, const std::size_t count) {
     address new_fragments;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
@@ -98,14 +98,15 @@ address mock_data_store::link(const address& addr) {
             if (!m_refcounter.contains(frag)) {
                 new_fragments.push(frag);
             }
-            m_refcounter[frag]++;
+            m_refcounter[frag] += count;
         }
     }
 
     return new_fragments;
 }
 
-std::size_t mock_data_store::unlink(const address& addr) {
+std::size_t mock_data_store::unlink(const address& addr,
+                                    const std::size_t count) {
     size_t size = 0;
     for (size_t i = 0; i < addr.size(); ++i) {
         auto frag = addr.get(i);
@@ -115,7 +116,7 @@ std::size_t mock_data_store::unlink(const address& addr) {
             if (it == m_refcounter.end()) {
                 throw std::exception();
             }
-            if (--(it->second) == 0) {
+            if (it->second -= count; it->second == 0) {
                 std::fill(m_data.begin() + frag.pointer,
                           m_data.begin() + frag.pointer + frag.size, 0);
                 m_refcounter.erase(it);

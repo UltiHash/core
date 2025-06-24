@@ -49,11 +49,11 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<address> link(const address& addr) override {
+    coro<address> link(const address& addr, const std::size_t count) override {
         auto p = std::make_shared<std::promise<address>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+        boost::asio::post(m_threads, [this, p, &addr, &count]() {
             try {
-                p->set_value(m_data_store->link(addr));
+                p->set_value(m_data_store->link(addr, count));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }
@@ -61,11 +61,12 @@ struct local_storage : public storage_interface {
         co_return p->get_future().get();
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
+    coro<std::size_t> unlink(const address& addr,
+                             const std::size_t count) override {
         auto p = std::make_shared<std::promise<std::size_t>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+        boost::asio::post(m_threads, [this, p, &addr, &count]() {
             try {
-                p->set_value(m_data_store->unlink(addr));
+                p->set_value(m_data_store->unlink(addr, count));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }
