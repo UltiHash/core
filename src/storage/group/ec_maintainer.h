@@ -269,6 +269,7 @@ private:
 
             m_repairer.emplace(
                 m_executor, m_etcd, m_group_config, m_storage_id, m_my_storage,
+                storage_states,
                 global_data_view_config{.storage_service_connection_count = 1,
                                         .read_cache_capacity_l2 = 0});
         }

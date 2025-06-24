@@ -1,19 +1,64 @@
 #pragma once
 
 #include <common/execution/executor.h>
-#include <common/service_interfaces/storage_interface.h>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
+#include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {
+
+class storages_reader {
+public:
+    using callback_t = reader::callback_t;
+    storages_reader(etcd_manager& etcd, std::size_t group_id,
+                    std::size_t num_storages, //
+                    std::size_t my_storage_id,
+                    std::shared_ptr<storage_interface> my_storage,
+                    service_factory<storage_interface> service_factory,
+                    callback_t callback = nullptr)
+        : m_prefix{get_prefix(group_id).storage_hostports},
+          m_my_storage_id{my_storage_id},
+          m_my_storage{my_storage},
+          m_storage_index{num_storages},
+          m_storage_hostports{m_prefix,
+                              std::move(service_factory),
+                              {m_storage_index},
+                              my_storage_id},
+          m_reader{"hostports_reader",
+                   etcd,
+                   m_prefix,
+                   {m_storage_hostports},
+                   std::move(callback)} {}
+
+    ~storages_reader() { LOG_DEBUG() << "hostports_reader is destroyed"; }
+
+    // NOTE: get method is heavy: it retrieves all atomic variables
+    auto get_storage_services() {
+        auto storages = m_storage_index.get();
+        storages[m_my_storage_id] = m_my_storage;
+        return storages;
+    };
+
+private:
+    prefix_t m_prefix;
+
+    std::size_t m_my_storage_id;
+    std::shared_ptr<storage_interface> m_my_storage;
+
+    storage_index m_storage_index;
+    hostports_observer<storage_interface> m_storage_hostports;
+
+    reader m_reader;
+};
 
 class repairer {
 public:
     repairer(executor& executor, etcd_manager& etcd, const group_config& config,
              std::size_t my_storage_id,
-             std::shared_ptr<storage_interface> my_storage,
+             std::shared_ptr<local_storage> my_storage,
+             std::vector<storage_state> storage_states,
              const global_data_view_config& global_config)
         : m_executor{executor},
           m_etcd{etcd},
@@ -21,16 +66,22 @@ public:
           m_storage_id{my_storage_id},
           m_global_config{global_config},
 
-          m_storages_reader(
-              m_etcd, m_group_config.id, m_group_config.storages, //
-              m_storage_id, my_storage,
-              service_factory<storage_interface>(
-                  m_executor.get_executor(),
-                  m_global_config.storage_service_connection_count)),
+          m_storages{[&]() {
+              auto reader = storages_reader(
+                  m_etcd, m_group_config.id, m_group_config.storages, //
+                  m_storage_id, my_storage,
+                  service_factory<storage_interface>(
+                      m_executor.get_executor(),
+                      m_global_config.storage_service_connection_count));
+              return reader.get_storage_services();
+          }()},
 
           m_promise{},
           m_future{m_promise.get_future()},
           m_signal{} {
+
+        // TODO: check there's element like storage_states[i] != DOWN and
+        // m_storages[i] == nullptr
 
         (void)m_executor;
         (void)m_etcd;
@@ -57,7 +108,7 @@ private:
     std::size_t m_storage_id;
     global_data_view_config m_global_config;
 
-    storages_reader m_storages_reader;
+    std::vector<std::shared_ptr<storage_interface>> m_storages;
 
     std::promise<void> m_promise;
     std::future<void> m_future;
@@ -65,9 +116,6 @@ private:
 
     coro<void> repair() {
         LOG_DEBUG() << "Repairing started for group " << m_group_config.id;
-
-        auto storages = m_storages_reader.get_storage_services();
-        (void)storages;
 
         auto timer = boost::asio::steady_timer(
             co_await boost::asio::this_coro::executor);
