@@ -26,6 +26,7 @@ public:
     virtual ~basic_fixture() { m_etcd.clear_all(); }
 
 protected:
+    executor m_executor;
     const std::size_t m_num_instances = 4;
     group_config m_group_cfg{.id = 0,
                              .type = group_config::type_t::ERASURE_CODING,
@@ -54,8 +55,8 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     temp_directory dir;
     service_config service_cfg{.working_dir = dir.path()};
 
-    ec_maintainer maintainer(thread_local_etcd, m_group_cfg, 0, service_cfg,
-                             m_gdv_cfg,
+    ec_maintainer maintainer(m_executor, thread_local_etcd, m_group_cfg, 0,
+                             service_cfg, m_gdv_cfg,
                              std::make_shared<write_offset_interface>(0));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -80,8 +81,8 @@ public:
 
             m_ec_maintainers.emplace_back(
                 std::make_unique<ec_maintainer<write_offset_interface>>(
-                    *m_etcds.back(), m_group_cfg, i, service_cfg, m_gdv_cfg,
-                    m_wo_interfaces.back()));
+                    m_executor, *m_etcds.back(), m_group_cfg, i, service_cfg,
+                    m_gdv_cfg, m_wo_interfaces.back()));
         }
     }
 
@@ -337,8 +338,8 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
         service_config service_cfg{.working_dir = dir.path()};
         m_ec_maintainers[leader_id] =
             std::make_unique<ec_maintainer<write_offset_interface>>(
-                *m_etcds[leader_id], m_group_cfg, leader_id, service_cfg,
-                m_gdv_cfg, m_wo_interfaces[leader_id]);
+                m_executor, *m_etcds[leader_id], m_group_cfg, leader_id,
+                service_cfg, m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
 
     TEST_FOR(wait_for_group_state_key() &&

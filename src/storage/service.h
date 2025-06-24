@@ -61,8 +61,8 @@ public:
           m_ec_maintainer(
               (m_group_config.type == group_config::type_t::ERASURE_CODING)
                   ? std::make_optional<ec_maintainer<local_storage>>(
-                        m_etcd, m_group_config, m_storage_id, service_config,
-                        sc.global_data_view, m_storage)
+                        m_executor, m_etcd, m_group_config, m_storage_id,
+                        service_config, sc.global_data_view, m_storage)
                   : std::nullopt) {
         metric<storage_available_space_gauge, byte, int64_t>::
             register_gauge_callback(

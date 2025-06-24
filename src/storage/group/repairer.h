@@ -1,5 +1,6 @@
 #pragma once
 
+#include <common/execution/executor.h>
 #include <common/service_interfaces/storage_interface.h>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
@@ -9,25 +10,26 @@ namespace uh::cluster::storage {
 
 class repairer {
 public:
-    repairer(boost::asio::io_context& ioc, etcd_manager& etcd,
-             const group_config& config, std::size_t storage_id,
+    repairer(executor& executor, etcd_manager& etcd, const group_config& config,
+             std::size_t storage_id,
              const global_data_view_config& global_config)
-        : m_ioc{ioc},
+        : m_executor{executor},
           m_etcd{etcd},
           m_group_config{config},
           m_global_config{global_config},
-          m_subscriber(
-              m_etcd, m_group_config.id, m_group_config.storages,
-              service_factory<storage_interface>(
-                  m_ioc, m_global_config.storage_service_connection_count)) {
+          m_subscriber(m_etcd, m_group_config.id, m_group_config.storages,
+                       service_factory<storage_interface>(
+                           m_executor.get_executor(),
+                           m_global_config.storage_service_connection_count)) {
         (void)m_subscriber;
         // TODO: Spawn coroutines to restore data
-        // After finishing recovery, we should set the storages' state to
-        // ASSIGNED.
+        //
+        // storage_assignment_triggers_manager::put(m_etcd, m_group_config.id,
+        //                                          true);
     }
 
 private:
-    boost::asio::io_context& m_ioc;
+    executor& m_executor;
     etcd_manager& m_etcd;
     group_config m_group_config;
     global_data_view_config m_global_config;

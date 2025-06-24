@@ -1,11 +1,13 @@
 #pragma once
 
 #include <common/etcd/service.h>
+#include <common/execution/executor.h>
 #include <memory>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
+#include <storage/group/repairer.h>
 
 namespace uh::cluster::storage {
 
@@ -17,11 +19,13 @@ concept SupportsWriteOffset = requires(T t, std::size_t offset) {
 
 template <SupportsWriteOffset T> class ec_maintainer {
 public:
-    ec_maintainer(etcd_manager& etcd, const group_config& group_cfg,
-                  std::size_t storage_id, const service_config& service_cfg,
+    ec_maintainer(executor& executor, etcd_manager& etcd,
+                  const group_config& group_cfg, std::size_t storage_id,
+                  const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
                   std::shared_ptr<T> write_offset_interface)
-        : m_etcd{etcd},
+        : m_executor{executor},
+          m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
@@ -175,6 +179,27 @@ private:
         }
     }
 
+    void print_stats(const statistics& stats,
+                     const std::vector<storage_state>& storage_states) {
+        LOG_DEBUG() << std::format(
+            "[group {}, storage {}] assigned_count {}, has_down {}",
+            m_group_config.id, m_storage_id, stats.assigned_count,
+            stats.has_down);
+
+        std::stringstream ss;
+        for (auto& s : storage_states) {
+            ss << serialize(s) << ", ";
+        }
+        LOG_DEBUG() << "storage states: " << ss.str();
+    }
+
+    void update_group_state(group_state new_state) {
+        LOG_DEBUG() << std::format(
+            "[group {}, storage {}] change group state to {}",
+            m_group_config.id, m_storage_id, magic_enum::enum_name(new_state));
+
+        m_group_state_manager.put(new_state);
+    }
     void storage_states_handler() {
         auto group_initialized = m_group_initialized.get();
         auto storage_states = m_storage_states.get();
@@ -221,51 +246,36 @@ private:
             m_group_initialized.set(true);
         }
 
-        auto new_state = state;
-
         if (state != group_state::HEALTHY and
             stats.assigned_count == m_group_config.storages) {
-            new_state = group_state::HEALTHY;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::HEALTHY);
         }
 
         if (state != group_state::DEGRADED and //
             stats.has_down and
             stats.assigned_count >= m_group_config.data_shards) {
-            new_state = group_state::DEGRADED;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::DEGRADED);
         }
 
         if (state != group_state::FAILED and //
             stats.assigned_count < m_group_config.data_shards) {
-            new_state = group_state::FAILED;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::FAILED);
         }
 
         if (state != group_state::REPAIRING and //
             !stats.has_down and
             stats.assigned_count >= m_group_config.data_shards and
             stats.assigned_count < m_group_config.storages) {
-            new_state = group_state::REPAIRING;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::REPAIRING);
 
-            // TODO: Spawn repairer here
-        }
-
-        if (new_state != state) {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] assigned_count {}, has_down {}",
-                m_group_config.id, m_storage_id, stats.assigned_count,
-                stats.has_down);
-
-            std::stringstream ss;
-            for (auto& s : storage_states) {
-                ss << serialize(s) << ", ";
-            }
-            LOG_DEBUG() << "storage states: " << ss.str();
-
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] change group state to {}",
-                m_group_config.id, m_storage_id,
-                magic_enum::enum_name(new_state));
-
-            m_group_state_manager.put(new_state);
+            m_repairer.emplace(
+                m_executor, m_etcd, m_group_config, m_storage_id,
+                global_data_view_config{.storage_service_connection_count = 1,
+                                        .read_cache_capacity_l2 = 0});
         }
     }
 
@@ -280,6 +290,7 @@ private:
         }
     }
 
+    executor& m_executor;
     etcd_manager& m_etcd;
     const group_config& m_group_config;
     std::size_t m_storage_id;
@@ -289,6 +300,8 @@ private:
     group_state_manager m_group_state_manager;
 
     prefix_t m_prefix;
+
+    std::optional<repairer> m_repairer;
 
     std::mutex m_mutex;
     std::optional<std::jthread> m_thread;
