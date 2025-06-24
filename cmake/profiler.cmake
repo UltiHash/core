@@ -19,7 +19,7 @@ function(uh_add_profiler name)
     cmake_parse_arguments(ARGS "${options}" "${one_value_args}"
                           "${multi_value_args}" ${ARGN})
 
-    set(target_name "uh_${name}")
+    set(target_name "${name}")
 
     add_executable(${target_name} ${name}.cpp)
 

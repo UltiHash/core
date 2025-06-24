@@ -290,4 +290,17 @@ requires std::is_enum_v<Enum>
     return static_cast<Enum>(value);
 }
 
+template <typename T>
+auto split_buffer(std::span<T> buffer, size_t chunk_size) {
+    if (buffer.size() % chunk_size != 0) {
+        throw std::invalid_argument(
+            "Buffer size is not a multiple of chunk size");
+    }
+    std::vector<std::span<T>> result;
+    for (size_t offset = 0; offset < buffer.size(); offset += chunk_size) {
+        result.push_back(buffer.subspan(offset, chunk_size));
+    }
+    return result;
+}
+
 } // namespace uh::cluster

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "test_config.h"
-
 #include <common/etcd/service.h>
 #include <common/etcd/service_discovery/service_maintainer.h>
 #include <common/etcd/utils.h>
