@@ -2,14 +2,15 @@
 
 #include <common/types/address.h>
 #include <common/types/common_types.h>
+#include <common/utils/common.h>
 #include <span>
 
 namespace uh::cluster {
 
 struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
+    size_t max_file_size = 1_GiB;
+    size_t max_data_store_size = 1_PiB;
+    size_t page_size = DEFAULT_PAGE_SIZE;
 };
 
 struct data_store {
