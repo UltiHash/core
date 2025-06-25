@@ -167,15 +167,14 @@ default_data_store::write(const allocation_t allocation,
     return rv;
 }
 
-address default_data_store::link(const address& addr, const std::size_t count) {
+address default_data_store::link(const address& addr) {
     std::unique_lock lock(m_mutex);
-    return m_refcounter.increment(addr, count);
+    return m_refcounter.increment(addr);
 }
 
-std::size_t default_data_store::unlink(const address& addr,
-                                       const std::size_t count) {
+std::size_t default_data_store::unlink(const address& addr) {
     std::unique_lock lock(m_mutex);
-    return m_refcounter.decrement(addr, count);
+    return m_refcounter.decrement(addr);
 }
 
 default_data_store::~default_data_store() {

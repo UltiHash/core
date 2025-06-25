@@ -37,23 +37,21 @@ public:
      * in a single transaction. This call can safely be exported to be used by
      * upstream services.
      *
-     * @param address: storage locations that are to be referenced.
-     * @param count: number of references to register
+     * @param addr
      * @return An address containing all fragments in addr pointing to
      * untracked pages.
      */
-    address increment(const address& addr, const std::size_t count = 1);
+    address increment(const address& addr);
 
     /***
      * Decrements the page reference counter to data regions specified in addr
      * in a single transaction. In case addr points to an untracked page, the
      * transaction is rolled back and a std::runtime exception is thrown.
      * This call can safely be exported to be used by upstream services.
-     * @param address: storage locations that are to be unreferenced.
-     * @param count: number of references to deregister
-     * @return number of bytes freed in response to removing references.
+     * @param addr
+     * @return Disk space reclaimed in the context of this call
      */
-    std::size_t decrement(const address& addr, const std::size_t count = 1);
+    std::size_t decrement(const address& addr);
 
 private:
     lmdb::env m_env;
