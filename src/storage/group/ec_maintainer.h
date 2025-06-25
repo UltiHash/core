@@ -267,9 +267,42 @@ private:
             print_stats(stats, storage_states);
             update_group_state(group_state::REPAIRING);
 
+            auto storages = [&]() {
+                auto reader = storages_reader(
+                    m_etcd, m_group_config.id, m_group_config.storages, //
+                    m_storage_id, m_my_storage,
+                    service_factory<storage_interface>(
+                        m_executor.get_executor(), 1));
+                return reader.get_storage_services();
+            }();
+
+            bool has_nullptr =
+                std::any_of(storages.begin(), storages.end(),
+                            [](const auto& ptr) { return ptr == nullptr; });
+            if (has_nullptr) {
+                LOG_ERROR() << std::format("One of the storages has nullptr "
+                                           "in m_storages in REPAIRING state",
+                                           m_group_config.id, m_storage_id);
+                std::stringstream ss;
+                for (auto& s : storages) {
+                    ss << serialize(s) << ", ";
+                }
+
+                LOG_DEBUG() << "storages: " << ss.str();
+                return;
+            }
+            if (storage_states[m_storage_id] == storage_state::NEW) {
+                // TODO: Implement resign interface on candidate and call it
+                // here.
+                throw std::runtime_error(
+                    std::format("[group {}, storage {}] leader is NEW in "
+                                "REPAIRING state",
+                                m_group_config.id, m_storage_id));
+            }
+
             m_repairer.emplace(
-                m_executor, m_etcd, m_group_config, m_storage_id, m_my_storage,
-                storage_states,
+                m_executor, m_etcd, m_group_config, //
+                m_my_storage, std::move(storages), std::move(storage_states),
                 global_data_view_config{.storage_service_connection_count = 1,
                                         .read_cache_capacity_l2 = 0});
         }

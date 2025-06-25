@@ -18,17 +18,17 @@ public:
                     std::shared_ptr<storage_interface> my_storage,
                     service_factory<storage_interface> service_factory,
                     callback_t callback = nullptr)
-        : m_prefix{get_prefix(group_id).storage_hostports},
+        : m_key{get_prefix(group_id).storage_hostports},
           m_my_storage_id{my_storage_id},
           m_my_storage{my_storage},
           m_storage_index{num_storages},
-          m_storage_hostports{m_prefix,
+          m_storage_hostports{m_key,
                               std::move(service_factory),
                               {m_storage_index},
                               my_storage_id},
           m_reader{"hostports_reader",
                    etcd,
-                   m_prefix,
+                   m_key,
                    {m_storage_hostports},
                    std::move(callback)} {}
 
@@ -42,7 +42,7 @@ public:
     };
 
 private:
-    prefix_t m_prefix;
+    std::string m_key;
 
     std::size_t m_my_storage_id;
     std::shared_ptr<storage_interface> m_my_storage;
@@ -56,38 +56,22 @@ private:
 class repairer {
 public:
     repairer(executor& executor, etcd_manager& etcd, const group_config& config,
-             std::size_t my_storage_id,
              std::shared_ptr<local_storage> my_storage,
+             std::vector<std::shared_ptr<storage_interface>> storages,
              std::vector<storage_state> storage_states,
              const global_data_view_config& global_config)
-        : m_executor{executor},
-          m_etcd{etcd},
+        : m_etcd{etcd},
           m_group_config{config},
-          m_storage_id{my_storage_id},
           m_global_config{global_config},
 
-          m_storages{[&]() {
-              auto reader = storages_reader(
-                  m_etcd, m_group_config.id, m_group_config.storages, //
-                  m_storage_id, my_storage,
-                  service_factory<storage_interface>(
-                      m_executor.get_executor(),
-                      m_global_config.storage_service_connection_count));
-              return reader.get_storage_services();
-          }()},
+          m_storages{std::move(storages)},
+          m_storage_states{std::move(storage_states)},
 
           m_promise{},
           m_future{m_promise.get_future()},
           m_signal{} {
 
-        // TODO: check there's element like storage_states[i] != DOWN and
-        // m_storages[i] == nullptr
-
-        (void)m_executor;
-        (void)m_etcd;
-        (void)m_group_config;
-        LOG_DEBUG() << "Repairer created for group " << m_group_config.id
-                    << " storage " << my_storage_id;
+        LOG_DEBUG() << "Repairer created for group " << m_group_config.id;
         boost::asio::co_spawn(
             executor.get_executor(),
             [this]() -> coro<void> { co_await repair(); },
@@ -102,13 +86,12 @@ public:
     }
 
 private:
-    executor& m_executor;
     etcd_manager& m_etcd;
     group_config m_group_config;
-    std::size_t m_storage_id;
     global_data_view_config m_global_config;
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
+    std::vector<storage_state> m_storage_states;
 
     std::promise<void> m_promise;
     std::future<void> m_future;
