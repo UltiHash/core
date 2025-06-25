@@ -32,10 +32,10 @@ private:
     boost::asio::awaitable<void> task() {
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
+            auto executor = co_await boost::asio::this_coro::executor;
             try {
-                co_await boost::asio::steady_timer(
-                    co_await boost::asio::this_coro::executor,
-                    std::chrono::hours(1))
+                co_await boost::asio::steady_timer(executor,
+                                                   std::chrono::hours(1))
                     .async_wait(boost::asio::use_awaitable);
             } catch (const boost::system::system_error& e) {
                 if (e.code() == boost::asio::error::operation_aborted) {
@@ -43,7 +43,8 @@ private:
                     m_promise.set_value();
                     co_return;
                 } else {
-                    throw; // rethrow unexpected errors
+                    std::cout << "Unknown exception thrown" << std::endl;
+                    throw;
                 }
             }
         }
