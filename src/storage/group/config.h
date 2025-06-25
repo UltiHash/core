@@ -5,6 +5,8 @@
 #include <string_view>
 #include <vector>
 
+#include <common/utils/common.h>
+
 namespace uh::cluster::storage {
 
 struct group_config {
@@ -16,6 +18,13 @@ struct group_config {
     std::size_t data_shards;
     std::size_t parity_shards;
     std::size_t stripe_size_kib;
+
+    std::size_t get_stripe_size() const { //
+        return stripe_size_kib * KiB;
+    }
+    std::size_t get_stripe_unit_size() const {
+        return get_stripe_size() / data_shards;
+    }
 
     static group_config create(const std::string& json_str);
     std::string to_string() const;

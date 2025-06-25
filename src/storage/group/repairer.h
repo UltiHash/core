@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/coroutines/coro_util.h>
+#include <common/ec/reedsolomon_c.h>
 #include <common/execution/executor.h>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
@@ -56,77 +58,167 @@ private:
 class repairer {
 public:
     repairer(executor& executor, etcd_manager& etcd, const group_config& config,
-             std::shared_ptr<local_storage> my_storage,
+             std::size_t repairing_size,
              std::vector<std::shared_ptr<storage_interface>> storages,
              std::vector<storage_state> storage_states,
              const global_data_view_config& global_config)
-        : m_etcd{etcd},
-          m_group_config{config},
+        : m_executor{executor},
+          m_etcd{etcd},
+          m_config{config},
           m_global_config{global_config},
+          m_repairing_size{repairing_size},
 
           m_storages{std::move(storages)},
-          m_storage_states{std::move(storage_states)},
+          m_storage_states{std::move(storage_states)} {
 
-          m_promise{},
-          m_future{m_promise.get_future()},
-          m_signal{} {
-
-        LOG_DEBUG() << "Repairer created for group " << m_group_config.id;
+        LOG_DEBUG() << "Repairer created for group " << m_config.id;
         boost::asio::co_spawn(
             executor.get_executor(),
             [this]() -> coro<void> { co_await repair(); },
-            boost::asio::bind_cancellation_slot(m_signal.slot(),
-                                                boost::asio::detached));
+            boost::asio::detached);
     }
 
     ~repairer() {
-        LOG_DEBUG() << "Repairer destroyed for group " << m_group_config.id;
-        m_signal.emit(boost::asio::cancellation_type::all);
-        m_future.get();
+        LOG_DEBUG() << "Repairer destroyed for group " << m_config.id;
     }
 
 private:
+    executor& m_executor;
     etcd_manager& m_etcd;
-    group_config m_group_config;
+    group_config m_config;
     global_data_view_config m_global_config;
+    std::size_t m_repairing_size;
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
     std::vector<storage_state> m_storage_states;
 
-    std::promise<void> m_promise;
-    std::future<void> m_future;
-    boost::asio::cancellation_signal m_signal;
-
     coro<void> repair() {
-        LOG_DEBUG() << "Repairing started for group " << m_group_config.id;
+        LOG_DEBUG() << "Repairing started for group " << m_config.id;
 
-        auto timer = boost::asio::steady_timer(
-            co_await boost::asio::this_coro::executor);
-        timer.expires_after(1s);
         try {
-            co_await timer.async_wait(boost::asio::use_awaitable);
-
-            // auto state = co_await boost::asio::this_coro::cancellation_state;
-            // while (state.cancelled() == boost::asio::cancellation_type::none)
-            // {
-            //     // Do repairing for certain number of stripes
-            // }
-        } catch (const boost::system::system_error& e) {
-            if (e.code() == boost::asio::error::operation_aborted) {
-                std::cout << "Repairing cancelled" << std::endl;
-                m_promise.set_value();
+            std::size_t m_chunk_size = m_config.get_stripe_unit_size();
+            std::size_t num_stripes = m_repairing_size / m_chunk_size;
+            if (m_repairing_size % m_chunk_size != 0) {
+                LOG_ERROR()
+                    << "Repairing size must be a multiple of chunk size";
                 co_return;
-            } else {
-                std::cout << "Repairing throws exception" << std::endl;
-                throw;
             }
+
+            auto m_rs = reedsolomon_c{m_config.data_shards,
+                                      m_config.parity_shards, m_chunk_size};
+
+            unique_buffer<char> stripe(m_chunk_size * m_config.storages);
+            std::vector<std::span<char>> shards;
+            shards.reserve(m_config.storages);
+            for (auto i = 0ul; i < m_config.storages; ++i) {
+                auto shard =
+                    stripe.span().subspan(m_chunk_size * i, m_chunk_size);
+                shards.push_back(shard);
+            }
+            for (auto i = 0ul; i < num_stripes; ++i) {
+                LOG_DEBUG() << "start repairing for stripe " << i;
+                (void)m_chunk_size;
+                address addr;
+                addr.emplace_back(i * m_chunk_size, m_chunk_size);
+                {
+                    auto v_succeeded = co_await run_for_all<
+                        bool, std::shared_ptr<storage_interface>>(
+                        m_executor.get_executor(),
+                        [&](std::size_t id,
+                            const std::shared_ptr<storage_interface>& storage)
+                            -> coro<bool> {
+                            try {
+                                if (m_storage_states[id] ==
+                                    storage_state::NEW) {
+                                    LOG_DEBUG() << "Storage " << id
+                                                << " is not assigned, skipping";
+                                    co_return true;
+                                }
+                                LOG_DEBUG() << "read from storage " << id;
+                                co_await storage->read_address(addr, shards[id],
+                                                               {0});
+                                LOG_DEBUG()
+                                    << "read from storage " << id << " done";
+                                co_return true;
+                            } catch (const std::exception& e) {
+                                LOG_ERROR() << "Failed to read from storage "
+                                            << id << ": " << e.what();
+                                co_return false;
+                            }
+                        },
+                        m_storages);
+
+                    auto failed = std::ranges::any_of(
+                        v_succeeded, [](auto s) { return s == false; });
+                    if (failed) {
+                        LOG_ERROR() << "Failed to read stripe " << i
+                                    << " from storages while repairing group "
+                                    << m_config.id;
+                        co_return;
+                    }
+                }
+
+                std::vector<data_stat> stats;
+                stats.reserve(m_config.storages);
+                for (const auto& f : m_storage_states) {
+                    if (f == storage_state::ASSIGNED) {
+                        stats.push_back(data_stat::valid);
+                    } else {
+                        stats.push_back(data_stat::lost);
+                    }
+                }
+
+                LOG_DEBUG() << "[read_address] call recover";
+                m_rs.recover(shards, stats);
+
+                {
+                    auto alloc = allocation_t{i * m_chunk_size, m_chunk_size};
+                    auto v_succeeded = co_await run_for_all<
+                        bool, std::shared_ptr<storage_interface>>(
+                        m_executor.get_executor(),
+                        [&](std::size_t id,
+                            const std::shared_ptr<storage_interface>& storage)
+                            -> coro<bool> {
+                            try {
+                                if (m_storage_states[id] !=
+                                    storage_state::NEW) {
+                                    LOG_DEBUG() << "Storage " << id
+                                                << " is not new, skipping";
+                                    co_return true;
+                                }
+                                LOG_DEBUG() << "write to storage " << id;
+                                co_await storage->write(alloc, {shards[id]},
+                                                        {0});
+                                // TODO: Call link!
+                                LOG_DEBUG()
+                                    << "write to storage " << id << " done";
+                                co_return true;
+                            } catch (const std::exception& e) {
+                                LOG_ERROR() << "Failed to write to storage "
+                                            << id << ": " << e.what();
+                                co_return false;
+                            }
+                        },
+                        m_storages);
+
+                    auto failed = std::ranges::any_of(
+                        v_succeeded, [](auto s) { return s == false; });
+                    if (failed) {
+                        LOG_ERROR() << "Failed to write stripe " << i
+                                    << " from storages while repairing group "
+                                    << m_config.id;
+                        co_return;
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cout << "exception thrown: " << e.what() << std::endl;
+            co_return;
         }
 
         std::cout << "Trigger assignment" << std::endl;
-        storage_assignment_triggers_manager::put(m_etcd, m_group_config.id,
-                                                 true);
+        storage_assignment_triggers_manager::put(m_etcd, m_config.id, true);
         std::cout << "Repairing finished" << std::endl;
-        m_promise.set_value();
     }
 };
 

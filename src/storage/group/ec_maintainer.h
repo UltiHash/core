@@ -302,7 +302,8 @@ private:
 
             m_repairer.emplace(
                 m_executor, m_etcd, m_group_config, //
-                m_my_storage, std::move(storages), std::move(storage_states),
+                m_my_storage->get_write_offset(),   //
+                std::move(storages), std::move(storage_states),
                 global_data_view_config{.storage_service_connection_count = 1,
                                         .read_cache_capacity_l2 = 0});
         }

@@ -25,6 +25,12 @@ constexpr unsigned long long operator""_PiB(unsigned long long value) {
     return value * 1024 * 1024 * 1024 * 1024 * 1024;
 }
 
+static constexpr std::size_t KiB = 1_KiB;
+static constexpr std::size_t MiB = 1_MiB;
+static constexpr std::size_t GiB = 1_GiB;
+static constexpr std::size_t TiB = 1_TiB;
+static constexpr std::size_t PiB = 1_PiB;
+
 static constexpr std::size_t KIBI_BYTE = 1024;
 static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
 static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
