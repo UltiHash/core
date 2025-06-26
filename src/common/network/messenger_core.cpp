@@ -6,11 +6,10 @@ namespace uh::cluster {
 messenger_core::messenger_core(boost::asio::io_context& ioc,
                                const std::string& ip_addr,
                                const std::uint16_t port)
-    : m_tcp_stream(ioc) {
-    boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::make_address(ip_addr), port);
+    : m_endpoint{boost::asio::ip::make_address(ip_addr), port},
+      m_tcp_stream(ioc) {
     try {
-        m_tcp_stream.connect(endpoint);
+        m_tcp_stream.connect(m_endpoint);
     } catch (const std::exception& e) {
         throw create_internal_network_error("socket connection failed", e);
     }
@@ -28,6 +27,23 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_write_buffers(std::move(m.m_write_buffers)),
       m_read_size(m.m_read_size),
       m_write_size(m.m_write_size) {}
+
+coro<void> messenger_core::ensure_connected() {
+    try {
+        if (!m_tcp_stream.socket().is_open()) {
+            m_tcp_stream.expires_after(
+                time_settings::instance().async_connection_timeout);
+            co_await m_tcp_stream.async_connect(m_endpoint,
+                                                boost::asio::use_awaitable);
+        }
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "Failed to ensure connection to " << m_endpoint << " - "
+                    << e.what();
+        throw error_exception(
+            error(error::internal_network_error,
+                  std::string("socket connection failed | ") + e.what()));
+    }
+}
 
 coro<messenger_core::header> messenger_core::recv_header() {
     header h;

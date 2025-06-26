@@ -33,6 +33,8 @@ public:
 
     messenger_core(messenger_core&& m) noexcept;
 
+    coro<void> ensure_connected();
+
     template <typename T>
     requires(std::is_trivially_copyable_v<T> and
              !std::ranges::contiguous_range<T>)
@@ -123,6 +125,7 @@ public:
     boost::asio::ip::tcp::socket& get_socket() noexcept;
 
 private:
+    boost::asio::ip::tcp::endpoint m_endpoint;
     boost::beast::tcp_stream m_tcp_stream;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
