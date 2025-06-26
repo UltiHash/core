@@ -11,6 +11,7 @@ add_library(httplib INTERFACE)
 target_include_directories(httplib INTERFACE ${CMAKE_BINARY_DIR}/test)
 
 add_subdirectory(lib)
+
 add_subdirectory(performance)
 
 configure_file(test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h @ONLY)

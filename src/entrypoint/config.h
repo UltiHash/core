@@ -12,7 +12,7 @@ struct entrypoint_config {
         .threads = 4, .port = 8080, .bind_address = "0.0.0.0"};
 
     bool noop_deduplicator = false;
-    std::size_t dedupe_node_connection_count = 16ul;
+    std::size_t dedupe_node_connection_count = 10ul;
     std::size_t worker_thread_count = 16ul;
     std::size_t buffer_size = INPUT_CHUNK_SIZE;
     std::optional<deduplicator_config> m_attached_deduplicator;
