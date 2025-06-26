@@ -95,7 +95,8 @@ public:
         m_write_size += buf.size();
     }
 
-    coro<header> recv_header();
+    coro<header> recv_header(std::optional<std::chrono::steady_clock::duration>
+                                 timeout = std::nullopt);
 
     coro<std::tuple<header, opentelemetry::context::Context>>
     recv_header_with_context();

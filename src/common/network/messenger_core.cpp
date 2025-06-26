@@ -32,7 +32,7 @@ coro<void> messenger_core::ensure_connected() {
     try {
         if (!m_tcp_stream.socket().is_open()) {
             m_tcp_stream.expires_after(
-                time_settings::instance().async_connection_timeout);
+                time_settings::instance().connection_timeout);
             co_await m_tcp_stream.async_connect(m_endpoint,
                                                 boost::asio::use_awaitable);
         }
@@ -45,7 +45,8 @@ coro<void> messenger_core::ensure_connected() {
     }
 }
 
-coro<messenger_core::header> messenger_core::recv_header() {
+coro<messenger_core::header> messenger_core::recv_header(
+    std::optional<std::chrono::steady_clock::duration> timeout) {
     header h;
     std::string ctx_buffer;
     ctx_buffer.resize(get_encoded_context_len());
@@ -55,12 +56,23 @@ coro<messenger_core::header> messenger_core::recv_header() {
             {&h.type, sizeof h.type},
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
-
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        if (timeout.has_value()) {
+            m_tcp_stream.expires_after(timeout.value());
+        } else {
+            m_tcp_stream.expires_never();
+        }
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_header failed", e);
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "Failed on the method `read_header` from " << m_endpoint
+                    << " - " << e.what();
+        if (e.code() == boost::asio::error::operation_aborted or
+            e.code() == boost::beast::error::timeout) {
+            throw error_exception(error(error::busy, e.what()));
+        } else {
+            throw error_exception(
+                error(error::internal_network_error, e.what()));
+        }
     }
 
     h.peer = peer();
@@ -130,14 +142,22 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     }
 
     try {
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().read_timeout);
         co_await boost::asio::async_read(m_tcp_stream, m_read_buffers,
                                          boost::asio::use_awaitable);
         m_read_buffers.clear();
         m_read_size = 0;
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_buffers failed", e);
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "Failed on the method `recv_buffers` from " << m_endpoint
+                    << " - " << e.what();
+        if (e.code() == boost::asio::error::operation_aborted or
+            e.code() == boost::beast::error::timeout) {
+            throw error_exception(error(error::busy, e.what()));
+        } else {
+            throw error_exception(
+                error(error::internal_network_error, e.what()));
+        }
     }
 }
 
@@ -186,12 +206,20 @@ coro<void> messenger_core::send_buffers(const message_type type) {
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().write_timeout);
         co_await boost::asio::async_write(m_tcp_stream, m_write_buffers,
                                           boost::asio::use_awaitable);
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("send_buffers failed", e);
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "Failed on the method `send_buffers` from " << m_endpoint
+                    << " - " << e.what();
+        if (e.code() == boost::asio::error::operation_aborted or
+            e.code() == boost::beast::error::timeout) {
+            throw error_exception(error(error::busy, e.what()));
+        } else {
+            throw error_exception(
+                error(error::internal_network_error, e.what()));
+        }
     }
 
     reset_write_buffers();
@@ -244,12 +272,20 @@ coro<void> messenger_core::send(const message_type type,
             boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().write_timeout);
         co_await boost::asio::async_write(m_tcp_stream, buffers,
                                           boost::asio::use_awaitable);
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("send failed", e);
+    } catch (const boost::system::system_error& e) {
+        LOG_ERROR() << "Failed on the method `send` from " << m_endpoint
+                    << " - " << e.what();
+        if (e.code() == boost::asio::error::operation_aborted or
+            e.code() == boost::beast::error::timeout) {
+            throw error_exception(error(error::busy, e.what()));
+        } else {
+            throw error_exception(
+                error(error::internal_network_error, e.what()));
+        }
     }
 }
 

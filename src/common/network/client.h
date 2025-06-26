@@ -26,7 +26,11 @@ public:
 
     client(client&&) = default;
 
-    coro<acquired_messenger> acquire_messenger() { return m_pool.get(); }
+    coro<acquired_messenger> acquire_messenger() {
+        auto ret = co_await m_pool.get();
+        co_await ret->ensure_connected();
+        co_return std::move(ret);
+    }
 
 private:
     boost::asio::io_context& m_ioc;

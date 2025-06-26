@@ -90,8 +90,10 @@ struct time_settings {
     duration_t service_get_timeout{std::chrono::seconds(10)};
     duration_t group_state_wait_timeout{std::chrono::seconds(10)};
     duration_t offset_gathering_timeout{std::chrono::seconds(2)};
-    duration_t async_connection_timeout{std::chrono::seconds(3)};
-    duration_t async_io_timeout{std::chrono::seconds(30)};
+    duration_t connection_timeout{std::chrono::seconds(3)};
+    duration_t write_timeout{std::chrono::seconds(3)};
+    duration_t read_timeout{std::chrono::seconds(3)};
+    duration_t storage_timeout{std::chrono::seconds(30)};
     duration_t license_fetch_period{std::chrono::hours(1)};
 
     static time_settings& instance() {
