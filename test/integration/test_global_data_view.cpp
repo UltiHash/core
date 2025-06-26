@@ -145,7 +145,6 @@ BOOST_FIXTURE_TEST_CASE(valid_write_read_address, global_data_view_fixture) {
 
 BOOST_FIXTURE_TEST_CASE(write_link_unlink_free, global_data_view_fixture) {
     auto config = get_group_config();
-
     auto gdv = get_data_view();
     auto input_buffer = random_buffer(config.get_stripe_size());
     std::size_t chunk_size =
@@ -186,49 +185,6 @@ BOOST_FIXTURE_TEST_CASE(write_link_unlink_free, global_data_view_fixture) {
                .get();
     BOOST_TEST(used == 0ull);
 
-    // BOOST_CHECK_THROW(boost::asio::co_spawn(get_executor(),
-    // gdv->unlink(addr),
-    //                                         boost::asio::use_future)
-    //                       .get(),
-    //                   std::exception);
-}
-
-BOOST_FIXTURE_TEST_CASE(write_link_unlink_nofree, global_data_view_fixture) {
-    auto gdv = get_data_view();
-    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE / 2);
-
-    std::cout << "start writing" << std::endl;
-    auto addr = boost::asio::co_spawn(
-                    get_executor(), gdv->write(input_buffer.string_view(), {0}),
-                    boost::asio::use_future)
-                    .get();
-    BOOST_TEST(input_buffer.size() == addr.data_size());
-    // BOOST_TEST(addr.fragments.size() == 1ul);
-
-    std::size_t used =
-        boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
-                              boost::asio::use_future)
-            .get();
-    BOOST_TEST(used == input_buffer.size());
-
-    boost::asio::co_spawn(get_executor(), gdv->link(addr),
-                          boost::asio::use_future)
-        .get();
-    std::size_t freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                              boost::asio::use_future)
-                            .get();
-    BOOST_TEST(freed == 0ull);
-
-    freed = boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                  boost::asio::use_future)
-                .get();
-    BOOST_TEST(freed == addr.data_size());
-
-    used = boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
-                                 boost::asio::use_future)
-               .get();
-    BOOST_TEST(used == 0ull);
-
     BOOST_CHECK_THROW(boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
                                             boost::asio::use_future)
                           .get(),
@@ -236,10 +192,16 @@ BOOST_FIXTURE_TEST_CASE(write_link_unlink_nofree, global_data_view_fixture) {
 }
 
 BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
+    auto config = get_group_config();
     auto gdv = get_data_view();
-    auto input_buffer = random_buffer(DEFAULT_PAGE_SIZE);
-    std::vector<std::size_t> offsets = {0 * KIBI_BYTE, 2 * KIBI_BYTE,
-                                        4 * KIBI_BYTE, 6 * KIBI_BYTE};
+    auto input_buffer = random_buffer(config.get_stripe_size());
+    const std::size_t num_frags = 4;
+    const std::size_t stripe_size = config.get_stripe_size();
+    const std::size_t frag_size = stripe_size / num_frags;
+    std::vector<std::size_t> offsets;
+    for (std::size_t i = 0; i < num_frags; ++i) {
+        offsets.push_back(i * frag_size);
+    }
 
     auto addr =
         boost::asio::co_spawn(get_executor(),
@@ -247,38 +209,34 @@ BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
                               boost::asio::use_future)
             .get();
     BOOST_TEST(input_buffer.size() == addr.data_size());
+    BOOST_TEST(addr.fragments.size() == config.data_shards);
     std::size_t used =
         boost::asio::co_spawn(get_executor(), gdv->get_used_space(),
                               boost::asio::use_future)
             .get();
     BOOST_TEST(used == input_buffer.size());
-    {
-        std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                  boost::asio::use_future)
-                .get();
-        BOOST_TEST(freed == 0ull);
-    }
-    {
-        std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                  boost::asio::use_future)
-                .get();
-        BOOST_TEST(freed == 0ull);
-    }
-    {
-        std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                  boost::asio::use_future)
-                .get();
-        BOOST_TEST(freed == 0ull);
-    }
-    {
-        std::size_t freed =
-            boost::asio::co_spawn(get_executor(), gdv->unlink(addr),
-                                  boost::asio::use_future)
-                .get();
-        BOOST_TEST(freed == 8 * KIBI_BYTE);
+
+    for (std::size_t i = 0; i < num_frags; ++i) {
+        {
+            address del_addr;
+#if defined(WITH_EC)
+            del_addr.push({i * frag_size, frag_size});
+#else
+            del_addr.push({addr.get(0).pointer + i * frag_size, frag_size});
+#endif
+            std::size_t freed =
+                boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
+                                      boost::asio::use_future)
+                    .get();
+
+            if (i > 0 and
+                ((i + 1) * frag_size) % (stripe_size / config.data_shards) ==
+                    0) {
+                BOOST_TEST(freed == stripe_size / config.data_shards);
+            } else {
+                BOOST_TEST(freed == 0ull);
+            }
+        }
     }
 }
 

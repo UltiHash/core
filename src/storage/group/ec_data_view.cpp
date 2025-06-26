@@ -169,24 +169,48 @@ coro<address> ec_data_view::write(std::span<const char> data,
 
         auto stripe_offsets =
             prepare_stripe_offsets(offsets, i, data_view_size);
-        for (size_t j = 0; j < m_config.data_shards; ++j) {
+        for (size_t j = 0; j < m_config.storages; ++j) {
             storage_offsets[j].insert(storage_offsets[j].end(),
                                       stripe_offsets[j].begin(),
                                       stripe_offsets[j].end());
         }
     }
 
-    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-        m_ioc,
-        [&](size_t i, auto storage) -> coro<void> {
-            auto storage_addr = co_await storage->write(
-                allocation, storage_buffers_view[i], storage_offsets[i]);
-        },
-        storages);
+    auto addresses =
+        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<address> {
+                auto storage_addr = co_await storage->write(
+                    allocation, storage_buffers_view[i], storage_offsets[i]);
+                address global_addr;
+                // translate storage address into global address
+                for (std::size_t j = 0; j < storage_addr.size(); ++j) {
+                    fragment frag = storage_addr.get(j);
+                    global_addr.emplace_back(
+                        get_global_pointer(frag.pointer, i), frag.size);
+                }
+                co_return global_addr;
+            },
+            storages);
 
     address rv;
-    rv.emplace_back(allocation.offset * m_config.data_shards,
-                    data.size_bytes());
+    std::size_t user_data_size = data.size_bytes();
+    // combine partial addresses into complete return address
+    for (std::size_t j = 0; j < m_config.data_shards; ++j) {
+        for (auto& frag : addresses.at(j).fragments) {
+            if (user_data_size == 0) {
+                break;
+            }
+
+            if (frag.size < user_data_size) {
+                user_data_size -= frag.size;
+                rv.emplace_back(frag.pointer, frag.size);
+            } else {
+                rv.emplace_back(frag.pointer, user_data_size);
+                user_data_size = 0;
+            }
+        }
+    }
     co_return rv;
 }
 
