@@ -28,10 +28,14 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         bool keep_alive = false;
 
         try {
-            rawreq = co_await raw_request::read(s);
-            resp = co_await handle_request(s, rawreq, id).start_trace();
-            metric<success>::increase(1);
-            keep_alive = true;
+            try {
+                rawreq = co_await raw_request::read(s);
+                resp = co_await handle_request(s, rawreq, id).start_trace();
+                metric<success>::increase(1);
+                keep_alive = true;
+            } catch (const error_exception& e) {
+                throw_from_error(e.error());
+            }
 
         } catch (const command_exception& e) {
             LOG_INFO() << s.remote_endpoint() << ": " << e.what();
@@ -48,6 +52,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                     status::internal_server_error, "InternalError",
                     "Internal server error."));
             }
+
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
             resp = make_response(command_exception());

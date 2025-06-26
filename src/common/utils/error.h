@@ -20,6 +20,7 @@ public:
         storage_limit_exceeded = 6,
         bucket_already_exists = 7,
         internal_network_error = 8,
+        busy = 9,
     };
 
     error(type t = unknown, const std::string& message = "");

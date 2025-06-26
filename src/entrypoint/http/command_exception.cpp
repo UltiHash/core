@@ -66,6 +66,9 @@ void throw_from_error(const error& e) {
     case error::internal_network_error:
         throw command_exception(status::internal_server_error, "InternalError",
                                 "Downstream connection failed.");
+    case error::busy:
+        throw command_exception(status::service_unavailable, "SlowDown",
+                                "Please reduce your request rate.");
     default:
         throw command_exception();
     }
