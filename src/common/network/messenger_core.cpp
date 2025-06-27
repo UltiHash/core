@@ -5,19 +5,27 @@ namespace uh::cluster {
 
 messenger_core::messenger_core(boost::asio::io_context& ioc,
                                const std::string& ip_addr,
-                               const std::uint16_t port)
-    : m_endpoint{boost::asio::ip::make_address(ip_addr), port},
-      m_tcp_stream(ioc) {
+                               const std::uint16_t port,
+                               connection_exception::origin org)
+    : m_tcp_stream(ioc),
+      m_origin{org} {
+
     try {
-        m_tcp_stream.connect(m_endpoint);
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("socket connection failed", e);
+        auto endpoint = boost::asio::ip::tcp::endpoint{
+            boost::asio::ip::make_address(ip_addr), port};
+        m_tcp_stream.expires_after(
+            time_settings::instance().connection_timeout);
+        m_tcp_stream.async_connect(endpoint, boost::asio::use_future).get();
+    } catch (const boost::system::system_error& e) {
+        throw connection_exception(m_origin, "failure on the connection", e);
     }
     clear_buffers();
 }
 
-messenger_core::messenger_core(boost::asio::ip::tcp::socket&& socket)
-    : m_tcp_stream(std::move(socket)) {
+messenger_core::messenger_core(boost::asio::ip::tcp::socket&& socket,
+                               connection_exception::origin org)
+    : m_tcp_stream(std::move(socket)),
+      m_origin{org} {
     clear_buffers();
 }
 
@@ -26,29 +34,8 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_buffers(std::move(m.m_read_buffers)),
       m_write_buffers(std::move(m.m_write_buffers)),
       m_read_size(m.m_read_size),
-      m_write_size(m.m_write_size) {}
-
-coro<void> messenger_core::ensure_connected() {
-    try {
-        if (!m_tcp_stream.socket().is_open()) {
-            m_tcp_stream.expires_after(
-                time_settings::instance().connection_timeout);
-            co_await m_tcp_stream.async_connect(m_endpoint,
-                                                boost::asio::use_awaitable);
-        }
-    } catch (const boost::system::system_error& e) {
-        LOG_WARN() << "Failed on the method `read_header` from " << m_endpoint
-                   << " - " << e.what();
-        if (e.code() == boost::asio::error::operation_aborted or
-            e.code() == boost::beast::error::timeout) {
-            throw error_exception(error(error::busy, e.what()));
-        } else {
-            throw error_exception(
-                error(error::internal_network_error, e.what()));
-        }
-    }
-    clear_buffers();
-}
+      m_write_size(m.m_write_size),
+      m_origin{m.m_origin} {}
 
 coro<messenger_core::header> messenger_core::recv_header(
     std::optional<std::chrono::steady_clock::duration> timeout) {
@@ -69,8 +56,7 @@ coro<messenger_core::header> messenger_core::recv_header(
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const boost::system::system_error& e) {
-        LOG_WARN() << "Failed on the method `read_header` from " << m_endpoint
-                   << " - " << e.what();
+        LOG_WARN() << "Failed on the method `read_header`: " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -157,8 +143,7 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
         m_read_size = 0;
 
     } catch (const boost::system::system_error& e) {
-        LOG_WARN() << "Failed on the method `recv_buffers` from " << m_endpoint
-                   << " - " << e.what();
+        LOG_WARN() << "Failed on the method `recv_buffers`: " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -219,8 +204,7 @@ coro<void> messenger_core::send_buffers(const message_type type) {
                                           boost::asio::use_awaitable);
 
     } catch (const boost::system::system_error& e) {
-        LOG_WARN() << "Failed on the method `send_buffers` from " << m_endpoint
-                   << " - " << e.what();
+        LOG_WARN() << "Failed on the method `send_buffers`: " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -285,8 +269,7 @@ coro<void> messenger_core::send(const message_type type,
                                           boost::asio::use_awaitable);
 
     } catch (const boost::system::system_error& e) {
-        LOG_WARN() << "Failed on the method `send` from " << m_endpoint << " - "
-                   << e.what();
+        LOG_WARN() << "Failed on the method `send`: " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));

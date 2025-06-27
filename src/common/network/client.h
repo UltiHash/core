@@ -18,7 +18,8 @@ public:
           m_messenger_factory{[&ioc, address, port]() {
               auto endpoint = resolve(address, port).back();
               return std::make_unique<messenger>(
-                  ioc, endpoint.address().to_string(), port);
+                  ioc, endpoint.address().to_string(), port,
+                  connection_exception::origin::downstream);
           }},
           m_pool(
               m_ioc, [this]() { return m_messenger_factory(); }, connections) {}
@@ -27,10 +28,11 @@ public:
 
     coro<acquired_messenger> acquire_messenger() {
         auto ret = co_await m_pool.get();
-        // if (!ret->connected()) {
-        //     ret.replace_resource(m_messenger_factory());
-        // }
-        co_await ret->ensure_connected();
+        if (!ret->connected()) {
+            LOG_DEBUG()
+                << "acquired messenger is not connected, reconnecting...";
+            ret.replace_resource(m_messenger_factory());
+        }
         co_return ret;
     }
 

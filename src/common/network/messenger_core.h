@@ -1,11 +1,12 @@
 #pragma once
 
-#include "common/telemetry/log.h"
-#include "common/telemetry/metrics.h"
-#include "common/types/common_types.h"
-#include "common/types/scoped_buffer.h"
-#include "common/utils/common.h"
-#include "common/utils/error.h"
+#include <common/telemetry/log.h>
+#include <common/telemetry/metrics.h>
+#include <common/types/common_types.h>
+#include <common/types/scoped_buffer.h>
+#include <common/utils/common.h>
+#include <common/utils/connection_exception.h>
+#include <common/utils/error.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -27,15 +28,14 @@ public:
     };
 
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
-                   const std::uint16_t port);
+                   const std::uint16_t port, connection_exception::origin org);
 
-    explicit messenger_core(boost::asio::ip::tcp::socket&& socket);
+    explicit messenger_core(boost::asio::ip::tcp::socket&& socket,
+                            connection_exception::origin org);
 
     messenger_core(messenger_core&& m) noexcept;
 
     bool connected() { return m_tcp_stream.socket().is_open(); }
-
-    coro<void> ensure_connected();
 
     template <typename T>
     requires(std::is_trivially_copyable_v<T> and
@@ -128,13 +128,14 @@ public:
     boost::asio::ip::tcp::socket& get_socket() noexcept;
 
 private:
-    boost::asio::ip::tcp::endpoint m_endpoint;
     boost::beast::tcp_stream m_tcp_stream;
 
     std::vector<boost::asio::mutable_buffer> m_read_buffers;
     std::vector<boost::asio::const_buffer> m_write_buffers;
     size_type m_read_size = 0;
     size_type m_write_size = 0;
+
+    connection_exception::origin m_origin;
 
     error_exception create_internal_network_error(const std::string& message,
                                                   const std::exception& e);

@@ -13,7 +13,7 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
-    messenger m(std::move(s));
+    messenger m(std::move(s), connection_exception::origin::upstream);
 
     for (;;) {
         std::optional<error> err;
