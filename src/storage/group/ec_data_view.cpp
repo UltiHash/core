@@ -526,7 +526,7 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
     auto freed_bytes = std::accumulate(
         std::ranges::begin(freed_pages_map | std::views::values),
         std::ranges::end(freed_pages_map | std::views::values), 0ul,
-        [&, this](std::size_t acc, std::size_t val) { return acc + val; });
+        [](std::size_t acc, std::size_t val) { return acc + val; });
     co_return freed_bytes;
 }
 
