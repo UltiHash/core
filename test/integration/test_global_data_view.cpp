@@ -214,11 +214,7 @@ BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
     for (std::size_t i = 0; i < num_frags; ++i) {
         {
             address del_addr;
-#if defined(WITH_EC)
-            del_addr.push({i * frag_size, frag_size});
-#else
-            del_addr.push({addr.get(0).pointer + i * frag_size, frag_size});
-#endif
+            del_addr.push({addr.get(i).pointer, frag_size});
             std::size_t freed =
                 boost::asio::co_spawn(get_executor(), gdv->unlink(del_addr),
                                       boost::asio::use_future)
