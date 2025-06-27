@@ -28,6 +28,7 @@ struct fixture : public gdv_fixture_using_process {
           }) {
 
         // To make test faster,
+        time_settings::instance().connection_timeout = 1s;
         time_settings::instance().storage_timeout = 1s;
         time_settings::instance().write_timeout = 1s;
         time_settings::instance().read_timeout = 1s;
