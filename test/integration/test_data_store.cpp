@@ -458,7 +458,7 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
                                 buffer1.size()) == 0);
     }
 
-    ds->unlink(buffer1_address);
+    BOOST_CHECK(ds->unlink(buffer1_address) == buffer1.size());
 
     {
         shared_buffer<char> zero_buffer(buffer1.size());
@@ -503,7 +503,7 @@ BOOST_AUTO_TEST_CASE(test_match_after_delete) {
     }
 
     BOOST_CHECK(!ds->link(buffer1_address).empty());
-    ds->unlink(buffer2_address);
+    BOOST_CHECK(ds->unlink(buffer2_address) == buffer2.size());
 
     {
         shared_buffer<char> zero_buffer(buffer1.size());
