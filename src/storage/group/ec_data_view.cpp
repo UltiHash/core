@@ -194,23 +194,16 @@ coro<address> ec_data_view::write(std::span<const char> data,
             storages);
 
     address rv;
-    std::size_t user_data_size = data.size_bytes();
-    // combine partial addresses into complete return address
-    for (std::size_t j = 0; j < m_config.data_shards; ++j) {
-        for (auto& frag : addresses.at(j).fragments) {
-            if (user_data_size == 0) {
-                break;
-            }
-
-            if (frag.size < user_data_size) {
-                user_data_size -= frag.size;
-                rv.emplace_back(frag.pointer, frag.size);
-            } else {
-                rv.emplace_back(frag.pointer, user_data_size);
-                user_data_size = 0;
-            }
-        }
+    std::size_t base_offset = allocation.offset * m_config.data_shards;
+    for (auto it = offsets.begin(); it != offsets.end(); it++) {
+        auto next = std::next(it);
+        std::size_t frag_size =
+            next == offsets.end() ? data.size_bytes() - *it : *next - *it;
+        rv.emplace_back(base_offset + *it, frag_size);
     }
+    // WARNING: this is a local address and won't work with multiple storage
+    // groups
+
     co_return rv;
 }
 
@@ -466,9 +459,15 @@ coro<std::size_t> ec_data_view::get_used_space() {
 }
 
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
+    auto aligned_addr = address{};
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+
     auto storages = m_externals.get_storage_services();
     auto addr_map = co_await perform_for_address<address>(
-        m_ioc, addr,
+        m_ioc, aligned_addr,
         [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         },
@@ -476,7 +475,7 @@ coro<std::size_t> ec_data_view::get_used_space() {
             -> coro<address> { co_return co_await svc->link(info.addr); },
         storages);
 
-    address parity_addr = compute_parity_address(addr);
+    address parity_addr = compute_parity_address(aligned_addr);
 
     for (size_t p = 0; p < m_config.parity_shards; ++p) {
         size_t parity_shard_id = m_config.data_shards + p;
@@ -499,9 +498,15 @@ coro<std::size_t> ec_data_view::get_used_space() {
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {
+    auto aligned_addr = address{};
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+
     auto storages = m_externals.get_storage_services();
     auto freed_pages_map = co_await perform_for_address<std::size_t>(
-        m_ioc, addr,
+        m_ioc, aligned_addr,
         [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
         },
@@ -509,9 +514,7 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
             -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
         storages);
 
-    // TODO: recompute parity shards for freed chunks
-
-    address parity_addr = compute_parity_address(addr);
+    address parity_addr = compute_parity_address(aligned_addr);
 
     for (size_t p = 0; p < m_config.parity_shards; ++p) {
         size_t parity_shard_id = m_config.data_shards + p;
