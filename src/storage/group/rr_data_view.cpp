@@ -25,15 +25,18 @@ coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
     const auto [storage_id, client] = m_load_balancer.get();
     auto allocation = co_await client->allocate(data.size());
-    auto addr = co_await client->write(allocation, {data}, offsets);
+    co_await client->write(allocation, {data}, offsets);
 
     address rv;
-    for (auto i = 0ul; i < addr.size(); i++) {
-        auto frag = addr.get(i);
-        frag.pointer = pointer_traits::rr::get_global_pointer(
-            frag.pointer, m_group_config.id, storage_id);
-        rv.push(frag);
+    for (auto it = offsets.begin(); it != offsets.end(); it++) {
+        auto next = std::next(it);
+        std::size_t frag_size =
+            next == offsets.end() ? data.size_bytes() - *it : *next - *it;
+        auto frag_offset = pointer_traits::rr::get_global_pointer(
+            allocation.offset + *it, m_group_config.id, storage_id);
+        rv.emplace_back(frag_offset, frag_size);
     }
+
     co_return rv;
 }
 
