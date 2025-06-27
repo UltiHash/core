@@ -37,12 +37,17 @@ coro<void> messenger_core::ensure_connected() {
                                                 boost::asio::use_awaitable);
         }
     } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "Failed to ensure connection to " << m_endpoint << " - "
-                    << e.what();
-        throw error_exception(
-            error(error::internal_network_error,
-                  std::string("socket connection failed | ") + e.what()));
+        LOG_WARN() << "Failed on the method `read_header` from " << m_endpoint
+                   << " - " << e.what();
+        if (e.code() == boost::asio::error::operation_aborted or
+            e.code() == boost::beast::error::timeout) {
+            throw error_exception(error(error::busy, e.what()));
+        } else {
+            throw error_exception(
+                error(error::internal_network_error, e.what()));
+        }
     }
+    clear_buffers();
 }
 
 coro<messenger_core::header> messenger_core::recv_header(
@@ -64,8 +69,8 @@ coro<messenger_core::header> messenger_core::recv_header(
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "Failed on the method `read_header` from " << m_endpoint
-                    << " - " << e.what();
+        LOG_WARN() << "Failed on the method `read_header` from " << m_endpoint
+                   << " - " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -79,6 +84,7 @@ coro<messenger_core::header> messenger_core::recv_header(
 
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
+        LOG_WARN() << "recv_header received error: " << e.message();
         throw error_exception(e);
     }
 
@@ -113,6 +119,8 @@ messenger_core::recv_header_with_context() {
 
     if (h.type == FAILURE) {
         const auto e = co_await recv_error(h);
+        LOG_WARN() << "recv_header_with_context received error: "
+                   << e.message();
         throw error_exception(e);
     }
 
@@ -149,8 +157,8 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
         m_read_size = 0;
 
     } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "Failed on the method `recv_buffers` from " << m_endpoint
-                    << " - " << e.what();
+        LOG_WARN() << "Failed on the method `recv_buffers` from " << m_endpoint
+                   << " - " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -211,8 +219,8 @@ coro<void> messenger_core::send_buffers(const message_type type) {
                                           boost::asio::use_awaitable);
 
     } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "Failed on the method `send_buffers` from " << m_endpoint
-                    << " - " << e.what();
+        LOG_WARN() << "Failed on the method `send_buffers` from " << m_endpoint
+                   << " - " << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));
@@ -277,8 +285,8 @@ coro<void> messenger_core::send(const message_type type,
                                           boost::asio::use_awaitable);
 
     } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "Failed on the method `send` from " << m_endpoint
-                    << " - " << e.what();
+        LOG_WARN() << "Failed on the method `send` from " << m_endpoint << " - "
+                   << e.what();
         if (e.code() == boost::asio::error::operation_aborted or
             e.code() == boost::beast::error::timeout) {
             throw error_exception(error(error::busy, e.what()));

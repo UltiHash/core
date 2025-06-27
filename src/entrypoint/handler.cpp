@@ -38,7 +38,11 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             }
 
         } catch (const command_exception& e) {
-            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+            if (static_cast<unsigned>(e.get_status()) >= 500) {
+                LOG_WARN() << s.remote_endpoint() << ": " << e.what();
+            } else {
+                LOG_INFO() << s.remote_endpoint() << ": " << e.what();
+            }
             resp = make_response(e);
             keep_alive = true;
 
@@ -82,7 +86,7 @@ coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                        const std::string& id) {
 
     auto req = co_await m_factory.create(s, rawreq);
-    LOG_INFO() << ": read request, id=" << id << ": " << *req;
+    LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
 

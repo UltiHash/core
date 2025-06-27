@@ -33,6 +33,8 @@ public:
 
     messenger_core(messenger_core&& m) noexcept;
 
+    bool connected() { return m_tcp_stream.socket().is_open(); }
+
     coro<void> ensure_connected();
 
     template <typename T>

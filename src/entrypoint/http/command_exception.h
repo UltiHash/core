@@ -14,6 +14,7 @@ public:
                       const std::string& reason);
 
     [[nodiscard]] const char* what() const noexcept override;
+    ep::http::status get_status() const noexcept { return m_status; }
 
 private:
     friend ep::http::response make_response(const command_exception&) noexcept;

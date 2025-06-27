@@ -26,6 +26,9 @@ public:
         resource& operator*() { return *m_r; }
         operator resource&() { return m_r; }
 
+        void replace_resource(std::unique_ptr<resource> new_r) {
+            m_r = std::move(new_r);
+        }
         void release() { m_pool.put_back(std::move(m_r)); }
 
         ~handle() { release(); }
