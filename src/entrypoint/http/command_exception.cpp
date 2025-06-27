@@ -24,6 +24,11 @@ const char* command_exception::what() const noexcept {
 }
 
 response make_response(const command_exception& e) noexcept {
+    if (static_cast<unsigned>(e.get_status()) >= 500) {
+        LOG_WARN() << e.what();
+    } else {
+        LOG_INFO() << e.what();
+    }
     return error_response(e.m_status, e.m_code, e.m_reason);
 }
 
@@ -38,39 +43,56 @@ ep::http::response error_response(ep::http::status status, std::string code,
     return res;
 }
 
-void throw_from_error(const error& e) {
-    switch (*e) {
+command_exception::command_exception(const error::type& e) {
+    switch (e) {
     case error::success:
-        return;
+        LOG_FATAL() << "Unexpected success error code in command_exception";
+        throw;
     case error::bucket_already_exists:
-        throw command_exception(status::conflict, "BucketAlreadyExists",
-                                "The requested bucket name is not available.");
+        m_status = status::conflict;
+        m_code = "BucketAlreadyExists";
+        m_reason = "The requested bucket name is not available.";
+        break;
     case error::bucket_not_empty:
-        throw command_exception(
-            status::conflict, "BucketNotEmpty",
-            "The bucket that you tried to delete is not empty.");
+        m_status = status::conflict;
+        m_code = "BucketNotEmpty";
+        m_reason = "The bucket that you tried to delete is not empty.";
+        break;
     case error::object_not_found:
-        throw command_exception(status::not_found, "NoSuchKey",
-                                "The specified key does not exist.");
+        m_status = status::not_found;
+        m_code = "NoSuchKey";
+        m_reason = "The specified key does not exist.";
+        break;
     case error::bucket_not_found:
-        throw command_exception(status::not_found, "NoSuchBucket",
-                                "The specified bucket does not exist.");
+        m_status = status::not_found;
+        m_code = "NoSuchBucket";
+        m_reason = "The specified bucket does not exist.";
+        break;
     case error::storage_limit_exceeded:
-        throw command_exception(status::insufficient_storage,
-                                "InsufficientCapacity",
-                                "Insufficient capacity.");
+        m_status = status::insufficient_storage;
+        m_code = "InsufficientCapacity";
+        m_reason = "Insufficient capacity.";
+        break;
     case error::invalid_bucket_name:
-        throw command_exception(
-            status::bad_request, "InvalidBucketName",
-            "The specified bucket name has invalid characters.");
+        m_status = status::bad_request;
+        m_code = "InvalidBucketName";
+        m_reason = "The specified bucket name has invalid characters.";
+        break;
     case error::internal_network_error:
-        throw command_exception(status::internal_server_error, "InternalError",
-                                "Downstream connection failed.");
+        m_status = status::internal_server_error;
+        m_code = "InternalError";
+        m_reason = "Downstream connection failed.";
+        break;
     case error::busy:
-        throw command_exception(status::service_unavailable, "SlowDown",
-                                "Please reduce your request rate.");
+        m_status = status::service_unavailable;
+        m_code = "SlowDown";
+        m_reason = "Please reduce your request rate.";
+        break;
     default:
-        throw command_exception();
+        m_status = status::internal_server_error;
+        m_code = "UnknownError";
+        m_reason = "An unknown error occurred.";
+        break;
     }
 }
 

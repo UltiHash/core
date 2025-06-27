@@ -136,9 +136,6 @@ private:
     size_type m_write_size = 0;
 
     connection_exception::origin m_origin;
-
-    error_exception create_internal_network_error(const std::string& message,
-                                                  const std::exception& e);
 };
 
 } // end namespace uh::cluster

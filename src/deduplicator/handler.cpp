@@ -24,16 +24,17 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         LOG_DEBUG() << remote.str() << " received "
                     << magic_enum::enum_name(hdr.type);
 
-        auto control =
+        try {
             co_await handle_dedupe(hdr, m).continue_trace(std::move(context));
-        if (control == flow_control::BREAK) {
+        } catch (const std::exception& e) {
+            LOG_WARN() << remote.str()
+                       << " error handling request: " << e.what();
             break;
         }
     }
 }
 
-coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
-                                                   messenger& m) {
+coro<void> handler::handle_dedupe(const messenger::header& hdr, messenger& m) {
     std::optional<error> err;
     try {
         switch (hdr.type) {
@@ -51,18 +52,29 @@ coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
         default:
             throw std::invalid_argument("Invalid message type!");
         }
-    } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "boost::system::system_error should be converted to "
-                       "error_exception with error::internal_network_error";
-        if (e.code() == boost::asio::error::eof) {
-            LOG_INFO() << hdr.peer << " disconnected";
-            co_return flow_control::BREAK;
+    } catch (const connection_exception& ce) {
+        auto e = ce.original_exception();
+        if (ce.get_origin() == connection_exception::origin::upstream) {
+            if (e.code() != boost::asio::error::eof) {
+                LOG_WARN() << "connection exception from upstream detected: "
+                           << ce.what();
+            }
+            throw;
+        } else {
+            if (e.code() == boost::asio::error::operation_aborted or
+                e.code() == boost::beast::error::timeout) {
+                err = error(error::busy, e.what());
+            } else {
+                err = error(error::internal_network_error, e.what());
+            }
         }
-        err = error(error::unknown, e.what());
+    } catch (const boost::system::system_error& e) {
+        LOG_FATAL() << "boost::system::system_error should be converted to "
+                       "error_exception with error::internal_network_error";
+        throw;
     } catch (const error_exception& e) {
         if (*e.error() == error::internal_network_error) {
-            LOG_INFO() << hdr.peer << " disconnected";
-            co_return flow_control::BREAK;
+            throw;
         }
         err = e.error();
     } catch (const std::exception& e) {
@@ -73,7 +85,6 @@ coro<handler::flow_control> handler::handle_dedupe(const messenger::header& hdr,
         LOG_WARN() << hdr.peer << " error handling request: " << err->message();
         co_await m.send_error(*err);
     }
-    co_return flow_control::CONTINUE;
 }
 
 } // namespace uh::cluster::deduplicator

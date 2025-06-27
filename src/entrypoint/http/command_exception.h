@@ -13,6 +13,8 @@ public:
     command_exception(ep::http::status status, const std::string& code,
                       const std::string& reason);
 
+    command_exception(const error::type& e);
+
     [[nodiscard]] const char* what() const noexcept override;
     ep::http::status get_status() const noexcept { return m_status; }
 
@@ -26,7 +28,5 @@ private:
 ep::http::response make_response(const command_exception& e) noexcept;
 ep::http::response error_response(ep::http::status status, std::string code,
                                   std::string reason) noexcept;
-
-void throw_from_error(const error& e);
 
 } // namespace uh::cluster

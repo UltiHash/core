@@ -24,41 +24,23 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         messenger_core::header hdr;
         opentelemetry::context::Context context;
 
+        std::tie(hdr, context) = co_await m.recv_header_with_context();
+        LOG_DEBUG() << remote.str() << " received "
+                    << magic_enum::enum_name(hdr.type);
+
         try {
-            std::tie(hdr, context) = co_await m.recv_header_with_context();
-            LOG_DEBUG() << remote.str() << " received "
-                        << magic_enum::enum_name(hdr.type);
-
-        } catch (const boost::system::system_error& e) {
-            LOG_ERROR() << "boost::system::system_error should be converted to "
-                           "error_exception with error::internal_network_error";
-            if (e.code() == boost::asio::error::eof) {
-                break;
-            }
-            err = error(error::unknown, e.what());
-        } catch (const error_exception& e) {
-            if (*e.error() == error::internal_network_error) {
-                break;
-            }
-            err = e.error();
+            co_await handle_iteration(hdr, m).continue_trace(
+                std::move(context));
         } catch (const std::exception& e) {
-            err = error(error::unknown, e.what());
-        }
-
-        if (err) {
             LOG_WARN() << remote.str()
-                       << " error handling request: " << err->message();
-        } else {
-            if (co_await handle_iteration(hdr, m).continue_trace(
-                    std::move(context)) == flow_control::BREAK) {
-                break;
-            }
+                       << " error handling request: " << e.what();
+            break;
         }
     };
 }
 
-coro<handler::flow_control>
-handler::handle_iteration(const messenger::header& hdr, messenger& m) {
+coro<void> handler::handle_iteration(const messenger::header& hdr,
+                                     messenger& m) {
     std::optional<error> err;
 
     try {
@@ -87,18 +69,30 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         default:
             throw std::invalid_argument("Invalid message type!");
         }
-    } catch (const boost::system::system_error& e) {
-        LOG_ERROR() << "boost::system::system_error should be converted to "
-                       "error_exception with error::internal_network_error";
-        if (e.code() == boost::asio::error::eof) {
-            LOG_INFO() << hdr.peer << " disconnected";
-            co_return flow_control::BREAK;
+    } catch (const connection_exception& ce) {
+        auto e = ce.original_exception();
+        if (ce.get_origin() == connection_exception::origin::upstream) {
+            if (e.code() != boost::asio::error::eof) {
+                LOG_WARN() << "connection exception from upstream detected: "
+                           << ce.what();
+            }
+            throw;
+        } else {
+            if (e.code() == boost::asio::error::operation_aborted or
+                e.code() == boost::beast::error::timeout) {
+                err = error(error::busy, e.what());
+            } else {
+                err = error(error::internal_network_error, e.what());
+            }
         }
-        err = error(error::unknown, e.what());
+    } catch (const boost::system::system_error& e) {
+        LOG_FATAL() << "boost::system::system_error should be converted to "
+                       "error_exception with error::internal_network_error";
+        throw;
     } catch (const error_exception& e) {
-        if (*e.error() == error::internal_network_error) {
-            LOG_INFO() << hdr.peer << " disconnected";
-            co_return flow_control::BREAK;
+        if (*e.error() == error::internal_network_error ||
+            *e.error() == error::busy) {
+            throw;
         }
         err = e.error();
     } catch (const std::exception& e) {
@@ -109,7 +103,6 @@ handler::handle_iteration(const messenger::header& hdr, messenger& m) {
         LOG_WARN() << hdr.peer << " error handling request: " << err->message();
         co_await m.send_error(*err);
     }
-    co_return flow_control::CONTINUE;
 }
 
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
