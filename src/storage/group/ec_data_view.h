@@ -176,6 +176,7 @@ private:
                            std::size_t stripe_index,
                            std::size_t stripe_data_size) const;
     address compute_parity_address(const address& addr);
+    address get_aligned_address(const address& addr) const;
 };
 
 } // namespace uh::cluster::storage
