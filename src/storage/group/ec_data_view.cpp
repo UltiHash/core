@@ -296,11 +296,7 @@ ec_data_view::get_stripe_ids(
 
 coro<std::size_t> ec_data_view::read_address(const address& addr,
                                              std::span<char> buffer) {
-    auto aligned_addr = address{};
-    for (auto& frag : addr.fragments) {
-        auto a = split_fragment(frag.pointer, frag.size);
-        aligned_addr.append(a);
-    }
+    address aligned_addr = get_aligned_address(addr);
     auto addr_info_map = extract_node_address_map(
         aligned_addr, [this](uint128_t pointer) -> auto {
             return get_storage_pointer(pointer);
@@ -428,6 +424,14 @@ coro<std::size_t> ec_data_view::read_address(const address& addr,
 
     co_return addr.data_size();
 }
+address ec_data_view::get_aligned_address(const address& addr) const {
+    address aligned_addr;
+    for (auto& frag : addr.fragments) {
+        auto a = split_fragment(frag.pointer, frag.size);
+        aligned_addr.append(a);
+    }
+    return aligned_addr;
+}
 
 coro<std::size_t> ec_data_view::get_used_space() {
     auto storages = m_externals.get_storage_services();
@@ -450,12 +454,7 @@ coro<std::size_t> ec_data_view::get_used_space() {
 }
 
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
-    auto aligned_addr = address{};
-    for (auto& frag : addr.fragments) {
-        auto a = split_fragment(frag.pointer, frag.size);
-        aligned_addr.append(a);
-    }
-
+    address aligned_addr = get_aligned_address(addr);
     auto storages = m_externals.get_storage_services();
     auto addr_map = co_await perform_for_address<address>(
         m_ioc, aligned_addr,
@@ -489,12 +488,7 @@ coro<std::size_t> ec_data_view::get_used_space() {
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {
-    auto aligned_addr = address{};
-    for (auto& frag : addr.fragments) {
-        auto a = split_fragment(frag.pointer, frag.size);
-        aligned_addr.append(a);
-    }
-
+    address aligned_addr = get_aligned_address(addr);
     auto storages = m_externals.get_storage_services();
     auto freed_pages_map = co_await perform_for_address<std::size_t>(
         m_ioc, aligned_addr,
