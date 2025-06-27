@@ -176,22 +176,13 @@ coro<address> ec_data_view::write(std::span<const char> data,
         }
     }
 
-    auto addresses =
-        co_await run_for_all<address, std::shared_ptr<storage_interface>>(
-            m_ioc,
-            [&](size_t i, auto storage) -> coro<address> {
-                auto storage_addr = co_await storage->write(
-                    allocation, storage_buffers_view[i], storage_offsets[i]);
-                address global_addr;
-                // translate storage address into global address
-                for (std::size_t j = 0; j < storage_addr.size(); ++j) {
-                    fragment frag = storage_addr.get(j);
-                    global_addr.emplace_back(
-                        get_global_pointer(frag.pointer, i), frag.size);
-                }
-                co_return global_addr;
-            },
-            storages);
+    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<void> {
+            co_await storage->write(allocation, storage_buffers_view[i],
+                                    storage_offsets[i]);
+        },
+        storages);
 
     address rv;
     std::size_t base_offset = allocation.offset * m_config.data_shards;
