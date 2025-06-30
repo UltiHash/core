@@ -56,8 +56,7 @@ coro<void> handler::handle_dedupe(const messenger::header& hdr, messenger& m) {
         auto e = ce.original_exception();
         if (ce.get_origin() == connection_exception::origin::upstream) {
             if (e.code() != boost::asio::error::eof) {
-                LOG_WARN() << "connection exception from upstream detected: "
-                           << ce.what();
+                LOG_INFO() << "upstream disconnected: " << ce.what();
             }
             throw;
         } else {

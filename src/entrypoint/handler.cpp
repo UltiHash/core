@@ -29,10 +29,15 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
         bool keep_alive = false;
 
         try {
-            rawreq = co_await raw_request::read(s);
-            resp = co_await handle_request(s, rawreq, id).start_trace();
-            metric<success>::increase(1);
-            keep_alive = true;
+            try {
+                rawreq = co_await raw_request::read(s);
+                resp = co_await handle_request(s, rawreq, id).start_trace();
+                metric<success>::increase(1);
+                keep_alive = true;
+            } catch (const boost::system::system_error& e) {
+                throw connection_exception(
+                    connection_exception::origin::upstream, "entrypoint", e);
+            }
         } catch (const error_exception& e) {
             resp = make_response(command_exception(*e.error()));
             keep_alive = true;
@@ -43,9 +48,6 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
             auto e = ce.original_exception();
             if (ce.get_origin() == connection_exception::origin::upstream) {
                 if (e.code() != boost::asio::error::eof) {
-                    LOG_WARN()
-                        << "connection exception from upstream detected: "
-                        << ce.what();
                     LOG_INFO() << s.remote_endpoint() << " disconnected";
                     break;
                 }
@@ -61,9 +63,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 keep_alive = true;
             }
         } catch (const boost::system::system_error& e) {
-            if (e.code() != boost::asio::error::eof) {
-                break;
-            }
+            LOG_FATAL() << "boost::system::system_error should be converted to "
+                           "error_exception with error::internal_network_error";
             throw;
         } catch (const std::exception& e) {
             LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
