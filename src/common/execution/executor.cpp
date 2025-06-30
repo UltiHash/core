@@ -2,25 +2,20 @@
 
 namespace uh::cluster {
 
-executor::executor(unsigned threads)
-    : m_ioc(threads),
-      m_threads(threads) {
+executor::executor(unsigned num_threads)
+    : m_ioc(num_threads),
+      m_stopped{false} {
+    LOG_DEBUG() << "starting executor";
+
+    keep_alive();
+    for (unsigned i = 0; i < num_threads; i++) {
+        m_threads.emplace_back([this]() { m_ioc.run(); });
+    }
 }
 
 void executor::run() {
-    LOG_DEBUG() << "starting executor";
 
-    {
-        std::unique_lock lock(m_stop_mutex);
-        m_stopped = false;
-    }
-
-    std::vector<std::thread> threads;
-    for (unsigned i = 0; i < m_threads; i++) {
-        threads.emplace_back([this](){ m_ioc.run(); });
-    }
-
-    for (auto& t : threads) {
+    for (auto& t : m_threads) {
         t.join();
     }
 
@@ -45,17 +40,19 @@ void executor::stop() {
 void executor::wait() {
     std::unique_lock lock(m_stop_mutex);
     if (!m_stopped) {
-        m_stop_cond.wait(lock, [this](){ return m_stopped; });
+        m_stop_cond.wait(lock, [this]() { return m_stopped; });
     }
 }
 
 void executor::keep_alive() {
-    m_work_guard = std::make_unique<boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>(m_ioc.get_executor());
+    m_work_guard = std::make_unique<
+        boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>(
+        m_ioc.get_executor());
 
     {
         std::unique_lock lock(m_mutex);
-        m_stop_functions.emplace_back([this](){ m_work_guard.reset(); });
+        m_stop_functions.emplace_back([this]() { m_work_guard.reset(); });
     }
 }
 
-}
+} // namespace uh::cluster
