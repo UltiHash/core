@@ -20,11 +20,24 @@ public:
         std::initializer_list<
             std::reference_wrapper<service_observer<service_interface>>>
             observers,
-        callback_t callback = nullptr)
+        callback_t callback = nullptr,
+        std::optional<std::size_t> ignore_id = std::nullopt)
         : m_expected_parent_key{expected_parent_key},
+          m_ignore_id{ignore_id},
           m_service_factory{factory},
           m_observers{observers} {}
 
+    hostports_observer(
+        const std::string& expected_parent_key,
+        service_factory<service_interface> factory,
+        std::initializer_list<
+            std::reference_wrapper<service_observer<service_interface>>>
+            observers,
+        std::size_t ignore_id)
+        : m_expected_parent_key{expected_parent_key},
+          m_ignore_id{ignore_id},
+          m_service_factory{factory},
+          m_observers{observers} {}
     /*
      * listener
      */
@@ -36,6 +49,11 @@ public:
             return false;
 
         auto id = deserialize<std::size_t>(key.filename().string());
+
+        if (m_ignore_id.has_value() and id == m_ignore_id.value()) {
+            LOG_INFO() << "Ignoring service with id " << id;
+            return true;
+        }
 
         switch (get_etcd_action_enum(resp.action)) {
         case etcd_action::GET:
@@ -105,6 +123,7 @@ private:
     }
 
     std::string m_expected_parent_key;
+    std::optional<std::size_t> m_ignore_id;
     service_factory<service_interface> m_service_factory;
     std::vector<std::reference_wrapper<service_observer<service_interface>>>
         m_observers;
