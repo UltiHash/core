@@ -19,7 +19,7 @@ public:
               auto endpoint = resolve(address, port).back();
               return std::make_unique<messenger>(
                   ioc, endpoint.address().to_string(), port,
-                  connection_exception::origin::downstream);
+                  messenger::origin::DOWNSTREAM);
           }},
           m_pool(
               m_ioc, [this]() { return m_messenger_factory(); }, connections) {}

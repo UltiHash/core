@@ -64,7 +64,7 @@ int main(int argc, char* args[]) {
 
     auto ioc = boost::asio::io_context();
     messenger m(ioc, ps.address, static_cast<std::uint16_t>(ps.port),
-                connection_exception::origin::downstream);
+                messenger::origin::DOWNSTREAM);
 
     LOG_INFO() << "Connected to the server";
 

@@ -17,90 +17,80 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
     std::stringstream remote;
     remote << s.remote_endpoint();
 
-    messenger m(std::move(s), connection_exception::origin::upstream);
+    messenger m(std::move(s), messenger::origin::UPSTREAM);
 
     for (;;) {
-        std::optional<error> err;
         messenger_core::header hdr;
         opentelemetry::context::Context context;
 
-        std::tie(hdr, context) = co_await m.recv_header_with_context();
-        LOG_DEBUG() << remote.str() << " received "
-                    << magic_enum::enum_name(hdr.type);
+        std::optional<error> err;
 
         try {
-            co_await handle_iteration(hdr, m).continue_trace(
-                std::move(context));
-        } catch (const std::exception& e) {
-            LOG_WARN() << remote.str()
-                       << " error handling request: " << e.what();
-            break;
+            try {
+                std::tie(hdr, context) = co_await m.recv_header_with_context();
+                LOG_DEBUG() << remote.str() << " received "
+                            << magic_enum::enum_name(hdr.type);
+
+                co_await handle_iteration(hdr, m).continue_trace(
+                    std::move(context));
+
+            } catch (const boost::system::system_error& e) {
+                throw;
+            } catch (const downstream_exception& e) {
+                if (e.code() == boost::asio::error::operation_aborted or
+                    e.code() == boost::beast::error::timeout) {
+                    err = error(error::busy, e.what());
+                } else {
+                    err = error(error::internal_network_error, e.what());
+                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
+            }
+
+            if (err) {
+                LOG_WARN() << hdr.peer
+                           << " error handling request: " << err->message();
+                co_await m.send_error(*err);
+            }
+
+        } catch (const boost::system::system_error& e) {
+            if (e.code() == boost::asio::error::eof) {
+                LOG_INFO() << s.remote_endpoint() << " disconnected";
+                break;
+            }
+            throw;
         }
     };
 }
 
 coro<void> handler::handle_iteration(const messenger::header& hdr,
                                      messenger& m) {
-    std::optional<error> err;
-
-    try {
-        switch (hdr.type) {
-        case STORAGE_WRITE_REQ:
-            co_await handle_write(m, hdr);
-            break;
-        case STORAGE_READ_REQ:
-            co_await handle_read(m, hdr);
-            break;
-        case STORAGE_READ_ADDRESS_REQ:
-            co_await handle_read_address(m, hdr);
-            break;
-        case STORAGE_LINK_REQ:
-            co_await handle_link(m, hdr);
-            break;
-        case STORAGE_UNLINK_REQ:
-            co_await handle_unlink(m, hdr);
-            break;
-        case STORAGE_USED_REQ:
-            co_await handle_get_used(m, hdr);
-            break;
-        case STORAGE_ALLOCATE_REQ:
-            co_await handle_allocate(m, hdr);
-            break;
-        default:
-            throw std::invalid_argument("Invalid message type!");
-        }
-    } catch (const connection_exception& ce) {
-        auto e = ce.original_exception();
-        if (ce.get_origin() == connection_exception::origin::upstream) {
-            if (e.code() != boost::asio::error::eof) {
-                LOG_INFO() << "upstream disconnected: " << ce.what();
-            }
-            throw;
-        } else {
-            if (e.code() == boost::asio::error::operation_aborted or
-                e.code() == boost::beast::error::timeout) {
-                err = error(error::busy, e.what());
-            } else {
-                err = error(error::internal_network_error, e.what());
-            }
-        }
-    } catch (const boost::system::system_error& e) {
-        LOG_FATAL() << "boost::system::system_error should be converted to "
-                       "error_exception with error::internal_network_error";
-        throw;
-    } catch (const error_exception& e) {
-        if (*e.error() == error::internal_network_error ||
-            *e.error() == error::busy) {
-            throw;
-        }
-        err = e.error();
-    } catch (const std::exception& e) {
-        err = error(error::unknown, e.what());
-    }
-
-    if (err) {
-        LOG_WARN() << hdr.peer << " error handling request: " << err->message();
-        co_await m.send_error(*err);
+    switch (hdr.type) {
+    case STORAGE_WRITE_REQ:
+        co_await handle_write(m, hdr);
+        break;
+    case STORAGE_READ_REQ:
+        co_await handle_read(m, hdr);
+        break;
+    case STORAGE_READ_ADDRESS_REQ:
+        co_await handle_read_address(m, hdr);
+        break;
+    case STORAGE_LINK_REQ:
+        co_await handle_link(m, hdr);
+        break;
+    case STORAGE_UNLINK_REQ:
+        co_await handle_unlink(m, hdr);
+        break;
+    case STORAGE_USED_REQ:
+        co_await handle_get_used(m, hdr);
+        break;
+    case STORAGE_ALLOCATE_REQ:
+        co_await handle_allocate(m, hdr);
+        break;
+    default:
+        throw std::invalid_argument("Invalid message type!");
     }
 }
 

@@ -5,7 +5,7 @@
 #include <common/types/common_types.h>
 #include <common/types/scoped_buffer.h>
 #include <common/utils/common.h>
-#include <common/utils/connection_exception.h>
+#include <common/utils/downstream_exception.h>
 #include <common/utils/error.h>
 
 #include <boost/asio.hpp>
@@ -27,11 +27,13 @@ public:
         boost::asio::ip::tcp::endpoint peer;
     };
 
+    enum class origin { UPSTREAM, DOWNSTREAM };
+
     messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
-                   const std::uint16_t port, connection_exception::origin org);
+                   const std::uint16_t port, origin origin);
 
     explicit messenger_core(boost::asio::ip::tcp::socket&& socket,
-                            connection_exception::origin org);
+                            origin origin);
 
     messenger_core(messenger_core&& m) noexcept;
 
@@ -135,7 +137,7 @@ private:
     size_type m_read_size = 0;
     size_type m_write_size = 0;
 
-    connection_exception::origin m_origin;
+    origin m_origin;
 };
 
 } // end namespace uh::cluster
