@@ -33,7 +33,7 @@ public:
 
     using object_lock = value_guard<object, unref>;
 
-    coro<void> put_object(const std::string& bucket, const object& obj);
+    coro<std::string> put_object(const std::string& bucket, const object& obj);
 
     coro<object_lock> get_object(const std::string& bucket,
                                  const std::string& object_id);

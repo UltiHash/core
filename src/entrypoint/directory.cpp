@@ -30,7 +30,7 @@ bucket_versioning to_versioning(std::string s) {
     throw std::runtime_error("unsupported versioning type: " + s);
 }
 
-coro<void> directory::put_object(const std::string& bucket, const object& obj) {
+coro<std::string> directory::put_object(const std::string& bucket, const object& obj) {
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -40,9 +40,10 @@ coro<void> directory::put_object(const std::string& bucket, const object& obj) {
 
     auto handle = co_await m_db.get();
     try {
-        co_await handle->execv("CALL uh_put_object($1, $2, $3, $4, $5, $6)",
+        auto row = co_await handle->execv("SELECT version FROM uh_put_object($1, $2, $3, $4, $5, $6)",
                                bucket, obj.name, span, obj.addr->data_size(),
                                obj.etag, obj.mime);
+        co_return row->string(0);
     } catch (const std::exception& e) {
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");

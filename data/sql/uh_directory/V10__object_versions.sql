@@ -125,6 +125,7 @@ BEGIN
     END IF;
 END
 $$;
+
 --
 -- re-define uh_clear_deleted_buckets()
 --
@@ -135,7 +136,6 @@ BEGIN
         AND NOT EXISTS (SELECT 1 FROM objects o WHERE o.bucket_id = b.id);
 END
 $$;
-
 
 --
 -- Re-define uh_list_buckets()
@@ -303,23 +303,23 @@ $$;
 --
 -- Re-define uh_put_object
 --
--- TODO return object id and version
-CREATE OR REPLACE PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
+DROP PROCEDURE uh_put_object;
+CREATE OR REPLACE FUNCTION uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
+    RETURNS TABLE(id BIGINT, version UUID)
     LANGUAGE plpgsql AS $$
 DECLARE b_id BIGINT;
         o_id BIGINT;
 BEGIN
     SELECT uh_get_bucket_id(bucket) INTO b_id;
 
-    SELECT id INTO o_id FROM uh_get_object(bucket, object);
+    SELECT uh_get_object.id INTO o_id FROM uh_get_object(bucket, object);
 
     IF o_id IS NOT NULL THEN
-        UPDATE objects SET status = 'Deleted' WHERE id = o_id;
+        UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
     END IF;
 
-    EXECUTE 'INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)'
-       USING b_id, object, address, size, ceiled_now(), etag, mime;
+    RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, objects.version;
 END
 $$;
 
