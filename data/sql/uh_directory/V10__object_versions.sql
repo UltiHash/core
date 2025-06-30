@@ -206,12 +206,13 @@ $$;
 --
 -- Re-define uh_get_object()
 --
+DROP FUNCTION uh_get_object(bucket TEXT, object TEXT);
 CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
+    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID)
     LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime
+        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version
          FROM objects o
          WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND status = 'Normal'
         ORDER BY id DESC
@@ -303,7 +304,7 @@ $$;
 --
 -- Re-define uh_put_object
 --
-DROP PROCEDURE uh_put_object;
+DROP PROCEDURE uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT);
 CREATE OR REPLACE FUNCTION uh_put_object(bucket TEXT, object TEXT, address BYTEA, size BIGINT, etag TEXT, mime TEXT)
     RETURNS TABLE(id BIGINT, version UUID)
     LANGUAGE plpgsql AS $$

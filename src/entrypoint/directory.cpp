@@ -69,7 +69,7 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
     address addr = to_address(*addr_data);
 
     auto metadata =
-        co_await handle->execv("SELECT size, last_modified, etag, mime, id "
+        co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
                                "FROM uh_get_object($1, $2)",
                                bucket, object_id);
 
@@ -95,7 +95,8 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
                                  .size = *metadata->size_type(0),
                                  .addr = std::move(addr),
                                  .etag = metadata->string(2),
-                                 .mime = metadata->string(3)},
+                                 .mime = metadata->string(3),
+                                 .version = metadata->string(5)},
                           unref{std::move(p)});
 }
 
