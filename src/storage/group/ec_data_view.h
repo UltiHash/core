@@ -171,10 +171,9 @@ private:
     address split_fragment(const uint128_t& pointer,
                            std::size_t read_size) const;
 
-    std::vector<std::vector<std::size_t>>
-    prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
-                           std::size_t stripe_index,
-                           std::size_t stripe_data_size) const;
+    std::size_t get_stripe_frag_count(const std::vector<std::size_t>& offsets,
+                                      std::size_t stripe_index,
+                                      std::size_t stripe_data_size) const;
     address compute_parity_address(const address& addr);
     address get_aligned_address(const address& addr) const;
 };

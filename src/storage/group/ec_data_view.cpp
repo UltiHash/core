@@ -30,52 +30,27 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
-std::vector<std::vector<std::size_t>>
-ec_data_view::prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
-                                     std::size_t stripe_index,
-                                     std::size_t stripe_data_size) const {
-    auto base_offset = stripe_index * m_chunk_size;
-    auto stripe_offsets = std::vector<std::vector<std::size_t>>(
-        m_config.data_shards + m_config.parity_shards);
-
-    // translate offsets into chunk-local offsets for each stripe.
+std::size_t
+ec_data_view::get_stripe_frag_count(const std::vector<std::size_t>& offsets,
+                                    std::size_t stripe_index,
+                                    std::size_t stripe_data_size) const {
     const std::size_t stripe_offset = stripe_index * m_stripe_size;
     auto current_offset =
         std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
 
-    for (size_t j = 0; j < m_config.data_shards; ++j) {
-        const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
-        if (stripe_data_size > j * m_chunk_size) {
-            // if chunk actually contains user data, and if so add a zero
-            // offset to denote the start of the chunk and thus a new
-            // fragment, as fragments may not span across chunks
-            stripe_offsets[j].push_back(0 + base_offset);
-        }
-        while (current_offset != offsets.end() &&
-               *current_offset < chunk_offset + m_chunk_size) {
-            auto local_offset = *current_offset - chunk_offset;
-            if (local_offset != 0) {
-                stripe_offsets[j].push_back(local_offset + base_offset);
-            }
-            ++current_offset;
+    std::size_t frag_count = 1;
+
+    while (current_offset != offsets.end() &&
+           *current_offset < stripe_offset + stripe_data_size) {
+        if (*current_offset != stripe_offset) {
+            frag_count++;
+            current_offset++;
         }
     }
 
-    std::size_t num_fragments = std::accumulate(
-        stripe_offsets.begin(), stripe_offsets.end(), 0ul,
-        [](std::size_t acc, const std::vector<std::size_t>& chunk_offsets) {
-            return acc + chunk_offsets.size();
-        });
-
-    // goal: stripe_offsets[p].size() for any p == num_fragments
-    for (std::size_t p = m_config.data_shards;
-         p < m_config.data_shards + m_config.parity_shards; ++p) {
-        for (std::size_t o = 0; o < num_fragments; ++o) {
-            stripe_offsets[p].push_back(0 + base_offset);
-        }
-    }
-    return stripe_offsets;
+    return frag_count;
 }
+
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
 
@@ -124,11 +99,8 @@ coro<address> ec_data_view::write(std::span<const char> data,
         storage_buffers_view[m_config.data_shards + i].push_back(parities[i]);
     }
 
-    std::vector<std::vector<std::size_t>> storage_offsets;
-    storage_offsets.reserve(m_config.storages);
-    for (size_t i = 0; i < m_config.storages; ++i) {
-        storage_offsets.emplace_back();
-    }
+    std::vector<std::size_t> stripe_refcounts;
+    stripe_refcounts.reserve(num_stripes);
 
     std::optional<unique_buffer<>> last_stripe;
 
@@ -166,21 +138,15 @@ coro<address> ec_data_view::write(std::span<const char> data,
         }
 
         m_rs.encode(data_view, parity_view);
-
-        auto stripe_offsets =
-            prepare_stripe_offsets(offsets, i, data_view_size);
-        for (size_t j = 0; j < m_config.storages; ++j) {
-            storage_offsets[j].insert(storage_offsets[j].end(),
-                                      stripe_offsets[j].begin(),
-                                      stripe_offsets[j].end());
-        }
+        stripe_refcounts.push_back(
+            get_stripe_frag_count(offsets, i, data_view_size));
     }
 
     co_await run_for_all<void, std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<void> {
             co_await storage->write(allocation, storage_buffers_view[i],
-                                    storage_offsets[i]);
+                                    stripe_refcounts[i]);
         },
         storages);
 
