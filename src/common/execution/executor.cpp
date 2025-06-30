@@ -7,13 +7,16 @@ executor::executor(unsigned num_threads)
       m_stopped{false} {
     LOG_DEBUG() << "starting executor";
 
-    keep_alive();
+    m_temp_work_guard = std::make_unique<
+        boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>(
+        m_ioc.get_executor());
     for (unsigned i = 0; i < num_threads; i++) {
         m_threads.emplace_back([this]() { m_ioc.run(); });
     }
 }
 
 void executor::run() {
+    m_temp_work_guard.reset();
 
     for (auto& t : m_threads) {
         t.join();
