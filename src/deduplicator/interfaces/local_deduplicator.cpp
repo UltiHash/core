@@ -43,6 +43,11 @@ local_deduplicator::local_deduplicator(deduplicator_config config,
 
 coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
     auto span = co_await boost::asio::this_coro::span;
+
+    auto peer =
+        boost::asio::context::get_pointer<boost::asio::ip::tcp::endpoint>(
+            span->context(), "peer");
+
     span->set_attribute("data-size", data.size());
 
     fragmentation fragments;
@@ -92,37 +97,43 @@ coro<dedupe_response> local_deduplicator::deduplicate(std::string_view data) {
             auto rejected = co_await m_storage.link(stored_fragments);
 
             if (!rejected.empty()) {
-                LOG_DEBUG() << rejected.size() << " fragments rejected, "
-                            << rejected.data_size() << " in bytes";
+                LOG_DEBUG() << *peer << ": " << rejected.size()
+                            << " fragments rejected, " << rejected.data_size()
+                            << " in bytes";
                 co_await m_dedupe_workers.post_in_workers(
                     [this, &rejected, &fragments] {
                         fragments.handle_rejected_fragments(rejected,
                                                             m_fragment_set);
                     });
-                LOG_DEBUG() << "handle_rejected_fragments done";
+                LOG_DEBUG() << *peer << ": "
+                            << "handle_rejected_fragments done";
             }
         }
     }
 
     span->add_event("deduplicator-flush-storage");
     {
-        LOG_DEBUG() << "flushing unstored data to storage";
+        LOG_DEBUG() << *peer << ": "
+                    << "flushing unstored data to storage";
         co_await fragments.flush_storage(m_storage);
     }
 
     span->add_event("deduplicator-flush-fragments");
     {
-        LOG_DEBUG() << "flushing fragments to fragment set";
+        LOG_DEBUG() << *peer << ": "
+                    << "flushing fragments to fragment set";
         co_await m_dedupe_workers.post_in_workers([this, &fragments] {
             fragments.flush_fragment_set(m_fragment_set);
         });
     }
 
-    LOG_DEBUG() << "creating deduplication response";
+    LOG_DEBUG() << *peer << ": "
+                << "creating deduplication response";
     dedupe_response result{.effective_size = fragments.effective_size(),
                            .addr = fragments.make_address()};
 
-    LOG_DEBUG() << "deduplicate finished: " << result.effective_size
+    LOG_DEBUG() << *peer << ": "
+                << "deduplicate finished: " << result.effective_size
                 << " effective bytes, " << result.addr.data_size()
                 << " raw bytes, " << result.addr.size() << " fragments";
     co_return result;
