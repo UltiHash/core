@@ -1,11 +1,12 @@
 #pragma once
 
-#include "common/telemetry/log.h"
-#include "common/telemetry/metrics.h"
-#include "common/types/common_types.h"
-#include "common/types/scoped_buffer.h"
-#include "common/utils/common.h"
-#include "common/utils/error.h"
+#include <common/telemetry/log.h>
+#include <common/telemetry/metrics.h>
+#include <common/types/common_types.h>
+#include <common/types/scoped_buffer.h>
+#include <common/utils/common.h>
+#include <common/utils/downstream_exception.h>
+#include <common/utils/error.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
@@ -26,12 +27,17 @@ public:
         boost::asio::ip::tcp::endpoint peer;
     };
 
-    messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
-                   const std::uint16_t port);
+    enum class origin { UPSTREAM, DOWNSTREAM };
 
-    explicit messenger_core(boost::asio::ip::tcp::socket&& socket);
+    messenger_core(boost::asio::io_context& ioc, const std::string& ip_addr,
+                   const std::uint16_t port, origin origin);
+
+    explicit messenger_core(boost::asio::ip::tcp::socket&& socket,
+                            origin origin);
 
     messenger_core(messenger_core&& m) noexcept;
+
+    bool connected() { return m_tcp_stream.socket().is_open(); }
 
     template <typename T>
     requires(std::is_trivially_copyable_v<T> and
@@ -93,7 +99,8 @@ public:
         m_write_size += buf.size();
     }
 
-    coro<header> recv_header();
+    coro<header> recv_header(std::optional<std::chrono::steady_clock::duration>
+                                 timeout = std::nullopt);
 
     coro<std::tuple<header, opentelemetry::context::Context>>
     recv_header_with_context();
@@ -130,8 +137,7 @@ private:
     size_type m_read_size = 0;
     size_type m_write_size = 0;
 
-    error_exception create_internal_network_error(const std::string& message,
-                                                  const std::exception& e);
+    origin m_origin;
 };
 
 } // end namespace uh::cluster

@@ -67,42 +67,36 @@ coro<response> put_object::handle(request& req) {
     response res;
 
     auto content_length = req.content_length();
-    try {
-        m_limits.check_storage_size(content_length);
+    m_limits.check_storage_size(content_length);
 
-        md5 hash;
+    md5 hash;
 
-        dedupe_response resp;
-        if (content_length >= m_config.buffer_size) {
-            resp = co_await put_large_object(req, hash);
-        } else {
-            resp = co_await put_small_object(req, hash);
-        }
-
-        auto tag = to_hex(hash.finalize());
-        LOG_DEBUG() << req.peer() << ": etag: " << tag;
-
-        auto original_size = resp.addr.data_size();
-        object obj{.name = req.object_key(),
-                   .size = original_size,
-                   .addr = std::move(resp.addr),
-                   .etag = tag,
-                   .mime = req.header("Content-Type")
-                               .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
-
-        { co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj); }
-
-        metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
-            static_cast<double>(content_length) / MEBI_BYTE);
-
-        res.set("ETag", tag);
-        res.set_original_size(original_size);
-        res.set_effective_size(resp.effective_size);
-    } catch (const error_exception& e) {
-        LOG_ERROR() << req.peer() << " failed to get bucket `" << req.bucket()
-                    << "`: " << e;
-        throw_from_error(e.error());
+    dedupe_response resp;
+    if (content_length >= m_config.buffer_size) {
+        resp = co_await put_large_object(req, hash);
+    } else {
+        resp = co_await put_small_object(req, hash);
     }
+
+    auto tag = to_hex(hash.finalize());
+    LOG_DEBUG() << req.peer() << ": etag: " << tag;
+
+    auto original_size = resp.addr.data_size();
+    object obj{.name = req.object_key(),
+               .size = original_size,
+               .addr = std::move(resp.addr),
+               .etag = tag,
+               .mime = req.header("Content-Type")
+                           .value_or(ep::DEFAULT_OBJECT_CONTENT_TYPE)};
+
+    { co_await safe_put_object(m_dir, m_gdv, req.bucket(), obj); }
+
+    metric<entrypoint_ingested_data_counter, mebibyte, double>::increase(
+        static_cast<double>(content_length) / MEBI_BYTE);
+
+    res.set("ETag", tag);
+    res.set_original_size(original_size);
+    res.set_effective_size(resp.effective_size);
 
     co_return res;
 }
