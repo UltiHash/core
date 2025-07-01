@@ -6,6 +6,7 @@
 #include <ostream>
 
 #define TEST_DATA_DIR "@CMAKE_SOURCE_DIR@/data"
+#define UH_BINARY_DIR "@PROJECT_BINARY_DIR@"
 #define UH_CLUSTER_EXECUTABLE "@PROJECT_BINARY_DIR@/bin/uh-cluster"
 
 static constexpr const char* test_license_string =
