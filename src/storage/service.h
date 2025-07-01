@@ -9,7 +9,6 @@
 #include <common/etcd/registry/service_registry.h>
 #include <common/etcd/service.h>
 #include <common/etcd/utils.h>
-#include <common/execution/executor.h>
 #include <common/license/license_watcher.h>
 #include <common/network/server.h>
 #include <common/utils/scope_guard.h>
@@ -37,7 +36,7 @@ data_store_config make_ds_config(const data_store_config& current_config,
 class service {
 public:
     service(const service_config& service_config, const storage_config& sc)
-        : m_executor(sc.server.threads),
+        : m_ioc(sc.server.threads),
           m_etcd{service_config.etcd_config},
           m_license_watcher(m_etcd),
           m_storage_id{sc.instance_id},
@@ -52,8 +51,7 @@ public:
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),
               sc.working_directory)),
-          m_server(sc.server, std::make_unique<handler>(*m_storage),
-                   m_executor),
+          m_server(sc.server, std::make_unique<handler>(*m_storage), m_ioc),
           m_service_registry(m_etcd,
                              ns::root.storage_groups[m_group_id]
                                  .storage_hostports[m_storage_id],
@@ -61,7 +59,7 @@ public:
           m_ec_maintainer(
               (m_group_config.type == group_config::type_t::ERASURE_CODING)
                   ? std::make_optional<ec_maintainer>(
-                        m_executor, m_etcd, m_group_config, m_storage_id,
+                        m_ioc, m_etcd, m_group_config, m_storage_id,
                         service_config, sc.global_data_view, m_storage)
                   : std::nullopt) {
         metric<storage_available_space_gauge, byte, int64_t>::
@@ -96,16 +94,16 @@ public:
         });
     }
 
-    void run() { m_executor.run(); }
+    void run() { m_server.run(); }
 
-    void stop() { m_executor.stop(); }
+    void stop() { m_server.stop(); }
 
     size_t id() const noexcept { return m_storage_id; }
 
     std::shared_ptr<local_storage> get_local_interface() { return m_storage; }
 
 private:
-    executor m_executor;
+    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
     license_watcher m_license_watcher;
     std::size_t m_storage_id;

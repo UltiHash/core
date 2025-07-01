@@ -1,5 +1,10 @@
 #pragma once
 
+#include <boost/asio.hpp>
+#include <boost/asio/async_result.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <common/coroutines/async_wrap.h>
 #include <common/telemetry/log.h>
 #include <cpr/cpr.h>

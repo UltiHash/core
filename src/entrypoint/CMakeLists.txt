@@ -67,4 +67,4 @@ add_library(entrypoint
             policy/module.cpp
             policy/variables.cpp)
 
-target_link_libraries(entrypoint db etcd nlohmann_json deduplicator storage uhcrypto utils license execution)
+target_link_libraries(entrypoint db etcd nlohmann_json deduplicator storage uhcrypto utils license)
