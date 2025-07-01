@@ -97,6 +97,14 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION uh_get_bucket_info(bucket TEXT)
+    RETURNS TABLE(id BIGINT, versioning versioning_type)
+LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY SELECT buckets.id, buckets.versioning FROM buckets WHERE name = bucket AND status = 'Normal';
+END;
+$$;
+
 --
 -- re-define uh_delete_bucket()
 --
@@ -178,15 +186,17 @@ $$;
 CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, object TEXT)
     LANGUAGE plpgsql AS $$
 DECLARE
+    b_versioning versioning_type;
     obj_id BIGINT;
 BEGIN
-    SELECT id INTO obj_id
-    FROM objects WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND status = 'Normal'
-    ORDER BY id DESC
-    LIMIT 1;
-
+    SELECT versioning FROM uh_get_bucket_info(bucket) INTO b_versioning;
+    SELECT id FROM uh_get_object(bucket, object) INTO obj_id;
     IF obj_id IS NULL THEN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
+    END IF;
+
+    IF b_versioning = 'Enabled' THEN
+        SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
     END IF;
 
     UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
@@ -208,13 +218,31 @@ $$;
 --
 DROP FUNCTION uh_get_object(bucket TEXT, object TEXT);
 CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID)
+    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
     LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version
+        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o
+          JOIN (
+            SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
+          ) temp ON o.id = temp.max_id
+          WHERE o.bucket_id = uh_get_bucket_id(bucket) AND o.name = object AND o.status = 'Normal'
+          ORDER BY id DESC
+          LIMIT 1;
+END;
+$$;
+
+--
+-- define uh_get_object_by_version()
+--
+CREATE OR REPLACE FUNCTION uh_get_object_by_version(bucket TEXT, object TEXT, ver UUID)
+    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
+    LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY
+        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status
          FROM objects o
-         WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND status = 'Normal'
+         WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND o.version = ver
         ORDER BY id DESC
         LIMIT 1;
 END;
@@ -223,16 +251,18 @@ $$;
 --
 -- Re-define uh_list_objects(bucket)
 --
--- TODO group by version
+DROP FUNCTION uh_list_objects(bucket TEXT);
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT)
-    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
+    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
     LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     RETURN QUERY
-        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime FROM objects o
-        WHERE o.bucket_id = uh_get_bucket_id(bucket)
-          AND o.status = 'Normal'
+        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o
+        JOIN (
+            SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
+        ) temp ON o.id = temp.max_id
+        WHERE o.bucket_id = uh_get_bucket_id(bucket) AND o.status = 'Normal'
         ORDER BY o.name;
 END;
 $$;
@@ -240,14 +270,17 @@ $$;
 --
 -- Re-define uh_list_objects(bucket, prefix)
 --
--- TODO group by version
+DROP FUNCTION uh_list_objects(bucket TEXT, prefix TEXT);
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT)
-    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
+    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
     LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     RETURN QUERY
-        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime FROM objects o
+        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o
+        JOIN (
+            SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
+        ) temp ON o.id = temp.max_id
         WHERE o.bucket_id = uh_get_bucket_id(bucket)
           AND o.name LIKE prefix || '%'
           AND o.status = 'Normal'
@@ -258,14 +291,17 @@ $$;
 --
 -- Re-define uh_list_objects(bucket, prefix, lower_bound)
 --
--- TODO group by version
+DROP FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound TEXT);
 CREATE OR REPLACE FUNCTION uh_list_objects(bucket TEXT, prefix TEXT, lower_bound TEXT)
-    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT)
+    RETURNS TABLE(id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
     LANGUAGE plpgsql AS $$
 BEGIN
     CALL uh_check_bucket(bucket);
     RETURN QUERY
-        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime FROM objects o
+        SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o
+        JOIN (
+            SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
+        ) temp ON o.id = temp.max_id
         WHERE o.bucket_id = uh_get_bucket_id(bucket)
           AND o.name LIKE prefix || '%'
           AND o.status = 'Normal'
@@ -287,8 +323,9 @@ BEGIN
     SELECT o.id, o.address
        INTO target_id, target_address
     FROM objects o
-    LEFT JOIN object_refs r on o.id = r.object_id
-    WHERE o.status = 'Deleted' AND r.object_id IS NULL
+    LEFT JOIN object_refs r ON o.id = r.object_id
+    LEFT JOIN buckets b ON b.id = o.bucket_id
+    WHERE o.status = 'Deleted' AND r.object_id IS NULL AND b.versioning = 'Disabled'
     LIMIT 1;
 
     IF NOT FOUND THEN
@@ -309,13 +346,13 @@ CREATE OR REPLACE FUNCTION uh_put_object(bucket TEXT, object TEXT, address BYTEA
     RETURNS TABLE(id BIGINT, version UUID)
     LANGUAGE plpgsql AS $$
 DECLARE b_id BIGINT;
+        b_ver versioning_type;
         o_id BIGINT;
 BEGIN
-    SELECT uh_get_bucket_id(bucket) INTO b_id;
+    SELECT uh_get_bucket_info.id, versioning FROM uh_get_bucket_info(bucket) INTO b_id, b_ver;
+    SELECT uh_get_object.id FROM uh_get_object(bucket, object) INTO o_id;
 
-    SELECT uh_get_object.id INTO o_id FROM uh_get_object(bucket, object);
-
-    IF o_id IS NOT NULL THEN
+    IF o_id IS NOT NULL AND b_ver != 'Enabled' THEN
         UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
     END IF;
 
