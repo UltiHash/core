@@ -1,7 +1,6 @@
 #pragma once
 
 #include <common/etcd/service.h>
-#include <common/execution/executor.h>
 #include <memory>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
