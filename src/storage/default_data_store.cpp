@@ -74,6 +74,7 @@ default_data_store::default_data_store(data_store_config conf,
           m_root, m_conf.page_size,
           std::bind_front(&default_data_store::internal_delete, this)) {
 
+    (void)m_storage_id;
     if (m_filesize % m_conf.page_size != 0) {
         throw std::runtime_error(
             "data store file size must be a multiple of ref-counter page size");
