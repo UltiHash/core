@@ -7,6 +7,7 @@
 namespace uh::cluster {
 
 struct service_config {
+    std::size_t threads = 1;
     uh::cluster::etcd_config etcd_config;
     std::filesystem::path working_dir = "/var/lib/uh";
     std::string telemetry_url;

@@ -11,8 +11,9 @@ namespace uh::cluster {
 constexpr std::size_t PREFIX_SIZE = 16;
 
 struct deduplicator_config {
+    std::size_t num_threads = 10;
+
     server_config server = {
-        .threads = 10,
         .port = 9300,
         .bind_address = "0.0.0.0",
     };

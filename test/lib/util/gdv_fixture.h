@@ -86,9 +86,9 @@ public:
     void teardown() {
         m_gdv.reset();
 
-        for (const auto& node : m_storage_instances) {
+        for (auto& node : m_storage_instances) {
             if (node != nullptr)
-                node->stop();
+                node.reset();
         }
 
         m_storage_instances.clear();
@@ -115,7 +115,6 @@ public:
     void deactivate_storage(std::size_t id) {
         auto& node = m_storage_instances.at(id);
         if (node != nullptr) {
-            node->stop();
             node.reset();
         }
     }
@@ -132,7 +131,7 @@ public:
         storage_cfg.instance_id = id;
         storage_cfg.group_id = m_config.id;
         m_storage_instances[id] =
-            std::make_unique<storage::service>(service_cfg, storage_cfg);
+            std::make_unique<storage::service>(m_ioc, service_cfg, storage_cfg);
     }
 
     void introduce_new_storage(std::size_t id,

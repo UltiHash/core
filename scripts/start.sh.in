@@ -288,7 +288,7 @@ while true; do
     fi
 done
 
-echo "Killing all spawned processes. It can take more than 5 seconds."
+echo "Killing all spawned processes."
 pkill uh-cluster
 
 sleep 0.3 

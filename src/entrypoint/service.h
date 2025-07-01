@@ -19,15 +19,11 @@ namespace uh::cluster::ep {
 
 class service {
 public:
-    service(const service_config& sc, entrypoint_config config);
-
-    void run();
-
-    void stop();
+    service(boost::asio::io_context& ioc, const service_config& sc,
+            entrypoint_config config);
 
 private:
     entrypoint_config m_config;
-    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
     std::size_t m_service_id;
 

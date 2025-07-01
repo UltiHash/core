@@ -19,35 +19,23 @@ namespace uh::cluster::deduplicator {
 
 class service {
 public:
-    explicit service(const service_config& sc,
+    explicit service(boost::asio::io_context& ioc, const service_config& sc,
                      const deduplicator_config& config)
-        : m_ioc(boost::asio::io_context(config.server.threads)),
-          m_etcd{sc.etcd_config},
+        : m_etcd{sc.etcd_config},
           m_service_id(get_service_id(m_etcd,
                                       get_service_string(DEDUPLICATOR_SERVICE),
                                       config.working_dir)),
-          m_gdv{m_ioc, m_etcd, config.global_data_view},
-          m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
+          m_gdv{ioc, m_etcd, config.global_data_view},
+          m_cache(ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
           m_deduplicator(
               std::make_shared<local_deduplicator>(config, m_gdv, m_cache)),
           m_server(config.server, std::make_unique<handler>(*m_deduplicator),
-                   m_ioc),
+                   ioc),
           m_service_registry(m_etcd,
                              ns::root.deduplicator.hostports[m_service_id],
                              config.server.port) {}
 
-    void run() { m_server.run(); }
-
-    void stop() { m_server.stop(); }
-
-    std::shared_ptr<local_deduplicator> get_local_interface() {
-        return m_deduplicator;
-    }
-
-    size_t id() const noexcept { return m_service_id; }
-
 private:
-    boost::asio::io_context m_ioc;
     etcd_manager m_etcd;
     std::size_t m_service_id;
 
