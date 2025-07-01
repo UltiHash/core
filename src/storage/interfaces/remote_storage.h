@@ -21,14 +21,16 @@ struct remote_storage : public storage_interface {
             .allocation = allocation, .buffers = buffers, .offsets = offsets};
 
         co_await m->send_write(req);
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_address(message_header);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_address(h);
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_fragment(STORAGE_READ_REQ, {pointer, size});
-        const auto h = co_await m->recv_header();
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
         shared_buffer<> buffer(h.size);
         m->register_read_buffer(buffer.data(), buffer.size());
         co_await m->recv_buffers(h);
@@ -41,7 +43,9 @@ struct remote_storage : public storage_interface {
 
         co_await m->send_address(STORAGE_READ_ADDRESS_REQ, addr);
 
-        const auto h = co_await m->recv_header();
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+
         m->reserve_read_buffers(addr.size());
         for (size_t i = 0; i < addr.size(); ++i) {
             m->register_read_buffer(buffer.data() + offsets.at(i),
@@ -54,22 +58,25 @@ struct remote_storage : public storage_interface {
     coro<address> link(const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_address(STORAGE_LINK_REQ, addr);
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_address(message_header);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_address(h);
     }
 
     coro<std::size_t> unlink(const address& addr) override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send_address(STORAGE_UNLINK_REQ, addr);
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_primitive<size_t>(message_header);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_primitive<size_t>(h);
     }
 
     coro<std::size_t> get_used_space() override {
         auto m = co_await m_storage_service.acquire_messenger();
         co_await m->send(STORAGE_USED_REQ, {});
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_primitive<size_t>(message_header);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_primitive<size_t>(h);
     }
 
     coro<allocation_t> allocate(std::size_t size,
@@ -78,8 +85,9 @@ struct remote_storage : public storage_interface {
         m->register_write_buffer(size);
         m->register_write_buffer(alignment);
         co_await m->send_buffers(STORAGE_ALLOCATE_REQ);
-        const auto message_header = co_await m->recv_header();
-        co_return co_await m->recv_allocation(message_header);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_allocation(h);
     }
 
 private:

@@ -16,9 +16,7 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    enum class flow_control : uint8_t { BREAK, CONTINUE };
-    coro<flow_control> handle_dedupe(const messenger::header& hdr,
-                                     messenger& m);
+    coro<void> handle_dedupe(const messenger::header& hdr, messenger& m);
 
     local_deduplicator& m_local_dedupe;
 };
