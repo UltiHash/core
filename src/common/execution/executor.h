@@ -36,12 +36,6 @@ public:
     void wait();
 
     /**
-     * Block executor from exiting on its own. This creates a work_guard that is
-     * reset when calling `stop()`
-     */
-    void keep_alive();
-
-    /**
      * Access underlying executor.
      */
     boost::asio::io_context& get_executor() { return m_ioc; }
@@ -160,9 +154,11 @@ private:
         boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>
         m_work_guard;
 
-    std::unique_ptr<
-        boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>
-        m_temp_work_guard;
+    /**
+     * Block executor from exiting on its own. This creates a work_guard that is
+     * reset when calling `stop()`
+     */
+    void keep_alive();
 };
 
 } // namespace uh::cluster
