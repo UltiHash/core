@@ -14,7 +14,7 @@ namespace uh::cluster {
 
 class executor {
 public:
-    executor(unsigned num_threads = 1);
+    executor(unsigned threads = 1);
 
     /**
      * Run the executor until all jobs are finished. This spawns the configured
@@ -34,6 +34,12 @@ public:
      * executor is not running.
      */
     void wait();
+
+    /**
+     * Block executor from exiting on its own. This creates a work_guard that is
+     * reset when calling `stop()`
+     */
+    void keep_alive();
 
     /**
      * Access underlying executor.
@@ -139,26 +145,19 @@ private:
     }
 
     boost::asio::io_context m_ioc;
-
-    std::vector<std::thread> m_threads;
+    unsigned m_threads;
 
     std::mutex m_mutex;
     std::list<std::function<void()>> m_stop_functions;
     std::stop_source m_stop;
 
     std::mutex m_stop_mutex;
-    bool m_stopped;
+    bool m_stopped = true;
     std::condition_variable m_stop_cond;
 
     std::unique_ptr<
         boost::asio::executor_work_guard<decltype(m_ioc.get_executor())>>
         m_work_guard;
-
-    /**
-     * Block executor from exiting on its own. This creates a work_guard that is
-     * reset when calling `stop()`
-     */
-    void keep_alive();
 };
 
 } // namespace uh::cluster

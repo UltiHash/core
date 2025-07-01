@@ -2,20 +2,24 @@
 
 namespace uh::cluster {
 
-executor::executor(unsigned num_threads)
-    : m_ioc(num_threads),
-      m_stopped{false} {
-    LOG_DEBUG() << "starting executor";
-
-    keep_alive();
-    for (unsigned i = 0; i < num_threads; i++) {
-        m_threads.emplace_back([this]() { m_ioc.run(); });
-    }
-}
+executor::executor(unsigned threads)
+    : m_ioc(threads),
+      m_threads(threads) {}
 
 void executor::run() {
+    LOG_DEBUG() << "starting executor";
 
-    for (auto& t : m_threads) {
+    {
+        std::unique_lock lock(m_stop_mutex);
+        m_stopped = false;
+    }
+
+    std::vector<std::thread> threads;
+    for (unsigned i = 0; i < m_threads; i++) {
+        threads.emplace_back([this]() { m_ioc.run(); });
+    }
+
+    for (auto& t : threads) {
         t.join();
     }
 
