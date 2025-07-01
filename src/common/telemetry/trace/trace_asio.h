@@ -98,7 +98,6 @@ inline void set_baggage(opentelemetry::context::Context& ctx,
     ctx = ctx.SetValue("baggage", new_baggage);
 }
 
-// baggage get 함수
 inline std::string get_baggage(const opentelemetry::context::Context& ctx,
                                const std::string& key) {
     auto baggage_val = ctx.GetValue("baggage");
