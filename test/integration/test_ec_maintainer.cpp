@@ -26,7 +26,7 @@ public:
     virtual ~basic_fixture() { m_etcd.clear_all(); }
 
 protected:
-    executor m_executor;
+    boost::asio::io_context m_ioc;
     const std::size_t m_num_instances = 4;
     group_config m_group_cfg{.id = 0,
                              .type = group_config::type_t::ERASURE_CODING,
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(is_created_and_destroys) {
     service_config service_cfg{.working_dir = dir.path()};
 
     temp_directory storage_dir;
-    ec_maintainer maintainer(m_executor, thread_local_etcd, m_group_cfg, 0,
+    ec_maintainer maintainer(m_ioc, thread_local_etcd, m_group_cfg, 0,
                              service_cfg, m_gdv_cfg,
                              std::make_shared<local_storage>(
                                  0, data_store_config{}, storage_dir.path()));
@@ -73,8 +73,8 @@ public:
                 i, data_store_config{}, m_storage_dirs[i].path()));
             m_wo_interfaces.back()->set_write_offset(i * 1_KiB);
             m_ec_maintainers.emplace_back(std::make_unique<ec_maintainer>(
-                m_executor, *m_etcds.back(), m_group_cfg, i, service_cfg,
-                m_gdv_cfg, m_wo_interfaces.back()));
+                m_ioc, *m_etcds.back(), m_group_cfg, i, service_cfg, m_gdv_cfg,
+                m_wo_interfaces.back()));
         }
     }
 
@@ -329,10 +329,10 @@ BOOST_AUTO_TEST_CASE(determine_repairing_group_state) {
     {
         service_config service_cfg{.working_dir = dir.path()};
         m_ec_maintainers[leader_id] = std::make_unique<ec_maintainer>(
-            m_executor, *m_etcds[leader_id], m_group_cfg, leader_id,
-            service_cfg, m_gdv_cfg, m_wo_interfaces[leader_id]);
+            m_ioc, *m_etcds[leader_id], m_group_cfg, leader_id, service_cfg,
+            m_gdv_cfg, m_wo_interfaces[leader_id]);
     }
-    auto thread = std::jthread([&]() { m_executor.get_executor().run(); });
+    auto thread = std::jthread([&]() { m_ioc.run(); });
 
     TEST_FOR(wait_for_group_state_key() &&
                  *m_group_state_observer.get() == group_state::REPAIRING,
