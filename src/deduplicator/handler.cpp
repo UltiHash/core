@@ -10,10 +10,10 @@ handler::handler(local_deduplicator& local_dedupe)
     : m_local_dedupe(local_dedupe) {}
 
 coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
-    std::stringstream remote;
-    remote << s.remote_endpoint();
-
     messenger m(std::move(s), messenger::origin::UPSTREAM);
+    auto peer = m.peer();
+    std::stringstream remote;
+    remote << peer;
 
     for (;;) {
         messenger_core::header hdr;
@@ -26,6 +26,8 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
                 std::tie(hdr, context) = co_await m.recv_header_with_context();
                 LOG_DEBUG() << remote.str() << " received "
                             << magic_enum::enum_name(hdr.type);
+                
+                boost::asio::context::set_pointer(context, "peer", &peer);
 
                 co_await handle_dedupe(hdr, m).continue_trace(
                     std::move(context));
