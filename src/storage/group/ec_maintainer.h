@@ -1,31 +1,30 @@
 #pragma once
 
 #include <common/etcd/service.h>
+#include <common/execution/executor.h>
 #include <memory>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
 #include <storage/group/externals.h>
 #include <storage/group/internals.h>
+#include <storage/group/repairer.h>
+#include <storage/interfaces/local_storage.h>
 
 namespace uh::cluster::storage {
 
-template <typename T>
-concept SupportsWriteOffset = requires(T t, std::size_t offset) {
-    { t.get_write_offset() } -> std::same_as<std::size_t>;
-    { t.set_write_offset(offset) } -> std::same_as<void>;
-};
-
-template <SupportsWriteOffset T> class ec_maintainer {
+class ec_maintainer {
 public:
-    ec_maintainer(etcd_manager& etcd, const group_config& group_cfg,
-                  std::size_t storage_id, const service_config& service_cfg,
+    ec_maintainer(executor& executor, etcd_manager& etcd,
+                  const group_config& group_cfg, std::size_t storage_id,
+                  const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
-                  std::shared_ptr<T> write_offset_interface)
-        : m_etcd{etcd},
+                  std::shared_ptr<local_storage> my_storage)
+        : m_executor{executor},
+          m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
 
-          m_write_offset_interface{write_offset_interface},
+          m_my_storage{my_storage},
 
           m_group_state_manager{etcd, group_cfg.id},
 
@@ -100,7 +99,7 @@ private:
 
     void election_handler(bool is_leader) {
 
-        auto write_offset = m_write_offset_interface->get_write_offset();
+        auto write_offset = m_my_storage->get_write_offset();
         LOG_DEBUG() << std::format("[group {}, storage {}] put offset: {}",
                                    m_group_config.id, m_storage_id,
                                    write_offset);
@@ -134,8 +133,7 @@ private:
                         break;
                     }
                     if ((std::chrono::steady_clock::now() - start) >=
-                        time_settings::instance()
-                            .get_offset_gathering_timeout()) {
+                        time_settings::instance().offset_gathering_timeout) {
                         break;
                     }
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -165,7 +163,7 @@ private:
                     "[group {}, storage {}] summarized offset is {}",
                     m_group_config.id, m_storage_id, offset);
 
-                m_write_offset_interface->set_write_offset(offset);
+                m_my_storage->set_write_offset(offset);
 
                 m_candidate.proclaim();
 
@@ -176,6 +174,27 @@ private:
         }
     }
 
+    void print_stats(const statistics& stats,
+                     const std::vector<storage_state>& storage_states) {
+        LOG_DEBUG() << std::format(
+            "[group {}, storage {}] assigned_count {}, has_down {}",
+            m_group_config.id, m_storage_id, stats.assigned_count,
+            stats.has_down);
+
+        std::stringstream ss;
+        for (auto& s : storage_states) {
+            ss << serialize(s) << ", ";
+        }
+        LOG_DEBUG() << "storage states: " << ss.str();
+    }
+
+    void update_group_state(group_state new_state) {
+        LOG_DEBUG() << std::format(
+            "[group {}, storage {}] change group state to {}",
+            m_group_config.id, m_storage_id, magic_enum::enum_name(new_state));
+
+        m_group_state_manager.put(new_state);
+    }
     void storage_states_handler() {
         auto group_initialized = m_group_initialized.get();
         auto storage_states = m_storage_states.get();
@@ -222,51 +241,71 @@ private:
             m_group_initialized.set(true);
         }
 
-        auto new_state = state;
-
         if (state != group_state::HEALTHY and
             stats.assigned_count == m_group_config.storages) {
-            new_state = group_state::HEALTHY;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::HEALTHY);
         }
 
         if (state != group_state::DEGRADED and //
             stats.has_down and
             stats.assigned_count >= m_group_config.data_shards) {
-            new_state = group_state::DEGRADED;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::DEGRADED);
         }
 
         if (state != group_state::FAILED and //
             stats.assigned_count < m_group_config.data_shards) {
-            new_state = group_state::FAILED;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::FAILED);
         }
 
         if (state != group_state::REPAIRING and //
             !stats.has_down and
             stats.assigned_count >= m_group_config.data_shards and
             stats.assigned_count < m_group_config.storages) {
-            new_state = group_state::REPAIRING;
+            print_stats(stats, storage_states);
+            update_group_state(group_state::REPAIRING);
 
-            // TODO: Spawn repairer here
-        }
+            auto storages = [&]() {
+                auto reader = storages_reader(
+                    m_etcd, m_group_config.id, m_group_config.storages, //
+                    m_storage_id, m_my_storage,
+                    service_factory<storage_interface>(
+                        m_executor.get_executor(), 1));
+                return reader.get_storage_services();
+            }();
 
-        if (new_state != state) {
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] assigned_count {}, has_down {}",
-                m_group_config.id, m_storage_id, stats.assigned_count,
-                stats.has_down);
+            bool has_nullptr =
+                std::any_of(storages.begin(), storages.end(),
+                            [](const auto& ptr) { return ptr == nullptr; });
+            if (has_nullptr) {
+                LOG_ERROR() << std::format("One of the storages has nullptr "
+                                           "in m_storages in REPAIRING state",
+                                           m_group_config.id, m_storage_id);
+                std::stringstream ss;
+                for (auto& s : storages) {
+                    ss << serialize(s) << ", ";
+                }
 
-            std::stringstream ss;
-            for (auto& s : storage_states) {
-                ss << serialize(s) << ", ";
+                LOG_DEBUG() << "storages: " << ss.str();
+                return;
             }
-            LOG_DEBUG() << "storage states: " << ss.str();
+            if (storage_states[m_storage_id] == storage_state::NEW) {
+                // TODO: Implement resign interface on candidate and call it
+                // here.
+                throw std::runtime_error(
+                    std::format("[group {}, storage {}] leader is NEW in "
+                                "REPAIRING state",
+                                m_group_config.id, m_storage_id));
+            }
 
-            LOG_DEBUG() << std::format(
-                "[group {}, storage {}] change group state to {}",
-                m_group_config.id, m_storage_id,
-                magic_enum::enum_name(new_state));
-
-            m_group_state_manager.put(new_state);
+            m_repairer.emplace(
+                m_executor, m_etcd, m_group_config, //
+                m_my_storage->get_write_offset(),   //
+                std::move(storages), std::move(storage_states),
+                global_data_view_config{.storage_service_connection_count = 1,
+                                        .read_cache_capacity_l2 = 0});
         }
     }
 
@@ -281,15 +320,18 @@ private:
         }
     }
 
+    executor& m_executor;
     etcd_manager& m_etcd;
     const group_config& m_group_config;
     std::size_t m_storage_id;
 
-    std::shared_ptr<T> m_write_offset_interface;
+    std::shared_ptr<local_storage> m_my_storage;
 
     group_state_manager m_group_state_manager;
 
     prefix_t m_prefix;
+
+    std::optional<repairer> m_repairer;
 
     std::mutex m_mutex;
     std::optional<std::jthread> m_thread;

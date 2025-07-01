@@ -3,6 +3,7 @@
 #include <common/coroutines/coro_util.h>
 #include <common/telemetry/log.h>
 #include <common/utils/integral.h>
+#include <common/utils/strings.h>
 #include <unordered_set>
 
 namespace uh::cluster::storage {
@@ -11,13 +12,8 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
                            std::size_t service_connections)
     : m_ioc(ioc),
       m_config{config},
-      m_stripe_size{m_config.stripe_size_kib * 1_KiB},
-      m_chunk_size{[&]() {
-          if (m_stripe_size % m_config.data_shards != 0)
-              throw std::runtime_error(
-                  "Stripe size must be divisible by data shards");
-          return m_stripe_size / m_config.data_shards;
-      }()},
+      m_stripe_size{m_config.get_stripe_size()},
+      m_chunk_size{m_config.get_stripe_unit_size()},
       m_rs{config.data_shards, config.parity_shards, m_chunk_size},
       m_externals(
           etcd, group_id, config.storages,
@@ -25,10 +21,56 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
 
     LOG_DEBUG() << "[ec_data_view] waiting group state for group " << group_id;
     etcd.wait(ns::root.storage_groups[group_id].group_state,
-              time_settings::instance().get_group_state_wait_timeout());
+              time_settings::instance().group_state_wait_timeout);
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
+std::vector<std::vector<std::size_t>>
+ec_data_view::prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
+                                     std::size_t stripe_index,
+                                     std::size_t stripe_data_size) const {
+    auto base_offset = stripe_index * m_chunk_size;
+    auto stripe_offsets = std::vector<std::vector<std::size_t>>(
+        m_config.data_shards + m_config.parity_shards);
+
+    // translate offsets into chunk-local offsets for each stripe.
+    const std::size_t stripe_offset = stripe_index * m_stripe_size;
+    auto current_offset =
+        std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
+
+    for (size_t j = 0; j < m_config.data_shards; ++j) {
+        const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
+        if (stripe_data_size > j * m_chunk_size) {
+            // if chunk actually contains user data, and if so add a zero
+            // offset to denote the start of the chunk and thus a new
+            // fragment, as fragments may not span across chunks
+            stripe_offsets[j].push_back(0 + base_offset);
+        }
+        while (current_offset != offsets.end() &&
+               *current_offset < chunk_offset + m_chunk_size) {
+            auto local_offset = *current_offset - chunk_offset;
+            if (local_offset != 0) {
+                stripe_offsets[j].push_back(local_offset + base_offset);
+            }
+            ++current_offset;
+        }
+    }
+
+    std::size_t num_fragments = std::accumulate(
+        stripe_offsets.begin(), stripe_offsets.end(), 0ul,
+        [](std::size_t acc, const std::vector<std::size_t>& chunk_offsets) {
+            return acc + chunk_offsets.size();
+        });
+
+    // goal: stripe_offsets[p].size() for any p == num_fragments
+    for (std::size_t p = m_config.data_shards;
+         p < m_config.data_shards + m_config.parity_shards; ++p) {
+        for (std::size_t o = 0; o < num_fragments; ++o) {
+            stripe_offsets[p].push_back(0 + base_offset);
+        }
+    }
+    return stripe_offsets;
+}
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
 
@@ -53,117 +95,93 @@ coro<address> ec_data_view::write(std::span<const char> data,
         throw std::runtime_error("Invalid leader id: " +
                                  std::to_string(leader));
 
-    auto write_size = data.size();
-    auto num_stripes = div_ceil(write_size, m_stripe_size);
+    auto num_stripes = div_ceil(data.size(), m_stripe_size);
     auto allocation = co_await storages.at(leader)->allocate(
         num_stripes * m_chunk_size, m_chunk_size);
 
     if (allocation.offset % m_chunk_size != 0)
         throw std::runtime_error("Allocation result is not aligned");
 
-    auto context = co_await boost::asio::this_coro::context;
+    auto parity_buffer = unique_buffer<char>(m_config.parity_shards *
+                                             m_chunk_size * num_stripes);
+    auto parities =
+        split_buffer<char>(parity_buffer, m_chunk_size * num_stripes);
 
-    // NOTE: Now we allocatate a buffer for data shards, not for whole stripe.
-    // It's because we allocate parity shards in the encode function. I'd like
-    // to change this in the future.
-    unique_buffer<char> stripe(m_chunk_size * m_config.data_shards);
-    address rv;
-    std::size_t user_data_size = data.size_bytes();
+    auto storage_buffers_view =
+        std::vector<std::vector<std::span<const char>>>();
+    storage_buffers_view.reserve(m_config.storages);
+    for (size_t i = 0; i < m_config.storages; ++i) {
+        storage_buffers_view.emplace_back();
+        storage_buffers_view.back().reserve(num_stripes);
+    }
+    // NOTE: buffer_views's data element will be pushed in the loop below
+    for (size_t i = 0; i < m_config.parity_shards; ++i) {
+        storage_buffers_view[m_config.data_shards + i].push_back(parities[i]);
+    }
+
+    std::vector<std::vector<std::size_t>> storage_offsets;
+    storage_offsets.reserve(m_config.storages);
+    for (size_t i = 0; i < m_config.storages; ++i) {
+        storage_offsets.emplace_back();
+    }
+
+    std::optional<unique_buffer<>> last_stripe;
 
     for (auto i = 0ul; i < num_stripes; i++) {
-        allocation_t alloc{.offset = allocation.offset + i * m_chunk_size,
-                           .size = m_chunk_size};
-        auto stripe_data = data.subspan(i * m_stripe_size);
-        auto stripe_data_size = std::min(stripe_data.size(), m_stripe_size);
-        if (stripe_data_size != m_stripe_size) {
-            std::copy(stripe_data.begin(), stripe_data.end(),
-                      stripe.span().begin());
-            std::ranges::fill(stripe.span().subspan(stripe_data_size), 0);
-            stripe_data = stripe.span();
-        } else {
-            stripe_data = stripe_data.first(stripe_data_size);
+
+        auto [data_view, data_view_size] = [&]() {
+            auto data_view_size = m_stripe_size;
+            auto sub_data = data.subspan(i * m_stripe_size);
+            if (i == num_stripes - 1 && sub_data.size() < m_stripe_size) {
+                data_view_size = sub_data.size();
+                last_stripe.emplace(m_stripe_size);
+                std::copy(sub_data.begin(), sub_data.end(),
+                          last_stripe->span().begin());
+                std::ranges::fill(last_stripe->span().subspan(sub_data.size()),
+                                  0);
+                auto d = std::span<const char>(last_stripe->string_view());
+                return std::make_pair(split_buffer<const char>(d, m_chunk_size),
+                                      data_view_size);
+            } else {
+                auto d = sub_data.first(m_stripe_size);
+                return std::make_pair(split_buffer<const char>(d, m_chunk_size),
+                                      data_view_size);
+            }
+        }();
+
+        for (auto j = 0ul; j < m_config.data_shards; ++j) {
+            storage_buffers_view[j].push_back(data_view[j]);
         }
 
-        write_size -= stripe_data_size;
+        auto parity_view = std::vector<std::span<char>>();
+        parity_view.reserve(m_config.parity_shards);
+        for (const auto& p : parities) {
+            parity_view.emplace_back(p.begin() + i * m_chunk_size,
+                                     m_chunk_size);
+        }
 
-        auto encoded = m_rs.encode(stripe_data);
+        m_rs.encode(data_view, parity_view);
 
-        std::vector<std::vector<std::size_t>> stripe_offsets(
-            m_config.data_shards + m_config.parity_shards);
-
-        // translate offsets into chunk-local offsets for each stripe.
-        const std::size_t stripe_offset = i * m_stripe_size;
-        auto current_offset =
-            std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
-
+        auto stripe_offsets =
+            prepare_stripe_offsets(offsets, i, data_view_size);
         for (size_t j = 0; j < m_config.data_shards; ++j) {
-            const std::size_t chunk_offset = stripe_offset + j * m_chunk_size;
-            if (stripe_data_size > j * m_chunk_size) {
-                // if chunk actually contains user data, and if so add a zero
-                // offset to denote the start of the chunk and thus a new
-                // fragment, as fragments may not span across chunks
-                stripe_offsets.at(j).push_back(0);
-            }
-            while (current_offset != offsets.end() and
-                   *current_offset < chunk_offset + m_chunk_size) {
-                auto local_offset = *current_offset - chunk_offset;
-                if (local_offset != 0) {
-                    stripe_offsets.at(j).push_back(local_offset);
-                }
-                ++current_offset;
-            }
-        }
-
-        std::size_t num_fragments = std::accumulate(
-            stripe_offsets.begin(), stripe_offsets.end(), 0ul,
-            [](std::size_t acc, std::vector<std::size_t> chunk_offsets) {
-                return acc + chunk_offsets.size();
-            });
-
-        // goal: stripe_offsets.at(p).size() for any p == num_fragments
-        for (std::size_t p = m_config.data_shards;
-             p < m_config.data_shards + m_config.parity_shards; ++p) {
-            for (std::size_t o = 0; o < num_fragments; ++o) {
-                stripe_offsets.at(p).push_back(0);
-            }
-        }
-
-        auto addresses =
-            co_await run_for_all<address, std::shared_ptr<storage_interface>>(
-                m_ioc,
-                [&](size_t i, auto storage) -> coro<address> {
-                    auto storage_addr = co_await storage
-                                            ->write(alloc, encoded.get().at(i),
-                                                    stripe_offsets.at(i))
-                                            .continue_trace(context);
-                    address global_addr;
-                    // translate storage address into global address
-                    for (std::size_t j = 0; j < storage_addr.size(); ++j) {
-                        fragment frag = storage_addr.get(j);
-                        global_addr.emplace_back(
-                            get_global_pointer(frag.pointer, i), frag.size);
-                    }
-                    co_return global_addr;
-                },
-                storages);
-
-        // combine partial addresses into complete return address
-        for (std::size_t j = 0; j < m_config.data_shards; ++j) {
-            for (auto& frag : addresses.at(j).fragments) {
-                if (user_data_size == 0) {
-                    break;
-                }
-
-                if (frag.size < user_data_size) {
-                    user_data_size -= frag.size;
-                    rv.emplace_back(frag.pointer, frag.size);
-                } else {
-                    rv.emplace_back(frag.pointer, user_data_size);
-                    user_data_size = 0;
-                }
-            }
+            storage_offsets[j].insert(storage_offsets[j].end(),
+                                      stripe_offsets[j].begin(),
+                                      stripe_offsets[j].end());
         }
     }
+
+    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<void> {
+            auto storage_addr = co_await storage->write(
+                allocation, storage_buffers_view[i], storage_offsets[i]);
+        },
+        storages);
+
+    address rv;
+    rv.emplace_back(allocation.offset * m_config.data_shards,
+                    data.size_bytes());
     co_return rv;
 }
 
@@ -408,8 +426,7 @@ coro<std::size_t> ec_data_view::get_used_space() {
                 if (i >= m_config.data_shards) {
                     co_return 0; // skip parity shards
                 }
-                co_return co_await storage->get_used_space().continue_trace(
-                    context);
+                co_return co_await storage->get_used_space();
             },
             storages);
 

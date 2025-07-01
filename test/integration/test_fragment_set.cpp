@@ -9,6 +9,8 @@
 #include <util/gdv_fixture.h>
 #include <util/temp_directory.h>
 
+#include "test_config.h"
+
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {

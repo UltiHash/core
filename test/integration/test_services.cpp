@@ -41,7 +41,7 @@ struct fixture {
               etcd, ns::root.storage_groups[0].storage_hostports,
               service_factory<storage_interface>(ioc, 2 /*num_connections*/),
               {services, load_balancer}) {
-        time_settings::instance().set_service_get_timeout(1s);
+        time_settings::instance().service_get_timeout = 1s;
     }
     ~fixture() {
         work_guard.reset();

@@ -36,9 +36,8 @@ public:
                                       default_backend_client(bc.backend_host,
                                                              bc.customer_id,
                                                              bc.access_token));
-            m_executor.repeated(
-                time_settings::instance().get_license_fetch_period(),
-                &license_updater::update, *m_license_updater);
+            m_executor.repeated(time_settings::instance().license_fetch_period,
+                                &license_updater::update, *m_license_updater);
 
             m_usage_updater.emplace(
                 m_executor.get_executor(), m_usage, *m_license_updater,

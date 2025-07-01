@@ -47,3 +47,5 @@ spec:
           value: "$TEST_NAME"
         - name: PROM_URL
           value: "$PROM_URL"
+        - name: STORAGE_GROUP_TYPE
+          value: "$STORAGE_GROUP_TYPE"

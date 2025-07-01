@@ -40,8 +40,7 @@ coro<messenger_core::header> messenger_core::recv_header() {
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
 
-        m_tcp_stream.expires_after(
-            time_settings::instance().get_async_io_timeout());
+        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
     } catch (const std::exception& e) {
@@ -115,8 +114,7 @@ coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     }
 
     try {
-        m_tcp_stream.expires_after(
-            time_settings::instance().get_async_io_timeout());
+        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
         co_await boost::asio::async_read(m_tcp_stream, m_read_buffers,
                                          boost::asio::use_awaitable);
         m_read_buffers.clear();
@@ -172,8 +170,7 @@ coro<void> messenger_core::send_buffers(const message_type type) {
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        m_tcp_stream.expires_after(
-            time_settings::instance().get_async_io_timeout());
+        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
         co_await boost::asio::async_write(m_tcp_stream, m_write_buffers,
                                           boost::asio::use_awaitable);
 
@@ -231,8 +228,7 @@ coro<void> messenger_core::send(const message_type type,
             boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
-        m_tcp_stream.expires_after(
-            time_settings::instance().get_async_io_timeout());
+        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
         co_await boost::asio::async_write(m_tcp_stream, buffers,
                                           boost::asio::use_awaitable);
 

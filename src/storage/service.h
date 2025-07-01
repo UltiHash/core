@@ -47,7 +47,7 @@ public:
                           << m_group_id;
               return m_etcd.wait(
                   ns::root.storage_groups.group_configs[m_group_id],
-                  time_settings::instance().get_group_state_wait_timeout());
+                  time_settings::instance().group_state_wait_timeout);
           }())},
           m_storage(std::make_shared<local_storage>(
               m_storage_id, make_ds_config(sc.data_store, m_group_config),
@@ -60,9 +60,9 @@ public:
                              sc.server.port),
           m_ec_maintainer(
               (m_group_config.type == group_config::type_t::ERASURE_CODING)
-                  ? std::make_optional<ec_maintainer<local_storage>>(
-                        m_etcd, m_group_config, m_storage_id, service_config,
-                        sc.global_data_view, m_storage)
+                  ? std::make_optional<ec_maintainer>(
+                        m_executor, m_etcd, m_group_config, m_storage_id,
+                        service_config, sc.global_data_view, m_storage)
                   : std::nullopt) {
         metric<storage_available_space_gauge, byte, int64_t>::
             register_gauge_callback(
@@ -114,6 +114,6 @@ private:
     std::shared_ptr<local_storage> m_storage;
     server m_server;
     service_registry m_service_registry;
-    std::optional<ec_maintainer<local_storage>> m_ec_maintainer;
+    std::optional<ec_maintainer> m_ec_maintainer;
 };
 } // namespace uh::cluster::storage

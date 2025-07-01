@@ -38,8 +38,7 @@ public:
 
         std::unique_lock lk(m_mutex);
 
-        if (!m_cv.wait_for(lk,
-                           time_settings::instance().get_service_get_timeout(),
+        if (!m_cv.wait_for(lk, time_settings::instance().service_get_timeout,
                            [this] { return !empty(); })) {
             throw std::runtime_error(
                 "timeout waiting for any " +

@@ -2,22 +2,23 @@
 
 #include <common/types/address.h>
 #include <common/types/common_types.h>
+#include <common/utils/common.h>
 #include <span>
 
 namespace uh::cluster {
 
 struct data_store_config {
-    size_t max_file_size;
-    size_t max_data_store_size;
-    size_t page_size;
+    size_t max_file_size = 1_GiB;
+    size_t max_data_store_size = 1_PiB;
+    size_t page_size = DEFAULT_PAGE_SIZE;
 };
 
 struct data_store {
     virtual allocation_t allocate(size_t size, std::size_t alignment = 1) = 0;
 
     virtual address write(const allocation_t allocation,
-                          std::span<const char> data,
-                          const std::vector<std::size_t>& offsets) = 0;
+                          const std::vector<std::span<const char>>& buffers,
+                          std::span<const std::size_t> offsets) = 0;
 
     virtual std::size_t read(const std::size_t local_pointer,
                              std::span<char> buffer) = 0;

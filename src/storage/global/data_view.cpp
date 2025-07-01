@@ -34,7 +34,7 @@ global_data_view::global_data_view(boost::asio::io_context& ioc,
     // We should save groups using map, or using two vectors like group_indices,
     // group_views.
     etcd.wait(ns::root.storage_groups.group_configs,
-              time_settings::instance().get_group_state_wait_timeout());
+              time_settings::instance().group_state_wait_timeout);
     auto map = etcd.ls(ns::root.storage_groups.group_configs);
     if (map.size() != 1) {
         throw std::runtime_error("Now we support single storage group only");
