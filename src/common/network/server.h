@@ -18,7 +18,6 @@
 namespace uh::cluster {
 
 struct server_config {
-    std::size_t threads;
     uint16_t port;
     std::string bind_address;
 };
@@ -31,7 +30,6 @@ public:
         : m_config(std::move(config)),
           m_ioc(ioc),
           m_handler(std::move(handler)) {
-        m_is_running = true;
 
         LOG_INFO() << "server config: " << m_config.bind_address << ":"
                    << m_config.port;
@@ -54,48 +52,10 @@ public:
             });
         LOG_INFO() << "starting server, listening at " << m_config.bind_address
                    << ":" << m_config.port;
-
-        for (size_t i = 0; i < m_config.threads - 1; i++)
-            m_thread_container.emplace_back([&] {
-                try {
-                    m_ioc.run();
-                } catch (const std::exception&) {
-                    m_excp_ptr = std::current_exception();
-                }
-            });
-    }
-
-    void run() {
-        // the calling thread is also running the I/O service
-        try {
-            m_ioc.run();
-        } catch (std::exception& e) {
-            m_excp_ptr = std::current_exception();
-        }
-
-        if (m_excp_ptr) {
-            try {
-                std::rethrow_exception(m_excp_ptr);
-            } catch (std::exception& e) {
-                throw e;
-            }
-        }
-    }
-
-    void stop() {
-        LOG_INFO() << "stopping server ";
-        m_is_running = false;
-        m_ioc.stop();
     }
 
     [[nodiscard]] const server_config& get_server_config() const {
         return m_config;
-    }
-
-    ~server() {
-        for (auto& thread : m_thread_container) {
-            thread.join();
-        }
     }
 
 private:
@@ -114,7 +74,7 @@ private:
     }
 
     coro<void> do_accept(auto acceptor) {
-        while (m_is_running) {
+        while (true) {
             boost::asio::ip::tcp::socket stream =
                 co_await acceptor.async_accept(boost::asio::use_awaitable);
             const auto conn_address =
@@ -147,15 +107,12 @@ private:
     const server_config m_config;
     boost::asio::io_context& m_ioc;
 
-    std::vector<std::thread> m_thread_container{};
     std::vector<boost::asio::basic_socket_acceptor<
         boost::asio::ip::tcp,
         boost::asio::use_awaitable_t<>::executor_with_default<
             boost::asio::any_io_executor>>>
         m_acceptors;
     std::unique_ptr<protocol_handler> m_handler;
-    std::atomic<bool> m_is_running;
-    std::exception_ptr m_excp_ptr;
 };
 
 //------------------------------------------------------------------------------

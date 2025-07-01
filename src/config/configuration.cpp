@@ -39,6 +39,11 @@ void register_service(CLI::App& app, service_config& cfg) {
     auto group = app.add_option_group("service", "service configuration");
 
     group
+        ->add_option("--server-threads", cfg.threads,
+                     "threads handling incoming connections")
+        ->default_val(cfg.threads);
+
+    group
         ->add_option("--registry,-r", cfg.etcd_config.url,
                      "URL to etcd endpoint")
         ->default_val(cfg.etcd_config.url);
@@ -75,11 +80,6 @@ void register_service(CLI::App& app, service_config& cfg) {
 
 void register_server(CLI::App& app, server_config& cfg) {
     auto group = app.add_option_group("server", "server network configuration");
-
-    group
-        ->add_option("--server-threads", cfg.threads,
-                     "threads handling incoming connections")
-        ->default_val(cfg.threads);
 
     group->add_option("--port,-p", cfg.port, "server listening port")
         ->default_val(cfg.port);
@@ -190,8 +190,6 @@ CLI::App* sub_deduplicator(CLI::App& app, deduplicator_config& cfg) {
 
 CLI::App* sub_coordinator(CLI::App& app, coordinator_config& cfg) {
     auto* rv = app.add_subcommand("coordinator", "Run as coordinator service");
-    rv->add_option("--thread-count", cfg.thread_count, "number of threads")
-        ->default_val(cfg.thread_count);
 
     app.add_option(
            "--license,-L",

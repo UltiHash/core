@@ -4,6 +4,7 @@
 #include <ranges>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace uh::cluster {
@@ -219,10 +220,13 @@ std::istream& operator>>(std::istream& is, T& value) {
 }
 
 template <typename T>
+concept NotEnum = !std::is_enum_v<T>;
+
+template <typename T>
 std::string serialize(const T& value)
 requires requires(std::ostream& os, const T& v) {
     { os << v } -> std::same_as<std::ostream&>;
-}
+} && NotEnum<T>
 {
     std::ostringstream oss;
     oss << value;
@@ -231,9 +235,9 @@ requires requires(std::ostream& os, const T& v) {
 
 template <typename T>
 T deserialize(auto&& str)
-requires requires(std::istream& is, T& v) {
-    { is >> v } -> std::same_as<std::istream&>;
-}
+requires requires(std::ostream& os, const T& v) {
+    { os << v } -> std::same_as<std::ostream&>;
+} && NotEnum<T>
 {
     std::istringstream iss(std::forward<decltype(str)>(str));
     T value;
