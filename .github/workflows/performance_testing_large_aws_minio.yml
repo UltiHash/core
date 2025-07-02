@@ -79,7 +79,7 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update bitnami
-          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values testing/performance/large/minio-helm-values.yaml --version 14.6.22 --wait --timeout 15m
+          helm install minio bitnami/minio -n ${{ env.ENVIRONMENT_NAME }} --values testing/performance/large/minio-helm-values.yaml --wait --timeout 15m
 
       - name: Execute the performance test against MinIO
         run: |
