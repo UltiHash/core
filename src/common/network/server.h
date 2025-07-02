@@ -85,11 +85,8 @@ public:
     ~server() {
         m_task.reset();
 
-        while (true) {
-            std::lock_guard<std::mutex> lock(m_sessions_mutex);
-            if (m_sessions.empty())
-                break;
-        }
+        std::unique_lock<std::mutex> lock(m_sessions_mutex);
+        m_sessions_cv.wait(lock, [&] { return m_sessions.empty(); });
     }
 
 private:
@@ -136,6 +133,7 @@ private:
             session->run(name, m_ioc, std::move(stream),
                          [this](std::shared_ptr<session_runner> session) {
                              remove_session(session);
+                             m_sessions_cv.notify_all();
                          });
             add_session(session);
         }
@@ -157,8 +155,9 @@ private:
     boost::asio::io_context& m_ioc;
     std::unique_ptr<protocol_handler> m_handler;
 
-    std::list<std::shared_ptr<session_runner>> m_sessions;
     std::mutex m_sessions_mutex;
+    std::condition_variable m_sessions_cv;
+    std::list<std::shared_ptr<session_runner>> m_sessions;
     std::unique_ptr<coro_task> m_task;
 };
 
