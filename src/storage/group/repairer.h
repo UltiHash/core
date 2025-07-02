@@ -68,13 +68,8 @@ public:
           m_repairing_size{repairing_size},
 
           m_storages{std::move(storages)},
-          m_storage_states{std::move(storage_states)} {
-
-        LOG_DEBUG() << "Repairer created for group " << m_config.id;
-        boost::asio::co_spawn(
-            ioc, [this]() -> coro<void> { co_await repair(); },
-            boost::asio::detached);
-    }
+          m_storage_states{std::move(storage_states)},
+          m_task{"repairing", ioc, repair().start_trace()} {}
 
     ~repairer() {
         LOG_DEBUG() << "Repairer destroyed for group " << m_config.id;
@@ -89,10 +84,12 @@ private:
 
     std::vector<std::shared_ptr<storage_interface>> m_storages;
     std::vector<storage_state> m_storage_states;
+    coro_task m_task;
 
     coro<void> repair() {
         LOG_DEBUG() << "Repairing started for group " << m_config.id;
 
+        auto state = co_await boost::asio::this_coro::cancellation_state;
         try {
             std::size_t m_chunk_size = m_config.get_stripe_unit_size();
             std::size_t num_stripes = m_repairing_size / m_chunk_size;
@@ -113,7 +110,10 @@ private:
                     stripe.span().subspan(m_chunk_size * i, m_chunk_size);
                 shards.push_back(shard);
             }
-            for (auto i = 0ul; i < num_stripes; ++i) {
+            for (auto i = 0ul;
+                 i < num_stripes and
+                 state.cancelled() == boost::asio::cancellation_type::none;
+                 ++i) {
                 LOG_DEBUG() << "start repairing for stripe " << i;
                 (void)m_chunk_size;
                 address addr;

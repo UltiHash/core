@@ -3,6 +3,7 @@
 #include "config.h"
 #include "multipart_state.h"
 
+#include <common/coroutines/coro_util.h>
 #include <common/db/db.h>
 #include <common/etcd/registry/service_id.h>
 #include <common/etcd/registry/service_registry.h>
@@ -40,6 +41,7 @@ private:
     server m_server;
     service_registry m_service_registry;
     garbage_collector m_gc;
+    coro_task m_task;
 };
 
 } // namespace uh::cluster::ep

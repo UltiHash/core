@@ -57,7 +57,9 @@ public:
     }
 
     coro<void> periodic_update(std::chrono::steady_clock::duration interval) {
-        while (true) {
+        auto state = co_await boost::asio::this_coro::cancellation_state;
+        while (state.cancelled() == boost::asio::cancellation_type::none) {
+
             auto start_time = std::chrono::steady_clock::now();
 
             co_await update();
