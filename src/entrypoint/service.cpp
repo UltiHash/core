@@ -19,7 +19,8 @@ coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
     std::atomic<std::size_t> size = co_await directory.data_size();
     l.set_storage_size(size);
 
-    while (true) {
+    auto state = co_await boost::asio::this_coro::cancellation_state;
+    while (state.cancelled() == boost::asio::cancellation_type::none) {
         timer.expires_after(LIMITS_UPDATE_INTERVAL);
         co_await timer.async_wait(boost::asio::use_awaitable);
 
@@ -81,17 +82,9 @@ service::service(boost::asio::io_context& ioc, const service_config& sc,
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
                          m_config.server.port),
 
-      m_gc(ioc, m_directory, m_gdv) {
-
-    co_spawn(ioc, update_limits(m_directory, m_limits).start_trace(),
-             [](std::exception_ptr e) {
-                 try {
-                     std::rethrow_exception(e);
-                 } catch (const std::exception& e) {
-                     LOG_ERROR()
-                         << "metrics monitor stopped working: " << e.what();
-                 }
-             });
+      m_gc(ioc, m_directory, m_gdv),
+      m_task{"update storage metrics", ioc,
+             update_limits(m_directory, m_limits).start_trace()} {
 
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
         register_gauge_callback(

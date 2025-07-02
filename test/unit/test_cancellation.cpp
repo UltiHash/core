@@ -2,6 +2,7 @@
 
 #include <boost/asio.hpp>
 #include <common/coroutines/coro_util.h>
+#include <common/types/common_types.h>
 
 #include "test_config.h"
 
@@ -10,21 +11,20 @@ namespace uh::cluster {
 class task_owner {
 public:
     task_owner(boost::asio::io_context& ioc)
-        : m_task{"task", ioc, [this]() -> boost::asio::awaitable<void> {
-                     co_await task();
-                 }} {}
+        : m_task{"task", ioc, task().start_trace()} {}
 
     ~task_owner() {}
 
 private:
     coro_task m_task;
 
-    boost::asio::awaitable<void> task() {
+    coro<void> task() {
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
             auto executor = co_await boost::asio::this_coro::executor;
-            co_await boost::asio::steady_timer(executor, std::chrono::hours(1))
-                .async_wait(boost::asio::use_awaitable);
+            auto timer =
+                boost::asio::steady_timer(executor, std::chrono::hours(1));
+            co_await timer.async_wait(boost::asio::use_awaitable);
         }
         std::cout << "Task finished" << std::endl;
     }

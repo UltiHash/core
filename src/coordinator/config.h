@@ -8,7 +8,7 @@
 namespace uh::cluster {
 
 struct coordinator_config {
-    std::size_t num_threads = 1;
+    std::size_t num_threads = 2;
 
     uh::cluster::license license;
     storage::group_configs storage_groups;

@@ -41,15 +41,23 @@ public:
                       default_backend_client(bc.backend_host, bc.customer_id,
                                              bc.access_token));
               }
+          }()},
+          m_task{"periodic license update", ioc,
+                 m_license_updater
+                     ->periodic_update(
+                         time_settings::instance().license_fetch_period)
+                     .start_trace()},
+          m_usage_updater{[&]() {
+              if (cc.license) {
+                  return std::optional<usage_updater>(std::nullopt);
+              } else {
+                  const auto& bc = cc.backend_config;
+                  return std::make_optional<usage_updater>(
+                      ioc, m_usage, *m_license_updater,
+                      default_backend_client(bc.backend_host, bc.customer_id,
+                                             bc.access_token));
+              }
           }()} {
-
-        boost::asio::co_spawn(
-            ioc,
-            m_license_updater
-                ->periodic_update(
-                    time_settings::instance().license_fetch_period)
-                .start_trace(),
-            boost::asio::detached);
 
         publish_configs(m_etcd, cc.storage_groups);
     }
@@ -66,6 +74,7 @@ private:
 
     usage m_usage;
     std::optional<license_updater> m_license_updater;
+    coro_task m_task;
     std::optional<usage_updater> m_usage_updater;
 };
 } // namespace uh::cluster::coordinator
