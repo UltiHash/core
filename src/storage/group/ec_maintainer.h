@@ -1,7 +1,6 @@
 #pragma once
 
 #include <common/etcd/service.h>
-#include <common/execution/executor.h>
 #include <memory>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
@@ -14,12 +13,12 @@ namespace uh::cluster::storage {
 
 class ec_maintainer {
 public:
-    ec_maintainer(executor& executor, etcd_manager& etcd,
+    ec_maintainer(boost::asio::io_context& ioc, etcd_manager& etcd,
                   const group_config& group_cfg, std::size_t storage_id,
                   const service_config& service_cfg,
                   const global_data_view_config& gdv_cfg,
                   std::shared_ptr<local_storage> my_storage)
-        : m_executor{executor},
+        : m_ioc{ioc},
           m_etcd{etcd},
           m_group_config{group_cfg},
           m_storage_id{storage_id},
@@ -271,8 +270,7 @@ private:
                 auto reader = storages_reader(
                     m_etcd, m_group_config.id, m_group_config.storages, //
                     m_storage_id, m_my_storage,
-                    service_factory<storage_interface>(
-                        m_executor.get_executor(), 1));
+                    service_factory<storage_interface>(m_ioc, 1));
                 return reader.get_storage_services();
             }();
 
@@ -301,8 +299,8 @@ private:
             }
 
             m_repairer.emplace(
-                m_executor, m_etcd, m_group_config, //
-                m_my_storage->get_write_offset(),   //
+                m_ioc, m_etcd, m_group_config,    //
+                m_my_storage->get_write_offset(), //
                 std::move(storages), std::move(storage_states),
                 global_data_view_config{.storage_service_connection_count = 1,
                                         .read_cache_capacity_l2 = 0});
@@ -320,7 +318,7 @@ private:
         }
     }
 
-    executor& m_executor;
+    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     const group_config& m_group_config;
     std::size_t m_storage_id;

@@ -2,7 +2,6 @@
 
 #include <common/coroutines/coro_util.h>
 #include <common/ec/reedsolomon_c.h>
-#include <common/execution/executor.h>
 #include <storage/global/config.h>
 #include <storage/group/config.h>
 #include <storage/group/externals.h>
@@ -57,12 +56,12 @@ private:
 
 class repairer {
 public:
-    repairer(executor& executor, etcd_manager& etcd, const group_config& config,
-             std::size_t repairing_size,
+    repairer(boost::asio::io_context& ioc, etcd_manager& etcd,
+             const group_config& config, std::size_t repairing_size,
              std::vector<std::shared_ptr<storage_interface>> storages,
              std::vector<storage_state> storage_states,
              const global_data_view_config& global_config)
-        : m_executor{executor},
+        : m_ioc{ioc},
           m_etcd{etcd},
           m_config{config},
           m_global_config{global_config},
@@ -73,8 +72,7 @@ public:
 
         LOG_DEBUG() << "Repairer created for group " << m_config.id;
         boost::asio::co_spawn(
-            executor.get_executor(),
-            [this]() -> coro<void> { co_await repair(); },
+            ioc, [this]() -> coro<void> { co_await repair(); },
             boost::asio::detached);
     }
 
@@ -83,7 +81,7 @@ public:
     }
 
 private:
-    executor& m_executor;
+    boost::asio::io_context& m_ioc;
     etcd_manager& m_etcd;
     group_config m_config;
     global_data_view_config m_global_config;
@@ -123,7 +121,7 @@ private:
                 {
                     auto v_succeeded = co_await run_for_all<
                         bool, std::shared_ptr<storage_interface>>(
-                        m_executor.get_executor(),
+                        m_ioc,
                         [&](std::size_t id,
                             const std::shared_ptr<storage_interface>& storage)
                             -> coro<bool> {
@@ -175,7 +173,7 @@ private:
                     auto alloc = allocation_t{i * m_chunk_size, m_chunk_size};
                     auto v_succeeded = co_await run_for_all<
                         bool, std::shared_ptr<storage_interface>>(
-                        m_executor.get_executor(),
+                        m_ioc,
                         [&](std::size_t id,
                             const std::shared_ptr<storage_interface>& storage)
                             -> coro<bool> {

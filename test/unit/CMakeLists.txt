@@ -1,20 +1,16 @@
 set_property(GLOBAL PROPERTY TEST_TYPE "unit")
 
-#
-# Please keep the list sorted by test name
-#
 uh_add_test(test_address)
+uh_add_test(test_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_async_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_backend_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_cancellation)
 uh_add_test(test_cors PRIVATE entrypoint)
 uh_add_test(test_cpr PRIVATE http_server nlohmann_json cpr::cpr)
 uh_add_test(test_data_file PRIVATE storage)
-uh_add_test(test_executor PRIVATE execution)
 uh_add_test(test_exp_backoff PRIVATE license)
 uh_add_test(test_formats PRIVATE entrypoint)
 uh_add_test(test_hash PRIVATE uhcrypto)
-uh_add_test(test_http_client PRIVATE http_server network nlohmann_json)
 uh_add_test(test_http_range PRIVATE entrypoint)
 uh_add_test(test_integral)
 uh_add_test(test_lfu_cache)
