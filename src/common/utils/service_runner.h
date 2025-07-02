@@ -34,36 +34,44 @@ public:
         : service_runner(std::vector{std::move(service_factory)}, num_threads) {
     }
 
-    bool is_running() const {
-        for (const auto& t : m_threads) {
-            if (t.joinable())
-                return true;
-        }
-        return false;
-    }
-
     void run() {
         auto workguard = boost::asio::make_work_guard(m_ioc);
         for (unsigned i = 0; i < m_num_threads; ++i)
-            m_threads.emplace_back([this] { m_ioc.run(); });
+            m_threads.emplace_back([this] {
+                try {
+                    m_ioc.run();
+                } catch (const std::exception& e) {
+                    LOG_FATAL() << "io_context.run() terminated by exception: "
+                                << e.what();
+                    std::terminate();
+                } catch (...) {
+                    LOG_FATAL()
+                        << "io_context.run() terminated by unknown exception";
+                    std::terminate();
+                }
+            });
 
         {
-            std::lock_guard lock(m_mtx);
-            m_creating = true;
-        }
-        try {
-            for (auto& factory : m_service_factories)
-                m_svcs.push_back(factory(m_ioc));
-        } catch (const std::exception& e) {
-            LOG_ERROR() << "Error in service creation: " << e.what();
-        }
-        {
-            std::lock_guard lock(m_mtx);
-            m_creating = false;
-            m_cv.notify_all();
+            std::lock_guard<std::mutex> lock(m_mtx);
+            if (m_signal_received) {
+                LOG_INFO() << "Signal received before service creation. "
+                              "Skipping service creation.";
+            } else {
+                try {
+                    for (auto& factory : m_service_factories)
+                        m_svcs.push_back(factory(m_ioc));
+                } catch (const std::exception& e) {
+                    LOG_FATAL() << "Service creation failed: " << e.what();
+                    std::terminate();
+                } catch (...) {
+                    LOG_FATAL() << "Service creation failed with unknown error";
+                    std::terminate();
+                }
+            }
         }
 
         workguard.reset();
+
         for (auto& t : m_threads)
             t.join();
     }
@@ -72,15 +80,9 @@ public:
 
 private:
     void handle_signal() {
-        std::unique_lock lock(m_mtx);
-        if (!m_svcs.empty()) {
-            m_svcs.clear();
-        } else if (m_creating) {
-            LOG_ERROR()
-                << "service is already being created, waiting for it to finish";
-            m_cv.wait(lock, [&] { return !m_creating; });
-            m_svcs.clear();
-        }
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_signal_received = true;
+        m_svcs.clear();
         m_ioc.stop();
     }
 
@@ -88,8 +90,8 @@ private:
     boost::asio::signal_set m_signals;
     std::vector<std::any> m_svcs;
     std::mutex m_mtx;
-    std::condition_variable m_cv;
-    bool m_creating = false;
+    bool m_signal_received = false;
+
     std::vector<std::thread> m_threads;
     std::vector<std::function<std::any(boost::asio::io_context&)>>
         m_service_factories;
