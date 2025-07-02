@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/coroutines/promise.h"
-#include "common/types/common_types.h"
+#include <common/coroutines/promise.h>
+#include <common/telemetry/log.h>
+#include <common/types/common_types.h>
 #include <ranges>
 
 namespace uh::cluster {
@@ -69,5 +70,83 @@ run_for_all(boost::asio::io_context& ioc, Func func,
         co_return res;
     }
 }
+
+inline auto make_logging_completion_notifier(
+    std::string name, std::promise<void>* p = nullptr,
+    std::function<void(std::exception_ptr)> on_finish = nullptr) {
+    return [name, p, on_finish = std::move(on_finish)](std::exception_ptr e) {
+        if (e) {
+            try {
+                std::rethrow_exception(e);
+            } catch (const boost::system::system_error& ex) {
+                if (ex.code() == boost::asio::error::operation_aborted) {
+                    LOG_INFO() << "[" << name << "] Task cancelled";
+                } else {
+                    LOG_WARN() << "[" << name << "] Exception: " << ex.what();
+                }
+            } catch (const std::exception& ex) {
+                LOG_WARN() << "[" << name << "] Exception: " << ex.what();
+            } catch (...) {
+                LOG_WARN() << "[" << name << "] Unknown non-std exception";
+            }
+        } else {
+            LOG_INFO() << "[" << name << "] Task finished";
+        }
+        if (on_finish)
+            on_finish(e);
+        if (p)
+            p->set_value();
+    };
+}
+
+class coro_task {
+public:
+    template <typename Awaitable>
+    coro_task(std::string name, boost::asio::io_context& ioc,
+              Awaitable&& awaitable,
+              std::function<void(std::exception_ptr)> on_finish = nullptr)
+        : m_name(std::move(name)),
+          m_promise{},
+          m_future(m_promise.get_future()) {
+        boost::asio::co_spawn(
+            ioc, std::forward<Awaitable>(awaitable),
+            boost::asio::bind_cancellation_slot(
+                m_signal.slot(),
+                make_logging_completion_notifier(m_name, &m_promise,
+                                                 std::move(on_finish))));
+    }
+
+    coro_task(const coro_task&) = delete;
+    coro_task& operator=(const coro_task&) = delete;
+    coro_task(coro_task&&) = delete;
+    coro_task& operator=(coro_task&&) = delete;
+
+    ~coro_task() {
+        cancel();
+        wait();
+    }
+
+    void cancel() { m_signal.emit(boost::asio::cancellation_type::all); }
+
+    void wait() {
+        try {
+            m_future.get();
+        } catch (const std::future_error& e) {
+            LOG_ERROR() << "[" << m_name
+                        << "] future_error in wait(): " << e.what();
+        } catch (const std::exception& e) {
+            LOG_ERROR() << "[" << m_name
+                        << "] exception in wait(): " << e.what();
+        } catch (...) {
+            LOG_ERROR() << "[" << m_name << "] unknown exception in wait()";
+        }
+    }
+
+private:
+    std::string m_name;
+    std::promise<void> m_promise;
+    std::future<void> m_future;
+    boost::asio::cancellation_signal m_signal;
+};
 
 } // namespace uh::cluster

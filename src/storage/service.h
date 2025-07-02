@@ -106,4 +106,5 @@ private:
     service_registry m_service_registry;
     std::optional<ec_maintainer> m_ec_maintainer;
 };
+
 } // namespace uh::cluster::storage
