@@ -130,8 +130,7 @@ public:
         wait();
     }
 
-    void cancel() {
-        LOG_INFO() << "[" << m_name << "] trying to cancel... ";
+    void cancel() { //
         m_signal.emit(boost::asio::cancellation_type::all);
     }
 
