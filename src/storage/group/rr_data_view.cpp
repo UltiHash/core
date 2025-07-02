@@ -17,9 +17,7 @@ rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
       m_storage_maintainer(
           etcd, ns::root.storage_groups[group_id].storage_hostports,
           service_factory<storage_interface>(ioc, service_connections),
-          {m_load_balancer, m_storage_index}) {
-    m_load_balancer.get();
-}
+          {m_load_balancer, m_storage_index}) {}
 
 coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
