@@ -1,55 +1,32 @@
 #define BOOST_TEST_MODULE "cancellation tests"
 
 #include <boost/asio.hpp>
+#include <common/coroutines/coro_util.h>
 
 #include "test_config.h"
+
+namespace uh::cluster {
 
 class task_owner {
 public:
     task_owner(boost::asio::io_context& ioc)
-        : m_ioc{ioc},
-          m_promise{},
-          m_future{m_promise.get_future()},
-          m_signal{} {
-        boost::asio::co_spawn(
-            m_ioc,
-            [this]() -> boost::asio::awaitable<void> { co_await task(); },
-            boost::asio::bind_cancellation_slot(m_signal.slot(),
-                                                boost::asio::detached));
-    }
+        : m_task{"task", ioc, [this]() -> boost::asio::awaitable<void> {
+                     co_await task();
+                 }} {}
 
-    ~task_owner() {
-        m_signal.emit(boost::asio::cancellation_type::all);
-        m_future.get();
-    }
+    ~task_owner() {}
 
 private:
-    boost::asio::io_context& m_ioc;
-    std::promise<void> m_promise;
-    std::future<void> m_future;
-    boost::asio::cancellation_signal m_signal;
+    coro_task m_task;
 
     boost::asio::awaitable<void> task() {
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
             auto executor = co_await boost::asio::this_coro::executor;
-            try {
-                co_await boost::asio::steady_timer(executor,
-                                                   std::chrono::hours(1))
-                    .async_wait(boost::asio::use_awaitable);
-            } catch (const boost::system::system_error& e) {
-                if (e.code() == boost::asio::error::operation_aborted) {
-                    std::cout << "Task cancelled" << std::endl;
-                    m_promise.set_value();
-                    co_return;
-                } else {
-                    std::cout << "Unknown exception thrown" << std::endl;
-                    throw;
-                }
-            }
+            co_await boost::asio::steady_timer(executor, std::chrono::hours(1))
+                .async_wait(boost::asio::use_awaitable);
         }
         std::cout << "Task finished" << std::endl;
-        m_promise.set_value();
     }
 };
 
@@ -65,3 +42,5 @@ BOOST_AUTO_TEST_CASE(cancels_tasks_on_destruction) {
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+} // namespace uh::cluster

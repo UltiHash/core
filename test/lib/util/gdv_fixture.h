@@ -73,6 +73,8 @@ public:
             try {
                 m_ioc.run();
             } catch (std::exception& e) {
+                LOG_ERROR()
+                    << "Exception in global data view thread: " << e.what();
                 m_exception_ptr = std::current_exception();
             }
         });
@@ -91,6 +93,8 @@ public:
                 node.reset();
         }
 
+        m_ioc.stop();
+
         m_storage_instances.clear();
 
         m_work_guard.reset();
@@ -101,6 +105,8 @@ public:
             try {
                 std::rethrow_exception(m_exception_ptr);
             } catch (std::exception& e) {
+                LOG_ERROR()
+                    << "Exception in global data view thread: " << e.what();
                 throw e;
             }
         }
