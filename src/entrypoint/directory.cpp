@@ -43,8 +43,9 @@ coro<std::string> directory::put_object(const std::string& bucket, const object&
         auto row = co_await handle->execv("SELECT version FROM uh_put_object($1, $2, $3, $4, $5, $6)",
                                bucket, obj.name, span, obj.addr->data_size(),
                                obj.etag, obj.mime);
-        co_return row->string(0);
+        co_return *row->string(0);
     } catch (const std::exception& e) {
+        LOG_WARN() << "cannot put object: " << e.what();
         throw command_exception(status::not_found, "NoSuchBucket",
                                 "The specified bucket does not exist.");
     }

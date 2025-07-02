@@ -9,12 +9,14 @@ DROP FUNCTION IF EXISTS uh_bucket_size;
 
 -- Merge object_status with objects
 ALTER TABLE object_status RENAME TO former_object_status;
-CREATE TYPE object_status as ENUM ('Normal', 'Deleted', 'Collected', 'DeleteMarker');
+CREATE TYPE object_status as ENUM ('Normal', 'Deleted', 'Collected');
 
 ALTER TABLE objects ADD COLUMN
     status object_status NOT NULL DEFAULT 'Normal';
 ALTER TABLE objects ADD COLUMN
     deleted_at TIMESTAMP DEFAULT NULL;
+ALTER TABLE objects ADD COLUMN
+    sticky BOOLEAN NOT NULL DEFAULT False;
 
 CREATE OR REPLACE FUNCTION migrate_object_status(id bigint)
     RETURNS object_status
@@ -188,18 +190,33 @@ CREATE OR REPLACE PROCEDURE uh_delete_object(bucket TEXT, object TEXT)
 DECLARE
     b_versioning versioning_type;
     obj_id BIGINT;
+    obj_sticky BOOLEAN;
 BEGIN
     SELECT versioning FROM uh_get_bucket_info(bucket) INTO b_versioning;
-    SELECT id FROM uh_get_object(bucket, object) INTO obj_id;
+    SELECT id, sticky FROM uh_get_object(bucket, object) INTO obj_id, obj_sticky;
+
     IF obj_id IS NULL THEN
         RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
     END IF;
 
     IF b_versioning = 'Enabled' THEN
-        SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
-    END IF;
 
-    UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+        SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
+        UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
+
+    ELSEIF b_versioning = 'Suspended' THEN
+
+        IF obj_sticky THEN
+            SELECT id FROM uh_put_object(bucket, object, '', 0, NULL, NULL) INTO obj_id;
+        END IF;
+
+        UPDATE objects SET status = 'Deleted', sticky = True WHERE id = obj_id;
+
+    ELSE
+
+        UPDATE objects SET status = 'Deleted' WHERE id = obj_id;
+
+    END IF;
 END;
 $$;
 
@@ -218,11 +235,11 @@ $$;
 --
 DROP FUNCTION uh_get_object(bucket TEXT, object TEXT);
 CREATE OR REPLACE FUNCTION uh_get_object(bucket TEXT, object TEXT)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
+    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
     LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o
+        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky FROM objects o
           JOIN (
             SELECT o2.name, o2.bucket_id, max(o2.id) AS max_id FROM objects o2 GROUP BY o2.name, o2.bucket_id
           ) temp ON o.id = temp.max_id
@@ -325,7 +342,7 @@ BEGIN
     FROM objects o
     LEFT JOIN object_refs r ON o.id = r.object_id
     LEFT JOIN buckets b ON b.id = o.bucket_id
-    WHERE o.status = 'Deleted' AND r.object_id IS NULL AND b.versioning = 'Disabled'
+    WHERE o.status = 'Deleted' AND o.sticky = False AND r.object_id IS NULL
     LIMIT 1;
 
     IF NOT FOUND THEN
@@ -348,16 +365,38 @@ CREATE OR REPLACE FUNCTION uh_put_object(bucket TEXT, object TEXT, address BYTEA
 DECLARE b_id BIGINT;
         b_ver versioning_type;
         o_id BIGINT;
+        o_sticky BOOLEAN;
 BEGIN
     SELECT uh_get_bucket_info.id, versioning FROM uh_get_bucket_info(bucket) INTO b_id, b_ver;
-    SELECT uh_get_object.id FROM uh_get_object(bucket, object) INTO o_id;
 
-    IF o_id IS NOT NULL AND b_ver != 'Enabled' THEN
-        UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
-    END IF;
+    IF b_ver = 'Disabled' THEN
 
-    RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
+        SELECT uh_get_object.id FROM uh_get_object(bucket, object) INTO o_id;
+
+        IF o_id IS NOT NULL THEN
+            UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
+        END IF;
+
+        RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
             VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, objects.version;
+
+    ELSEIF b_ver = 'Enabled' THEN
+
+        RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime, sticky)
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime, True) RETURNING objects.id, objects.version;
+
+    ELSEIF b_ver = 'Suspended' THEN
+
+        SELECT uh_get_object.id, sticky FROM uh_get_object(bucket, object) INTO o_id, o_sticky;
+
+        IF o_id IS NOT NULL AND NOT o_sticky THEN
+            UPDATE objects SET status = 'Deleted' WHERE objects.id = o_id;
+        END IF;
+
+        RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, objects.version;
+
+    END IF;
 END
 $$;
 
