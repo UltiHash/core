@@ -12,6 +12,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/asio/steady_timer.hpp>
 
+#include <common/coroutines/coro_util.h>
 #include <common/license/backend_client.h>
 #include <common/license/license_updater.h>
 #include <common/license/usage_updater.h>
@@ -24,41 +25,32 @@ public:
     service(boost::asio::io_context& ioc, const service_config& service,
             const coordinator_config& cc)
         : m_etcd{service.etcd_config},
-          m_usage{ioc, cc.database_config} {
+          m_usage{ioc, cc.database_config},
+          m_license_updater{[&]() {
+              if (cc.license) {
+                  LOG_INFO() << "using license from UH_LICENSE";
+                  return std::make_optional<license_updater>(
+                      ioc, m_etcd,
+                      pseudo_backend_client(cc.license.to_string()));
+              } else {
+                  LOG_INFO() << "using license from licensing host "
+                             << cc.backend_config.backend_host;
+                  const auto& bc = cc.backend_config;
+                  return std::make_optional<license_updater>(
+                      ioc, m_etcd,
+                      default_backend_client(bc.backend_host, bc.customer_id,
+                                             bc.access_token));
+              }
+          }()} {
 
-        if (cc.license) {
-            LOG_INFO() << "using license from UH_LICENSE";
-            m_license_updater.emplace(
-                ioc, m_etcd, pseudo_backend_client(cc.license.to_string()));
+        boost::asio::co_spawn(
+            ioc,
+            m_license_updater
+                ->periodic_update(
+                    time_settings::instance().license_fetch_period)
+                .start_trace(),
+            boost::asio::detached);
 
-            boost::asio::co_spawn(
-                ioc,
-                m_license_updater
-                    ->periodic_update(
-                        time_settings::instance().license_fetch_period)
-                    .start_trace(),
-                boost::asio::detached);
-        } else {
-            LOG_INFO() << "using license from licensing host "
-                       << cc.backend_config.backend_host;
-            const auto& bc = cc.backend_config;
-            m_license_updater.emplace(ioc, m_etcd,
-                                      default_backend_client(bc.backend_host,
-                                                             bc.customer_id,
-                                                             bc.access_token));
-            boost::asio::co_spawn(
-                ioc,
-                m_license_updater
-                    ->periodic_update(
-                        time_settings::instance().license_fetch_period)
-                    .start_trace(),
-                boost::asio::detached);
-
-            m_usage_updater.emplace(ioc, m_usage, *m_license_updater,
-                                    default_backend_client(bc.backend_host,
-                                                           bc.customer_id,
-                                                           bc.access_token));
-        }
         publish_configs(m_etcd, cc.storage_groups);
     }
     static void publish_configs(etcd_manager& etcd,
