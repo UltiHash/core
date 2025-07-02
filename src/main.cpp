@@ -30,6 +30,22 @@ static std::any make_service(boost::asio::io_context& ioc, const config& c) {
         throw std::runtime_error("unknown service role: " + serialize(c.role));
     }
 }
+
+static std::size_t get_num_threads(const config& c) {
+    switch (c.role) {
+    case STORAGE_SERVICE:
+        return c.storage.num_threads;
+    case DEDUPLICATOR_SERVICE:
+        return c.deduplicator.num_threads;
+    case ENTRYPOINT_SERVICE:
+        return c.entrypoint.num_threads;
+    case COORDINATOR_SERVICE:
+        return c.coordinator.num_threads;
+    default:
+        throw std::runtime_error("unknown service role: " + serialize(c.role));
+    }
+}
+
 int main(int argc, char** argv) {
 
     try {
@@ -58,7 +74,7 @@ int main(int argc, char** argv) {
             [&](boost::asio::io_context& ioc) {
                 return make_service(ioc, *config);
             },
-            config->service.threads);
+            get_num_threads(*config));
         runner.run();
     } catch (const std::exception& e) {
         std::cerr << "Failure during startup: " << e.what() << "\n";
