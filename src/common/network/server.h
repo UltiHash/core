@@ -86,9 +86,6 @@ public:
         m_task.reset();
 
         std::unique_lock<std::mutex> lock(m_sessions_mutex);
-        for (const auto& session : m_sessions) {
-            session->cancel();
-        }
         m_sessions_cv.wait(lock, [&] { return m_sessions.empty(); });
     }
 
