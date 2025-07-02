@@ -81,8 +81,12 @@ inline auto make_logging_completion_notifier(
             } catch (const boost::system::system_error& ex) {
                 if (ex.code() == boost::asio::error::operation_aborted) {
                     LOG_INFO() << "[" << name << "] Task cancelled";
+                } else if (ex.code() == boost::asio::error::eof or
+                           ex.code() == boost::asio::error::bad_descriptor) {
+                    LOG_INFO() << "[" << name << "] Disconnected ";
                 } else {
-                    LOG_WARN() << "[" << name << "] Exception: " << ex.what();
+                    LOG_WARN() << "[" << name << "] Exception with error code "
+                               << ex.code() << " : " << ex.what();
                 }
             } catch (const std::exception& ex) {
                 LOG_WARN() << "[" << name << "] Exception: " << ex.what();
