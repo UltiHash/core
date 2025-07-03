@@ -29,7 +29,6 @@ struct group_config {
 
     static group_config create(const std::string& json_str);
     std::string to_string() const;
-    std::size_t get_stripe_size() const { return stripe_size_kib * KIBI_BYTE; }
 };
 
 struct group_configs {
