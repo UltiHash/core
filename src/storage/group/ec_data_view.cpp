@@ -30,27 +30,6 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     LOG_DEBUG() << "[ec_data_view] group state is ready for group " << group_id;
 }
 
-std::size_t
-ec_data_view::get_stripe_frag_count(const std::vector<std::size_t>& offsets,
-                                    std::size_t stripe_index,
-                                    std::size_t stripe_data_size) const {
-    const std::size_t stripe_offset = stripe_index * m_stripe_size;
-    auto current_offset =
-        std::lower_bound(offsets.begin(), offsets.end(), stripe_offset);
-
-    std::size_t frag_count = 1;
-
-    while (current_offset != offsets.end() &&
-           *current_offset < stripe_offset + stripe_data_size) {
-        if (*current_offset != stripe_offset) {
-            frag_count++;
-            current_offset++;
-        }
-    }
-
-    return frag_count;
-}
-
 coro<address> ec_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
 
@@ -138,30 +117,35 @@ coro<address> ec_data_view::write(std::span<const char> data,
         }
 
         m_rs.encode(data_view, parity_view);
-        stripe_refcounts.push_back(
-            get_stripe_frag_count(offsets, i, data_view_size));
     }
+
+    address addr = compute_address(offsets, data.size_bytes(), allocation);
+    // WARNING: this is a group address and won't work with multiple storage
+    // groups
+    auto refcounts = extract_refcounts(addr);
 
     co_await run_for_all<void, std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<void> {
             co_await storage->write(allocation, storage_buffers_view[i],
-                                    stripe_refcounts[i]);
+                                    refcounts);
         },
         storages);
 
+    co_return addr;
+}
+address ec_data_view::compute_address(const std::vector<std::size_t>& offsets,
+                                      const std::size_t data_size,
+                                      const allocation_t& allocation) const {
     address rv;
     std::size_t base_offset = allocation.offset * m_config.data_shards;
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
         auto next = std::next(it);
         std::size_t frag_size =
-            next == offsets.end() ? data.size_bytes() - *it : *next - *it;
+            next == offsets.end() ? data_size - *it : *next - *it;
         rv.emplace_back(base_offset + *it, frag_size);
     }
-    // WARNING: this is a local address and won't work with multiple storage
-    // groups
-
-    co_return rv;
+    return rv;
 }
 
 address ec_data_view::split_fragment(const uint128_t& pointer,
@@ -419,76 +403,67 @@ coro<std::size_t> ec_data_view::get_used_space() {
     co_return used_space;
 }
 
-[[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
-    address aligned_addr = get_aligned_address(addr);
-    auto storages = m_externals.get_storage_services();
-    auto addr_map = co_await perform_for_address<address>(
-        m_ioc, aligned_addr,
-        [this](uint128_t pointer) -> auto {
-            return get_storage_pointer(pointer);
-        },
-        [](std::shared_ptr<storage_interface> svc, const address_info& info)
-            -> coro<address> { co_return co_await svc->link(info.addr); },
-        storages);
+std::vector<refcount_t>
+ec_data_view::extract_refcounts(const address& addr) const {
+    std::map<std::size_t, std::size_t> refcount_by_stripe;
 
-    address parity_addr = compute_parity_address(aligned_addr);
-
-    for (size_t p = 0; p < m_config.parity_shards; ++p) {
-        size_t parity_shard_id = m_config.data_shards + p;
-        if (!storages[parity_shard_id])
-            continue;
-        auto rejected_addr =
-            co_await storages[parity_shard_id]->link(parity_addr);
-        if (!rejected_addr.empty()) {
-            throw std::runtime_error("Failed to link parity address: " +
-                                     rejected_addr.to_string());
+    for (const auto& frag : addr.fragments) {
+        auto group_pointer = pointer_traits::get_group_pointer(frag.pointer);
+        std::size_t first_stripe = group_pointer / m_stripe_size;
+        std::size_t last_stripe =
+            (group_pointer + frag.size - 1) / m_stripe_size;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            refcount_by_stripe[stripe_id]++;
         }
     }
 
-    address rv;
-    for (const auto& a : addr_map | std::views::values) {
-        rv.append(a);
+    std::vector<refcount_t> refcounts;
+    refcounts.reserve(refcount_by_stripe.size());
+    for (const auto& [stripe_id, count] : refcount_by_stripe) {
+        refcounts.emplace_back(stripe_id, count);
     }
+    return refcounts;
+}
+
+[[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
+    auto refcounts = extract_refcounts(addr);
+    auto storages = m_externals.get_storage_services();
+    auto link_rvs = co_await run_for_all<std::vector<refcount_t>,
+                                         std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
+            std::vector<refcount_t> refcounts;
+            co_return co_await storage->link(refcounts);
+        },
+        storages);
+
+    address rv;
+    // TODO: identify fragments matching with rejected refcounts
 
     co_return rv;
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {
-    address aligned_addr = get_aligned_address(addr);
+    auto refcounts = extract_refcounts(addr);
     auto storages = m_externals.get_storage_services();
-    auto freed_pages_map = co_await perform_for_address<std::size_t>(
-        m_ioc, aligned_addr,
-        [this](uint128_t pointer) -> auto {
-            return get_storage_pointer(pointer);
-        },
-        [](std::shared_ptr<storage_interface> svc, const address_info& info)
-            -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
-        storages);
 
-    address parity_addr = compute_parity_address(aligned_addr);
+    auto unlink_rvs =
+        co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<std::size_t> {
+                std::vector<refcount_t> refcounts;
+                std::size_t freed = co_await storage->unlink(refcounts);
+                if (i >= m_config.data_shards) {
+                    co_return 0;
+                }
+                co_return freed;
+            },
+            storages);
 
-    for (size_t p = 0; p < m_config.parity_shards; ++p) {
-        size_t parity_shard_id = m_config.data_shards + p;
-        if (!storages[parity_shard_id])
-            continue;
-        co_await storages[parity_shard_id]->unlink(parity_addr);
-    }
-
-    auto freed_bytes = std::accumulate(
-        std::ranges::begin(freed_pages_map | std::views::values),
-        std::ranges::end(freed_pages_map | std::views::values), 0ul,
-        [](std::size_t acc, std::size_t val) { return acc + val; });
+    auto freed_bytes =
+        std::accumulate(unlink_rvs.begin(), unlink_rvs.end(), 0ul);
     co_return freed_bytes;
-}
-
-address ec_data_view::compute_parity_address(const address& addr) {
-    address parity_addr;
-    for (size_t i = 0; i < addr.size(); ++i) {
-        auto frag = addr.get(i);
-        std::size_t chunk_base = (frag.pointer / m_stripe_size) * m_chunk_size;
-        parity_addr.push({chunk_base, m_chunk_size});
-    }
-    return parity_addr;
 }
 
 } // namespace uh::cluster::storage

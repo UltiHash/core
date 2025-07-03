@@ -120,6 +120,12 @@ private:
     service_load_balancer<storage_interface> m_load_balancer;
     storage_index m_storage_index;
     service_maintainer<storage_interface> m_storage_maintainer;
+    std::vector<std::vector<refcount_t>>
+    extract_refcounts(const address& addr) const;
+    address compute_address(const std::vector<std::size_t>& offsets,
+                            const std::size_t data_size,
+                            const std::size_t storage_id,
+                            const std::size_t base_offset) const;
 };
 
 } // namespace uh::cluster::storage

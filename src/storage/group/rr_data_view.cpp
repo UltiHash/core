@@ -25,19 +25,27 @@ coro<address> rr_data_view::write(std::span<const char> data,
                                   const std::vector<std::size_t>& offsets) {
     const auto [storage_id, client] = m_load_balancer.get();
     auto allocation = co_await client->allocate(data.size());
-    co_await client->write(allocation, {data}, offsets);
+    address rv = compute_address(offsets, data.size_bytes(), storage_id,
+                                 allocation.offset);
+    auto refcounts = extract_refcounts(rv);
+    co_await client->write(allocation, {data}, refcounts[storage_id]);
 
+    co_return rv;
+}
+address rr_data_view::compute_address(const std::vector<std::size_t>& offsets,
+                                      const std::size_t data_size,
+                                      const std::size_t storage_id,
+                                      const std::size_t base_offset) const {
     address rv;
     for (auto it = offsets.begin(); it != offsets.end(); it++) {
         auto next = std::next(it);
         std::size_t frag_size =
-            next == offsets.end() ? data.size_bytes() - *it : *next - *it;
+            next == offsets.end() ? data_size - *it : *next - *it;
         auto frag_offset = pointer_traits::rr::get_global_pointer(
-            allocation.offset + *it, m_group_config.id, storage_id);
+            base_offset + *it, m_group_config.id, storage_id);
         rv.emplace_back(frag_offset, frag_size);
     }
-
-    co_return rv;
+    return rv;
 }
 
 coro<shared_buffer<>> rr_data_view::read(const uint128_t& pointer,
@@ -78,33 +86,64 @@ coro<std::size_t> rr_data_view::get_used_space() {
     co_return used;
 }
 
+std::vector<std::vector<refcount_t>>
+rr_data_view::extract_refcounts(const address& addr) const {
+    std::map<uint16_t, std::map<std::size_t, std::size_t>>
+        refcount_by_stripe_and_storage;
+    size_t stripe_size = m_group_config.get_stripe_size();
+
+    for (const auto& frag : addr.fragments) {
+        auto [storage_id, local_pointer] =
+            pointer_traits::rr::get_storage_pointer(frag.pointer);
+        std::size_t first_stripe = local_pointer / stripe_size;
+        std::size_t last_stripe = (local_pointer + frag.size - 1) / stripe_size;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            refcount_by_stripe_and_storage[storage_id][stripe_id]++;
+        }
+    }
+
+    std::vector<std::vector<refcount_t>> refcounts_by_storage;
+    refcounts_by_storage.reserve(m_group_config.storages);
+    for (const auto& [storage_id, stripe_map] :
+         refcount_by_stripe_and_storage) {
+        std::vector<refcount_t> refcounts;
+        refcounts.reserve(stripe_map.size());
+        for (const auto& [stripe_id, count] : stripe_map) {
+            refcounts.emplace_back(stripe_id, count);
+        }
+        refcounts_by_storage.push_back(std::move(refcounts));
+    }
+    return refcounts_by_storage;
+}
+
 [[nodiscard]] coro<address> rr_data_view::link(const address& addr) {
-    auto addr_map = co_await perform_for_address<address>(
-        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [](std::shared_ptr<storage_interface> svc, const address_info& info)
-            -> coro<address> { co_return co_await svc->link(info.addr); },
+    std::vector<std::vector<refcount_t>> refcounts_by_storage =
+        extract_refcounts(addr);
+
+    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<void> {
+            co_await storage->link(refcounts_by_storage[i]);
+        },
         m_storage_index.get());
 
     address rv;
-    for (const auto& a : addr_map | std::views::values) {
-        rv.append(a);
-    }
 
     co_return rv;
 }
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
-    auto freed_bytes_map = co_await perform_for_address<std::size_t>(
-        m_ioc, addr, pointer_traits::rr::get_storage_pointer,
-        [](std::shared_ptr<storage_interface> svc, const address_info& info)
-            -> coro<std::size_t> { co_return co_await svc->unlink(info.addr); },
-        m_storage_index.get());
+    std::vector<std::vector<refcount_t>> refcounts_by_storage =
+        extract_refcounts(addr);
 
-    auto freed_bytes = std::accumulate(
-        std::ranges::begin(freed_bytes_map | std::views::values),
-        std::ranges::end(freed_bytes_map | std::views::values), 0ul,
-        [](std::size_t acc, std::size_t val) { return acc + val; });
-    co_return freed_bytes;
+    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+        m_ioc,
+        [&](size_t i, auto storage) -> coro<void> {
+            co_await storage->unlink(refcounts_by_storage[i]);
+        },
+        m_storage_index.get());
+    co_return 0;
 }
 
 } // namespace uh::cluster::storage

@@ -121,7 +121,18 @@ uh::cluster::coro<void> write_file(uh::cluster::storage_interface& svc,
 
     timer t;
     auto alloc = co_await svc.allocate(buffer.size());
-    auto addr = co_await svc.write(alloc, {buffer}, {0});
+
+    std::size_t first_stripe = alloc.offset / DEFAULT_PAGE_SIZE;
+    std::size_t last_stripe =
+        (alloc.offset + alloc.size - 1) / DEFAULT_PAGE_SIZE;
+    std::vector<refcount_t> refcounts;
+    refcounts.reserve(last_stripe - first_stripe);
+    for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+         stripe_id++) {
+        refcounts.emplace_back(stripe_id, 1);
+    }
+
+    auto addr = co_await svc.write(alloc, {buffer}, refcounts);
     auto time = t.passed();
 
     auto mb = buffer.size() / MEBI_BYTE;

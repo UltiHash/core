@@ -121,9 +121,9 @@ std::size_t default_data_store::fetch_used_space() const {
 }
 
 address
-default_data_store::write(const allocation_t allocation,
+default_data_store::write(allocation_t allocation,
                           const std::vector<std::span<const char>>& buffers,
-                          std::span<const std::size_t> offsets) {
+                          const std::vector<refcount_t>& refcounts) {
     std::unique_lock lock(m_mutex);
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
@@ -160,21 +160,35 @@ default_data_store::write(const allocation_t allocation,
         std::max(m_write_offset, allocation.offset + allocation.size);
     sync();
 
-    maintain_refcount(allocation.offset, allocation.size, offsets);
+    if (refcounts.empty()) {
+        std::vector<refcount_t> derived_refcounts;
+        std::size_t first_stripe = allocation.offset / m_conf.page_size;
+        std::size_t last_stripe =
+            (allocation.offset + allocation.size - 1) / m_conf.page_size;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            derived_refcounts.emplace_back(stripe_id, 1);
+        }
+        m_refcounter.increment(derived_refcounts, false);
+    } else {
+        m_refcounter.increment(refcounts, false);
+    }
 
     address rv;
     rv.emplace_back(allocation.offset, allocation.size);
     return rv;
 }
 
-address default_data_store::link(const address& addr) {
+std::vector<refcount_t>
+default_data_store::link(const std::vector<refcount_t>& refcounts) {
     std::unique_lock lock(m_mutex);
-    return m_refcounter.increment(addr);
+    return m_refcounter.increment(refcounts);
 }
 
-std::size_t default_data_store::unlink(const address& addr) {
+std::size_t
+default_data_store::unlink(const std::vector<refcount_t>& refcounts) {
     std::unique_lock lock(m_mutex);
-    return m_refcounter.decrement(addr);
+    return m_refcounter.decrement(refcounts);
 }
 
 default_data_store::~default_data_store() {
@@ -275,32 +289,6 @@ allocation_t default_data_store::allocate(size_t size, std::size_t alignment) {
     allocation_t rv = {.offset = m_write_offset, .size = size};
     m_write_offset += size;
     return rv;
-}
-
-void default_data_store::maintain_refcount(
-    const std::size_t local_pointer, const std::size_t size,
-    std::span<const std::size_t> offsets) {
-    std::deque<reference_counter::refcount_cmd> refcount_commands;
-
-    if (offsets.empty()) {
-        refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                       local_pointer, size);
-        m_refcounter.execute(refcount_commands);
-        return;
-    }
-
-    for (auto it = offsets.begin(); it != offsets.end(); it++) {
-        auto next_different =
-            std::find_if(std::next(it), offsets.end(),
-                         [it](const std::size_t& val) { return val != *it; });
-        std::size_t frag_size = next_different == offsets.end()
-                                    ? size - *it
-                                    : *next_different - *it;
-        refcount_commands.emplace_back(reference_counter::INCREMENT,
-                                       local_pointer + *it, frag_size);
-    }
-
-    m_refcounter.execute(refcount_commands);
 }
 
 std::size_t default_data_store::internal_delete(std::size_t offset,

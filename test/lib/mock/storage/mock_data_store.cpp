@@ -46,14 +46,13 @@ mock_data_store::mock_data_store(data_store_config conf,
             ifs.read(reinterpret_cast<char*>(&map_size), sizeof(map_size));
 
             for (size_t i = 0; i < map_size; ++i) {
-                fragment key;
+                refcount_t refcount;
 
-                ifs.read(reinterpret_cast<char*>(&key.pointer),
-                         sizeof(key.pointer));
-                ifs.read(reinterpret_cast<char*>(&key.size), sizeof(key.size));
-                int value;
-                ifs.read(reinterpret_cast<char*>(&value), sizeof(value));
-                m_refcounter[key] = value;
+                ifs.read(reinterpret_cast<char*>(&refcount.stripe_id),
+                         sizeof(refcount.stripe_id));
+                ifs.read(reinterpret_cast<char*>(&refcount.count),
+                         sizeof(refcount.count));
+                m_refcounter[refcount.stripe_id] = refcount.count;
             }
         }
     }
@@ -62,13 +61,13 @@ mock_data_store::mock_data_store(data_store_config conf,
 address
 mock_data_store::write(const allocation_t allocation,
                        const std::vector<std::span<const char>>& buffers,
-                       std::span<const std::size_t> offsets) {
+                       const std::vector<refcount_t>& refcounts) {
     address data_address;
     auto offset = allocation.offset;
     for (const auto& data : buffers) {
         std::copy(data.begin(), data.end(), m_data.begin() + offset);
         data_address.emplace_back(offset, data.size());
-        link(data_address);
+        link(refcounts);
         offset += data.size();
     }
 
@@ -89,38 +88,31 @@ std::size_t mock_data_store::read(const std::size_t pointer,
     return buffer.size();
 }
 
-address mock_data_store::link(const address& addr) {
-    address new_fragments;
-    for (size_t i = 0; i < addr.size(); ++i) {
-        auto frag = addr.get(i);
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            if (!m_refcounter.contains(frag)) {
-                new_fragments.push(frag);
-            }
-            m_refcounter[frag]++;
+std::vector<refcount_t>
+mock_data_store::link(const std::vector<refcount_t>& refcounts) {
+    std::vector<refcount_t> new_refcounts;
+    for (auto& refcount : refcounts) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (!m_refcounter.contains(refcount.stripe_id)) {
+            new_refcounts.push_back(refcount);
         }
+        m_refcounter[refcount.stripe_id] += refcount.count;
     }
 
-    return new_fragments;
+    return new_refcounts;
 }
 
-std::size_t mock_data_store::unlink(const address& addr) {
+std::size_t mock_data_store::unlink(const std::vector<refcount_t>& refcounts) {
     size_t size = 0;
-    for (size_t i = 0; i < addr.size(); ++i) {
-        auto frag = addr.get(i);
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            auto it = m_refcounter.find(frag);
-            if (it == m_refcounter.end()) {
-                throw std::exception();
-            }
-            if (--(it->second) == 0) {
-                std::fill(m_data.begin() + frag.pointer,
-                          m_data.begin() + frag.pointer + frag.size, 0);
-                m_refcounter.erase(it);
-                size += frag.size;
-            }
+    for (auto& refcount : refcounts) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_refcounter.find(refcount.stripe_id);
+        if (it == m_refcounter.end()) {
+            throw std::exception();
+        }
+        if (it->second < refcount.count) {
+            m_refcounter.erase(it);
+            size += m_conf.page_size;
         }
     }
     return size;
@@ -180,10 +172,7 @@ mock_data_store::~mock_data_store() {
         ofs.write(reinterpret_cast<const char*>(&map_size), sizeof(map_size));
 
         for (const auto& [key, value] : m_refcounter) {
-            ofs.write(reinterpret_cast<const char*>(&key.pointer),
-                      sizeof(key.pointer));
-            ofs.write(reinterpret_cast<const char*>(&key.size),
-                      sizeof(key.size));
+            ofs.write(reinterpret_cast<const char*>(&key), sizeof(key));
             ofs.write(reinterpret_cast<const char*>(&value), sizeof(value));
         }
     }

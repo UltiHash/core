@@ -20,8 +20,8 @@ struct local_storage : public storage_interface {
 
     coro<address> write(allocation_t allocation,
                         const std::vector<std::span<const char>>& buffers,
-                        std::span<const std::size_t> offsets) override {
-        co_return m_data_store->write(allocation, buffers, offsets);
+                        const std::vector<refcount_t>& refcounts) override {
+        co_return m_data_store->write(allocation, buffers, refcounts);
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
@@ -49,11 +49,12 @@ struct local_storage : public storage_interface {
         co_return;
     }
 
-    coro<address> link(const address& addr) override {
-        auto p = std::make_shared<std::promise<address>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+    coro<std::vector<refcount_t>>
+    link(const std::vector<refcount_t>& refcounts) override {
+        auto p = std::make_shared<std::promise<std::vector<refcount_t>>>();
+        boost::asio::post(m_threads, [this, p, &refcounts]() {
             try {
-                p->set_value(m_data_store->link(addr));
+                p->set_value(m_data_store->link(refcounts));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }
@@ -61,11 +62,12 @@ struct local_storage : public storage_interface {
         co_return p->get_future().get();
     }
 
-    coro<std::size_t> unlink(const address& addr) override {
+    coro<std::size_t>
+    unlink(const std::vector<refcount_t>& refcounts) override {
         auto p = std::make_shared<std::promise<std::size_t>>();
-        boost::asio::post(m_threads, [this, p, &addr]() {
+        boost::asio::post(m_threads, [this, p, &refcounts]() {
             try {
-                p->set_value(m_data_store->unlink(addr));
+                p->set_value(m_data_store->unlink(refcounts));
             } catch (const std::exception&) {
                 p->set_exception(std::current_exception());
             }

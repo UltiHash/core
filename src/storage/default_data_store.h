@@ -41,7 +41,7 @@ public:
      */
     address write(const allocation_t allocation,
                   const std::vector<std::span<const char>>& buffers,
-                  std::span<const std::size_t> offsets = {});
+                  const std::vector<refcount_t>& refcounts = {}) override;
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and
@@ -63,7 +63,7 @@ public:
      * @param address: storage locations that are to be referenced.
      * @return an address containing rejected fragments.
      */
-    address link(const address& addr);
+    std::vector<refcount_t> link(const std::vector<refcount_t>& refcounts);
 
     /**
      * @brief Removes a reference to one or multiple storage locations.
@@ -72,7 +72,7 @@ public:
      * @param address: storage locations that are to be unreferenced.
      * @return number of bytes freed in response to removing references.
      */
-    std::size_t unlink(const address& addr);
+    std::size_t unlink(const std::vector<refcount_t>& refcounts);
 
     /**
      * @brief Returns the current used space of the data store.

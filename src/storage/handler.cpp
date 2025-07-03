@@ -117,7 +117,7 @@ coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
 
     // Use buffers directly from the write_request
     auto addr =
-        co_await m_storage.write(req.allocation, req.buffers, req.offsets);
+        co_await m_storage.write(req.allocation, req.buffers, req.refcounts);
     co_await m.send_address(SUCCESS, addr);
 }
 
@@ -149,15 +149,15 @@ coro<void> handler::handle_read_address(messenger& m,
 
 coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
-    auto rejected_addr = co_await m_storage.link(addr);
+    const auto refcounts = co_await m.recv_refcounts(h);
+    auto rejected_stripes = co_await m_storage.link(refcounts);
 
-    co_await m.send_address(SUCCESS, rejected_addr);
+    co_await m.send_refcounts(SUCCESS, rejected_stripes);
 }
 
 coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
+    const auto addr = co_await m.recv_refcounts(h);
     std::size_t freed_bytes = co_await m_storage.unlink(addr);
 
     co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);

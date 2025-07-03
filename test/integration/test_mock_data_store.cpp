@@ -8,6 +8,7 @@
 
 #include <boost/test/unit_test.hpp>
 
+#include <common/utils/pointer_traits.h>
 #include <random>
 #include <thread>
 
@@ -66,6 +67,29 @@ struct data_store_fixture {
         m_expected_used += t_written;
         m_expected_last_file_space -= t_written;
         return m_expected_used;
+    }
+
+    std::vector<refcount_t> extract_refcounts(const address& addr) {
+        std::map<std::size_t, std::size_t> refcount_by_stripe;
+
+        for (const auto& frag : addr.fragments) {
+            auto local_pointer =
+                pointer_traits::get_group_pointer(frag.pointer);
+            std::size_t first_stripe = local_pointer / DEFAULT_PAGE_SIZE;
+            std::size_t last_stripe =
+                (local_pointer + frag.size - 1) / DEFAULT_PAGE_SIZE;
+            for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+                 stripe_id++) {
+                refcount_by_stripe[stripe_id]++;
+            }
+        }
+
+        std::vector<refcount_t> refcounts;
+        refcounts.reserve(refcount_by_stripe.size());
+        for (const auto& [stripe_id, count] : refcount_by_stripe) {
+            refcounts.emplace_back(stripe_id, count);
+        }
+        return refcounts;
     }
 
     temp_directory m_dir;
@@ -260,7 +284,8 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     auto buffer = random_buffer(2 * DEFAULT_PAGE_SIZE);
     auto alloc = ds->allocate(buffer.size());
     auto addr = ds->write(alloc, {buffer.string_view()});
-    BOOST_CHECK_EQUAL(ds->unlink(addr), addr.data_size());
+    auto addr_refcounts = extract_refcounts(addr);
+    BOOST_CHECK_EQUAL(ds->unlink(addr_refcounts), addr.data_size());
 
     auto alloc2 = ds->allocate(buffer.size());
     addr = ds->write(alloc2, {buffer.string_view()});
@@ -271,7 +296,8 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
         {addr.data_size() / 2, (addr.data_size() - addr.data_size() / 2)});
     BOOST_TEST(addr.data_size() == illegal_addr.data_size());
     BOOST_TEST(addr.size() != illegal_addr.size());
-    BOOST_CHECK_THROW(ds->unlink(illegal_addr), std::exception);
+    auto illegal_refcounts = extract_refcounts(illegal_addr);
+    BOOST_CHECK_THROW(ds->unlink(illegal_refcounts), std::exception);
 }
 
 BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
@@ -313,7 +339,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_aligned) {
         offset += buffer3.size();
     }
 
-    ds->unlink(buffer2_address);
+    auto buffer2_refcounts = extract_refcounts(buffer2_address);
+    ds->unlink(buffer2_refcounts);
 
     {
         shared_buffer<char> read_buffer(full_address.data_size());
@@ -378,7 +405,8 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         offset += buffer3.size();
     }
 
-    ds->unlink(buffer2_address);
+    auto buffer2_refcounts = extract_refcounts(buffer2_address);
+    ds->unlink(buffer2_refcounts);
 
     {
         shared_buffer<char> read_buffer(full_address.data_size());
@@ -410,7 +438,8 @@ BOOST_AUTO_TEST_CASE(repeated_write_delete) {
     for (std::size_t i = 0; i < 100; i++) {
         auto alloc = ds->allocate(buffer.size());
         buffer_address = ds->write(alloc, {buffer.string_view()});
-        ds->unlink(buffer_address);
+        auto buffer_refcounts = extract_refcounts(buffer_address);
+        ds->unlink(buffer_refcounts);
     }
 
     auto alloc = ds->allocate(buffer.size());

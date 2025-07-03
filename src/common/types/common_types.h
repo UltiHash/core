@@ -28,6 +28,10 @@ struct allocation_t {
 struct refcount_t {
     std::size_t stripe_id;
     std::size_t count;
+
+    bool operator==(const refcount_t& other) const {
+        return stripe_id == other.stripe_id && count == other.count;
+    }
 };
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;

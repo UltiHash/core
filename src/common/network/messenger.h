@@ -7,14 +7,14 @@ namespace uh::cluster {
 struct write_request_store {
     allocation_t allocation;
     std::vector<std::span<const char>> buffers;
-    std::span<const std::size_t> offsets;
+    std::vector<refcount_t> refcounts;
     unique_buffer<> backing_buffer;
 };
 
 struct write_request_view {
     allocation_t allocation;
     std::vector<std::span<const char>> buffers;
-    std::span<const std::size_t> offsets;
+    std::vector<refcount_t> refcounts;
 };
 
 class messenger : public messenger_core {
@@ -26,6 +26,8 @@ public:
     coro<fragment> recv_fragment(const header& message_header);
 
     coro<allocation_t> recv_allocation(const header& message_header);
+
+    coro<std::vector<refcount_t>> recv_refcounts(const header& message_header);
 
     template <typename T>
     requires std::is_arithmetic_v<T>
@@ -59,6 +61,9 @@ public:
 
     coro<void> send_allocation(const message_type type,
                                const allocation_t& allocation);
+
+    coro<void> send_refcounts(const message_type type,
+                              const std::vector<refcount_t>& refcounts);
 
     template <typename T>
     requires std::is_arithmetic_v<T>
