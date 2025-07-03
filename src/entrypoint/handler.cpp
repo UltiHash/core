@@ -1,5 +1,6 @@
 #include "handler.h"
 #include "http/command_exception.h"
+#include <common/utils/downstream_exception.h>
 #include <common/utils/random.h>
 #include <format>
 
@@ -25,46 +26,41 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 
         raw_request rawreq;
         response resp;
-        bool keep_alive = false;
 
         try {
-            rawreq = co_await raw_request::read(s);
-            resp = co_await handle_request(s, rawreq, id).start_trace();
-            metric<success>::increase(1);
-            keep_alive = true;
+            try {
+                rawreq = co_await raw_request::read(s);
+                resp = co_await handle_request(s, rawreq, id).start_trace();
+                metric<success>::increase(1);
 
-        } catch (const command_exception& e) {
-            LOG_INFO() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(e);
-            keep_alive = true;
-
-        } catch (const boost::system::system_error& se) {
-            if (se.code() == boost::beast::http::error::end_of_stream) {
-                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
-                break;
-            } else {
-                LOG_ERROR() << s.remote_endpoint() << ": " << se.what();
-                resp = make_response(command_exception(
-                    status::internal_server_error, "InternalError",
-                    "Internal server error."));
+            } catch (const boost::system::system_error& e) {
+                throw;
+            } catch (const downstream_exception& e) {
+                if (e.code() == boost::asio::error::operation_aborted or
+                    e.code() == boost::beast::error::timeout) {
+                    resp = make_response(command_exception(error::busy));
+                } else {
+                    resp = make_response(
+                        command_exception(error::internal_network_error));
+                }
+            } catch (const command_exception& e) {
+                resp = make_response(e);
+            } catch (const error_exception& e) {
+                resp = make_response(command_exception(*e.error()));
+            } catch (const std::exception& e) {
+                LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
+                resp = make_response(command_exception());
             }
-        } catch (const std::exception& e) {
-            LOG_ERROR() << s.remote_endpoint() << ": " << e.what();
-            resp = make_response(command_exception());
-        }
 
-        try {
             co_await write(s, std::move(resp), id);
-        } catch (const boost::system::system_error& se) {
-            if (se.code() == boost::beast::http::error::end_of_stream) {
-                LOG_INFO() << s.remote_endpoint() << ": peer closed connection";
+
+        } catch (const boost::system::system_error& e) {
+            if (e.code() == boost::beast::http::error::end_of_stream or
+                e.code() == boost::asio::error::eof) {
+                LOG_INFO() << s.remote_endpoint() << " disconnected";
                 break;
             }
             throw;
-        }
-
-        if (!keep_alive) {
-            break;
         }
     }
 
@@ -75,9 +71,9 @@ coro<void> handler::handle(boost::asio::ip::tcp::socket s) {
 coro<response> handler::handle_request(boost::asio::ip::tcp::socket& s,
                                        raw_request& rawreq,
                                        const std::string& id) {
-
-    auto req = co_await m_factory.create(s, rawreq);
-    LOG_INFO() << ": read request, id=" << id << ": " << *req;
+    std::unique_ptr<request> req;
+    req = co_await m_factory.create(s, rawreq);
+    LOG_INFO() << req->peer() << ": read request, id=" << id << ": " << *req;
 
     auto span = co_await boost::asio::this_coro::span;
 

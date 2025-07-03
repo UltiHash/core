@@ -13,12 +13,7 @@ ec_data_view::ec_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
     : m_ioc(ioc),
       m_config{config},
       m_stripe_size{m_config.get_stripe_size()},
-      m_chunk_size{[&]() {
-          if (m_stripe_size % m_config.data_shards != 0)
-              throw std::runtime_error(
-                  "Stripe size must be divisible by data shards");
-          return m_stripe_size / m_config.data_shards;
-      }()},
+      m_chunk_size{m_config.get_stripe_unit_size()},
       m_rs{config.data_shards, config.parity_shards, m_chunk_size},
       m_externals(
           etcd, group_id, config.storages,

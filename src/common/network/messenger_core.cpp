@@ -5,20 +5,26 @@ namespace uh::cluster {
 
 messenger_core::messenger_core(boost::asio::io_context& ioc,
                                const std::string& ip_addr,
-                               const std::uint16_t port)
-    : m_tcp_stream(ioc) {
-    boost::asio::ip::tcp::endpoint endpoint(
-        boost::asio::ip::make_address(ip_addr), port);
+                               const std::uint16_t port, origin origin)
+    : m_tcp_stream(ioc),
+      m_origin{origin} {
+
     try {
+        auto endpoint = boost::asio::ip::tcp::endpoint{
+            boost::asio::ip::make_address(ip_addr), port};
         m_tcp_stream.connect(endpoint);
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("socket connection failed", e);
+        clear_buffers();
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception("failure on the connection", e);
+        throw;
     }
-    clear_buffers();
 }
 
-messenger_core::messenger_core(boost::asio::ip::tcp::socket&& socket)
-    : m_tcp_stream(std::move(socket)) {
+messenger_core::messenger_core(boost::asio::ip::tcp::socket&& socket,
+                               origin origin)
+    : m_tcp_stream(std::move(socket)),
+      m_origin{origin} {
     clear_buffers();
 }
 
@@ -27,47 +33,55 @@ messenger_core::messenger_core(messenger_core&& m) noexcept
       m_read_buffers(std::move(m.m_read_buffers)),
       m_write_buffers(std::move(m.m_write_buffers)),
       m_read_size(m.m_read_size),
-      m_write_size(m.m_write_size) {}
+      m_write_size(m.m_write_size),
+      m_origin{m.m_origin} {}
 
-coro<messenger_core::header> messenger_core::recv_header() {
-    header h;
-    std::string ctx_buffer;
-    ctx_buffer.resize(get_encoded_context_len());
-
+coro<messenger_core::header> messenger_core::recv_header(
+    std::optional<std::chrono::steady_clock::duration> timeout) {
     try {
+        header h;
+        std::string ctx_buffer;
+        ctx_buffer.resize(get_encoded_context_len());
+
         std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type},
             {&h.size, sizeof h.size},
             boost::asio::buffer(ctx_buffer)};
-
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        if (timeout.has_value()) {
+            m_tcp_stream.expires_after(timeout.value());
+        } else {
+            m_tcp_stream.expires_never();
+        }
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_header failed", e);
+        h.peer = peer();
+
+        if (h.type == FAILURE) {
+            const auto e = co_await recv_error(h);
+            LOG_DEBUG() << "recv_header received error: " << e.message();
+            throw error_exception(e);
+        }
+
+        if (h.type != SUCCESS) {
+            measure_message_type(h.type);
+        }
+
+        co_return h;
+
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception(__func__, e);
+        throw;
     }
-
-    h.peer = peer();
-
-    if (h.type == FAILURE) {
-        const auto e = co_await recv_error(h);
-        throw error_exception(e);
-    }
-
-    if (h.type != SUCCESS) {
-        measure_message_type(h.type);
-    }
-
-    co_return h;
 }
 
 coro<std::tuple<messenger_core::header, opentelemetry::context::Context>>
 messenger_core::recv_header_with_context() {
-    header h;
-    std::string ctx_buffer;
-    ctx_buffer.resize(get_encoded_context_len());
-
     try {
+        header h;
+        std::string ctx_buffer;
+        ctx_buffer.resize(get_encoded_context_len());
+
         std::vector<boost::asio::mutable_buffer> buffers{
             {&h.type, sizeof h.type},
             {&h.size, sizeof h.size},
@@ -76,52 +90,48 @@ messenger_core::recv_header_with_context() {
         m_tcp_stream.expires_never();
         co_await boost::asio::async_read(m_tcp_stream, buffers,
                                          boost::asio::use_awaitable);
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_header_with_context failed",
-                                            e);
+
+        h.peer = peer();
+
+        if (h.type == FAILURE) {
+            const auto e = co_await recv_error(h);
+            LOG_WARN() << "recv_header_with_context received error: "
+                       << e.message();
+            throw error_exception(e);
+        }
+
+        if (h.type != SUCCESS) {
+            measure_message_type(h.type);
+        }
+        auto context = decode_context(ctx_buffer);
+
+        co_return std::make_tuple(h, context);
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception(__func__, e);
+        throw;
     }
-
-    h.peer = peer();
-
-    if (h.type == FAILURE) {
-        const auto e = co_await recv_error(h);
-        throw error_exception(e);
-    }
-
-    if (h.type != SUCCESS) {
-        measure_message_type(h.type);
-    }
-    auto context = decode_context(ctx_buffer);
-
-    if (boost::asio::trace_span::enable &&
-        !boost::asio::trace_span::check_context(context)) {
-        LOG_ERROR() << "[messenger_core::send] The decoded context is invalid: "
-                       "see following stack trace";
-        auto span = co_await boost::asio::this_coro::span;
-        span->iterate_call_stack(
-            [](boost::source_location loc) { LOG_INFO() << loc; });
-        LOG_ERROR() << "End of stack trace";
-    }
-
-    co_return std::make_tuple(h, context);
 }
 
 coro<void> messenger_core::recv_buffers(const messenger_core::header& h) {
     if (h.size != m_read_size) {
-        throw std::length_error(
-            "The size of the buffers does not match with the header size: " +
-            std::to_string(h.size) + " != " + std::to_string(m_read_size));
+        throw std::length_error("The size of the buffers does not match "
+                                "with the header size: " +
+                                std::to_string(h.size) +
+                                " != " + std::to_string(m_read_size));
     }
 
     try {
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().read_timeout);
         co_await boost::asio::async_read(m_tcp_stream, m_read_buffers,
                                          boost::asio::use_awaitable);
         m_read_buffers.clear();
         m_read_size = 0;
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("recv_buffers failed", e);
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception(__func__, e);
+        throw;
     }
 }
 
@@ -154,31 +164,22 @@ coro<void> messenger_core::send_buffers(const message_type type) {
 
         auto context = co_await boost::asio::this_coro::context;
 
-        if (boost::asio::trace_span::enable &&
-            !boost::asio::trace_span::check_context(context)) {
-            LOG_ERROR() << "[messenger_core::send_buffers] The context to be "
-                           "encoded is invalid: see following stack trace";
-            auto span = co_await boost::asio::this_coro::span;
-            span->iterate_call_stack(
-                [](boost::source_location loc) { LOG_INFO() << loc; });
-            LOG_ERROR() << "End of stack trace";
-        }
-
         auto ctx_buf = encode_context(context);
 
         m_write_buffers[0] = {&type, sizeof type};
         m_write_buffers[1] = {&m_write_size, sizeof m_write_size};
         m_write_buffers[2] = boost::asio::buffer(ctx_buf);
 
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().write_timeout);
         co_await boost::asio::async_write(m_tcp_stream, m_write_buffers,
                                           boost::asio::use_awaitable);
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("send_buffers failed", e);
+        reset_write_buffers();
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception(__func__, e);
+        throw;
     }
-
-    reset_write_buffers();
 }
 
 coro<void> messenger_core::send_error(const error& e) {
@@ -210,16 +211,6 @@ coro<void> messenger_core::send(const message_type type,
 
         auto context = co_await boost::asio::this_coro::context;
 
-        if (boost::asio::trace_span::enable &&
-            !boost::asio::trace_span::check_context(context)) {
-            LOG_ERROR() << "[messenger_core::recv_header] The context to be "
-                           "encoded is invalid: see following stack trace";
-            auto span = co_await boost::asio::this_coro::span;
-            span->iterate_call_stack(
-                [](boost::source_location loc) { LOG_INFO() << loc; });
-            LOG_ERROR() << "End of stack trace";
-        }
-
         auto ctx_buf = encode_context(context);
 
         std::vector<boost::asio::const_buffer> buffers{
@@ -228,12 +219,14 @@ coro<void> messenger_core::send(const message_type type,
             boost::asio::buffer(ctx_buf),
             {data.data(), data.size()}};
 
-        m_tcp_stream.expires_after(time_settings::instance().async_io_timeout);
+        m_tcp_stream.expires_after(time_settings::instance().write_timeout);
         co_await boost::asio::async_write(m_tcp_stream, buffers,
                                           boost::asio::use_awaitable);
 
-    } catch (const std::exception& e) {
-        throw create_internal_network_error("send failed", e);
+    } catch (const boost::system::system_error& e) {
+        if (m_origin == origin::DOWNSTREAM)
+            throw downstream_exception(__func__, e);
+        throw;
     }
 }
 
@@ -252,13 +245,6 @@ boost::asio::ip::tcp::endpoint messenger_core::peer() const {
 
 boost::asio::ip::tcp::socket& messenger_core::get_socket() noexcept {
     return m_tcp_stream.socket();
-}
-
-error_exception
-messenger_core::create_internal_network_error(const std::string& message,
-                                              const std::exception& e) {
-    return error_exception(
-        error(error::internal_network_error, message + " | " + e.what()));
 }
 
 } // namespace uh::cluster

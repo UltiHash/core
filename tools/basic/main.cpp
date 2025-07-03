@@ -1,4 +1,5 @@
 #include "common/network/messenger.h"
+#include "common/network/tools.h"
 #include "common/telemetry/log.h"
 #include "common/types/common_types.h"
 #include "common/utils/time_utils.h"
@@ -62,7 +63,8 @@ int main(int argc, char* args[]) {
     }
 
     auto ioc = boost::asio::io_context();
-    messenger m(ioc, ps.address, static_cast<std::uint16_t>(ps.port));
+    messenger m(ioc, ps.address, static_cast<std::uint16_t>(ps.port),
+                messenger::origin::DOWNSTREAM);
 
     LOG_INFO() << "Connected to the server";
 

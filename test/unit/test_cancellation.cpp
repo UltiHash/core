@@ -7,29 +7,49 @@
 class task_owner {
 public:
     task_owner(boost::asio::io_context& ioc)
-        : ioc_(ioc),
-          signal_(std::make_shared<boost::asio::cancellation_signal>()) {
-        boost::asio::co_spawn(ioc_, task(signal_),
-                              boost::asio::bind_cancellation_slot(
-                                  signal_->slot(), boost::asio::detached));
+        : m_ioc{ioc},
+          m_promise{},
+          m_future{m_promise.get_future()},
+          m_signal{} {
+        boost::asio::co_spawn(
+            m_ioc,
+            [this]() -> boost::asio::awaitable<void> { co_await task(); },
+            boost::asio::bind_cancellation_slot(m_signal.slot(),
+                                                boost::asio::detached));
     }
 
-    ~task_owner() { signal_->emit(boost::asio::cancellation_type::all); }
+    ~task_owner() {
+        m_signal.emit(boost::asio::cancellation_type::all);
+        m_future.get();
+    }
 
 private:
-    boost::asio::io_context& ioc_;
-    std::shared_ptr<boost::asio::cancellation_signal> signal_;
+    boost::asio::io_context& m_ioc;
+    std::promise<void> m_promise;
+    std::future<void> m_future;
+    boost::asio::cancellation_signal m_signal;
 
-    static boost::asio::awaitable<void>
-    task(std::shared_ptr<boost::asio::cancellation_signal> signal) {
+    boost::asio::awaitable<void> task() {
         auto state = co_await boost::asio::this_coro::cancellation_state;
         while (state.cancelled() == boost::asio::cancellation_type::none) {
-            co_await boost::asio::steady_timer(
-                co_await boost::asio::this_coro::executor,
-                std::chrono::hours(1))
-                .async_wait(boost::asio::use_awaitable);
+            auto executor = co_await boost::asio::this_coro::executor;
+            try {
+                co_await boost::asio::steady_timer(executor,
+                                                   std::chrono::hours(1))
+                    .async_wait(boost::asio::use_awaitable);
+            } catch (const boost::system::system_error& e) {
+                if (e.code() == boost::asio::error::operation_aborted) {
+                    std::cout << "Task cancelled" << std::endl;
+                    m_promise.set_value();
+                    co_return;
+                } else {
+                    std::cout << "Unknown exception thrown" << std::endl;
+                    throw;
+                }
+            }
         }
-        co_return;
+        std::cout << "Task finished" << std::endl;
+        m_promise.set_value();
     }
 };
 

@@ -18,8 +18,8 @@ struct storage_config {
 
     std::filesystem::path working_directory;
     data_store_config data_store = {
-        .max_file_size = 1 * GIBI_BYTE,
-        .max_data_store_size = 1ul * PEBI_BYTE,
+        .max_file_size = 1_GiB,
+        .max_data_store_size = 1_PiB,
         .page_size = DEFAULT_PAGE_SIZE,
     };
     std::size_t instance_id = 0;
