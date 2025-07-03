@@ -36,6 +36,7 @@ public:
     std::optional<std::string> header(const std::string& name) const;
 
     http::body& body() { return *m_body; }
+    auto result() const { return m_res.result(); }
 
 private:
     beast::http::response<beast::http::empty_body> m_res;

@@ -25,6 +25,12 @@ constexpr unsigned long long operator""_PiB(unsigned long long value) {
     return value * 1024 * 1024 * 1024 * 1024 * 1024;
 }
 
+static constexpr std::size_t KiB = 1_KiB;
+static constexpr std::size_t MiB = 1_MiB;
+static constexpr std::size_t GiB = 1_GiB;
+static constexpr std::size_t TiB = 1_TiB;
+static constexpr std::size_t PiB = 1_PiB;
+
 static constexpr std::size_t KIBI_BYTE = 1024;
 static constexpr std::size_t MEBI_BYTE = 1024 * KIBI_BYTE;
 static constexpr std::size_t GIBI_BYTE = 1024 * MEBI_BYTE;
@@ -90,7 +96,10 @@ struct time_settings {
     duration_t service_get_timeout{std::chrono::seconds(10)};
     duration_t group_state_wait_timeout{std::chrono::seconds(10)};
     duration_t offset_gathering_timeout{std::chrono::seconds(2)};
-    duration_t async_io_timeout{std::chrono::seconds(30)};
+    duration_t connection_timeout{std::chrono::seconds(30)};
+    duration_t write_timeout{std::chrono::seconds(30)};
+    duration_t read_timeout{std::chrono::seconds(30)};
+    duration_t storage_timeout{std::chrono::seconds(30)};
     duration_t license_fetch_period{std::chrono::hours(1)};
 
     static time_settings& instance() {

@@ -14,9 +14,8 @@ public:
     coro<void> handle(boost::asio::ip::tcp::socket s) override;
 
 private:
-    enum class flow_control : uint8_t { BREAK, CONTINUE };
-    coro<handler::flow_control> handle_iteration(const messenger::header& hdr,
-                                                 messenger& m);
+    coro<void> handle_iteration(const messenger::header& hdr, messenger& m);
+
     coro<void> handle_write(messenger& m, const messenger::header& h);
 
     coro<void> handle_read(messenger& m, const messenger::header& h);

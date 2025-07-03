@@ -1,8 +1,5 @@
 #pragma once
 
-#include "common/types/scoped_buffer.h"
-#include "ec_interface.h"
-
 #include <span>
 #include <vector>
 
@@ -11,6 +8,11 @@ extern "C" {
 }
 
 namespace uh::cluster {
+
+enum data_stat : uint8_t {
+    valid = 0,
+    lost = 1,
+};
 
 static bool init_fec() {
     static bool init = false;

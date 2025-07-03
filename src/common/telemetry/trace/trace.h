@@ -6,7 +6,7 @@
 
 namespace uh::cluster {
 
-inline constexpr std::string_view TRACE_STDOUT_ENDPOINT = "stdout";
+inline constexpr std::string TRACE_STDOUT_ENDPOINT = "stdout";
 
 void initialize_trace(const std::string& tracer_name,
                       const std::string& tracer_version,

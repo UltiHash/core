@@ -1,22 +1,32 @@
 #include "service.h"
 #include "handler.h"
 
-#include <common/execution/executor.h>
 #include <common/telemetry/metrics.h>
 #include <common/utils/scope_guard.h>
 #include <deduplicator/interfaces/dedupe_array.h>
 #include <deduplicator/interfaces/noop_deduplicator.h>
-#include <entrypoint/garbage_collector.h>
-
-#include <magic_enum/magic_enum.hpp>
-
 #include <format>
+#include <magic_enum/magic_enum.hpp>
 
 namespace uh::cluster::ep {
 
 namespace {
 
 static const auto LIMITS_UPDATE_INTERVAL = std::chrono::seconds(5);
+
+coro<void> update_limits(uh::cluster::directory& directory, limits& l) {
+    boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
+    std::atomic<std::size_t> size = co_await directory.data_size();
+    l.set_storage_size(size);
+
+    while (true) {
+        timer.expires_after(LIMITS_UPDATE_INTERVAL);
+        co_await timer.async_wait(boost::asio::use_awaitable);
+
+        size = co_await directory.data_size();
+        l.set_storage_size(size);
+    }
+}
 
 std::unique_ptr<deduplicator_interface>
 make_deduplicator(const entrypoint_config& config,
@@ -44,32 +54,45 @@ make_deduplicator(const entrypoint_config& config,
 
 service::service(const service_config& sc, entrypoint_config config)
     : m_config(std::move(config)),
-      m_executor(m_config.server.threads),
+      m_ioc(boost::asio::io_context(m_config.server.threads)),
       m_etcd{sc.etcd_config},
       m_service_id(get_service_id(
           m_etcd, get_service_string(ENTRYPOINT_SERVICE), sc.working_dir)),
-      m_gdv{m_executor.get_executor(), m_etcd, config.global_data_view},
-      m_cache(m_executor.get_executor(), m_gdv, config.global_data_view.read_cache_capacity_l2),
+      m_gdv{m_ioc, m_etcd, config.global_data_view},
+      m_cache(m_ioc, m_gdv, config.global_data_view.read_cache_capacity_l2),
 
-      m_dedupe(make_deduplicator(m_config, m_gdv, m_cache, m_executor.get_executor(), m_etcd)),
+      m_dedupe(make_deduplicator(m_config, m_gdv, m_cache, m_ioc, m_etcd)),
 
-      m_directory(m_executor.get_executor(), m_config.database),
-      m_uploads(m_executor.get_executor(), m_config.database),
-      m_users(m_executor.get_executor(), m_config.database),
+      m_directory(m_ioc, m_config.database),
+      m_uploads(m_ioc, m_config.database),
+      m_users(m_ioc, m_config.database),
       m_license_watcher(m_etcd),
       m_limits(m_license_watcher),
       m_server(m_config.server,
                std::make_unique<handler>(
-                   command_factory(m_executor.get_executor(), *m_dedupe, m_directory, m_uploads,
+                   command_factory(m_ioc, *m_dedupe, m_directory, m_uploads,
                                    m_config, m_gdv, m_limits, m_users,
                                    m_license_watcher),
                    http::request_factory(m_users),
                    std::make_unique<policy::module>(m_directory),
                    std::make_unique<cors::module>(cors::config{}, m_directory)),
-               m_executor),
+               m_ioc),
       // TODO: add support for non-persistent service_id
       m_service_registry(m_etcd, ns::root.entrypoint.hostports[m_service_id],
-                         m_config.server.port) { }
+                         m_config.server.port),
+
+      m_gc(m_ioc, m_directory, m_gdv) {
+
+    co_spawn(m_ioc, update_limits(m_directory, m_limits).start_trace(),
+             [](std::exception_ptr e) {
+                 try {
+                     std::rethrow_exception(e);
+                 } catch (const std::exception& e) {
+                     LOG_ERROR()
+                         << "metrics monitor stopped working: " << e.what();
+                 }
+             });
+}
 
 void service::run() {
     metric<entrypoint_original_data_volume_gauge, byte, int64_t>::
@@ -87,22 +110,13 @@ void service::run() {
                int64_t>::remove_gauge_callback();
     });
 
-    m_executor.repeated(
-        garbage_collector::POLL_INTERVAL,
-        &garbage_collector::collect, m_directory, m_gdv);
-
-    m_executor.repeated(
-        LIMITS_UPDATE_INTERVAL,
-        [this]() -> coro<void> {
-            m_limits.set_storage_size(co_await m_directory.data_size());
-        });
-
-    m_executor.run();
+    m_server.run();
 }
 
 void service::stop() {
     LOG_INFO() << "stopping entrypoint " << m_service_id;
-    m_executor.stop();
+
+    m_server.stop();
 }
 
 } // namespace uh::cluster::ep

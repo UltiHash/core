@@ -18,13 +18,7 @@ bool delete_bucket::can_handle(const request& req) {
 coro<response> delete_bucket::handle(request& req) {
     metric<entrypoint_delete_bucket_req>::increase(1);
 
-    try {
-        co_await m_dir.delete_bucket(req.bucket());
-    } catch (const error_exception& e) {
-        LOG_INFO() << "Failed to delete the bucket " << req.bucket() << ":"
-                   << e;
-        throw_from_error(e.error());
-    }
+    co_await m_dir.delete_bucket(req.bucket());
 
     co_return response{};
 }
