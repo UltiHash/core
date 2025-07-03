@@ -25,7 +25,7 @@ public:
      * allocation
      */
     allocation_t allocate(std::size_t size,
-                          std::size_t alignment = DEFAULT_PAGE_SIZE);
+                          std::size_t alignment = DEFAULT_PAGE_SIZE) override;
 
     /**
      * Writes data to persistent storage. On completion, the provided data
@@ -54,7 +54,8 @@ public:
      * @throws std::out_of_range invalid pointer and size given
      * @throws std::exception: corrupted storage
      */
-    std::size_t read(std::size_t local_pointer, std::span<char> buffer);
+    std::size_t read(std::size_t local_pointer,
+                     std::span<char> buffer) override;
 
     /**
      * @brief Creates a reference to one or multiple storage locations.
@@ -63,7 +64,8 @@ public:
      * @param address: storage locations that are to be referenced.
      * @return an address containing rejected fragments.
      */
-    std::vector<refcount_t> link(const std::vector<refcount_t>& refcounts);
+    std::vector<refcount_t>
+    link(const std::vector<refcount_t>& refcounts) override;
 
     /**
      * @brief Removes a reference to one or multiple storage locations.
@@ -72,20 +74,20 @@ public:
      * @param address: storage locations that are to be unreferenced.
      * @return number of bytes freed in response to removing references.
      */
-    std::size_t unlink(const std::vector<refcount_t>& refcounts);
+    std::size_t unlink(const std::vector<refcount_t>& refcounts) override;
 
     /**
      * @brief Returns the current used space of the data store.
      * @return size_t: the used space in the data store
      */
-    std::size_t get_used_space() const noexcept;
+    std::size_t get_used_space() const noexcept override;
 
     /**
      * @brief Returns the current available space in the data store. Available
      * = allocated - used
      * @return size_t: the available space in the data store
      */
-    std::size_t get_available_space() const noexcept;
+    std::size_t get_available_space() const noexcept override;
 
     /**
      * @brief Returns the current write offset in the data store.
