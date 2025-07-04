@@ -432,10 +432,16 @@ ec_data_view::extract_refcounts(const address& addr) const {
         },
         storages);
 
-    address rv;
-    // TODO: identify fragments matching with rejected refcounts
-
-    co_return rv;
+    bool none_rejected =
+        std::all_of(link_rvs.begin(), link_rvs.end(),
+                    [](const auto& refcount) { return refcount.empty(); });
+    if (none_rejected) {
+        address rv;
+        // todo: derive address from refcounts
+        co_return rv;
+    } else {
+        co_return addr;
+    }
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {

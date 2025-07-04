@@ -121,18 +121,24 @@ rr_data_view::extract_refcounts(const address& addr) const {
     std::vector<std::vector<refcount_t>> refcounts_by_storage =
         extract_refcounts(addr);
 
-    co_await run_for_all<std::vector<refcount_t>,
-                         std::shared_ptr<storage_interface>>(
+    auto refcounts = co_await run_for_all<std::vector<refcount_t>,
+                                          std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
             co_return co_await storage->link(refcounts_by_storage[i]);
         },
         m_storage_index.get());
 
-    address rv;
-    // todo: derive address from refcounts
-
-    co_return rv;
+    bool none_rejected =
+        std::all_of(refcounts.begin(), refcounts.end(),
+                    [](const auto& refcount) { return refcount.empty(); });
+    if (none_rejected) {
+        address rv;
+        // todo: derive address from refcounts
+        co_return rv;
+    } else {
+        co_return addr;
+    }
 }
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {
