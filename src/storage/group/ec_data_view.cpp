@@ -428,7 +428,6 @@ ec_data_view::extract_refcounts(const address& addr) const {
                                          std::shared_ptr<storage_interface>>(
         m_ioc,
         [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
-            std::vector<refcount_t> refcounts;
             co_return co_await storage->link(refcounts);
         },
         storages);
@@ -447,7 +446,6 @@ coro<std::size_t> ec_data_view::unlink(const address& addr) {
         co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
             m_ioc,
             [&](size_t i, auto storage) -> coro<std::size_t> {
-                std::vector<refcount_t> refcounts;
                 std::size_t freed = co_await storage->unlink(refcounts);
                 if (i >= m_config.data_shards) {
                     co_return 0;

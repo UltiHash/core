@@ -104,7 +104,7 @@ rr_data_view::extract_refcounts(const address& addr) const {
     }
 
     std::vector<std::vector<refcount_t>> refcounts_by_storage;
-    refcounts_by_storage.reserve(m_group_config.storages);
+    refcounts_by_storage.resize(m_group_config.storages);
     for (const auto& [storage_id, stripe_map] :
          refcount_by_stripe_and_storage) {
         std::vector<refcount_t> refcounts;
@@ -112,7 +112,7 @@ rr_data_view::extract_refcounts(const address& addr) const {
         for (const auto& [stripe_id, count] : stripe_map) {
             refcounts.emplace_back(stripe_id, count);
         }
-        refcounts_by_storage.push_back(std::move(refcounts));
+        refcounts_by_storage[storage_id] = std::move(refcounts);
     }
     return refcounts_by_storage;
 }
@@ -121,14 +121,16 @@ rr_data_view::extract_refcounts(const address& addr) const {
     std::vector<std::vector<refcount_t>> refcounts_by_storage =
         extract_refcounts(addr);
 
-    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
+    co_await run_for_all<std::vector<refcount_t>,
+                         std::shared_ptr<storage_interface>>(
         m_ioc,
-        [&](size_t i, auto storage) -> coro<void> {
-            co_await storage->link(refcounts_by_storage[i]);
+        [&](size_t i, auto storage) -> coro<std::vector<refcount_t>> {
+            co_return co_await storage->link(refcounts_by_storage[i]);
         },
         m_storage_index.get());
 
     address rv;
+    // todo: derive address from refcounts
 
     co_return rv;
 }
@@ -137,13 +139,17 @@ coro<std::size_t> rr_data_view::unlink(const address& addr) {
     std::vector<std::vector<refcount_t>> refcounts_by_storage =
         extract_refcounts(addr);
 
-    co_await run_for_all<void, std::shared_ptr<storage_interface>>(
-        m_ioc,
-        [&](size_t i, auto storage) -> coro<void> {
-            co_await storage->unlink(refcounts_by_storage[i]);
-        },
-        m_storage_index.get());
-    co_return 0;
+    auto freed_partials =
+        co_await run_for_all<std::size_t, std::shared_ptr<storage_interface>>(
+            m_ioc,
+            [&](size_t i, auto storage) -> coro<std::size_t> {
+                co_return co_await storage->unlink(refcounts_by_storage[i]);
+            },
+            m_storage_index.get());
+
+    std::size_t freed =
+        std::accumulate(freed_partials.begin(), freed_partials.end(), 0ull);
+    co_return freed;
 }
 
 } // namespace uh::cluster::storage

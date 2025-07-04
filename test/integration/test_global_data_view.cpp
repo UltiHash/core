@@ -194,6 +194,8 @@ BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
     const std::size_t stripe_size = config.get_stripe_size();
     const std::size_t frag_size = stripe_size / num_frags;
     std::vector<std::size_t> offsets;
+    LOG_DEBUG() << "stripe size: " << stripe_size
+                << ", frag size: " << frag_size;
     for (std::size_t i = 0; i < num_frags; ++i) {
         offsets.push_back(i * frag_size);
     }
@@ -220,10 +222,8 @@ BOOST_FIXTURE_TEST_CASE(write_offsets_unlink, global_data_view_fixture) {
                                       boost::asio::use_future)
                     .get();
 
-            if (i > 0 and
-                ((i + 1) * frag_size) % (stripe_size / config.data_shards) ==
-                    0) {
-                BOOST_TEST(freed == stripe_size / config.data_shards);
+            if (i + 1 == num_frags) {
+                BOOST_TEST(freed == stripe_size);
             } else {
                 BOOST_TEST(freed == 0ull);
             }
