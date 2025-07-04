@@ -7,6 +7,7 @@
 
 #include <boost/asio/awaitable.hpp>
 #include <chrono>
+#include <string>
 
 namespace uh::cluster {
 
@@ -36,6 +37,10 @@ struct refcount_t {
 
 using utc_time = std::chrono::time_point<std::chrono::system_clock>;
 
+enum class object_state {
+    normal, deleted, collected
+};
+
 struct object {
     std::string name;
     utc_time last_modified;
@@ -45,6 +50,8 @@ struct object {
     std::optional<std::string> etag;
     std::optional<std::string> mime;
     std::optional<std::string> version;
+
+    object_state state = object_state::normal;
 
     constexpr static auto serialize(auto& archive, auto& self) {
         std::size_t count = 0;
@@ -59,6 +66,9 @@ struct object {
         return archive(self.name, count, self.size);
     }
 };
+
+object_state to_object_state(const std::string& s);
+std::string to_string(object_state os);
 
 template <typename T> using coro = boost::asio::traced_awaitable<T>;
 

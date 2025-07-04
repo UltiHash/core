@@ -30,7 +30,7 @@ bucket_versioning to_versioning(std::string s) {
     throw std::runtime_error("unsupported versioning type: " + s);
 }
 
-coro<std::string> directory::put_object(const std::string& bucket, const object& obj) {
+coro<std::optional<std::string>> directory::put_object(const std::string& bucket, const object& obj) {
     if (!obj.addr) {
         throw std::runtime_error("put_object requires address");
     }
@@ -43,7 +43,7 @@ coro<std::string> directory::put_object(const std::string& bucket, const object&
         auto row = co_await handle->execv("SELECT version FROM uh_put_object($1, $2, $3, $4, $5, $6)",
                                bucket, obj.name, span, obj.addr->data_size(),
                                obj.etag, obj.mime);
-        co_return *row->string(0);
+        co_return row->string(0);
     } catch (const std::exception& e) {
         LOG_WARN() << "cannot put object: " << e.what();
         throw command_exception(status::not_found, "NoSuchBucket",
@@ -283,6 +283,35 @@ directory::list_objects(const std::string& bucket,
     co_return rv;
 }
 
+coro<std::vector<object>>
+directory::list_object_versions(const std::string& bucket,
+                                const std::optional<std::string>& prefix,
+                                const std::optional<std::string>& key_marker,
+                                const std::optional<std::string>& version_marker,
+                                std::size_t limit) {
+    co_await bucket_exists(bucket);
+
+    std::vector<object> rv;
+
+    auto handle = co_await m_db.get();
+    auto row = co_await handle->execv(
+        "SELECT id, name, size, last_modified, etag, mime, version, status FROM uh_list_object_versions($1, $2, $3, $4, $5)",
+        bucket, prefix, key_marker, version_marker, limit);
+
+    for (; row; row = co_await handle->next()) {
+
+        rv.emplace_back(object{.name = *row->string(1),
+                               .last_modified = *row->date(3),
+                               .size = *row->size_type(2),
+                               .addr = std::nullopt,
+                               .etag = row->string(4),
+                               .mime = row->string(5),
+                               .version = row->string(6) });
+    }
+
+    co_return rv;
+}
+
 coro<std::optional<directory::to_delete>> directory::next_deleted() {
     auto handle = co_await m_db.get();
 
@@ -332,12 +361,13 @@ void directory::validate_bucket_name(const std::string& bucket_name) {
     }
 }
 
-coro<void> safe_put_object(directory& dir,
+coro<std::optional<std::string>> safe_put_object(directory& dir,
                            storage::global::global_data_view& gdv,
                            const std::string& bucket, const object& obj) {
+    std::optional<std::string> rv;
     std::optional<std::exception_ptr> error;
     try {
-        co_await dir.put_object(bucket, obj);
+        rv = co_await dir.put_object(bucket, obj);
     } catch (...) {
         error = std::current_exception();
     }
@@ -346,6 +376,8 @@ coro<void> safe_put_object(directory& dir,
         co_await gdv.unlink(*obj.addr);
         std::rethrow_exception(*error);
     }
+
+    co_return rv;
 }
 
 } // namespace uh::cluster

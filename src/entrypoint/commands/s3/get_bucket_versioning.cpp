@@ -12,7 +12,7 @@ get_bucket_versioning::get_bucket_versioning(directory& dir)
 bool get_bucket_versioning::can_handle(const ep::http::request& req) {
     return req.method() == verb::get && !req.bucket().empty() &&
            req.bucket() != RESERVED_BUCKET_NAME && req.object_key().empty() &&
-           req.query("versioning");
+           req.query("versioning") && !req.query("versions");
 }
 
 coro<response> get_bucket_versioning::handle(request& req) {

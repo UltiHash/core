@@ -378,7 +378,7 @@ BEGIN
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, objects.version;
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL;
 
     ELSEIF b_ver = 'Enabled' THEN
 
@@ -394,9 +394,34 @@ BEGIN
         END IF;
 
         RETURN QUERY INSERT INTO objects (bucket_id, name, address, size, last_modified, etag, mime)
-            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, objects.version;
+            VALUES (b_id, object, address, size, ceiled_now(), etag, mime) RETURNING objects.id, NULL;
 
     END IF;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION uh_list_object_versions(bucket TEXT, prefix TEXT, key_marker TEXT, version_marker UUID, max_keys INTEGER)
+    RETURNS TABLE (id BIGINT, name TEXT, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
+    LANGUAGE plpgsql AS $$
+DECLARE
+    min_id BIGINT;
+    condition TEXT;
+    query TEXT;
+BEGIN
+    IF version_marker IS NOT NULL THEN
+        SELECT o.id FROM objects o, buckets b WHERE o.bucket_id = b.id AND b.name = bucket AND o.name = key_marker AND o.version = version_marker INTO min_id;
+
+        IF FOUND THEN
+            SELECT format(' AND o.id >= %s', min_id) INTO condition;
+        END IF;
+    END IF;
+
+    IF prefix IS NOT NULL THEN
+        SELECT format('%s AND o.name LIKE %L || ''%%''', condition, prefix) INTO condition;
+    END IF;
+
+    RETURN QUERY EXECUTE format('SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o, buckets b WHERE '
+        || ' o.bucket_id = b.id AND b.name = %L %s ORDER BY o.id DESC LIMIT %L' , bucket, condition, max_keys);
 END
 $$;
 
