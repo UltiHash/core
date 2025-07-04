@@ -285,7 +285,8 @@ BOOST_AUTO_TEST_CASE(test_link_unlink_invariant) {
     auto alloc = ds->allocate(buffer.size());
     auto addr = ds->write(alloc, {buffer.string_view()});
     auto addr_refcounts = extract_refcounts(addr);
-    BOOST_CHECK_EQUAL(ds->unlink(addr_refcounts), addr.data_size());
+    auto freed = ds->unlink(addr_refcounts);
+    BOOST_CHECK_EQUAL(freed, addr.data_size());
 
     auto alloc2 = ds->allocate(buffer.size());
     addr = ds->write(alloc2, {buffer.string_view()});
@@ -372,9 +373,9 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
     auto buffer3 = random_buffer(DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET);
 
     address full_address;
-    auto alloc1 = ds->allocate(buffer1.size());
-    auto alloc2 = ds->allocate(buffer2.size());
-    auto alloc3 = ds->allocate(buffer3.size());
+    auto alloc1 = ds->allocate(buffer1.size(), 1);
+    auto alloc2 = ds->allocate(buffer2.size(), 1);
+    auto alloc3 = ds->allocate(buffer3.size(), 1);
     auto buffer1_address = ds->write(alloc1, {buffer1.string_view()});
     auto buffer2_address = ds->write(alloc2, {buffer2.string_view()});
     auto buffer3_address = ds->write(alloc3, {buffer3.string_view()});
@@ -419,15 +420,24 @@ BOOST_AUTO_TEST_CASE(test_unlink_page_unaligned) {
         }
 
         BOOST_CHECK(t_read == full_address.data_size());
-        size_t offset = 0;
-        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer1);
         shared_buffer<char> zero_buffer(buffer2.size());
         memset(zero_buffer.data(), 0, buffer2.size());
-        offset += buffer1.size();
-        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, zero_buffer);
-        offset += buffer2.size();
-        CHECK_EQUAL_FROM_OFFSET(read_buffer, offset, buffer3);
-        offset += buffer3.size();
+
+        BOOST_CHECK(std::memcmp(read_buffer.data(), buffer1.data(),
+                                buffer1.size()) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + buffer1.size(),
+                                buffer2.data(),
+                                DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + 2 * DEFAULT_PAGE_SIZE,
+                                zero_buffer.data(), DEFAULT_PAGE_SIZE) == 0);
+        BOOST_CHECK(
+            std::memcmp(read_buffer.data() + 3 * DEFAULT_PAGE_SIZE,
+                        buffer2.data() + buffer2.size() - ALIGNMENT_OFFSET,
+                        ALIGNMENT_OFFSET) == 0);
+        BOOST_CHECK(std::memcmp(read_buffer.data() + 3 * DEFAULT_PAGE_SIZE +
+                                    ALIGNMENT_OFFSET,
+                                buffer3.data(),
+                                DEFAULT_PAGE_SIZE - ALIGNMENT_OFFSET) == 0);
     }
 }
 
