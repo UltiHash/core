@@ -253,11 +253,11 @@ $$;
 -- define uh_get_object_by_version()
 --
 CREATE OR REPLACE FUNCTION uh_get_object_by_version(bucket TEXT, object TEXT, ver UUID)
-    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status)
+    RETURNS TABLE (id BIGINT, address BYTEA, size BIGINT, last_modified TIMESTAMP, etag TEXT, mime TEXT, version UUID, status object_status, sticky BOOLEAN)
     LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status
+        SELECT o.id, o.address, o.size, o.last_modified, o.etag, o.mime, o.version, o.status, o.sticky
          FROM objects o
          WHERE bucket_id = uh_get_bucket_id(bucket) AND name = object AND o.version = ver
         ORDER BY id DESC

@@ -52,10 +52,17 @@ coro<std::optional<std::string>> directory::put_object(const std::string& bucket
 }
 
 coro<directory::object_lock>
-directory::get_object(const std::string& bucket, const std::string& object_id) {
+directory::get_object(const std::string& bucket,
+                      const std::string& object_id,
+                      std::optional<std::string> version) {
     auto handle = co_await m_db.get();
-    auto row = co_await handle->execb(
-        "SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
+    std::optional<db::row> row;
+
+    if (version) {
+        row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object_by_version($1, $2, $3)", bucket, object_id, *version);
+    } else {
+        row = co_await handle->execb("SELECT address::BYTEA FROM uh_get_object($1, $2)", bucket, object_id);
+    }
 
     if (!row) {
         throw command_exception(status::not_found, "NoSuchKey",
@@ -69,10 +76,17 @@ directory::get_object(const std::string& bucket, const std::string& object_id) {
 
     address addr = to_address(*addr_data);
 
-    auto metadata =
-        co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
+    std::optional<db::row> metadata;
+
+    if (version) {
+        metadata = co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
+                               "FROM uh_get_object_by_version($1, $2, $3)",
+                               bucket, object_id, *version);
+    } else {
+        metadata = co_await handle->execv("SELECT size, last_modified, etag, mime, id, version "
                                "FROM uh_get_object($1, $2)",
                                bucket, object_id);
+    }
 
     std::size_t id = *metadata->number(4);
 

@@ -36,7 +36,8 @@ public:
     coro<std::optional<std::string>> put_object(const std::string& bucket, const object& obj);
 
     coro<object_lock> get_object(const std::string& bucket,
-                                 const std::string& object_id);
+                                 const std::string& object_id,
+                                 std::optional<std::string> version = std::nullopt);
 
     coro<object> head_object(const std::string& bucket,
                              const std::string& object_id);

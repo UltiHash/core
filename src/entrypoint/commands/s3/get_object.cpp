@@ -106,7 +106,7 @@ coro<response> get_object::handle(request& req) {
 
     response res;
 
-    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key());
+    auto obj = co_await m_dir.get_object(req.bucket(), req.object_key(), req.query("versionId"));
 
     res.set("ETag", obj->etag);
     res.set("Content-Type", obj->mime);
