@@ -49,7 +49,8 @@ public:
     coro<void> delete_bucket(const std::string& bucket);
 
     coro<void> delete_object(const std::string& bucket,
-                             const std::string& object_id);
+                             const std::string& object_id,
+                             std::optional<std::string> version = std::nullopt);
 
     coro<std::vector<std::string>> list_buckets();
 

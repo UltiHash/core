@@ -181,12 +181,18 @@ coro<void> directory::delete_bucket(const std::string& bucket) {
 }
 
 coro<void> directory::delete_object(const std::string& bucket,
-                                    const std::string& object_id) {
+                                    const std::string& object_id,
+                                    std::optional<std::string> version) {
 
     try {
         auto handle = co_await m_db.get();
-        co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
-                               object_id);
+        if (version) {
+            co_await handle->execv("CALL uh_delete_object_version($1, $2, $3)", bucket,
+                                object_id, *version);
+        } else {
+            co_await handle->execv("CALL uh_delete_object($1, $2)", bucket,
+                                object_id);
+        }
     } catch (const std::exception& e) {
     }
 }

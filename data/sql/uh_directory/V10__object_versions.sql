@@ -221,6 +221,25 @@ END;
 $$;
 
 --
+-- Re-define uh_delete_object_version()
+--
+CREATE OR REPLACE PROCEDURE uh_delete_object_version(bucket TEXT, object TEXT, version UUID)
+    LANGUAGE plpgsql AS $$
+DECLARE
+    obj_id BIGINT;
+    obj_sticky BOOLEAN;
+BEGIN
+    SELECT id, sticky FROM uh_get_object_by_version(bucket, object, version) INTO obj_id, obj_sticky;
+
+    IF obj_id IS NULL THEN
+        RAISE EXCEPTION 'Cannot delete object "%" in bucket "%", as it does not appear to exist.', object, bucket;
+    END IF;
+
+    UPDATE objects SET status = 'Deleted', sticky = False WHERE id = obj_id;
+END;
+$$;
+
+--
 -- Re-define uh_delete_object_by_id()
 --
 CREATE OR REPLACE PROCEDURE uh_delete_object_by_id(target_id BIGINT)
@@ -421,7 +440,7 @@ BEGIN
     END IF;
 
     RETURN QUERY EXECUTE format('SELECT o.id, o.name, o.size, o.last_modified, o.etag, o.mime, o.version, o.status FROM objects o, buckets b WHERE '
-        || ' o.bucket_id = b.id AND b.name = %L %s ORDER BY o.id DESC LIMIT %L' , bucket, condition, max_keys);
+        || ' o.bucket_id = b.id AND b.name = %L AND (o.status = ''Normal'' OR o.sticky) %s ORDER BY o.id DESC LIMIT %L' , bucket, condition, max_keys);
 END
 $$;
 

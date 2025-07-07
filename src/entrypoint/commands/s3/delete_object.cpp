@@ -20,7 +20,7 @@ coro<response> delete_object::handle(request& req) {
     metric<entrypoint_delete_object_req>::increase(1);
 
     co_await m_dir.bucket_exists(req.bucket());
-    co_await m_dir.delete_object(req.bucket(), req.object_key());
+    co_await m_dir.delete_object(req.bucket(), req.object_key(), req.query("versionId"));
 
     co_return response{};
 }
