@@ -146,9 +146,9 @@ private:
 
     int m_meta_fd;
 
-    mutable std::shared_mutex m_mutex;
-    std::size_t m_used_space{};
-    std::size_t m_write_offset{};
+    mutable std::mutex m_file_mutex;
+    std::atomic<std::size_t> m_used_space{};
+    std::atomic<std::size_t> m_write_offset{};
 
     reference_counter m_refcounter;
 };
