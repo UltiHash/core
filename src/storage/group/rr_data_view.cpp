@@ -5,6 +5,7 @@
 
 #include <numeric>
 #include <ranges>
+#include <unordered_set>
 
 namespace uh::cluster::storage {
 rr_data_view::rr_data_view(boost::asio::io_context& ioc, etcd_manager& etcd,
@@ -117,6 +118,43 @@ rr_data_view::extract_refcounts(const address& addr) const {
     return refcounts_by_storage;
 }
 
+address rr_data_view::compute_rejected_address(
+    const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+    const address& original_addr) {
+    std::unordered_set<std::size_t> rejected_stripes;
+    for (const auto& refcount : rejected_refcounts) {
+        for (const auto& rc : refcount) {
+            rejected_stripes.insert(rc.stripe_id);
+        }
+    }
+
+    if (rejected_stripes.empty()) {
+        return {};
+    }
+
+    address rv;
+    for (const auto& frag : original_addr.fragments) {
+        auto storage_pointer =
+            pointer_traits::rr::get_storage_pointer(frag.pointer).second;
+        std::size_t first_stripe =
+            storage_pointer / m_group_config.get_stripe_size();
+        std::size_t last_stripe = (storage_pointer + frag.size - 1) /
+                                  m_group_config.get_stripe_size();
+        bool has_overlap = false;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            if (rejected_stripes.contains(stripe_id)) {
+                has_overlap = true;
+            }
+        }
+        if (has_overlap) {
+            rv.push(frag);
+        }
+    }
+
+    return rv;
+}
+
 [[nodiscard]] coro<address> rr_data_view::link(const address& addr) {
     std::vector<std::vector<refcount_t>> refcounts_by_storage =
         extract_refcounts(addr);
@@ -129,16 +167,7 @@ rr_data_view::extract_refcounts(const address& addr) const {
         },
         m_storage_index.get());
 
-    bool none_rejected =
-        std::all_of(refcounts.begin(), refcounts.end(),
-                    [](const auto& refcount) { return refcount.empty(); });
-    if (none_rejected) {
-        address rv;
-        // todo: derive address from refcounts
-        co_return rv;
-    } else {
-        co_return addr;
-    }
+    co_return compute_rejected_address(refcounts, addr);
 }
 
 coro<std::size_t> rr_data_view::unlink(const address& addr) {

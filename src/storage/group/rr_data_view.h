@@ -126,6 +126,9 @@ private:
                             const std::size_t data_size,
                             const std::size_t storage_id,
                             const std::size_t base_offset) const;
+    address compute_rejected_address(
+        const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+        const address& original_addr);
 };
 
 } // namespace uh::cluster::storage

@@ -421,6 +421,41 @@ ec_data_view::extract_refcounts(const address& addr) const {
     return refcounts;
 }
 
+address ec_data_view::compute_rejected_address(
+    const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+    const address& original_addr) {
+    std::unordered_set<std::size_t> rejected_stripes;
+    for (const auto& refcount : rejected_refcounts) {
+        for (const auto& rc : refcount) {
+            rejected_stripes.insert(rc.stripe_id);
+        }
+    }
+
+    if (rejected_stripes.empty()) {
+        return {};
+    }
+
+    address rv;
+    for (const auto& frag : original_addr.fragments) {
+        auto group_pointer = pointer_traits::get_group_pointer(frag.pointer);
+        std::size_t first_stripe = group_pointer / m_stripe_size;
+        std::size_t last_stripe =
+            (group_pointer + frag.size - 1) / m_stripe_size;
+        bool has_overlap = false;
+        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
+             stripe_id++) {
+            if (rejected_stripes.contains(stripe_id)) {
+                has_overlap = true;
+            }
+        }
+        if (has_overlap) {
+            rv.push(frag);
+        }
+    }
+
+    return rv;
+}
+
 [[nodiscard]] coro<address> ec_data_view::link(const address& addr) {
     auto refcounts = extract_refcounts(addr);
     auto storages = m_externals.get_storage_services();
@@ -432,16 +467,14 @@ ec_data_view::extract_refcounts(const address& addr) const {
         },
         storages);
 
-    bool none_rejected =
-        std::all_of(link_rvs.begin(), link_rvs.end(),
-                    [](const auto& refcount) { return refcount.empty(); });
-    if (none_rejected) {
-        address rv;
-        // todo: derive address from refcounts
-        co_return rv;
-    } else {
-        co_return addr;
+    std::unordered_set<std::size_t> rejected_stripes;
+    for (const auto& refcount : link_rvs) {
+        for (const auto& rc : refcount) {
+            rejected_stripes.insert(rc.stripe_id);
+        }
     }
+
+    co_return compute_rejected_address(link_rvs, addr);
 }
 
 coro<std::size_t> ec_data_view::unlink(const address& addr) {

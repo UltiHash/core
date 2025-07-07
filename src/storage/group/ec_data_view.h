@@ -177,6 +177,9 @@ private:
     address compute_address(const std::vector<std::size_t>& offsets,
                             const std::size_t data_size,
                             const allocation_t& allocation) const;
+    address compute_rejected_address(
+        const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+        const address& original_addr);
 };
 
 } // namespace uh::cluster::storage
