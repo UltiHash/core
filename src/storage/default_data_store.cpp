@@ -366,9 +366,9 @@ void default_data_store::write_metadata() {
                                       sizeof(metadata)),
                 0);
 }
-coro<std::vector<refcount_t>>
+std::vector<refcount_t>
 default_data_store::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
-    co_return m_refcounter.get_refcounts(stripe_ids);
+    return m_refcounter.get_refcounts(stripe_ids);
 }
 
 } // end namespace uh::cluster

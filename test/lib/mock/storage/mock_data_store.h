@@ -24,6 +24,8 @@ public:
     std::size_t read(const std::size_t pointer, std::span<char> buffer);
     std::vector<refcount_t> link(const std::vector<refcount_t>& refcounts);
     std::size_t unlink(const std::vector<refcount_t>& refcounts);
+    std::vector<refcount_t>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids);
     [[nodiscard]] size_t get_used_space() const noexcept;
     [[nodiscard]] size_t get_available_space() const noexcept;
     [[nodiscard]] std::size_t get_write_offset() const noexcept;

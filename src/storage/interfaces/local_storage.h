@@ -77,7 +77,7 @@ struct local_storage : public storage_interface {
 
     coro<std::vector<refcount_t>>
     get_refcounts(const std::vector<std::size_t>& stripe_ids) override {
-        co_return co_await m_data_store->get_refcounts(stripe_ids);
+        co_return m_data_store->get_refcounts(stripe_ids);
     }
 
     std::size_t get_used_space_func() { return m_data_store->get_used_space(); }

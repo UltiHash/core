@@ -133,6 +133,21 @@ std::size_t mock_data_store::unlink(const std::vector<refcount_t>& refcounts) {
     return size;
 }
 
+std::vector<refcount_t>
+mock_data_store::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
+    std::vector<refcount_t> rv;
+    for (std::size_t stripe_id : stripe_ids) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_refcounter.find(stripe_id);
+        if (it == m_refcounter.end()) {
+            rv.emplace_back(stripe_id, 0);
+        } else {
+            rv.emplace_back(stripe_id, it->second);
+        }
+    }
+    return rv;
+}
+
 uint64_t mock_data_store::get_used_space() const noexcept {
     return m_current_offset.load();
 }

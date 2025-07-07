@@ -84,7 +84,7 @@ public:
      * @param stripe_ids: vector of stripe IDs to get reference counts for
      * @return vector of refcount_t containing the stripe ID and its count
      */
-    coro<std::vector<refcount_t>>
+    std::vector<refcount_t>
     get_refcounts(const std::vector<std::size_t>& stripe_ids) override;
 
     /**
