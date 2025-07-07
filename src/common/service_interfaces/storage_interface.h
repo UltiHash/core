@@ -9,10 +9,9 @@ struct storage_interface {
     virtual coro<allocation_t>
     allocate(std::size_t size, std::size_t alignment = DEFAULT_PAGE_SIZE) = 0;
 
-    virtual coro<address>
-    write(allocation_t allocation,
-          const std::vector<std::span<const char>>& buffers,
-          const std::vector<refcount_t>& refcounts) = 0;
+    virtual coro<void> write(allocation_t allocation,
+                             const std::vector<std::span<const char>>& buffers,
+                             const std::vector<refcount_t>& refcounts) = 0;
 
     virtual coro<shared_buffer<>> read(const uint128_t& pointer,
                                        size_t size) = 0;

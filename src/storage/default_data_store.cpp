@@ -121,10 +121,9 @@ std::size_t default_data_store::fetch_used_space() const {
         [](auto acc, const auto& it) { return acc + it.used_space(); });
 }
 
-address
-default_data_store::write(allocation_t allocation,
-                          const std::vector<std::span<const char>>& buffers,
-                          const std::vector<refcount_t>& refcounts) {
+void default_data_store::write(
+    allocation_t allocation, const std::vector<std::span<const char>>& buffers,
+    const std::vector<refcount_t>& refcounts) {
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
@@ -177,10 +176,6 @@ default_data_store::write(allocation_t allocation,
     } else {
         m_refcounter.increment(refcounts, false);
     }
-
-    address rv;
-    rv.emplace_back(allocation.offset, allocation.size);
-    return rv;
 }
 
 std::vector<refcount_t>

@@ -13,18 +13,16 @@ struct remote_storage : public storage_interface {
     explicit remote_storage(client storage_service)
         : m_storage_service(std::move(storage_service)) {}
 
-    coro<address> write(allocation_t allocation,
-                        const std::vector<std::span<const char>>& buffers,
-                        const std::vector<refcount_t>& refcounts) override {
+    coro<void> write(allocation_t allocation,
+                     const std::vector<std::span<const char>>& buffers,
+                     const std::vector<refcount_t>& refcounts) override {
         auto m = co_await m_storage_service.acquire_messenger();
         write_request_view req = {.allocation = allocation,
                                   .buffers = buffers,
                                   .refcounts = refcounts};
 
         co_await m->send_write(req);
-        const auto h =
-            co_await m->recv_header(time_settings::instance().storage_timeout);
-        co_return co_await m->recv_address(h);
+        co_await m->recv_header(time_settings::instance().storage_timeout);
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {

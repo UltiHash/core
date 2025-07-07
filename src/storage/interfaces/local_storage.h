@@ -18,10 +18,11 @@ struct local_storage : public storage_interface {
           m_data_store(
               std::make_unique<default_data_store>(config, path, index)) {}
 
-    coro<address> write(allocation_t allocation,
-                        const std::vector<std::span<const char>>& buffers,
-                        const std::vector<refcount_t>& refcounts) override {
-        co_return m_data_store->write(allocation, buffers, refcounts);
+    coro<void> write(allocation_t allocation,
+                     const std::vector<std::span<const char>>& buffers,
+                     const std::vector<refcount_t>& refcounts) override {
+        m_data_store->write(allocation, buffers, refcounts);
+        co_return;
     }
 
     coro<shared_buffer<>> read(const uint128_t& pointer, size_t size) override {
