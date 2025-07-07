@@ -30,8 +30,6 @@ coro<allocation_t> messenger::recv_allocation(const header& message_header) {
 coro<std::vector<refcount_t>>
 messenger::recv_refcounts(const header& message_header) {
     std::vector<refcount_t> refcounts(message_header.size / sizeof(refcount_t));
-    LOG_DEBUG() << "messenge_header.size: "
-                << std::to_string(message_header.size);
     register_read_buffer(refcounts);
     co_await recv_buffers(message_header);
     co_return refcounts;
