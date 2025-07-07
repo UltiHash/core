@@ -53,6 +53,30 @@ reference_counter::decrement(const std::vector<refcount_t>& refcounts) {
     return free_stripes(stripes_to_free);
 }
 
+std::vector<refcount_t>
+reference_counter::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
+    lmdb::txn txn = lmdb::txn::begin(m_env, nullptr, 0);
+    lmdb::dbi dbi = lmdb::dbi::open(txn, nullptr);
+    std::vector<refcount_t> rv;
+
+    for (auto stripe_id : stripe_ids) {
+        auto key = lmdb::to_sv<std::size_t>(stripe_id);
+        std::string_view view;
+        std::size_t current_value = 0;
+
+        if (dbi.get(txn, key, view)) {
+            current_value = lmdb::from_sv<std::size_t>(view);
+        } else {
+            LOG_DEBUG() << "stripe " << stripe_id
+                        << " is untracked, returning zero count.";
+        }
+
+        rv.emplace_back(stripe_id, current_value);
+    }
+    txn.abort();
+    return rv;
+}
+
 bool reference_counter::increment(const std::size_t stripe_id,
                                   const std::size_t count, bool upstream,
                                   lmdb::txn& txn, lmdb::dbi& dbi) {

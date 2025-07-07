@@ -86,7 +86,6 @@ default_data_store::default_data_store(data_store_config conf,
 
 std::size_t default_data_store::read(std::size_t local_pointer,
                                      std::span<char> buffer) {
-    std::shared_lock lock(m_mutex);
     std::size_t rv = 0ull;
 
     while (rv < buffer.size()) {
@@ -125,7 +124,6 @@ address
 default_data_store::write(allocation_t allocation,
                           const std::vector<std::span<const char>>& buffers,
                           const std::vector<refcount_t>& refcounts) {
-    std::unique_lock lock(m_mutex);
     std::size_t local_pointer = allocation.offset;
     allocate_files(local_pointer, allocation.size);
 
@@ -182,13 +180,11 @@ default_data_store::write(allocation_t allocation,
 
 std::vector<refcount_t>
 default_data_store::link(const std::vector<refcount_t>& refcounts) {
-    std::unique_lock lock(m_mutex);
     return m_refcounter.increment(refcounts);
 }
 
 std::size_t
 default_data_store::unlink(const std::vector<refcount_t>& refcounts) {
-    std::unique_lock lock(m_mutex);
     return m_refcounter.decrement(refcounts);
 }
 
@@ -215,6 +211,7 @@ void default_data_store::allocate_files(std::size_t offset, std::size_t size) {
         return;
     }
 
+    std::unique_lock lock(m_mutex);
     while (m_file_count < required_file_count) {
         m_files.emplace_back(
             data_file::create(m_root / base_name(m_files.size()), m_filesize));
@@ -362,6 +359,10 @@ void default_data_store::write_metadata() {
                 std::span<const char>(reinterpret_cast<const char*>(&md),
                                       sizeof(metadata)),
                 0);
+}
+coro<std::vector<refcount_t>>
+default_data_store::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
+    co_return m_refcounter.get_refcounts(stripe_ids);
 }
 
 } // end namespace uh::cluster

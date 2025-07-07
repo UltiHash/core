@@ -26,11 +26,8 @@ struct storage_interface {
     virtual coro<std::size_t>
     unlink(const std::vector<refcount_t>& refcounts) = 0;
 
-    // virtual coro<std::vector<refcount_t>> get_reference_counters(const
-    // std::vector<std::size_t>& stripe_ids) = 0;
-
-    // virtual coro<void> set_reference_counters(const std::vector<refcount_t>&
-    // refcounts) = 0;
+    virtual coro<std::vector<refcount_t>>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids) = 0;
 
     virtual coro<std::size_t> get_used_space() = 0;
 
