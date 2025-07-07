@@ -93,6 +93,16 @@ struct remote_storage : public storage_interface {
         co_return co_await m->recv_allocation(h);
     }
 
+    coro<std::vector<refcount_t>>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids) override {
+        auto m = co_await m_storage_service.acquire_messenger();
+        m->register_write_buffer(stripe_ids);
+        co_await m->send_buffers(STORAGE_GET_REFCOUNTS_REQ);
+        const auto h =
+            co_await m->recv_header(time_settings::instance().storage_timeout);
+        co_return co_await m->recv_refcounts(h);
+    }
+
 private:
     client m_storage_service;
 };

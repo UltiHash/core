@@ -16,26 +16,40 @@ public:
                       const std::function<std::size_t(std::size_t offset,
                                                       std::size_t size)>& cb);
     /***
-     * Increments the page reference counter for the regions specified by addr
-     * in a single transaction. This call can safely be exported to be used by
-     * upstream services.
+     * Increments the reference counters of the stripes by the specified counts
+     * in a single transaction.
      *
-     * @param addr
-     * @return An address containing all fragments in addr pointing to
-     * untracked pages.
+     * @param A vector of refcount_t containing the reference counters for the
+     * specified stripes.
+     * @param upstream A bool indicating if this call originates from am
+     * upstream service. If false, trying to increment an untracked stripe will
+     * start tracking it. If true see @return.
+     * @return In case upstream is true, a vector of refcount_t for which no
+     * prior reference count information was available.
      */
     std::vector<refcount_t> increment(const std::vector<refcount_t>& refcounts,
                                       bool upstream = true);
 
     /***
-     * Decrements the page reference counter to data regions specified in addr
-     * in a single transaction. In case addr points to an untracked page, the
+     * Decrements the reference counters of the stripes by the specified counts
+     * in a single transaction. In case an untracked stripe is referenced, the
      * transaction is rolled back and a std::runtime exception is thrown.
-     * This call can safely be exported to be used by upstream services.
-     * @param addr
-     * @return Disk space reclaimed in the context of this call
+     *
+     * @param A vector of refcount_t containing the reference counters for the
+     * specified stripes.
+     * @return The number of bytes freed by this operation.
      */
     std::size_t decrement(const std::vector<refcount_t>& refcounts);
+
+    /***
+     * Retrieves the reference counters for the stripes specified by stripe_ids.
+     *
+     * @param stripe_ids
+     * @return A vector of refcount_t containing the reference counters for the
+     * specified stripes.
+     */
+    std::vector<refcount_t>
+    get_refcounts(const std::vector<std::size_t>& stripe_ids);
 
 private:
     lmdb::env m_env;
