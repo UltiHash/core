@@ -64,8 +64,16 @@ public:
     static void publish_configs(etcd_manager& etcd,
                                 const storage::group_configs& group_configs) {
         for (const auto& cfg : group_configs.configs) {
-            etcd.put(ns::root.storage_groups.group_configs[cfg.id],
-                     cfg.to_string());
+            if (cfg.type != storage::group_config::type_t::ERASURE_CODING) {
+                storage::group_config modified_config = cfg;
+                modified_config.stripe_size_kib = DEFAULT_PAGE_SIZE / KIBI_BYTE;
+                etcd.put(
+                    ns::root.storage_groups.group_configs[modified_config.id],
+                    modified_config.to_string());
+            } else {
+                etcd.put(ns::root.storage_groups.group_configs[cfg.id],
+                         cfg.to_string());
+            }
         }
     }
 

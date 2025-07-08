@@ -49,7 +49,7 @@ public:
         if (m_config.type == storage::group_config::type_t::ERASURE_CODING) {
             if (m_config.storages !=
                     m_config.data_shards + m_config.parity_shards or
-                m_config.stripe_size_kib % m_config.data_shards != 0) {
+                m_config.get_stripe_size() % m_config.data_shards != 0) {
                 throw std::runtime_error("Invalid group config");
             }
         }
