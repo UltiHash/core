@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.5.0] 2025-07-08
 - Fix issue with get-object which lead to stale downloads with high CPU utilization
 - Improved write performance of erasure-coded storage groups
 - Enabled reference-count based deletion support for erasure-coded storage groups
