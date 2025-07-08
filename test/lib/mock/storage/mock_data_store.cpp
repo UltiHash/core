@@ -58,15 +58,12 @@ mock_data_store::mock_data_store(data_store_config conf,
     }
 }
 
-address
-mock_data_store::write(const allocation_t allocation,
-                       const std::vector<std::span<const char>>& buffers,
-                       const std::vector<refcount_t>& refcounts) {
-    address data_address;
+void mock_data_store::write(const allocation_t allocation,
+                            const std::vector<std::span<const char>>& buffers,
+                            const std::vector<refcount_t>& refcounts) {
     auto offset = allocation.offset;
     for (const auto& data : buffers) {
         std::copy(data.begin(), data.end(), m_data.begin() + offset);
-        data_address.emplace_back(offset, data.size());
         if (refcounts.empty()) {
             std::vector<refcount_t> derived_refcounts;
             std::size_t first_stripe = allocation.offset / m_conf.page_size;
@@ -82,8 +79,6 @@ mock_data_store::write(const allocation_t allocation,
         }
         offset += data.size();
     }
-
-    return data_address;
 }
 
 std::size_t mock_data_store::read(const std::size_t pointer,

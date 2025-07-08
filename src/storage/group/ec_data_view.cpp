@@ -467,13 +467,6 @@ address ec_data_view::compute_rejected_address(
         },
         storages);
 
-    std::unordered_set<std::size_t> rejected_stripes;
-    for (const auto& refcount : link_rvs) {
-        for (const auto& rc : refcount) {
-            rejected_stripes.insert(rc.stripe_id);
-        }
-    }
-
     co_return compute_rejected_address(link_rvs, addr);
 }
 

@@ -103,6 +103,8 @@ std::size_t default_data_store::read(std::size_t local_pointer,
 }
 
 void default_data_store::sync() {
+    // TODO:
+    // https://linear.app/ultihash/issue/ENG-1123/sync-workflow-in-data-store-is-broken
     std::unique_lock lock(m_file_mutex);
     m_files.back().sync();
 
@@ -163,19 +165,7 @@ void default_data_store::write(
     }
     sync();
 
-    if (refcounts.empty()) {
-        std::vector<refcount_t> derived_refcounts;
-        std::size_t first_stripe = allocation.offset / m_conf.page_size;
-        std::size_t last_stripe =
-            (allocation.offset + allocation.size - 1) / m_conf.page_size;
-        for (size_t stripe_id = first_stripe; stripe_id <= last_stripe;
-             stripe_id++) {
-            derived_refcounts.emplace_back(stripe_id, 1);
-        }
-        m_refcounter.increment(derived_refcounts, false);
-    } else {
-        m_refcounter.increment(refcounts, false);
-    }
+    m_refcounter.increment(refcounts, false);
 }
 
 std::vector<refcount_t>

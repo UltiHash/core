@@ -41,7 +41,7 @@ public:
      */
     void write(const allocation_t allocation,
                const std::vector<std::span<const char>>& buffers,
-               const std::vector<refcount_t>& refcounts = {}) override;
+               const std::vector<refcount_t>& refcounts) override;
 
     /**
      * @brief Read bytes of data starting from the pointer until the size and

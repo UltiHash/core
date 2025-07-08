@@ -66,9 +66,6 @@ reference_counter::get_refcounts(const std::vector<std::size_t>& stripe_ids) {
 
         if (dbi.get(txn, key, view)) {
             current_value = lmdb::from_sv<std::size_t>(view);
-        } else {
-            LOG_DEBUG() << "stripe " << stripe_id
-                        << " is untracked, returning zero count.";
         }
 
         rv.emplace_back(stripe_id, current_value);
