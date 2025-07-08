@@ -1,5 +1,7 @@
 ## [Unreleased]
 - Fix issue with get-object which lead to stale downloads with high CPU utilization
+- Improved write performance of erasure-coded storage groups
+- Enabled reference-count based deletion support for erasure-coded storage groups
 
 ## [1.4.0] 2025-06-04
 - Add missing Last-Modified header to GetObject
