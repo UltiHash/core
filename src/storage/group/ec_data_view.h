@@ -171,10 +171,15 @@ private:
     address split_fragment(const uint128_t& pointer,
                            std::size_t read_size) const;
 
-    std::vector<std::vector<std::size_t>>
-    prepare_stripe_offsets(const std::vector<std::size_t>& offsets,
-                           std::size_t stripe_index,
-                           std::size_t stripe_data_size) const;
+    std::vector<refcount_t> extract_refcounts(const address& addr) const;
+
+    address get_aligned_address(const address& addr) const;
+    address compute_address(const std::vector<std::size_t>& offsets,
+                            const std::size_t data_size,
+                            const allocation_t& allocation) const;
+    address compute_rejected_address(
+        const std::vector<std::vector<refcount_t>>& rejected_refcounts,
+        const address& original_addr);
 };
 
 } // namespace uh::cluster::storage
