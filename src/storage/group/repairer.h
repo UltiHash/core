@@ -186,8 +186,8 @@ private:
                                 }
                                 LOG_DEBUG() << "write to storage " << id;
                                 co_await storage->write(alloc, {shards[id]},
-                                                        {0});
-                                // TODO: Call link!
+                                                        {});
+                                // TODO: Call link / adjust write call!
                                 LOG_DEBUG()
                                     << "write to storage " << id << " done";
                                 co_return true;

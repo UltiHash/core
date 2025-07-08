@@ -83,6 +83,9 @@ coro<void> handler::handle_iteration(const messenger::header& hdr,
     case STORAGE_UNLINK_REQ:
         co_await handle_unlink(m, hdr);
         break;
+    case STORAGE_GET_REFCOUNTS_REQ:
+        co_await handle_get_refcounts(m, hdr);
+        break;
     case STORAGE_USED_REQ:
         co_await handle_get_used(m, hdr);
         break;
@@ -97,10 +100,8 @@ coro<void> handler::handle_iteration(const messenger::header& hdr,
 coro<void> handler::handle_write(messenger& m, const messenger::header& h) {
     auto req = co_await m.recv_write(h);
 
-    // Use buffers directly from the write_request
-    auto addr =
-        co_await m_storage.write(req.allocation, req.buffers, req.offsets);
-    co_await m.send_address(SUCCESS, addr);
+    co_await m_storage.write(req.allocation, req.buffers, req.refcounts);
+    co_await m.send(SUCCESS, {});
 }
 
 coro<void> handler::handle_read(messenger& m, const messenger::header& h) {
@@ -131,18 +132,28 @@ coro<void> handler::handle_read_address(messenger& m,
 
 coro<void> handler::handle_link(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
-    auto rejected_addr = co_await m_storage.link(addr);
+    const auto refcounts = co_await m.recv_refcounts(h);
+    auto rejected_stripes = co_await m_storage.link(refcounts);
 
-    co_await m.send_address(SUCCESS, rejected_addr);
+    co_await m.send_refcounts(SUCCESS, rejected_stripes);
 }
 
 coro<void> handler::handle_unlink(messenger& m, const messenger::header& h) {
 
-    const auto addr = co_await m.recv_address(h);
+    const auto addr = co_await m.recv_refcounts(h);
     std::size_t freed_bytes = co_await m_storage.unlink(addr);
 
     co_await m.send_primitive<size_t>(SUCCESS, freed_bytes);
+}
+
+coro<void> handler::handle_get_refcounts(uh::cluster::messenger& m,
+                                         const messenger::header& h) {
+    std::vector<std::size_t> stripe_ids(h.size / sizeof(std::size_t));
+    m.register_read_buffer(stripe_ids);
+    co_await m.recv_buffers(h);
+
+    auto refcounts = co_await m_storage.get_refcounts(stripe_ids);
+    co_await m.send_refcounts(SUCCESS, refcounts);
 }
 
 coro<void> handler::handle_get_used(messenger& m, const messenger::header&) {
